@@ -11,10 +11,10 @@
 | Папка в репо | Путь к исходникам (WORK) | Проекты в репо |
 |--------------|--------------------------|----------------|
 | **SBB_Broker** | `C:\1c\Cursor_1c\WORK\SBB_Broker` | example |
-| **SBB_Depo**   | `C:\1c\Cursor_1c\WORK\SBB_Depo`   | — |
-| **Wim_Du**     | `C:\1c\Cursor_1c\WORK\Wim_Du`     | — |
-| **WIM_FIn**    | `C:\1c\Cursor_1c\WORK\WIM_FIn`    | — |
-| **Wim_Mo**     | `C:\1c\Cursor_1c\WORK\Wim_Mo`     | — |
+| **SBB_Depo**   | `C:\1c\Cursor_1c\WORK\SBB_Depo`   | example |
+| **Wim_Du**     | `C:\1c\Cursor_1c\WORK\Wim_Du`     | example |
+| **WIM_FIn**    | `C:\1c\Cursor_1c\WORK\WIM_FIn`    | example |
+| **Wim_Mo**     | `C:\1c\Cursor_1c\WORK\Wim_Mo`     | example |
 
 Исходники баз в репозиторий не копируются; путь всегда берётся из **source-path.txt** в папке базы.
 
