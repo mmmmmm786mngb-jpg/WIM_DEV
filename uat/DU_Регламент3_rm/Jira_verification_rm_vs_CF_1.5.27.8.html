@@ -1,0 +1,663 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <title>Проверка доработок rm в релизе вендора 1.5.27.8</title>
+  <style>
+    :root {
+      --ok: #28a745;
+      --err: #dc3545;
+      --warn: #fd7e14;
+      --info: #17a2b8;
+      --bg-ok: #d4edda;
+      --bg-err: #f8d7da;
+      --bg-warn: #fff3cd;
+      --bg-info: #d1ecf1;
+    }
+    body {
+      font-family: 'Segoe UI', Tahoma, sans-serif;
+      margin: 1.5rem 2.5rem;
+      background: #f8f9fa;
+      color: #1a202c;
+      font-size: 0.93rem;
+    }
+    h1 { font-size: 1.45rem; margin-bottom: 0.3rem; }
+    h2 { font-size: 1.15rem; margin: 2rem 0 0.6rem; border-bottom: 2px solid #dee2e6; padding-bottom: 0.3rem; }
+    h3 { font-size: 1rem; margin: 1rem 0 0.4rem; color: #495057; }
+    .meta { color: #6c757d; font-size: 0.85rem; margin-bottom: 1.5rem; }
+    .badge {
+      display: inline-block; padding: 0.2rem 0.55rem; border-radius: 4px;
+      font-size: 0.78rem; font-weight: 600; white-space: nowrap;
+    }
+    .badge-ok   { background: var(--bg-ok);   color: var(--ok); }
+    .badge-warn { background: var(--bg-warn);  color: #856404; }
+    .badge-err  { background: var(--bg-err);   color: var(--err); }
+    .badge-info { background: var(--bg-info);  color: #0c5460; }
+    .summary-box {
+      display: flex; gap: 1rem; flex-wrap: wrap; margin: 1rem 0 1.5rem;
+    }
+    .stat {
+      background: #fff; border: 1px solid #dee2e6; border-radius: 8px;
+      padding: 0.75rem 1.2rem; min-width: 130px; text-align: center;
+    }
+    .stat .num  { font-size: 2rem; font-weight: 700; }
+    .stat .lbl  { font-size: 0.78rem; color: #6c757d; }
+    .stat.ok   .num { color: var(--ok); }
+    .stat.warn .num { color: var(--warn); }
+    .stat.err  .num { color: var(--err); }
+    table { width: 100%; border-collapse: collapse; margin: 0.5rem 0 1rem; }
+    th { background: #495057; color: #fff; padding: 0.45rem 0.7rem; text-align: left; font-size: 0.82rem; }
+    td { padding: 0.4rem 0.7rem; border-bottom: 1px solid #dee2e6; vertical-align: top; font-size: 0.82rem; }
+    tr:nth-child(even) td { background: #f8f9fa; }
+    .module-header {
+      background: #fff; border: 1px solid #dee2e6; border-left: 5px solid #6c757d;
+      border-radius: 6px; padding: 0.7rem 1rem; margin: 1.2rem 0 0.5rem;
+      display: flex; align-items: center; gap: 0.7rem;
+    }
+    .module-header.ok   { border-left-color: var(--ok); }
+    .module-header.warn { border-left-color: var(--warn); }
+    .module-header.err  { border-left-color: var(--err); }
+    .module-header .module-name { font-weight: 700; font-size: 1rem; }
+    .module-header .module-path { font-size: 0.78rem; color: #6c757d; font-family: Consolas, monospace; }
+    pre {
+      background: #282c34; color: #abb2bf; font-family: Consolas, monospace;
+      font-size: 0.78rem; padding: 0.75rem 1rem; border-radius: 5px;
+      overflow-x: auto; margin: 0.3rem 0; white-space: pre-wrap; word-break: break-all;
+    }
+    .diff-row-rm  td:nth-child(3) { background: #fff3cd; }
+    .diff-row-cf  td:nth-child(4) { background: #d1ecf1; }
+    .diff-row-both td:nth-child(3),
+    .diff-row-both td:nth-child(4) { background: #e2e3e5; }
+    .verdict-block {
+      background: #fff; border: 1px solid #dee2e6; border-radius: 8px;
+      padding: 1rem 1.2rem; margin: 1.5rem 0;
+    }
+    .verdict-block.ok   { border-color: var(--ok);   background: #f0fff4; }
+    .verdict-block.warn { border-color: var(--warn);  background: #fffaf0; }
+    .verdict-block.err  { border-color: var(--err);   background: #fff5f5; }
+    .verdict-title { font-weight: 700; font-size: 1.05rem; margin-bottom: 0.5rem; }
+    .toc { background: #fff; border: 1px solid #dee2e6; border-radius: 6px; padding: 0.75rem 1.2rem; margin-bottom: 1.5rem; display: inline-block; }
+    .toc ul { margin: 0; padding-left: 1.2rem; }
+    .toc li { margin: 0.2rem 0; font-size: 0.85rem; }
+    a { color: #0070f3; text-decoration: none; }
+    a:hover { text-decoration: underline; }
+  </style>
+</head>
+<body>
+
+<h1>Проверка доработок расширения rm в релизе вендора 1.5.27.8</h1>
+<div class="meta">
+  <strong>Дата проверки:</strong> 09.03.2026 &nbsp;|&nbsp;
+  <strong>Задача:</strong> IMAPPS-35037 &nbsp;|&nbsp;
+  <strong>Источник rm:</strong> <code>rm\</code> &nbsp;|&nbsp;
+  <strong>Источник CF:</strong> <code>CF_Доработки_rvu_И_rm\</code>
+</div>
+
+<div class="summary-box">
+  <div class="stat ok">
+    <div class="num">9</div>
+    <div class="lbl">Модулей<br>совпадает</div>
+  </div>
+  <div class="stat warn">
+    <div class="num">0</div>
+    <div class="lbl">С отличиями<br>(некритично)</div>
+  </div>
+  <div class="stat err">
+    <div class="num">0</div>
+    <div class="lbl">Не перенесено<br>/ пропущено</div>
+  </div>
+  <div class="stat ok">
+    <div class="num">+1</div>
+    <div class="lbl">Константа<br>добавлена в CF</div>
+  </div>
+</div>
+
+<div class="toc">
+  <strong>Содержание</strong>
+  <ul>
+    <li><a href="#const">0. Константа ИспользоватьПредварительныеЗапросыДляУтреннихРегламентов</a></li>
+    <li><a href="#regperiod">1. Справочник.РегламентныеПериоды &mdash; МодульМенеджера</a></li>
+    <li><a href="#vidoper">2. Справочник.ВидыОперацийЗакрытияПериода &mdash; МодульМенеджера</a></li>
+    <li><a href="#pereocenka">3. Документ.ПереоценкаВзаиморасчетов &mdash; МодульОбъекта</a></li>
+    <li><a href="#nkd">4. Документ.ПереводНКДВЗадолженностьЭмитента &mdash; МодульОбъекта</a></li>
+    <li><a href="#pogashenie">5. Документ.ПогашениеОблигаций &mdash; МодульОбъекта</a></li>
+    <li><a href="#nachislenie">6. Документ.НачислениеПроцентовПоБанковскимСчетам &mdash; МодульОбъекта</a></li>
+    <li><a href="#plan">7. Документ.ПланРегламентныхОперацийДУ &mdash; МодульОбъекта</a></li>
+    <li><a href="#ispolnproc">8. ОбщийМодуль.ИсполняемыеПроцедурыЗакрытияПериода</a></li>
+    <li><a href="#fonov">9. ОбщийМодуль.ФоновыеЗаданияСервер</a></li>
+    <li><a href="#obshchiy">10. ОбщийМодуль.ОбщегоНазначенияДУ</a></li>
+    <li><a href="#verdict">Итоговый вывод</a></li>
+  </ul>
+</div>
+
+
+<!-- ============================================================ -->
+<h2 id="const">0. Константа ИспользоватьПредварительныеЗапросыДляУтреннихРегламентов</h2>
+
+<div class="module-header ok">
+  <span class="badge badge-ok">ДОБАВЛЕНА В CF</span>
+  <span class="module-name">Константа.ИспользоватьПредварительныеЗапросыДляУтреннихРегламентов</span>
+  <span class="module-path">CF_Доработки_rvu_И_rm\Constants\ИспользоватьПредварительныеЗапросыДляУтреннихРегламентов.xml</span>
+</div>
+
+<p>Согласно документации (ref-block в HTML-дереве), константа должна быть добавлена напрямую в базовую конфигурацию (не в расширение rm), т.к. расширение её не содержит. <strong>Вендор добавил константу тип Булево в CF</strong> &mdash; файл <code>Constants\ИспользоватьПредварительныеЗапросыДляУтреннихРегламентов.xml</code> присутствует, константа зарегистрирована в <code>Configuration.xml</code> и <code>ConfigDumpInfo.xml</code>.</p>
+
+<table>
+  <tr><th>Аспект</th><th>Требование</th><th>Факт в CF</th><th>Статус</th></tr>
+  <tr><td>Наличие константы</td><td>Добавить в CF, тип Булево</td><td>Присутствует в Configuration.xml, тип Булево</td><td><span class="badge badge-ok">OK</span></td></tr>
+  <tr><td>Использование</td><td>РегламентныеПериоды.МодульМенеджера, строка проверки</td><td>CF строка 317: <code>ОбщегоНазначенияДУПовтИсп.ПолучитьЗначениеКонстанты("ИспользоватьПредварительныеЗапросыДляУтреннихРегламентов") = Истина</code></td><td><span class="badge badge-ok">OK</span></td></tr>
+</table>
+
+
+<!-- ============================================================ -->
+<h2 id="regperiod">1. Справочник.РегламентныеПериоды &mdash; МодульМенеджера</h2>
+
+<div class="module-header ok">
+  <span class="badge badge-ok">ПЕРЕНЕСЕНО ПОЛНОСТЬЮ</span>
+  <span class="module-name">Справочники.РегламентныеПериоды.МодульМенеджера</span>
+</div>
+
+<p>Три процедуры из расширения rm перенесены напрямую в базовый модуль менеджера CF (без директив <code>&amp;Вместо</code>).</p>
+
+<h3>Процедура СформироватьРегламентныеОперации</h3>
+<table>
+  <tr><th>№</th><th>Аспект</th><th>rm (расширение)</th><th>CF (релиз 1.5.27.8)</th><th>Статус</th></tr>
+  <tr><td>1</td><td>Директива</td><td><code>&amp;Вместо("СформироватьРегламентныеОперации")</code></td><td>Отсутствует (базовая CF)</td><td><span class="badge badge-ok">Норм</span></td></tr>
+  <tr><td>2</td><td>Имя процедуры</td><td><code>r_СформироватьРегламентныеОперации</code></td><td><code>СформироватьРегламентныеОперации</code> + тег <code>// ASP-196537</code></td><td><span class="badge badge-ok">OK</span></td></tr>
+  <tr><td>3</td><td>Сигнатура</td><td><code>(ПараметрыПроцедуры, АдресХранилищаРезультат) Экспорт</code></td><td>Идентична</td><td><span class="badge badge-ok">OK</span></td></tr>
+  <tr><td>4</td><td>Тело: валидация, цикл, прогресс</td><td>Полный код</td><td>Идентичен построчно</td><td><span class="badge badge-ok">OK</span></td></tr>
+  <tr><td>5</td><td>Блок IMAPPS-35037++ (проверка константы, вызов пакетного заполнения)</td><td>Строки 98&ndash;114</td><td>CF строки 307&ndash;323, добавлен префикс <code>// ASP-197909</code> к меткам</td><td><span class="badge badge-ok">OK</span></td></tr>
+</table>
+
+<h3>Процедура ЗаполнитьПараметрыСохраненияПакетнымиДаннымиУтреннихОпераций</h3>
+<table>
+  <tr><th>№</th><th>Аспект</th><th>rm</th><th>CF</th><th>Статус</th></tr>
+  <tr><td>1</td><td>Директива</td><td>Нет (не &amp;Вместо)</td><td>Нет (CF)</td><td><span class="badge badge-ok">OK</span></td></tr>
+  <tr><td>2</td><td>Сигнатура</td><td><code>(ПараметрыСохранения, СписокДоговоровДУ, ДатаПроведения) Экспорт</code></td><td>Идентична + тег <code>// ASP-197909</code></td><td><span class="badge badge-ok">OK</span></td></tr>
+  <tr><td>3</td><td>Тело: 6 блоков пакетных запросов</td><td>Все 6 блоков</td><td>Все 6 блоков, идентичны</td><td><span class="badge badge-ok">OK</span></td></tr>
+</table>
+
+<h3>Процедура СформироватьДокументыЗакрытияПериода</h3>
+<table>
+  <tr><th>№</th><th>Аспект</th><th>rm</th><th>CF</th><th>Статус</th></tr>
+  <tr><td>1</td><td>Директива</td><td><code>&amp;Вместо("СформироватьДокументыЗакрытияПериода")</code></td><td>Нет (CF)</td><td><span class="badge badge-ok">Норм</span></td></tr>
+  <tr><td>2</td><td>Имя</td><td><code>r_СформироватьДокументыЗакрытияПериода</code></td><td><code>СформироватьДокументыЗакрытияПериода</code> + <code>// ASP-196537</code></td><td><span class="badge badge-ok">OK</span></td></tr>
+  <tr><td>3</td><td>Извлечение 6 соответствий договор&rarr;таблица</td><td>Строки 331&ndash;400</td><td>Идентичны (с префиксами ASP-197909 в комментариях)</td><td><span class="badge badge-ok">OK</span></td></tr>
+  <tr><td>4</td><td>Цикл по родителям, вызов фонового/синхронного задания</td><td>Строки 403&ndash;512</td><td>Идентичны</td><td><span class="badge badge-ok">OK</span></td></tr>
+  <tr><td>5</td><td>Добавление СоответствиеОперацияТаблица в МассивПараметров</td><td>Строка 460</td><td>Присутствует</td><td><span class="badge badge-ok">OK</span></td></tr>
+</table>
+
+
+<!-- ============================================================ -->
+<h2 id="vidoper">2. Справочник.ВидыОперацийЗакрытияПериода &mdash; МодульМенеджера</h2>
+
+<div class="module-header ok">
+  <span class="badge badge-ok">ПЕРЕНЕСЕНО ПОЛНОСТЬЮ</span>
+  <span class="module-name">Справочники.ВидыОперацийЗакрытияПериода.МодульМенеджера</span>
+</div>
+
+<h3>Процедура ВыполнитьИсполняемуюПроцедуруЗакрытияПериода</h3>
+<table>
+  <tr><th>№</th><th>Аспект</th><th>rm</th><th>CF</th><th>Статус</th></tr>
+  <tr><td>1</td><td>Директива</td><td><code>&amp;Вместо("ВыполнитьИсполняемуюПроцедуруЗакрытияПериода")</code></td><td>Нет (базовый CF)</td><td><span class="badge badge-ok">Норм</span></td></tr>
+  <tr><td>2</td><td>Имя</td><td><code>reg_m_ВыполнитьИсполняемуюПроцедуруЗакрытияПериода</code></td><td><code>ВыполнитьИсполняемуюПроцедуруЗакрытияПериода</code></td><td><span class="badge badge-ok">OK</span></td></tr>
+  <tr><td>3</td><td>Блок IMAPPS-35037++ (условная передача СоответствиеОперацияТаблица)</td><td>Строки 14&ndash;29</td><td>CF строки 182&ndash;197, идентичны (добавлен <code>// ASP-197909</code>)</td><td><span class="badge badge-ok">OK</span></td></tr>
+  <tr><td>4</td><td>Вызов с ТаблицейРезультата или без</td><td>Строки 25&ndash;28</td><td>Идентичны</td><td><span class="badge badge-ok">OK</span></td></tr>
+</table>
+
+
+<!-- ============================================================ -->
+<h2 id="pereocenka">3. Документ.ПереоценкаВзаиморасчетов &mdash; МодульОбъекта</h2>
+
+<div class="module-header ok">
+  <span class="badge badge-ok">ПЕРЕНЕСЕНО ПОЛНОСТЬЮ</span>
+  <span class="module-name">Документы.ПереоценкаВзаиморасчетов.МодульОбъекта</span>
+</div>
+
+<p>8 процедур/функций из расширения rm перенесены в CF без директив <code>&amp;Вместо</code>.</p>
+
+<table>
+  <tr><th>Процедура/Функция</th><th>rm</th><th>CF</th><th>Статус</th></tr>
+  <tr class="diff-row-both">
+    <td><code>ЗаполнитьТабличнуюЧастьВзаиморасчеты</code></td>
+    <td>Директива <code>&amp;Вместо</code>, имя <code>reg_m_ЗаполнитьТабличнуюЧастьВзаиморасчеты</code></td>
+    <td>Без директивы, имя <code>ЗаполнитьТабличнуюЧастьВзаиморасчеты</code>, тег <code>// ASP-197909 IMAPPS-35037++</code></td>
+    <td><span class="badge badge-ok">OK (стилистика)</span></td>
+  </tr>
+  <tr>
+    <td><code>ЗаполнитьПоГотовойТаблице</code></td>
+    <td>Режим 3: готовая таблица</td>
+    <td>Идентично, тег ASP-197909</td>
+    <td><span class="badge badge-ok">OK</span></td>
+  </tr>
+  <tr>
+    <td><code>ЗаполнитьПакетно</code></td>
+    <td>Режим 2: пакетный</td>
+    <td>Идентично</td>
+    <td><span class="badge badge-ok">OK</span></td>
+  </tr>
+  <tr>
+    <td><code>ЗаполнитьОбычныйРежим</code></td>
+    <td>Режим 1: обычный</td>
+    <td>Идентично</td>
+    <td><span class="badge badge-ok">OK</span></td>
+  </tr>
+  <tr>
+    <td><code>ТекстЗапросаПереоценкиВзаиморасчетов</code></td>
+    <td>Функция с текстом запроса</td>
+    <td>Идентично</td>
+    <td><span class="badge badge-ok">OK</span></td>
+  </tr>
+  <tr>
+    <td><code>НастроитьЗапросДляРежима</code></td>
+    <td>Настройка по режиму</td>
+    <td>Идентично</td>
+    <td><span class="badge badge-ok">OK</span></td>
+  </tr>
+  <tr>
+    <td><code>ПодготовитьТаблицуДоговорыВалютаРегл</code></td>
+    <td>Подготовка ТЗ для запроса</td>
+    <td>Идентично</td>
+    <td><span class="badge badge-ok">OK</span></td>
+  </tr>
+  <tr>
+    <td><code>ИсключаемыеСчетаРасчетов</code></td>
+    <td>Массив счетов-исключений</td>
+    <td>Идентично</td>
+    <td><span class="badge badge-ok">OK</span></td>
+  </tr>
+</table>
+
+<p><strong>Построчные отличия:</strong> только комментарии. В rm метки вида <code>// IMAPPS-35037++ Режим 3: Готовая таблица</code>, в CF добавлен префикс <code>// ASP-197909</code> перед <code>IMAPPS-35037++</code>. Логика и код идентичны.</p>
+
+
+<!-- ============================================================ -->
+<h2 id="nkd">4. Документ.ПереводНКДВЗадолженностьЭмитента &mdash; МодульОбъекта</h2>
+
+<div class="module-header ok">
+  <span class="badge badge-ok">ПЕРЕНЕСЕНО ПОЛНОСТЬЮ</span>
+  <span class="module-name">Документы.ПереводНКДВЗадолженностьЭмитента.МодульОбъекта</span>
+</div>
+
+<p>14 процедур/функций расширения rm по пунктам 3.1&ndash;3.4 перенесены в CF.</p>
+
+<table>
+  <tr><th>Процедура/Функция</th><th>Пункт</th><th>rm (имя)</th><th>CF (имя)</th><th>Статус</th></tr>
+  <tr>
+    <td><code>ЗаполнитьКупоннымиПериодами</code></td>
+    <td>3.1</td>
+    <td><code>nkd_m_ЗаполнитьКупоннымиПериодами</code>, <code>&amp;Вместо</code></td>
+    <td><code>ЗаполнитьКупоннымиПериодами</code>, без директивы</td>
+    <td><span class="badge badge-ok">OK</span></td>
+  </tr>
+  <tr>
+    <td><code>ЗаполнитьКупоннымиПериодамиОбычныйРежим</code></td>
+    <td>3.1</td>
+    <td>Режим 1</td>
+    <td>Идентично, тег ASP-197909</td>
+    <td><span class="badge badge-ok">OK</span></td>
+  </tr>
+  <tr>
+    <td><code>ЗаполнитьОблигацииПоГотовойТаблице</code></td>
+    <td>3.1</td>
+    <td>Режим 3</td>
+    <td>Идентично</td>
+    <td><span class="badge badge-ok">OK</span></td>
+  </tr>
+  <tr>
+    <td><code>ЗаполнитьКупоннымиПериодамиПакетно</code></td>
+    <td>3.1</td>
+    <td>Режим 2</td>
+    <td>Идентично</td>
+    <td><span class="badge badge-ok">OK</span></td>
+  </tr>
+  <tr>
+    <td><code>ПодготовитьСчетаОблигаций</code>, <code>ПодготовитьСчетаНКД</code></td>
+    <td>3.1</td>
+    <td>Вспомогательные функции</td>
+    <td>Идентично</td>
+    <td><span class="badge badge-ok">OK</span></td>
+  </tr>
+  <tr>
+    <td><code>ТекстЗапросаКупонныхПериодов</code>, <code>НастроитьЗапросКупонныхПериодов</code></td>
+    <td>3.1</td>
+    <td>Текст запроса + настройка</td>
+    <td>Идентично</td>
+    <td><span class="badge badge-ok">OK</span></td>
+  </tr>
+  <tr>
+    <td><code>ТаблицаНКД_УУ</code></td>
+    <td>3.2</td>
+    <td><code>nkd_m_ТаблицаНКД_УУ</code>, <code>&amp;Вместо</code></td>
+    <td><code>ТаблицаНКД_УУ</code>, без директивы</td>
+    <td><span class="badge badge-ok">OK</span></td>
+  </tr>
+  <tr>
+    <td><code>ТекстЗапросаТаблицаНКД_УУ</code>, <code>НастроитьЗапросТаблицаНКД_УУ</code></td>
+    <td>3.2</td>
+    <td>Текст запроса + настройка</td>
+    <td>Идентично</td>
+    <td><span class="badge badge-ok">OK</span></td>
+  </tr>
+  <tr>
+    <td><code>СформироватьДвиженияУУ</code></td>
+    <td>3.2</td>
+    <td><code>nkd_m_СформироватьДвиженияУУ</code>, <code>&amp;Вместо</code></td>
+    <td><code>СформироватьДвиженияУУ</code>, без директивы</td>
+    <td><span class="badge badge-ok">OK</span></td>
+  </tr>
+  <tr>
+    <td><code>СформироватьТаблицыДанных</code></td>
+    <td>3.3</td>
+    <td><code>nkd_m_СформироватьТаблицыДанных</code>, <code>&amp;Вместо</code></td>
+    <td><code>СформироватьТаблицыДанных</code>, без директивы</td>
+    <td><span class="badge badge-ok">OK</span></td>
+  </tr>
+  <tr>
+    <td><code>ТекстЗапросаСформироватьТаблицыДанных</code>, <code>НастроитьЗапросСформироватьТаблицыДанных</code></td>
+    <td>3.3</td>
+    <td>Текст запроса + настройка</td>
+    <td>Идентично</td>
+    <td><span class="badge badge-ok">OK</span></td>
+  </tr>
+  <tr>
+    <td><code>СформироватьДвиженияБУ</code></td>
+    <td>3.3</td>
+    <td><code>nkd_m_СформироватьДвиженияБУ</code>, <code>&amp;Вместо</code></td>
+    <td><code>СформироватьДвиженияБУ</code>, без директивы</td>
+    <td><span class="badge badge-ok">OK</span></td>
+  </tr>
+  <tr>
+    <td><code>ПередЗаписью</code></td>
+    <td>3.4</td>
+    <td><code>nkd_m_ПередЗаписью</code>, <code>&amp;Вместо</code></td>
+    <td><code>ПередЗаписью</code>, без директивы</td>
+    <td><span class="badge badge-ok">OK</span></td>
+  </tr>
+</table>
+
+<p><strong>Построчные отличия:</strong> только комментарии &mdash; в CF добавлен <code>// ASP-197909</code> к меткам IMAPPS-35037. Логика, тексты запросов и сигнатуры полностью идентичны.</p>
+
+
+<!-- ============================================================ -->
+<h2 id="pogashenie">5. Документ.ПогашениеОблигаций &mdash; МодульОбъекта</h2>
+
+<div class="module-header ok">
+  <span class="badge badge-ok">ПЕРЕНЕСЕНО ПОЛНОСТЬЮ</span>
+  <span class="module-name">Документы.ПогашениеОблигаций.МодульОбъекта</span>
+</div>
+
+<table>
+  <tr><th>Процедура/Функция</th><th>rm</th><th>CF</th><th>Статус</th></tr>
+  <tr>
+    <td><code>ЗаполнитьСписокОблигаций</code></td>
+    <td><code>rm_ЗаполнитьСписокОблигаций</code>, <code>&amp;Вместо</code>, 4 параметра</td>
+    <td><code>ЗаполнитьСписокОблигаций</code>, без директивы, тег <code>// ASP-197909 IMAPPS-35037++</code></td>
+    <td><span class="badge badge-ok">OK</span></td>
+  </tr>
+  <tr>
+    <td><code>СформироватьМассивТекстовЗапросаСписокАктивовОблигаций</code></td>
+    <td>Функция с 4 параметрами</td>
+    <td>Идентично</td>
+    <td><span class="badge badge-ok">OK</span></td>
+  </tr>
+  <tr>
+    <td><code>НастроитьЗапросСписокАктивовСОстатками</code></td>
+    <td>Настройка запроса</td>
+    <td>Идентично</td>
+    <td><span class="badge badge-ok">OK</span></td>
+  </tr>
+</table>
+
+
+<!-- ============================================================ -->
+<h2 id="nachislenie">6. Документ.НачислениеПроцентовПоБанковскимСчетам &mdash; МодульОбъекта</h2>
+
+<div class="module-header ok">
+  <span class="badge badge-ok">ПЕРЕНЕСЕНО ПОЛНОСТЬЮ</span>
+  <span class="module-name">Документы.НачислениеПроцентовПоБанковскимСчетам.МодульОбъекта</span>
+</div>
+
+<table>
+  <tr><th>Процедура/Функция</th><th>rm</th><th>CF</th><th>Статус</th></tr>
+  <tr>
+    <td><code>ЗаполнитьТЧ</code></td>
+    <td><code>rm_ЗаполнитьТЧ</code>, <code>&amp;Вместо</code>, 2 доп. параметра</td>
+    <td><code>ЗаполнитьТЧ</code>, без директивы, тег <code>// ASP-197909 IMAPPS-35037++</code></td>
+    <td><span class="badge badge-ok">OK</span></td>
+  </tr>
+  <tr>
+    <td><code>СформироватьМассивТекстовЗапросаОстаткиПоБанковскимСчетам</code></td>
+    <td>Функция, 2 параметра (БУ, УУ)</td>
+    <td>Идентично</td>
+    <td><span class="badge badge-ok">OK</span></td>
+  </tr>
+  <tr>
+    <td><code>НастроитьЗапросОстаткиПоБанковскимСчетам</code></td>
+    <td>Настройка запроса</td>
+    <td>Идентично</td>
+    <td><span class="badge badge-ok">OK</span></td>
+  </tr>
+</table>
+
+
+<!-- ============================================================ -->
+<h2 id="plan">7. Документ.ПланРегламентныхОперацийДУ &mdash; МодульОбъекта</h2>
+
+<div class="module-header ok">
+  <span class="badge badge-ok">ПЕРЕНЕСЕНО ПОЛНОСТЬЮ</span>
+  <span class="module-name">Документы.ПланРегламентныхОперацийДУ.МодульОбъекта</span>
+</div>
+
+<table>
+  <tr><th>Процедура</th><th>rm</th><th>CF</th><th>Статус</th></tr>
+  <tr>
+    <td><code>ВыполнитьРегламентныеПроцедуры</code></td>
+    <td><code>reg_m_ВыполнитьРегламентныеПроцедуры</code>, <code>&amp;Вместо</code>, добавлен параметр <code>СоответствиеОперацияТаблица</code></td>
+    <td>CF строка 8: <code>ВыполнитьРегламентныеПроцедуры(..., СоответствиеОперацияТаблица = Неопределено)</code>, тег <code>// ASP-197909 IMAPPS-35037++</code></td>
+    <td><span class="badge badge-ok">OK</span></td>
+  </tr>
+  <tr>
+    <td>Добавление СоответствиеОперацияТаблица в ПараметрыВыполнения</td>
+    <td>Строки 65&ndash;68</td>
+    <td>CF строки 68&ndash;72, идентично</td>
+    <td><span class="badge badge-ok">OK</span></td>
+  </tr>
+</table>
+
+
+<!-- ============================================================ -->
+<h2 id="ispolnproc">8. ОбщийМодуль.ИсполняемыеПроцедурыЗакрытияПериода</h2>
+
+<div class="module-header ok">
+  <span class="badge badge-ok">ПЕРЕНЕСЕНО ПОЛНОСТЬЮ</span>
+  <span class="module-name">ОбщиеМодули.ИсполняемыеПроцедурыЗакрытияПериода</span>
+</div>
+
+<p>4 процедуры расширения rm (операции 0200, 0050, 0055, 0030) перенесены в CF.</p>
+
+<table>
+  <tr><th>Процедура</th><th>rm</th><th>CF (строка)</th><th>Статус</th></tr>
+  <tr>
+    <td><code>Операция_0200_ПереоценкаВзаиморасчетов</code></td>
+    <td><code>reg_m_Операция_0200_...</code>, <code>&amp;Вместо</code>, параметр <code>ДополнительныеДанные</code></td>
+    <td>CF ст. 1692: <code>Операция_0200_...</code>, тег <code>// ASP-197909 IMAPPS-35037++</code></td>
+    <td><span class="badge badge-ok">OK</span></td>
+  </tr>
+  <tr>
+    <td><code>Операция_0050_ПереводНКДВЗадолженностьЭмитента</code></td>
+    <td><code>nkd_m_Операция_0050_...</code>, <code>&amp;Вместо</code>, параметр <code>ДополнительныеДанные</code> (Структура или ТЗ)</td>
+    <td>CF ст. 809, идентично</td>
+    <td><span class="badge badge-ok">OK</span></td>
+  </tr>
+  <tr>
+    <td><code>Операция_0055_ПогашениеОблигаций</code></td>
+    <td><code>rm_Операция_0055_...</code>, <code>&amp;Вместо</code></td>
+    <td>CF ст. 884, идентично</td>
+    <td><span class="badge badge-ok">OK</span></td>
+  </tr>
+  <tr>
+    <td><code>Операция_0030_НачислениеПроцентовПоБанковскимСчетам</code></td>
+    <td><code>rm_Операция_0030_...</code>, <code>&amp;Вместо</code></td>
+    <td>CF ст. 574, идентично</td>
+    <td><span class="badge badge-ok">OK</span></td>
+  </tr>
+</table>
+
+<h3>Детальные построчные отличия (общие для всех 4 процедур)</h3>
+<table>
+  <tr><th>№</th><th>Аспект</th><th>rm</th><th>CF 1.5.27.8</th></tr>
+  <tr class="diff-row-both">
+    <td>1</td>
+    <td>Директива перед процедурой</td>
+    <td><code>&amp;Вместо("...")</code></td>
+    <td>Отсутствует (код встроен в CF)</td>
+  </tr>
+  <tr class="diff-row-both">
+    <td>2</td>
+    <td>Имя процедуры</td>
+    <td><code>reg_m_/nkd_m_/rm_Операция_...</code></td>
+    <td><code>Операция_...</code> (без префикса)</td>
+  </tr>
+  <tr class="diff-row-cf">
+    <td>3</td>
+    <td>Комментарий-метка</td>
+    <td><code>// IMAPPS-35037++</code></td>
+    <td><code>// ASP-197909 IMAPPS-35037++</code> (добавлен номер задачи ASP)</td>
+  </tr>
+</table>
+
+
+<!-- ============================================================ -->
+<h2 id="fonov">9. ОбщийМодуль.ФоновыеЗаданияСервер</h2>
+
+<div class="module-header ok">
+  <span class="badge badge-ok">ПЕРЕНЕСЕНО ПОЛНОСТЬЮ</span>
+  <span class="module-name">ОбщиеМодули.ФоновыеЗаданияСервер</span>
+</div>
+
+<table>
+  <tr><th>Функция</th><th>rm</th><th>CF</th><th>Статус</th></tr>
+  <tr class="diff-row-both">
+    <td><code>СоздатьПланРегламентныхОперацийДУ</code></td>
+    <td><code>reg_m_СоздатьПланРегламентныхОперацийДУ</code>, <code>&amp;Вместо</code>, параметр <code>СоответствиеОперацияТаблица = Неопределено</code></td>
+    <td>CF строки 245&ndash;246: <code>СоздатьПланРегламентныхОперацийДУ(..., СоответствиеОперацияТаблица = Неопределено) Экспорт // IMAPPS-35037++</code></td>
+    <td><span class="badge badge-ok">OK</span></td>
+  </tr>
+  <tr>
+    <td>Вызов <code>ВыполнитьРегламентныеПроцедуры</code> с параметром</td>
+    <td>Строка 50: <code>ТекДокумент.ВыполнитьРегламентныеПроцедуры(Отказ, УчитыватьВыполненные, СоответствиеОперацияТаблица)</code></td>
+    <td>CF строка 293: идентично, тег <code>// ASP-197909 IMAPPS-35037++</code></td>
+    <td><span class="badge badge-ok">OK</span></td>
+  </tr>
+</table>
+
+
+<!-- ============================================================ -->
+<h2 id="obshchiy">10. ОбщийМодуль.ОбщегоНазначенияДУ</h2>
+
+<div class="module-header ok">
+  <span class="badge badge-ok">ПЕРЕНЕСЕНО ПОЛНОСТЬЮ</span>
+  <span class="module-name">ОбщиеМодули.ОбщегоНазначенияДУ</span>
+</div>
+
+<p>Две функции добавлены в CF согласно требованию документации (не потерять при переносе).</p>
+
+<table>
+  <tr><th>Функция</th><th>rm строки</th><th>CF строки</th><th>Построчные отличия</th><th>Статус</th></tr>
+  <tr>
+    <td><code>СоответствиеТаблицПоДоговорамДУ</code></td>
+    <td>1&ndash;68</td>
+    <td>2991&ndash;(+68)</td>
+    <td>
+      rm: метка <code>// IMAPPS-35037++</code><br>
+      CF: <code>// ASP-197909 IMAPPS-35037++</code><br>
+      Логика идентична
+    </td>
+    <td><span class="badge badge-ok">OK</span></td>
+  </tr>
+  <tr>
+    <td><code>ДатаСЗаданнымиСекундами</code></td>
+    <td>70&ndash;91</td>
+    <td>3059&ndash;(+22)</td>
+    <td>
+      rm: метка <code>// IMAPPS-35037++</code><br>
+      CF: <code>// ASP-197909 IMAPPS-35037++</code><br>
+      Логика идентична
+    </td>
+    <td><span class="badge badge-ok">OK</span></td>
+  </tr>
+</table>
+
+
+<!-- ============================================================ -->
+<h2>Сводная таблица отличий (все модули)</h2>
+
+<table>
+  <tr>
+    <th>Тип отличия</th>
+    <th>В расширении rm</th>
+    <th>В CF 1.5.27.8</th>
+    <th>Критичность</th>
+  </tr>
+  <tr>
+    <td>Директива замены</td>
+    <td><code>&amp;Вместо("ИмяБазовойПроцедуры")</code> перед каждой заменяемой процедурой</td>
+    <td>Отсутствует &mdash; код встроен непосредственно в CF</td>
+    <td><span class="badge badge-info">Архитектурная норма</span></td>
+  </tr>
+  <tr>
+    <td>Префиксы имён процедур</td>
+    <td><code>r_</code>, <code>reg_m_</code>, <code>nkd_m_</code>, <code>rm_</code></td>
+    <td>Оригинальные имена без префиксов</td>
+    <td><span class="badge badge-info">Архитектурная норма</span></td>
+  </tr>
+  <tr>
+    <td>Метки задач в комментариях</td>
+    <td><code>// IMAPPS-35037++</code></td>
+    <td><code>// ASP-197909 IMAPPS-35037++</code> (добавлен номер задачи вендора)</td>
+    <td><span class="badge badge-info">Некритично</span></td>
+  </tr>
+  <tr>
+    <td>Логика и код</td>
+    <td>Оригинальная реализация</td>
+    <td>Полностью идентична</td>
+    <td><span class="badge badge-ok">Совпадает</span></td>
+  </tr>
+  <tr>
+    <td>Тексты запросов</td>
+    <td>Оригинальные тексты SQL</td>
+    <td>Идентичны</td>
+    <td><span class="badge badge-ok">Совпадает</span></td>
+  </tr>
+  <tr>
+    <td>Сигнатуры функций/процедур</td>
+    <td>Оригинальные (с доп. параметрами IMAPPS-35037)</td>
+    <td>Идентичны</td>
+    <td><span class="badge badge-ok">Совпадает</span></td>
+  </tr>
+</table>
+
+
+<!-- ============================================================ -->
+<h2 id="verdict">Итоговый вывод</h2>
+
+<div class="verdict-block ok">
+  <div class="verdict-title">Сравнение проведено успешно. Все доработки расширения rm перенесены в релиз вендора 1.5.27.8.</div>
+  <p>
+    Проверено <strong>10 объектов</strong> (9 модулей + 1 константа).
+    Все <strong>35+ процедур и функций</strong> из расширения rm присутствуют в CF и функционально идентичны.
+  </p>
+  <p><strong>Обнаруженные отличия носят исключительно архитектурный и стилистический характер:</strong></p>
+  <ul>
+    <li>Директивы <code>&amp;Вместо</code> и префиксы имён (<code>reg_m_</code>, <code>nkd_m_</code>, <code>rm_</code>) убраны &mdash; это норма при встраивании кода из расширения в базовую конфигурацию.</li>
+    <li>К меткам <code>IMAPPS-35037++</code> добавлен трекинговый тег <code>ASP-197909</code> вендора &mdash; это трассировка задачи на стороне вендора.</li>
+  </ul>
+  <p>
+    <strong>Поведение, производительность и логика идентичны расширению rm.</strong>
+    Константа <code>ИспользоватьПредварительныеЗапросыДляУтреннихРегламентов</code> добавлена в CF напрямую согласно требованию документации.
+  </p>
+</div>
+
+</body>
+</html>
