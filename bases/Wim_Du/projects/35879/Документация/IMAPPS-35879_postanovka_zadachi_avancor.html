@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>IMAPPS-35879: Постановка задачи вендору Аванкор (перенос из расширения optOst)</title>
+	<style>
+		body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 2rem; max-width: 900px; line-height: 1.5; color: #333; }
+		h1 { color: #1a5276; border-bottom: 2px solid #1a5276; padding-bottom: 0.3em; }
+		h2 { color: #2874a6; margin-top: 1.5em; }
+		h3 { color: #5499c7; margin-top: 1em; }
+		.meta { color: #666; font-size: 0.95em; margin-bottom: 1.5em; }
+		blockquote { margin: 1em 0; padding: 0.8em 1em; background: #ebf5fb; border-left: 4px solid #2874a6; }
+		pre { background: #f4f6f7; padding: 1em; overflow-x: auto; border-radius: 4px; font-size: 0.9em; }
+		.code-inline { font-family: Consolas, monospace; background: #f4f6f7; padding: 0.1em 0.3em; }
+		ul, ol { margin: 0.5em 0 1em 1.2em; }
+		table { border-collapse: collapse; width: 100%; margin: 1em 0; }
+		th, td { border: 1px solid #bdc3c7; padding: 0.5em 0.75em; text-align: left; }
+		th { background: #d5dbdb; }
+		.highlight { background: #fdebd0; padding: 0.2em 0.4em; }
+		.success { color: #1e8449; }
+		.footer { margin-top: 2em; font-size: 0.9em; color: #666; }
+	</style>
+</head>
+<body>
+
+<h1>IMAPPS-35879: Постановка задачи вендору Аванкор</h1>
+<p class="meta">Перенос доработок из расширения optOst в базовую конфигурацию. Документ предназначен для передачи вендору базовой конфигурации (Аванкор) с целью включения исправлений в штатную поставку.</p>
+
+<h2>1. Зачем это было сделано</h2>
+
+<p>В модуле объекта документа <strong>Сделка</strong> при формировании запросов для таблицы продаж БУ и для НКД используются поля регистра бухгалтерии <strong>Хозрасчетный</strong>, в которых субконто (<code class="code-inline">Субконто2</code>, <code class="code-inline">Партия</code>) хранят <strong>полиморфные ссылки</strong> на документы разных типов (Сделка, ПогашениеОблигаций, ДокументРасчетовСКонтрагентом, СделкаРЕПОПерваяНога, ВводВыводЦенныхБумагИзДУ, ВводНачальныхОстатовПоНКД, СделкаРЕПОВтораяНога, ПринятиеКУчетуАктивов, СделкаНаСрочномРынке).</p>
+
+<p>Прямое обращение к свойству <strong>Дата</strong> по такой ссылке в языке запросов (<code class="code-inline">Субконто2.Дата</code>, <code class="code-inline">Партия.Дата</code>) на полиморфной ссылке может отрабатывать <strong>нестабильно</strong> в зависимости от версии платформы и особенностей оптимизатора запросов. Это приводило к риску некорректной сортировки/группировки по дате документа оприходования и к неоднозначным результатам выборки.</p>
+
+<p>Цель доработки: сделать получение даты по полиморфной ссылке <strong>однозначным и воспроизводимым</strong>, явно приводя ссылку к конкретному типу документа через <code class="code-inline">ТИПЗНАЧЕНИЯ</code> и <code class="code-inline">ВЫРАЗИТЬ(... КАК Документ.XXX)</code>.</p>
+
+<blockquote>
+	<strong>Итог:</strong> исправление направлено на корректное извлечение даты документа из полиморфных ссылок в запросах документа Сделка и должно быть включено в базовую конфигурацию, чтобы не зависеть от расширения и обновляться вместе с типовой поставкой.
+</blockquote>
+
+<h2>2. Что было сделано в расширении optOst</h2>
+
+<p>В расширении конфигурации <strong>optOst</strong> выполнены подмены двух функций модуля объекта документа <strong>Сделка</strong>:</p>
+
+<ul>
+	<li><code class="code-inline">ТекстЗапросаТаблицыПоПродажамБУ_БезНКД</code> &rarr; <code class="code-inline">optOst_ТекстЗапросаТаблицыПоПродажамБУ_БезНКД</code></li>
+	<li><code class="code-inline">ТекстЗапросаНКД</code> &rarr; <code class="code-inline">optOst_ТекстЗапросаНКД</code></li>
+</ul>
+
+<p>Все изменения в коде помечены комментариями <code class="code-inline">// IMAPPS-35879 ++</code> и <code class="code-inline">// IMAPPS-35879 --</code>.</p>
+
+<h3>2.1. Функция ТекстЗапросаТаблицыПоПродажамБУ_БезНКД</h3>
+
+<p>Заменены <strong>три участка</strong> текста запроса:</p>
+
+<table>
+	<thead>
+		<tr>
+			<th>№</th>
+			<th>Место в запросе</th>
+			<th>Суть изменения</th>
+		</tr>
+	</thead>
+	<tbody>
+		<tr>
+			<td>1</td>
+			<td>Блок &laquo;ОстаткиАктивов&raquo;, поле <code class="code-inline">ДокументОприходованияДата</code></td>
+			<td>Вместо <code class="code-inline">ЕСТЬNULL(ВТ_ХозрасчетныйОстатки.Субконто2.Дата, ...)</code> используется выражение <strong>ВЫБОР</strong> по <code class="code-inline">ТИПЗНАЧЕНИЯ(Субконто2)</code> с приведением к каждому из типов документов и получением <code class="code-inline">.Дата</code>; в остальных случаях &mdash; <code class="code-inline">ДАТАВРЕМЯ(1,1,1,0,0,0)</code>.</td>
+		</tr>
+		<tr>
+			<td>2</td>
+			<td>Тот же блок, выражение в <code class="code-inline">СГРУППИРОВАТЬ ПО</code></td>
+			<td>Аналогичное выражение для группировки (та же логика ВЫБОР по типам для даты).</td>
+		</tr>
+		<tr>
+			<td>3</td>
+			<td>Блок с <code class="code-inline">ВТ_ОстаткиТело</code> и <code class="code-inline">ВТ_ОстаткиПереоценка</code>, поле <code class="code-inline">Дата</code></td>
+			<td>Вместо <code class="code-inline">ЕСТЬNULL(ВТ_ОстаткиТело.Партия.Дата, ВТ_ОстаткиПереоценка.Партия.Дата)</code> используется ВЫБОР по <code class="code-inline">ТИПЗНАЧЕНИЯ(ЕСТЬNULL(ВТ_ОстаткиТело.Партия, ВТ_ОстаткиПереоценка.Партия))</code> с приведением к каждому типу документа и получением <code class="code-inline">.Дата</code>.</td>
+		</tr>
+	</tbody>
+</table>
+
+<p>Во всех трёх местах перечисляются одни и те же типы документов: Сделка, ПогашениеОблигаций, ДокументРасчетовСКонтрагентом, СделкаРЕПОПерваяНога, ВводВыводЦенныхБумагИзДУ, ВводНачальныхОстатовПоНКД, СделкаРЕПОВтораяНога, ПринятиеКУчетуАктивов, СделкаНаСрочномРынке.</p>
+
+<h3>2.2. Функция ТекстЗапросаНКД</h3>
+
+<p>Заменён <strong>один участок</strong> (при признаке &laquo;Вести учет купонного дохода в разрезе партий&raquo;):</p>
+
+<ul>
+	<li>В выборке &laquo;ТаблицаНКДКСписанию&raquo; поле <code class="code-inline">Дата</code> для <code class="code-inline">ВТ_ОстаткиТело.Партия</code>: вместо прямого <code class="code-inline">ВТ_ОстаткиТело.Партия.Дата</code> используется тот же подход &mdash; <strong>ВЫБОР</strong> по <code class="code-inline">ТИПЗНАЧЕНИЯ(ВТ_ОстаткиТело.Партия)</code> с приведением к перечисленным типам документов и получением <code class="code-inline">.Дата</code>.</li>
+</ul>
+
+<h2>3. Что необходимо перенести в базовую конфигурацию</h2>
+
+<p>В базовый модуль объекта документа <strong>Сделка</strong> нужно перенести <strong>все фрагменты кода между маркерами <code class="code-inline">// IMAPPS-35879 ++</code> и <code class="code-inline">// IMAPPS-35879 --</code></code></strong> из расширения optOst (файл <code class="code-inline">Расширения/optOst/Documents/Сделка/Ext/ObjectModule.bsl</code>).</p>
+
+<p>Конкретно:</p>
+
+<ol>
+	<li><strong>В функции <code class="code-inline">ТекстЗапросаТаблицыПоПродажамБУ_БезНКД</code></strong>:
+		<ul>
+			<li>Поле <code class="code-inline">ДокументОприходованияДата</code> в блоке &laquo;ОстаткиАктивов&raquo; (выражение ВЫБОР по ТИПЗНАЧЕНИЯ(Субконто2) с перечислением типов документов).</li>
+			<li>Выражение в <code class="code-inline">СГРУППИРОВАТЬ ПО</code> этого же блока (то же выражение для даты).</li>
+			<li>Поле <code class="code-inline">Дата</code> в блоке с <code class="code-inline">ВТ_ОстаткиТело</code> и <code class="code-inline">ВТ_ОстаткиПереоценка</code> (ВЫБОР по ТИПЗНАЧЕНИЯ для партии).</li>
+		</ul>
+	</li>
+	<li><strong>В функции <code class="code-inline">ТекстЗапросаНКД</code></strong>:
+		<ul>
+			<li>Поле <code class="code-inline">Дата</code> в выборке &laquo;ТаблицаНКДКСписанию&raquo; (ВЫБОР по ТИПЗНАЧЕНИЯ(ВТ_ОстаткиТело.Партия) с приведением к типам документов).</li>
+		</ul>
+	</li>
+</ol>
+
+<p>Маркеры <code class="code-inline">// IMAPPS-35879 ++/--</code> при переносе в базу можно удалить; в расширении они использовались только для идентификации изменённых фрагментов.</p>
+
+<h2>4. Проверка после переноса</h2>
+
+<ul>
+	<li>Убедиться, что во всех указанных участках даты формируются через <strong>ВЫБОР ... ТИПЗНАЧЕНИЯ(...) ... ВЫРАЗИТЬ(... КАК Документ.XXX).Дата</strong>, без прямого обращения к <code class="code-inline">.Дата</code> по полиморфной ссылке.</li>
+	<li>Сравнить результаты выборки по контрольным сделкам до и после переноса (таблица продаж БУ и списание НКД) и убедиться в совпадении ожидаемых данных и порядка.</li>
+</ul>
+
+<h2>5. Справочная информация</h2>
+
+<ul>
+	<li><strong>Задача:</strong> IMAPPS-35879.</li>
+	<li><strong>Объект:</strong> Документ <strong>Сделка</strong>, модуль объекта.</li>
+	<li><strong>Функции:</strong> <code class="code-inline">ТекстЗапросаТаблицыПоПродажамБУ_БезНКД</code>, <code class="code-inline">ТекстЗапросаНКД</code>.</li>
+	<li><strong>Источник доработок:</strong> расширение конфигурации <strong>optOst</strong>, файл <code class="code-inline">Documents/Сделка/Ext/ObjectModule.bsl</code>.</li>
+</ul>
+
+<p class="footer">Документ подготовлен для передачи вендору Аванкор в рамках переноса исправлений из расширения optOst в базовую конфигурацию. Проект 35879.</p>
+
+</body>
+</html>
