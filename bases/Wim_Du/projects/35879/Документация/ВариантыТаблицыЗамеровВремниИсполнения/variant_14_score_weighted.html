@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+	<meta charset="UTF-8">
+	<title>Вариант 14. Авто-оценка по баллам</title>
+	<style>
+		body{font-family:Segoe UI,sans-serif;margin:1.5rem;max-width:1120px;}
+		h1{color:#17a2b8;}
+		.note{background:#cce5ff;padding:0.6rem;margin:0.75rem 0;}
+		.controls{display:flex;gap:0.75rem;flex-wrap:wrap;align-items:center;margin:0.9rem 0;}
+		.controls label{font-weight:600;}
+		.controls input{width:90px;padding:0.25rem 0.35rem;}
+		.hint{font-size:0.9em;color:#555;}
+		table{border-collapse:collapse;width:100%;}
+		th,td{border:1px solid #ddd;padding:0.5rem 0.7rem;text-align:left;}
+		th{background:#e9ecef;}
+		.score-excellent{background:#d4edda;}
+		.score-good{background:#e2f0d9;}
+		.score-medium{background:#fff3cd;}
+		.score-bad{background:#f8d7da;}
+		.score-na{background:#e2e3e5;color:#555;}
+		.footer{font-size:0.85em;color:#666;margin-top:1.2rem;}
+	</style>
+</head>
+<body>
+<h1>Вариант 14. Авто-оценка сценариев по баллам</h1>
+<div class="note">
+	Формула по умолчанию: <strong>Score = 100 - (0.7 x НормИсполнение + 0.3 x НормОткрытие) x 100</strong>.<br>
+	Чем выше score, тем быстрее и стабильнее сценарий.
+</div>
+
+<div class="controls">
+	<label for="execWeight">Вес Исполнение, %</label>
+	<input id="execWeight" type="number" min="0" max="100" step="1" value="70">
+	<label for="openWeight">Вес Открытие, %</label>
+	<input id="openWeight" type="number" min="0" max="100" step="1" value="30">
+	<button id="applyBtn" type="button">Пересчитать</button>
+	<span class="hint">Сумма весов должна быть 100.</span>
+</div>
+
+<table id="scoreTable">
+	<thead>
+		<tr>
+			<th>№</th>
+			<th>Алгоритм</th>
+			<th>Потоков</th>
+			<th>Конфигурация</th>
+			<th>Открытие</th>
+			<th>Исполнение</th>
+			<th>Score</th>
+			<th>Комментарий</th>
+		</tr>
+	</thead>
+	<tbody>
+		<tr data-open="35" data-exec="174">
+			<td>1</td><td>Текущий</td><td>18</td><td>1 000 x 100</td><td>35 мин</td><td>2 ч 54 мин</td><td class="score-cell">-</td><td>Базовая точка</td>
+		</tr>
+		<tr data-open="42" data-exec="196">
+			<td>2</td><td>Текущий</td><td>12</td><td>3 031 x 33</td><td>42 мин</td><td>3 ч 16 мин</td><td class="score-cell">-</td><td>Медленно</td>
+		</tr>
+		<tr data-open="30" data-exec="194">
+			<td>3</td><td>Текущий</td><td>20</td><td>3 031 x 33</td><td>30 мин</td><td>3 ч 14 мин</td><td class="score-cell">-</td><td>Исполнение узкое место</td>
+		</tr>
+		<tr data-open="34" data-exec="160">
+			<td>4</td><td>Улучшенный</td><td>14</td><td>3 031 x 33</td><td>34 мин</td><td>2 ч 40 мин</td><td class="score-cell">-</td><td>После оптимизации</td>
+		</tr>
+		<tr data-open="38" data-exec="158">
+			<td>5</td><td>Улучшенный</td><td>12</td><td>1 000 x 100</td><td>38 мин</td><td>2 ч 38 мин</td><td class="score-cell">-</td><td>Стабильный режим</td>
+		</tr>
+		<tr data-open="26" data-exec="125">
+			<td>6</td><td>Улучшенный</td><td>18</td><td>1 000 x 100</td><td>26 мин</td><td>2 ч 5 мин</td><td class="score-cell">-</td><td>Лучший замер</td>
+		</tr>
+		<tr data-open="60" data-exec="238">
+			<td>7</td><td>Улучшенный</td><td>6</td><td>1 000 x 100</td><td>60 мин</td><td>3 ч 58 мин</td><td class="score-cell">-</td><td>Недостаточно потоков</td>
+		</tr>
+		<tr data-open="" data-exec="">
+			<td>8</td><td>Улучшенный</td><td>20</td><td>1 000 x 100</td><td>-</td><td>-</td><td class="score-cell">-</td><td>В процессе</td>
+		</tr>
+	</tbody>
+</table>
+
+<div class="footer">Вариант 14 - динамический расчет score с настраиваемыми весами.</div>
+
+<script>
+	function clamp(Value, Min, Max) {
+		return Math.min(Max, Math.max(Min, Value));
+	}
+
+	function round1(Value) {
+		return Math.round(Value * 10) / 10;
+	}
+
+	function getRowsWithData() {
+		const Rows = Array.from(document.querySelectorAll("#scoreTable tbody tr"));
+		return Rows.filter(Row => Row.dataset.open !== "" && Row.dataset.exec !== "");
+	}
+
+	function clearScoreClasses(Cell) {
+		Cell.classList.remove("score-excellent", "score-good", "score-medium", "score-bad", "score-na");
+	}
+
+	function applyScores() {
+		const ExecWeightInput = document.getElementById("execWeight");
+		const OpenWeightInput = document.getElementById("openWeight");
+		const ExecWeight = Number(ExecWeightInput.value);
+		const OpenWeight = Number(OpenWeightInput.value);
+
+		if (ExecWeight + OpenWeight !== 100) {
+			alert("Сумма весов должна быть равна 100.");
+			return;
+		}
+
+		const DataRows = getRowsWithData();
+		const OpenValues = DataRows.map(Row => Number(Row.dataset.open));
+		const ExecValues = DataRows.map(Row => Number(Row.dataset.exec));
+		const MinOpen = Math.min(...OpenValues);
+		const MaxOpen = Math.max(...OpenValues);
+		const MinExec = Math.min(...ExecValues);
+		const MaxExec = Math.max(...ExecValues);
+
+		const AllRows = Array.from(document.querySelectorAll("#scoreTable tbody tr"));
+		AllRows.forEach(Row => {
+			const Cell = Row.querySelector(".score-cell");
+			clearScoreClasses(Cell);
+
+			if (Row.dataset.open === "" || Row.dataset.exec === "") {
+				Cell.textContent = "-";
+				Cell.classList.add("score-na");
+				return;
+			}
+
+			const Open = Number(Row.dataset.open);
+			const Exec = Number(Row.dataset.exec);
+			const OpenNorm = (MaxOpen === MinOpen) ? 0 : (Open - MinOpen) / (MaxOpen - MinOpen);
+			const ExecNorm = (MaxExec === MinExec) ? 0 : (Exec - MinExec) / (MaxExec - MinExec);
+			const ScoreRaw = 100 - (((ExecWeight / 100) * ExecNorm) + ((OpenWeight / 100) * OpenNorm)) * 100;
+			const Score = clamp(round1(ScoreRaw), 0, 100);
+			Cell.textContent = Score.toFixed(1);
+
+			if (Score >= 80) {
+				Cell.classList.add("score-excellent");
+			} else if (Score >= 65) {
+				Cell.classList.add("score-good");
+			} else if (Score >= 45) {
+				Cell.classList.add("score-medium");
+			} else {
+				Cell.classList.add("score-bad");
+			}
+		});
+	}
+
+	document.getElementById("applyBtn").addEventListener("click", applyScores);
+	applyScores();
+</script>
+</body>
+</html>

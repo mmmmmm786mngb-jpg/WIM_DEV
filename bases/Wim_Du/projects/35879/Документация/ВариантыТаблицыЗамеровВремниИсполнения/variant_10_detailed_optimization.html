@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+	<meta charset="UTF-8">
+	<title>Вариант 10. Детальная таблица с акцентом на оптимизацию</title>
+	<style>body{font-family:Segoe UI,sans-serif;margin:1.5rem;max-width:980px;} table{border-collapse:collapse;width:100%;} th,td{border:1px solid #ddd;padding:0.5rem 0.75rem;} th{background:#e9ecef;} h1{color:#17a2b8;} h2{font-size:1em;margin:1rem 0 0.5rem 0;} .note{background:#cce5ff;padding:0.6rem;margin:0.75rem 0;} .opt{background:#d4edda;} .base{background:#fff3cd;} .footer{font-size:0.85em;color:#666;margin-top:1.5rem;}</style>
+</head>
+<body>
+<h1>Вариант 10. Детальные замеры с описанием оптимизации</h1>
+<h2>Узкое место и доработка</h2>
+<div class="note">
+	Замеры времени показали, что дольше всего выполняется расчёт в документе <strong>Сделка</strong>, в модуле объекта (получение остатков) — около <strong>25%</strong> времени. Внесены изменения в запрос формирования ВТ_ХозрасчетныйОстатки: для текущего месяца используется вариант на актуальных остатках и оборотах с группировкой, для остальных периодов — виртуальная таблица Остатки(&Период). Дополнительно скорректировано получение даты по полиморфной ссылке (ВЫБОР по типам документов). Все замеры после 19.03 выполнены по <strong>улучшенному алгоритму</strong>.
+</div>
+<table>
+	<thead>
+		<tr><th>Этап</th><th>Алгоритм</th><th>Замеры</th><th>Открытие (мин)</th><th>Исполнение</th></tr>
+	</thead>
+	<tbody>
+		<tr class="base">
+			<td>До оптимизации</td><td>Текущий</td>
+			<td>100k сд.: 1000×100 (18 пот.), 3031×33 (12 пот.), 3031×33 (20 пот.)</td>
+			<td>30, 35, 42</td><td>2 ч 54 мин; 3 ч 16 мин; 3 ч 14 мин</td>
+		</tr>
+		<tr class="opt">
+			<td>После оптимизации</td><td>Улучшенный</td>
+			<td>100k сд.: 3031×33 (14); 1000×100 (12, 18, 6, 20 пот.)</td>
+			<td>26, 34, 38, 60, —</td><td>2 ч 5 мин; 2 ч 40 мин; 2 ч 38 мин; 3 ч 58 мин; —</td>
+		</tr>
+	</tbody>
+</table>
+<table>
+	<thead><tr><th>№</th><th>Даты</th><th>Алгоритм</th><th>Конфигурация</th><th>Потоков</th><th>Открытие</th><th>Исполнение</th></tr></thead>
+	<tbody>
+		<tr class="base"><td>1</td><td>16–17.03</td><td>Текущий</td><td>1 000 × 100</td><td>18</td><td>35 мин</td><td>2 ч 54 мин</td></tr>
+		<tr class="base"><td>2</td><td>17–18.03</td><td>Текущий</td><td>3 031 × 33</td><td>12</td><td>42 мин</td><td>3 ч 16 мин</td></tr>
+		<tr class="base"><td>3</td><td>18–19.03</td><td>Текущий</td><td>3 031 × 33</td><td>20</td><td>30 мин</td><td>3 ч 14 мин</td></tr>
+		<tr class="opt"><td>4</td><td>19–20.03</td><td>Улучшенный</td><td>3 031 × 33</td><td>14</td><td>34 мин</td><td>2 ч 40 мин</td></tr>
+		<tr class="opt"><td>5</td><td>20–23.03</td><td>Улучшенный</td><td>1 000 × 100</td><td>12</td><td>38 мин</td><td>2 ч 38 мин</td></tr>
+		<tr class="opt"><td>6</td><td>23–24.03</td><td>Улучшенный</td><td>1 000 × 100</td><td>18</td><td>26 мин</td><td>2 ч 5 мин</td></tr>
+		<tr class="opt"><td>7</td><td>24–25.03</td><td>Улучшенный</td><td>1 000 × 100</td><td>6</td><td>60 мин</td><td>3 ч 58 мин</td></tr>
+		<tr class="opt"><td>8</td><td>25–26.03</td><td>Улучшенный</td><td>1 000 × 100</td><td>20</td><td>—</td><td>— (в процессе)</td></tr>
+	</tbody>
+</table>
+<div class="footer">Вариант таблицы 10 — детальный с акцентом на оптимизацию. Источник: ИзмерениеВремениИсполнения.</div>
+</body>
+</html>

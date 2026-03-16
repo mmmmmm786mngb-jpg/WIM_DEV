@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+	<meta charset="UTF-8">
+	<title>Вариант 1. Замеры по хронологии</title>
+	<style>
+		body{font-family:Segoe UI,sans-serif;margin:1.5rem;max-width:1100px;}
+		table{border-collapse:collapse;width:100%;}
+		th,td{border:1px solid #ddd;padding:0.5rem 0.75rem;text-align:left;}
+		th{background:#e9ecef;}
+		h1{color:#17a2b8;}
+		.note{background:#cce5ff;padding:0.6rem;margin:0.75rem 0;font-size:0.95em;}
+		.legend{display:flex;gap:0.5rem;flex-wrap:wrap;margin:0.8rem 0 1rem 0;}
+		.legend span{display:inline-block;padding:0.3rem 0.6rem;border-radius:4px;border:1px solid #cfd4da;font-size:0.9em;}
+		.l-fast{background:#d4edda;}
+		.l-medium{background:#fff3cd;}
+		.l-slow{background:#f8d7da;}
+		.l-na{background:#e2e3e5;}
+		.alg-base{font-weight:600;}
+		.alg-opt{font-weight:600;}
+		.t-fast{background:#d4edda;}
+		.t-medium{background:#fff3cd;}
+		.t-slow{background:#f8d7da;}
+		.t-na{background:#e2e3e5;color:#555;}
+		.footer{font-size:0.85em;color:#666;margin-top:1.5rem;}
+	</style>
+</head>
+<body>
+<h1>Вариант 1. Замеры времени исполнения сделок (по хронологии)</h1>
+<p><strong>Проект 35879.</strong> Модуль исполнения сделок, 100 000 сделок за прогон.</p>
+<div class="note"><strong>Оптимизация:</strong> после замеров 1–3 выявлено узкое место — расчёт в документе Сделка, модуль объекта (получение остатков, ~25% времени). Внесены изменения в запрос (оптимизация ВТ_ХозрасчетныйОстатки). Замеры 4–8 выполнены уже по <em>улучшенному алгоритму</em>.</div>
+<div class="legend">
+	<span class="l-fast">Быстро</span>
+	<span class="l-medium">Средне</span>
+	<span class="l-slow">Медленно</span>
+	<span class="l-na">Нет данных</span>
+</div>
+<table>
+	<thead>
+		<tr><th>№</th><th>Дата (открытие / исполнение)</th><th>Алгоритм</th><th>Сделки</th><th>Договоры x сделок</th><th>Потоков</th><th>Открытие</th><th>Исполнение</th></tr>
+	</thead>
+	<tbody>
+		<tr><td>1</td><td>16.03 / 17.03</td><td class="alg-base">Текущий</td><td>100 000</td><td>1 000 x 100</td><td>18</td><td class="t-medium">35 мин</td><td class="t-medium">2 ч 54 мин</td></tr>
+		<tr><td>2</td><td>17.03 / 18.03</td><td class="alg-base">Текущий</td><td>100 000</td><td>3 031 x 33</td><td>12</td><td class="t-slow">42 мин</td><td class="t-slow">3 ч 16 мин</td></tr>
+		<tr><td>3</td><td>18.03 / 19.03</td><td class="alg-base">Текущий</td><td>100 000</td><td>3 031 x 33</td><td>20</td><td class="t-fast">30 мин</td><td class="t-slow">3 ч 14 мин</td></tr>
+		<tr><td>4</td><td>19.03 / 20.03</td><td class="alg-opt">Улучшенный</td><td>100 000</td><td>3 031 x 33</td><td>14</td><td class="t-medium">34 мин</td><td class="t-medium">2 ч 40 мин</td></tr>
+		<tr><td>5</td><td>20.03 / 23.03</td><td class="alg-opt">Улучшенный</td><td>100 000</td><td>1 000 x 100</td><td>12</td><td class="t-medium">38 мин</td><td class="t-medium">2 ч 38 мин</td></tr>
+		<tr><td>6</td><td>23.03 / 24.03</td><td class="alg-opt">Улучшенный</td><td>100 000</td><td>1 000 x 100</td><td>18</td><td class="t-fast">26 мин</td><td class="t-fast">2 ч 5 мин</td></tr>
+		<tr><td>7</td><td>24.03 / 25.03</td><td class="alg-opt">Улучшенный</td><td>100 000</td><td>1 000 x 100</td><td>6</td><td class="t-slow">60 мин</td><td class="t-slow">3 ч 58 мин</td></tr>
+		<tr><td>8</td><td>25.03 / 26.03</td><td class="alg-opt">Улучшенный</td><td>100 000</td><td>1 000 x 100</td><td>20</td><td class="t-na">— мин</td><td class="t-na">—</td></tr>
+	</tbody>
+</table>
+<p><em>Замер 8 — в процессе, цифры подставляются по завершении.</em></p>
+<div class="footer">Источник: ИзмерениеВремениИсполнения. Вариант таблицы 1 — хронологический с цветовой шкалой скорости.</div>
+</body>
+</html>
