@@ -67,7 +67,7 @@
 	<h1>Вариант 15. Диаграммы времени исполнения</h1>
 	<p class="subtitle">Проект 35879. Модуль исполнения сделок, 100 000 сделок за прогон.</p>
 	<div class="target-note"><strong>Ключевая цель:</strong> время исполнения &le; 2 ч (120 мин). На диаграммах отмечена линией «Цель: 2 ч».</div>
-	<div class="note">После замеров 1–3 выполнена оптимизация запроса (ВТ_ХозрасчетныйОстатки). Замеры 4–8 — по улучшенному алгоритму. Замер 8: открытие 29 мин; исполнение — по завершении.</div>
+	<div class="note">После замеров 1–3 выполнена оптимизация запроса (ВТ_ХозрасчетныйОстатки). Замеры 4–9 — улучшенный алгоритм; 10–11 — доработанный алгоритм -3. Всего 11 замеров, замер 8: исполнение 1 ч 56 мин (в цели 2 ч).</div>
 
 	<div class="chart-card">
 		<div class="chart-title">1. Время исполнения по замерам (мин)</div>
@@ -110,7 +110,7 @@
 	</div>
 
 	<div class="chart-card">
-		<div class="chart-title">9. Только улучшенный алгоритм (замеры 4–7) к цели 2 ч</div>
+		<div class="chart-title">9. Только улучшенный алгоритм (замеры 4–9) к цели 2 ч</div>
 		<div class="chart-wrap chart-wrap--tall"><canvas id="chart9"></canvas></div>
 	</div>
 
@@ -129,9 +129,14 @@
 
 	var TARGET_MIN = 120;
 
-	var labels1 = ["Замер 1\n18 пот., 1000×100", "Замер 2\n12 пот., 3031×33", "Замер 3\n20 пот., 3031×33", "Замер 4\n14 пот., 3031×33", "Замер 5\n12 пот., 1000×100", "Замер 6\n18 пот., 1000×100", "Замер 7\n6 пот., 1000×100"];
-	var execMin = [174, 196, 194, 160, 158, 125, 238];
-	var isImproved = [false, false, false, true, true, true, true];
+	var labels1 = [
+		"Замер 1\n18 пот., 1000×100", "Замер 2\n12 пот., 3031×33", "Замер 3\n20 пот., 3031×33",
+		"Замер 4\n14 пот., 3031×33", "Замер 5\n12 пот., 1000×100", "Замер 6\n18 пот., 1000×100", "Замер 7\n6 пот., 1000×100",
+		"Замер 8\n20 пот., 1000×100", "Замер 9\n10 пот., 3031×33", "Замер 10\n16 пот., 1000×100 (Дор.-3)", "Замер 11\n19 пот., 1000×100 (Дор.-3)"
+	];
+	var execMin = [174, 196, 194, 160, 158, 125, 238, 116, 209, 153, 132];
+	var isImproved = [false, false, false, true, true, true, true, true, true, false, false];
+	var isDor3 = [false, false, false, false, false, false, false, false, false, true, true];
 	var targetLine = execMin.map(function() { return TARGET_MIN; });
 
 	function barColorByTarget(v) {
@@ -141,9 +146,13 @@
 		return v <= TARGET_MIN ? "#198754" : "#dc3545";
 	}
 	var colorsByAlgo = execMin.map(function(_, i) {
+		if (isDor3[i]) return "rgba(111, 66, 193, 0.85)";
 		return isImproved[i] ? "rgba(25, 135, 84, 0.85)" : "rgba(255, 193, 7, 0.85)";
 	});
-	var bordersByAlgo = isImproved.map(function(b) { return b ? "#198754" : "#d4a017"; });
+	var bordersByAlgo = execMin.map(function(_, i) {
+		if (isDor3[i]) return "#6f42c1";
+		return isImproved[i] ? "#198754" : "#d4a017";
+	});
 
 	function makeBarWithTarget(canvasId, labels, data, colors, borders, title) {
 		return new Chart(document.getElementById(canvasId), {
@@ -214,22 +223,23 @@
 
 	// 3. До/после оптимизации (среднее) + цель
 	var beforeAvg = (174 + 196 + 194) / 3;
-	var afterAvg = (160 + 158 + 125 + 238) / 4;
+	var afterImprovedAvg = (160 + 158 + 125 + 238 + 116 + 209) / 6;
+	var afterDor3Avg = (153 + 132) / 2;
 	new Chart(document.getElementById("chart3"), {
 		type: "bar",
 		data: {
-			labels: ["До оптимизации (1–3)", "После оптимизации (4–7)"],
+			labels: ["До оптимизации (1–3)", "После улучш. (4–9)", "После Доработ.-3 (10–11)"],
 			datasets: [
 				{
 					label: "Среднее исполнение (мин)",
-					data: [beforeAvg, afterAvg],
-					backgroundColor: ["rgba(255, 193, 7, 0.8)", "rgba(25, 135, 84, 0.8)"],
-					borderColor: ["#d4a017", "#198754"],
+					data: [beforeAvg, afterImprovedAvg, afterDor3Avg],
+					backgroundColor: ["rgba(255, 193, 7, 0.8)", "rgba(25, 135, 84, 0.8)", "rgba(111, 66, 193, 0.8)"],
+					borderColor: ["#d4a017", "#198754", "#6f42c1"],
 					borderWidth: 1
 				},
 				{
 					label: "Цель: 2 ч (120 мин)",
-					data: [TARGET_MIN, TARGET_MIN],
+					data: [TARGET_MIN, TARGET_MIN, TARGET_MIN],
 					type: "line",
 					borderColor: "#0d6efd",
 					borderWidth: 2,
@@ -260,15 +270,19 @@
 		}
 	});
 
-	// 4. По числу потоков (порядок: 6, 12, 14, 18, 20 с повторениями по замерам)
+	// 4. По числу потоков
 	var byThread = [
 		{ thread: 6,  exec: 238, label: "6 потоков (замер 7)" },
+		{ thread: 10, exec: 209, label: "10 потоков (замер 9)" },
 		{ thread: 12, exec: 196, label: "12 потоков (замер 2)" },
 		{ thread: 12, exec: 158, label: "12 потоков (замер 5)" },
 		{ thread: 14, exec: 160, label: "14 потоков (замер 4)" },
+		{ thread: 16, exec: 153, label: "16 потоков (замер 10, Дор.-3)" },
 		{ thread: 18, exec: 174, label: "18 потоков (замер 1)" },
 		{ thread: 18, exec: 125, label: "18 потоков (замер 6)" },
-		{ thread: 20, exec: 194, label: "20 потоков (замер 3)" }
+		{ thread: 19, exec: 132, label: "19 потоков (замер 11, Дор.-3)" },
+		{ thread: 20, exec: 194, label: "20 потоков (замер 3)" },
+		{ thread: 20, exec: 116, label: "20 потоков (замер 8)" }
 	];
 	var labels4 = byThread.map(function(x) { return x.label; });
 	var data4 = byThread.map(function(x) { return x.exec; });
@@ -276,10 +290,10 @@
 
 	// 5. По конфигурации: 1000×100 затем 3031×33
 	var byConfig = [
-		"1000×100 (замер 1)", "1000×100 (замер 5)", "1000×100 (замер 6)", "1000×100 (замер 7)",
-		"3031×33 (замер 2)", "3031×33 (замер 3)", "3031×33 (замер 4)"
+		"1000×100 (замер 1)", "1000×100 (замер 5)", "1000×100 (замер 6)", "1000×100 (замер 7)", "1000×100 (замер 8)", "1000×100 (замер 10 Дор.-3)", "1000×100 (замер 11 Дор.-3)",
+		"3031×33 (замер 2)", "3031×33 (замер 3)", "3031×33 (замер 4)", "3031×33 (замер 9)"
 	];
-	var data5 = [174, 158, 125, 238, 196, 194, 160];
+	var data5 = [174, 158, 125, 238, 116, 153, 132, 196, 194, 160, 209];
 	makeBarWithTarget("chart5", byConfig, data5, data5.map(function(v) { return barColorByTarget(v); }), data5.map(barBorderByTarget));
 
 	// 6. Цвет по достижению цели
@@ -289,7 +303,7 @@
 	new Chart(document.getElementById("chart7"), {
 		type: "line",
 		data: {
-			labels: ["Замер 1", "Замер 2", "Замер 3", "Замер 4", "Замер 5", "Замер 6", "Замер 7"],
+			labels: ["Замер 1", "Замер 2", "Замер 3", "Замер 4", "Замер 5", "Замер 6", "Замер 7", "Замер 8", "Замер 9", "Замер 10", "Замер 11"],
 			datasets: [
 				{
 					label: "Исполнение (мин)",
@@ -335,10 +349,10 @@
 	new Chart(document.getElementById("chart8"), {
 		type: "bar",
 		data: {
-			labels: ["Лучший (замер 6)\n125 мин", "Цель: 2 ч\n120 мин", "Худший (замер 7)\n238 мин"],
+			labels: ["Лучший (замер 8)\n116 мин", "Цель: 2 ч\n120 мин", "Худший (замер 7)\n238 мин"],
 			datasets: [{
 				label: "Минуты",
-				data: [125, TARGET_MIN, 238],
+				data: [116, TARGET_MIN, 238],
 				backgroundColor: ["rgba(25, 135, 84, 0.9)", "rgba(13, 110, 253, 0.8)", "rgba(220, 53, 69, 0.8)"],
 				borderColor: ["#198754", "#0d6efd", "#dc3545"],
 				borderWidth: 1
@@ -364,9 +378,9 @@
 		}
 	});
 
-	// 9. Только улучшенный алгоритм (замеры 4–7)
-	var labels9 = ["Замер 4\n14 пот., 3031×33", "Замер 5\n12 пот., 1000×100", "Замер 6\n18 пот., 1000×100", "Замер 7\n6 пот., 1000×100"];
-	var data9 = [160, 158, 125, 238];
+	// 9. Только улучшенный алгоритм (замеры 4–9)
+	var labels9 = ["Замер 4\n14 пот., 3031×33", "Замер 5\n12 пот., 1000×100", "Замер 6\n18 пот., 1000×100", "Замер 7\n6 пот., 1000×100", "Замер 8\n20 пот., 1000×100", "Замер 9\n10 пот., 3031×33"];
+	var data9 = [160, 158, 125, 238, 116, 209];
 	makeBarWithTarget("chart9", labels9, data9, data9.map(function(v) { return barColorByTarget(v); }), data9.map(barBorderByTarget));
 
 	// 10. Горизонтальные столбцы + вертикальная линия 120
