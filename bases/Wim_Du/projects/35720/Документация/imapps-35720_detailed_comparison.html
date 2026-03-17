@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IMAPPS-35720 - Детальное сравнение обработок</title>
+    <style>
+        :root {
+            --bg: #f0f2f5; --card: #fff; --text: #1f2937; --muted: #6b7280;
+            --border: #dbe2ea; --accent: #0b66c3; --accent-soft: #e8f2ff;
+            --green: #1f8f4e; --red: #dc2626; --orange: #d97706; --blue: #2563eb;
+        }
+        * { box-sizing: border-box; }
+        body { margin: 0; padding: 20px; background: var(--bg); color: var(--text); font: 13.5px/1.5 "Segoe UI", Arial, sans-serif; }
+        .wrap { max-width: 1280px; margin: 0 auto; }
+        .hero { background: linear-gradient(135deg, #0b66c3 0%, #1e40af 100%); color: #fff; border-radius: 14px; padding: 22px 28px; margin-bottom: 16px; }
+        .hero h1 { margin: 0 0 4px; font-size: 22px; } .hero p { margin: 0; opacity: .9; font-size: 14px; }
+        .card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 16px 18px; margin-bottom: 14px; }
+        h2 { margin: 0 0 10px; font-size: 17px; color: var(--accent); } h3 { margin: 12px 0 6px; font-size: 14px; }
+        table { width: 100%; border-collapse: collapse; margin: 8px 0 12px; font-size: 13px; }
+        th, td { border: 1px solid var(--border); padding: 6px 8px; vertical-align: top; text-align: left; }
+        th { background: #f8fafc; font-weight: 600; }
+        code { background: #f3f4f6; border: 1px solid #e5e7eb; border-radius: 3px; padding: 0 3px; font-size: 12px; }
+        pre { margin: 6px 0; padding: 10px; border-radius: 6px; background: #0f172a; color: #e2e8f0; overflow-x: auto; font-size: 11.5px; line-height: 1.4; }
+        .badge { display: inline-block; border-radius: 999px; padding: 1px 8px; font-size: 11px; font-weight: 600; margin-right: 4px; }
+        .b-add { background: #dcfce7; color: var(--green); border: 1px solid #86efac; }
+        .b-mod { background: #fef3c7; color: var(--orange); border: 1px solid #fcd34d; }
+        .b-del { background: #fee2e2; color: var(--red); border: 1px solid #fca5a5; }
+        .b-ok  { background: #f0f9ff; color: var(--blue); border: 1px solid #93c5fd; }
+        .b-src { background: #f5f3ff; color: #7c3aed; border: 1px solid #c4b5fd; }
+        ul { margin: 4px 0 0 16px; padding: 0; } li { margin: 2px 0; }
+        .toc { columns: 2; column-gap: 20px; margin-bottom: 12px; } .toc li { break-inside: avoid; }
+        .note { background: #fffbeb; border-left: 4px solid #f59e0b; padding: 8px 12px; margin: 8px 0; font-size: 13px; }
+    </style>
+</head>
+<body>
+<div class="wrap">
+    <section class="hero">
+        <h1>IMAPPS-35720: детальное сравнение обработок</h1>
+        <p>AI-версия (<code>внSFРасчетВознаграждения_22_СЧА_AI</code>) vs оригиналы (<code>внSFРасчетВознаграждения_22_СЧА</code> и <code>SF РасчетВознаграждения_14_1</code>)</p>
+    </section>
+
+    <nav class="card">
+        <h2>Содержание</h2>
+        <ul class="toc">
+            <li><a href="#s1">1. ObjectModule.bsl: AI vs SF 22</a></li>
+            <li><a href="#s2">2. ObjectModule.bsl: заимствования из SF 14.1</a></li>
+            <li><a href="#s3">3. Модуль формы настроек</a></li>
+            <li><a href="#s4">4. Макет СправкаРасчет</a></li>
+            <li><a href="#s5">5. Метаданные (XML)</a></li>
+        </ul>
+    </nav>
+
+    <!-- ================================================================ -->
+    <section class="card" id="s1">
+        <h2>1. ObjectModule.bsl: AI-версия vs SF 22 (оригинал)</h2>
+        <table>
+            <thead><tr><th>Процедура / Функция</th><th>Статус</th><th>Суть изменений</th><th>Строки AI</th></tr></thead>
+            <tbody>
+            <tr><td><code>СведенияОВнешнейОбработке()</code></td><td><span class="badge b-mod">Изменена</span></td>
+                <td>Наименование: <code>"SF 22 (AI)..."</code>, версия <code>1.00</code>.</td><td>6-32</td></tr>
+            <tr><td><code>РасчетСуммыЗаУправление()</code></td><td><span class="badge b-ok">Без изменений</span></td><td>--</td><td>36-76</td></tr>
+            <tr><td><code>СуммыДСиЦБсИП()</code></td><td><span class="badge b-ok">Без изменений</span></td><td>--</td><td>78-236</td></tr>
+            <tr><td><code>СправкаРасчет()</code></td><td><span class="badge b-mod">Изменена</span></td>
+                <td>Добавлены области <code>Заголовок2</code>, <code>Подвал2</code>. Исправлен регистр <code>Сча -> СЧА</code>. Заполняются новые параметры: <code>ПлатаЗаУправление</code>, <code>П000</code>, <code>ПериодРасчета</code>.</td><td>238-324</td></tr>
+            <tr><td><code>ИнвестиционныйДоход_Базовый()</code></td><td><span class="badge b-ok">Без изменений</span></td><td>--</td><td>326-383</td></tr>
+            <tr><td><code>РасчетБРСА()</code></td><td><span class="badge b-mod">Изменена</span></td>
+                <td>Стал самодостаточным: свой вызов <code>СуммыДСиЦБсИП</code>, без зависимости от модульной переменной. Переименована переменная <code>РСА_конец -> РСАКонец</code>.</td><td>385-404</td></tr>
+            <tr><td><code>КоличествоМесяцевВПериоде()</code></td><td><span class="badge b-ok">Без изменений</span></td><td>--</td><td>407-421</td></tr>
+            <tr><td><code>ГраницыПериодаРасчета()</code></td><td><span class="badge b-ok">Без изменений</span></td><td>--</td><td>423-515</td></tr>
+            <tr><td><code>РезультатРасчета()</code></td><td><span class="badge b-mod">Изменена</span></td>
+                <td>Добавлен выбор ставки SF по <code>ПроцентПоТаблицеКоэффициентов()</code> от СЧА на конец периода. Исправлен баг БРСА (параметры заполнялись не в ту структуру). Новые показатели: <code>П021Строка</code>, <code>ВознаграждениеЗаУспех</code>, <code>ИтоговоеВознаграждениеЗаУспех</code>. Убран дубль <code>П05</code>. Исправлен регистр переменной <code>СтруктураПараметровДу -> СтруктураПараметровДУ</code>.</td><td>517-714</td></tr>
+            <tr><td><code>ПроцентПоТаблицеКоэффициентов()</code></td><td><span class="badge b-add">Добавлена</span></td>
+                <td>Новая функция. Диапазонная выборка ставки SF по таблице коэффициентов (<code>МинГраница/МаксГраница/Коэффициент</code>) с fallback на договорную ставку.</td><td>720-767</td></tr>
+            <tr><td><code>СреднееСЧА_РСА()</code></td><td><span class="badge b-ok">Без изменений</span></td><td>--</td><td>769-803</td></tr>
+            <tr><td><code>ИнициализироватьБухгалтерскиеИтоги()</code></td><td><span class="badge b-ok">Без изменений</span></td><td>--</td><td>805-824</td></tr>
+            <tr><td><code>ПолучитьРасходы()</code></td><td><span class="badge b-ok">Без изменений</span></td><td>--</td><td>826-1002</td></tr>
+            <tr><td><code>ПолучитьПодписанта()</code></td><td><span class="badge b-ok">Без изменений</span></td><td>--</td><td>1005-1023</td></tr>
+            </tbody>
+        </table>
+        <div class="note">Удаленных процедур/функций: 0. Все 14 процедур из SF 22 сохранены, добавлена 1 новая.</div>
+
+        <h3>Ключевые фрагменты кода</h3>
+        <p><b>Выбор ставки SF по СЧА (строки 593-602):</b></p>
+        <pre>// IMAPPS-35720: коэффициент выбирается по СЧА на конец периода (не по П015).
+СЧАНаКонецПериода = РегистрыСведений.РегистрРСА_СЧА.ЗначенияСЧА_РСА(
+    РасчетнаяДатаОкончания,
+    СтруктураПараметров.ДоговорДУ
+).СЧА;
+ПроцентВознаграждения = ПроцентПоТаблицеКоэффициентов(
+    СтруктураПараметровПериода.НастройкиАлгоритма,
+    СЧАНаКонецПериода,
+    ПроцентВознагражденияПоДоговору
+);</pre>
+        <p><b>Исправленный расчет БРСА (строки 385-404):</b></p>
+        <pre>// IMAPPS-35720: расчет БРСА выполняется самодостаточно, без зависимости от внешнего состояния.
+РСАКонец = РегистрыСведений.РегистрРСА_СЧА.ЗначенияСЧА_РСА(
+    СтруктураПараметров.ДатаОкончанияРасчета,
+    СтруктураПараметров.ДоговорДУ
+).СЧА;
+
+ПараметрыДСиЦБсИП = Новый Структура;
+ПараметрыДСиЦБсИП.Вставить("ДатаНачала", СтруктураПараметров.ДатаНачалаРасчета + 1);
+ПараметрыДСиЦБсИП.Вставить("ДатаОкончания", СтруктураПараметров.ДатаОкончанияРасчета);
+ПараметрыДСиЦБсИП.Вставить("ДоговорДУ", СтруктураПараметров.ДоговорДУ);
+СтруктураДСиЦБсИПБРСА = СуммыДСиЦБсИП(ПараметрыДСиЦБсИП);</pre>
+        <p><b>Исправлен баг: параметры БРСА заполнялись не в ту структуру (строки 646-654):</b></p>
+        <pre>// Было (баг в оригинале SF 22):
+СтруктураПараметровУправление.Вставить("БРСА_Прошлая", ...);
+БРСА = РасчетБРСА(СтруктураПараметровУправление);
+
+// Стало (AI-версия, IMAPPS-35720):
+СтруктураПараметровБРСА.Вставить("БРСА_Прошлая", ...);
+БРСА = РасчетБРСА(СтруктураПараметровБРСА);</pre>
+    </section>
+
+    <!-- ================================================================ -->
+    <section class="card" id="s2">
+        <h2>2. ObjectModule.bsl: что заимствовано из SF 14.1</h2>
+        <table>
+            <thead><tr><th>Функция SF 14.1</th><th>Использована в AI?</th><th>Что взято / адаптировано</th></tr></thead>
+            <tbody>
+            <tr><td><code>СведенияОВнешнейОбработке()</code></td><td><span class="badge b-src">Структура</span></td><td>Каркас скопирован, изменены значения (наименование, версия)</td></tr>
+            <tr><td><code>КоличествоМесяцевВПериоде()</code></td><td><span class="badge b-src">1-в-1</span></td><td>Скопирована без изменений</td></tr>
+            <tr><td><code>ГраницыПериодаРасчета()</code></td><td><span class="badge b-src">Архитектура</span></td><td>Архитектура заимствована, логика расширена по SF 22</td></tr>
+            <tr><td><code>РезультатРасчета()</code></td><td><span class="badge b-src">Скелет</span></td><td>Скелет и сигнатура из SF 14.1, расчетная логика полностью из SF 22</td></tr>
+            <tr><td><code>СправкаРасчет()</code></td><td><span class="badge b-src">Принцип</span></td><td>Принцип 3 табдокументов и возврат ХранилищеЗначения заимствован</td></tr>
+            <tr><td><code>СреднееСЧА_РСА()</code></td><td><span class="badge b-src">Закомм. вариант</span></td><td>Использован закомментированный вариант из SF 14.1 (с КалендарныеГрафики)</td></tr>
+            <tr><td><code>ПолучитьПодписанта()</code></td><td><span class="badge b-src">Идея</span></td><td>Запрос к КонтактныеЛица заимствован, реализация упрощена</td></tr>
+            <tr><td><code>СформироватьРасшифровкуРасчету()</code></td><td><span class="badge b-src">Inline</span></td><td>Код расшифровки СЧА встроен в СправкаРасчет()</td></tr>
+            <tr><td><code>ПолучитьРазмерВознаграждения()</code></td><td><span class="badge b-del">Нет</span></td><td>Заменена на <code>ПроцентПоТаблицеКоэффициентов()</code></td></tr>
+            <tr><td><code>ПолучитьСуммуВПроцентомОтношении...()</code></td><td><span class="badge b-del">Нет</span></td><td>Другая модель расчета</td></tr>
+            <tr><td><code>УстановитьПользовательскиеНастройки()</code></td><td><span class="badge b-del">Нет</span></td><td>Десериализация выполняется inline</td></tr>
+            <tr><td><code>ПолучитьВводыВыводы()</code></td><td><span class="badge b-del">Нет</span></td><td>Используется <code>СуммыДСиЦБсИП()</code> из SF 22</td></tr>
+            <tr><td><code>ПолучитьСреднегодовуюКлючевуюСтавку()</code></td><td><span class="badge b-del">Нет</span></td><td>Нет TWR/КлючеваяСтавка в AI-версии</td></tr>
+            <tr><td><code>ПолучитьНачисленноеВознаграждение()</code></td><td><span class="badge b-del">Нет</span></td><td>Нет механизма возврата вознаграждения</td></tr>
+            </tbody>
+        </table>
+    </section>
+
+    <!-- ================================================================ -->
+    <section class="card" id="s3">
+        <h2>3. Модуль формы настроек (ФормаНастроек/Ext/Form/Module.bsl)</h2>
+        <table>
+            <thead><tr><th>Процедура / Функция</th><th>Источник</th><th>Статус в AI</th><th>Детали</th></tr></thead>
+            <tbody>
+            <tr><td><code>ПодготовитьСтруктуруХранилища()</code></td><td>SF 22 + SF 14.1</td><td><span class="badge b-mod">Изменена</span></td>
+                <td>Добавлены: <code>ТипДня</code>, сериализация <code>ТаблицаКоэффициентов</code> в XML</td></tr>
+            <tr><td><code>ИнициализироватьТаблицуКоэффициентовПоУмолчанию()</code></td><td>Новая</td><td><span class="badge b-add">Добавлена</span></td>
+                <td>Дефолтная шкала: 0-250 млн (6%), 250-500 млн (5.25%), 500+ млн (5%)</td></tr>
+            <tr><td><code>Установить()</code></td><td>SF 22 = SF 14.1</td><td><span class="badge b-ok">Без изменений</span></td><td>--</td></tr>
+            <tr><td><code>ПриСозданииНаСервере()</code></td><td>SF 22 + SF 14.1 + новое</td><td><span class="badge b-mod">Существенно изменена</span></td>
+                <td>Добавлены: чтение <code>ТипДня</code>, десериализация <code>ТаблицаКоэффициентов</code>, безопасные дефолты для новых реквизитов</td></tr>
+            <tr><td><code>СчитатьНастройки()</code></td><td>SF 22 + SF 14.1</td><td><span class="badge b-mod">Изменена</span></td>
+                <td>Добавлено чтение <code>ТипДня</code></td></tr>
+            <tr><td><code>ТаблицаВознагражденийПередНачаломДобавления()</code></td><td>SF 22 = SF 14.1</td><td><span class="badge b-ok">Без изменений</span></td><td>--</td></tr>
+            <tr><td><code>ПутьСохраненияОтчетаНачалоВыбора()</code></td><td>SF 22 = SF 14.1</td><td><span class="badge b-ok">Без изменений</span></td><td>--</td></tr>
+            <tr><td><code>Считать()</code>, <code>ЗаписатьНастройкиСервер()</code>, <code>Записать()</code></td><td>SF 22 = SF 14.1</td><td><span class="badge b-ok">Без изменений</span></td><td>--</td></tr>
+            <tr><td><code>ПроверитьРезультатСервер()</code>, <code>ПроверитьРезультат()</code></td><td>SF 22</td><td><span class="badge b-ok">Без изменений</span></td><td>Отсутствуют в SF 14.1</td></tr>
+            <tr><td>Блок расчета (7 функций)</td><td>SF 22</td><td><span class="badge b-ok">Без изменений</span></td><td>Побайтовые копии из SF 22, нет в SF 14.1</td></tr>
+            </tbody>
+        </table>
+
+        <h3>Пример: новая процедура ИнициализироватьТаблицуКоэффициентовПоУмолчанию()</h3>
+        <pre>// IMAPPS-35720: дефолтная шкала коэффициентов по ТЗ СК ТИТ.
+// IMAPPS-35720: границы указываются в рублях (0-250 млн; 250-500 млн; свыше 500 млн).
+Объект.ТаблицаКоэффициентов.Очистить();
+
+СтрокаТаблицы = Объект.ТаблицаКоэффициентов.Добавить();
+СтрокаТаблицы.МинГраница = 0;
+СтрокаТаблицы.МаксГраница = 250000000;
+СтрокаТаблицы.Коэффициент = 6;
+
+СтрокаТаблицы = Объект.ТаблицаКоэффициентов.Добавить();
+СтрокаТаблицы.МинГраница = 250000000.01;
+СтрокаТаблицы.МаксГраница = 500000000;
+СтрокаТаблицы.Коэффициент = 5.25;
+
+СтрокаТаблицы = Объект.ТаблицаКоэффициентов.Добавить();
+СтрокаТаблицы.МинГраница = 500000000.01;
+СтрокаТаблицы.МаксГраница = 999999999999;
+СтрокаТаблицы.Коэффициент = 5;</pre>
+    </section>
+
+    <!-- ================================================================ -->
+    <section class="card" id="s4">
+        <h2>4. Макет СправкаРасчет (Template.xml)</h2>
+        <h3>4.1 Именованные области</h3>
+        <table>
+            <thead><tr><th>Область</th><th>В SF 22</th><th>В AI</th><th>Параметры AI</th></tr></thead>
+            <tbody>
+            <tr><td><code>Заголовок</code></td><td>Есть</td><td>Есть</td><td><code>ДатаНомерДоговораДУ</code></td></tr>
+            <tr><td><code>Заголовок1</code></td><td>Есть</td><td>Есть</td><td><code>ПериодРасчета</code></td></tr>
+            <tr><td><code>Заголовок2</code></td><td>Нет</td><td><span class="badge b-add">Добавлена</span></td><td><code>ПериодРасчета</code>, <code>ПлатаЗаУправление</code>, <code>П000</code></td></tr>
+            <tr><td><code>ТелоРасчета</code></td><td>Есть</td><td><span class="badge b-mod">Изменена</span></td><td>Добавлены: <code>П021Строка</code>, <code>ВознаграждениеЗаУспех</code>, <code>ИтоговоеВознаграждениеЗаУспех</code></td></tr>
+            <tr><td><code>Подвал</code></td><td>Есть</td><td>Есть</td><td><code>Клиент</code>, <code>Управляющий</code></td></tr>
+            <tr><td><code>Подвал1</code></td><td>Есть</td><td>Есть</td><td><code>ТекстИтог</code>, <code>СуммаИтог</code></td></tr>
+            <tr><td><code>Подвал2</code></td><td>Нет</td><td><span class="badge b-add">Добавлена</span></td><td>Нет параметров (блок подписей)</td></tr>
+            <tr><td><code>ШапкаРасшифровкиСЧА</code></td><td>Есть</td><td>Есть</td><td><code>Клиент</code>, <code>ДатаНач</code>, <code>ДатаКон</code>, <code>ВалютаРасчета</code></td></tr>
+            <tr><td><code>СтрокаРасшифровкиСЧА</code></td><td>Есть</td><td>Есть</td><td><code>ДатаСЧА</code>, <code>Сумма</code></td></tr>
+            <tr><td><code>ПодвалСЧА</code></td><td>Есть</td><td><span class="badge b-mod">Изменена</span></td><td>Параметр <code>Сча -> СЧА</code></td></tr>
+            </tbody>
+        </table>
+    </section>
+
+    <!-- ================================================================ -->
+    <section class="card" id="s5">
+        <h2>5. Метаданные обработки (XML)</h2>
+        <table>
+            <thead><tr><th>Реквизит</th><th>SF 22</th><th>AI</th><th>Комментарий</th></tr></thead>
+            <tbody>
+            <tr><td>Name</td><td><code>РасчетВознаграждения_ЗаУспех_22_СЧА</code></td><td><code>РасчетВознаграждения_ЗаУспех_22_СЧА_AI</code></td><td><span class="badge b-mod">Изменено</span></td></tr>
+            <tr><td>Synonym</td><td>SF 22. Расчет вознаграждения за успех...</td><td>SF 22 (AI) Расчет вознаграждения за успех...</td><td><span class="badge b-mod">Изменено</span></td></tr>
+            <tr><td>Реквизит <code>ТипДня</code></td><td>Нет</td><td>Есть</td><td><span class="badge b-add">Добавлен</span> (из SF 14.1)</td></tr>
+            <tr><td>ТЧ <code>ТаблицаКоэффициентов</code></td><td>Нет</td><td>Есть (МинГраница, МаксГраница, Коэффициент)</td><td><span class="badge b-add">Добавлена</span> (из SF 14.1)</td></tr>
+            </tbody>
+        </table>
+    </section>
+</div>
+</body>
+</html>

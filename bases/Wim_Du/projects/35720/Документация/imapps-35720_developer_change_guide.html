@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IMAPPS-35720 - Guide по изменениям макета и кода</title>
+    <style>
+        :root {
+            --bg: #f4f6f8;
+            --card: #ffffff;
+            --text: #1f2937;
+            --muted: #6b7280;
+            --border: #dbe2ea;
+            --accent: #0b66c3;
+            --accent-soft: #e8f2ff;
+            --ok: #1f8f4e;
+        }
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            padding: 24px;
+            background: var(--bg);
+            color: var(--text);
+            font: 14px/1.55 "Segoe UI", Arial, sans-serif;
+        }
+        .wrap {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .hero {
+            background: linear-gradient(135deg, #0b66c3, #1c7ed6);
+            color: #fff;
+            border-radius: 14px;
+            padding: 24px;
+            margin-bottom: 18px;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+        }
+        .hero h1 {
+            margin: 0 0 6px;
+            font-size: 24px;
+        }
+        .hero p {
+            margin: 0;
+            opacity: .95;
+        }
+        .grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 14px;
+        }
+        .card {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 16px 18px;
+        }
+        h2 {
+            margin: 0 0 10px;
+            font-size: 18px;
+        }
+        h3 {
+            margin: 12px 0 8px;
+            font-size: 15px;
+        }
+        .meta {
+            color: var(--muted);
+            margin-top: 8px;
+        }
+        .pill {
+            display: inline-block;
+            background: var(--accent-soft);
+            color: var(--accent);
+            border: 1px solid #c7dcfb;
+            border-radius: 999px;
+            padding: 2px 10px;
+            margin-right: 6px;
+            font-size: 12px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 8px;
+        }
+        th, td {
+            border: 1px solid var(--border);
+            padding: 8px 10px;
+            vertical-align: top;
+            text-align: left;
+        }
+        th {
+            background: #f8fafc;
+        }
+        ul {
+            margin: 8px 0 0 18px;
+            padding: 0;
+        }
+        code {
+            background: #f3f4f6;
+            border: 1px solid #e5e7eb;
+            border-radius: 4px;
+            padding: 1px 4px;
+        }
+        pre {
+            margin: 8px 0 0;
+            padding: 12px;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            background: #0f172a;
+            color: #e5edf7;
+            overflow-x: auto;
+            font-size: 12px;
+            line-height: 1.45;
+        }
+        .ok { color: var(--ok); font-weight: 600; }
+        .muted { color: var(--muted); }
+    </style>
+</head>
+<body>
+<div class="wrap">
+    <section class="hero">
+        <h1>IMAPPS-35720: что изменилось и зачем</h1>
+        <p>Практический guide для разработчика по изменениям в макете <code>СправкаРасчет</code> и в коде обработки, относительно типовой <code>внSFРасчетВознаграждения_22_СЧА</code>.</p>
+    </section>
+
+    <div class="grid">
+        <section class="card">
+            <h2>1. Контекст и куда смотреть</h2>
+            <div>
+                <span class="pill">База: SF 22</span>
+                <span class="pill">Цель: ТЗ СК ТИТ</span>
+                <span class="pill">Задача: IMAPPS-35720</span>
+            </div>
+            <table>
+                <thead>
+                <tr>
+                    <th>Тип</th>
+                    <th>Файл</th>
+                    <th>Роль</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr>
+                    <td>Макет</td>
+                    <td><code>bases/Wim_Du/projects/35720/внSFРасчетВознаграждения_22_СЧА_AI/Templates/СправкаРасчет/Ext/Template.xml</code></td>
+                    <td>Новые области, новые параметры и обновленные формулы печати</td>
+                </tr>
+                <tr>
+                    <td>Логика</td>
+                    <td><code>bases/Wim_Du/projects/35720/внSFРасчетВознаграждения_22_СЧА_AI/Ext/ObjectModule.bsl</code></td>
+                    <td>Заполнение параметров макета, расчет SF и БРСА</td>
+                </tr>
+                <tr>
+                    <td>Форма настроек</td>
+                    <td><code>bases/Wim_Du/projects/35720/внSFРасчетВознаграждения_22_СЧА_AI/Forms/ФормаНастроек/Ext/Form/Module.bsl</code></td>
+                    <td>Таблица коэффициентов, границы и размерность</td>
+                </tr>
+                <tr>
+                    <td>ТЗ</td>
+                    <td><code>bases/Wim_Du/projects/35720/вознагр. СК ТИТ.docx</code></td>
+                    <td>Источник требований по формулам и структуре</td>
+                </tr>
+                </tbody>
+            </table>
+        </section>
+
+        <section class="card">
+            <h2>2. Что изменилось в макете</h2>
+            <h3>2.1 Новые секции</h3>
+            <ul>
+                <li><code>Заголовок2</code> - секция методики расчета платы за управление.</li>
+                <li><code>Подвал2</code> - дополнительный блок подписей.</li>
+            </ul>
+
+            <h3>2.2 Новые/измененные параметры</h3>
+            <table>
+                <thead>
+                <tr>
+                    <th>Область</th>
+                    <th>Параметры</th>
+                    <th>Комментарий</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr>
+                    <td><code>Заголовок2</code></td>
+                    <td><code>ПериодРасчета</code>, <code>ПлатаЗаУправление</code>, <code>П000</code></td>
+                    <td>Второй заголовок с блоком MF</td>
+                </tr>
+                <tr>
+                    <td><code>ТелоРасчета</code></td>
+                    <td><code>П021Строка</code>, <code>ВознаграждениеЗаУспех</code>, <code>ИтоговоеВознаграждениеЗаУспех</code></td>
+                    <td>Новые параметры для SF-блока</td>
+                </tr>
+                <tr>
+                    <td><code>ПодвалСЧА</code></td>
+                    <td><code>СЧА</code></td>
+                    <td>Важно: имя параметра стало <code>СЧА</code> (не <code>Сча</code>)</td>
+                </tr>
+                </tbody>
+            </table>
+
+            <h3>2.3 Формулы/тексты, которые были уточнены</h3>
+            <ul>
+                <li>Ставка SF: пороги 250/500 млн и ставки 6/5.25/5.</li>
+                <li>Условия по SF: ветка <code>&lt;= 0</code> для нулевого результата.</li>
+                <li>Переход к обозначениям новой версии макета (включая <code>Стр. MF</code> / <code>Стр. SF</code>).</li>
+            </ul>
+        </section>
+
+        <section class="card">
+            <h2>3. Что изменилось в коде и почему</h2>
+            <h3>3.1 Печать по новым областям</h3>
+            <p>В функции <code>СправкаРасчет()</code> добавлено получение и вывод <code>Заголовок2</code>/<code>Подвал2</code>, чтобы новая структура макета реально выводилась в табличный документ.</p>
+            <pre>// IMAPPS-35720: новый макет содержит дополнительную секцию методики платы за управление.
+ОбластьЗаголовок2 = Макет.ПолучитьОбласть("Заголовок2");
+// IMAPPS-35720: новый макет содержит дополнительный блок подписей Подвал2.
+ОбластьПодвал2    = Макет.ПолучитьОбласть("Подвал2");
+
+...
+
+Если ОбластьЗаголовок2.Параметры.Свойство("ПлатаЗаУправление") Тогда
+    ОбластьЗаголовок2.Параметры.ПлатаЗаУправление = Формат(ПоказателиСправки.П000, "ЧДЦ=2; ЧН=0,00");
+КонецЕсли;
+Если ОбластьЗаголовок2.Параметры.Свойство("П000") Тогда
+    ОбластьЗаголовок2.Параметры.П000 = ПоказателиСправки.П000;
+КонецЕсли;
+ТабДокументПодвал.Вывести(ОбластьЗаголовок2);
+ТабДокументПодвал.Вывести(ОбластьПодвал2);</pre>
+
+            <h3>3.2 Поддержка новых параметров SF в теле</h3>
+            <p>Добавлены поля структуры <code>ПоказателиСправки</code>, чтобы <code>ЗаполнитьЗначенияСвойств()</code> корректно заполнял новые параметры макета.</p>
+            <pre>ПоказателиСправки.Вставить("П021Строка", "");
+ПоказателиСправки.Вставить("ВознаграждениеЗаУспех", 0);
+ПоказателиСправки.Вставить("ИтоговоеВознаграждениеЗаУспех", 0);
+
+...
+
+ПоказателиСправки.П021Строка = Формат(ПроцентВознаграждения, "ЧДЦ=2; ЧН=0,00") + "%";
+ПоказателиСправки.ВознаграждениеЗаУспех = ПоказателиСправки.П022;
+ПоказателиСправки.ИтоговоеВознаграждениеЗаУспех = ПоказателиСправки.П023;</pre>
+
+            <h3>3.3 Исправление имени параметра в блоке СЧА</h3>
+            <p>В новом макете параметр называется <code>СЧА</code>, поэтому в коде вывод изменен на это имя.</p>
+            <pre>// IMAPPS-35720: в новом макете параметр называется "СЧА".
+ОбластьПодвалСЧА.Параметры.СЧА = Формат(ПоказателиСправки.СтруктураСЧА.СЧА, "ЧДЦ=2");</pre>
+
+            <h3>3.4 Расчетная часть (ключевые изменения относительно типовой)</h3>
+            <ul>
+                <li>Ставка SF выбирается по таблице коэффициентов от СЧА на конец периода.</li>
+                <li><code>РасчетБРСА</code> стал самодостаточным (без зависимости от внешнего состояния).</li>
+                <li>Сохранены комментарии с номером задачи <code>IMAPPS-35720</code> в измененных местах.</li>
+            </ul>
+        </section>
+
+        <section class="card">
+            <h2>4. Примеры из макета</h2>
+            <p class="muted">Фрагменты ниже показывают реальные элементы нового макета, с которыми синхронизирован код.</p>
+            <pre>&lt;name&gt;Заголовок2&lt;/name&gt;
+...
+&lt;name&gt;Подвал2&lt;/name&gt;</pre>
+
+            <pre>&lt;parameter&gt;П021Строка&lt;/parameter&gt;
+...
+&lt;parameter&gt;ВознаграждениеЗаУспех&lt;/parameter&gt;
+...
+&lt;parameter&gt;ИтоговоеВознаграждениеЗаУспех&lt;/parameter&gt;</pre>
+
+            <pre>&lt;parameter&gt;СЧА&lt;/parameter&gt;</pre>
+        </section>
+
+        <section class="card">
+            <h2>5. Чеклист для программиста</h2>
+            <ul>
+                <li><span class="ok">OK</span> В коде есть получение областей <code>Заголовок2</code> и <code>Подвал2</code>.</li>
+                <li><span class="ok">OK</span> Все новые параметры макета заполняются из <code>ПоказателиСправки</code>.</li>
+                <li><span class="ok">OK</span> Параметр <code>СЧА</code> в <code>ПодвалСЧА</code> заполняется корректным именем.</li>
+                <li><span class="ok">OK</span> Формулы SF/БРСА и текстовые блоки синхронизированы с текущим макетом и ТЗ.</li>
+                <li><span class="ok">OK</span> Комментарии <code>IMAPPS-35720</code> присутствуют в ключевых изменениях кода.</li>
+            </ul>
+            <div class="meta">Если макет снова изменится, начинать проверку с этой последовательности: <code>namedItem</code> -> <code>parameter</code> -> <code>СправкаРасчет()</code> -> <code>ПоказателиСправки</code>.</div>
+        </section>
+    </div>
+</div>
+</body>
+</html>
