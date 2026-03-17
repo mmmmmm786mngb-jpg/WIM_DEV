@@ -1,0 +1,543 @@
+﻿<?xml version="1.0" encoding="UTF-8"?>
+<DataCompositionSchema xmlns="http://v8.1c.ru/8.1/data-composition-system/schema" xmlns:dcscom="http://v8.1c.ru/8.1/data-composition-system/common" xmlns:dcscor="http://v8.1c.ru/8.1/data-composition-system/core" xmlns:dcsset="http://v8.1c.ru/8.1/data-composition-system/settings" xmlns:v8="http://v8.1c.ru/8.1/data/core" xmlns:v8ui="http://v8.1c.ru/8.1/data/ui" xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+	<dataSource>
+		<name>ИсточникДанных1</name>
+		<dataSourceType>Local</dataSourceType>
+	</dataSource>
+	<dataSet xsi:type="DataSetQuery">
+		<name>ДокументыКНачислениюУслуг</name>
+		<field xsi:type="DataSetFieldField">
+			<dataPath>ТарифныйПлан</dataPath>
+			<field>ТарифныйПлан</field>
+			<title xsi:type="v8:LocalStringType">
+				<v8:item>
+					<v8:lang>ru</v8:lang>
+					<v8:content>Тарифный план</v8:content>
+				</v8:item>
+			</title>
+		</field>
+		<field xsi:type="DataSetFieldField">
+			<dataPath>Документ</dataPath>
+			<field>Документ</field>
+			<title xsi:type="v8:LocalStringType">
+				<v8:item>
+					<v8:lang>ru</v8:lang>
+					<v8:content>Документ</v8:content>
+				</v8:item>
+			</title>
+		</field>
+		<field xsi:type="DataSetFieldField">
+			<dataPath>Договор</dataPath>
+			<field>Договор</field>
+			<title xsi:type="v8:LocalStringType">
+				<v8:item>
+					<v8:lang>ru</v8:lang>
+					<v8:content>Договор</v8:content>
+				</v8:item>
+			</title>
+		</field>
+		<field xsi:type="DataSetFieldField">
+			<dataPath>Депонент</dataPath>
+			<field>Депонент</field>
+		</field>
+		<field xsi:type="DataSetFieldField">
+			<dataPath>СтатусДокументаВФайловомШлюзе</dataPath>
+			<field>СтатусДокументаВФайловомШлюзе</field>
+			<title xsi:type="v8:LocalStringType">
+				<v8:item>
+					<v8:lang>ru</v8:lang>
+					<v8:content>Статус документа в файловом шлюзе</v8:content>
+				</v8:item>
+			</title>
+		</field>
+		<field xsi:type="DataSetFieldField">
+			<dataPath>ТипДокумента</dataPath>
+			<field>ТипДокумента</field>
+			<title xsi:type="v8:LocalStringType">
+				<v8:item>
+					<v8:lang>ru</v8:lang>
+					<v8:content>Тип документа</v8:content>
+				</v8:item>
+			</title>
+			<valueType>
+				<v8:Type>xs:string</v8:Type>
+				<v8:StringQualifiers>
+					<v8:Length>0</v8:Length>
+					<v8:AllowedLength>Variable</v8:AllowedLength>
+				</v8:StringQualifiers>
+			</valueType>
+			<availableValue>
+				<value xsi:type="xs:string">Поручение</value>
+				<presentation xsi:type="v8:LocalStringType">
+					<v8:item>
+						<v8:lang>ru</v8:lang>
+						<v8:content>Поручение</v8:content>
+					</v8:item>
+				</presentation>
+			</availableValue>
+			<availableValue>
+				<value xsi:type="xs:string">ФормаW8</value>
+				<presentation xsi:type="v8:LocalStringType">
+					<v8:item>
+						<v8:lang>ru</v8:lang>
+						<v8:content>Форма W8</v8:content>
+					</v8:item>
+				</presentation>
+			</availableValue>
+		</field>
+		<field xsi:type="DataSetFieldField">
+			<dataPath>СообщениеОбОшибке</dataPath>
+			<field>СообщениеОбОшибке</field>
+			<title xsi:type="v8:LocalStringType">
+				<v8:item>
+					<v8:lang>ru</v8:lang>
+					<v8:content>Сообщение об ошибке</v8:content>
+				</v8:item>
+			</title>
+			<useRestriction>
+				<condition>true</condition>
+			</useRestriction>
+		</field>
+		<field xsi:type="DataSetFieldField">
+			<dataPath>КоличествоДокументовНаОсновании</dataPath>
+			<field>КоличествоДокументовНаОсновании</field>
+			<title xsi:type="v8:LocalStringType">
+				<v8:item>
+					<v8:lang>ru</v8:lang>
+					<v8:content>Количество документов на основании</v8:content>
+				</v8:item>
+			</title>
+		</field>
+		<dataSource>ИсточникДанных1</dataSource>
+		<query>ВЫБРАТЬ
+	"Поручение" КАК ТипДокумента,
+	Поручение.Ссылка КАК Документ,
+	Поручение.Ссылка КАК ДокументДляПолученияСтатусаФШ,
+	ВЫБОР
+		КОГДА Поручение.ВидОперацииД = &amp;Перевод
+				И Поручение.Инициатор = Поручение.Контрагент
+			ТОГДА Поручение.Инициатор
+		ИНАЧЕ Поручение.Депонент
+	КОНЕЦ КАК Депонент,
+	1 КАК КоличествоДепонентов,
+	МАКСИМУМ(ДоговорыКонтрагентов.Ссылка) КАК Договор,
+	КОЛИЧЕСТВО(РАЗЛИЧНЫЕ ДоговорыКонтрагентов.Ссылка) КАК КоличествоДоговоров,
+	КОЛИЧЕСТВО(РАЗЛИЧНЫЕ ОперацииЦБ.Ссылка) + КОЛИЧЕСТВО(РАЗЛИЧНЫЕ ОперацииЦБПоВстречномуОснованию.Ссылка) + КОЛИЧЕСТВО(РАЗЛИЧНЫЕ УчастиеВКД.Ссылка) + КОЛИЧЕСТВО(РАЗЛИЧНЫЕ ОтменаПоручения.Ссылка) КАК КоличествоДокументовНаОсновании
+ПОМЕСТИТЬ ДанныеДокументовКНачислениюУслуг
+ИЗ
+	Документ.Поручение КАК Поручение
+		ЛЕВОЕ СОЕДИНЕНИЕ РегистрСведений.ДокументыКНачислениюКомиссииДепо КАК ДокументыКНачислениюКомиссииДепо
+		ПО Поручение.Ссылка = ДокументыКНачислениюКомиссииДепо.Документ
+		ЛЕВОЕ СОЕДИНЕНИЕ Справочник.ДоговорыКонтрагентов КАК ДоговорыКонтрагентов
+		ПО (ВЫБОР
+				КОГДА Поручение.ВидОперацииД = &amp;Перевод
+						И Поручение.Инициатор = Поручение.Контрагент
+					ТОГДА Поручение.Инициатор
+				ИНАЧЕ Поручение.Депонент
+			КОНЕЦ = ДоговорыКонтрагентов.Владелец)
+			И (НЕ ДоговорыКонтрагентов.ПометкаУдаления)
+		ЛЕВОЕ СОЕДИНЕНИЕ Документ.УчастиеВКД КАК УчастиеВКД
+		ПО (УчастиеВКД.ДокументОснование = Поручение.Ссылка)
+			И (УчастиеВКД.Проведен)
+		ЛЕВОЕ СОЕДИНЕНИЕ Документ.ОперацииЦБ КАК ОперацииЦБ
+		ПО (ОперацииЦБ.ДокументОснование = Поручение.Ссылка)
+			И (ОперацииЦБ.Проведен)
+		ЛЕВОЕ СОЕДИНЕНИЕ Документ.ОперацииЦБ КАК ОперацииЦБПоВстречномуОснованию
+		ПО (ОперацииЦБПоВстречномуОснованию.ДокументОснованиеВстречный = Поручение.Ссылка)
+			И (ОперацииЦБПоВстречномуОснованию.Проведен)
+		ЛЕВОЕ СОЕДИНЕНИЕ Документ.ОтменаПоручения КАК ОтменаПоручения
+		ПО (ОтменаПоручения.ДокументОснование = Поручение.Ссылка)
+			И (ОтменаПоручения.Проведен)
+ГДЕ
+	Поручение.ВидОперацииД &lt;&gt; &amp;ОтменаПоручения
+	И Поручение.ДатаИсполненияПоручения МЕЖДУ &amp;НачалоПериода И &amp;ОкончаниеПериода
+	И Поручение.Инициатор &lt;&gt; &amp;ОрганизацияПоУмолчанию
+	И Поручение.Инициатор &lt;&gt; &amp;МестоХраненияПоУмолчанию
+	И (ДокументыКНачислениюКомиссииДепо.Документ ЕСТЬ НЕ NULL 
+			ИЛИ &amp;ВыводитьВсеДокументы)
+	И Поручение.Проведен
+
+СГРУППИРОВАТЬ ПО
+	Поручение.Ссылка,
+	ВЫБОР
+		КОГДА Поручение.ВидОперацииД = &amp;Перевод
+				И Поручение.Инициатор = Поручение.Контрагент
+			ТОГДА Поручение.Инициатор
+		ИНАЧЕ Поручение.Депонент
+	КОНЕЦ,
+	Поручение.Ссылка
+
+ИМЕЮЩИЕ
+	КОЛИЧЕСТВО(РАЗЛИЧНЫЕ ОперацииЦБ.Ссылка) + КОЛИЧЕСТВО(РАЗЛИЧНЫЕ ОперацииЦБПоВстречномуОснованию.Ссылка) + КОЛИЧЕСТВО(РАЗЛИЧНЫЕ УчастиеВКД.Ссылка) + КОЛИЧЕСТВО(РАЗЛИЧНЫЕ ОтменаПоручения.Ссылка) &gt; 0
+
+ОБЪЕДИНИТЬ ВСЕ
+
+ВЫБРАТЬ
+	"Поручение",
+	Поручение.Ссылка,
+	Поручение.ОтменяемоеПоручение,
+	ВЫРАЗИТЬ(Поручение.ОтменяемоеПоручение КАК Документ.Поручение).Депонент,
+	1,
+	МАКСИМУМ(ДоговорыКонтрагентов.Ссылка),
+	КОЛИЧЕСТВО(РАЗЛИЧНЫЕ ДоговорыКонтрагентов.Ссылка),
+	КОЛИЧЕСТВО(РАЗЛИЧНЫЕ ОперацииЦБ.Ссылка) + КОЛИЧЕСТВО(РАЗЛИЧНЫЕ УчастиеВКД.Ссылка) + КОЛИЧЕСТВО(РАЗЛИЧНЫЕ ОтменаПоручения.Ссылка)
+ИЗ
+	Документ.Поручение КАК Поручение
+		ЛЕВОЕ СОЕДИНЕНИЕ РегистрСведений.ДокументыКНачислениюКомиссииДепо КАК ДокументыКНачислениюКомиссииДепо
+		ПО Поручение.Ссылка = ДокументыКНачислениюКомиссииДепо.Документ
+		ЛЕВОЕ СОЕДИНЕНИЕ Справочник.ДоговорыКонтрагентов КАК ДоговорыКонтрагентов
+		ПО (ВЫРАЗИТЬ(Поручение.ОтменяемоеПоручение КАК Документ.Поручение).Депонент = ДоговорыКонтрагентов.Владелец)
+			И (НЕ ДоговорыКонтрагентов.ПометкаУдаления)
+		ЛЕВОЕ СОЕДИНЕНИЕ Документ.УчастиеВКД КАК УчастиеВКД
+		ПО (УчастиеВКД.ДокументОснование = Поручение.Ссылка)
+			И (УчастиеВКД.Проведен)
+		ЛЕВОЕ СОЕДИНЕНИЕ Документ.ОперацииЦБ КАК ОперацииЦБ
+		ПО (ОперацииЦБ.ДокументОснование = Поручение.Ссылка)
+			И (ОперацииЦБ.Проведен)
+		ЛЕВОЕ СОЕДИНЕНИЕ Документ.ОтменаПоручения КАК ОтменаПоручения
+		ПО (ОтменаПоручения.ДокументОснование = Поручение.Ссылка)
+			И (ОтменаПоручения.Проведен)
+ГДЕ
+	Поручение.ВидОперацииД = &amp;ОтменаПоручения
+	И Поручение.ДатаИсполненияПоручения МЕЖДУ &amp;НачалоПериода И &amp;ОкончаниеПериода
+	И Поручение.Инициатор &lt;&gt; &amp;ОрганизацияПоУмолчанию
+	И Поручение.Инициатор &lt;&gt; &amp;МестоХраненияПоУмолчанию
+	И (ДокументыКНачислениюКомиссииДепо.Документ ЕСТЬ НЕ NULL 
+			ИЛИ &amp;ВыводитьВсеДокументы)
+	И Поручение.Проведен
+
+СГРУППИРОВАТЬ ПО
+	Поручение.Ссылка,
+	ВЫРАЗИТЬ(Поручение.ОтменяемоеПоручение КАК Документ.Поручение).Депонент,
+	Поручение.ОтменяемоеПоручение
+
+ИМЕЮЩИЕ
+	КОЛИЧЕСТВО(РАЗЛИЧНЫЕ ОперацииЦБ.Ссылка) + КОЛИЧЕСТВО(РАЗЛИЧНЫЕ УчастиеВКД.Ссылка) + КОЛИЧЕСТВО(РАЗЛИЧНЫЕ ОтменаПоручения.Ссылка) &gt; 0
+
+ОБЪЕДИНИТЬ ВСЕ
+
+ВЫБРАТЬ
+	"ФормаW8",
+	ФормыW8.Ссылка,
+	ФормыW8.Ссылка,
+	МАКСИМУМ(ПредоставленныеДокументыСрезПоследних.Депонент),
+	КОЛИЧЕСТВО(РАЗЛИЧНЫЕ ПредоставленныеДокументыСрезПоследних.Депонент),
+	МАКСИМУМ(ДоговорыКонтрагентов.Ссылка),
+	КОЛИЧЕСТВО(РАЗЛИЧНЫЕ ДоговорыКонтрагентов.Ссылка),
+	1
+ИЗ
+	Справочник.ФормыW8 КАК ФормыW8
+		ЛЕВОЕ СОЕДИНЕНИЕ РегистрСведений.ДокументыКНачислениюКомиссииДепо КАК ДокументыКНачислениюКомиссииДепо
+		ПО ФормыW8.Ссылка = ДокументыКНачислениюКомиссииДепо.Документ
+		ЛЕВОЕ СОЕДИНЕНИЕ РегистрСведений.ПредоставленныеДокументы.СрезПоследних КАК ПредоставленныеДокументыСрезПоследних
+			ЛЕВОЕ СОЕДИНЕНИЕ Справочник.ДоговорыКонтрагентов КАК ДоговорыКонтрагентов
+			ПО (ПредоставленныеДокументыСрезПоследних.Депонент ССЫЛКА Справочник.Контрагенты
+						И ПредоставленныеДокументыСрезПоследних.Депонент = ДоговорыКонтрагентов.Владелец
+					ИЛИ ПредоставленныеДокументыСрезПоследних.Депонент ССЫЛКА Справочник.Субклиенты
+						И ПредоставленныеДокументыСрезПоследних.Депонент.Владелец = ДоговорыКонтрагентов.Владелец)
+				И (НЕ ДоговорыКонтрагентов.ПометкаУдаления)
+		ПО (ПредоставленныеДокументыСрезПоследних.ПредоставленнаяФорма = ФормыW8.Ссылка)
+ГДЕ
+	ФормыW8.ДатаПредоставления МЕЖДУ &amp;НачалоПериода И &amp;ОкончаниеПериода
+	И НЕ ФормыW8.ПометкаУдаления
+	И (ДокументыКНачислениюКомиссииДепо.Документ ЕСТЬ НЕ NULL 
+			ИЛИ &amp;ВыводитьВсеДокументы)
+
+СГРУППИРОВАТЬ ПО
+	ФормыW8.Ссылка,
+	ФормыW8.Ссылка
+;
+
+////////////////////////////////////////////////////////////////////////////////
+ВЫБРАТЬ
+	ДанныеДокументовКНачислениюУслуг.Документ КАК Документ,
+	ДанныеДокументовКНачислениюУслуг.ДокументДляПолученияСтатусаФШ КАК ДокументДляПолученияСтатусаФШ,
+	МАКСИМУМ(ТехническаяОперация.Дата) КАК ДатаТехОперации
+ПОМЕСТИТЬ СрезДатТехОпераций
+ИЗ
+	ДанныеДокументовКНачислениюУслуг КАК ДанныеДокументовКНачислениюУслуг
+		ВНУТРЕННЕЕ СОЕДИНЕНИЕ Документ.ТехническаяОперация КАК ТехническаяОперация
+		ПО ДанныеДокументовКНачислениюУслуг.ДокументДляПолученияСтатусаФШ = ТехническаяОперация.ДокументОснование
+ГДЕ
+	ДанныеДокументовКНачислениюУслуг.ТипДокумента = "Поручение"
+
+СГРУППИРОВАТЬ ПО
+	ДанныеДокументовКНачислениюУслуг.Документ,
+	ДанныеДокументовКНачислениюУслуг.ДокументДляПолученияСтатусаФШ
+;
+
+////////////////////////////////////////////////////////////////////////////////
+ВЫБРАТЬ
+	СрезДатТехОпераций.Документ КАК Документ,
+	МАКСИМУМ(СостоянияДокументовВФайловомШлюзеСрезПоследних.Статус) КАК СтатусДокументаВФайловомШлюзе
+ПОМЕСТИТЬ СтатусыДокументовВФайловомШлюзе
+ИЗ
+	РегистрСведений.СостоянияДокументовВФайловомШлюзе.СрезПоследних КАК СостоянияДокументовВФайловомШлюзеСрезПоследних
+		ВНУТРЕННЕЕ СОЕДИНЕНИЕ Документ.ТехническаяОперация КАК ТехническаяОперация
+			ВНУТРЕННЕЕ СОЕДИНЕНИЕ СрезДатТехОпераций КАК СрезДатТехОпераций
+			ПО (СрезДатТехОпераций.ДатаТехОперации = ТехническаяОперация.Дата)
+				И (СрезДатТехОпераций.ДокументДляПолученияСтатусаФШ = ТехническаяОперация.ДокументОснование)
+		ПО (ТехническаяОперация.Ссылка = СостоянияДокументовВФайловомШлюзеСрезПоследних.Документ)
+
+СГРУППИРОВАТЬ ПО
+	СрезДатТехОпераций.Документ
+;
+
+////////////////////////////////////////////////////////////////////////////////
+ВЫБРАТЬ
+	ДанныеДокументовКНачислениюУслуг.Документ КАК Документ,
+	МАКСИМУМ(ТарифныеПланыУслугиТарифногоПлана.Ссылка) КАК ТарифныйПлан
+ПОМЕСТИТЬ ТарифныеПланыПоДокументам
+ИЗ
+	ДанныеДокументовКНачислениюУслуг КАК ДанныеДокументовКНачислениюУслуг
+		ЛЕВОЕ СОЕДИНЕНИЕ РегистрСведений.РегистрНазначенныхКомиссий.СрезПоследних(&amp;ПериодСреза {(&amp;ПериодСреза)}, ) КАК РегистрНазначенныхКомиссийСрезПоследних
+			ЛЕВОЕ СОЕДИНЕНИЕ Справочник.ТарифныеПланы.УслугиТарифногоПлана КАК ТарифныеПланыУслугиТарифногоПлана
+			ПО РегистрНазначенныхКомиссийСрезПоследних.Услуга = ТарифныеПланыУслугиТарифногоПлана.Услуга
+		ПО ДанныеДокументовКНачислениюУслуг.Договор = РегистрНазначенныхКомиссийСрезПоследних.ДоговорКонтрагента
+ГДЕ
+	РегистрНазначенныхКомиссийСрезПоследних.ФлагАктивности
+
+СГРУППИРОВАТЬ ПО
+	ДанныеДокументовКНачислениюУслуг.Документ
+;
+
+////////////////////////////////////////////////////////////////////////////////
+ВЫБРАТЬ
+	ДанныеДокументовКНачислениюУслуг.ТипДокумента КАК ТипДокумента,
+	ДанныеДокументовКНачислениюУслуг.Документ КАК Документ,
+	ДанныеДокументовКНачислениюУслуг.Депонент КАК Депонент,
+	ВЫБОР
+		КОГДА ДанныеДокументовКНачислениюУслуг.КоличествоДепонентов = 0
+			ТОГДА "Не определён депонент"
+		КОГДА ДанныеДокументовКНачислениюУслуг.КоличествоДепонентов &gt; 1
+			ТОГДА "Найдено более одного депонента"
+		КОГДА ДанныеДокументовКНачислениюУслуг.КоличествоДоговоров = 0
+			ТОГДА "Не найден договор"
+		КОГДА ДанныеДокументовКНачислениюУслуг.КоличествоДоговоров &gt; 1
+			ТОГДА "Найдено более одного договора"
+		ИНАЧЕ ""
+	КОНЕЦ КАК СообщениеОбОшибке,
+	ДанныеДокументовКНачислениюУслуг.Договор КАК Договор,
+	ДанныеДокументовКНачислениюУслуг.КоличествоДокументовНаОсновании КАК КоличествоДокументовНаОсновании,
+	ЕСТЬNULL(СтатусыДокументовВФайловомШлюзе.СтатусДокументаВФайловомШлюзе, &amp;ПустойСтатусФШ) КАК СтатусДокументаВФайловомШлюзе,
+	ЕСТЬNULL(ТарифныеПланыПоДокументам.ТарифныйПлан, &amp;ПустойТарифныйПлан) КАК ТарифныйПлан
+{ВЫБРАТЬ
+	ТипДокумента,
+	Документ.*,
+	Депонент,
+	СообщениеОбОшибке,
+	Договор,
+	КоличествоДокументовНаОсновании,
+	СтатусДокументаВФайловомШлюзе,
+	ТарифныйПлан}
+ИЗ
+	ДанныеДокументовКНачислениюУслуг КАК ДанныеДокументовКНачислениюУслуг
+		ЛЕВОЕ СОЕДИНЕНИЕ СтатусыДокументовВФайловомШлюзе КАК СтатусыДокументовВФайловомШлюзе
+		ПО ДанныеДокументовКНачислениюУслуг.Документ = СтатусыДокументовВФайловомШлюзе.Документ
+		ЛЕВОЕ СОЕДИНЕНИЕ ТарифныеПланыПоДокументам КАК ТарифныеПланыПоДокументам
+		ПО ДанныеДокументовКНачислениюУслуг.Документ = ТарифныеПланыПоДокументам.Документ
+{ГДЕ
+	ДанныеДокументовКНачислениюУслуг.ТипДокумента,
+	ДанныеДокументовКНачислениюУслуг.Документ.*,
+	СтатусыДокументовВФайловомШлюзе.СтатусДокументаВФайловомШлюзе,
+	ТарифныеПланыПоДокументам.ТарифныйПлан}</query>
+		<autoFillFields>false</autoFillFields>
+	</dataSet>
+	<parameter>
+		<name>НачалоПериода</name>
+		<title xsi:type="v8:LocalStringType">
+			<v8:item>
+				<v8:lang>ru</v8:lang>
+				<v8:content>Начало периода</v8:content>
+			</v8:item>
+		</title>
+		<valueType>
+			<v8:Type>xs:dateTime</v8:Type>
+			<v8:DateQualifiers>
+				<v8:DateFractions>DateTime</v8:DateFractions>
+			</v8:DateQualifiers>
+		</valueType>
+		<value xsi:type="xs:dateTime">0001-01-01T00:00:00</value>
+		<useRestriction>true</useRestriction>
+	</parameter>
+	<parameter>
+		<name>ОкончаниеПериода</name>
+		<title xsi:type="v8:LocalStringType">
+			<v8:item>
+				<v8:lang>ru</v8:lang>
+				<v8:content>Окончание периода</v8:content>
+			</v8:item>
+		</title>
+		<valueType>
+			<v8:Type>xs:dateTime</v8:Type>
+			<v8:DateQualifiers>
+				<v8:DateFractions>DateTime</v8:DateFractions>
+			</v8:DateQualifiers>
+		</valueType>
+		<value xsi:type="xs:dateTime">0001-01-01T00:00:00</value>
+		<useRestriction>true</useRestriction>
+	</parameter>
+	<parameter>
+		<name>МестоХраненияПоУмолчанию</name>
+		<title xsi:type="v8:LocalStringType">
+			<v8:item>
+				<v8:lang>ru</v8:lang>
+				<v8:content>Место хранения по умолчанию</v8:content>
+			</v8:item>
+		</title>
+		<valueType>
+			<v8:Type xmlns:d4p1="http://v8.1c.ru/8.1/data/enterprise/current-config">d4p1:CatalogRef.Контрагенты</v8:Type>
+			<v8:Type xmlns:d4p1="http://v8.1c.ru/8.1/data/enterprise/current-config">d4p1:CatalogRef.Сотрудники</v8:Type>
+			<v8:Type xmlns:d4p1="http://v8.1c.ru/8.1/data/enterprise/current-config">d4p1:CatalogRef.МестаХранения</v8:Type>
+			<v8:Type xmlns:d4p1="http://v8.1c.ru/8.1/data/enterprise/current-config">d4p1:CatalogRef.Организации</v8:Type>
+		</valueType>
+		<value xsi:nil="true"/>
+		<useRestriction>true</useRestriction>
+	</parameter>
+	<parameter>
+		<name>ОрганизацияПоУмолчанию</name>
+		<title xsi:type="v8:LocalStringType">
+			<v8:item>
+				<v8:lang>ru</v8:lang>
+				<v8:content>Организация по умолчанию</v8:content>
+			</v8:item>
+		</title>
+		<valueType>
+			<v8:Type xmlns:d4p1="http://v8.1c.ru/8.1/data/enterprise/current-config">d4p1:CatalogRef.Контрагенты</v8:Type>
+			<v8:Type xmlns:d4p1="http://v8.1c.ru/8.1/data/enterprise/current-config">d4p1:CatalogRef.Сотрудники</v8:Type>
+			<v8:Type xmlns:d4p1="http://v8.1c.ru/8.1/data/enterprise/current-config">d4p1:CatalogRef.МестаХранения</v8:Type>
+			<v8:Type xmlns:d4p1="http://v8.1c.ru/8.1/data/enterprise/current-config">d4p1:CatalogRef.Организации</v8:Type>
+		</valueType>
+		<value xsi:nil="true"/>
+		<useRestriction>true</useRestriction>
+	</parameter>
+	<parameter>
+		<name>ОтменаПоручения</name>
+		<title xsi:type="v8:LocalStringType">
+			<v8:item>
+				<v8:lang>ru</v8:lang>
+				<v8:content>Отмена поручения</v8:content>
+			</v8:item>
+		</title>
+		<valueType>
+			<v8:Type xmlns:d4p1="http://v8.1c.ru/8.1/data/enterprise/current-config">d4p1:CatalogRef.ВидыОпераций</v8:Type>
+			<v8:Type xmlns:d4p1="http://v8.1c.ru/8.1/data/enterprise/current-config">d4p1:EnumRef.ВидыОтчетов</v8:Type>
+		</valueType>
+		<value xsi:type="dcscor:DesignTimeValue">Справочник.ВидыОпераций.ОтменаПоручения</value>
+		<useRestriction>true</useRestriction>
+	</parameter>
+	<parameter>
+		<name>ПериодСреза</name>
+		<title xsi:type="v8:LocalStringType">
+			<v8:item>
+				<v8:lang>ru</v8:lang>
+				<v8:content>Период среза</v8:content>
+			</v8:item>
+		</title>
+		<valueType>
+			<v8:Type>xs:dateTime</v8:Type>
+			<v8:DateQualifiers>
+				<v8:DateFractions>DateTime</v8:DateFractions>
+			</v8:DateQualifiers>
+		</valueType>
+		<value xsi:type="xs:dateTime">0001-01-01T00:00:00</value>
+		<useRestriction>true</useRestriction>
+	</parameter>
+	<parameter>
+		<name>ВыводитьВсеДокументы</name>
+		<title xsi:type="v8:LocalStringType">
+			<v8:item>
+				<v8:lang>ru</v8:lang>
+				<v8:content>Выводить все документы</v8:content>
+			</v8:item>
+		</title>
+		<valueType>
+			<v8:Type>xs:boolean</v8:Type>
+		</valueType>
+		<value xsi:type="xs:boolean">false</value>
+		<useRestriction>true</useRestriction>
+	</parameter>
+	<parameter>
+		<name>ПустойТарифныйПлан</name>
+		<title xsi:type="v8:LocalStringType">
+			<v8:item>
+				<v8:lang>ru</v8:lang>
+				<v8:content>Пустой тарифный план</v8:content>
+			</v8:item>
+		</title>
+		<valueType>
+			<v8:Type xmlns:d4p1="http://v8.1c.ru/8.1/data/enterprise/current-config">d4p1:CatalogRef.ТарифныеПланы</v8:Type>
+		</valueType>
+		<value xsi:nil="true"/>
+		<useRestriction>true</useRestriction>
+	</parameter>
+	<parameter>
+		<name>ПустойСтатусФШ</name>
+		<title xsi:type="v8:LocalStringType">
+			<v8:item>
+				<v8:lang>ru</v8:lang>
+				<v8:content>Пустой статус ФШ</v8:content>
+			</v8:item>
+		</title>
+		<valueType>
+			<v8:Type xmlns:d4p1="http://v8.1c.ru/8.1/data/enterprise/current-config">d4p1:EnumRef.СтатусыДокументовФайловыйШлюз</v8:Type>
+		</valueType>
+		<value xsi:nil="true"/>
+		<useRestriction>true</useRestriction>
+	</parameter>
+	<parameter>
+		<name>Перевод</name>
+		<title xsi:type="v8:LocalStringType">
+			<v8:item>
+				<v8:lang>ru</v8:lang>
+				<v8:content>Перевод</v8:content>
+			</v8:item>
+		</title>
+		<valueType>
+			<v8:Type xmlns:d4p1="http://v8.1c.ru/8.1/data/enterprise/current-config">d4p1:CatalogRef.ВидыОпераций</v8:Type>
+			<v8:Type xmlns:d4p1="http://v8.1c.ru/8.1/data/enterprise/current-config">d4p1:EnumRef.ВидыОтчетов</v8:Type>
+		</valueType>
+		<value xsi:type="dcscor:DesignTimeValue">Справочник.ВидыОпераций.Перевод</value>
+		<useRestriction>true</useRestriction>
+	</parameter>
+	<settingsVariant>
+		<dcsset:name>Основной</dcsset:name>
+		<dcsset:presentation xsi:type="xs:string">Основной</dcsset:presentation>
+		<dcsset:settings xmlns:style="http://v8.1c.ru/8.1/data/ui/style" xmlns:sys="http://v8.1c.ru/8.1/data/ui/fonts/system" xmlns:web="http://v8.1c.ru/8.1/data/ui/colors/web" xmlns:win="http://v8.1c.ru/8.1/data/ui/colors/windows">
+			<dcsset:selection>
+				<dcsset:item xsi:type="dcsset:SelectedItemField">
+					<dcsset:field>ТипДокумента</dcsset:field>
+				</dcsset:item>
+				<dcsset:item xsi:type="dcsset:SelectedItemField">
+					<dcsset:field>Документ</dcsset:field>
+				</dcsset:item>
+				<dcsset:item xsi:type="dcsset:SelectedItemField">
+					<dcsset:field>Депонент</dcsset:field>
+				</dcsset:item>
+				<dcsset:item xsi:type="dcsset:SelectedItemField">
+					<dcsset:field>Договор</dcsset:field>
+				</dcsset:item>
+				<dcsset:item xsi:type="dcsset:SelectedItemField">
+					<dcsset:field>СтатусДокументаВФайловомШлюзе</dcsset:field>
+				</dcsset:item>
+				<dcsset:item xsi:type="dcsset:SelectedItemField">
+					<dcsset:field>ТарифныйПлан</dcsset:field>
+				</dcsset:item>
+				<dcsset:item xsi:type="dcsset:SelectedItemField">
+					<dcsset:field>КоличествоДокументовНаОсновании</dcsset:field>
+				</dcsset:item>
+				<dcsset:item xsi:type="dcsset:SelectedItemField">
+					<dcsset:field>СообщениеОбОшибке</dcsset:field>
+				</dcsset:item>
+			</dcsset:selection>
+			<dcsset:item xsi:type="dcsset:StructureItemGroup">
+				<dcsset:order>
+					<dcsset:item xsi:type="dcsset:OrderItemAuto"/>
+				</dcsset:order>
+				<dcsset:selection>
+					<dcsset:item xsi:type="dcsset:SelectedItemAuto"/>
+				</dcsset:selection>
+			</dcsset:item>
+		</dcsset:settings>
+	</settingsVariant>
+</DataCompositionSchema>
