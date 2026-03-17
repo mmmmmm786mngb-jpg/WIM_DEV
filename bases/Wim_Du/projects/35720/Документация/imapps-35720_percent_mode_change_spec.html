@@ -1,0 +1,870 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>IMAPPS-35720 - Переход SF 22/1 на проценты (детальная инструкция)</title>
+  <style>
+    :root {
+      --bg: #f5f7fb;
+      --card: #ffffff;
+      --text: #1f2937;
+      --muted: #6b7280;
+      --border: #d1d5db;
+      --info: #2563eb;
+      --ok: #198754;
+      --warn: #f59e0b;
+      --danger: #dc3545;
+      --code: #f3f4f6;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      padding: 20px;
+      font-family: "Segoe UI", Arial, sans-serif;
+      line-height: 1.6;
+      color: var(--text);
+      background: var(--bg);
+      max-width: 1200px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+    article {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 28px 32px;
+    }
+    h1 {
+      margin-top: 0;
+      margin-bottom: 6px;
+      font-size: 1.5rem;
+      border-bottom: 2px solid var(--border);
+      padding-bottom: 10px;
+    }
+    h2 {
+      margin-top: 32px;
+      margin-bottom: 10px;
+      font-size: 1.22rem;
+      color: var(--info);
+      border-bottom: 1px solid #e5e7eb;
+      padding-bottom: 6px;
+    }
+    h3 {
+      margin-top: 20px;
+      margin-bottom: 8px;
+      font-size: 1.04rem;
+    }
+    p { margin: 8px 0; }
+    ul, ol { margin: 8px 0; padding-left: 22px; }
+    li { margin: 4px 0; }
+    .meta { color: var(--muted); font-size: 0.93rem; }
+    .good {
+      border-left: 4px solid var(--ok);
+      background: #ecfdf5;
+      padding: 10px 14px;
+      border-radius: 6px;
+      margin: 10px 0;
+    }
+    .warn {
+      border-left: 4px solid var(--warn);
+      background: #fffbeb;
+      padding: 10px 14px;
+      border-radius: 6px;
+      margin: 10px 0;
+    }
+    .danger {
+      border-left: 4px solid var(--danger);
+      background: #fef2f2;
+      padding: 10px 14px;
+      border-radius: 6px;
+      margin: 10px 0;
+    }
+    .info-block {
+      border-left: 4px solid var(--info);
+      background: #eff6ff;
+      padding: 10px 14px;
+      border-radius: 6px;
+      margin: 10px 0;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 12px 0 16px;
+      font-size: 0.93rem;
+    }
+    th, td {
+      border: 1px solid var(--border);
+      padding: 8px 10px;
+      vertical-align: top;
+      text-align: left;
+    }
+    th { background: #eef2ff; }
+    td.was { background: #fef2f2; }
+    td.now { background: #ecfdf5; }
+    code {
+      background: var(--code);
+      border-radius: 4px;
+      padding: 1px 5px;
+      font-family: Consolas, "Courier New", monospace;
+      font-size: 0.88em;
+    }
+    pre {
+      background: #0f172a;
+      color: #e2e8f0;
+      padding: 14px 16px;
+      border-radius: 8px;
+      overflow-x: auto;
+      font-size: 0.86rem;
+      line-height: 1.55;
+      margin: 8px 0;
+    }
+    pre .line-num { color: #64748b; margin-right: 10px; display: inline-block; min-width: 35px; text-align: right; user-select: none; }
+    pre .changed { color: #fbbf24; }
+    pre .removed { color: #f87171; text-decoration: line-through; }
+    pre .added   { color: #34d399; }
+    pre .comment { color: #94a3b8; }
+    .step-num {
+      display: inline-block;
+      background: var(--info);
+      color: #fff;
+      width: 28px; height: 28px;
+      border-radius: 50%;
+      text-align: center;
+      line-height: 28px;
+      font-weight: 700;
+      font-size: 0.9rem;
+      margin-right: 6px;
+    }
+    .file-badge {
+      display: inline-block;
+      background: #dbeafe;
+      color: #1e40af;
+      border-radius: 4px;
+      padding: 2px 8px;
+      font-size: 0.82rem;
+      font-family: Consolas, monospace;
+      margin-bottom: 4px;
+    }
+    .toc { background: #f8fafc; border: 1px solid var(--border); border-radius: 8px; padding: 14px 20px; margin: 16px 0; }
+    .toc ul { list-style: none; padding-left: 0; margin: 6px 0; }
+    .toc li { margin: 3px 0; }
+    .toc a { color: var(--info); text-decoration: none; }
+    .toc a:hover { text-decoration: underline; }
+    .roadmap-table td:nth-child(1) { width: 45px; text-align: center; font-weight: bold; color: var(--info); }
+    .roadmap-table td:nth-child(2) { width: 250px; }
+    .roadmap-table td:nth-child(3) { width: 120px; font-family: Consolas, monospace; font-size: 0.85rem; }
+  </style>
+</head>
+<body>
+  <article>
+
+    <h1>IMAPPS-35720: Детальная инструкция перехода SF 22/1 на проценты</h1>
+    <p class="meta">
+      Задача: пользователь в <code>ТаблицаКоэффициентов</code> вводит проценты
+      (<code>6</code>, <code>5.25</code>, <code>5</code>), а не доли (<code>0.06</code>).
+      Необходимо привести код расчета, вывод ставки и справку к единому процентному формату.
+    </p>
+    <p class="meta">
+      Обработка: <code>внSFРасчетВознаграждения_22_1_СЧА</code>
+      &nbsp;|&nbsp; ТЗ: <code>вознагр. СК ТИТ.docx</code>, разделы 4.1 - 4.3
+    </p>
+
+    <!-- ==== СОДЕРЖАНИЕ ==== -->
+    <div class="toc">
+      <strong>Содержание</strong>
+      <ul>
+        <li><a href="#problem">1. Суть проблемы (почему код не работает с процентами)</a></li>
+        <li><a href="#roadmap">2. Карта правок: файл -> строка -> действие</a></li>
+        <li><a href="#step1">3. Шаг 1: Метаданные обработки (XML)</a></li>
+        <li><a href="#step2">4. Шаг 2: Форма настроек</a></li>
+        <li><a href="#step3">5. Шаг 3: Модуль объекта - РезультатРасчета()</a></li>
+        <li><a href="#step4">6. Шаг 4: Модуль объекта - ПроцентПоТаблицеКоэффициентов()</a></li>
+        <li><a href="#step5">7. Шаг 5: Передача fallback-процента из договора</a></li>
+        <li><a href="#brsa">8. БРСА: что НЕ трогаем</a></li>
+        <li><a href="#test">9. Тестирование: 3 контрольных примера</a></li>
+        <li><a href="#checklist">10. Финальный чек-лист</a></li>
+      </ul>
+    </div>
+
+    <!-- ==== 1. СУТЬ ПРОБЛЕМЫ ==== -->
+    <h2 id="problem">1. Суть проблемы (почему текущий код не работает с процентами)</h2>
+
+    <p>
+      В текущей реализации код написан в расчете на хранение <strong>долей</strong> (0.06, 0.0525, 0.05)
+      в таблице коэффициентов. Бизнес требует, чтобы пользователь вводил <strong>проценты</strong>
+      (6, 5.25, 5). Если пользователь введет <code>6</code>, текущий код даст ошибку x100.
+    </p>
+
+    <div class="danger">
+      <strong>Проблемные точки в коде (3 места, которые создают ошибку):</strong>
+      <ol>
+        <li><strong>Строка 621</strong> (<code>ObjectModule.bsl</code>):
+            коэффициент подставляется в формулу как множитель без деления на 100.<br>
+            <code>База * 6 = x100 ошибка</code> вместо <code>База * 6/100 = корректно</code>.</li>
+        <li><strong>Строка 661</strong>: <code>П021 = КоэффициентВознаграждения * 100</code> -- при вводе <code>6</code> получим <code>600</code> вместо <code>6</code>.</li>
+        <li><strong>Строка 708</strong>: <code>СтавкаВознаграждения = КоэффициентВознаграждения * 100</code> -- аналогично, <code>600</code> уйдет в документ.</li>
+      </ol>
+    </div>
+
+    <h3>Числовой пример (ставка 6%, база 10 000 000 руб.)</h3>
+    <table>
+      <thead>
+        <tr><th>Показатель</th><th>Текущий код (ввод 6)</th><th>Правильный результат</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Сумма SF</td>
+          <td class="was"><code>10 000 000 * 6 = 60 000 000</code></td>
+          <td class="now"><code>10 000 000 * 6 / 100 = 600 000</code></td>
+        </tr>
+        <tr>
+          <td>П021 (ставка в справке)</td>
+          <td class="was"><code>6 * 100 = 600</code></td>
+          <td class="now"><code>6</code> (как есть)</td>
+        </tr>
+        <tr>
+          <td>СтавкаВознаграждения (в документ)</td>
+          <td class="was"><code>6 * 100 = 600</code></td>
+          <td class="now"><code>6</code> (как есть)</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <!-- ==== 2. КАРТА ПРАВОК ==== -->
+    <h2 id="roadmap">2. Карта правок: файл -> строка -> действие</h2>
+
+    <p>Полная карта в одной таблице. Идите сверху вниз и вносите правки по порядку.</p>
+
+    <table class="roadmap-table">
+      <thead>
+        <tr><th>#</th><th>Файл</th><th>Строка(и)</th><th>Действие</th><th>Описание</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>1</td>
+          <td><code>внSFРасчетВознаграждения_22_1_СЧА.xml</code></td>
+          <td><code>535</code></td>
+          <td>Изменить</td>
+          <td>Синоним колонки <code>Коэффициент</code> -> <code>Ставка, %</code></td>
+        </tr>
+        <tr>
+          <td>2</td>
+          <td><code>внSFРасчетВознаграждения_22_1_СЧА.xml</code></td>
+          <td><code>541-543</code></td>
+          <td>Изменить</td>
+          <td>Точность числа: <code>Digits</code> 7->5, <code>FractionDigits</code> 4->2 (достаточно для 99.99%)</td>
+        </tr>
+        <tr>
+          <td>3</td>
+          <td><code>Forms/ФормаНастроек/Ext/Form.xml</code></td>
+          <td><code>335-340</code></td>
+          <td>Изменить</td>
+          <td>Добавить <code>&lt;Title&gt;Ставка, %&lt;/Title&gt;</code> и подсказку пользователю</td>
+        </tr>
+        <tr>
+          <td>4</td>
+          <td><code>Forms/ФормаНастроек/Ext/Form/Module.bsl</code></td>
+          <td>после <code>46</code></td>
+          <td>Добавить</td>
+          <td>Валидация: если значение &lt; 0 или &gt; 100 -- предупреждение</td>
+        </tr>
+        <tr>
+          <td>5</td>
+          <td><code>Ext/ObjectModule.bsl</code></td>
+          <td><code>616</code></td>
+          <td>Изменить</td>
+          <td>Fallback: убрать <code>/ 100</code> в передаче <code>ПроцентВознаграждения</code></td>
+        </tr>
+        <tr>
+          <td>6</td>
+          <td><code>Ext/ObjectModule.bsl</code></td>
+          <td><code>621</code></td>
+          <td>Изменить</td>
+          <td>Формула SF: добавить <code>/ 100</code> при умножении</td>
+        </tr>
+        <tr>
+          <td>7</td>
+          <td><code>Ext/ObjectModule.bsl</code></td>
+          <td><code>661</code></td>
+          <td>Изменить</td>
+          <td>П021: убрать <code>* 100</code></td>
+        </tr>
+        <tr>
+          <td>8</td>
+          <td><code>Ext/ObjectModule.bsl</code></td>
+          <td><code>708</code></td>
+          <td>Изменить</td>
+          <td>СтавкаВознаграждения: убрать <code>* 100</code></td>
+        </tr>
+        <tr>
+          <td>9</td>
+          <td><code>Ext/ObjectModule.bsl</code></td>
+          <td><code>1303</code></td>
+          <td>Без изменений</td>
+          <td>Коэффициент берется как есть -- это правильно (теперь в %)</td>
+        </tr>
+        <tr>
+          <td>10</td>
+          <td><code>Ext/ObjectModule.bsl</code></td>
+          <td><code>1322</code></td>
+          <td>Изменить</td>
+          <td>Текст справки: убрать <code>* 100</code></td>
+        </tr>
+        <tr>
+          <td>11</td>
+          <td><code>Ext/ObjectModule.bsl</code></td>
+          <td><code>1339</code></td>
+          <td>Без изменений</td>
+          <td><code>П021 = Коэффициент</code> -- уже присваивается напрямую (проценты)</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <!-- ==== 3. ШАГ 1: МЕТАДАННЫЕ ==== -->
+    <h2 id="step1">3. Шаг 1: Метаданные обработки (XML)</h2>
+
+    <p><span class="file-badge">внSFРасчетВознаграждения_22_1_СЧА.xml</span></p>
+
+    <h3>3.1. Синоним колонки <code>Коэффициент</code> (строка 535)</h3>
+    <p>Пользователь должен видеть понятное название колонки в интерфейсе.</p>
+
+    <p><strong>Было</strong> (строка 535):</p>
+    <pre><span class="line-num">535</span>  <span class="removed">&lt;v8:content&gt;Коэффициент&lt;/v8:content&gt;</span></pre>
+
+    <p><strong>Стало:</strong></p>
+    <pre><span class="line-num">535</span>  <span class="added">&lt;v8:content&gt;Ставка, %&lt;/v8:content&gt;</span></pre>
+
+    <h3>3.2. Точность числового поля (строки 541-543)</h3>
+    <p>Для процентных ставок (6, 5.25, 5) не нужно 4 знака после запятой и 7 разрядов.</p>
+
+    <p><strong>Было</strong> (строки 541-543):</p>
+    <pre><span class="line-num">541</span>  &lt;v8:NumberQualifiers&gt;
+<span class="line-num">542</span>    <span class="removed">&lt;v8:Digits&gt;7&lt;/v8:Digits&gt;</span>
+<span class="line-num">543</span>    <span class="removed">&lt;v8:FractionDigits&gt;4&lt;/v8:FractionDigits&gt;</span>
+<span class="line-num">544</span>    &lt;v8:AllowedSign&gt;Nonnegative&lt;/v8:AllowedSign&gt;</pre>
+
+    <p><strong>Стало:</strong></p>
+    <pre><span class="line-num">541</span>  &lt;v8:NumberQualifiers&gt;
+<span class="line-num">542</span>    <span class="added">&lt;v8:Digits&gt;5&lt;/v8:Digits&gt;</span>
+<span class="line-num">543</span>    <span class="added">&lt;v8:FractionDigits&gt;2&lt;/v8:FractionDigits&gt;</span>
+<span class="line-num">544</span>    &lt;v8:AllowedSign&gt;Nonnegative&lt;/v8:AllowedSign&gt;</pre>
+
+    <div class="info-block">
+      <strong>Почему 5 / 2:</strong> <code>Digits=5</code> позволяет хранить до <code>999.99</code>,
+      <code>FractionDigits=2</code> -- два знака после запятой (5.25%, 6.5%).
+      Для процентных ставок этого достаточно. Если нужна точность три знака (5.125%), используйте <code>Digits=6, FractionDigits=3</code>.
+    </div>
+
+    <!-- ==== 4. ШАГ 2: ФОРМА ==== -->
+    <h2 id="step2">4. Шаг 2: Форма настроек</h2>
+
+    <h3>4.1. Заголовок поля ввода ставки</h3>
+    <p><span class="file-badge">Forms/ФормаНастроек/Ext/Form.xml</span>, строки 335-340</p>
+
+    <p><strong>Было</strong> (строки 335-340):</p>
+    <pre><span class="line-num">335</span>  &lt;InputField name="ТаблицаКоэффициентовКоэффициент" id="76"&gt;
+<span class="line-num">336</span>    &lt;DataPath&gt;Объект.ТаблицаКоэффициентов.Коэффициент&lt;/DataPath&gt;
+<span class="line-num">337</span>    &lt;EditMode&gt;EnterOnInput&lt;/EditMode&gt;
+<span class="line-num">338</span>    &lt;ContextMenu .../&gt;
+<span class="line-num">339</span>    &lt;ExtendedTooltip .../&gt;
+<span class="line-num">340</span>  &lt;/InputField&gt;</pre>
+
+    <p><strong>Стало:</strong></p>
+    <pre><span class="line-num">335</span>  &lt;InputField name="ТаблицаКоэффициентовКоэффициент" id="76"&gt;
+<span class="line-num">336</span>    &lt;DataPath&gt;Объект.ТаблицаКоэффициентов.Коэффициент&lt;/DataPath&gt;
+<span class="line-num">336a</span>   <span class="added">&lt;Title&gt;</span>
+<span class="line-num">336b</span>     <span class="added">&lt;v8:item&gt;&lt;v8:lang&gt;ru&lt;/v8:lang&gt;&lt;v8:content&gt;Ставка, %&lt;/v8:content&gt;&lt;/v8:item&gt;</span>
+<span class="line-num">336c</span>   <span class="added">&lt;/Title&gt;</span>
+<span class="line-num">336d</span>   <span class="added">&lt;ToolTip&gt;</span>
+<span class="line-num">336e</span>     <span class="added">&lt;v8:item&gt;&lt;v8:lang&gt;ru&lt;/v8:lang&gt;&lt;v8:content&gt;Введите процент (6, 5.25, 5)&lt;/v8:content&gt;&lt;/v8:item&gt;</span>
+<span class="line-num">336f</span>   <span class="added">&lt;/ToolTip&gt;</span>
+<span class="line-num">337</span>    &lt;EditMode&gt;EnterOnInput&lt;/EditMode&gt;
+<span class="line-num">338</span>    &lt;ContextMenu .../&gt;
+<span class="line-num">339</span>    &lt;ExtendedTooltip .../&gt;
+<span class="line-num">340</span>  &lt;/InputField&gt;</pre>
+
+    <h3>4.2. Валидация ввода при загрузке</h3>
+    <p><span class="file-badge">Forms/ФормаНастроек/Ext/Form/Module.bsl</span></p>
+
+    <p>
+      После загрузки таблицы из хранилища (строка 46: <code>КонецЦикла</code>) добавить контроль.
+      Это предупреждает пользователя, если он случайно ввел долю (0.06) вместо процента (6).
+    </p>
+
+    <p><strong>Было</strong> (строки 43-47):</p>
+    <pre><span class="line-num">43</span>  Для Каждого СтрХран ИЗ ТаблицаКоэфициентовХранилище Цикл
+<span class="line-num">44</span>      Стр = Объект.ТаблицаКоэффициентов.Добавить();
+<span class="line-num">45</span>      ЗаполнитьЗначенияСвойств(стр,СтрХран);
+<span class="line-num">46</span>  КонецЦикла;
+<span class="line-num">47</span>  КонецЕсли;</pre>
+
+    <p><strong>Стало:</strong></p>
+    <pre><span class="line-num">43</span>  Для Каждого СтрХран ИЗ ТаблицаКоэфициентовХранилище Цикл
+<span class="line-num">44</span>      Стр = Объект.ТаблицаКоэффициентов.Добавить();
+<span class="line-num">45</span>      ЗаполнитьЗначенияСвойств(стр,СтрХран);
+<span class="line-num">46</span>  КонецЦикла;
+<span class="line-num">46a</span> <span class="added comment">// IMAPPS-35720: Контроль формата ввода -- ставки в процентах</span>
+<span class="line-num">46b</span> <span class="added">Для Каждого СтрТЗ ИЗ Объект.ТаблицаКоэффициентов Цикл</span>
+<span class="line-num">46c</span>     <span class="added">Если СтрТЗ.Коэффициент > 0 И СтрТЗ.Коэффициент < 1 Тогда</span>
+<span class="line-num">46d</span>         <span class="added">Сообщить("Внимание: ставка " + СтрТЗ.Коэффициент</span>
+<span class="line-num">46e</span>             <span class="added">+ " похожа на долю. Ожидаются проценты (6, 5.25, 5).",</span>
+<span class="line-num">46f</span>             <span class="added">СтатусСообщения.Важное);</span>
+<span class="line-num">46g</span>     <span class="added">КонецЕсли;</span>
+<span class="line-num">46h</span>     <span class="added">Если СтрТЗ.Коэффициент > 100 Тогда</span>
+<span class="line-num">46i</span>         <span class="added">Сообщить("Ставка " + СтрТЗ.Коэффициент</span>
+<span class="line-num">46j</span>             <span class="added">+ "% превышает 100%. Проверьте корректность ввода.",</span>
+<span class="line-num">46k</span>             <span class="added">СтатусСообщения.Важное);</span>
+<span class="line-num">46l</span>     <span class="added">КонецЕсли;</span>
+<span class="line-num">46m</span> <span class="added">КонецЦикла;</span>
+<span class="line-num">47</span>  КонецЕсли;</pre>
+
+    <!-- ==== 5. ШАГ 3: РЕЗУЛЬТАТ РАСЧЕТА ==== -->
+    <h2 id="step3">5. Шаг 3: Модуль объекта -- РезультатРасчета()</h2>
+
+    <p><span class="file-badge">Ext/ObjectModule.bsl</span>, Функция <code>РезультатРасчета()</code>, строки 513-726</p>
+
+    <div class="info-block">
+      <strong>Принцип:</strong> Переменная <code>КоэффициентВознаграждения</code> во всем коде
+      содержит <strong>процент</strong> (6, 5.25, 5). Деление на 100 происходит <em>только один раз</em> --
+      непосредственно в формуле расчета суммы SF.
+    </div>
+
+    <!-- Правка 5.1 -->
+    <h3><span class="step-num">5.1</span> Вызов функции определения ставки (строка 616)</h3>
+    <p>
+      Четвертый параметр -- fallback-значение из договора (<code>ПроцентВознаграждения</code>).
+      Сейчас передается <code>ПроцентВознаграждения / 100</code>, то есть доля.
+      Нужно передавать процент как есть, чтобы fallback и таблица были в одном формате.
+    </p>
+
+    <p><strong>Было</strong> (строка 616):</p>
+    <pre><span class="line-num">616</span>  КоэффициентВознаграждения = ПроцентПоТаблицеКоэффициентов(
+         СтруктураРасчетаПриростРСА,
+         СтруктураПараметровПериода,
+         ПоказателиСправки,
+         <span class="removed">ПроцентВознаграждения / 100</span>
+     );</pre>
+
+    <p><strong>Стало:</strong></p>
+    <pre><span class="line-num">616</span>  <span class="comment">// IMAPPS-35720: передаем процент из договора как есть (без деления на 100)</span>
+     КоэффициентВознаграждения = ПроцентПоТаблицеКоэффициентов(
+         СтруктураРасчетаПриростРСА,
+         СтруктураПараметровПериода,
+         ПоказателиСправки,
+         <span class="added">ПроцентВознаграждения</span>
+     );</pre>
+
+    <div class="warn">
+      <strong>Уточнение по fallback:</strong> Параметр <code>ПроцентВознаграждения</code> (строка 567)
+      берется из <code>ПВХ.ВеличинаВознагражденияЗаУспех</code>. Убедитесь, что в справочнике
+      <code>ЗначенияПараметровДоговораДУ</code> значение хранится именно в процентах (6, а не 0.06).
+      Если там хранятся доли -- оставьте деление <code>/ 100</code> здесь, но тогда внутри
+      <code>ПроцентПоТаблицеКоэффициентов()</code> нужно будет обратно домножить на 100 для единого формата.
+    </div>
+
+    <!-- Правка 5.2 -->
+    <h3><span class="step-num">5.2</span> Формула расчета суммы SF (строка 621)</h3>
+    <p>
+      Основная формула: <code>(Инвестиционный_доход - Вознаграждение_MF) * Ставка</code>.
+      Поскольку ставка в процентах, делим на 100 при умножении.
+    </p>
+
+    <p><strong>Было</strong> (строка 621):</p>
+    <pre><span class="line-num">621</span>  РачетнаяВеличинаВознаграждения = ОКР(
+         (СтруктураРасчетаПриростРСА.ПриростРСА - СуммаЗаУправление)
+         <span class="removed">* КоэффициентВознаграждения</span>, 2);</pre>
+
+    <p><strong>Стало:</strong></p>
+    <pre><span class="line-num">621</span>  <span class="comment">// IMAPPS-35720: ставка в процентах, переводим в долю делением на 100</span>
+     РачетнаяВеличинаВознаграждения = ОКР(
+         (СтруктураРасчетаПриростРСА.ПриростРСА - СуммаЗаУправление)
+         <span class="added">* (КоэффициентВознаграждения / 100)</span>, 2);</pre>
+
+    <p><strong>Проверка по формуле ТЗ:</strong></p>
+    <table>
+      <tr><th>Вход</th><th>Вычисление</th><th>Результат</th></tr>
+      <tr>
+        <td>База = 10 000 000, Ставка = 6</td>
+        <td><code>10 000 000 * (6 / 100) = 10 000 000 * 0.06</code></td>
+        <td><code>600 000</code></td>
+      </tr>
+    </table>
+
+    <!-- Правка 5.3 -->
+    <h3><span class="step-num">5.3</span> Показатель П021 -- ставка для справки (строка 661)</h3>
+    <p>
+      В текущем коде <code>П021</code> домножается на 100.
+      Если ставка уже в процентах, домножение дает <code>600</code> вместо <code>6</code>.
+    </p>
+
+    <p><strong>Было</strong> (строка 661):</p>
+    <pre><span class="line-num">661</span>  ПоказателиСправки.П021 = <span class="removed">КоэффициентВознаграждения * 100</span>;</pre>
+
+    <p><strong>Стало:</strong></p>
+    <pre><span class="line-num">661</span>  <span class="comment">// IMAPPS-35720: ставка уже в процентах, убрано умножение на 100</span>
+     ПоказателиСправки.П021 = <span class="added">КоэффициентВознаграждения</span>;</pre>
+
+    <!-- Правка 5.4 -->
+    <h3><span class="step-num">5.4</span> Возвращаемое значение СтавкаВознаграждения (строка 708)</h3>
+    <p>
+      Ставка уходит в документ <code>НачислениеВознаграждения</code>. Та же проблема: лишнее <code>* 100</code>.
+    </p>
+
+    <p><strong>Было</strong> (строка 708):</p>
+    <pre><span class="line-num">708</span>  СтруктураВозврата.СтавкаВознаграждения = <span class="removed">КоэффициентВознаграждения * 100</span>;</pre>
+
+    <p><strong>Стало:</strong></p>
+    <pre><span class="line-num">708</span>  <span class="comment">// IMAPPS-35720: ставка уже в процентах</span>
+     СтруктураВозврата.СтавкаВознаграждения = <span class="added">КоэффициентВознаграждения</span>;</pre>
+
+    <h3>5.5. Итоговый вид ключевого блока РезультатРасчета() после правок</h3>
+    <p>Собранный фрагмент для копирования (строки ~615-670):</p>
+
+    <pre><span class="comment">// IMAPPS-35720: КоэффициентВознаграждения содержит процент (6, 5.25, 5)</span>
+КоэффициентВознаграждения = ПроцентПоТаблицеКоэффициентов(
+    СтруктураРасчетаПриростРСА,
+    СтруктураПараметровПериода,
+    ПоказателиСправки,
+    ПроцентВознаграждения  <span class="comment">// fallback из договора тоже в процентах</span>
+);
+
+<span class="comment">// Формула SF: переводим процент в долю единовременно</span>
+РачетнаяВеличинаВознаграждения = ОКР(
+    (СтруктураРасчетаПриростРСА.ПриростРСА - СуммаЗаУправление)
+    * (КоэффициентВознаграждения / 100), 2
+);
+ИтоговыйРасчет = ?(
+    СтруктураРасчетаПриростРСА.ПриростРСА - СуммаЗаУправление > 0,
+    Макс(0, РачетнаяВеличинаВознаграждения), 0
+);
+ИтоговыйРасчет = Окр(ИтоговыйРасчет, 2);
+
+<span class="comment">// ... (БРСА без изменений) ...</span>
+
+<span class="comment">// Показатели для справки: ставка как есть, в процентах</span>
+ПоказателиСправки.П021 = КоэффициентВознаграждения;
+ПоказателиСправки.П022 = РачетнаяВеличинаВознаграждения;
+ПоказателиСправки.П023 = ИтоговыйРасчет;
+
+<span class="comment">// ... (П031, П032, П033 без изменений) ...</span>
+
+<span class="comment">// Возвращаемые значения: ставка = процент</span>
+СтруктураВозврата.СуммаВознаграждения  = ИтоговыйРасчет;
+СтруктураВозврата.СправкаРасчет        = СправкаРасчет(ПоказателиСправки);
+СтруктураВозврата.СтавкаВознаграждения = КоэффициентВознаграждения;
+СтруктураВозврата.БРСА                 = БРСА;
+СтруктураВозврата.БРСА_Начальная       = БРСА_Начальная;</pre>
+
+    <!-- ==== 6. ШАГ 4: ПРОЦЕНТ ПО ТАБЛИЦЕ ==== -->
+    <h2 id="step4">6. Шаг 4: Модуль объекта -- ПроцентПоТаблицеКоэффициентов()</h2>
+
+    <p><span class="file-badge">Ext/ObjectModule.bsl</span>, строки 1233-1342</p>
+
+    <div class="info-block">
+      <strong>Контекст:</strong> Эта функция ищет подходящую строку в таблице коэффициентов
+      по величине СЧА и возвращает ставку. Также формирует текст справки <code>П021Строка</code>.
+    </div>
+
+    <!-- Правка 6.1 -->
+    <h3><span class="step-num">6.1</span> Чтение коэффициента из таблицы (строка 1303)</h3>
+    <p>Строка 1303 <strong>НЕ меняется</strong>. Значение берется как есть из таблицы (теперь это процент).</p>
+    <pre><span class="line-num">1303</span>  Коэффициент = ВыборкаДетальныеЗаписи.Коэффициент; <span class="comment">// Было 6, и остается 6 -- OK</span></pre>
+
+    <!-- Правка 6.2 -->
+    <h3><span class="step-num">6.2</span> Текст справки -- формирование процента (строка 1322)</h3>
+    <p>
+      При формировании текстового описания ставок для справки,
+      значение домножалось на 100 (перевод доли в проценты). Теперь это не нужно.
+    </p>
+
+    <p><strong>Было</strong> (строка 1322):</p>
+    <pre><span class="line-num">1322</span>  Процент = ОКР(<span class="removed">СтрокаТЗ.Коэффициент * 100</span>, 3);</pre>
+
+    <p><strong>Стало:</strong></p>
+    <pre><span class="line-num">1322</span>  <span class="comment">// IMAPPS-35720: ставка уже в процентах, убрано * 100</span>
+     Процент = ОКР(<span class="added">СтрокаТЗ.Коэффициент</span>, 3);</pre>
+
+    <p><strong>Проверка:</strong></p>
+    <table>
+      <tr><th>В таблице</th><th>Старый код</th><th>Новый код</th></tr>
+      <tr><td><code>6</code> (процент)</td><td class="was"><code>6 * 100 = 600</code></td><td class="now"><code>6</code></td></tr>
+      <tr><td><code>5.25</code></td><td class="was"><code>5.25 * 100 = 525</code></td><td class="now"><code>5.25</code></td></tr>
+      <tr><td><code>5</code></td><td class="was"><code>5 * 100 = 500</code></td><td class="now"><code>5</code></td></tr>
+    </table>
+
+    <!-- Правка 6.3 -->
+    <h3><span class="step-num">6.3</span> Запись П021 внутри функции (строка 1339)</h3>
+    <p>Строка 1339 <strong>НЕ меняется</strong>:</p>
+    <pre><span class="line-num">1339</span>  ПоказателиСправки.П021 = Коэффициент; <span class="comment">// Уже процент, OK</span></pre>
+
+    <!-- Правка 6.4 -->
+    <h3><span class="step-num">6.4</span> Текст строк справки (строки 1324-1333)</h3>
+    <p>Эти строки формируют текст вида: <code>"6% при СЧА до 1 000 000 000 руб. включительно"</code>.
+       Переменная <code>Процент</code> (исправлена в 6.2) уже содержит правильное значение,
+       поэтому сами строки 1324-1333 <strong>НЕ требуют правок</strong> -- они просто используют <code>Процент</code>.</p>
+
+    <h3>6.5. Полный вид функции после правок</h3>
+    <pre>Функция ПроцентПоТаблицеКоэффициентов(СтруктураРасчетаПриростРСА,
+    СтруктураПараметровПериода, ПоказателиСправки, СтруктураКоэффициент)
+
+    Коэффициент = 0;
+
+    Если СтруктураПараметровПериода.НастройкиАлгоритма.Свойство("ТаблицаКоэффициентов") Тогда
+        ТаблицаКоэфициентовХранилище = XMLЗначение(
+            Тип("ХранилищеЗначения"),
+            СтруктураПараметровПериода.НастройкиАлгоритма.ТаблицаКоэффициентов
+        ).Получить();
+
+        Запрос = Новый Запрос;
+        Запрос.Текст = "ВЫБРАТЬ ... ГДЕ ... МинГраница <= &СуммаСЧА И МаксГраница >= &СуммаСЧА";
+        Запрос.УстановитьПараметр("СуммаСЧА",
+            СтруктураРасчетаПриростРСА.РСА_Окончание);
+        Запрос.УстановитьПараметр("ТЗ", ТаблицаКоэфициентовХранилище);
+        РезультатЗапроса = Запрос.Выполнить();
+        ВыборкаДетальныеЗаписи = РезультатЗапроса.Выбрать();
+
+        Если ВыборкаДетальныеЗаписи.Следующий() Тогда
+            <span class="comment">// Значение из таблицы берется как есть -- это процент (6, 5.25, 5)</span>
+            Коэффициент = ВыборкаДетальныеЗаписи.Коэффициент;
+        ИначеЕсли СтруктураРасчетаПриростРСА.РСА_Окончание <= 0 Тогда
+            Сообщить("Дохода нет", СтатусСообщения.Важное);
+        Иначе
+            Сообщить("Не заполнена таблица коэффициентов по договору",
+                СтатусСообщения.Важное);
+        КонецЕсли;
+    КонецЕсли;
+
+    <span class="comment">// Формирование текста для справки</span>
+    ТекстКоэффициенты = "Ставка ... согласно Приложению 1:";
+    ТаблицаКоэфициентовХранилище.Сортировать("МинГраница");
+    КоличествоСтрок = ТаблицаКоэфициентовХранилище.Количество();
+    Для инд = 0 По КоличествоСтрок - 1 Цикл
+        СтрокаТЗ = ТаблицаКоэфициентовХранилище.Получить(инд);
+        <span class="added">Процент = ОКР(СтрокаТЗ.Коэффициент, 3);  // уже в процентах!</span>
+        <span class="comment">// ... формирование строки "6% при СЧА до/свыше ..." ...</span>
+    КонецЦикла;
+
+    ПоказателиСправки.П021Строка = ТекстКоэффициенты;
+    ПоказателиСправки.П021 = Коэффициент;  <span class="comment">// процент как есть</span>
+
+    Возврат Коэффициент;
+КонецФункции</pre>
+
+    <!-- ==== 7. ШАГ 5: FALLBACK ==== -->
+    <h2 id="step5">7. Шаг 5: Fallback -- процент вознаграждения из договора</h2>
+
+    <p><span class="file-badge">Ext/ObjectModule.bsl</span>, строка 567</p>
+
+    <p>
+      Переменная <code>ПроцентВознаграждения</code> читается из <code>ПВХ.ВеличинаВознагражденияЗаУспех</code>.
+      Это значение из регистра параметров договора. <strong>Необходимо проверить формат хранения!</strong>
+    </p>
+
+    <pre><span class="line-num">567</span>  ПроцентВознаграждения = УправлениеПараметрамиДоговораДУ
+         .ПолучитьПараметрДоговораДУ(
+             СтруктураПараметров.ДоговорДУ,
+             ПВХ.ВеличинаВознагражденияЗаУспех,
+             СтруктураПараметров.Дата
+         );</pre>
+
+    <div class="warn">
+      <strong>Проверьте:</strong> Если в <code>РегистрыСведений.ЗначенияПараметровДоговораДУ</code>
+      для <code>ВеличинаВознагражденияЗаУспех</code> хранится <code>6</code> (процент) -- правки строки 616 корректны.
+      Если хранится <code>0.06</code> (доля) -- в строке 616 нужно оставить деление, но изменить его:
+    </div>
+
+    <table>
+      <thead>
+        <tr><th>Формат хранения в ПВХ</th><th>Строка 616 (вызов функции)</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><code>6</code> (процент)</td>
+          <td class="now"><code>ПроцентВознаграждения</code> (передаем как есть)</td>
+        </tr>
+        <tr>
+          <td><code>0.06</code> (доля)</td>
+          <td class="was"><code>ПроцентВознаграждения * 100</code> (конвертируем в процент)</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="info-block">
+      <strong>Как проверить:</strong> Откройте любой действующий договор -> вкладка "Параметры" ->
+      найдите параметр "Величина вознаграждения за успех". Если там стоит <code>6</code> -- вариант 1.
+      Если <code>0.06</code> -- вариант 2.
+    </div>
+
+    <!-- ==== 8. БРСА ==== -->
+    <h2 id="brsa">8. БРСА: что НЕ трогаем</h2>
+
+    <p>
+      Расчет БРСА (строки 629-712) <strong>не зависит от формата ставки</strong>
+      и не требует правок при переходе на проценты.
+    </p>
+
+    <div class="good">
+      <strong>Формулы БРСА (раздел 4 ТЗ) не затронуты:</strong>
+      <ul>
+        <li><code>4.1: БРСА_Расчетная = БРСА_Начальная + Вложения - Изъятия</code></li>
+        <li><code>4.2: РСАМинусВознаграждения = РСА_Окончание - MF - SF</code></li>
+        <li><code>4.3: БРСА = max(0, 4.1, 4.2)</code></li>
+      </ul>
+      <p>БРСА получает уже <em>рассчитанную</em> сумму SF (<code>ИтоговыйРасчет</code>),
+         которая будет корректной после правок в шаге 5.</p>
+    </div>
+
+    <!-- ==== 9. ТЕСТИРОВАНИЕ ==== -->
+    <h2 id="test">9. Тестирование: 3 контрольных примера</h2>
+
+    <h3>9.1. Тест-кейсы (расчет суммы SF)</h3>
+    <table>
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>СЧА (РСА_Окончание)</th>
+          <th>Ставка в таблице, %</th>
+          <th>Инвест. доход (П015)</th>
+          <th>MF</th>
+          <th>Ожидаемый SF</th>
+          <th>Формула</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>1</td>
+          <td><code>500 000 000</code></td>
+          <td><code>6</code></td>
+          <td><code>10 000 000</code></td>
+          <td><code>0</code></td>
+          <td><code>600 000</code></td>
+          <td><code>10 000 000 * 6 / 100</code></td>
+        </tr>
+        <tr>
+          <td>2</td>
+          <td><code>1 500 000 000</code></td>
+          <td><code>5.25</code></td>
+          <td><code>80 000 000</code></td>
+          <td><code>2 000 000</code></td>
+          <td><code>4 095 000</code></td>
+          <td><code>(80 000 000 - 2 000 000) * 5.25 / 100</code></td>
+        </tr>
+        <tr>
+          <td>3</td>
+          <td><code>3 000 000 000</code></td>
+          <td><code>5</code></td>
+          <td><code>250 000 000</code></td>
+          <td><code>5 000 000</code></td>
+          <td><code>12 250 000</code></td>
+          <td><code>(250 000 000 - 5 000 000) * 5 / 100</code></td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h3>9.2. Контроль вывода ставки</h3>
+    <table>
+      <thead>
+        <tr><th>Показатель</th><th>Тест 1 (ставка 6)</th><th>Тест 2 (ставка 5.25)</th><th>Тест 3 (ставка 5)</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><code>П021</code> (справка)</td><td><code>6</code></td><td><code>5.25</code></td><td><code>5</code></td></tr>
+        <tr><td><code>СтавкаВознаграждения</code> (документ)</td><td><code>6</code></td><td><code>5.25</code></td><td><code>5</code></td></tr>
+        <tr><td>Текст справки (фрагмент)</td><td><code>"6% при СЧА до ..."</code></td><td><code>"5.25% при СЧА свыше ..."</code></td><td><code>"5% при СЧА свыше ..."</code></td></tr>
+      </tbody>
+    </table>
+
+    <h3>9.3. Дополнительные проверки</h3>
+    <ol>
+      <li>Ввести в таблицу <code>0.06</code> -- должно появиться предупреждение "похожа на долю".</li>
+      <li>Ввести <code>150</code> -- должно появиться предупреждение "превышает 100%".</li>
+      <li>Оставить таблицу пустой -- должно сработать <code>"Не заполнена таблица коэффициентов по договору"</code>.</li>
+      <li>Проверить БРСА: формулы раздела 4 ТЗ не должны измениться.</li>
+    </ol>
+
+    <!-- ==== 10. ЧЕК-ЛИСТ ==== -->
+    <h2 id="checklist">10. Финальный чек-лист готовности</h2>
+
+    <table>
+      <thead>
+        <tr><th>#</th><th>Проверка</th><th>Файл и строки</th><th>Статус</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>1</td>
+          <td>Синоним колонки = <code>Ставка, %</code></td>
+          <td><code>внSFРасчетВознаграждения_22_1_СЧА.xml : 535</code></td>
+          <td></td>
+        </tr>
+        <tr>
+          <td>2</td>
+          <td>Точность числового поля = <code>5/2</code></td>
+          <td><code>внSFРасчетВознаграждения_22_1_СЧА.xml : 542-543</code></td>
+          <td></td>
+        </tr>
+        <tr>
+          <td>3</td>
+          <td>Заголовок поля формы = <code>Ставка, %</code></td>
+          <td><code>Form.xml : 335-336</code></td>
+          <td></td>
+        </tr>
+        <tr>
+          <td>4</td>
+          <td>Валидация ввода (предупреждение при дробях и > 100)</td>
+          <td><code>Module.bsl : после 46</code></td>
+          <td></td>
+        </tr>
+        <tr>
+          <td>5</td>
+          <td>Fallback передается как процент</td>
+          <td><code>ObjectModule.bsl : 616</code></td>
+          <td></td>
+        </tr>
+        <tr>
+          <td>6</td>
+          <td>Формула SF делит на 100: <code>* (К / 100)</code></td>
+          <td><code>ObjectModule.bsl : 621</code></td>
+          <td></td>
+        </tr>
+        <tr>
+          <td>7</td>
+          <td><code>П021 = КоэффициентВознаграждения</code> (без * 100)</td>
+          <td><code>ObjectModule.bsl : 661</code></td>
+          <td></td>
+        </tr>
+        <tr>
+          <td>8</td>
+          <td><code>СтавкаВознаграждения = КоэффициентВознаграждения</code> (без * 100)</td>
+          <td><code>ObjectModule.bsl : 708</code></td>
+          <td></td>
+        </tr>
+        <tr>
+          <td>9</td>
+          <td>Текст справки: <code>Процент = ОКР(СтрокаТЗ.Коэффициент, 3)</code> (без * 100)</td>
+          <td><code>ObjectModule.bsl : 1322</code></td>
+          <td></td>
+        </tr>
+        <tr>
+          <td>10</td>
+          <td>Тест-кейсы 1-3 дают правильные суммы SF</td>
+          <td>Ручная проверка</td>
+          <td></td>
+        </tr>
+        <tr>
+          <td>11</td>
+          <td>БРСА без изменений (раздел 4 ТЗ)</td>
+          <td><code>ObjectModule.bsl : 629-712</code></td>
+          <td></td>
+        </tr>
+        <tr>
+          <td>12</td>
+          <td>Все правки содержат комментарий <code>// IMAPPS-35720:</code></td>
+          <td>Все измененные файлы</td>
+          <td></td>
+        </tr>
+      </tbody>
+    </table>
+
+  </article>
+</body>
+</html>
