@@ -1,0 +1,249 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>IMAPPS-35879 - TestProd (полная копия ПРОД) - SLA 2 часа</title>
+  <style>
+    :root {
+      --bg: #f6f8fb;
+      --card: #ffffff;
+      --text: #1f2937;
+      --muted: #6b7280;
+      --line: #e5e7eb;
+      --open: #3b82f6;
+      --exec: #ef4444;
+      --exec-good: #16a34a;
+      --exec-bad: #dc2626;
+      --speed: #10b981;
+    }
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+    }
+    .wrap {
+      max-width: 1100px;
+      margin: 24px auto;
+      padding: 0 16px 24px;
+    }
+    .card {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 16px;
+      margin-bottom: 16px;
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+    }
+    h1, h2 {
+      margin: 0 0 12px;
+      font-weight: 700;
+    }
+    h1 { font-size: 22px; }
+    h2 { font-size: 18px; }
+    .sub {
+      color: var(--muted);
+      margin-bottom: 8px;
+      font-size: 14px;
+    }
+    .legend {
+      display: flex;
+      gap: 16px;
+      flex-wrap: wrap;
+      font-size: 14px;
+      color: var(--muted);
+      margin-bottom: 10px;
+    }
+    .dot {
+      display: inline-block;
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      margin-right: 6px;
+      vertical-align: middle;
+    }
+    .row {
+      margin: 10px 0 12px;
+    }
+    .label {
+      font-size: 14px;
+      margin-bottom: 6px;
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+    }
+    .track {
+      position: relative;
+      height: 14px;
+      border-radius: 7px;
+      background: #f3f4f6;
+      overflow: hidden;
+      border: 1px solid #e5e7eb;
+    }
+    .track.sla::after {
+      content: "";
+      position: absolute;
+      top: -2px;
+      bottom: -2px;
+      left: 47.62%;
+      border-left: 2px dashed #f59e0b;
+      pointer-events: none;
+      z-index: 2;
+    }
+    .sla-note {
+      margin: 4px 0 8px;
+      font-size: 13px;
+      color: #92400e;
+    }
+    .bar {
+      height: 100%;
+      border-radius: 7px;
+    }
+    .open { background: var(--open); }
+    .exec { background: var(--exec); }
+    .exec-good { background: var(--exec-good); }
+    .exec-bad { background: var(--exec-bad); }
+    .speed { background: var(--speed); }
+    .ok { color: #15803d; font-weight: 700; }
+    .fail { color: #b91c1c; font-weight: 700; }
+    table {
+      border-collapse: collapse;
+      width: 100%;
+      font-size: 14px;
+    }
+    th, td {
+      border: 1px solid var(--line);
+      padding: 8px 10px;
+      text-align: left;
+    }
+    th {
+      background: #f9fafb;
+      font-weight: 700;
+    }
+    .num { text-align: right; white-space: nowrap; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="card">
+      <h1>IMAPPS-35879: замеры исполнения на TestProd (полная копия ПРОД)</h1>
+      <div class="sub">Цель: удержать время исполнения ниже SLA 2 часа (120 минут). Объем каждого прогона: 100 000 сделок.</div>
+      <div class="legend">
+        <span><span class="dot" style="background:#3b82f6"></span>Время открытия, мин</span>
+        <span><span class="dot" style="background:#ef4444"></span>Время исполнения, мин</span>
+        <span><span class="dot" style="background:#10b981"></span>Скорость исполнения, сделок/час</span>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>1) Диаграмма времени по 4 замерам</h2>
+      <div class="sub">Масштаб по времени: максимум 252 мин (исполнение, замер 3).</div>
+      <div class="sla-note"><strong>Ключевая веха:</strong> 2 часа (120 минут). Бизнес-требование - время исполнения должно быть ниже этой границы.</div>
+
+      <div class="row">
+        <div class="label"><strong>Замер 1 (20 потоков)</strong><span>Открытие: 22 мин | Исполнение: 83 мин | <span class="ok">SLA OK</span></span></div>
+        <div class="track sla"><div class="bar open" style="width: 8.73%"></div></div>
+        <div style="height:4px"></div>
+        <div class="track sla"><div class="bar exec-good" style="width: 32.94%"></div></div>
+      </div>
+
+      <div class="row">
+        <div class="label"><strong>Замер 2 (12 потоков)</strong><span>Открытие: 32 мин | Исполнение: 107 мин | <span class="ok">SLA OK</span></span></div>
+        <div class="track sla"><div class="bar open" style="width: 12.70%"></div></div>
+        <div style="height:4px"></div>
+        <div class="track sla"><div class="bar exec-good" style="width: 42.46%"></div></div>
+      </div>
+
+      <div class="row">
+        <div class="label"><strong>Замер 3 (6 потоков)</strong><span>Открытие: 59 мин | Исполнение: 252 мин | <span class="fail">SLA FAIL</span></span></div>
+        <div class="track sla"><div class="bar open" style="width: 23.41%"></div></div>
+        <div style="height:4px"></div>
+        <div class="track sla"><div class="bar exec-bad" style="width: 100%"></div></div>
+      </div>
+
+      <div class="row">
+        <div class="label"><strong>Замер 4 (10 потоков)</strong><span>Открытие: 38 мин | Исполнение: 139 мин | <span class="fail">SLA FAIL</span></span></div>
+        <div class="track sla"><div class="bar open" style="width: 15.08%"></div></div>
+        <div style="height:4px"></div>
+        <div class="track sla"><div class="bar exec-bad" style="width: 55.16%"></div></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>2) Диаграмма скорости исполнения (сделок/час)</h2>
+      <div class="sub">Скорость = 100 000 / время исполнения (в часах). Масштаб: максимум 72 289 сделок/час.</div>
+
+      <div class="row">
+        <div class="label"><strong>Замер 1 (20 потоков)</strong><span>72 289 сделок/час</span></div>
+        <div class="track"><div class="bar speed" style="width: 100%"></div></div>
+      </div>
+
+      <div class="row">
+        <div class="label"><strong>Замер 2 (12 потоков)</strong><span>56 075 сделок/час</span></div>
+        <div class="track"><div class="bar speed" style="width: 77.57%"></div></div>
+      </div>
+
+      <div class="row">
+        <div class="label"><strong>Замер 3 (6 потоков)</strong><span>23 810 сделок/час</span></div>
+        <div class="track"><div class="bar speed" style="width: 32.94%"></div></div>
+      </div>
+
+      <div class="row">
+        <div class="label"><strong>Замер 4 (10 потоков)</strong><span>43 165 сделок/час</span></div>
+        <div class="track"><div class="bar speed" style="width: 59.71%"></div></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>3) Таблица исходных данных</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>Замер</th>
+            <th>Потоков</th>
+            <th>Договоры x сделок</th>
+            <th class="num">Открытие, мин</th>
+            <th class="num">Исполнение, мин</th>
+            <th class="num">Скорость, сделок/час</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>1</td>
+            <td>20</td>
+            <td>1000 x 100</td>
+            <td class="num">22</td>
+            <td class="num">83</td>
+            <td class="num">72 289</td>
+          </tr>
+          <tr>
+            <td>2</td>
+            <td>12</td>
+            <td>1000 x 100</td>
+            <td class="num">32</td>
+            <td class="num">107</td>
+            <td class="num">56 075</td>
+          </tr>
+          <tr>
+            <td>3</td>
+            <td>6</td>
+            <td>1000 x 100</td>
+            <td class="num">59</td>
+            <td class="num">252</td>
+            <td class="num">23 810</td>
+          </tr>
+          <tr>
+            <td>4</td>
+            <td>10</td>
+            <td>3031 x 33</td>
+            <td class="num">38</td>
+            <td class="num">139</td>
+            <td class="num">43 165</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</body>
+</html>
