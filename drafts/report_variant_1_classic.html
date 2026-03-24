@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Вариант 1 - Сводный отчет по оптимизации блоков</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 24px;
+            color: #1f2937;
+            background: #f8fafc;
+        }
+        h1, h2 {
+            margin: 0 0 12px 0;
+        }
+        .subtitle {
+            margin-bottom: 20px;
+            color: #475569;
+        }
+        .cards {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(160px, 1fr));
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+        .card {
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 12px;
+        }
+        .card .label {
+            font-size: 13px;
+            color: #64748b;
+        }
+        .card .value {
+            font-size: 24px;
+            font-weight: bold;
+            margin-top: 8px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: #ffffff;
+            margin-bottom: 18px;
+            border: 1px solid #e2e8f0;
+        }
+        th, td {
+            border: 1px solid #e2e8f0;
+            padding: 8px;
+            vertical-align: top;
+            text-align: left;
+        }
+        th {
+            background: #e2e8f0;
+            font-size: 13px;
+        }
+        .status {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+            color: #ffffff;
+            font-weight: bold;
+        }
+        .prod { background: #28a745; }
+        .ready { background: #17a2b8; }
+        .vendor { background: #dc3545; }
+        .release { background: #f59e0b; }
+        ul {
+            margin: 0;
+            padding-left: 18px;
+        }
+        .footnote {
+            color: #64748b;
+            font-size: 13px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Отчет для руководства: оптимизация блоков</h1>
+    <p class="subtitle">Вариант 1. Классический управленческий формат: KPI сводка + детальные таблицы по блокам и замерам.</p>
+
+    <div class="cards">
+        <div class="card"><div class="label">Всего блоков</div><div class="value">8</div></div>
+        <div class="card"><div class="label">На ПРОД</div><div class="value">4</div></div>
+        <div class="card"><div class="label">Не на ПРОД</div><div class="value">4</div></div>
+        <div class="card"><div class="label">Макс. замер</div><div class="value">110 мин</div></div>
+    </div>
+
+    <h2>1. Сводная таблица по блокам</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>Блок</th>
+                <th>Статус</th>
+                <th>Замер</th>
+                <th>Комментарий</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>ДУ. Загрузка сделок</td>
+                <td><span class="status prod">ПРОД</span></td>
+                <td>50 мин</td>
+                <td>Оптимизация запросов и потоков, перенос функции в модуль повторного использования.</td>
+            </tr>
+            <tr>
+                <td>ДУ. Исполнение: открытие позиций</td>
+                <td><span class="status prod">ПРОД</span></td>
+                <td>15 мин</td>
+                <td>Ускорение исполнения сделок T+, оптимизация набора запросов.</td>
+            </tr>
+            <tr>
+                <td>ДУ. Исполнение: проведение сделок</td>
+                <td><span class="status vendor">У вендора в разработке</span></td>
+                <td>45 мин</td>
+                <td>Оптимизация партий остатков; на ПРОД 100 тыс сделок в 20 потоков - 1 час 23 мин.</td>
+            </tr>
+            <tr>
+                <td>ДУ-ФИН. Обмены</td>
+                <td><span class="status prod">ПРОД</span></td>
+                <td>90 мин</td>
+                <td>Устранено дублирование выгрузки и дублирование сделок при выгрузке.</td>
+            </tr>
+            <tr>
+                <td>ФИН. Исполнение: открытие позиций, обработка после загрузки</td>
+                <td><span class="status prod">ПРОД</span></td>
+                <td>30 мин</td>
+                <td>Распараллеливание постобработки потока по портфелям.</td>
+            </tr>
+            <tr>
+                <td>ФИН. Исполнение: проведение сделок, обработка после загрузки</td>
+                <td><span class="status prod">ПРОД</span></td>
+                <td>110 мин</td>
+                <td>Оптимизация исполнения сделок без дублей перепроведения, ускорение аванса ПеререгистрацияЦБ.</td>
+            </tr>
+            <tr>
+                <td>ДУ. Регламенты УТРО</td>
+                <td><span class="status release">Ожидание релиза</span></td>
+                <td>25 мин (на 3000 договоров)</td>
+                <td>Оптимизация кода, вынос расчета в предварительный модуль.</td>
+            </tr>
+            <tr>
+                <td>ДУ. Регламенты ВЕЧЕР</td>
+                <td><span class="status vendor">У вендора в разработке</span></td>
+                <td>110 мин (на 3000 договоров)</td>
+                <td>Оптимизация кода, вынос расчета в предварительный модуль.</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <h2>2. Детализация работ по исполнителям</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>Блок</th>
+                <th>ЛИЧНО Я</th>
+                <th>АВАНКОР</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>ДУ. Загрузка сделок</td>
+                <td><ul><li>Ускорение загрузки в ДУ: оптимизация запросов и параллельные потоки.</li></ul></td>
+                <td><ul><li>Оптимизация функции ДоговорКонтрагентаСРольюДоговорДУПоПортфелю через перенос в повторно используемый модуль.</li></ul></td>
+            </tr>
+            <tr>
+                <td>ДУ. Исполнение (открытие и проведение)</td>
+                <td>
+                    <ul>
+                        <li>Ускорение исполнения сделок T+.</li>
+                        <li>Отключение блокировки количества потоков во внешней обработке внИсполнениеСделокТ+2_ДУ.</li>
+                    </ul>
+                </td>
+                <td>
+                    <ul>
+                        <li>Оптимизация кода для Исполнений СделокTn, оптимизировано много запросов.</li>
+                        <li>Оптимизация запроса партий остатков в сделке (в разработке у вендора).</li>
+                    </ul>
+                </td>
+            </tr>
+            <tr>
+                <td>ДУ-ФИН. Обмены</td>
+                <td><ul><li>Устранено дублирование выгрузки данных и сделок.</li></ul></td>
+                <td><ul><li>Нет отдельных работ в этом блоке.</li></ul></td>
+            </tr>
+            <tr>
+                <td>ФИН. Исполнение (открытие и проведение)</td>
+                <td><ul><li>Распараллеливание постобработки потока по портфелям.</li></ul></td>
+                <td>
+                    <ul>
+                        <li>Исправление долгого расчета аванса в документе ПеререгистрацияЦБ.</li>
+                        <li>Оптимизация исполнения сделок без дублей перепроведения.</li>
+                    </ul>
+                </td>
+            </tr>
+            <tr>
+                <td>ДУ. Регламенты УТРО</td>
+                <td><ul><li>Нет отдельных работ в этом блоке.</li></ul></td>
+                <td><ul><li>Оптимизация утренних операций, готово к выводу в ПРОД.</li></ul></td>
+            </tr>
+            <tr>
+                <td>ДУ. Регламенты ВЕЧЕР</td>
+                <td><ul><li>Нет отдельных работ в этом блоке.</li></ul></td>
+                <td><ul><li>Оптимизация вечерних операций, у вендора в разработке.</li></ul></td>
+            </tr>
+            <tr>
+                <td>Общая оптимизация систем</td>
+                <td>
+                    <ul>
+                        <li>ФИН: оптимизация отчета расшифровка финвложений (с 2 часов до 1 минуты).</li>
+                        <li>ФИН: оптимизация отчета о финансовом результате по данным ЕПС.</li>
+                    </ul>
+                </td>
+                <td>
+                    <ul>
+                        <li>Перевод клиентских вызовов расчетов на сервер (готово к выводу в ПРОД).</li>
+                        <li>Параллельный расчет ПИФ в ГрупповоеСозданиеПланаРеглОпераций.</li>
+                        <li>Оптимизации по проблемным операциям и выгрузкам УК-Фонд.</li>
+                    </ul>
+                </td>
+            </tr>
+        </tbody>
+    </table>
+
+    <p class="footnote">Источник: перечень работ и замеры на 30 тыс сделок из внутреннего черновика. Статус не на ПРОД определен по примечаниям.</p>
+</body>
+</html>

@@ -1,0 +1,544 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Вариант 7 - Детализация по цепочке процессов</title>
+    <style>
+        * { box-sizing: border-box; }
+        body {
+            font-family: "Segoe UI", Arial, sans-serif;
+            margin: 0;
+            background: #111827;
+            color: #e5e7eb;
+        }
+        .page {
+            max-width: 1140px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .title-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            margin-bottom: 18px;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        .title-bar h1 { margin: 0; font-size: 22px; color: #f9fafb; }
+        .title-bar p { margin: 4px 0 0 0; color: #9ca3af; font-size: 13px; }
+        .kpi-row {
+            display: flex;
+            gap: 8px;
+        }
+        .kpi {
+            background: #1f2937;
+            border: 1px solid #374151;
+            border-radius: 8px;
+            padding: 8px 14px;
+            text-align: center;
+        }
+        .kpi .v { font-size: 22px; font-weight: 700; }
+        .kpi .l { font-size: 11px; color: #9ca3af; }
+        .kpi-blue .v { color: #60a5fa; }
+        .kpi-green .v { color: #34d399; }
+        .kpi-purple .v { color: #a78bfa; }
+        .kpi-red .v { color: #f87171; }
+        .kpi-amber .v { color: #fbbf24; }
+
+        .chain {
+            position: relative;
+            padding-left: 30px;
+        }
+        .chain::before {
+            content: "";
+            position: absolute;
+            left: 12px;
+            top: 0;
+            bottom: 0;
+            width: 2px;
+            background: #374151;
+        }
+        .stage {
+            position: relative;
+            margin-bottom: 24px;
+        }
+        .stage-dot {
+            position: absolute;
+            left: -24px;
+            top: 6px;
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            border: 2px solid #374151;
+        }
+        .dot-prod { background: #28a745; border-color: #28a745; }
+        .dot-ready { background: #17a2b8; border-color: #17a2b8; }
+        .dot-wait { background: #f59e0b; border-color: #f59e0b; }
+        .dot-vendor { background: #dc3545; border-color: #dc3545; }
+
+        .stage-header {
+            background: #1f2937;
+            border: 1px solid #374151;
+            border-radius: 8px;
+            padding: 10px 14px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin-bottom: 8px;
+        }
+        .stage-name {
+            font-weight: 700;
+            font-size: 15px;
+            color: #f9fafb;
+        }
+        .stage-meta {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+        .pill {
+            font-size: 11px;
+            padding: 3px 8px;
+            border-radius: 10px;
+            font-weight: 600;
+        }
+        .pill-prod { background: #064e3b; color: #34d399; }
+        .pill-ready { background: #0c4a6e; color: #67e8f9; }
+        .pill-wait { background: #78350f; color: #fbbf24; }
+        .pill-vendor { background: #7f1d1d; color: #fca5a5; }
+        .pill-time { background: #1e3a5f; color: #93c5fd; }
+
+        .work-list {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            margin-left: 6px;
+        }
+        .work-item {
+            background: #1f2937;
+            border: 1px solid #374151;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        .wi-top {
+            padding: 10px 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 8px;
+        }
+        .wi-title {
+            font-weight: 600;
+            font-size: 13px;
+            color: #e5e7eb;
+        }
+        .wi-who {
+            font-size: 10px;
+            padding: 2px 7px;
+            border-radius: 8px;
+            font-weight: 700;
+            white-space: nowrap;
+        }
+        .wi-me { background: #1e3a5f; color: #93c5fd; }
+        .wi-av { background: #3b0764; color: #c4b5fd; }
+
+        .wi-body {
+            padding: 0 12px 10px 12px;
+            font-size: 12px;
+            color: #d1d5db;
+            display: grid;
+            grid-template-columns: 110px 1fr;
+            row-gap: 5px;
+            column-gap: 8px;
+        }
+        .wi-label {
+            color: #6b7280;
+            font-weight: 600;
+            font-size: 11px;
+        }
+        .wi-val { }
+        .wi-highlight {
+            background: #064e3b;
+            color: #34d399;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-weight: 700;
+        }
+
+        .footnote {
+            color: #6b7280;
+            font-size: 12px;
+            margin-top: 16px;
+            padding-top: 10px;
+            border-top: 1px solid #374151;
+        }
+    </style>
+</head>
+<body>
+<div class="page">
+
+    <div class="title-bar">
+        <div>
+            <h1>Детализация работ по цепочке обработки сделок</h1>
+            <p>Вариант 7. Работы представлены в порядке цепочки бизнес-процесса: загрузка -> исполнение -> обмены -> постобработка -> регламенты -> общая оптимизация.</p>
+        </div>
+        <div class="kpi-row">
+            <div class="kpi kpi-blue"><div class="v">20</div><div class="l">Работ</div></div>
+            <div class="kpi kpi-green"><div class="v">7</div><div class="l">ЛИЧНО Я</div></div>
+            <div class="kpi kpi-purple"><div class="v">13</div><div class="l">АВАНКОР</div></div>
+            <div class="kpi kpi-red"><div class="v">4</div><div class="l">Не на ПРОД</div></div>
+            <div class="kpi kpi-amber"><div class="v">485</div><div class="l">Мин суммарно</div></div>
+        </div>
+    </div>
+
+    <div class="chain">
+
+        <!-- ЭТАП 1 -->
+        <div class="stage">
+            <div class="stage-dot dot-prod"></div>
+            <div class="stage-header">
+                <div class="stage-name">Этап 1. Загрузка сделок (ДУ)</div>
+                <div class="stage-meta">
+                    <span class="pill pill-prod">ПРОД</span>
+                    <span class="pill pill-time">50 мин / 30 тыс сделок</span>
+                </div>
+            </div>
+            <div class="work-list">
+                <div class="work-item">
+                    <div class="wi-top">
+                        <div class="wi-title">Ускорение загрузки сделок в ДУ (оптимизация запросов, параллельные потоки)</div>
+                        <span class="wi-who wi-me">ЛИЧНО Я</span>
+                    </div>
+                    <div class="wi-body">
+                        <div class="wi-label">Объект</div><div class="wi-val">Механизм загрузки сделок в подсистему ДУ</div>
+                        <div class="wi-label">Суть</div><div class="wi-val">Переписаны тяжелые запросы загрузки сделок, устранены избыточные обращения к базе данных. Внедрена параллельная обработка входящего потока сделок в несколько потоков одновременно вместо последовательной обработки.</div>
+                        <div class="wi-label">Контекст</div><div class="wi-val">Загрузка - первый этап цепочки. Чем быстрее загрузка, тем раньше стартуют исполнение, обмены, регламенты.</div>
+                        <div class="wi-label">Эффект</div><div class="wi-val">Существенное сокращение времени загрузки за счет параллелизма и оптимизации SQL.</div>
+                    </div>
+                </div>
+                <div class="work-item">
+                    <div class="wi-top">
+                        <div class="wi-title">Оптимизация функции ДоговорКонтрагентаСРольюДоговорДУПоПортфелю через модуль повторного использования</div>
+                        <span class="wi-who wi-av">АВАНКОР</span>
+                    </div>
+                    <div class="wi-body">
+                        <div class="wi-label">Объект</div><div class="wi-val">Функция получения договора контрагента по портфелю ДУ</div>
+                        <div class="wi-label">Суть</div><div class="wi-val">Функция вызывалась многократно с одними и теми же параметрами. Перенесена в модуль повторного использования - результат кэшируется на время сеанса.</div>
+                        <div class="wi-label">Контекст</div><div class="wi-val">Модуль повторного использования в 1С кэширует результат при одинаковых параметрах и неизменных справочных данных.</div>
+                        <div class="wi-label">Эффект</div><div class="wi-val">Устранены тысячи повторных обращений к базе данных при загрузке.</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ЭТАП 2 -->
+        <div class="stage">
+            <div class="stage-dot dot-prod"></div>
+            <div class="stage-header">
+                <div class="stage-name">Этап 2. Исполнение сделок (ДУ): открытие позиций и проведение</div>
+                <div class="stage-meta">
+                    <span class="pill pill-prod">ПРОД (частично)</span>
+                    <span class="pill pill-vendor">Частично у вендора</span>
+                    <span class="pill pill-time">15 + 45 мин / 30 тыс</span>
+                </div>
+            </div>
+            <div class="work-list">
+                <div class="work-item">
+                    <div class="wi-top">
+                        <div class="wi-title">Ускорение исполнения сделок T+</div>
+                        <span class="wi-who wi-me">ЛИЧНО Я</span>
+                    </div>
+                    <div class="wi-body">
+                        <div class="wi-label">Объект</div><div class="wi-val">Механизм исполнения сделок с расчетом даты Т+ (расчеты через N торговых дней)</div>
+                        <div class="wi-label">Суть</div><div class="wi-val">Оптимизированы алгоритмы расчета даты T+ и логика обработки по режимам торгов. Устранены лишние итерации и повторные вычисления.</div>
+                        <div class="wi-label">Контекст</div><div class="wi-val">T+ - режим торгов, каждая сделка требует вычисления даты с учетом календарей бирж.</div>
+                        <div class="wi-label">Эффект</div><div class="wi-val">Ускорение массового исполнения сделок.</div>
+                    </div>
+                </div>
+                <div class="work-item">
+                    <div class="wi-top">
+                        <div class="wi-title">Отключение блокировки потоков во внешней обработке "внИсполнениеСделокТ+2_ДУ"</div>
+                        <span class="wi-who wi-me">ЛИЧНО Я</span>
+                    </div>
+                    <div class="wi-body">
+                        <div class="wi-label">Объект</div><div class="wi-val">Внешняя обработка внИсполнениеСделокТ+2_ДУ</div>
+                        <div class="wi-label">Суть</div><div class="wi-val">Снята программная блокировка max параллельных потоков. Блокировка была защитой от перегрузки, после оптимизации стала избыточной.</div>
+                        <div class="wi-label">Эффект</div><div class="wi-val">Полное использование серверных ресурсов, пропорциональное ускорение.</div>
+                    </div>
+                </div>
+                <div class="work-item">
+                    <div class="wi-top">
+                        <div class="wi-title">Оптимизация кода Исполнений СделокTn (комплексная оптимизация запросов)</div>
+                        <span class="wi-who wi-av">АВАНКОР</span>
+                    </div>
+                    <div class="wi-body">
+                        <div class="wi-label">Объект</div><div class="wi-val">Код исполнений сделок по всем режимам торгов Tn</div>
+                        <div class="wi-label">Суть</div><div class="wi-val">Устранение дублирующих запросов, объединение мелких в пакетные, временные таблицы для промежуточных расчетов, устранение запросов в циклах.</div>
+                        <div class="wi-label">Контекст</div><div class="wi-val">Исполнение включает расчет позиций, движения по регистрам, проверку лимитов - каждый лишний запрос кратно замедляет.</div>
+                        <div class="wi-label">Эффект</div><div class="wi-val">Существенное сокращение обращений к СУБД и общего времени.</div>
+                    </div>
+                </div>
+                <div class="work-item">
+                    <div class="wi-top">
+                        <div class="wi-title">Оптимизация запроса партий остатков в Сделке</div>
+                        <span class="wi-who wi-av">АВАНКОР</span>
+                    </div>
+                    <div class="wi-body">
+                        <div class="wi-label">Объект</div><div class="wi-val">Запрос к регистрам остатков по партиям ц/б (FIFO/LIFO)</div>
+                        <div class="wi-label">Суть</div><div class="wi-val">Переработан тяжелый запрос партионного учета, оптимизированы соединения таблиц и условия отбора.</div>
+                        <div class="wi-label">Контекст</div><div class="wi-val">При продаже определяется, из каких партий (покупок) списывать - один из самых тяжелых запросов.</div>
+                        <div class="wi-label">Статус</div><div class="wi-val"><span class="pill pill-vendor">У вендора в разработке</span></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ЭТАП 3 -->
+        <div class="stage">
+            <div class="stage-dot dot-prod"></div>
+            <div class="stage-header">
+                <div class="stage-name">Этап 3. Обмены ДУ -> ФИН</div>
+                <div class="stage-meta">
+                    <span class="pill pill-prod">ПРОД</span>
+                    <span class="pill pill-time">90 мин / 30 тыс сделок</span>
+                </div>
+            </div>
+            <div class="work-list">
+                <div class="work-item">
+                    <div class="wi-top">
+                        <div class="wi-title">Устранение дублирования выгрузки данных (дублирование сделок при выгрузке)</div>
+                        <span class="wi-who wi-me">ЛИЧНО Я</span>
+                    </div>
+                    <div class="wi-body">
+                        <div class="wi-label">Объект</div><div class="wi-val">Механизм выгрузки/обмена данными из подсистемы ДУ в подсистему ФИН</div>
+                        <div class="wi-label">Суть</div><div class="wi-val">Сделки выгружались повторно при каждом запуске обмена, даже если были переданы ранее. Добавлен контроль уже выгруженных, исключена повторная обработка.</div>
+                        <div class="wi-label">Контекст</div><div class="wi-val">Дубли приводили к двойной нагрузке, рискам двойного проведения и ошибкам в учете. Кратно увеличивали время обмена.</div>
+                        <div class="wi-label">Эффект</div><div class="wi-val">Устранение двойной обработки, сокращение объема передаваемых данных, повышение надежности и корректности.</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ЭТАП 4 -->
+        <div class="stage">
+            <div class="stage-dot dot-prod"></div>
+            <div class="stage-header">
+                <div class="stage-name">Этап 4. Постобработка в ФИН (исполнение: открытие позиций и проведение)</div>
+                <div class="stage-meta">
+                    <span class="pill pill-prod">ПРОД</span>
+                    <span class="pill pill-time">30 + 110 мин / 30 тыс сделок</span>
+                </div>
+            </div>
+            <div class="work-list">
+                <div class="work-item">
+                    <div class="wi-top">
+                        <div class="wi-title">Распараллеливание обработки после загрузки Потока по Портфелям</div>
+                        <span class="wi-who wi-me">ЛИЧНО Я</span>
+                    </div>
+                    <div class="wi-body">
+                        <div class="wi-label">Объект</div><div class="wi-val">Этап постобработки после загрузки потока сделок в подсистему ФИН</div>
+                        <div class="wi-label">Суть</div><div class="wi-val">Сделки распределяются по портфелям, каждый портфель обрабатывается в отдельном потоке. Портфели независимы - параллелизация безопасна.</div>
+                        <div class="wi-label">Контекст</div><div class="wi-val">Постобработка: формирование движений, расчет позиций, проверка лимитов. При большом числе портфелей последовательная обработка непропорционально долгая.</div>
+                        <div class="wi-label">Эффект</div><div class="wi-val">Кратное сокращение времени пропорционально числу потоков на сервере.</div>
+                    </div>
+                </div>
+                <div class="work-item">
+                    <div class="wi-top">
+                        <div class="wi-title">Исправление: Долго рассчитывается аванс в документе ПеререгистрацияЦБ</div>
+                        <span class="wi-who wi-av">АВАНКОР</span>
+                    </div>
+                    <div class="wi-body">
+                        <div class="wi-label">Объект</div><div class="wi-val">Документ ПеререгистрацияЦБ - расчет аванса при проведении</div>
+                        <div class="wi-label">Суть</div><div class="wi-val">Оптимизирован запрос расчета авансовых сумм, устранены избыточные соединения таблиц и пересчеты при проведении.</div>
+                        <div class="wi-label">Контекст</div><div class="wi-val">ПеререгистрацияЦБ - перевод ценных бумаг между депозитариями. Медленный аванс блокировал весь пакет документов.</div>
+                        <div class="wi-label">Эффект</div><div class="wi-val">Ускорение проведения, разблокировка очереди.</div>
+                    </div>
+                </div>
+                <div class="work-item">
+                    <div class="wi-top">
+                        <div class="wi-title">Оптимизация исполнения сделок (без дублей перепроведения)</div>
+                        <span class="wi-who wi-av">АВАНКОР</span>
+                    </div>
+                    <div class="wi-body">
+                        <div class="wi-label">Объект</div><div class="wi-val">Механизм исполнения (проведения) сделок в ФИН</div>
+                        <div class="wi-label">Суть</div><div class="wi-val">Устранено повторное проведение уже проведенных сделок. Добавлена проверка актуальности - перепроведение только для документов с устаревшими движениями.</div>
+                        <div class="wi-label">Контекст</div><div class="wi-val">Перепроведение = полная отмена движений + повторное формирование. Для актуальных документов - бесполезная операция.</div>
+                        <div class="wi-label">Эффект</div><div class="wi-val">Исключение бесполезных перепроведений, пропорциональное сокращение общего времени.</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ЭТАП 5 -->
+        <div class="stage">
+            <div class="stage-dot dot-wait"></div>
+            <div class="stage-header">
+                <div class="stage-name">Этап 5. Регламенты ДУ (утренние и вечерние)</div>
+                <div class="stage-meta">
+                    <span class="pill pill-ready">УТРО: готово к ПРОД</span>
+                    <span class="pill pill-vendor">ВЕЧЕР: у вендора</span>
+                    <span class="pill pill-time">25 + 110 мин / 3000 дог.</span>
+                </div>
+            </div>
+            <div class="work-list">
+                <div class="work-item">
+                    <div class="wi-top">
+                        <div class="wi-title">Оптимизация утренних операций (вынос расчетов в предварительный модуль)</div>
+                        <span class="wi-who wi-av">АВАНКОР</span>
+                    </div>
+                    <div class="wi-body">
+                        <div class="wi-label">Объект</div><div class="wi-val">Утренний регламент ДУ - ежедневные операции до начала торгового дня</div>
+                        <div class="wi-label">Суть</div><div class="wi-val">Расчеты, не зависящие от количества договоров, вынесены в предварительный модуль. Вычисляются один раз и используются для всех 3000 договоров, а не пересчитываются для каждого.</div>
+                        <div class="wi-label">Контекст</div><div class="wi-val">Утренний регламент: пересчет позиций, обновление котировок, расчет СЧА. На 3000 договоров каждая лишняя операция = тысячи избыточных вычислений.</div>
+                        <div class="wi-label">Статус</div><div class="wi-val"><span class="pill pill-ready">Готово к выводу в ПРОД</span> - ожидание релизного окна</div>
+                        <div class="wi-label">Эффект</div><div class="wi-val">Время перестает линейно зависеть от числа договоров для вынесенных расчетов.</div>
+                    </div>
+                </div>
+                <div class="work-item">
+                    <div class="wi-top">
+                        <div class="wi-title">Оптимизация вечерних операций (вынос расчетов в предварительный модуль)</div>
+                        <span class="wi-who wi-av">АВАНКОР</span>
+                    </div>
+                    <div class="wi-body">
+                        <div class="wi-label">Объект</div><div class="wi-val">Вечерний регламент ДУ - итоговые операции по результатам торгового дня</div>
+                        <div class="wi-label">Суть</div><div class="wi-val">Аналогично утренним: общие данные (курсы, котировки, параметры торгов) вычисляются однократно. Вечерний регламент тяжелее утреннего: финансовый результат, переоценка портфелей, отчетность.</div>
+                        <div class="wi-label">Контекст</div><div class="wi-val">110 мин на 3000 договоров - критическое узкое место. Включает расчет P&L, переоценку, формирование данных для отчетности.</div>
+                        <div class="wi-label">Статус</div><div class="wi-val"><span class="pill pill-vendor">У вендора в разработке</span></div>
+                        <div class="wi-label">Эффект</div><div class="wi-val">Существенное сокращение длительности после внедрения вендором.</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ЭТАП 6 -->
+        <div class="stage">
+            <div class="stage-dot dot-prod"></div>
+            <div class="stage-header">
+                <div class="stage-name">Этап 6. Общая оптимизация всех систем</div>
+                <div class="stage-meta">
+                    <span class="pill pill-prod">ПРОД (большинство)</span>
+                    <span class="pill pill-ready">Частично готово к ПРОД</span>
+                </div>
+            </div>
+            <div class="work-list">
+                <div class="work-item">
+                    <div class="wi-top">
+                        <div class="wi-title">Перевод клиентских вызовов расчета операций на сервер</div>
+                        <span class="wi-who wi-av">АВАНКОР</span>
+                    </div>
+                    <div class="wi-body">
+                        <div class="wi-label">Объект</div><div class="wi-val">Регламентные операции, запускаемые с клиентского приложения 1С</div>
+                        <div class="wi-label">Суть</div><div class="wi-val">Расчеты переведены с клиентских вызовов на серверные, устранена зависимость от клиентского сеанса и лишний сетевой трафик.</div>
+                        <div class="wi-label">Статус</div><div class="wi-val"><span class="pill pill-ready">Готово к выводу в ПРОД</span></div>
+                        <div class="wi-label">Эффект</div><div class="wi-val">Снижение нагрузки на сервер и процессор, ускорение расчетов.</div>
+                    </div>
+                </div>
+                <div class="work-item">
+                    <div class="wi-top">
+                        <div class="wi-title">Параллельный расчет ПИФ в ГрупповоеСозданиеПланаРеглОпераций</div>
+                        <span class="wi-who wi-av">АВАНКОР</span>
+                    </div>
+                    <div class="wi-body">
+                        <div class="wi-label">Объект</div><div class="wi-val">Обработка ГрупповоеСозданиеПланаРеглОпераций - расчет по ПИФ</div>
+                        <div class="wi-label">Суть</div><div class="wi-val">ПИФ выделены в отдельный поток, не пересекающийся с расчетами по ДУ-портфелям. Специфика ПИФ (пай, СЧА, надбавки/скидки) независима от ДУ.</div>
+                        <div class="wi-label">Эффект</div><div class="wi-val">Сокращение общего времени регламентных операций за счет параллелизма.</div>
+                    </div>
+                </div>
+                <div class="work-item">
+                    <div class="wi-top">
+                        <div class="wi-title">Устранение зависаний: ПроверкаСуммКонтрагентовКредитныхОрганизаций_4129У_2_10</div>
+                        <span class="wi-who wi-av">АВАНКОР</span>
+                    </div>
+                    <div class="wi-body">
+                        <div class="wi-label">Объект</div><div class="wi-val">Процедура проверки лимитов по указанию ЦБ 4129-У</div>
+                        <div class="wi-label">Суть</div><div class="wi-val">Устранена причина жестких зависаний (hang) сервера. Оптимизирован алгоритм проверки и запросы к регистрам. Медленные расчеты блокировали серверные ресурсы для всех остальных процессов.</div>
+                        <div class="wi-label">Контекст</div><div class="wi-val">Нормативная проверка по указанию ЦБ, затрагивает все договоры с кредитными организациями.</div>
+                        <div class="wi-label">Эффект</div><div class="wi-val">Устранение зависаний, разблокировка серверных ресурсов.</div>
+                    </div>
+                </div>
+                <div class="work-item">
+                    <div class="wi-top">
+                        <div class="wi-title">Оптимизация операций в выгрузке "УК-Фонд 2.0"</div>
+                        <span class="wi-who wi-av">АВАНКОР</span>
+                    </div>
+                    <div class="wi-body">
+                        <div class="wi-label">Объект</div><div class="wi-val">Механизм выгрузки данных УК-Фонд 2.0 (обмен УК - специализированный депозитарий)</div>
+                        <div class="wi-label">Суть</div><div class="wi-val">Устранены узкие места в формировании XML-пакетов, оптимизированы запросы формирования данных для пакетов.</div>
+                        <div class="wi-label">Эффект</div><div class="wi-val">Ускорение формирования выгрузки, снижение нагрузки.</div>
+                    </div>
+                </div>
+                <div class="work-item">
+                    <div class="wi-top">
+                        <div class="wi-title">ПИФ: ускорение массового проведения документов "Сделка с ц/б"</div>
+                        <span class="wi-who wi-av">АВАНКОР</span>
+                    </div>
+                    <div class="wi-body">
+                        <div class="wi-label">Объект</div><div class="wi-val">Документ "Сделка с ц/б" - массовое проведение по ПИФ</div>
+                        <div class="wi-label">Суть</div><div class="wi-val">Оптимизированы запросы и логика проведения. Промежуточные пересчеты СЧА сгруппированы для пакетной обработки.</div>
+                        <div class="wi-label">Контекст</div><div class="wi-val">Каждое проведение = пересчет стоимости чистых активов фонда. При массовом проведении можно группировать пересчеты.</div>
+                        <div class="wi-label">Эффект</div><div class="wi-val">Ускорение массового проведения сделок по ПИФ.</div>
+                    </div>
+                </div>
+                <div class="work-item">
+                    <div class="wi-top">
+                        <div class="wi-title">Оптимизация регламента закрытия портфелей по ряду операций</div>
+                        <span class="wi-who wi-av">АВАНКОР</span>
+                    </div>
+                    <div class="wi-body">
+                        <div class="wi-label">Объект</div><div class="wi-val">Регламент закрытия портфелей - итоговые операции (пересчет итогов, сверка, отчетные данные)</div>
+                        <div class="wi-label">Суть</div><div class="wi-val">Устранены избыточные обращения к базе данных и повторные расчеты внутри операций пересчета итогов и формирования отчетных данных.</div>
+                        <div class="wi-label">Контекст</div><div class="wi-val">Завершающий этап дня. От его скорости зависит своевременность формирования отчетности.</div>
+                        <div class="wi-label">Эффект</div><div class="wi-val">Ускорение завершающего этапа дневной обработки.</div>
+                    </div>
+                </div>
+                <div class="work-item">
+                    <div class="wi-top">
+                        <div class="wi-title">Исправление: ФИН-СЕП - медленная выгрузка Обмен УК-Фонд (Аванкор) 2.0</div>
+                        <span class="wi-who wi-av">АВАНКОР</span>
+                    </div>
+                    <div class="wi-body">
+                        <div class="wi-label">Объект</div><div class="wi-val">Выгрузка Обмен УК-Фонд 2.0 в контуре ФИН-СЕП (сепаратный учет)</div>
+                        <div class="wi-label">Суть</div><div class="wi-val">Оптимизированы запросы формирования пакетов данных и устранены блокировки при параллельном доступе. Контур ФИН-СЕП имел специфические проблемы, отличные от основного контура.</div>
+                        <div class="wi-label">Эффект</div><div class="wi-val">Ускорение выгрузки из контура ФИН-СЕП, устранение задержки.</div>
+                    </div>
+                </div>
+                <div class="work-item">
+                    <div class="wi-top">
+                        <div class="wi-title">ФИН. Оптимизация Отчета расшифровка финансовых вложений</div>
+                        <span class="wi-who wi-me">ЛИЧНО Я</span>
+                    </div>
+                    <div class="wi-body">
+                        <div class="wi-label">Объект</div><div class="wi-val">Отчет "Расшифровка финансовых вложений" в подсистеме ФИН</div>
+                        <div class="wi-label">Суть</div><div class="wi-val">Полная переработка механизма формирования: замена вложенных подзапросов на временные таблицы, устранение запросов в циклах, пакетная обработка данных.</div>
+                        <div class="wi-label">Контекст</div><div class="wi-val">Детальная аналитика по всем инвестиционным позициям с разбивкой по типам, эмитентам, срокам. Десятки тысяч строк данных.</div>
+                        <div class="wi-label">Эффект</div><div class="wi-val"><span class="wi-highlight">С 2 ЧАСОВ ДО 1 МИНУТЫ (ускорение x120)</span></div>
+                    </div>
+                </div>
+                <div class="work-item">
+                    <div class="wi-top">
+                        <div class="wi-title">ФИН. Оптимизация Отчета о финансовом результате по данным ЕПС</div>
+                        <span class="wi-who wi-me">ЛИЧНО Я</span>
+                    </div>
+                    <div class="wi-body">
+                        <div class="wi-label">Объект</div><div class="wi-val">Отчет "Финансовый результат по данным ЕПС" (Единая Подсистема Счетов)</div>
+                        <div class="wi-label">Суть</div><div class="wi-val">Оптимизированы запросы агрегации, улучшена логика расчета итоговых строк, устранены избыточные перерасчеты.</div>
+                        <div class="wi-label">Контекст</div><div class="wi-val">Ключевой управленческий отчет: P&L по всем направлениям инвестиционной деятельности. Используется руководством.</div>
+                        <div class="wi-label">Эффект</div><div class="wi-val">Существенное сокращение времени формирования управленческой отчетности.</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <div class="footnote">
+        Замеры выполнены на старом тестовом сервере на предпоследней версии оптимизации (30 тыс сделок, регламенты - 3000 договоров).
+        Дополнительный замер проведения на ПРОД: 100 тыс сделок, 20 потоков - 1 час 23 минуты.
+    </div>
+
+</div>
+</body>
+</html>

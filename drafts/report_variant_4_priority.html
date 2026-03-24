@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Вариант 4 - Отчет с расшифровкой и приоритезацией</title>
+    <style>
+        body {
+            font-family: Tahoma, Arial, sans-serif;
+            margin: 24px;
+            background: #fcfcfd;
+            color: #1e1e1e;
+        }
+        h1 {
+            margin-bottom: 4px;
+        }
+        .sub {
+            margin-bottom: 14px;
+            color: #555;
+        }
+        .section {
+            margin-bottom: 16px;
+            border: 1px solid #dcdfe6;
+            background: #fff;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        .section h2 {
+            margin: 0;
+            padding: 10px 12px;
+            background: #eef2ff;
+            border-bottom: 1px solid #dcdfe6;
+            font-size: 18px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+        th, td {
+            border: 1px solid #dcdfe6;
+            padding: 8px;
+            vertical-align: top;
+        }
+        th {
+            background: #f9fafb;
+        }
+        .prio-high { background: #ffe4e6; }
+        .prio-mid { background: #fff7ed; }
+        .prio-low { background: #ecfeff; }
+
+        .status-prod { color: #28a745; font-weight: bold; }
+        .status-ready { color: #17a2b8; font-weight: bold; }
+        .status-wait { color: #b45309; font-weight: bold; }
+        .status-vendor { color: #dc3545; font-weight: bold; }
+
+        .split {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 14px;
+            margin-top: 10px;
+        }
+        .mini {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        .mini th,
+        .mini td {
+            border: 1px solid #dcdfe6;
+            padding: 8px;
+            font-size: 13px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Отчет для руководства по блокам работ и замерам</h1>
+    <div class="sub">Вариант 4. Управленческий лист приоритетов: сначала зоны нагрузки, затем расшифровка задач и вклад исполнителей.</div>
+
+    <div class="section">
+        <h2>A. Сводка по приоритету (по замерам)</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>Приоритет</th>
+                    <th>Блок</th>
+                    <th>Замер</th>
+                    <th>Статус</th>
+                    <th>Управленческий комментарий</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr class="prio-high">
+                    <td>Высокий</td>
+                    <td>ФИН. Исполнение: проведение сделок, обработка после загрузки</td>
+                    <td>110 мин</td>
+                    <td><span class="status-prod">ПРОД</span></td>
+                    <td>Максимальная длительность среди блоков на ПРОД, требуется контроль эффекта дальнейших оптимизаций.</td>
+                </tr>
+                <tr class="prio-high">
+                    <td>Высокий</td>
+                    <td>ДУ. Регламенты ВЕЧЕР (3000 договоров)</td>
+                    <td>110 мин</td>
+                    <td><span class="status-vendor">У вендора в разработке</span></td>
+                    <td>Высокая длительность и внешняя зависимость от вендора.</td>
+                </tr>
+                <tr class="prio-mid">
+                    <td>Средний</td>
+                    <td>ДУ-ФИН. Обмены</td>
+                    <td>90 мин</td>
+                    <td><span class="status-prod">ПРОД</span></td>
+                    <td>После устранения дублей блок стабилен, но остается тяжелым.</td>
+                </tr>
+                <tr class="prio-mid">
+                    <td>Средний</td>
+                    <td>ДУ. Загрузка сделок</td>
+                    <td>50 мин</td>
+                    <td><span class="status-prod">ПРОД</span></td>
+                    <td>Критичен для цепочки, поддерживается за счет оптимизации запросов и потоков.</td>
+                </tr>
+                <tr class="prio-mid">
+                    <td>Средний</td>
+                    <td>ДУ. Исполнение: проведение сделок</td>
+                    <td>45 мин</td>
+                    <td><span class="status-vendor">У вендора в разработке</span></td>
+                    <td>Есть зависимость от доработки вендора по партиям остатков.</td>
+                </tr>
+                <tr class="prio-low">
+                    <td>Низкий</td>
+                    <td>ФИН. Исполнение: открытие позиций, обработка после загрузки</td>
+                    <td>30 мин</td>
+                    <td><span class="status-prod">ПРОД</span></td>
+                    <td>Параллелизация постобработки дала приемлемый результат.</td>
+                </tr>
+                <tr class="prio-low">
+                    <td>Низкий</td>
+                    <td>ДУ. Регламенты УТРО (3000 договоров)</td>
+                    <td>25 мин</td>
+                    <td><span class="status-wait">Ожидание релиза</span></td>
+                    <td>Готово к выводу в ПРОД, лимитирует только релизное окно.</td>
+                </tr>
+                <tr class="prio-low">
+                    <td>Низкий</td>
+                    <td>ДУ. Исполнение: открытие позиций</td>
+                    <td>15 мин</td>
+                    <td><span class="status-prod">ПРОД</span></td>
+                    <td>Наиболее быстрый блок после оптимизаций T+.</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <div class="section">
+        <h2>B. Расшифровка работ по блокам</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>Блок</th>
+                    <th>Перечень изменений</th>
+                    <th>Статус по примечанию</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>ДУ. Загрузка сделок</td>
+                    <td>Ускорение загрузки в ДУ (оптимизация запросов, параллельные потоки); перенос функции ДоговорКонтрагентаСРольюДоговорДУПоПортфелю в модуль повторного использования.</td>
+                    <td><span class="status-prod">ПРОД</span></td>
+                </tr>
+                <tr>
+                    <td>ДУ. Исполнение: открытие позиций; проведение сделок</td>
+                    <td>Ускорение исполнения сделок T+; снятие ограничения потоков во внешней обработке; оптимизация запросов для Исполнений СделокTn; оптимизация запроса партий остатков в сделке.</td>
+                    <td><span class="status-vendor">В разработке у вендора (часть по партиям остатков)</span></td>
+                </tr>
+                <tr>
+                    <td>ДУ-ФИН. Обмены</td>
+                    <td>Устранение дублирования выгрузки данных и сделок.</td>
+                    <td><span class="status-prod">ПРОД</span></td>
+                </tr>
+                <tr>
+                    <td>ФИН. Исполнение (открытие и проведение)</td>
+                    <td>Распараллеливание обработки после загрузки по портфелям; ускорение расчета аванса в ПеререгистрацияЦБ; оптимизация исполнения без дублей перепроведения.</td>
+                    <td><span class="status-prod">ПРОД</span></td>
+                </tr>
+                <tr>
+                    <td>ДУ. Регламенты УТРО</td>
+                    <td>Оптимизация кода и вынос части расчетов в предварительный модуль, не зависящий от количества договоров.</td>
+                    <td><span class="status-wait">Ожидание следующего релиза</span></td>
+                </tr>
+                <tr>
+                    <td>ДУ. Регламенты ВЕЧЕР</td>
+                    <td>Оптимизация кода и вынос части расчетов в предварительный модуль, не зависящий от количества договоров.</td>
+                    <td><span class="status-vendor">У вендора в разработке</span></td>
+                </tr>
+                <tr>
+                    <td>Общая оптимизация систем</td>
+                    <td>Перевод клиентских вызовов расчета операций на сервер; параллельный расчет ПИФ; оптимизация проблемной проверки сумм, выгрузки УК-Фонд, проведения сделок с ц/б и закрытия портфелей; оптимизация отчетов ФИН.</td>
+                    <td><span class="status-ready">Частично готово к выводу в ПРОД</span></td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <div class="split">
+        <div class="section">
+            <h2>C. Вклад ЛИЧНО Я</h2>
+            <table class="mini">
+                <thead><tr><th>Направление</th><th>Результат</th></tr></thead>
+                <tbody>
+                    <tr><td>ДУ. Загрузка сделок</td><td>Оптимизация запросов и параллельных потоков.</td></tr>
+                    <tr><td>ДУ. Исполнение</td><td>Ускорение T+, отключение блокировки количества потоков.</td></tr>
+                    <tr><td>ДУ-ФИН. Обмены</td><td>Устранено дублирование выгрузки данных.</td></tr>
+                    <tr><td>ФИН. Исполнение</td><td>Распараллеливание постобработки по портфелям.</td></tr>
+                    <tr><td>ФИН. Отчеты</td><td>Расшифровка финвложений: с 2 часов до 1 минуты; оптимизация отчета по данным ЕПС.</td></tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="section">
+            <h2>D. Вклад АВАНКОР</h2>
+            <table class="mini">
+                <thead><tr><th>Направление</th><th>Результат</th></tr></thead>
+                <tbody>
+                    <tr><td>ДУ. Загрузка сделок</td><td>Перенос функции в модуль повторного использования.</td></tr>
+                    <tr><td>ДУ. Исполнение</td><td>Оптимизация Исполнений СделокTn, партий остатков.</td></tr>
+                    <tr><td>ФИН. Исполнение</td><td>Исправление медленного расчета аванса, оптимизация исполнения без дублей.</td></tr>
+                    <tr><td>ДУ. Регламенты</td><td>Оптимизация утренних и вечерних операций.</td></tr>
+                    <tr><td>Общесистемный контур</td><td>Перевод расчетов на сервер, параллельный расчет ПИФ, ускорение выгрузок УК-Фонд.</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</body>
+</html>
