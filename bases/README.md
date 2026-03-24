@@ -9,6 +9,7 @@
 | SBB_Broker | C:\1c\Cursor_1c\WORK\SBB_Broker |
 | SBB_Depo | C:\1c\Cursor_1c\WORK\SBB_Depo |
 | Wim_Du | C:\1c\Cursor_1c\WORK\Wim_Du |
+| Wim_Pif | C:\1c\Cursor_1c\WORK\Wim_PIF\SRC |
 | WIM_FIn | C:\1c\Cursor_1c\WORK\WIM_FIn |
 | Wim_Mo | C:\1c\Cursor_1c\WORK\Wim_Mo |
 

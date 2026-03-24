@@ -13,6 +13,7 @@
 | **SBB_Broker** | `C:\1c\Cursor_1c\WORK\SBB_Broker` | example |
 | **SBB_Depo**   | `C:\1c\Cursor_1c\WORK\SBB_Depo`   | example |
 | **Wim_Du**     | `C:\1c\Cursor_1c\WORK\Wim_Du`     | example |
+| **Wim_Pif**    | `C:\1c\Cursor_1c\WORK\Wim_PIF\SRC` | example |
 | **WIM_FIn**    | `C:\1c\Cursor_1c\WORK\WIM_FIn`    | example |
 | **Wim_Mo**     | `C:\1c\Cursor_1c\WORK\Wim_Mo`     | example |
 
@@ -56,7 +57,7 @@ bases/<база>/
 |-------|----------------|
 | Имя папки базы по пути WORK | Таблица выше: столбец «Папка в репо» ↔ «Путь к исходникам» |
 | Путь к исходникам по папке базы | `bases/<папка_базы>/source-path.txt` или таблица выше |
-| **Назначение и состав конфигурации (что за база)** | **`bases/BASES_GLOSSARY.md`** — глоссарий по всем пяти базам |
+| **Назначение и состав конфигурации (что за база)** | **`bases/BASES_GLOSSARY.md`** — глоссарий по всем шести базам |
 | Проекты на конкретной базе | `bases/<база>/projects/` |
 | Проекты по нескольким базам | `bases/shared/projects/` |
 | Правила создания проектов | `.cursor/rules/project-structure.mdc`, `.cursor/rules/1c-project-conventions.mdc` |
@@ -69,6 +70,7 @@ bases/<база>/
 - SBB_Broker  
 - SBB_Depo  
 - Wim_Du  
+- Wim_Pif  
 - WIM_FIn  
 - Wim_Mo  
 
