@@ -1,0 +1,874 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Создание остатков под оборот | принцип работы</title>
+    <style>
+        :root {
+            --bg: #0b0f17;
+            --surface: #121826;
+            --surface-2: #1a2235;
+            --border: rgba(148, 163, 184, 0.12);
+            --text: #e2e8f0;
+            --muted: #94a3b8;
+            --accent: #6366f1;
+            --accent-soft: rgba(99, 102, 241, 0.15);
+            --success: #22c55e;
+            --warn: #eab308;
+            --danger: #f43f5e;
+            --radius: 14px;
+            --radius-sm: 10px;
+            --shadow: 0 24px 48px rgba(0, 0, 0, 0.35);
+            --font: "Segoe UI", system-ui, -apple-system, sans-serif;
+            --mono: ui-monospace, "Cascadia Code", "Consolas", monospace;
+        }
+
+        *, *::before, *::after { box-sizing: border-box; }
+
+        html { scroll-behavior: smooth; }
+
+        body {
+            margin: 0;
+            font-family: var(--font);
+            font-size: 16px;
+            line-height: 1.6;
+            color: var(--text);
+            background: var(--bg);
+            background-image:
+                radial-gradient(ellipse 120% 80% at 50% -20%, rgba(99, 102, 241, 0.25), transparent),
+                radial-gradient(ellipse 60% 40% at 100% 0%, rgba(34, 197, 94, 0.08), transparent);
+        }
+
+        a { color: #a5b4fc; text-decoration: none; }
+        a:hover { text-decoration: underline; }
+
+        .wrap {
+            max-width: 1120px;
+            margin: 0 auto;
+            padding: 0 24px 80px;
+        }
+
+        /* Hero */
+        .hero {
+            padding: 48px 0 40px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .hero-inner {
+            max-width: 1120px;
+            margin: 0 auto;
+            padding: 0 24px;
+        }
+
+        .badge-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-bottom: 16px;
+        }
+
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 12px;
+            border-radius: 999px;
+            font-size: 12px;
+            font-weight: 600;
+            letter-spacing: 0.02em;
+            background: var(--surface-2);
+            border: 1px solid var(--border);
+            color: var(--muted);
+        }
+
+        .badge--accent {
+            background: var(--accent-soft);
+            border-color: rgba(99, 102, 241, 0.35);
+            color: #c7d2fe;
+        }
+
+        .hero h1 {
+            margin: 0 0 12px;
+            font-size: clamp(1.75rem, 4vw, 2.35rem);
+            font-weight: 700;
+            letter-spacing: -0.02em;
+            line-height: 1.2;
+        }
+
+        .hero-lead {
+            margin: 0 0 24px;
+            max-width: 720px;
+            color: var(--muted);
+            font-size: 1.05rem;
+        }
+
+        .hero-meta {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+            gap: 12px;
+        }
+
+        .meta-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            padding: 14px 16px;
+            font-size: 13px;
+        }
+
+        .meta-card strong {
+            display: block;
+            color: #cbd5e1;
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            margin-bottom: 6px;
+        }
+
+        .meta-card code {
+            font-family: var(--mono);
+            font-size: 12px;
+            word-break: break-all;
+            color: #e2e8f0;
+        }
+
+        /* Nav */
+        .toc {
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            margin: 24px 0 32px;
+            padding: 12px 16px;
+            background: rgba(11, 15, 23, 0.85);
+            backdrop-filter: blur(12px);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+        }
+
+        .toc-title {
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: var(--muted);
+            margin-bottom: 10px;
+        }
+
+        .toc ul {
+            margin: 0;
+            padding: 0;
+            list-style: none;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px 16px;
+        }
+
+        .toc a {
+            font-size: 14px;
+            font-weight: 500;
+            color: #cbd5e1;
+        }
+
+        .toc a:hover { color: #fff; text-decoration: none; }
+
+        /* Sections */
+        section {
+            margin-bottom: 48px;
+        }
+
+        .section-head {
+            display: flex;
+            align-items: baseline;
+            gap: 12px;
+            flex-wrap: wrap;
+            margin-bottom: 20px;
+        }
+
+        .section-head h2 {
+            margin: 0;
+            font-size: 1.35rem;
+            font-weight: 700;
+            letter-spacing: -0.02em;
+        }
+
+        .section-id {
+            font-family: var(--mono);
+            font-size: 12px;
+            color: var(--muted);
+        }
+
+        .lead {
+            color: var(--muted);
+            margin: 0 0 20px;
+            max-width: 800px;
+        }
+
+        /* Cards grid */
+        .grid-3 {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+            gap: 16px;
+        }
+
+        .card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 22px;
+            transition: border-color 0.2s, transform 0.2s;
+        }
+
+        .card:hover {
+            border-color: rgba(99, 102, 241, 0.35);
+        }
+
+        .card h3 {
+            margin: 0 0 10px;
+            font-size: 1rem;
+            font-weight: 600;
+        }
+
+        .card p {
+            margin: 0;
+            font-size: 14px;
+            color: var(--muted);
+        }
+
+        .card-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            background: var(--accent-soft);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            margin-bottom: 14px;
+        }
+
+        /* Timeline */
+        .timeline {
+            position: relative;
+            padding-left: 28px;
+            border-left: 2px solid var(--border);
+            margin-left: 8px;
+        }
+
+        .timeline-item {
+            position: relative;
+            padding-bottom: 28px;
+        }
+
+        .timeline-item:last-child { padding-bottom: 0; }
+
+        .timeline-item::before {
+            content: "";
+            position: absolute;
+            left: -35px;
+            top: 4px;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: var(--accent);
+            box-shadow: 0 0 0 4px var(--bg);
+        }
+
+        .timeline-item h4 {
+            margin: 0 0 6px;
+            font-size: 15px;
+        }
+
+        .timeline-item p {
+            margin: 0;
+            font-size: 14px;
+            color: var(--muted);
+        }
+
+        /* Tables */
+        .table-wrap {
+            overflow-x: auto;
+            border-radius: var(--radius);
+            border: 1px solid var(--border);
+            background: var(--surface);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 14px;
+        }
+
+        th, td {
+            padding: 12px 16px;
+            text-align: left;
+            border-bottom: 1px solid var(--border);
+            vertical-align: top;
+        }
+
+        th {
+            background: var(--surface-2);
+            color: #cbd5e1;
+            font-weight: 600;
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+        }
+
+        tr:last-child td { border-bottom: none; }
+
+        tr:hover td { background: rgba(255, 255, 255, 0.02); }
+
+        code.inline {
+            font-family: var(--mono);
+            font-size: 0.9em;
+            padding: 2px 6px;
+            border-radius: 6px;
+            background: var(--surface-2);
+            color: #e2e8f0;
+        }
+
+        /* Code block */
+        pre {
+            margin: 0;
+            padding: 20px 22px;
+            border-radius: var(--radius);
+            background: #070a10;
+            border: 1px solid var(--border);
+            font-family: var(--mono);
+            font-size: 13px;
+            line-height: 1.55;
+            overflow-x: auto;
+            color: #cbd5e1;
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+
+        /* Callouts */
+        .callout {
+            border-radius: var(--radius);
+            padding: 16px 20px;
+            margin: 16px 0;
+            border: 1px solid var(--border);
+            font-size: 14px;
+        }
+
+        .callout--info {
+            background: rgba(99, 102, 241, 0.08);
+            border-color: rgba(99, 102, 241, 0.25);
+        }
+
+        .callout--ok {
+            background: rgba(34, 197, 94, 0.08);
+            border-color: rgba(34, 197, 94, 0.25);
+        }
+
+        .callout--warn {
+            background: rgba(234, 179, 8, 0.08);
+            border-color: rgba(234, 179, 8, 0.25);
+        }
+
+        .callout--risk {
+            background: rgba(244, 63, 94, 0.08);
+            border-color: rgba(244, 63, 94, 0.25);
+        }
+
+        .callout strong {
+            display: block;
+            margin-bottom: 6px;
+            font-size: 13px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .callout--info strong { color: #a5b4fc; }
+        .callout--ok strong { color: var(--success); }
+        .callout--warn strong { color: var(--warn); }
+        .callout--risk strong { color: var(--danger); }
+
+        /* List steps */
+        .steps {
+            counter-reset: step;
+            list-style: none;
+            margin: 0;
+            padding: 0;
+        }
+
+        .steps li {
+            counter-increment: step;
+            position: relative;
+            padding: 14px 16px 14px 48px;
+            margin-bottom: 8px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            font-size: 14px;
+        }
+
+        .steps li::before {
+            content: counter(step);
+            position: absolute;
+            left: 14px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 26px;
+            height: 26px;
+            border-radius: 8px;
+            background: var(--accent-soft);
+            color: #c7d2fe;
+            font-weight: 700;
+            font-size: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        footer {
+            margin-top: 56px;
+            padding-top: 24px;
+            border-top: 1px solid var(--border);
+            font-size: 13px;
+            color: var(--muted);
+        }
+    </style>
+</head>
+<body>
+    <header class="hero">
+        <div class="hero-inner">
+            <div class="badge-row">
+                <span class="badge badge--accent">Внешняя обработка 1С</span>
+                <span class="badge">Wim_Pif / IMAPPS-36058</span>
+                <span class="badge">Документ: СделкаЦБ</span>
+            </div>
+            <h1>Создание остатков под оборот</h1>
+            <p class="hero-lead">
+                Обработка переносит в тестовую базу агрегированный оборот расходных сделок (из запроса в рабочей базе),
+                сохраненный в табличном макете <code class="inline">Данные</code>, и по строкам макета создает проведенные
+                приходные <code class="inline">СделкаЦБ</code> так, чтобы при последующей загрузке списаний остатков хватало
+                по тем же аналитикам.
+            </p>
+            <div class="hero-meta">
+                <div class="meta-card">
+                    <strong>Метаданные</strong>
+                    <code>СозданиеОстатковПодОборот.xml</code>
+                </div>
+                <div class="meta-card">
+                    <strong>Модуль логики</strong>
+                    <code>СозданиеОстатковПодОборот/Forms/Форма/Ext/Form/Module.bsl</code>
+                </div>
+                <div class="meta-card">
+                    <strong>Макет данных</strong>
+                    <code>Templates/Данные</code> (12 колонок, первая строка - заголовки)
+                </div>
+                <div class="meta-card">
+                    <strong>Запрос-образец (рабочая база)</strong>
+                    <code>ПИФ.sel</code>, блок <code class="inline">Остатки0102</code>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <div class="wrap">
+        <nav class="toc" aria-label="Содержание">
+            <div class="toc-title">Навигация по документу</div>
+            <ul>
+                <li><a href="#overview">Назначение</a></li>
+                <li><a href="#composition">Состав</a></li>
+                <li><a href="#ui">Интерфейс</a></li>
+                <li><a href="#flow">Поток данных</a></li>
+                <li><a href="#layout">Макет и сопоставление</a></li>
+                <li><a href="#document">Реквизиты СделкаЦБ</a></li>
+                <li><a href="#code">Модуль формы</a></li>
+                <li><a href="#query">Текст запроса</a></li>
+                <li><a href="#risks">Риски</a></li>
+            </ul>
+        </nav>
+
+        <main>
+            <section id="overview">
+                <div class="section-head">
+                    <h2>Назначение</h2>
+                    <span class="section-id">#overview</span>
+                </div>
+                <p class="lead">
+                    Задача - подготовить тестовую информационную базу: сформировать остаток до периода списаний,
+                    эквивалентный (с учетом коэффициента в запросе) обороту расхода за выбранный интервал в продуктиве.
+                </p>
+                <div class="grid-3">
+                    <div class="card">
+                        <div class="card-icon">1</div>
+                        <h3>Продуктив</h3>
+                        <p>Запрос к проведенным <code class="inline">СделкаЦБ</code> с видом операции расход, группировка по аналитике, суммы количества и суммы (в образце x10).</p>
+                    </div>
+                    <div class="card">
+                        <div class="card-icon">2</div>
+                        <h3>Макет</h3>
+                        <p>Результат выгружается в табличный документ <code class="inline">Данные</code> обработки: строки с наименованиями справочников и числами (в ячейках возможны пробелы в числах).</p>
+                    </div>
+                    <div class="card">
+                        <div class="card-icon">3</div>
+                        <h3>Тест</h3>
+                        <p>Команда формы создает приходные документы на дату <code class="inline">НачалоПериода - 1 день</code>, проводит неоперативно; далее можно загружать списания за период.</p>
+                    </div>
+                </div>
+            </section>
+
+            <section id="composition">
+                <div class="section-head">
+                    <h2>Состав обработки</h2>
+                    <span class="section-id">#composition</span>
+                </div>
+                <p class="lead">
+                    По выгрузке XML у обработки нет отдельного модуля объекта: вся исполняемая логика сосредоточена в модуле управляемой формы <code class="inline">Форма</code>.
+                </p>
+                <div class="table-wrap">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Элемент</th>
+                                <th>Описание</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><code class="inline">Реквизиты объекта</code></td>
+                                <td><code class="inline">НачалоПериода</code>, <code class="inline">КонецПериода</code> (ДатаВремя), <code class="inline">ВидОперации</code> (ПеречислениеСсылка.ВидыОперацийСделка).</td>
+                            </tr>
+                            <tr>
+                                <td><code class="inline">Форма по умолчанию</code></td>
+                                <td>Управляемая форма с полями периода и вида операции, командная кнопка запуска.</td>
+                            </tr>
+                            <tr>
+                                <td><code class="inline">Макет</code></td>
+                                <td>Табличный документ <code class="inline">Данные</code>: заголовок в первой строке, данные со второй.</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <section id="ui">
+                <div class="section-head">
+                    <h2>Интерфейс пользователя</h2>
+                    <span class="section-id">#ui</span>
+                </div>
+                <div class="callout callout--warn">
+                    <strong>Важно</strong>
+                    В <code class="inline">Form.xml</code> поле <code class="inline">КонецПериода</code> помечено как <code class="inline">Visible=false</code>.
+                    На сервере при открытии формы все равно задаются и начало, и конец периода (жестко в <code class="inline">ПриСозданииНаСервере</code>),
+                    но пользователь на форме видит в основном <code class="inline">НачалоПериода</code> и <code class="inline">ВидОперации</code>.
+                    Дата создаваемых документов берется только из <code class="inline">НачалоПериода - 1</code>.
+                </div>
+                <div class="table-wrap">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Элемент UI</th>
+                                <th>Привязка / действие</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>Кнопка панели</td>
+                                <td>Команда <code class="inline">СоздатьПриходы</code>, заголовок на форме: "Создать приходы из МАКЕТА".</td>
+                            </tr>
+                            <tr>
+                                <td><code class="inline">НачалоПериода</code></td>
+                                <td>Реквизит объекта; влияет на <code class="inline">ДатаДок = НачалоПериода - 1</code> для каждого создаваемого документа.</td>
+                            </tr>
+                            <tr>
+                                <td><code class="inline">ВидОперации</code></td>
+                                <td>По умолчанию при открытии: <code class="inline">Перечисления.ВидыОперацийСделка.Поступление</code>; подставляется в создаваемый документ.</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <section id="flow">
+                <div class="section-head">
+                    <h2>Поток данных</h2>
+                    <span class="section-id">#flow</span>
+                </div>
+                <p class="lead">Сквозной сценарий от продуктива до проведения в тесте.</p>
+                <div class="timeline">
+                    <div class="timeline-item">
+                        <h4>Подготовка макета (вне обработки или в Консоли запросов)</h4>
+                        <p>Выполнить запрос к <code class="inline">Документ.СделкаЦБ</code> с параметрами периода и вида операции "расход". Сохранить результат в макет <code class="inline">Данные</code> (структура колонок должна совпадать с первой строкой макета).</p>
+                    </div>
+                    <div class="timeline-item">
+                        <h4>Открытие обработки в тестовой базе</h4>
+                        <p>При <code class="inline">ПриСозданииНаСервере</code> заполняются демонстрационные даты и вид операции поступления.</p>
+                    </div>
+                    <div class="timeline-item">
+                        <h4>Команда "Создать приходы из МАКЕТА"</h4>
+                        <p>Клиент вызывает <code class="inline">СоздатьПриходыНаСервере</code>: получение макета, преобразование в <code class="inline">ТаблицаЗначений</code>, цикл по строкам, создание и проведение документов.</p>
+                    </div>
+                    <div class="timeline-item">
+                        <h4>Загрузка списаний</h4>
+                        <p>После успешного проведения приходов можно загружать и проводить списания за целевой период - аналитика в макете должна соответствовать списаниям.</p>
+                    </div>
+                </div>
+            </section>
+
+            <section id="layout">
+                <div class="section-head">
+                    <h2>Макет "Данные" и сопоставление со справочниками</h2>
+                    <span class="section-id">#layout</span>
+                </div>
+                <p class="lead">
+                    Построитель отчета читает прямоугольную область макета с (1,1) по последнюю строку и колонку.
+                    Имена колонок в <code class="inline">ТаблицаЗначений</code> совпадают с текстом заголовков первой строки.
+                </p>
+                <div class="table-wrap">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Колонка макета</th>
+                                <th>Поиск в конфигурации</th>
+                                <th>Примечание</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><code class="inline">НомСтр</code></td>
+                                <td>-</td>
+                                <td>Выводится в сообщениях при обработке строки.</td>
+                            </tr>
+                            <tr>
+                                <td><code class="inline">ПИФ</code></td>
+                                <td><code class="inline">Справочники.ПИФ.НайтиПоНаименованию</code></td>
+                                <td>Строка наименования в макете.</td>
+                            </tr>
+                            <tr>
+                                <td><code class="inline">РежимТоргов</code></td>
+                                <td><code class="inline">Справочники.РежимыТоргов.НайтиПоНаименованию</code></td>
+                                <td></td>
+                            </tr>
+                            <tr>
+                                <td><code class="inline">Контрагент</code></td>
+                                <td><code class="inline">Справочники.Контрагенты.НайтиПоНаименованию</code></td>
+                                <td>Если пусто: подстановка "ООО СБ-Брокер", затем "ООО CБ-Брокер" (вторая строка с латинской C).</td>
+                            </tr>
+                            <tr>
+                                <td><code class="inline">ФизическоеМестоХраненияДС</code></td>
+                                <td><code class="inline">Справочники.ТорговыеКоды.НайтиПоНаименованию</code></td>
+                                <td>То же значение копируется в <code class="inline">БрокерскийСчет</code> документа.</td>
+                            </tr>
+                            <tr>
+                                <td><code class="inline">ДоговорКонтрагента</code></td>
+                                <td><code class="inline">Справочники.ДоговорыКонтрагентов.НайтиПоНаименованию(..., Контрагент)</code></td>
+                                <td>Отбор по владельцу-контрагенту.</td>
+                            </tr>
+                            <tr>
+                                <td><code class="inline">ВалютаДокумента</code>, <code class="inline">ВалютаЦБ</code></td>
+                                <td><code class="inline">Справочники.Валюты.НайтиПоНаименованию</code></td>
+                                <td></td>
+                            </tr>
+                            <tr>
+                                <td><code class="inline">Актив</code></td>
+                                <td><code class="inline">Справочники.Активы.НайтиПоНаименованию</code></td>
+                                <td></td>
+                            </tr>
+                            <tr>
+                                <td><code class="inline">Количество</code>, <code class="inline">Сумма</code>, <code class="inline">Цена</code></td>
+                                <td>Функция <code class="inline">УбратьНецифровые</code></td>
+                                <td>Из строки оставляются только цифры, точка и запятая; затем умножение на 1 для приведения к числу.</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <section id="document">
+                <div class="section-head">
+                    <h2>Заполнение документа СделкаЦБ</h2>
+                    <span class="section-id">#document</span>
+                </div>
+                <p class="lead">Для каждой строки макета создается новый документ; сначала запись, затем попытка неоперативного проведения.</p>
+                <div class="table-wrap">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Реквизит / действие</th>
+                                <th>Значение</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><code class="inline">ВидОперации</code></td>
+                                <td>Из <code class="inline">Объект.ВидОперации</code> (типично Поступление).</td>
+                            </tr>
+                            <tr>
+                                <td><code class="inline">Дата</code></td>
+                                <td><code class="inline">Объект.НачалоПериода - 1</code> (одна дата на все строки цикла).</td>
+                            </tr>
+                            <tr>
+                                <td>Аналитика сделки</td>
+                                <td>ПИФ, РежимТоргов, Контрагент, ФизическоеМестоХраненияДС, ДоговорКонтрагента, ВалютаДокумента, Актив, ВалютаЦБ, Количество, Сумма, Цена.</td>
+                            </tr>
+                            <tr>
+                                <td><code class="inline">БрокерскийСчет</code></td>
+                                <td>Равен найденному <code class="inline">ФизическоеМестоХраненияДС</code> (ТорговыеКоды).</td>
+                            </tr>
+                            <tr>
+                                <td><code class="inline">ВУ</code>, <code class="inline">МСФО</code></td>
+                                <td><code class="inline">Истина</code>.</td>
+                            </tr>
+                            <tr>
+                                <td>Курс и кратность</td>
+                                <td><code class="inline">КурсВзаиморасчетов = 1</code>, <code class="inline">КратностьВзаиморасчетов = 1</code>.</td>
+                            </tr>
+                            <tr>
+                                <td>Валюты "по приоритету"</td>
+                                <td><code class="inline">ВалютаДокументаПоПриоритету</code> и <code class="inline">ВалютаЦБПоПриоритету</code> = валюта документа.</td>
+                            </tr>
+                            <tr>
+                                <td>Счета учета (план Управленческий)</td>
+                                <td>Актив <code class="inline">58.01.4</code>; расчеты с контрагентом и авансы <code class="inline">76.07.3</code>; доп. расходы <code class="inline">76.07.7</code>.</td>
+                            </tr>
+                            <tr>
+                                <td>Запись и проведение</td>
+                                <td><code class="inline">Записать(Запись)</code>, затем <code class="inline">Записать(Проведение, Неоперативный)</code> в <code class="inline">Попытка</code>; при ошибке сообщение без прерывания цикла.</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <section id="code">
+                <div class="section-head">
+                    <h2>Процедуры и функции модуля формы</h2>
+                    <span class="section-id">#code</span>
+                </div>
+                <div class="table-wrap">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Имя</th>
+                                <th>Контекст</th>
+                                <th>Назначение</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><code class="inline">ПриСозданииНаСервере</code></td>
+                                <td>&НаСервере</td>
+                                <td>Инициализация периода и вида операции по умолчанию.</td>
+                            </tr>
+                            <tr>
+                                <td><code class="inline">ПолучитьМакетНаСервере</code></td>
+                                <td>&НаСервере</td>
+                                <td><code class="inline">РеквизитФормыВЗначение("Объект")</code>, <code class="inline">ПолучитьМакет("Данные")</code>, обработка ошибок через <code class="inline">Сообщить</code>.</td>
+                            </tr>
+                            <tr>
+                                <td><code class="inline">СоздатьПриходыНаСервере</code></td>
+                                <td>&НаСервере</td>
+                                <td>Основной цикл: макет -> таблица -> строки -> документы.</td>
+                            </tr>
+                            <tr>
+                                <td><code class="inline">СоздатьПриходы</code></td>
+                                <td>&НаКлиенте</td>
+                                <td>Обработчик команды: вызов серверной процедуры.</td>
+                            </tr>
+                            <tr>
+                                <td><code class="inline">ЗагрузитьДанныеИзМакета</code></td>
+                                <td>&НаСервереБезКонтекста</td>
+                                <td><code class="inline">ОписаниеИсточникаДанных</code> + <code class="inline">ПостроительОтчета</code>, <code class="inline">Выгрузить()</code> в ТЗ.</td>
+                            </tr>
+                            <tr>
+                                <td><code class="inline">УбратьНецифровые</code></td>
+                                <td>&НаСервереБезКонтекста</td>
+                                <td>Фильтр символов для парсинга чисел из текста ячеек.</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="callout callout--info">
+                    <strong>Диагностика</strong>
+                    В цикле по строкам вызывается <code class="inline">Сообщить</code> для номера строки и каждого разобранного реквизита; это упрощает отладку в тестовой базе, но увеличивает шум в окне сообщений при большом макете.
+                </div>
+            </section>
+
+            <section id="query">
+                <div class="section-head">
+                    <h2>Запрос к продуктиву (фрагмент ПИФ.sel, "Остатки0102")</h2>
+                    <span class="section-id">#query</span>
+                </div>
+                <p class="lead">
+                    Ниже текст, который используется как источник структуры и объемов для заполнения макета.
+                    Параметры: <code class="inline">&amp;НачалоПериода</code>, <code class="inline">&amp;КонецПериода</code>, <code class="inline">&amp;ВидОперацииРасход</code>.
+                    В выборке поля <code class="inline">Количество</code> и <code class="inline">Сумма</code> умножаются на 10 относительно фактического оборота - это осознанный запас в образце запроса.
+                </p>
+                <pre>ВЫБРАТЬ
+    СделкаЦБ.ПИФ КАК ПИФ,
+    СделкаЦБ.РежимТоргов КАК РежимТоргов,
+    СделкаЦБ.Контрагент КАК Контрагент,
+    СделкаЦБ.ФизическоеМестоХраненияДС КАК ФизическоеМестоХраненияДС,
+    СделкаЦБ.ДоговорКонтрагента КАК ДоговорКонтрагента,
+    СделкаЦБ.ВалютаДокумента КАК ВалютаДокумента,
+    СделкаЦБ.Актив КАК Актив,
+    СделкаЦБ.ВалютаЦБ КАК ВалютаЦБ,
+    СУММА(СделкаЦБ.Количество) * 10 КАК Количество,
+    СУММА(СделкаЦБ.Сумма) * 10 КАК Сумма,
+    СУММА(СделкаЦБ.Сумма) / СУММА(СделкаЦБ.Количество) КАК Цена
+ИЗ
+    Документ.СделкаЦБ КАК СделкаЦБ
+ГДЕ
+    СделкаЦБ.Проведен
+    И СделкаЦБ.Дата МЕЖДУ &amp;НачалоПериода И &amp;КонецПериода
+    И СделкаЦБ.ВидОперации = &amp;ВидОперацииРасход
+
+СГРУППИРОВАТЬ ПО
+    СделкаЦБ.ВалютаДокумента,
+    СделкаЦБ.ПИФ,
+    СделкаЦБ.Актив,
+    СделкаЦБ.ФизическоеМестоХраненияДС,
+    СделкаЦБ.ВалютаЦБ,
+    СделкаЦБ.ДоговорКонтрагента,
+    СделкаЦБ.Контрагент,
+    СделкаЦБ.РежимТоргов,
+    СделкаЦБ.ТипСделки</pre>
+            </section>
+
+            <section id="risks">
+                <div class="section-head">
+                    <h2>Риски, ограничения и проверки</h2>
+                    <span class="section-id">#risks</span>
+                </div>
+                <div class="callout callout--risk">
+                    <strong>Справочники по наименованию</strong>
+                    Любое расхождение наименований между продуктивом и тестом даст пустые ссылки и некорректные документы. Имеет смысл заранее сверить эталонные строки в макете с тестовой НСИ.
+                </div>
+                <div class="callout callout--risk">
+                    <strong>Коэффициент x10</strong>
+                    Объем прихода в тесте завышен относительно "1:1" обороту. Для другого сценария запрос при формировании макета нужно скорректировать.
+                </div>
+                <div class="callout callout--warn">
+                    <strong>Группировка в запросе и колонки макета</strong>
+                    В запросе в группировке участвует <code class="inline">ТипСделки</code>, но в выборку поле не попадает. При выгрузке в макет убедитесь, что строки макета однозначно соответствуют нужным разрезам (иначе разные типы сделок сольются в одну строку агрегата).
+                </div>
+                <div class="callout callout--ok">
+                    <strong>Устойчивость к формату чисел</strong>
+                    Функция <code class="inline">УбратьНецифровые</code> позволяет подставлять в макет числа с пробелами как разделителями тысяч (как в типовом отображении в табличном документе).
+                </div>
+
+                <h3 style="margin-top: 28px; font-size: 1rem;">Контрольный чек-лист перед прогоном</h3>
+                <ol class="steps">
+                    <li>Макет <code class="inline">Данные</code> обновлен и сохранен в составе внешней обработки (EPF/XML).</li>
+                    <li>Первая строка макета - ровно 12 заголовков, совпадающих с ожидаемыми именами колонок.</li>
+                    <li>В тестовой базе заданы корректные <code class="inline">НачалоПериода</code> и при необходимости скрытый <code class="inline">КонецПериода</code> (через конфигуратор или снятие скрытия на форме).</li>
+                    <li><code class="inline">ВидОперации</code> на форме - поступление (или иной нужный вид для создания остатка).</li>
+                    <li>После прогона проверить журнал регистрации и сообщения при ошибках проведения отдельных документов.</li>
+                </ol>
+            </section>
+        </main>
+
+        <footer>
+            Документ описывает обработку <strong>СозданиеОстатковПодОборот</strong> по исходникам проекта IMAPPS-36058:
+            метаданные, форма <code class="inline">Форма</code>, модуль формы и макет <code class="inline">Данные</code>.
+            Отдельного модуля объекта обработки в репозитории нет.
+        </footer>
+    </div>
+</body>
+</html>

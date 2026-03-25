@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Создание остатков под оборот - для пользователя</title>
+    <style>
+        :root {
+            --slide-bg-1: linear-gradient(145deg, #1e1b4b 0%, #312e81 45%, #4c1d95 100%);
+            --slide-bg-2: linear-gradient(160deg, #0c4a6e 0%, #0369a1 50%, #0e7490 100%);
+            --slide-bg-3: linear-gradient(155deg, #14532d 0%, #166534 45%, #15803d 100%);
+            --slide-bg-4: linear-gradient(150deg, #431407 0%, #9a3412 40%, #c2410c 100%);
+            --slide-bg-5: linear-gradient(145deg, #1c1917 0%, #44403c 50%, #57534e 100%);
+            --text: #fafafa;
+            --text-soft: rgba(250, 250, 250, 0.85);
+            --accent: #fde047;
+            --card: rgba(255, 255, 255, 0.1);
+            --card-border: rgba(255, 255, 255, 0.2);
+            --font: "Segoe UI", system-ui, -apple-system, sans-serif;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        html { scroll-snap-type: y mandatory; scroll-behavior: smooth; }
+
+        body {
+            font-family: var(--font);
+            color: var(--text);
+            background: #0a0a0a;
+        }
+
+        .slide {
+            min-height: 100vh;
+            min-height: 100dvh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 48px 28px 64px;
+            scroll-snap-align: start;
+            scroll-snap-stop: always;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .slide::before {
+            content: "";
+            position: absolute;
+            inset: 0;
+            background: radial-gradient(ellipse 80% 50% at 50% -20%, rgba(255,255,255,0.12), transparent);
+            pointer-events: none;
+        }
+
+        .slide-inner {
+            position: relative;
+            z-index: 1;
+            max-width: 720px;
+            width: 100%;
+            text-align: center;
+        }
+
+        .slide-num {
+            position: absolute;
+            top: 28px;
+            right: 28px;
+            font-size: 13px;
+            font-weight: 600;
+            letter-spacing: 0.12em;
+            opacity: 0.55;
+            z-index: 2;
+        }
+
+        .slide-1 { background: var(--slide-bg-1); }
+        .slide-2 { background: var(--slide-bg-2); }
+        .slide-3 { background: var(--slide-bg-3); }
+        .slide-4 { background: var(--slide-bg-4); }
+        .slide-5 { background: var(--slide-bg-5); }
+
+        .kicker {
+            font-size: 14px;
+            font-weight: 600;
+            letter-spacing: 0.2em;
+            text-transform: uppercase;
+            color: var(--accent);
+            margin-bottom: 20px;
+        }
+
+        h1 {
+            font-size: clamp(1.85rem, 5.5vw, 2.75rem);
+            font-weight: 800;
+            line-height: 1.15;
+            letter-spacing: -0.03em;
+            margin-bottom: 24px;
+        }
+
+        h2 {
+            font-size: clamp(1.5rem, 4vw, 2.1rem);
+            font-weight: 700;
+            line-height: 1.2;
+            letter-spacing: -0.02em;
+            margin-bottom: 20px;
+        }
+
+        .goal-box {
+            background: rgba(0, 0, 0, 0.25);
+            border: 2px solid var(--accent);
+            border-radius: 20px;
+            padding: 28px 24px;
+            margin-top: 8px;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.25);
+        }
+
+        .goal-box p {
+            font-size: clamp(1.15rem, 3.2vw, 1.45rem);
+            font-weight: 600;
+            line-height: 1.45;
+            color: #fff;
+        }
+
+        .subtitle {
+            font-size: 1.15rem;
+            color: var(--text-soft);
+            line-height: 1.55;
+            max-width: 560px;
+            margin: 0 auto;
+        }
+
+        .steps {
+            list-style: none;
+            text-align: left;
+            margin-top: 28px;
+        }
+
+        .steps li {
+            display: flex;
+            gap: 18px;
+            align-items: flex-start;
+            margin-bottom: 18px;
+            background: var(--card);
+            border: 1px solid var(--card-border);
+            border-radius: 16px;
+            padding: 18px 20px;
+            backdrop-filter: blur(8px);
+        }
+
+        .steps li:last-child { margin-bottom: 0; }
+
+        .step-num {
+            flex-shrink: 0;
+            width: 40px;
+            height: 40px;
+            border-radius: 12px;
+            background: var(--accent);
+            color: #1e1b4b;
+            font-weight: 800;
+            font-size: 1.1rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .step-text {
+            font-size: 1.05rem;
+            line-height: 1.5;
+            color: var(--text-soft);
+            padding-top: 6px;
+        }
+
+        .step-text strong {
+            color: #fff;
+            display: block;
+            margin-bottom: 4px;
+            font-size: 1.08rem;
+        }
+
+        .hint {
+            margin-top: 28px;
+            font-size: 0.95rem;
+            color: rgba(255,255,255,0.7);
+            font-style: italic;
+        }
+
+        .checklist {
+            text-align: left;
+            margin-top: 24px;
+        }
+
+        .checklist li {
+            list-style: none;
+            padding: 14px 18px 14px 48px;
+            margin-bottom: 10px;
+            background: var(--card);
+            border-radius: 12px;
+            border: 1px solid var(--card-border);
+            position: relative;
+            font-size: 1.02rem;
+            line-height: 1.45;
+            color: var(--text-soft);
+        }
+
+        .checklist li::before {
+            content: "OK";
+            position: absolute;
+            left: 16px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 11px;
+            font-weight: 800;
+            color: #14532d;
+            background: var(--accent);
+            padding: 4px 8px;
+            border-radius: 6px;
+        }
+
+        footer {
+            text-align: center;
+            padding: 20px;
+            font-size: 12px;
+            color: #737373;
+            background: #0a0a0a;
+        }
+
+        @media (max-width: 520px) {
+            .slide-num { top: 16px; right: 16px; }
+            .steps li { flex-direction: column; align-items: center; text-align: center; }
+            .step-num { margin-bottom: 4px; }
+        }
+    </style>
+</head>
+<body>
+
+    <section class="slide slide-1" aria-label="Титул">
+        <span class="slide-num">01 / 05</span>
+        <div class="slide-inner">
+            <p class="kicker">Внешняя обработка</p>
+            <h1>Создание остатков под оборот</h1>
+            <div class="goal-box">
+                <p>Чтобы в тестовой базе перед загрузкой списаний на счетах было достаточно актива: обработка заранее создает приходные сделки в нужном объеме и с нужными реквизитами.</p>
+            </div>
+        </div>
+    </section>
+
+    <section class="slide slide-2" aria-label="Зачем">
+        <span class="slide-num">02 / 05</span>
+        <div class="slide-inner">
+            <p class="kicker">Зачем это нужно</p>
+            <h2>Без остатка списание не проведется</h2>
+            <p class="subtitle">В рабочей базе за период уже был оборот по расходным сделкам. В тесте этих движений нет - значит, не из чего списывать. Обработка восполняет запас один раз, до ваших тестовых списаний.</p>
+        </div>
+    </section>
+
+    <section class="slide slide-3" aria-label="Как устроено">
+        <span class="slide-num">03 / 05</span>
+        <div class="slide-inner">
+            <p class="kicker">Как это работает</p>
+            <h2>Три простых звена</h2>
+            <ul class="steps">
+                <li>
+                    <span class="step-num">1</span>
+                    <div class="step-text">
+                        <strong>Данные из рабочей базы</strong>
+                        По запросу за период считается, сколько и по каким ПИФ, активам и контрагентам ушло в расход. Результат сохраняют в табличный макет обработки (файл с колонками, как таблица Excel).
+                    </div>
+                </li>
+                <li>
+                    <span class="step-num">2</span>
+                    <div class="step-text">
+                        <strong>Макет едет в тест</strong>
+                        Обработку с заполненным макетом открывают в тестовой базе. Справочники в тесте должны содержать те же наименования, что в ячейках макета (ПИФ, актив, валюта и т.д.).
+                    </div>
+                </li>
+                <li>
+                    <span class="step-num">3</span>
+                    <div class="step-text">
+                        <strong>Приходы до периода</strong>
+                        По каждой строке макета создается приходная сделка с датой накануне выбранного начала периода. После проведения в тесте появляется остаток под последующие списания.
+                    </div>
+                </li>
+            </ul>
+        </div>
+    </section>
+
+    <section class="slide slide-4" aria-label="Действия">
+        <span class="slide-num">04 / 05</span>
+        <div class="slide-inner">
+            <p class="kicker">Что делать вам</p>
+            <h2>Короткая инструкция</h2>
+            <ul class="checklist">
+                <li>Запросить или подготовить макет с цифрами из продуктива за нужный период и вложить его в обработку (как договорено в вашей команде).</li>
+                <li>В тестовой базе открыть обработку, проверить дату начала периода и вид операции (обычно поступление).</li>
+                <li>Нажать кнопку создания приходов из макета и дождаться сообщений о завершении.</li>
+                <li>Затем загрузить или ввести списания за период и провести их.</li>
+            </ul>
+            <p class="hint">Подробная техническая схема - в отдельном файле для разработчиков.</p>
+        </div>
+    </section>
+
+    <section class="slide slide-5" aria-label="Важно">
+        <span class="slide-num">05 / 05</span>
+        <div class="slide-inner">
+            <p class="kicker">На что обратить внимание</p>
+            <h2>Два момента</h2>
+            <ul class="steps">
+                <li>
+                    <span class="step-num">!</span>
+                    <div class="step-text">
+                        <strong>Совпадение справочников</strong>
+                        Если в тесте другое наименование ПИФ или контрагента, строка может заполниться неверно. Перед массовым прогоном лучше проверить пару строк вручную.
+                    </div>
+                </li>
+                <li>
+                    <span class="step-num">!</span>
+                    <div class="step-text">
+                        <strong>Объем в макете</strong>
+                        Цифры в макете могут быть с запасом относительно фактического оборота (так задано в исходном запросе). Это нормально для теста, но имейте в виду при анализе остатков.
+                    </div>
+                </li>
+            </ul>
+        </div>
+    </section>
+
+    <footer>
+        Проект IMAPPS-36058, база Wim_Pif. Пользовательская версия. Техническое описание: create_balances_from_turnover_workflow.html
+    </footer>
+</body>
+</html>
