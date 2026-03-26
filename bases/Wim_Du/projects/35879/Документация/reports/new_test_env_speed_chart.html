@@ -16,6 +16,8 @@
       --exec-good: #16a34a;
       --exec-bad: #dc2626;
       --speed: #10b981;
+      --repeat: #f59e0b;
+      --repeat-bg: #fff7ed;
     }
     body {
       margin: 0;
@@ -107,6 +109,18 @@
     .speed { background: var(--speed); }
     .ok { color: #15803d; font-weight: 700; }
     .fail { color: #b91c1c; font-weight: 700; }
+    .repeat-label { color: var(--repeat); font-weight: 700; }
+    .repeat-row {
+      background: var(--repeat-bg);
+      border-radius: 8px;
+      padding: 6px 8px;
+      border: 1px dashed #fdba74;
+    }
+    .repeat-cell {
+      color: #c2410c;
+      font-weight: 700;
+      background: #fff7ed;
+    }
     table {
       border-collapse: collapse;
       width: 100%;
@@ -128,16 +142,17 @@
   <div class="wrap">
     <div class="card">
       <h1>IMAPPS-35879: замеры исполнения на TestProd (полная копия ПРОД)</h1>
-      <div class="sub">Цель: удержать время исполнения ниже SLA 2 часа (120 минут). Объем каждого прогона: 100 000 сделок.</div>
+      <div class="sub">Цель: удержать время исполнения ниже SLA 2 часа (120 минут). Объем каждого прогона: 100 000 сделок. Включены 2 повторных прогона (10 и 6 потоков).</div>
       <div class="legend">
         <span><span class="dot" style="background:#3b82f6"></span>Время открытия, мин</span>
         <span><span class="dot" style="background:#ef4444"></span>Время исполнения, мин</span>
         <span><span class="dot" style="background:#10b981"></span>Скорость исполнения, сделок/час</span>
+        <span><span class="dot" style="background:#f59e0b"></span>Повторные замеры</span>
       </div>
     </div>
 
     <div class="card">
-      <h2>1) Диаграмма времени по 4 замерам</h2>
+      <h2>1) Диаграмма времени по 6 замерам</h2>
       <div class="sub">Масштаб по времени: максимум 252 мин (исполнение, замер 3).</div>
       <div class="sla-note"><strong>Ключевая веха:</strong> 2 часа (120 минут). Бизнес-требование - время исполнения должно быть ниже этой границы.</div>
 
@@ -168,10 +183,24 @@
         <div style="height:4px"></div>
         <div class="track sla"><div class="bar exec-bad" style="width: 55.16%"></div></div>
       </div>
+
+      <div class="row repeat-row">
+        <div class="label"><strong>Замер 5 (10 потоков, <span class="repeat-label">ПОВТОРНЫЙ</span>)</strong><span>Открытие: 41 мин | Исполнение: 168 мин | <span class="fail">SLA FAIL</span></span></div>
+        <div class="track sla"><div class="bar open" style="width: 16.27%"></div></div>
+        <div style="height:4px"></div>
+        <div class="track sla"><div class="bar exec-bad" style="width: 66.67%"></div></div>
+      </div>
+
+      <div class="row repeat-row">
+        <div class="label"><strong>Замер 6 (6 потоков, <span class="repeat-label">ПОВТОРНЫЙ</span>)</strong><span>Открытие: 61 мин | Исполнение: 251 мин | <span class="fail">SLA FAIL</span></span></div>
+        <div class="track sla"><div class="bar open" style="width: 24.21%"></div></div>
+        <div style="height:4px"></div>
+        <div class="track sla"><div class="bar exec-bad" style="width: 99.60%"></div></div>
+      </div>
     </div>
 
     <div class="card">
-      <h2>2) Диаграмма скорости исполнения (сделок/час)</h2>
+      <h2>2) Диаграмма скорости исполнения (сделок/час, 6 замеров)</h2>
       <div class="sub">Скорость = 100 000 / время исполнения (в часах). Масштаб: максимум 72 289 сделок/час.</div>
 
       <div class="row">
@@ -193,6 +222,16 @@
         <div class="label"><strong>Замер 4 (10 потоков)</strong><span>43 165 сделок/час</span></div>
         <div class="track"><div class="bar speed" style="width: 59.71%"></div></div>
       </div>
+
+      <div class="row repeat-row">
+        <div class="label"><strong>Замер 5 (10 потоков, <span class="repeat-label">ПОВТОРНЫЙ</span>)</strong><span>35 714 сделок/час</span></div>
+        <div class="track"><div class="bar speed" style="width: 49.40%"></div></div>
+      </div>
+
+      <div class="row repeat-row">
+        <div class="label"><strong>Замер 6 (6 потоков, <span class="repeat-label">ПОВТОРНЫЙ</span>)</strong><span>23 904 сделок/час</span></div>
+        <div class="track"><div class="bar speed" style="width: 33.07%"></div></div>
+      </div>
     </div>
 
     <div class="card">
@@ -201,6 +240,7 @@
         <thead>
           <tr>
             <th>Замер</th>
+            <th>Тип</th>
             <th>Потоков</th>
             <th>Договоры x сделок</th>
             <th class="num">Открытие, мин</th>
@@ -211,6 +251,7 @@
         <tbody>
           <tr>
             <td>1</td>
+            <td>Базовый</td>
             <td>20</td>
             <td>1000 x 100</td>
             <td class="num">22</td>
@@ -219,6 +260,7 @@
           </tr>
           <tr>
             <td>2</td>
+            <td>Базовый</td>
             <td>12</td>
             <td>1000 x 100</td>
             <td class="num">32</td>
@@ -227,6 +269,7 @@
           </tr>
           <tr>
             <td>3</td>
+            <td>Базовый</td>
             <td>6</td>
             <td>1000 x 100</td>
             <td class="num">59</td>
@@ -235,11 +278,30 @@
           </tr>
           <tr>
             <td>4</td>
+            <td>Базовый</td>
             <td>10</td>
             <td>3031 x 33</td>
             <td class="num">38</td>
             <td class="num">139</td>
             <td class="num">43 165</td>
+          </tr>
+          <tr>
+            <td>5</td>
+            <td class="repeat-cell">ПОВТОРНЫЙ</td>
+            <td>10</td>
+            <td>1000 x 100</td>
+            <td class="num">41</td>
+            <td class="num">168</td>
+            <td class="num">35 714</td>
+          </tr>
+          <tr>
+            <td>6</td>
+            <td class="repeat-cell">ПОВТОРНЫЙ</td>
+            <td>6</td>
+            <td>1000 x 100</td>
+            <td class="num">61</td>
+            <td class="num">251</td>
+            <td class="num">23 904</td>
           </tr>
         </tbody>
       </table>
