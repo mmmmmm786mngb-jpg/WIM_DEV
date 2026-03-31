@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NRB-3451 Code Review (практика 1С)</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 24px; color: #1f2937; background: #f6f8fb; line-height: 1.5; }
+        h1, h2, h3 { margin-top: 0; }
+        .card { background: #fff; border: 1px solid #d8e1ee; border-radius: 10px; padding: 16px; margin-bottom: 16px; }
+        .meta { font-size: 14px; color: #4b5563; }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        th, td { border: 1px solid #d8e1ee; padding: 10px; vertical-align: top; text-align: left; }
+        th { background: #eef4fb; }
+        .ok { color: #fff; background: #28a745; border-radius: 6px; padding: 2px 8px; font-size: 12px; display: inline-block; font-weight: bold; }
+        .warn { color: #fff; background: #f0ad4e; border-radius: 6px; padding: 2px 8px; font-size: 12px; display: inline-block; font-weight: bold; }
+        .bad { color: #fff; background: #dc3545; border-radius: 6px; padding: 2px 8px; font-size: 12px; display: inline-block; font-weight: bold; }
+        .info { background: #eaf5ff; border-left: 4px solid #17a2b8; padding: 10px; margin: 8px 0; }
+        .note { background: #fff7e6; border-left: 4px solid #f0ad4e; padding: 10px; margin: 8px 0; }
+        pre { background: #f4f6fa; border: 1px solid #dde3ef; border-radius: 6px; padding: 10px; overflow-x: auto; white-space: pre-wrap; }
+        code { background: #f4f6fa; border: 1px solid #dde3ef; border-radius: 4px; padding: 1px 4px; }
+        a { color: #0b5ed7; }
+    </style>
+</head>
+<body>
+    <h1>NRB-3451 - Code review в стиле практики 1С-разработчиков</h1>
+
+    <div class="card meta">
+        <div><b>Задача:</b> RuData: актуализация кода НРД эмитента при смене <code>issuer_nrd</code></div>
+        <div><b>База:</b> <code>C:\1c\Cursor_1c\WORK\NRB_Depo</code></div>
+        <div><b>Источники:</b> постановка, <code>ОтчетОСравнении.txt</code>, оригинал в NRB_Depo</div>
+    </div>
+
+    <div class="card">
+        <h2>Как обычно ревьюят BSL в 1С (ориентиры)</h2>
+        <p>В русскоязычной практике ревью часто опираются на три опоры:</p>
+        <ul>
+            <li><b>Чек-лист по разделам</b> (комментарии, оформление, имена, архитектура, дубли, проверки данных, запросы) - типичная структура материалов для code review, см. например <a href="https://infostart.ru/1c/articles/1442065/">статью на Infostart</a>.</li>
+            <li><b>Система стандартов разработки 1С</b> (ИТС, публичные выжимки вроде <a href="https://v8std.ru/">v8std.ru</a>): оформление модулей, запросы, транзакции, общие модули.</li>
+            <li><b>Статический анализ</b>: <a href="https://infostart.ru/1c/articles/1789716/">BSL Language Server</a>, правила <a href="https://docs.checkbsl.org/checks/%D0%9E%D0%BF%D0%B8%D1%81%D0%B0%D0%BD%D0%B8%D1%8F%D0%9F%D1%80%D0%B0%D0%B2%D0%B8%D0%BB%D0%9F%D1%80%D0%BE%D0%B2%D0%B5%D1%80%D0%BA%D0%B8%D0%9A%D0%BE%D0%B4%D0%B0/">SonarQube 1C (BSL) Plugin</a>, EDT v8-code-style.</li>
+        </ul>
+        <div class="info">
+            Ниже - ревью именно в таком духе: сначала быстрый вердикт, затем проход по чек-листу, затем что бы подсветил линтер, затем итог для внедренца.
+        </div>
+    </div>
+
+    <div class="card">
+        <h2>Краткий вердикт (как на созвоне с разработчиком)</h2>
+        <p><b>Суть:</b> направление верное, баг оригинала с условием <code>КодЗагрузкиНДЦ</code> закрывается. Но перед мержем в основную ветку нужно поправить ветку с пустой строкой <code>СтарыйКод</code> и прогнать EDT/BSL LS - иначе риск "грязных" активных кодов в справочнике.</p>
+        <p><b>Статус:</b> <span class="warn">Доработать и повторить ревью</span></p>
+    </div>
+
+    <div class="card">
+        <h2>Чек-лист ревью (по мотивам типовых материалов для 1С)</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>Раздел</th>
+                    <th>Проверка</th>
+                    <th>По NRB-3451</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Комментарии</td>
+                    <td>Есть ли документирующий комментарий у экспортных процедур, нет ли вводящих в заблуждение формулировок</td>
+                    <td><span class="ok">Есть</span> у новой процедуры. По diff в менеджере каталога у <code>ИзменитьКодЗагрузки</code> заголовок комментария дублирует "создание" - <span class="warn">поправить текст</span></td>
+                </tr>
+                <tr>
+                    <td>Оформление</td>
+                    <td>Отступы, длина строки, читаемость запроса, один оператор на строку (см. <a href="https://v8std.ru/std/456/">#std456</a> - тексты модулей)</td>
+                    <td><span class="ok">В целом ок</span> для выгрузки. Длинные строки запроса - норма при переносах</td>
+                </tr>
+                <tr>
+                    <td>Имена</td>
+                    <td>PascalCase, понятные имена процедур и параметров</td>
+                    <td><span class="ok">Нормально</span>: <code>АктуализироватьКодЗагрузки</code>, параметры понятны</td>
+                </tr>
+                <tr>
+                    <td>Архитектура</td>
+                    <td>Логика в правильном слое: серверный общий модуль, менеджер справочника для записи</td>
+                    <td><span class="ok">Хорошо</span>: запись вынесена в менеджер <code>КодыЗагрузки</code></td>
+                </tr>
+                <tr>
+                    <td>Дубли</td>
+                    <td>Нет ли копипасты создания элемента в разных местах</td>
+                    <td><span class="ok">Улучшено</span>: вместо прямого <code>СоздатьЭлемент</code> в <code>RuDataAPI</code> вызов менеджера</td>
+                </tr>
+                <tr>
+                    <td>Проверки данных</td>
+                    <td>Корректная работа с пустыми строками, <code>Неопределено</code>, граничные случаи</td>
+                    <td><span class="bad">Проблема</span>: условие <code>ЗначениеЗаполнено(СтарыйКод) Или СтарыйКод = Неопределено</code> пропускает <code>СтарыйКод = ""</code></td>
+                </tr>
+                <tr>
+                    <td>Запросы</td>
+                    <td>Параметры, не конкатенация, эффективность условий (<a href="https://v8std.ru/std/437/">#std437</a>, <a href="https://v8std.ru/std/658/">#std658</a>)</td>
+                    <td><span class="ok">Параметры есть</span>. Запрос в цикле не размножается - один раз, дальше цикл по выборке</td>
+                </tr>
+                <tr>
+                    <td>Транзакции</td>
+                    <td>Нужна ли транзакция при пакетной записи нескольких объектов (<a href="https://its.1c.ru/db/v8std/browse/13/-1/31/32">ИТС: оформление и правила</a>, см. также раздел про транзакции в стандартах)</td>
+                    <td><span class="warn">Обсудить</span>: несколько <code>Записать()</code> подряд - при сбое возможно частичное состояние</td>
+                </tr>
+                <tr>
+                    <td>Регламент и ручная загрузка</td>
+                    <td>Одинаковое поведение в фоне и в обработке</td>
+                    <td><span class="ok">Ожидаемо</span>, если вызов один и тот же - но нужен регресс по двум сценариям из ТЗ</td>
+                </tr>
+                <tr>
+                    <td>Тесты</td>
+                    <td>Vanessa / xUnit / сценарии для критичной логики</td>
+                    <td><span class="warn">Нужны</span> сценарии с дублями, сменой кода, пустым <code>СтарыйКод</code></td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <div class="card">
+        <h2>Что бы подсветил BSL Language Server / Sonar (типовые категории)</h2>
+        <p>Точный список срабатываний без прогона инструмента на ветке разработчика назвать нельзя. По опыту ревью на таком коде обычно смотрят:</p>
+        <ul>
+            <li><b>Cognitive complexity</b> процедуры <code>АктуализироватьКодЗагрузки</code> - возможно превышение порога, рекомендация разбить на подпроцедуры.</li>
+            <li><b>Magic numbers / даты</b> - повторяющиеся <code>ДАТА(1,1,1)</code>, <code>ДАТАВРЕМЯ(1,1,1)</code> - вынести в общую функцию или константу модуля.</li>
+            <li><b>Описание параметров</b> в документирующем комментарии - проверка полноты типов и смысла <code>СтарыйКод</code> (зачем параметр, если по факту не фильтрует выборку).</li>
+        </ul>
+        <div class="note">
+            Рекомендация команде: прогнать ветку через EDT (v8-code-style) и BSL LS / Sonar по регламенту проекта и приложить отчет к задаче - это стандарт де-факто для зрелых 1С-команд.
+        </div>
+    </div>
+
+    <div class="card">
+        <h2>Замечания по существу доработки (по-1С-овски, без "международной теории")</h2>
+        <ol>
+            <li><b>Блокер:</b> исправить условие входа в блок поиска активных кодов, чтобы не пропускать пустую строку <code>СтарыйКод</code>.</li>
+            <li><b>Важно:</b> явно зафиксировать порядок обработки дублей (сортировка в запросе или правило "какой элемент оставляем") - иначе при смене СУБД/плана поведение может "плавать".</li>
+            <li><b>Желательно:</b> <code>НовыйКод</code> нормализовать один раз (<code>СокрЛП</code>) до сравнения и до записи, чтобы в справочнике не копились варианты с пробелами.</li>
+            <li><b>Регресс:</b> прогнать загрузку регламентом и обработкой, плюс сценарии из ТЗ (новые/обновленные эмитенты и прочие признаки загрузчика).</li>
+        </ol>
+    </div>
+
+    <div class="card">
+        <h2>Итог для постановки в очередь на релиз</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>Критерий</th>
+                    <th>Результат</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Соответствие бизнес-задаче (смена issuer_nrd)</td>
+                    <td><span class="ok">В целом да</span></td>
+                </tr>
+                <tr>
+                    <td>Готовность по стандартам 1С и линтерам</td>
+                    <td><span class="warn">После правок и прогона инструментов</span></td>
+                </tr>
+                <tr>
+                    <td>Рекомендация ревьюера</td>
+                    <td><b>Влить после исправления блокера и приложения отчета BSL LS / EDT</b></td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</body>
+</html>
