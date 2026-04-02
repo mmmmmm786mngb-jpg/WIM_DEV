@@ -1,0 +1,1187 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>IMAPPS-36274 - Пошаговое руководство разработчика</title>
+<style>
+  :root {
+    --blue: #1a73e8;
+    --blue-light: #e8f0fe;
+    --green: #137333;
+    --green-light: #e6f4ea;
+    --orange: #e37400;
+    --orange-light: #fef7e0;
+    --red: #c5221f;
+    --red-light: #fce8e6;
+    --gray: #5f6368;
+    --gray-light: #f8f9fa;
+    --border: #dadce0;
+    --text: #202124;
+    --purple: #7b2d8b;
+    --purple-light: #f5e6f8;
+    --teal: #007b7b;
+    --teal-light: #e0f7f7;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Segoe UI', Arial, sans-serif;
+    font-size: 14px;
+    color: var(--text);
+    background: #fff;
+    line-height: 1.6;
+  }
+  /* === HEADER === */
+  .page-header {
+    background: linear-gradient(135deg, #1a73e8 0%, #0d47a1 100%);
+    color: #fff;
+    padding: 32px 40px;
+  }
+  .page-header h1 { font-size: 26px; font-weight: 700; margin-bottom: 6px; }
+  .page-header .subtitle { font-size: 15px; opacity: 0.85; }
+  .badge-row { display: flex; gap: 10px; margin-top: 14px; flex-wrap: wrap; }
+  .badge {
+    background: rgba(255,255,255,0.2);
+    border: 1px solid rgba(255,255,255,0.35);
+    border-radius: 20px;
+    padding: 3px 12px;
+    font-size: 12px;
+    font-weight: 600;
+  }
+  /* === TOC === */
+  .toc {
+    background: var(--gray-light);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 20px 24px;
+    margin: 24px 40px;
+  }
+  .toc h3 { font-size: 14px; color: var(--gray); text-transform: uppercase; letter-spacing: .5px; margin-bottom: 12px; }
+  .toc ol { padding-left: 20px; }
+  .toc li { margin: 5px 0; }
+  .toc a { color: var(--blue); text-decoration: none; font-size: 13px; }
+  .toc a:hover { text-decoration: underline; }
+  /* === CONTENT === */
+  .content { padding: 0 40px 40px; }
+  /* === STEP === */
+  .step {
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    margin: 28px 0;
+    overflow: hidden;
+  }
+  .step-header {
+    display: flex;
+    align-items: center;
+    padding: 16px 20px;
+    gap: 14px;
+    cursor: default;
+  }
+  .step-num {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 15px;
+    flex-shrink: 0;
+    color: #fff;
+  }
+  .step-title { font-size: 16px; font-weight: 600; flex: 1; }
+  .step-tag {
+    font-size: 11px;
+    font-weight: 700;
+    padding: 3px 9px;
+    border-radius: 12px;
+    text-transform: uppercase;
+    letter-spacing: .5px;
+  }
+  .step-body { padding: 20px 24px; border-top: 1px solid var(--border); }
+
+  /* Step color themes */
+  .step.meta .step-header  { background: var(--blue-light); }
+  .step.meta .step-num     { background: var(--blue); }
+  .step.meta .step-tag     { background: var(--blue); color: #fff; }
+
+  .step.form .step-header  { background: var(--purple-light); }
+  .step.form .step-num     { background: var(--purple); }
+  .step.form .step-tag     { background: var(--purple); color: #fff; }
+
+  .step.server .step-header { background: var(--teal-light); }
+  .step.server .step-num   { background: var(--teal); }
+  .step.server .step-tag   { background: var(--teal); color: #fff; }
+
+  .step.logic .step-header  { background: var(--green-light); }
+  .step.logic .step-num    { background: var(--green); }
+  .step.logic .step-tag    { background: var(--green); color: #fff; }
+
+  .step.test .step-header   { background: var(--orange-light); }
+  .step.test .step-num     { background: var(--orange); }
+  .step.test .step-tag     { background: var(--orange); color: #fff; }
+
+  /* === BOXES === */
+  .info-box, .warn-box, .ok-box, .tip-box, .danger-box {
+    border-radius: 8px;
+    padding: 14px 16px;
+    margin: 14px 0;
+    font-size: 13px;
+  }
+  .info-box  { background: var(--blue-light);   border-left: 4px solid var(--blue);   }
+  .warn-box  { background: var(--orange-light); border-left: 4px solid var(--orange); }
+  .ok-box    { background: var(--green-light);  border-left: 4px solid var(--green);  }
+  .tip-box   { background: var(--purple-light); border-left: 4px solid var(--purple); }
+  .danger-box{ background: var(--red-light);    border-left: 4px solid var(--red);    }
+  .box-title { font-weight: 700; margin-bottom: 5px; font-size: 13px; }
+
+  /* === CODE === */
+  pre {
+    background: #1e1e2e;
+    color: #cdd6f4;
+    border-radius: 8px;
+    padding: 16px;
+    overflow-x: auto;
+    font-family: 'Consolas', 'Courier New', monospace;
+    font-size: 12.5px;
+    line-height: 1.65;
+    margin: 12px 0;
+    position: relative;
+  }
+  .code-label {
+    display: inline-block;
+    background: #313244;
+    color: #89b4fa;
+    font-size: 11px;
+    font-family: monospace;
+    padding: 2px 10px;
+    border-radius: 4px 4px 0 0;
+    margin-bottom: -4px;
+    margin-top: 12px;
+  }
+  code { font-family: 'Consolas', monospace; }
+  /* syntax highlight helpers */
+  .kw  { color: #cba6f7; }   /* keyword */
+  .fn  { color: #89dceb; }   /* function / procedure name */
+  .st  { color: #a6e3a1; }   /* string */
+  .cm  { color: #585b70; font-style: italic; } /* comment */
+  .nm  { color: #fab387; }   /* number / literal */
+  .op  { color: #89b4fa; }   /* operator / type */
+  .at  { color: #f38ba8; }   /* attribute / directive */
+  .vr  { color: #cdd6f4; }   /* variable */
+
+  /* === TABLES === */
+  table { width: 100%; border-collapse: collapse; margin: 12px 0; font-size: 13px; }
+  th { background: var(--gray-light); text-align: left; padding: 8px 12px; border: 1px solid var(--border); font-weight: 600; }
+  td { padding: 8px 12px; border: 1px solid var(--border); vertical-align: top; }
+  tr:nth-child(even) td { background: #fafafa; }
+
+  /* === INLINE LABELS === */
+  .label {
+    display: inline-block;
+    border-radius: 4px;
+    padding: 1px 7px;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+  }
+  .label.xml  { background: #e8f0fe; color: #1a73e8; }
+  .label.bsl  { background: #e6f4ea; color: #137333; }
+  .label.ui   { background: #f5e6f8; color: #7b2d8b; }
+  .label.attr { background: #fef7e0; color: #e37400; }
+  .label.new  { background: #c8e6c9; color: #1b5e20; }
+
+  /* === SECTIONS WITHIN STEP === */
+  .sub-title {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--text);
+    margin: 18px 0 8px;
+    padding-bottom: 4px;
+    border-bottom: 2px solid var(--border);
+  }
+  ul, ol { padding-left: 20px; margin: 8px 0; }
+  li { margin: 4px 0; }
+  p  { margin: 8px 0; }
+
+  /* === SCHEMA DIAGRAM === */
+  .schema {
+    background: var(--gray-light);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 16px;
+    font-family: monospace;
+    font-size: 12px;
+    white-space: pre;
+    overflow-x: auto;
+    margin: 12px 0;
+    line-height: 1.7;
+  }
+
+  /* === FILENAME chip === */
+  .file-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    background: #1e1e2e;
+    color: #89b4fa;
+    border-radius: 6px;
+    padding: 3px 10px;
+    font-family: monospace;
+    font-size: 12px;
+    margin: 4px 2px;
+  }
+
+  /* checklist */
+  .check-list { list-style: none; padding-left: 0; }
+  .check-list li { padding: 5px 0; padding-left: 24px; position: relative; }
+  .check-list li::before { content: "☐"; position: absolute; left: 0; color: var(--gray); }
+  .check-list li.done::before { content: "✓"; color: var(--green); }
+
+  @media print {
+    .step-header { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ====== HEADER ====== -->
+<div class="page-header">
+  <h1>Пошаговое руководство разработчика</h1>
+  <div class="subtitle">IMAPPS-36274 &mdash; Универсальный СКД-фильтр для настроек закрытия портфелей по расписанию</div>
+  <div class="badge-row">
+    <span class="badge">WIM_FIn</span>
+    <span class="badge">Справочник.НастройкиЗакрытияПортфелейПоРасписанию</span>
+    <span class="badge">Обработка.ГрупповоеВыполнениеЗакрытияПериодов</span>
+    <span class="badge">8.3.21+</span>
+  </div>
+</div>
+
+<!-- ====== TOC ====== -->
+<div class="toc">
+  <h3>Содержание</h3>
+  <ol>
+    <li><a href="#s1">Шаг 1 &mdash; Добавить реквизит ФильтрПортфелейСКД в справочник (XML метаданных)</a></li>
+    <li><a href="#s2">Шаг 2 &mdash; Добавить реквизит формы НастройкиСКД + кнопку (Form.xml)</a></li>
+    <li><a href="#s3">Шаг 3 &mdash; Обработчик кнопки: открываем КомпоновщикНастроек (Module.bsl формы)</a></li>
+    <li><a href="#s4">Шаг 4 &mdash; Сохранение настроек СКД: ОбработкаВыбора + запись на сервер</a></li>
+    <li><a href="#s5">Шаг 5 &mdash; Отображение текущего фильтра (декорация/текстовое поле)</a></li>
+    <li><a href="#s6">Шаг 6 &mdash; ПриСозданииНаСервере: восстановление настроек из базы</a></li>
+    <li><a href="#s7">Шаг 7 &mdash; Новая функция в МенеджерМодуле Портфелей: СписокПортфелейПоСКДФильтру</a></li>
+    <li><a href="#s8">Шаг 8 &mdash; Интеграция в ГрупповоеВыполнениеЗакрытияПериодов (ЗаполнитьСписокПортфелей)</a></li>
+    <li><a href="#s9">Шаг 9 &mdash; Итоговая проверка: чеклист тестирования</a></li>
+  </ol>
+</div>
+
+<!-- ====== CONTENT ====== -->
+<div class="content">
+
+<!-- ========================================================= -->
+<!-- STEP 1 -->
+<!-- ========================================================= -->
+<div class="step meta" id="s1">
+  <div class="step-header">
+    <div class="step-num">1</div>
+    <div class="step-title">Добавить реквизит <code>ФильтрПортфелейСКД</code> в справочник</div>
+    <span class="step-tag label xml">XML метаданные</span>
+  </div>
+  <div class="step-body">
+
+    <div class="info-box">
+      <div class="box-title">Что делаем</div>
+      Добавляем в справочник <strong>НастройкиЗакрытияПортфелейПоРасписанию</strong> один новый реквизит типа <code>ХранилищеЗначения</code> для хранения сериализованных настроек СКД.
+    </div>
+
+    <p class="sub-title">Файл для редактирования</p>
+    <span class="file-chip">&#9654; Catalogs/НастройкиЗакрытияПортфелейПоРасписанию.xml</span>
+
+    <p class="sub-title">Где искать место вставки</p>
+    <p>В файле <code>.xml</code> найдите блок <code>&lt;Attributes&gt;</code>. Внутри него уже есть реквизиты: <code>ПоВсемДействующимПортфелям</code>, <code>ТипыКлиентов</code> и другие. Добавьте новый реквизит <strong>после последнего существующего</strong> реквизита, перед закрывающим тегом <code>&lt;/Attributes&gt;</code>.</p>
+
+    <div class="warn-box">
+      <div class="box-title">Про UUID</div>
+      Для каждого нового реквизита нужен уникальный UUID. Сгенерируйте его в 1C EDT (при создании реквизита через дизайнер) или вручную любым UUID-генератором. Формат: <code>xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx</code>.
+    </div>
+
+    <p class="sub-title">XML фрагмент для вставки</p>
+    <span class="code-label">НастройкиЗакрытияПортфелейПоРасписанию.xml</span>
+<pre>&lt;!-- Вставить ВНУТРИ блока &lt;ChildObjects&gt; после последнего &lt;Attribute ...&gt; --&gt;
+&lt;Attribute uuid="<span class="op">ВАШИ-UUID-ЗДЕСЬ-12345-000000000001</span>"&gt;
+    &lt;Properties&gt;
+        &lt;Name&gt;<span class="st">ФильтрПортфелейСКД</span>&lt;/Name&gt;
+        &lt;Synonym&gt;
+            &lt;v8:item&gt;
+                &lt;v8:lang&gt;ru&lt;/v8:lang&gt;
+                &lt;v8:content&gt;<span class="st">Фильтр портфелей (СКД)</span>&lt;/v8:content&gt;
+            &lt;/v8:item&gt;
+        &lt;/Synonym&gt;
+        &lt;Comment/&gt;
+        &lt;Type&gt;
+            &lt;v8:Type&gt;<span class="op">v8:ValueStorageType</span>&lt;/v8:Type&gt;
+        &lt;/Type&gt;
+        &lt;FillChecking&gt;DontCheck&lt;/FillChecking&gt;
+        &lt;FullTextSearch&gt;DontUse&lt;/FullTextSearch&gt;
+        &lt;DataHistory&gt;Use&lt;/DataHistory&gt;
+    &lt;/Properties&gt;
+&lt;/Attribute&gt;</pre>
+
+    <div class="ok-box">
+      <div class="box-title">Результат</div>
+      В таблице справочника появится колонка <code>ФильтрПортфелейСКД</code> типа <code>ХранилищеЗначения</code>. Там будут храниться XML-настройки компоновщика.
+    </div>
+
+    <p class="sub-title">Как использовать EDT вместо XML</p>
+    <ol>
+      <li>Откройте объект <strong>НастройкиЗакрытияПортфелейПоРасписанию</strong> в дереве метаданных.</li>
+      <li>Вкладка <strong>Данные &rarr; Реквизиты</strong> &rarr; кнопка "Добавить".</li>
+      <li>Имя: <code>ФильтрПортфелейСКД</code>, Тип: <code>ХранилищеЗначения</code>.</li>
+      <li>Синоним (рус.): "Фильтр портфелей (СКД)".</li>
+      <li>Сохраните. EDT сам запишет XML с правильным UUID.</li>
+    </ol>
+
+  </div>
+</div>
+
+<!-- ========================================================= -->
+<!-- STEP 2 -->
+<!-- ========================================================= -->
+<div class="step form" id="s2">
+  <div class="step-header">
+    <div class="step-num">2</div>
+    <div class="step-title">Добавить реквизит формы <code>НастройкиСКД</code> и кнопку в Form.xml</div>
+    <span class="step-tag label ui">UI / Form.xml</span>
+  </div>
+  <div class="step-body">
+
+    <div class="info-box">
+      <div class="box-title">Что делаем</div>
+      В форме элемента справочника (<code>ФормаЭлемента</code>) добавляем:<br>
+      1. <strong>Реквизит формы</strong> <code>НастройкиСКД</code> типа <strong><code>КомпоновщикНастроекКомпоновкиДанных</code></strong> — для штатного дерева отбора СКД на форме (в хранилище справочника по-прежнему сохраняют <code>НастройкиКомпоновкиДанных</code> через <code>ПолучитьНастройки()</code>).<br>
+      2. <strong>Реквизит формы</strong> <code>ПредставлениеФильтраСКД</code> (строка) — для отображения текущего фильтра пользователю (при варианте с отдельной формой настроек; при встроенной таблице отбора может не понадобиться).<br>
+      3. <strong>Группу</strong> на форме с кнопкой "Настроить фильтр портфелей" и полем-декорацией для показа фильтра <em>или</em> таблицей <code>НастройкиСКД.Settings.Filter</code> (актуальный вариант без отдельного окна).
+    </div>
+
+    <div class="warn-box">
+      <div class="box-title">Тип реквизита <code>НастройкиСКД</code> в метаданных</div>
+      Чтобы дерево отбора на управляемой форме работало штатно, в свойствах реквизита формы нужно указать тип
+      <strong>КомпоновщикНастроекКомпоновкиДанных</strong> (в XML: <code>dcsset:SettingsComposer</code>).
+      Реквизит с типом <code>НастройкиКомпоновкиДанных</code> (<code>dcscor:DataCompositionSettings</code>) для привязки <code>DataPath = НастройкиСКД.Settings.Filter</code> не используют.
+    </div>
+
+    <p class="sub-title">Файл для редактирования</p>
+    <span class="file-chip">&#9654; Forms/ФормаЭлемента/Ext/Form.xml</span>
+
+    <p class="sub-title">Структура формы (текущая)</p>
+    <p>Форма содержит группы верхнего уровня (внутри <code>&lt;ChildItems&gt;</code> корневого тега <code>&lt;Form&gt;</code>):</p>
+    <div class="schema">
+Form
+ ├─ ГруппаНачалоКонецПериода
+ ├─ ГруппаПолучатели          ← здесь чекбокс ПоВсемДействующимПортфелям, гиперссылки ТипыКлиентов/Стратегии
+ ├─ ГруппаНастройкиРасписания
+ ├─ ГруппаПараметрыМногопотока
+ ├─ ГруппаСохранениеЛога
+ ├─ ГруппаРассылка
+ └─ Страницы (Pages)
+     ├─ ГруппаТипыКлиентов (Page)
+     └─ ГруппаНастройкиЗакрытияПериода (Page) "Портфели"</div>
+
+    <p><strong>Место вставки:</strong> новую группу нужно добавить ПОСЛЕ <code>&lt;/UsualGroup&gt;</code>, закрывающего группу <strong>ГруппаПолучатели</strong>, и ПЕРЕД открытием <strong>ГруппаНастройкиРасписания</strong>.</p>
+
+    <p class="sub-title">XML фрагмент: новая группа с кнопкой и полем</p>
+    <span class="code-label">Form.xml — вставить между ГруппаПолучатели и ГруппаНастройкиРасписания</span>
+<pre><span class="cm">&lt;!-- ======= НОВЫЙ БЛОК: Фильтр портфелей по СКД ======= --&gt;</span>
+&lt;UsualGroup <span class="at">name</span>=<span class="st">"ГруппаФильтрСКД"</span> <span class="at">id</span>=<span class="st">"200"</span>&gt;
+    &lt;Title&gt;
+        &lt;v8:item&gt;
+            &lt;v8:lang&gt;ru&lt;/v8:lang&gt;
+            &lt;v8:content&gt;<span class="st">Фильтр портфелей (СКД)</span>&lt;/v8:content&gt;
+        &lt;/v8:item&gt;
+    &lt;/Title&gt;
+    &lt;Behavior&gt;Usual&lt;/Behavior&gt;
+    &lt;Representation&gt;WeakSeparation&lt;/Representation&gt;
+    &lt;ExtendedTooltip name=<span class="st">"ГруппаФильтрСКДРасширеннаяПодсказка"</span> id=<span class="st">"201"</span>/&gt;
+    &lt;ChildItems&gt;
+
+        <span class="cm">&lt;!-- Горизонтальная группа: кнопка + декорация представления --&gt;</span>
+        &lt;UsualGroup <span class="at">name</span>=<span class="st">"ГруппаФильтрСКДКнопка"</span> <span class="at">id</span>=<span class="st">"202"</span>&gt;
+            &lt;Group&gt;AlwaysHorizontal&lt;/Group&gt;
+            &lt;Behavior&gt;Usual&lt;/Behavior&gt;
+            &lt;Representation&gt;None&lt;/Representation&gt;
+            &lt;ShowTitle&gt;false&lt;/ShowTitle&gt;
+            &lt;ExtendedTooltip name=<span class="st">"ГруппаФильтрСКДКнопкаРасширеннаяПодсказка"</span> id=<span class="st">"203"</span>/&gt;
+            &lt;ChildItems&gt;
+
+                <span class="cm">&lt;!-- Кнопка вызова компоновщика настроек --&gt;</span>
+                &lt;Button <span class="at">name</span>=<span class="st">"НастроитьФильтрСКД"</span> <span class="at">id</span>=<span class="st">"204"</span>&gt;
+                    &lt;Type&gt;UsualButton&lt;/Type&gt;
+                    &lt;Representation&gt;Text&lt;/Representation&gt;
+                    &lt;CommandName&gt;Form.Command.<span class="fn">НастроитьФильтрСКД</span>&lt;/CommandName&gt;
+                    &lt;ExtendedTooltip name=<span class="st">"НастроитьФильтрСКДРасширеннаяПодсказка"</span> id=<span class="st">"205"</span>/&gt;
+                &lt;/Button&gt;
+
+                <span class="cm">&lt;!-- Кнопка сброса фильтра --&gt;</span>
+                &lt;Button <span class="at">name</span>=<span class="st">"СброситьФильтрСКД"</span> <span class="at">id</span>=<span class="st">"206"</span>&gt;
+                    &lt;Type&gt;UsualButton&lt;/Type&gt;
+                    &lt;Representation&gt;Text&lt;/Representation&gt;
+                    &lt;CommandName&gt;Form.Command.<span class="fn">СброситьФильтрСКД</span>&lt;/CommandName&gt;
+                    &lt;ExtendedTooltip name=<span class="st">"СброситьФильтрСКДРасширеннаяПодсказка"</span> id=<span class="st">"207"</span>/&gt;
+                &lt;/Button&gt;
+
+            &lt;/ChildItems&gt;
+        &lt;/UsualGroup&gt;
+
+        <span class="cm">&lt;!-- Поле для отображения текущего фильтра --&gt;</span>
+        &lt;InputField <span class="at">name</span>=<span class="st">"ПредставлениеФильтраСКД"</span> <span class="at">id</span>=<span class="st">"208"</span>&gt;
+            &lt;DataPath&gt;<span class="op">ПредставлениеФильтраСКД</span>&lt;/DataPath&gt;
+            &lt;TitleLocation&gt;None&lt;/TitleLocation&gt;
+            &lt;ReadOnly&gt;true&lt;/ReadOnly&gt;
+            &lt;MultiLine&gt;true&lt;/MultiLine&gt;
+            &lt;Height&gt;3&lt;/Height&gt;
+            &lt;TextColor&gt;#5f6368&lt;/TextColor&gt;
+            &lt;BackColor&gt;#f8f9fa&lt;/BackColor&gt;
+            &lt;ContextMenu name=<span class="st">"ПредставлениеФильтраСКДКонтекстноеМеню"</span> id=<span class="st">"209"</span>/&gt;
+            &lt;ExtendedTooltip name=<span class="st">"ПредставлениеФильтраСКДРасширеннаяПодсказка"</span> id=<span class="st">"210"</span>/&gt;
+        &lt;/InputField&gt;
+
+    &lt;/ChildItems&gt;
+&lt;/UsualGroup&gt;
+<span class="cm">&lt;!-- ======= КОНЕЦ НОВОГО БЛОКА ======= --&gt;</span></pre>
+
+    <p class="sub-title">XML фрагмент: новые реквизиты формы</p>
+    <p>Найдите блок <code>&lt;Attributes&gt;</code> (ближе к концу файла, после <code>&lt;/ChildItems&gt;</code>). Добавьте внутри этого блока:</p>
+    <span class="code-label">Form.xml — раздел &lt;Attributes&gt;</span>
+<pre><span class="cm">&lt;!-- КомпоновщикНастроекКомпоновкиДанных — штатный тип для дерева отбора Settings.Filter --&gt;</span>
+&lt;Attribute <span class="at">name</span>=<span class="st">"НастройкиСКД"</span> <span class="at">id</span>=<span class="st">"10"</span>&gt;
+    &lt;Title&gt;
+        &lt;v8:item&gt;&lt;v8:lang&gt;ru&lt;/v8:lang&gt;
+            &lt;v8:content&gt;<span class="st">Настройки СКД</span>&lt;/v8:content&gt;&lt;/v8:item&gt;
+    &lt;/Title&gt;
+    &lt;Type&gt;
+        &lt;v8:Type&gt;<span class="op">dcsset:SettingsComposer</span>&lt;/v8:Type&gt;
+    &lt;/Type&gt;
+&lt;/Attribute&gt;
+
+<span class="cm">&lt;!-- Строковое представление активного фильтра --&gt;</span>
+&lt;Attribute <span class="at">name</span>=<span class="st">"ПредставлениеФильтраСКД"</span> <span class="at">id</span>=<span class="st">"11"</span>&gt;
+    &lt;Title&gt;
+        &lt;v8:item&gt;&lt;v8:lang&gt;ru&lt;/v8:lang&gt;
+            &lt;v8:content&gt;<span class="st">Представление фильтра СКД</span>&lt;/v8:content&gt;&lt;/v8:item&gt;
+    &lt;/Title&gt;
+    &lt;Type&gt;
+        &lt;v8:Type&gt;<span class="op">v8:StringType</span>&lt;/v8:Type&gt;
+        &lt;v8:StringQualifiers&gt;
+            &lt;v8:Length&gt;0&lt;/v8:Length&gt;
+            &lt;v8:AllowedLength&gt;Variable&lt;/v8:AllowedLength&gt;
+        &lt;/v8:StringQualifiers&gt;
+    &lt;/Type&gt;
+&lt;/Attribute&gt;</pre>
+
+    <p class="sub-title">XML фрагмент: новые команды формы</p>
+    <p>Найдите блок <code>&lt;Commands&gt;</code>, добавьте внутри:</p>
+    <span class="code-label">Form.xml — раздел &lt;Commands&gt;</span>
+<pre>&lt;Command <span class="at">name</span>=<span class="st">"НастроитьФильтрСКД"</span> <span class="at">id</span>=<span class="st">"10"</span>&gt;
+    &lt;Title&gt;
+        &lt;v8:item&gt;&lt;v8:lang&gt;ru&lt;/v8:lang&gt;
+            &lt;v8:content&gt;<span class="st">Настроить фильтр портфелей...</span>&lt;/v8:content&gt;&lt;/v8:item&gt;
+    &lt;/Title&gt;
+    &lt;ToolTip&gt;
+        &lt;v8:item&gt;&lt;v8:lang&gt;ru&lt;/v8:lang&gt;
+            &lt;v8:content&gt;<span class="st">Открыть компоновщик настроек для выбора фильтра по полям портфелей</span>&lt;/v8:content&gt;&lt;/v8:item&gt;
+    &lt;/ToolTip&gt;
+    &lt;Action&gt;<span class="fn">НастроитьФильтрСКД</span>&lt;/Action&gt;
+&lt;/Command&gt;
+
+&lt;Command <span class="at">name</span>=<span class="st">"СброситьФильтрСКД"</span> <span class="at">id</span>=<span class="st">"11"</span>&gt;
+    &lt;Title&gt;
+        &lt;v8:item&gt;&lt;v8:lang&gt;ru&lt;/v8:lang&gt;
+            &lt;v8:content&gt;<span class="st">Сбросить фильтр портфелей</span>&lt;/v8:content&gt;&lt;/v8:item&gt;
+    &lt;/Title&gt;
+    &lt;Action&gt;<span class="fn">СброситьФильтрСКД</span>&lt;/Action&gt;
+&lt;/Command&gt;</pre>
+
+    <div class="tip-box">
+      <div class="box-title">Важно про ID элементов</div>
+      ID элементов формы (<code>id="200"</code>, <code>id="201"</code> и т.д.) должны быть уникальными в пределах файла. Проверьте максимальный используемый id (найдите в файле строку с самым большим номером) и начните нумерацию с <strong>max_id + 1</strong>. В данной форме последний id равен 169 — значит используйте 170+.
+    </div>
+
+  </div>
+</div>
+
+<!-- ========================================================= -->
+<!-- STEP 3 -->
+<!-- ========================================================= -->
+<div class="step form" id="s3">
+  <div class="step-header">
+    <div class="step-num">3</div>
+    <div class="step-title">Обработчик кнопки: открываем КомпоновщикНастроек (Module.bsl формы)</div>
+    <span class="step-tag label bsl">BSL / Module клиент</span>
+  </div>
+  <div class="step-body">
+
+    <div class="info-box">
+      <div class="box-title">Принцип работы</div>
+      Нажатие кнопки &rarr; на <strong>сервере</strong> получаем СКД-схему и текущие настройки (или инициализируем новые) &rarr; передаём их на <strong>клиент</strong> &rarr; открываем стандартную форму <code>БиблиотекаКартинок.КомпоновщикНастроек</code> через <code>ОткрытьФорму</code> &rarr; после выбора пользователем &mdash; в <code>ОбработкаВыбора</code> принимаем результат.
+    </div>
+
+    <p class="sub-title">Файл для редактирования</p>
+    <span class="file-chip">&#9654; Forms/ФормаЭлемента/Ext/Form/Module.bsl</span>
+
+    <p class="sub-title">Как это устроено: открытие компоновщика в 1С</p>
+    <p>В 1С нет прямого объекта "ДиалогКомпоновщикаНастроек". Стандартный способ:</p>
+    <ol>
+      <li>Создать объект <code>КомпоновщикНастроекКомпоновкиДанных</code>.</li>
+      <li>Инициализировать его СКД-схемой.</li>
+      <li>Загрузить текущие настройки (или настройки по умолчанию).</li>
+      <li>Открыть форму <strong>"ОбщаяФорма.НастройкиКомпоновкиДанных"</strong> (если она есть в конфигурации) или стандартную платформенную форму через <code>ОткрытьФорму("ОбщаяФорма.НастройкиКомпоновкиДанных", ...)</code>.</li>
+    </ol>
+
+    <div class="warn-box">
+      <div class="box-title">Если в конфигурации нет общей формы настроек СКД</div>
+      Используем альтернативный способ: открываем форму через <code>НастройкиКомпоновщика.ОткрытьФормуНастроек()</code>. Однако этот метод не доступен в тонком клиенте. Рекомендуемый подход &mdash; передать компоновщик как параметр в специально созданную вспомогательную форму. Ниже приведён рабочий вариант.
+    </div>
+
+    <p class="sub-title">Код: добавить в раздел ОбработчикиКомандФормы</p>
+    <span class="code-label">Form/Module.bsl — раздел #Область ОбработчикиКомандФормы</span>
+<pre><span class="cm">// Открыть компоновщик настроек СКД для выбора фильтра портфелей</span>
+<span class="at">&НаКлиенте</span>
+<span class="kw">Процедура</span> <span class="fn">НастроитьФильтрСКД</span>(Команда)
+    
+    <span class="cm">// Получаем схему и текущие настройки с сервера</span>
+    СхемаИНастройки = <span class="fn">ПолучитьСхемуИНастройкиСКДНаСервере</span>();
+    
+    ПараметрыОткрытия = <span class="kw">Новый</span> Структура;
+    ПараметрыОткрытия.Вставить(<span class="st">"Схема"</span>,     СхемаИНастройки.Схема);
+    ПараметрыОткрытия.Вставить(<span class="st">"Настройки"</span>, СхемаИНастройки.Настройки);
+    ПараметрыОткрытия.Вставить(<span class="st">"ФиксированныеНастройки"</span>, <span class="kw">Новый</span> НастройкиКомпоновкиДанных);
+    
+    <span class="cm">// Открываем стандартную форму редактирования настроек СКД</span>
+    <span class="kw">ОткрытьФорму</span>(
+        <span class="st">"ОбщаяФорма.НастройкиКомпоновкиДанных"</span>,
+        ПараметрыОткрытия,
+        ЭтаФорма,
+        ,
+        ,
+        ,
+        <span class="st">"НастройкиФильтраСКД"</span>,   <span class="cm">// ИдентификаторОповещения — по нему ловим в ОбработкаВыбора</span>
+        РежимОткрытияОкнаФормы.БлокироватьОкноВладельца
+    );
+    
+<span class="kw">КонецПроцедуры</span>
+
+<span class="at">&НаКлиенте</span>
+<span class="kw">Процедура</span> <span class="fn">СброситьФильтрСКД</span>(Команда)
+    
+    НастройкиСКД = <span class="kw">Неопределено</span>;
+    ПредставлениеФильтраСКД = <span class="st">""</span>;
+    <span class="fn">СохранитьНастройкиСКДНаСервере</span>(<span class="kw">Неопределено</span>);
+    <span class="fn">УправлениеФормой</span>();
+    
+<span class="kw">КонецПроцедуры</span></pre>
+
+    <p class="sub-title">Серверная функция получения схемы и настроек</p>
+    <span class="code-label">Form/Module.bsl — раздел #Область СлужебныеПроцедурыИФункции</span>
+<pre><span class="cm">// Описание: Возвращает схему СКД для фильтра портфелей и текущие сохранённые настройки.
+//           Если настройки ещё не сохранены — возвращает настройки по умолчанию.
+//
+// Возвращаемое значение:
+//   Структура - поля: Схема (СхемаКомпоновкиДанных), Настройки (НастройкиКомпоновкиДанных)</span>
+<span class="at">&НаСервере</span>
+<span class="kw">Функция</span> <span class="fn">ПолучитьСхемуИНастройкиСКДНаСервере</span>()
+    
+    <span class="cm">// Берём СКД-схему из макета "ДействующиеПортфели" справочника Портфели</span>
+    Схема = Справочники.Портфели.ПолучитьМакет(<span class="st">"ДействующиеПортфели"</span>);
+    
+    <span class="cm">// Пробуем прочитать сохранённые настройки из реквизита объекта</span>
+    СохранённыеНастройки = <span class="kw">Неопределено</span>;
+    
+    ХранилищеЗначения = Объект.ФильтрПортфелейСКД;
+    <span class="kw">Если</span> ТипЗнч(ХранилищеЗначения) = Тип(<span class="st">"ХранилищеЗначения"</span>) Тогда
+        СохранённыеНастройки = ХранилищеЗначения.Получить();
+    <span class="kw">КонецЕсли</span>;
+    
+    <span class="kw">Если</span> ТипЗнч(СохранённыеНастройки) &lt;&gt; Тип(<span class="st">"НастройкиКомпоновкиДанных"</span>) Тогда
+        <span class="cm">// Первый запуск — используем настройки по умолчанию из схемы</span>
+        СохранённыеНастройки = Схема.НастройкиПоУмолчанию;
+    <span class="kw">КонецЕсли</span>;
+    
+    Результат = <span class="kw">Новый</span> Структура(<span class="st">"Схема, Настройки"</span>, Схема, СохранённыеНастройки);
+    <span class="kw">Возврат</span> Результат;
+    
+<span class="kw">КонецФункции</span></pre>
+
+  </div>
+</div>
+
+<!-- ========================================================= -->
+<!-- STEP 4 -->
+<!-- ========================================================= -->
+<div class="step form" id="s4">
+  <div class="step-header">
+    <div class="step-num">4</div>
+    <div class="step-title">ОбработкаВыбора: принять настройки от компоновщика и сохранить</div>
+    <span class="step-tag label bsl">BSL / Module клиент+сервер</span>
+  </div>
+  <div class="step-body">
+
+    <div class="info-box">
+      <div class="box-title">Поток данных</div>
+      Форма компоновщика закрывается &rarr; платформа вызывает <code>ОбработкаВыбора(ВыбранноеЗначение, ИсточникВыбора)</code> &rarr; проверяем идентификатор оповещения &rarr; сохраняем настройки в <code>НастройкиСКД</code> (реквизит формы) &rarr; вызываем серверную процедуру, которая кладёт их в <code>Объект.ФильтрПортфелейСКД</code> &rarr; обновляем представление фильтра.
+    </div>
+
+    <p class="sub-title">Дополнение процедуры ОбработкаВыбора (уже существует в Module.bsl)</p>
+    <span class="code-label">Form/Module.bsl — процедура ОбработкаВыбора (ДОБАВИТЬ блок)</span>
+<pre><span class="at">&НаКлиенте</span>
+<span class="kw">Процедура</span> <span class="fn">ОбработкаВыбора</span>(ВыбранноеЗначение, ИсточникВыбора)
+    
+    <span class="cm">// --- существующий код ---</span>
+    <span class="kw">Если</span> ИсточникВыбора.ИмяФормы = <span class="st">"Справочник.НастройкиЗакрытияПортфелейПоРасписанию.Форма.ФормаВыбораТиповКлиентов"</span> Тогда
+        <span class="cm">// ... (не трогаем) ...</span>
+    <span class="kw">КонецЕсли</span>;
+    
+    <span class="cm">// --- НОВЫЙ БЛОК ---</span>
+    <span class="kw">Если</span> ИсточникВыбора.ИдентификаторОповещения = <span class="st">"НастройкиФильтраСКД"</span> Тогда
+        
+        <span class="kw">Если</span> ВыбранноеЗначение = <span class="kw">Неопределено</span> Тогда
+            <span class="kw">Возврат</span>; <span class="cm">// пользователь нажал Отмена</span>
+        <span class="kw">КонецЕсли</span>;
+        
+        <span class="cm">// ВыбранноеЗначение содержит объект НастройкиКомпоновкиДанных</span>
+        НастройкиСКД = ВыбранноеЗначение;
+        
+        <span class="cm">// Сохраняем в реквизит объекта на сервере + получаем представление</span>
+        ПредставлениеФильтраСКД = <span class="fn">СохранитьИПолучитьПредставлениеСКДНаСервере</span>(НастройкиСКД);
+        
+        <span class="fn">УправлениеФормой</span>();
+        
+    <span class="kw">КонецЕсли</span>;
+    <span class="cm">// --- КОНЕЦ НОВОГО БЛОКА ---</span>
+    
+    <span class="fn">УправлениеФормой</span>();
+    
+<span class="kw">КонецПроцедуры</span></pre>
+
+    <p class="sub-title">Серверная функция сохранения настроек в объект</p>
+    <span class="code-label">Form/Module.bsl — раздел #Область СлужебныеПроцедурыИФункции</span>
+<pre><span class="cm">// Описание: Сохраняет НастройкиКомпоновкиДанных в реквизит Объект.ФильтрПортфелейСКД
+//           и возвращает строковое представление активных элементов отбора.
+//
+// Параметры:
+//   НастройкиСКД - НастройкиКомпоновкиДанных - объект настроек; Неопределено — для сброса
+//
+// Возвращаемое значение:
+//   Строка - текстовое представление установленных фильтров</span>
+<span class="at">&НаСервере</span>
+<span class="kw">Функция</span> <span class="fn">СохранитьИПолучитьПредставлениеСКДНаСервере</span>(НастройкиСКД)
+    
+    <span class="kw">Если</span> НастройкиСКД = <span class="kw">Неопределено</span> Тогда
+        Объект.ФильтрПортфелейСКД = <span class="kw">Неопределено</span>;
+        <span class="kw">Возврат</span> <span class="st">""</span>;
+    <span class="kw">КонецЕсли</span>;
+    
+    <span class="cm">// Сохраняем в ХранилищеЗначения (сжатие Ложь для скорости)</span>
+    Объект.ФильтрПортфелейСКД = <span class="kw">Новый</span> ХранилищеЗначения(НастройкиСКД, <span class="kw">Новый</span> СжатиеДанных(0));
+    
+    <span class="cm">// Формируем читаемое представление элементов отбора</span>
+    Представление = <span class="fn">СформироватьПредставлениеОтбораСКД</span>(НастройкиСКД.Отбор);
+    <span class="kw">Возврат</span> Представление;
+    
+<span class="kw">КонецФункции</span>
+
+<span class="cm">// Описание: Формирует строку вида "Поле1 = Значение1; Поле2 В (A, B)" из элементов отбора СКД.
+//
+// Параметры:
+//   Отбор - ОтборКомпоновкиДанных - коллекция элементов отбора
+//
+// Возвращаемое значение:
+//   Строка - описание фильтра; пустая строка если отбор не задан</span>
+<span class="at">&НаСервере</span>
+<span class="kw">Функция</span> <span class="fn">СформироватьПредставлениеОтбораСКД</span>(Отбор)
+    
+    СтрокиПредставления = <span class="kw">Новый</span> Массив;
+    
+    <span class="kw">Для каждого</span> ЭлементОтбора <span class="kw">Из</span> Отбор.Элементы <span class="kw">Цикл</span>
+        
+        <span class="kw">Если</span> <span class="kw">Не</span> ЭлементОтбора.Использование <span class="kw">Тогда</span>
+            <span class="kw">Продолжить</span>;
+        <span class="kw">КонецЕсли</span>;
+        
+        <span class="kw">Если</span> ТипЗнч(ЭлементОтбора) = Тип(<span class="st">"ЭлементОтбораКомпоновкиДанных"</span>) Тогда
+            
+            <span class="cm">// Получаем представление поля</span>
+            ПредставлениеПоля = Строка(ЭлементОтбора.ЛевоеЗначение);
+            ПредставлениеВидаСравнения = Строка(ЭлементОтбора.ВидСравнения);
+            ПредставлениеЗначения = Строка(ЭлементОтбора.ПравоеЗначение);
+            
+            СтрокиПредставления.Добавить(
+                СтрШаблон(<span class="st">"%1 %2 %3"</span>, ПредставлениеПоля, ПредставлениеВидаСравнения, ПредставлениеЗначения)
+            );
+            
+        <span class="kw">ИначеЕсли</span> ТипЗнч(ЭлементОтбора) = Тип(<span class="st">"ГруппаЭлементовОтбораКомпоновкиДанных"</span>) Тогда
+            
+            <span class="cm">// Рекурсивно обходим группу</span>
+            ПредставлениеГруппы = <span class="fn">СформироватьПредставлениеОтбораСКД</span>(ЭлементОтбора);
+            <span class="kw">Если</span> ЗначениеЗаполнено(ПредставлениеГруппы) Тогда
+                СтрокиПредставления.Добавить(<span class="st">"("</span> + ПредставлениеГруппы + <span class="st">")"</span>);
+            <span class="kw">КонецЕсли</span>;
+            
+        <span class="kw">КонецЕсли</span>;
+        
+    <span class="kw">КонецЦикла</span>;
+    
+    <span class="kw">Если</span> СтрокиПредставления.Количество() = <span class="nm">0</span> <span class="kw">Тогда</span>
+        <span class="kw">Возврат</span> <span class="st">"(фильтр не задан — все действующие портфели)"</span>;
+    <span class="kw">КонецЕсли</span>;
+    
+    <span class="kw">Возврат</span> СтрСоединить(СтрокиПредставления, <span class="st">"; "</span> + Символы.ПС);
+    
+<span class="kw">КонецФункции</span></pre>
+
+  </div>
+</div>
+
+<!-- ========================================================= -->
+<!-- STEP 5 -->
+<!-- ========================================================= -->
+<div class="step form" id="s5">
+  <div class="step-header">
+    <div class="step-num">5</div>
+    <div class="step-title">Управление видимостью элементов и отображение фильтра</div>
+    <span class="step-tag label ui">UI / BSL клиент</span>
+  </div>
+  <div class="step-body">
+
+    <div class="info-box">
+      <div class="box-title">Что делаем</div>
+      Дополняем процедуру <code>УправлениеФормой()</code>, которая уже есть в модуле формы. Добавляем логику: показывать/скрывать кнопку "Сбросить" в зависимости от наличия настроек, и показывать текстовое поле с представлением фильтра.
+    </div>
+
+    <p class="sub-title">Найдите и дополните УправлениеФормой в Module.bsl</p>
+    <span class="code-label">Form/Module.bsl — дополнение в УправлениеФормой()</span>
+<pre><span class="at">&НаКлиентеНаСервереБезКонтекста</span>
+<span class="kw">Процедура</span> <span class="fn">УправлениеФормой</span>(Форма = <span class="kw">Неопределено</span>)
+    
+    <span class="cm">// ... существующий код управления формой ...</span>
+    <span class="cm">// Например: управление видимостью по чекбоксу ПоВсемДействующимПортфелям</span>
+    
+    <span class="cm">// === ДОБАВЛЯЕМ: управление блоком СКД фильтра ===</span>
+    
+    <span class="cm">// Кнопка сброса видна только если есть активные настройки</span>
+    <span class="kw">Если</span> Форма &lt;&gt; <span class="kw">Неопределено</span> <span class="kw">Тогда</span>
+        
+        ЕстьФильтр = ЗначениеЗаполнено(Форма.ПредставлениеФильтраСКД)
+                     <span class="kw">И</span> Форма.ПредставлениеФильтраСКД &lt;&gt; <span class="st">"(фильтр не задан — все действующие портфели)"</span>;
+        
+        Форма.Элементы.СброситьФильтрСКД.Доступность = ЕстьФильтр;
+        
+        <span class="cm">// Подсвечиваем группу когда фильтр задан</span>
+        <span class="kw">Если</span> ЕстьФильтр <span class="kw">Тогда</span>
+            Форма.Элементы.ГруппаФильтрСКД.ЦветФона = ВебЦвета.ЛимонноШифоновый;
+        <span class="kw">Иначе</span>
+            Форма.Элементы.ГруппаФильтрСКД.ЦветФона = ВебЦвета.Белый;
+        <span class="kw">КонецЕсли</span>;
+        
+    <span class="kw">КонецЕсли</span>;
+    <span class="cm">// === КОНЕЦ ДОБАВЛЕНИЯ ===</span>
+    
+<span class="kw">КонецПроцедуры</span></pre>
+
+    <div class="warn-box">
+      <div class="box-title">Замечание по сигнатуре УправлениеФормой</div>
+      В текущем модуле <code>УправлениеФормой()</code> объявлена как <code>&НаКлиенте</code> без параметров. Если вы добавляете параметр <code>Форма</code>, убедитесь что все существующие вызовы <code>УправлениеФормой()</code> передают <code>ЭтаФорма</code> или обновите директиву на <code>&НаКлиентеНаСервереБезКонтекста</code>. Альтернатива — оставить отдельную процедуру <code>УправлениеФормойСКД()</code> без изменения существующей.
+    </div>
+
+  </div>
+</div>
+
+<!-- ========================================================= -->
+<!-- STEP 6 -->
+<!-- ========================================================= -->
+<div class="step server" id="s6">
+  <div class="step-header">
+    <div class="step-num">6</div>
+    <div class="step-title">ПриСозданииНаСервере: восстановить настройки из базы</div>
+    <span class="step-tag label bsl">BSL / Сервер</span>
+  </div>
+  <div class="step-body">
+
+    <div class="info-box">
+      <div class="box-title">Что делаем</div>
+      При открытии формы нужно восстановить представление фильтра из сохранённого реквизита <code>ФильтрПортфелейСКД</code>, чтобы пользователь сразу видел текущий фильтр.
+    </div>
+
+    <p class="sub-title">Добавить в ПриСозданииНаСервере</p>
+    <span class="code-label">Form/Module.bsl — Процедура ПриСозданииНаСервере</span>
+<pre><span class="at">&НаСервере</span>
+<span class="kw">Процедура</span> <span class="fn">ПриСозданииНаСервере</span>(Отказ, СтандартнаяОбработка)
+    
+    <span class="cm">// ... существующий код ...</span>
+    Задание = РегламентныеЗаданияСервер.Задание(Объект.РегламентноеЗаданиеGUID);
+    <span class="kw">Если</span> Задание &lt;&gt; <span class="kw">Неопределено</span> <span class="kw">Тогда</span>
+        Элементы.ДекорацияРасписание.Заголовок = Строка(Задание.Расписание);
+    <span class="kw">КонецЕсли</span>;
+    <span class="cm">// ... остальной существующий код ...</span>
+    
+    <span class="cm">// === ДОБАВЛЯЕМ: восстановление представления фильтра СКД ===</span>
+    ХранилищеЗначения = Объект.ФильтрПортфелейСКД;
+    <span class="kw">Если</span> ТипЗнч(ХранилищеЗначения) = Тип(<span class="st">"ХранилищеЗначения"</span>) Тогда
+        
+        СохранённыеНастройки = ХранилищеЗначения.Получить();
+        
+        <span class="kw">Если</span> ТипЗнч(СохранённыеНастройки) = Тип(<span class="st">"НастройкиКомпоновкиДанных"</span>) Тогда
+            ПредставлениеФильтраСКД = <span class="fn">СформироватьПредставлениеОтбораСКД</span>(СохранённыеНастройки.Отбор);
+        <span class="kw">КонецЕсли</span>;
+        
+    <span class="kw">КонецЕсли</span>;
+    <span class="cm">// === КОНЕЦ ДОБАВЛЕНИЯ ===</span>
+    
+<span class="kw">КонецПроцедуры</span></pre>
+
+  </div>
+</div>
+
+<!-- ========================================================= -->
+<!-- STEP 7 -->
+<!-- ========================================================= -->
+<div class="step server" id="s7">
+  <div class="step-header">
+    <div class="step-num">7</div>
+    <div class="step-title">Новая функция в МенеджерМодуле Портфелей: СписокПортфелейПоСКДФильтру</div>
+    <span class="step-tag label bsl">BSL / МенеджерМодуль</span>
+  </div>
+  <div class="step-body">
+
+    <div class="info-box">
+      <div class="box-title">Что делаем</div>
+      Добавляем в <strong>МенеджерМодуль справочника Портфели</strong> экспортную функцию <code>СписокПортфелейПоСКДФильтру</code>. Она применяет сохранённые настройки СКД (из <code>ХранилищеЗначения</code>) к схеме "ДействующиеПортфели" и возвращает массив ссылок. Реализация основана на уже существующей функции <code>СписокПортфелейПоДинамическомуСписку</code>.
+    </div>
+
+    <p class="sub-title">Файл для редактирования</p>
+    <span class="file-chip">&#9654; Catalogs/Портфели/Ext/ManagerModule.bsl</span>
+
+    <p class="sub-title">Существующий аналог (для понимания)</p>
+    <p>Функция <code>СписокПортфелейПоДинамическомуСписку</code> (строки 350–403) уже делает нечто похожее: берёт схему, инициализирует компоновщик, применяет отборы из динамического списка и выполняет СКД. Наша функция будет делать то же самое, но брать отборы из сохранённых <code>НастройкиКомпоновкиДанных</code>.</p>
+
+    <p class="sub-title">Код: добавить после функции СписокПортфелейПоДинамическомуСписку</p>
+    <span class="code-label">Catalogs/Портфели/Ext/ManagerModule.bsl</span>
+<pre><span class="cm">// Описание: Возвращает список действующих портфелей, отфильтрованных по настройкам СКД,
+//           сохранённым в элементе справочника НастройкиЗакрытияПортфелейПоРасписанию.
+//           Если ФильтрСКД = Неопределено или настройки пустые — возвращает все действующие портфели.
+//
+// Параметры:
+//   ДатаПериода - Дата - дата, на которую определяется актуальность портфелей
+//   ФильтрСКД   - ХранилищеЗначения, НастройкиКомпоновкиДанных или Неопределено -
+//                 сохранённые настройки фильтра
+//
+// Возвращаемое значение:
+//   Массив - элементы типа СправочникСсылка.Портфели</span>
+<span class="kw">Функция</span> <span class="fn">СписокПортфелейПоСКДФильтру</span>(ДатаПериода, ФильтрСКД) <span class="kw">Экспорт</span>
+    
+    ТаблицаЗначений = <span class="kw">Новый</span> ТаблицаЗначений;
+    
+    <span class="cm">// Получаем схему СКД из макета</span>
+    СКД = Справочники.Портфели.ПолучитьМакет(<span class="st">"ДействующиеПортфели"</span>);
+    
+    <span class="cm">// Инициализируем компоновщик настроек</span>
+    КомпоновщикНастроек = <span class="kw">Новый</span> КомпоновщикНастроекКомпоновкиДанных;
+    КомпоновщикНастроек.Инициализировать(<span class="kw">Новый</span> ИсточникДоступныхНастроекКомпоновкиДанных(СКД));
+    КомпоновщикНастроек.ЗагрузитьНастройки(СКД.НастройкиПоУмолчанию);
+    
+    НастройкиКомпоновщика = КомпоновщикНастроек.ПолучитьНастройки();
+    
+    <span class="cm">// Устанавливаем параметр даты</span>
+    Параметр = НастройкиКомпоновщика.ПараметрыДанных.Элементы.Найти(<span class="st">"ДатаПериода"</span>);
+    <span class="kw">Если</span> Параметр &lt;&gt; <span class="kw">Неопределено</span> <span class="kw">Тогда</span>
+        Параметр.Значение = ДатаПериода;
+        Параметр.Использование = <span class="kw">Истина</span>;
+    <span class="kw">КонецЕсли</span>;
+    
+    <span class="cm">// Очищаем отбор по умолчанию и применяем сохранённый фильтр</span>
+    НастройкиКомпоновщика.Отбор.Элементы.Очистить();
+    
+    <span class="kw">Если</span> ФильтрСКД &lt;&gt; <span class="kw">Неопределено</span> <span class="kw">Тогда</span>
+        
+        <span class="cm">// Получаем объект НастройкиКомпоновкиДанных</span>
+        <span class="kw">Если</span> ТипЗнч(ФильтрСКД) = Тип(<span class="st">"ХранилищеЗначения"</span>) <span class="kw">Тогда</span>
+            НастройкиСКД = ФильтрСКД.Получить();
+        <span class="kw">ИначеЕсли</span> ТипЗнч(ФильтрСКД) = Тип(<span class="st">"НастройкиКомпоновкиДанных"</span>) <span class="kw">Тогда</span>
+            НастройкиСКД = ФильтрСКД;
+        <span class="kw">КонецЕсли</span>;
+        
+        <span class="kw">Если</span> ТипЗнч(НастройкиСКД) = Тип(<span class="st">"НастройкиКомпоновкиДанных"</span>) <span class="kw">Тогда</span>
+            <span class="cm">// Переносим элементы отбора из сохранённых настроек</span>
+            <span class="kw">Для каждого</span> ЭлементОтбора <span class="kw">Из</span> НастройкиСКД.Отбор.Элементы <span class="kw">Цикл</span>
+                <span class="kw">Если</span> ЭлементОтбора.Использование <span class="kw">Тогда</span>
+                    <span class="fn">ДобавитьЭлементОтбора</span>(НастройкиКомпоновщика.Отбор.Элементы, ЭлементОтбора);
+                <span class="kw">КонецЕсли</span>;
+            <span class="kw">КонецЦикла</span>;
+        <span class="kw">КонецЕсли</span>;
+        
+    <span class="kw">КонецЕсли</span>;
+    
+    <span class="cm">// Выполняем компоновку данных</span>
+    КомпоновщикМакета = <span class="kw">Новый</span> КомпоновщикМакетаКомпоновкиДанных;
+    МакетКомпоновкиДанных = КомпоновщикМакета.Выполнить(
+        СКД,
+        НастройкиКомпоновщика,
+        ,
+        ,
+        Тип(<span class="st">"ГенераторМакетаКомпоновкиДанныхДляКоллекцииЗначений"</span>)
+    );
+    
+    ПроцессорКомпоновкиДанных = <span class="kw">Новый</span> ПроцессорКомпоновкиДанных;
+    ПроцессорКомпоновкиДанных.Инициализировать(МакетКомпоновкиДанных);
+    
+    ПроцессорВывода = <span class="kw">Новый</span> ПроцессорВыводаРезультатаКомпоновкиДанныхВКоллекциюЗначений;
+    ПроцессорВывода.УстановитьОбъект(ТаблицаЗначений);
+    ПроцессорВывода.Вывести(ПроцессорКомпоновкиДанных);
+    
+    МассивДУ = ТаблицаЗначений.ВыгрузитьКолонку(<span class="st">"Ссылка"</span>);
+    <span class="kw">Возврат</span> МассивДУ;
+    
+<span class="kw">КонецФункции</span></pre>
+
+    <div class="ok-box">
+      <div class="box-title">Повторное использование вспомогательной функции</div>
+      Функция <code>ДобавитьЭлементОтбора</code> уже существует в этом модуле (используется в <code>СписокПортфелейПоДинамическомуСписку</code>). Наша новая функция использует её без изменений.
+    </div>
+
+  </div>
+</div>
+
+<!-- ========================================================= -->
+<!-- STEP 8 -->
+<!-- ========================================================= -->
+<div class="step logic" id="s8">
+  <div class="step-header">
+    <div class="step-num">8</div>
+    <div class="step-title">Интеграция в ГрупповоеВыполнениеЗакрытияПериодов (ЗаполнитьСписокПортфелей)</div>
+    <span class="step-tag label bsl">BSL / ObjectModule обработки</span>
+  </div>
+  <div class="step-body">
+
+    <div class="info-box">
+      <div class="box-title">Что делаем</div>
+      В <strong>ObjectModule</strong> обработки <code>ГрупповоеВыполнениеЗакрытияПериодов</code> в процедуре <code>ЗаполнитьРеквизитыПоНастройкеРегулярногоЗакрытия</code> читаем реквизит <code>ФильтрПортфелейСКД</code> из настройки и сохраняем в реквизит обработки. В процедуре <code>ЗаполнитьСписокПортфелей</code> после получения базового списка применяем дополнительный СКД-фильтр.
+    </div>
+
+    <p class="sub-title">Файл для редактирования</p>
+    <span class="file-chip">&#9654; DataProcessors/ГрупповоеВыполнениеЗакрытияПериодов/Ext/ObjectModule.bsl</span>
+
+    <p class="sub-title">Шаг 8.1: Добавить реквизит обработки ФильтрПортфелейСКД</p>
+    <p>В XML-файле обработки <code>ГрупповоеВыполнениеЗакрытияПериодов.xml</code> добавьте реквизит:</p>
+    <span class="code-label">DataProcessors/ГрупповоеВыполнениеЗакрытияПериодов.xml — Attributes</span>
+<pre>&lt;Attribute uuid="<span class="op">ВАШИ-UUID-ЗДЕСЬ-12345-000000000002</span>"&gt;
+    &lt;Properties&gt;
+        &lt;Name&gt;<span class="st">ФильтрПортфелейСКД</span>&lt;/Name&gt;
+        &lt;Synonym&gt;
+            &lt;v8:item&gt;&lt;v8:lang&gt;ru&lt;/v8:lang&gt;
+                &lt;v8:content&gt;<span class="st">Фильтр портфелей (СКД)</span>&lt;/v8:content&gt;&lt;/v8:item&gt;
+        &lt;/Synonym&gt;
+        &lt;Type&gt;
+            &lt;v8:Type&gt;<span class="op">v8:ValueStorageType</span>&lt;/v8:Type&gt;
+        &lt;/Type&gt;
+        &lt;FillChecking&gt;DontCheck&lt;/FillChecking&gt;
+    &lt;/Properties&gt;
+&lt;/Attribute&gt;</pre>
+
+    <p class="sub-title">Шаг 8.2: Дополнить ЗаполнитьРеквизитыПоНастройкеРегулярногоЗакрытия</p>
+    <span class="code-label">ObjectModule.bsl — Процедура ЗаполнитьРеквизитыПоНастройкеРегулярногоЗакрытия</span>
+<pre><span class="cm">// Найдите существующую процедуру и добавьте строки после присваивания других реквизитов</span>
+
+<span class="kw">Процедура</span> <span class="fn">ЗаполнитьРеквизитыПоНастройкеРегулярногоЗакрытия</span>(НастройкаЗакрытия)
+    
+    <span class="cm">// ... существующий код ...
+    // ПоВсемДействующимПортфелям = НастройкаЗакрытия.ПоВсемДействующимПортфелям;
+    // ВариантДатыНачалаПериода = НастройкаЗакрытия.ВариантДатыНачалаПериода;
+    // ... и т.д. ...</span>
+    
+    <span class="cm">// === ДОБАВЛЯЕМ: читаем фильтр СКД ===</span>
+    ФильтрПортфелейСКД = НастройкаЗакрытия.ФильтрПортфелейСКД;
+    <span class="cm">// === КОНЕЦ ДОБАВЛЕНИЯ ===</span>
+    
+<span class="kw">КонецПроцедуры</span></pre>
+
+    <p class="sub-title">Шаг 8.3: Дополнить ЗаполнитьСписокПортфелей — применить СКД-фильтр</p>
+    <p>Текущая логика: получаем список портфелей через <code>Справочники.Портфели.ДействующиеПортфели(...)</code>, затем фильтруем по типам и стратегиям. СКД-фильтр применяем <strong>вместо</strong> или <strong>вместе с</strong> базовым фильтром.</p>
+
+    <div class="tip-box">
+      <div class="box-title">Архитектурное решение</div>
+      <strong>Вариант А (рекомендуемый):</strong> если задан СКД-фильтр, используем <code>СписокПортфелейПоСКДФильтру</code> вместо <code>ДействующиеПортфели</code>. Типы клиентов и стратегии при этом игнорируются (или можно совместить — берём пересечение).<br><br>
+      <strong>Вариант Б:</strong> всегда вызываем <code>ДействующиеПортфели</code>, а затем применяем СКД как дополнительный фильтр (пересечение двух списков).
+    </div>
+
+    <span class="code-label">ObjectModule.bsl — в Процедуре ЗаполнитьСписокПортфелей</span>
+<pre><span class="at">&НаСервере</span>
+<span class="kw">Процедура</span> <span class="fn">ЗаполнитьСписокПортфелей</span>(ДатаНачала, ДатаОкончания)
+    
+    <span class="cm">// === НОВЫЙ КОД: проверяем наличие СКД-фильтра ===</span>
+    <span class="kw">Если</span> ЗначениеЗаполнено(ФильтрПортфелейСКД) <span class="kw">Тогда</span>
+        
+        <span class="cm">// Используем универсальный СКД-фильтр</span>
+        МассивПортфелей = Справочники.Портфели.СписокПортфелейПоСКДФильтру(
+            ДатаОкончания,      <span class="cm">// дата актуальности — обычно конец периода</span>
+            ФильтрПортфелейСКД
+        );
+        
+    <span class="kw">Иначе</span>
+        
+        <span class="cm">// === СУЩЕСТВУЮЩИЙ КОД (не трогаем) ===</span>
+        <span class="kw">Если</span> ПоВсемДействующимПортфелям <span class="kw">Тогда</span>
+            
+            МассивПортфелей = Справочники.Портфели.ДействующиеПортфели(
+                ДатаОкончания,
+                <span class="fn">ВыбранныеТипыКлиентовДУ</span>(),
+                <span class="fn">ВыбранныеСтратегии</span>()
+            );
+            
+        <span class="kw">Иначе</span>
+            
+            МассивПортфелей = <span class="kw">Новый</span> Массив;
+            <span class="kw">Для каждого</span> СтрокаПортфель <span class="kw">Из</span> НастройкиЗакрытияПериода <span class="kw">Цикл</span>
+                <span class="kw">Если</span> ЗначениеЗаполнено(СтрокаПортфель.Портфель) <span class="kw">Тогда</span>
+                    МассивПортфелей.Добавить(СтрокаПортфель.Портфель);
+                <span class="kw">КонецЕсли</span>;
+            <span class="kw">КонецЦикла</span>;
+            
+        <span class="kw">КонецЕсли</span>;
+        <span class="cm">// === КОНЕЦ СУЩЕСТВУЮЩЕГО КОДА ===</span>
+        
+    <span class="kw">КонецЕсли</span>;
+    <span class="cm">// === КОНЕЦ НОВОГО КОДА ===</span>
+    
+    <span class="cm">// Дальше идёт существующий код по обходу МассивПортфелей
+    // и заполнению ПериодыПортфелей — его НЕ трогаем</span>
+    <span class="kw">Для каждого</span> Портфель <span class="kw">Из</span> МассивПортфелей <span class="kw">Цикл</span>
+        <span class="cm">// ... существующий код ...</span>
+    <span class="kw">КонецЦикла</span>;
+    
+<span class="kw">КонецПроцедуры</span></pre>
+
+    <p class="sub-title">Итоговая таблица изменений ObjectModule</p>
+    <table>
+      <tr><th>Процедура/Функция</th><th>Что меняем</th></tr>
+      <tr><td><code>ЗаполнитьРеквизитыПоНастройкеРегулярногоЗакрытия</code></td><td>Добавить чтение <code>ФильтрПортфелейСКД</code></td></tr>
+      <tr><td><code>ЗаполнитьСписокПортфелей</code></td><td>Добавить ветку <code>Если ЗначениеЗаполнено(ФильтрПортфелейСКД)</code></td></tr>
+    </table>
+
+  </div>
+</div>
+
+<!-- ========================================================= -->
+<!-- STEP 9 -->
+<!-- ========================================================= -->
+<div class="step test" id="s9">
+  <div class="step-header">
+    <div class="step-num">9</div>
+    <div class="step-title">Итоговый чеклист тестирования</div>
+    <span class="step-tag label attr">Тестирование</span>
+  </div>
+  <div class="step-body">
+
+    <p class="sub-title">Проверка UI (форма справочника)</p>
+    <ul class="check-list">
+      <li>При открытии элемента справочника группа "Фильтр портфелей (СКД)" видна</li>
+      <li>Кнопка "Настроить фильтр портфелей..." присутствует</li>
+      <li>Кнопка "Сбросить фильтр" недоступна, когда фильтр не задан</li>
+      <li>Поле с представлением фильтра пустое (или содержит текст "(фильтр не задан)")</li>
+      <li>Нажатие "Настроить фильтр..." открывает форму компоновщика настроек СКД</li>
+      <li>В компоновщике отображаются поля справочника Портфели (Наименование, Стратегия, ТипКлиента и т.д.)</li>
+      <li>После выбора фильтра и нажатия ОК — форма обновляется, текстовое поле показывает фильтр</li>
+      <li>Кнопка "Сбросить" становится доступной</li>
+      <li>После нажатия "Сбросить" — поле фильтра очищается, кнопка недоступна</li>
+      <li>После сохранения элемента и повторного открытия — фильтр восстанавливается</li>
+    </ul>
+
+    <p class="sub-title">Проверка сохранения</p>
+    <ul class="check-list">
+      <li>Реквизит <code>ФильтрПортфелейСКД</code> в базе содержит непустое значение типа ХранилищеЗначения</li>
+      <li>При копировании элемента — фильтр копируется (ХранилищеЗначения копируется автоматически)</li>
+      <li>При удалении элемента — связанное регламентное задание удаляется (существующая логика)</li>
+    </ul>
+
+    <p class="sub-title">Проверка работы регламентного задания</p>
+    <ul class="check-list">
+      <li>Если фильтр не задан — обработка работает как прежде (существующая логика)</li>
+      <li>Если задан фильтр "Стратегия = X" — список портфелей содержит только портфели с этой стратегией</li>
+      <li>Если задан фильтр с несколькими условиями — применяются все условия одновременно</li>
+      <li>Журнал регистрации не содержит ошибок при запуске регламентного задания с фильтром</li>
+      <li>Количество обработанных портфелей соответствует ожидаемому</li>
+    </ul>
+
+    <p class="sub-title">Проверка обратной совместимости</p>
+    <ul class="check-list">
+      <li>Существующие элементы справочника без <code>ФильтрПортфелейСКД</code> работают без ошибок</li>
+      <li>Флаг <code>ПоВсемДействующимПортфелям</code> работает корректно когда фильтр СКД не задан</li>
+      <li>Явный список портфелей (таб.часть НастройкиЗакрытияПериода) работает когда фильтр СКД не задан</li>
+      <li>Фильтр по пулам (IMAPPS-36224) не нарушен</li>
+    </ul>
+
+    <div class="ok-box" style="margin-top: 16px;">
+      <div class="box-title">Все шаги выполнены!</div>
+      После успешного прохождения чеклиста задача IMAPPS-36274 (основная часть) реализована. Фильтр по пулам (заплатка IMAPPS-36224) может быть удалён или помечен как устаревший в отдельном задании.
+    </div>
+
+  </div>
+</div>
+
+<!-- ========================================================= -->
+<!-- SUMMARY TABLE -->
+<!-- ========================================================= -->
+<div style="margin: 28px 0; border: 1px solid var(--border); border-radius: 10px; overflow: hidden;">
+  <div style="background: #1a73e8; color:#fff; padding: 14px 20px; font-weight: 700; font-size: 15px;">
+    Сводная таблица изменяемых файлов
+  </div>
+  <table style="margin: 0;">
+    <tr>
+      <th>#</th>
+      <th>Файл</th>
+      <th>Тип изменения</th>
+      <th>Что добавляем</th>
+    </tr>
+    <tr>
+      <td>1</td>
+      <td><code>Catalogs/НастройкиЗакрытияПортфелейПоРасписанию.xml</code></td>
+      <td><span class="label xml">XML</span></td>
+      <td>Реквизит <code>ФильтрПортфелейСКД</code> (ХранилищеЗначения)</td>
+    </tr>
+    <tr>
+      <td>2</td>
+      <td><code>Forms/ФормаЭлемента/Ext/Form.xml</code></td>
+      <td><span class="label ui">UI</span></td>
+      <td>Группа с кнопкой + поле представления + реквизиты формы + команды</td>
+    </tr>
+    <tr>
+      <td>3</td>
+      <td><code>Forms/ФормаЭлемента/Ext/Form/Module.bsl</code></td>
+      <td><span class="label bsl">BSL</span></td>
+      <td>Обработчик кнопки, ОбработкаВыбора, ПриСозданиНаСервере, вспом. функции</td>
+    </tr>
+    <tr>
+      <td>4</td>
+      <td><code>Catalogs/Портфели/Ext/ManagerModule.bsl</code></td>
+      <td><span class="label bsl">BSL</span></td>
+      <td>Новая экспортная функция <code>СписокПортфелейПоСКДФильтру</code></td>
+    </tr>
+    <tr>
+      <td>5</td>
+      <td><code>DataProcessors/ГрупповоеВыполнениеЗакрытияПериодов.xml</code></td>
+      <td><span class="label xml">XML</span></td>
+      <td>Реквизит <code>ФильтрПортфелейСКД</code> (ХранилищеЗначения)</td>
+    </tr>
+    <tr>
+      <td>6</td>
+      <td><code>DataProcessors/ГрупповоеВыполнениеЗакрытияПериодов/Ext/ObjectModule.bsl</code></td>
+      <td><span class="label bsl">BSL</span></td>
+      <td>Чтение фильтра в ЗаполнитьРеквизитыПоНастройке + ветка в ЗаполнитьСписокПортфелей</td>
+    </tr>
+  </table>
+</div>
+
+</div><!-- /content -->
+
+<div style="background: var(--gray-light); border-top: 1px solid var(--border); padding: 16px 40px; font-size: 12px; color: var(--gray); margin-top: 20px;">
+  IMAPPS-36274 &mdash; WIM_FIn &mdash; Универсальный СКД-фильтр &mdash; Пошаговое руководство разработчика
+</div>
+
+</body>
+</html>
