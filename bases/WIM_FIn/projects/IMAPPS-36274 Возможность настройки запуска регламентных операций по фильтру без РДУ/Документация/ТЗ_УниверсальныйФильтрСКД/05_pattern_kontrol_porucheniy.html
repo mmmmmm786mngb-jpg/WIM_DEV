@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>IMAPPS-36274 - Образец Контроль поручений (SBB_Depo)</title>
+<style>
+  :root {
+    --blue: #1a73e8;
+    --gray: #5f6368;
+    --border: #dadce0;
+    --text: #202124;
+    --bg: #f8f9fa;
+    --note: #e8f0fe;
+    --warn: #fff8e1;
+    --warn-border: #f9ab00;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', Arial, sans-serif; font-size: 14px; color: var(--text); line-height: 1.55; background: #fff; }
+  header {
+    background: linear-gradient(135deg, #1a73e8 0%, #0d47a1 100%);
+    color: #fff;
+    padding: 24px 32px;
+  }
+  header h1 { font-size: 22px; font-weight: 700; margin-bottom: 6px; }
+  header p { font-size: 14px; opacity: 0.9; }
+  main { padding: 24px 32px 40px; max-width: 960px; }
+  h2 { font-size: 16px; margin: 26px 0 12px; color: #174ea6; border-bottom: 1px solid var(--border); padding-bottom: 6px; }
+  h3 { font-size: 14px; margin: 18px 0 8px; color: var(--text); }
+  ul, ol { margin: 8px 0 8px 22px; }
+  li { margin: 4px 0; }
+  code, .mono { font-family: Consolas, 'Courier New', monospace; font-size: 13px; background: var(--bg); padding: 1px 6px; border-radius: 4px; }
+  .note {
+    background: var(--note);
+    border: 1px solid #c6dafc;
+    border-radius: 8px;
+    padding: 14px 16px;
+    margin: 14px 0;
+    font-size: 13px;
+  }
+  .warn {
+    background: var(--warn);
+    border: 1px solid var(--warn-border);
+    border-radius: 8px;
+    padding: 14px 16px;
+    margin: 14px 0;
+    font-size: 13px;
+  }
+  table { width: 100%; border-collapse: collapse; margin: 12px 0; font-size: 13px; }
+  th, td { border: 1px solid var(--border); padding: 8px 10px; text-align: left; vertical-align: top; }
+  th { background: var(--bg); font-weight: 600; }
+  footer { padding: 0 32px 28px; font-size: 12px; color: var(--gray); }
+  a { color: var(--blue); }
+  pre.bsl {
+    background: #f8f9fa;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 14px 16px;
+    overflow-x: auto;
+    font-family: Consolas, "Courier New", monospace;
+    font-size: 12px;
+    line-height: 1.45;
+    margin: 12px 0 16px;
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+  .code-caption { font-size: 12px; color: var(--gray); margin: 14px 0 6px; font-weight: 600; }
+</style>
+</head>
+<body>
+<header>
+  <h1>IMAPPS-36274: блок фильтра СКД по образцу &laquo;Контроль поручений&raquo;</h1>
+  <p>Как перенести проверенные приемы из справочника SBB_Depo в настройки регламентного закрытия и обработку.</p>
+</header>
+<main>
+
+<h2>1. Откуда брать образец</h2>
+<p>Исходники базы <span class="mono">SBB_Depo</span> (каталог по <span class="mono">bases/SBB_Depo/source-path.txt</span>, обычно <span class="mono">C:\1c\Cursor_1c\WORK\SBB_Depo</span>):</p>
+<ul>
+  <li><span class="mono">Справочник.КонтрольПоручений</span> &mdash; реквизит <span class="mono">НастройкиСКД</span> (<span class="mono">ХранилищеЗначения</span>), макет <span class="mono">МакетОтбораПоручений</span>.</li>
+  <li><span class="mono">КонтрольПоручений.ФормаЭлемента</span> &mdash; реквизит формы <span class="mono">КомпоновщикСхемы</span> с типом <span class="mono">dcsset:SettingsComposer</span>, таблица <span class="mono">КомпоновщикСхемы.Settings.Filter</span>.</li>
+  <li><span class="mono">КонтрольПоручений.Менеджер</span> &mdash; выполнение СКД по сохраненным настройкам и параметру контекста (<span class="mono">УстановитьПараметрыСКД</span>).</li>
+</ul>
+
+<h2>2. Соответствие нашим объектам IMAPPS-36274</h2>
+<table>
+  <thead>
+    <tr><th>Образец (Depo)</th><th>Наш проект</th><th>Комментарий</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><span class="mono">НастройкиСКД</span> (объект справочника)</td>
+      <td><span class="mono">НастройкиУниверсальногоФильтраПортфелейСКД</span></td>
+      <td>Оба &mdash; <span class="mono">ХранилищеЗначения</span> с <span class="mono">НастройкиКомпоновкиДанных</span> внутри.</td>
+    </tr>
+    <tr>
+      <td><span class="mono">КомпоновщикСхемы</span> (форма)</td>
+      <td><span class="mono">КомпоновщикУниверсальногоФильтраПортфелейСКД</span> (реквизит формы)</td>
+      <td>Имя на форме можно взять из краткого брифа; тип обязательно компоновщик, не &laquo;голые&raquo; настройки.</td>
+    </tr>
+    <tr>
+      <td><span class="mono">МакетОтбораПоручений</span></td>
+      <td><span class="mono">ДействующиеПортфели</span> у <span class="mono">Справочник.Портфели</span></td>
+      <td>Один макет &mdash; и для формы настройки, и для серверного выполнения в обработке.</td>
+    </tr>
+    <tr>
+      <td>Параметр <span class="mono">КонтролируемоеПоручение</span></td>
+      <td>Параметры сужения набора (для портфелей &mdash; <span class="mono">ОграничитьКандидатами</span> / <span class="mono">КандидатыПортфели</span>; дату дня в СКД не передают)</td>
+      <td>Перед компоновкой заполнять из контекста выполнения, как в Depo через <span class="mono">ОбщегоНазначения.УстановитьПараметрыСКД</span> или вручную по полям <span class="mono">ПараметрыДанных</span>.</td>
+    </tr>
+  </tbody>
+</table>
+
+<h2>3. Метаданные (как в Depo)</h2>
+<ul>
+  <li>В справочнике настроек регламента добавить реквизит <span class="mono">НастройкиУниверсальногоФильтраПортфелейСКД</span>, тип <span class="mono">ХранилищеЗначения</span> (как <span class="mono">НастройкиСКД</span> у контроля поручений).</li>
+  <li>В обработке закрытия &mdash; такой же реквизит для рабочей копии; копировать из выбранной настройки при открытии (см. <a href="04_developer_brief.html">04_developer_brief.html</a>).</li>
+</ul>
+
+<h2>4. Форма элемента настройки: XML</h2>
+<p>Повторить структуру формы элемента <span class="mono">КонтрольПоручений</span>, заменив имя реквизита компоновщика на <span class="mono">КомпоновщикУниверсальногоФильтраПортфелейСКД</span> (IMAPPS-36274):</p>
+<ul>
+  <li>Реквизит формы: тип <span class="mono">dcsset:SettingsComposer</span> (в конфигураторе &mdash; <span class="mono">КомпоновщикНастроекКомпоновкиДанных</span>).</li>
+  <li>Таблица (дерево): <span class="mono">DataPath = КомпоновщикУниверсальногоФильтраПортфелейСКД.Settings.Filter</span>, представление дерева, режим настроек СКД.</li>
+  <li>События: минимум <span class="mono">OnCreateAtServer</span>, <span class="mono">BeforeWriteAtServer</span>. Для расширения и повторного чтения объекта &mdash; еще <span class="mono">OnReadAtServer</span> с той же инициализацией, что и при создании (в типовом Depo для контроля поручений подписан только при создании; для надежности в расширении лучше дублировать).</li>
+</ul>
+
+<div class="warn">
+  <strong>Идея из Depo:</strong> схему СКД помещают во временное хранилище и передают в <span class="mono">ИсточникДоступныхНастроекКомпоновкиДанных</span> по адресу. Это устойчиво для тонкого клиента и совпадает по смыслу с прямой инициализацией из макета в брифе &mdash; выберите один стиль в проекте и придерживайтесь его везде.
+</div>
+
+<h2>5. Модуль формы: инициализация и запись</h2>
+<p>Ниже &mdash; объединение логики <span class="mono">КонтрольПоручений.ФормаЭлемента</span> (ВХ, копирование, загрузка из хранилища) с именами IMAPPS-36274. Вызов инициализации выполняйте из <span class="mono">ПриСозданииНаСервере</span> и при необходимости из <span class="mono">ПриЧтенииНаСервере</span>.</p>
+
+<p class="code-caption">Инициализация компоновщика (образец Depo + наши объекты)</p>
+<pre class="bsl">&amp;НаСервере
+Процедура ИнициализироватьКомпоновщикФильтраПортфелей()
+
+    ЭтоКопирование = Не Параметры.ЗначениеКопирования.Пустая();
+
+    ДанныеОбъект = РеквизитФормыВЗначение("Объект");
+
+    ИмяМакетаСКД = "ДействующиеПортфели";
+    СхемаКомпоновки = Справочники.Портфели.ПолучитьМакет(ИмяМакетаСКД);
+
+    АдресСхемы = ПоместитьВоВременноеХранилище(СхемаКомпоновки, УникальныйИдентификатор);
+    ИсточникНастроек = Новый ИсточникДоступныхНастроекКомпоновкиДанных(АдресСхемы);
+
+    КомпоновщикУниверсальногоФильтраПортфелейСКД.Инициализировать(ИсточникНастроек);
+
+    Если ЭтоКопирование Тогда
+        СохраненнаяНастройка = Параметры.ЗначениеКопирования.НастройкиУниверсальногоФильтраПортфелейСКД.Получить();
+    Иначе
+        СохраненнаяНастройка = ДанныеОбъект.НастройкиУниверсальногоФильтраПортфелейСКД.Получить();
+    КонецЕсли;
+
+    Если ЗначениеЗаполнено(СохраненнаяНастройка)
+        И ТипЗнч(СохраненнаяНастройка) = Тип("НастройкиКомпоновкиДанных") Тогда
+        КомпоновщикУниверсальногоФильтраПортфелейСКД.ЗагрузитьНастройки(СохраненнаяНастройка);
+    Иначе
+        КомпоновщикУниверсальногоФильтраПортфелейСКД.ЗагрузитьНастройки(СхемаКомпоновки.НастройкиПоУмолчанию);
+    КонецЕсли;
+
+КонецПроцедуры</pre>
+
+<p class="code-caption">Перед записью элемента (как в Depo: свойство <span class="mono">Настройки</span> компоновщика)</p>
+<pre class="bsl">&amp;НаСервере
+Процедура Расширение_ПередЗаписьюНаСервере(Отказ, ТекущийОбъект, ПараметрыЗаписи)
+
+    Если КомпоновщикУниверсальногоФильтраПортфелейСКД = Неопределено Тогда
+        ТекущийОбъект.НастройкиУниверсальногоФильтраПортфелейСКД = Неопределено;
+    Иначе
+        ТекущийОбъект.НастройкиУниверсальногоФильтраПортфелейСКД = Новый ХранилищеЗначения(КомпоновщикУниверсальногоФильтраПортфелейСКД.Настройки);
+    КонецЕсли;
+
+КонецПроцедуры</pre>
+
+<div class="note">
+  В <a href="04_developer_brief.html">04_developer_brief.html</a> для записи указано <span class="mono">КомпоновщикУниверсальногоФильтраПортфелейСКД.ПолучитьНастройки()</span> (или свойство <span class="mono">.Настройки</span> по стандарту проекта). В Depo используют <span class="mono">КомпоновщикСхемы.Настройки</span>. Оба варианта приводят к сохранению актуальных <span class="mono">НастройкиКомпоновкиДанных</span>; главное &mdash; не сериализовать на форме тип <span class="mono">НастройкиКомпоновкиДанных</span> без компоновщика (дерево отбора).
+</div>
+
+<h2>6. Выполнение СКД в обработке (логика менеджера Depo)</h2>
+<p>В <span class="mono">КонтрольПоручений</span> после чтения настроек из ссылки выставляют внешний параметр и строят макет компоновки. Для портфелей по IMAPPS-36274: загрузить <span class="mono">НастройкиКомпоновкиДанных</span> из хранилища, установить параметры <span class="mono">ОграничитьКандидатами</span> и <span class="mono">КандидатыПортфели</span> (дату дня в схему СКД не подставляют &mdash; кандидаты уже отобраны на нужную дату), затем <span class="mono">КомпоновщикМакета</span> + <span class="mono">ПроцессорКомпоновкиДанных</span> + вывод в коллекцию.</p>
+<pre class="bsl">УстановитьПараметрСКД(НастройкиКомпоновщика, "ОграничитьКандидатами", Истина);
+УстановитьПараметрСКД(НастройкиКомпоновщика, "КандидатыПортфели", МассивКандидатов);</pre>
+<p class="note">Имя процедуры и сигнатура &mdash; как в <span class="mono">02_code_templates.md</span>; при наличии обёртки в конфигурации вызывать её.</p>
+<p>Имена параметров и полей результата должны совпадать с макетом <span class="mono">ДействующиеПортфели</span> (часто колонка <span class="mono">Ссылка</span>).</p>
+<p>Дальше &mdash; пересечение с уже заполненным списком портфелей обработки, как в разделе 6 <a href="04_developer_brief.html">04_developer_brief.html</a>.</p>
+
+<h2>7. Дополнительные идеи из Depo</h2>
+<ul>
+  <li><strong>Копирование элемента:</strong> ветка <span class="mono">Параметры.ЗначениеКопирования</span> при загрузке настроек &mdash; чтобы фильтр переносился вместе с новой настройкой регламента.</li>
+  <li><strong>Защита от ошибок в данных СКД:</strong> в менеджере контроля поручений настройки обрабатываются в <span class="mono">Попытка ... Исключение</span> в цикле; для регламента имеет смысл логировать сбой и не ронять весь сеанс закрытия.</li>
+  <li><strong>Единый макет:</strong> как <span class="mono">МакетОтбораПоручений</span> лежит на справочнике контроля, макет отбора портфелей удобно держать у <span class="mono">Портфели</span>, чтобы форма и сервер брали одну схему.</li>
+</ul>
+
+<h2>8. Чек-лист</h2>
+<ol>
+  <li><span class="mono">НастройкиУниверсальногоФильтраПортфелейСКД</span> в справочнике настроек и в обработке (<span class="mono">ХранилищеЗначения</span>).</li>
+  <li>Реквизит формы &mdash; <span class="mono">КомпоновщикНастроекКомпоновкиДанных</span> (<span class="mono">SettingsComposer</span> в XML).</li>
+  <li>Таблица отбора привязана к <span class="mono">КомпоновщикУниверсальногоФильтраПортфелейСКД.Settings.Filter</span>.</li>
+  <li>Инициализация: макет <span class="mono">Портфели.ДействующиеПортфели</span>, при необходимости ВХ по образцу Depo.</li>
+  <li>Запись в хранилище объекта перед записью элемента; повторная инициализация после чтения при работе через расширение.</li>
+  <li>Серверное выполнение СКД с установкой параметров периода и пересечением списка портфелей.</li>
+</ol>
+
+</main>
+<footer>
+  <p>См. также: <a href="04_developer_brief.html">04_developer_brief.html</a>, <a href="03_developer_guide.html">03_developer_guide.html</a>, <a href="02_code_templates.md">02_code_templates.md</a>.</p>
+</footer>
+</body>
+</html>
