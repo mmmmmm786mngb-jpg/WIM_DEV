@@ -1,0 +1,499 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IMAPPS-36058: ночная обработка T+n &mdash; сокращение времени</title>
+    <style>
+        :root {
+            --ok: #28a745;
+            --err: #dc3545;
+            --info: #17a2b8;
+            --ink: #1a1d21;
+            --muted: #5c6370;
+            --line: #e2e5ea;
+            --surface: #f6f8fb;
+            --card: #ffffff;
+            --accent: #1e4d7a;
+            --accent-soft: #e8f0f7;
+            --warn-bg: #fff8e6;
+            --warn-border: #e8c96a;
+        }
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+            font-size: 16px;
+            line-height: 1.55;
+            color: var(--ink);
+            background: linear-gradient(180deg, var(--accent-soft) 0%, #fff 420px);
+        }
+        .wrap { max-width: 1000px; margin: 0 auto; padding: 32px 20px 64px; }
+        header.doc-head {
+            margin-bottom: 28px;
+            padding-bottom: 24px;
+            border-bottom: 1px solid var(--line);
+        }
+        .badge {
+            display: inline-block;
+            font-size: 12px;
+            font-weight: 600;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+            color: var(--info);
+            background: rgba(23, 162, 184, 0.12);
+            padding: 4px 10px;
+            border-radius: 4px;
+            margin-bottom: 12px;
+        }
+        h1 {
+            font-size: 1.75rem;
+            font-weight: 700;
+            margin: 0 0 12px;
+            color: var(--accent);
+            letter-spacing: -0.02em;
+        }
+        .lead {
+            font-size: 1.05rem;
+            color: var(--muted);
+            max-width: 720px;
+            margin: 0;
+        }
+        h2 {
+            font-size: 1.25rem;
+            margin: 36px 0 14px;
+            color: var(--accent);
+            padding-top: 8px;
+            border-top: 1px solid var(--line);
+        }
+        h2:first-of-type { border-top: none; padding-top: 0; }
+        h3 { font-size: 1.05rem; margin: 22px 0 10px; color: var(--ink); }
+        p { margin: 0 0 12px; }
+        ul { margin: 8px 0 16px; padding-left: 1.25rem; }
+        li { margin-bottom: 6px; }
+        .cards {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+            margin: 16px 0;
+        }
+        @media (max-width: 700px) { .cards { grid-template-columns: 1fr; } }
+        .card {
+            background: var(--card);
+            border: 1px solid var(--line);
+            border-radius: 10px;
+            padding: 18px 20px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+        }
+        .card h3 { margin-top: 0; font-size: 1rem; }
+        .card.before { border-left: 4px solid var(--err); }
+        .card.after { border-left: 4px solid var(--ok); }
+        .stat-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            margin: 20px 0;
+        }
+        .stat {
+            flex: 1;
+            min-width: 140px;
+            background: var(--card);
+            border: 1px solid var(--line);
+            border-radius: 10px;
+            padding: 16px;
+            text-align: center;
+        }
+        .stat .num { font-size: 1.5rem; font-weight: 700; color: var(--accent); }
+        .stat .lbl { font-size: 12px; color: var(--muted); margin-top: 4px; }
+        .callout {
+            border-radius: 10px;
+            padding: 16px 18px;
+            margin: 16px 0;
+            border: 1px solid transparent;
+        }
+        .callout.info { background: #e6f7fb; border-color: #b8e0eb; color: #0c5460; }
+        .callout.warn { background: var(--warn-bg); border-color: var(--warn-border); color: #5c4a00; }
+        .callout.ok { background: #e8f5ec; border-color: #a3d9b1; color: #155724; }
+        .callout.ok ul { margin: 10px 0 0; padding-left: 1.2rem; }
+        .callout.ok li { margin-bottom: 8px; }
+        .callout.ok .essence-lead { margin-bottom: 14px; }
+        .callout.ok .essence-sub { font-weight: 600; margin: 16px 0 8px; color: #0f3d22; }
+        .callout.ok .essence-tail { margin: 12px 0 0; }
+        table.data {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 14px 0 20px;
+            font-size: 14px;
+            background: var(--card);
+            border-radius: 8px;
+            overflow: hidden;
+            border: 1px solid var(--line);
+        }
+        table.data th, table.data td {
+            border-bottom: 1px solid var(--line);
+            padding: 10px 12px;
+            text-align: left;
+            vertical-align: top;
+        }
+        table.data th { background: var(--surface); font-weight: 600; color: var(--accent); }
+        table.data tr:last-child td { border-bottom: none; }
+        code, .mono {
+            font-family: "Cascadia Mono", Consolas, monospace;
+            font-size: 0.88em;
+            background: var(--surface);
+            padding: 2px 6px;
+            border-radius: 4px;
+        }
+        pre.flow {
+            background: #0f172a;
+            color: #e2e8f0;
+            padding: 16px 18px;
+            border-radius: 10px;
+            overflow: auto;
+            font-size: 13px;
+            line-height: 1.45;
+            margin: 14px 0;
+        }
+        .flow-step { color: #94a3b8; }
+        /* Приложение 1: Mermaid «Было / Стало» */
+        .app1-intro { font-size: 15px; color: var(--muted); margin: 0 0 16px; max-width: 880px; }
+        .app1-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 24px;
+            margin-top: 8px;
+        }
+        @media (max-width: 900px) { .app1-grid { grid-template-columns: 1fr; } }
+        .app1-panel {
+            background: var(--card);
+            border: 1px solid var(--line);
+            border-radius: 12px;
+            padding: 18px 16px 22px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+        }
+        .app1-panel.was { border-top: 4px solid var(--err); }
+        .app1-panel.will { border-top: 4px solid var(--ok); }
+        .app1-panel h3 {
+            font-size: 1.1rem;
+            margin: 0 0 6px;
+            color: var(--accent);
+        }
+        .app1-panel .app1-hint {
+            font-size: 14px;
+            color: var(--muted);
+            margin: 0 0 14px;
+        }
+        .app1-mermaid-wrap {
+            background: var(--surface);
+            border-radius: 10px;
+            padding: 12px 8px;
+            overflow: auto;
+            min-height: 260px;
+        }
+        .app1-mermaid-wrap .mermaid { display: flex; justify-content: center; }
+        .app1-legend {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 16px;
+            margin: 12px 0 8px;
+            font-size: 14px;
+            color: var(--muted);
+        }
+        .app1-legend span { display: inline-flex; align-items: center; gap: 8px; }
+        .app1-dot { width: 12px; height: 12px; border-radius: 3px; flex-shrink: 0; }
+        .app1-dot.was { background: var(--err); }
+        .app1-dot.will { background: var(--ok); }
+        .app1-footnote {
+            margin-top: 22px;
+            padding: 16px 18px;
+            background: #e6f7fb;
+            border: 1px solid #b8e0eb;
+            border-radius: 10px;
+            font-size: 14px;
+            color: #0c5460;
+        }
+    </style>
+</head>
+<body>
+    <div class="wrap">
+        <header class="doc-head">
+            <span class="badge">Бизнес-предложение / IMAPPS-36058</span>
+            <h1>Ночная обработка по сделкам T+n: короче по времени, без потери полноты учета</h1>
+            <p class="lead">
+                Материал подготовлен для согласования с руководством и смежными подразделениями.
+                <strong>Цель:</strong> существенно сократить календарную длительность ночного цикла
+                (исполнение регламентных операций по T+n и групповое перепроведение документов),
+                сохранив требование: к началу рабочего дня нужные документы проведены и учет согласован.
+                Ниже &mdash; в чем узкое место сегодня, что предлагается изменить в процессе и на что обратить внимание при принятии решения.
+            </p>
+        </header>
+
+        <h2>Суть</h2>
+        <div class="callout ok">
+            <p class="essence-lead">Ночью система выполняет большой пакет операций по сделкам T+n
+            (создание и движение связанных документов, оплаты, комиссии и т.д.), а затем отдельным длительным этапом
+            еще раз «прогоняет» проведение по нужному кругу документов. Сегодня второй этап стартует только после полного
+            окончания первого, поэтому <strong>в календаре складываются оба времени подряд</strong> &mdash; порядка 30 часов,
+            что натягивает ночное окно и повышает риск задела на рабочий день.</p>
+
+            <p class="essence-sub">Что предлагается изменить с точки зрения процесса</p>
+            <ul>
+                <li><strong>Разделить два тяжелых этапа по времени, а не по очереди.</strong> Запускать в одно и то же время (например, в 19:30)
+                два независимых фоновых задания: исполнение цепочки T+n (как сейчас по смыслу работ) и массовое перепроведение документов.
+                Тогда общая длительность ночи определяется не суммой, а <strong>более длинным из двух процессов</strong> &mdash; ориентир около 12&ndash;16 часов вместо ~30.</li>
+                <li><strong>Сократить работу внутри самого бизнес-процесса T+n.</strong> На шаге, где сейчас долго проводится документ «Сделка»,
+                оставить заполнение и сохранение документа, но не выполнять проведение в момент прохождения маршрута; этап при этом по-прежнему
+                считается выполненным, цепочка не останавливается. Оплаты, комиссии и прочие шаги, которые уже настроены, <strong>не убираются</strong>.</li>
+                <li><strong>Гарантировать, что ни одна сделка не останется «вне» перепроведения.</strong> Специальная обработка по-прежнему проведет
+                сделки за нужные даты, но дополнительно подхватит те, что остались непроведенными после ночного БП, если на них ссылаются задачи этого процесса.
+                Для бухгалтерии и контроля это означает: итог к утру &mdash; те же проведенные документы, что и при текущей схеме, при согласованной доработке логики отбора.</li>
+            </ul>
+
+            <p class="essence-sub">Что это дает бизнесу</p>
+            <p class="essence-tail">Значительно короче календарное окно ночной обработки, меньше нагрузка на идею «успеть до открытия дня»,
+            при этом состав операций (что должно быть сделано по сделкам T+n и связанным документам) не сокращается &mdash; меняется только
+            <em>раскладка во времени и техническая точка проведения сделок</em>. Перед внедрением нужно отдельно согласовать допустимость кратковременного
+            расхождения по моменту проведения «Сделки» и остальных документов, если оно возникает в промежутке между двумя параллельными заданиями.</p>
+        </div>
+        <div class="stat-row">
+            <div class="stat">
+                <div class="num">~30 ч</div>
+                <div class="lbl">оценка сегодня (БП + перепроведение подряд)</div>
+            </div>
+            <div class="stat">
+                <div class="num">~12&ndash;16 ч</div>
+                <div class="lbl">целевой ориентир (max из двух параллельных процессов)</div>
+            </div>
+            <div class="stat">
+                <div class="num">2</div>
+                <div class="lbl">независимых фоновых задания в 19:30</div>
+            </div>
+        </div>
+
+        <h2>Как устроено сегодня (по коду обработок)</h2>
+        <p>
+            Обработка <strong>Групповое исполнение сделок T+n</strong> вызывает бизнес-процессы
+            <span class="mono">БизнесПроцессы.СделкиTn</span> (в т.ч. через <span class="mono">ВТБ_МодульФоновыхЗаданий</span> при фоновом режиме),
+            а также сценарии РЕПО и FX. После успешного завершения при включенном флаге
+            <span class="mono">ЗапускатьГрупповоеПерепроведение</span> она <strong>синхронно</strong> получает объект внешней обработки
+            по ссылке <span class="mono">МногопоточноеПерепроведениеПоСчету_58</span> и вызывает
+            <span class="mono">ПерепровестиДокументыМногопоточно(...)</span> с периодом «вчера &ndash; дата исполнения» (вариант зависит от
+            <span class="mono">ПерепроводитьТекущийДень</span>).
+        </p>
+        <pre class="flow"><span class="flow-step">Текущая цепочка (упрощенно)</span>
+Регламент 19:30
+  -&gt; ФоноваяОбработка / ВыполнитьСделки
+       -&gt; Исполнение T+n, РЕПО, FX
+       -&gt; [если OK и флаг перепроведения]
+            -&gt; внешняя обработка: ПерепровестиДокументыМногопоточно (ожидание до завершения)
+  -&gt; Конец (общее время = время БП + время перепроведения)</pre>
+
+        <p>
+            В обработке перепроведения запрос распределения по <span class="mono">Документ.СделкаЦБ</span> отбирает строки с условием
+            <span class="mono">СделкаЦБ.Проведен</span> в заданном интервале дат. Непроведенные документы в эту выборку
+            <strong>не попадают</strong>. Это ключевой технический момент: если на этапе БП документ «Сделка» перестанет
+            проводиться сразу, без доработки выборки часть сделок может не войти в перепроведение.
+        </p>
+
+        <h2>Проблема</h2>
+        <div class="cards">
+            <div class="card before">
+                <h3>Нагрузка и длительность</h3>
+                <p>Длительное проведение сделок внутри БП суммируется с отдельным длительным этапом группового перепроведения.</p>
+            </div>
+            <div class="card before">
+                <h3>Риск для операционного дня</h3>
+                <p>Общая длительность контура создает риск пересечения с началом рабочего дня и пиковой нагрузкой.</p>
+            </div>
+        </div>
+
+        <h2>Предлагаемое решение (согласованная логика)</h2>
+        <ol>
+            <li>
+                <strong>Бизнес-процесс «СделкаTn» (конфигурация):</strong>
+                на шаге проведения документа «Сделка» не выполнять проведение; документ сохраняется непроведенным;
+                точка маршрута по-прежнему считается успешно пройденной, остальная логика (оплаты, комиссии и т.д.) без изменений.
+            </li>
+            <li>
+                <strong>Обработка многопоточного перепроведения:</strong>
+                перепроводить проведенные сделки за «вчера и сегодня» (как сейчас по смыслу периода),
+                <em>плюс</em> явно включить непроведенные сделки, на которые ссылается реквизит <strong>Предмет</strong> задач,
+                созданных в рамках БП «СделкаTn» за тот же период.
+            </li>
+            <li>
+                <strong>Планировщик:</strong> в 19:30 запускать два независимых фоновых задания: групповое исполнение T+n (без ожидания перепроведения внутри)
+                и обработку перепроведения с согласованными параметрами (фонды, потоки, валютные отборы &mdash; по действующим правилам).
+            </li>
+        </ol>
+
+        <div class="callout info">
+            <strong>Связь с текущей обработкой исполнения:</strong> сегодня перепроведение вызывается из
+            <span class="mono">ВыполнитьСделки</span> при <span class="mono">ЗапускатьГрупповоеПерепроведение = Истина</span>.
+            Для параллельного режима потребуется либо отключить этот встроенный вызов и вынести запуск в регламент,
+            либо ввести отдельную команду/флаг «не вызывать перепроведение из этой обработки» при внешнем параллельном старте.
+        </div>
+
+        <h2>Корректность для бизнеса: что проверить до внедрения</h2>
+        <table class="data">
+            <thead>
+                <tr>
+                    <th>Тема</th>
+                    <th>Вопрос</th>
+                    <th>Замечание</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Порядок отражения</td>
+                    <td>Допустимо ли временное расхождение: оплаты и комиссии проведены, а связанная «Сделка» еще нет?</td>
+                    <td>Требуется экспертиза бухгалтерии и учетной политики по ПИФ; при необходимости сдвиг отдельных шагов БП.</td>
+                </tr>
+                <tr>
+                    <td>Блокировки СУБД</td>
+                    <td>Как изменится конкуренция за одни и те же объекты при параллельной работе?</td>
+                    <td>Оценить нагрузочно; при росте ожиданий по блокировкам скорректировать число потоков или окна запуска.</td>
+                </tr>
+                <tr>
+                    <td>Полнота выборки</td>
+                    <td>Покрывает ли объединение «проведенные за период» + «Предмет задач БП» все сделки контура T+n?</td>
+                    <td>Согласовать с владельцем процесса; при необходимости добавить дополнительные критерии отбора.</td>
+                </tr>
+                <tr>
+                    <td>Контроль завершения</td>
+                    <td>Как фиксируется успех ночи при двух заданиях?</td>
+                    <td>Единый мониторинг (журнал регистрации, почтовые отбивки, дашборд) и критерии эскалации.</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <h2>Ожидаемый эффект</h2>
+        <table class="data">
+            <thead>
+                <tr>
+                    <th>Показатель</th>
+                    <th>Сейчас (оценка)</th>
+                    <th>После внедрения (оценка)</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Длительность БП T+n</td>
+                    <td>~19 ч (включая тяжелое проведение сделок)</td>
+                    <td>~12&ndash;16 ч (без проведения сделок на шаге БП)</td>
+                </tr>
+                <tr>
+                    <td>Перепроведение</td>
+                    <td>~11 ч, после БП</td>
+                    <td>~11 ч, <strong>параллельно</strong> с БП</td>
+                </tr>
+                <tr>
+                    <td>Итог ночного окна</td>
+                    <td>~30 ч суммарно</td>
+                    <td>~12&ndash;16 ч по максимуму из двух процессов</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <h2>Преимущества</h2>
+        <ul>
+            <li>Сокращение календарного времени ночной обработки (порядка двукратного снижения относительно суммы этапов).</li>
+            <li>Снижение риска «не успеть» к началу рабочего дня.</li>
+            <li>Более предсказуемое планирование ресурсов сервера (два процесса вместо одного очень длинного).</li>
+            <li>Сохраняется основа текущей автоматизации (те же обработки и многопоточность перепроведения).</li>
+        </ul>
+
+        <h2>Объем работ (чек-лист)</h2>
+        <ul>
+            <li>Доработка бизнес-процесса «СделкаTn»: пропуск проведения документа «Сделка» с сохранением успешного прохождения этапа.</li>
+            <li>Доработка запросов/логики <span class="mono">МногопоточноеПерепроведение58</span>: объединение отбора проведенных и непроведенных сделок по задачам (реквизит <strong>Предмет</strong>).</li>
+            <li>Настройка регламентных заданий: параллельный старт в 19:30; исключение двойного вызова перепроведения из обработки исполнения при новом режиме.</li>
+            <li>Тестирование на копии базы: полнота проведения, отчеты, типовые сценарии T+n, РЕПО, FX и рассылки.</li>
+        </ul>
+
+        <div class="callout warn">
+            <strong>Оговорка по оценкам:</strong> цифры 12&ndash;16 и 11 часов взяты из исходного предложения и должны быть уточнены
+            замерами на стенде, близком к промышленной нагрузке. Параллельный режим может слегка увеличить длительность каждого
+            процесса из-за конкуренции за ресурсы; итог все равно сравнивается с <em>максимумом</em> двух потоков, а не с суммой.
+        </div>
+
+        <h2>Приложение 1. Схема «Было и стало»</h2>
+        <p class="app1-intro">
+            Наглядное сравнение текущей последовательной схемы и предлагаемой параллельной (ориентиры по времени &mdash; как в разделах выше).
+            Для отображения схем нужен доступ в интернет (библиотека Mermaid с CDN). Отдельная страница с теми же диаграммами:
+            <a href="IMAPPS-36058_ночная_обработка_диаграмма_было_стало.html">IMAPPS-36058_ночная_обработка_диаграмма_было_стало.html</a>.
+        </p>
+        <div class="app1-legend">
+            <span><span class="app1-dot was"></span> текущая схема (последовательно)</span>
+            <span><span class="app1-dot will"></span> целевая схема (параллельно)</span>
+        </div>
+        <div class="app1-grid">
+            <section class="app1-panel was" aria-labelledby="app1-h-was">
+                <h3 id="app1-h-was">Было</h3>
+                <p class="app1-hint">Один контур: сначала полностью исполняется пакет T+n и смежные операции, затем стартует перепроведение.</p>
+                <div class="app1-mermaid-wrap">
+                    <div class="mermaid">
+flowchart TB
+    S1([19:30 старт одного контура])
+    E1["Ночной пакет: T+n, РЕПО, FX<br/>в ходе БП документы Сделка проводятся"]
+    E2["Только после успешного конца пакета:<br/>групповое перепроведение документов"]
+    R1["Календарное время ночи СКЛАДЫВАЕТСЯ<br/>этап 1 плюс этап 2<br/>ориентир около 30 ч"]
+    S1 --> E1 --> E2 --> R1
+                    </div>
+                </div>
+            </section>
+            <section class="app1-panel will" aria-labelledby="app1-h-will">
+                <h3 id="app1-h-will">Стало</h3>
+                <p class="app1-hint">Два независимых фоновых задания с одного времени старта; проведение сделок переносится в контур перепроведения.</p>
+                <div class="app1-mermaid-wrap">
+                    <div class="mermaid">
+flowchart TB
+    S2([19:30 старт двух заданий])
+    subgraph PAR2["Параллельно, без ожидания друг друга"]
+        direction TB
+        A2["Задание 1: T+n, РЕПО, FX<br/>Сделка только запись, без проведения на шаге БП"]
+        B2["Задание 2: групповое перепроведение<br/>в т.ч. непроведенные сделки по задачам БП"]
+    end
+    R2["Календарное время ночи НЕ СУММИРУЕТСЯ<br/>берется max из двух заданий<br/>ориентир около 12-16 ч"]
+    S2 --> A2
+    S2 --> B2
+    A2 --> R2
+    B2 --> R2
+                    </div>
+                </div>
+            </section>
+        </div>
+        <div class="app1-footnote">
+            <strong>Для бизнеса:</strong> «Было» &mdash; ночь длится как сумма двух тяжелых этапов. «Стало» &mdash; оба этапа идут одновременно,
+            поэтому важен не арифметический суммарный срок, а <em>какой из процессов завершится позже</em>.
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@10.9.0/dist/mermaid.min.js"></script>
+    <script>
+        mermaid.initialize({
+            startOnLoad: true,
+            theme: "base",
+            securityLevel: "loose",
+            themeVariables: {
+                fontFamily: '"Segoe UI", system-ui, sans-serif',
+                fontSize: "15px",
+                primaryColor: "#e8f0f7",
+                primaryTextColor: "#1a1d21",
+                primaryBorderColor: "#1e4d7a",
+                secondaryColor: "#e8f5ec",
+                tertiaryColor: "#f6f8fb",
+                lineColor: "#5c6370",
+                clusterBkg: "#f0f4f8",
+                clusterBorder: "#1e4d7a",
+                titleColor: "#1e4d7a"
+            },
+            flowchart: {
+                curve: "basis",
+                padding: 14,
+                nodeSpacing: 40,
+                rankSpacing: 50
+            }
+        });
+    </script>
+</body>
+</html>

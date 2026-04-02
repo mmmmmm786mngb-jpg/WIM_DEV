@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IMAPPS-36058: ночная обработка &mdash; было и стало (схема)</title>
+    <style>
+        :root {
+            --ok: #28a745;
+            --err: #dc3545;
+            --info: #17a2b8;
+            --ink: #1a1d21;
+            --muted: #5c6370;
+            --line: #e2e5ea;
+            --surface: #f6f8fb;
+            --card: #ffffff;
+            --accent: #1e4d7a;
+            --accent-soft: #e8f0f7;
+        }
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+            font-size: 16px;
+            line-height: 1.55;
+            color: var(--ink);
+            background: linear-gradient(180deg, var(--accent-soft) 0%, #fff 480px);
+        }
+        .wrap { max-width: 1100px; margin: 0 auto; padding: 32px 20px 56px; }
+        header.doc-head {
+            margin-bottom: 28px;
+            padding-bottom: 22px;
+            border-bottom: 1px solid var(--line);
+        }
+        .badge {
+            display: inline-block;
+            font-size: 12px;
+            font-weight: 600;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+            color: var(--info);
+            background: rgba(23, 162, 184, 0.12);
+            padding: 4px 10px;
+            border-radius: 4px;
+            margin-bottom: 12px;
+        }
+        h1 {
+            font-size: 1.6rem;
+            font-weight: 700;
+            margin: 0 0 10px;
+            color: var(--accent);
+            letter-spacing: -0.02em;
+        }
+        .lead { font-size: 1.02rem; color: var(--muted); margin: 0; max-width: 800px; }
+        .grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 24px;
+            margin-top: 8px;
+        }
+        @media (max-width: 900px) { .grid { grid-template-columns: 1fr; } }
+        .panel {
+            background: var(--card);
+            border: 1px solid var(--line);
+            border-radius: 12px;
+            padding: 18px 16px 22px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+        }
+        .panel.was { border-top: 4px solid var(--err); }
+        .panel.will { border-top: 4px solid var(--ok); }
+        .panel h2 {
+            font-size: 1.15rem;
+            margin: 0 0 6px;
+            color: var(--accent);
+        }
+        .panel .hint {
+            font-size: 14px;
+            color: var(--muted);
+            margin: 0 0 14px;
+        }
+        .mermaid-wrap {
+            background: var(--surface);
+            border-radius: 10px;
+            padding: 12px 8px;
+            overflow: auto;
+            min-height: 280px;
+        }
+        .mermaid { display: flex; justify-content: center; }
+        .footnote {
+            margin-top: 28px;
+            padding: 16px 18px;
+            background: #e6f7fb;
+            border: 1px solid #b8e0eb;
+            border-radius: 10px;
+            font-size: 14px;
+            color: #0c5460;
+        }
+        .footnote a { color: var(--accent); }
+        .legend {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 16px;
+            margin-top: 20px;
+            font-size: 14px;
+            color: var(--muted);
+        }
+        .legend span { display: inline-flex; align-items: center; gap: 8px; }
+        .dot { width: 12px; height: 12px; border-radius: 3px; }
+        .dot.was { background: var(--err); }
+        .dot.will { background: var(--ok); }
+    </style>
+</head>
+<body>
+    <div class="wrap">
+        <header class="doc-head">
+            <span class="badge">IMAPPS-36058 / наглядная схема</span>
+            <h1>Ночная обработка T+n: было и стало</h1>
+            <p class="lead">
+                Две схемы для согласования: как устроен ночной контур <strong>сейчас</strong> (этапы друг за другом)
+                и как предлагается <strong>в будущем</strong> (два задания параллельно, короче календарное время).
+                Цифры &mdash; ориентиры из предложения по оптимизации; уточняются на стенде.
+            </p>
+        </header>
+
+        <div class="legend">
+            <span><span class="dot was"></span> текущая схема (последовательно)</span>
+            <span><span class="dot will"></span> целевая схема (параллельно)</span>
+        </div>
+
+        <div class="grid">
+            <section class="panel was" aria-labelledby="h-was">
+                <h2 id="h-was">Было</h2>
+                <p class="hint">Один контур: сначала полностью исполняется пакет T+n и смежные операции, затем стартует перепроведение.</p>
+                <div class="mermaid-wrap">
+                    <div class="mermaid">
+flowchart TB
+    S([19:30 старт одного контура])
+    E1["Ночной пакет: T+n, РЕПО, FX<br/>в ходе БП документы Сделка проводятся"]
+    E2["Только после успешного конца пакета:<br/>групповое перепроведение документов"]
+    R["Календарное время ночи СКЛАДЫВАЕТСЯ<br/>этап 1 плюс этап 2<br/>ориентир около 30 ч"]
+    S --> E1 --> E2 --> R
+                    </div>
+                </div>
+            </section>
+
+            <section class="panel will" aria-labelledby="h-will">
+                <h2 id="h-will">Стало</h2>
+                <p class="hint">Два независимых фоновых задания с одного времени старта; проведение сделок переносится в контур перепроведения.</p>
+                <div class="mermaid-wrap">
+                    <div class="mermaid">
+flowchart TB
+    S([19:30 старт двух заданий])
+    subgraph PAR["Параллельно, без ожидания друг друга"]
+        direction TB
+        A["Задание 1: T+n, РЕПО, FX<br/>Сделка только запись, без проведения на шаге БП"]
+        B["Задание 2: групповое перепроведение<br/>в т.ч. непроведенные сделки по задачам БП"]
+    end
+    R["Календарное время ночи НЕ СУММИРУЕТСЯ<br/>берется max из двух заданий<br/>ориентир около 12-16 ч"]
+    S --> A
+    S --> B
+    A --> R
+    B --> R
+                    </div>
+                </div>
+            </section>
+        </div>
+
+        <div class="footnote">
+            <strong>Для бизнеса:</strong> «Было» &mdash; ночь длится как сумма двух тяжелых кусков. «Стало» &mdash; оба куска идут одновременно,
+            поэтому важен не их арифметический суммарный срок, а <em>какой из них закончится позже</em>.
+            См. <a href="IMAPPS-36058_предложение_по_оптимизации_ночной_обработки.html">текстовое предложение по оптимизации</a>.
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@10.9.0/dist/mermaid.min.js"></script>
+    <script>
+        mermaid.initialize({
+            startOnLoad: true,
+            theme: "base",
+            securityLevel: "loose",
+            themeVariables: {
+                fontFamily: '"Segoe UI", system-ui, sans-serif',
+                fontSize: "15px",
+                primaryColor: "#e8f0f7",
+                primaryTextColor: "#1a1d21",
+                primaryBorderColor: "#1e4d7a",
+                secondaryColor: "#e8f5ec",
+                tertiaryColor: "#f6f8fb",
+                lineColor: "#5c6370",
+                clusterBkg: "#f0f4f8",
+                clusterBorder: "#1e4d7a",
+                titleColor: "#1e4d7a"
+            },
+            flowchart: {
+                curve: "basis",
+                padding: 14,
+                nodeSpacing: 40,
+                rankSpacing: 50
+            }
+        });
+    </script>
+</body>
+</html>
