@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IMAPPS-36274 - Список измененных объектов для Avancore</title>
+    <style>
+        body {
+            font-family: "Segoe UI", Arial, sans-serif;
+            margin: 24px;
+            line-height: 1.45;
+            color: #1f2937;
+            background: #f8fafc;
+        }
+        h1, h2, h3 {
+            color: #0f172a;
+            margin-bottom: 10px;
+        }
+        h1 {
+            font-size: 24px;
+        }
+        h2 {
+            margin-top: 28px;
+            font-size: 20px;
+        }
+        h3 {
+            margin-top: 18px;
+            font-size: 17px;
+        }
+        .meta, .note {
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 12px 14px;
+            margin: 12px 0;
+        }
+        .note {
+            background: #eff6ff;
+            border-color: #bfdbfe;
+        }
+        .risk {
+            background: #fff7ed;
+            border-color: #fed7aa;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: #ffffff;
+            border: 1px solid #dbe2ea;
+            margin-top: 12px;
+        }
+        th, td {
+            border: 1px solid #dbe2ea;
+            padding: 10px;
+            text-align: left;
+            vertical-align: top;
+        }
+        th {
+            background: #f1f5f9;
+            font-weight: 600;
+        }
+        code {
+            font-family: Consolas, "Courier New", monospace;
+            font-size: 0.92em;
+            background: #f1f5f9;
+            padding: 2px 5px;
+            border-radius: 4px;
+        }
+        ul {
+            margin-top: 6px;
+            margin-bottom: 6px;
+        }
+        .small {
+            color: #475569;
+            font-size: 14px;
+        }
+        .mono {
+            font-family: Consolas, "Courier New", monospace;
+            font-size: 13px;
+        }
+    </style>
+</head>
+<body>
+    <h1>IMAPPS-36274 - Список измененных объектов для вендора Avancore</h1>
+
+    <div class="meta">
+        <p><strong>Задача:</strong> IMAPPS-36274 "Возможность настройки запуска регламентных операций по фильтру без РДУ"</p>
+        <p><strong>Источник:</strong> <code>Jira.txt</code> (компонент <code>AvancoreFinance</code>)</p>
+        <p><strong>Расширение с доработками:</strong> <code>FP</code></p>
+        <p><strong>Цель доработки:</strong> добавить гибкий отбор портфелей для "Группового выполнения закрытия периода", чтобы исключить зависимость от выбора только по типам/ручным спискам.</p>
+    </div>
+
+    <h2>1. Измененные объекты (по расширению FP)</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>Объект</th>
+                <th>Тип изменения</th>
+                <th>Что добавлено/изменено</th>
+                <th>Назначение изменения</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td><code>Обработка.ГрупповоеВыполнениеЗакрытияПериодов</code></td>
+                <td>Заимствован, расширен модуль объекта</td>
+                <td>
+                    <ul>
+                        <li><code>&amp;Вместо("ЗаполнитьРеквизитыПоНастройкеРегулярногоЗакрытия")</code></li>
+                        <li><code>&amp;ИзменениеИКонтроль("ЗаполнитьПериодыПортфелейПоГраницам")</code></li>
+                        <li><code>&amp;ИзменениеИКонтроль("ЗаполнитьПериодыПортфелейПоВарианту_ДНГ_ДКР")</code></li>
+                        <li><code>&amp;Вместо("ЗаполнитьСписокПортфелей")</code></li>
+                        <li>Использование нового реквизита <code>НастройкаЗакрытияПортфелейПоРасписанию</code></li>
+                        <li>Фильтрация через вызов <code>Справочники.Портфели.ПолучитьПортфелиПоОтборуСКД(...)</code></li>
+                    </ul>
+                </td>
+                <td>Встроить отбор по СКД в логику формирования и отбора портфелей в регламентной операции.</td>
+            </tr>
+            <tr>
+                <td><code>Справочник.Портфели</code></td>
+                <td>Заимствован, расширен модуль менеджера + добавлен макет СКД</td>
+                <td>
+                    <ul>
+                        <li>Новая экспортная функция: <code>ПолучитьПортфелиПоОтборуСКД(...)</code></li>
+                        <li>Новая процедура: <code>УстановитьПараметрыСКД(...)</code></li>
+                        <li>Добавлен макет: <code>МакетОтбораПортфелей</code> (СКД)</li>
+                        <li>В макете используется параметр <code>СписокПортфелей</code> и выборка ссылок портфелей</li>
+                    </ul>
+                </td>
+                <td>Реализовать универсальный механизм фильтрации списка портфелей по сохраненным настройкам СКД.</td>
+            </tr>
+            <tr>
+                <td><code>Справочник.НастройкиЗакрытияПортфелейПоРасписанию</code></td>
+                <td>Заимствован, добавлен реквизит + расширена форма элемента</td>
+                <td>
+                    <ul>
+                        <li>Новый реквизит: <code>НастройкиОтбораПортфелейСКД</code> (тип <code>ValueStorage</code>)</li>
+                        <li>Форма элемента: события <code>OnCreateAtServer</code> и <code>BeforeWriteAtServer</code> с <code>callType="After"</code></li>
+                        <li>Модуль формы: процедуры <code>fp_ПриСозданииНаСервереПосле</code>, <code>fp_ПередЗаписьюНаСервереПосле</code></li>
+                        <li>Инициализация и сохранение настроек компоновщика отбора в хранилище значения</li>
+                    </ul>
+                </td>
+                <td>Добавить пользовательскую настройку отбора портфелей и сохранить ее в настройке расписания.</td>
+            </tr>
+            <tr>
+                <td><code>Справочник.ВидыОперацийЗакрытияПериода</code></td>
+                <td>Заимствован в состав расширения</td>
+                <td>Код и дочерние объекты в рамках задачи не изменялись.</td>
+                <td>Техническое включение объекта в состав расширения.</td>
+            </tr>
+            <tr>
+                <td><code>Стиль.ЦветГиперссылки</code>, <code>ОбщаяКартинка.Плюс</code></td>
+                <td>Заимствованы в состав расширения</td>
+                <td>Без изменений прикладной логики.</td>
+                <td>Технические/визуальные зависимости формы.</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <h2>2. Точки интеграции (что переносить в основную конфигурацию)</h2>
+    <div class="note">
+        <ul>
+            <li>Логика обработки отбора по СКД в объекте <code>Обработка.ГрупповоеВыполнениеЗакрытияПериодов</code>.</li>
+            <li>Новая функция фильтрации в <code>Справочник.Портфели</code> + макет <code>МакетОтбораПортфелей</code>.</li>
+            <li>Новый реквизит <code>НастройкиОтбораПортфелейСКД</code> и код формы элемента в <code>Справочник.НастройкиЗакрытияПортфелейПоРасписанию</code>.</li>
+        </ul>
+    </div>
+
+    <h2>3. Файлы расширения FP с фактическими изменениями</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>Файл</th>
+                <th>Содержание изменения</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td class="mono">FP/DataProcessors/ГрупповоеВыполнениеЗакрытияПериодов/Ext/ObjectModule.bsl</td>
+                <td>Основная логика внедрения фильтра портфелей (перехватчики &amp;Вместо и &amp;ИзменениеИКонтроль).</td>
+            </tr>
+            <tr>
+                <td class="mono">FP/Catalogs/Портфели/Ext/ManagerModule.bsl</td>
+                <td>СКД-фильтрация массива портфелей по сохраненным настройкам.</td>
+            </tr>
+            <tr>
+                <td class="mono">FP/Catalogs/Портфели/Templates/МакетОтбораПортфелей/Ext/Template.xml</td>
+                <td>СКД-макет для применения пользовательского отбора.</td>
+            </tr>
+            <tr>
+                <td class="mono">FP/Catalogs/НастройкиЗакрытияПортфелейПоРасписанию.xml</td>
+                <td>Добавлен реквизит <code>НастройкиОтбораПортфелейСКД</code>.</td>
+            </tr>
+            <tr>
+                <td class="mono">FP/Catalogs/НастройкиЗакрытияПортфелейПоРасписанию/Forms/ФормаЭлемента/Ext/Form.xml</td>
+                <td>Подключены события формы с обработчиками расширения.</td>
+            </tr>
+            <tr>
+                <td class="mono">FP/Catalogs/НастройкиЗакрытияПортфелейПоРасписанию/Forms/ФормаЭлемента/Ext/Form/Module.bsl</td>
+                <td>Инициализация и сохранение настроек СКД в форме.</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <h2>4. Примечание для Avancore</h2>
+    <div class="note risk">
+        <p><strong>Важно:</strong> в XML макета СКД параметр в тексте запроса отображается как <code>&amp;amp;СписокПортфелей</code>, что является стандартным XML-экранированием символа <code>&amp;</code>. В исполняемом тексте запроса 1С это параметр <code>&amp;СписокПортфелей</code>.</p>
+        <p class="small">Документ подготовлен на основе состава расширения <code>FP</code> и описания задачи из <code>Jira.txt</code>.</p>
+    </div>
+</body>
+</html>
