@@ -6,6 +6,7 @@
 | [imapps36274_02_patch_imapps36224.html](imapps36274_02_patch_imapps36224.html) | Временная заплатка по пулам (IMAPPS-36224) |
 | [imapps36274_03_skd_universal_filter_research.html](imapps36274_03_skd_universal_filter_research.html) | Универсальный отбор через СКД: подходы и ссылки |
 | [imapps36274_04_vendor_avancore_changed_objects.html](imapps36274_04_vendor_avancore_changed_objects.html) | Перечень измененных объектов для передачи вендору Avancore |
+| [imapps36274_tree_changed_objects_fp.html](imapps36274_tree_changed_objects_fp.html) | Дерево изменяемых объектов расширения FP (как rev-дерево вечерних операций) |
 | [imapps36274_05_fp_based_technical_spec.md](imapps36274_05_fp_based_technical_spec.md) | ТЗ на доработку, составленное по фактическим изменениям расширения FP и Jira |
 | [ТЗ_УниверсальныйФильтрСКД/index.md](ТЗ_УниверсальныйФильтрСКД/index.md) | Подробное техническое задание для разработчика (пошагово + тексты BSL) |
 
