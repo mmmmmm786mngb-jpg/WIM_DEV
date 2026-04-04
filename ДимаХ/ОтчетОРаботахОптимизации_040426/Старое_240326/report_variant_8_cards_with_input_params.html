@@ -1,0 +1,483 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Вариант 8 - Карточки с входными параметрами замеров</title>
+    <style>
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background: #f1f5f9;
+            color: #0f172a;
+        }
+        .wrap {
+            max-width: 1250px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .header {
+            background: linear-gradient(90deg, #0ea5e9, #6366f1);
+            color: #ffffff;
+            border-radius: 10px;
+            padding: 18px;
+            margin-bottom: 16px;
+        }
+        .header h1 {
+            margin: 0 0 8px 0;
+            font-size: 26px;
+        }
+        .header p {
+            margin: 0;
+            font-size: 14px;
+            line-height: 1.4;
+        }
+        .source-box {
+            background: #ffffff;
+            border: 1px solid #dbeafe;
+            border-radius: 10px;
+            padding: 12px;
+            margin-bottom: 14px;
+            font-size: 13px;
+        }
+        .kpi {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(180px, 1fr));
+            gap: 10px;
+            margin-bottom: 14px;
+        }
+        .kpi-item {
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 10px;
+            text-align: center;
+        }
+        .kpi-item .v {
+            font-size: 22px;
+            font-weight: bold;
+            color: #0f766e;
+        }
+        .kpi-item .l {
+            font-size: 12px;
+            color: #64748b;
+        }
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(320px, 1fr));
+            gap: 14px;
+            margin-bottom: 18px;
+        }
+        .block {
+            background: #ffffff;
+            border: 1px solid #dbeafe;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+        .top {
+            padding: 10px 12px;
+            border-bottom: 1px solid #e2e8f0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 8px;
+        }
+        .title {
+            font-weight: 700;
+            font-size: 14px;
+        }
+        .badge {
+            font-size: 11px;
+            color: #ffffff;
+            border-radius: 12px;
+            padding: 4px 8px;
+            white-space: nowrap;
+            font-weight: 700;
+        }
+        .prod { background: #28a745; }
+        .wait { background: #f59e0b; }
+        .vendor { background: #dc3545; }
+
+        .content {
+            padding: 12px;
+            font-size: 13px;
+        }
+        .times {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            margin-bottom: 10px;
+        }
+        .tbox {
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 8px;
+            background: #f8fafc;
+        }
+        .tbox .lbl {
+            color: #64748b;
+            font-size: 11px;
+            margin-bottom: 3px;
+            text-transform: uppercase;
+        }
+        .tbox .val {
+            font-size: 20px;
+            font-weight: 700;
+        }
+        .old .val { color: #dc2626; }
+        .new .val { color: #0f766e; }
+
+        .delta {
+            border-radius: 8px;
+            padding: 8px;
+            font-size: 12px;
+            margin-bottom: 10px;
+            border: 1px solid #e2e8f0;
+            background: #ecfeff;
+        }
+        .delta.bad {
+            background: #fff7ed;
+        }
+
+        .meta-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 12px;
+            margin-bottom: 8px;
+        }
+        .meta-table th,
+        .meta-table td {
+            border: 1px solid #e2e8f0;
+            padding: 6px;
+            vertical-align: top;
+            text-align: left;
+        }
+        .meta-table th {
+            width: 34%;
+            background: #f8fafc;
+            color: #334155;
+        }
+
+        .note {
+            font-size: 12px;
+            color: #475569;
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 6px;
+            padding: 8px;
+        }
+
+        .table-wrap {
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 10px;
+            padding: 12px;
+            margin-bottom: 14px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+        th, td {
+            border: 1px solid #e2e8f0;
+            padding: 8px;
+            vertical-align: top;
+            text-align: left;
+        }
+        th {
+            background: #f8fafc;
+        }
+        .summary {
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 10px;
+            padding: 12px;
+            font-size: 13px;
+            line-height: 1.5;
+        }
+        .summary h2 {
+            margin: 0 0 8px 0;
+        }
+        .summary ul {
+            margin: 0;
+            padding-left: 18px;
+        }
+    </style>
+</head>
+<body>
+    <div class="wrap">
+        <div class="header">
+            <h1>Отчет по оптимизации: карточки с входными параметрами замеров</h1>
+            <p>Отчет содержит входные параметры "время было", текущие значения "время стало", нормализацию замеров к сопоставимому объему и сравнительные выводы по каждому блоку.</p>
+        </div>
+
+        <div class="source-box">
+            <b>Источник входных замеров:</b> лист Sheet1 в файле "Результаты нагрузочного тестирования. Выводы +Исполнение - Замеры.xlsx".<br>
+            Для блока использовано поле "Результат" как базовое "время было" и значения из колонки "Тестовый пример на 30 тыс. Сделок" как "время стало" там, где это доступно.
+        </div>
+
+        <div class="kpi">
+            <div class="kpi-item"><div class="v">8</div><div class="l">Блоков в отчете</div></div>
+            <div class="kpi-item"><div class="v">5</div><div class="l">С явным улучшением</div></div>
+            <div class="kpi-item"><div class="v">2</div><div class="l">Требуют нормализации</div></div>
+            <div class="kpi-item"><div class="v">1</div><div class="l">Сравнение ограничено</div></div>
+        </div>
+
+        <div class="grid">
+            <div class="block">
+                <div class="top"><div class="title">ДУ. Загрузка сделок</div><div class="badge prod">ПРОД</div></div>
+                <div class="content">
+                    <div class="times">
+                        <div class="tbox old"><div class="lbl">Время было</div><div class="val">667 мин</div></div>
+                        <div class="tbox new"><div class="lbl">Время стало</div><div class="val">50 мин</div></div>
+                    </div>
+                    <div class="delta"><b>Нормализация к 30000 сделок:</b> исходный замер выполнен на 900 сделок (20 мин), значение 667 мин на 30000 сделок экстраполировано линейно. Снижение до 50 мин составляет около 92.5%.</div>
+                    <table class="meta-table">
+                        <tr><th>Сценарий в Excel</th><td>Загрузка сделок</td></tr>
+                        <tr><th>Результат (было)</th><td>20 мин на 900 сделок</td></tr>
+                        <tr><th>Оценка было на 30000</th><td>667 мин (линейно)</td></tr>
+                        <tr><th>Тестовый пример 30 тыс</th><td>50 мин</td></tr>
+                    </table>
+                    <div class="note">Линейная нормализация использована как оценка для сопоставления масштаба 900 и 30000 сделок.</div>
+                </div>
+            </div>
+
+            <div class="block">
+                <div class="top"><div class="title">ДУ. Исполнение: открытие позиций</div><div class="badge prod">ПРОД</div></div>
+                <div class="content">
+                    <div class="times">
+                        <div class="tbox old"><div class="lbl">Время было</div><div class="val">36 мин</div></div>
+                        <div class="tbox new"><div class="lbl">Время стало</div><div class="val">15 мин</div></div>
+                    </div>
+                    <div class="delta"><b>Изменение:</b> минус 21 мин (примерно минус 58.4%).</div>
+                    <table class="meta-table">
+                        <tr><th>Сценарий в Excel</th><td>Исполнение сделок Т</td></tr>
+                        <tr><th>Результат (было)</th><td>36 мин</td></tr>
+                        <tr><th>Тестовый пример 30 тыс</th><td>15 мин (этап ОТКРЫТИЕ)</td></tr>
+                    </table>
+                </div>
+            </div>
+
+            <div class="block">
+                <div class="top"><div class="title">ДУ. Исполнение: проведение сделок</div><div class="badge vendor">Вендор передал в UAT</div></div>
+                <div class="content">
+                    <div class="times">
+                        <div class="tbox old"><div class="lbl">Время было</div><div class="val">216 мин</div></div>
+                        <div class="tbox new"><div class="lbl">Время стало</div><div class="val">45 мин</div></div>
+                    </div>
+                    <div class="delta"><b>Изменение:</b> минус 171 мин (примерно минус 79.2%).</div>
+                    <table class="meta-table">
+                        <tr><th>Сценарий в Excel</th><td>Исполнение сделок Т-1</td></tr>
+                        <tr><th>Результат (было)</th><td>216 мин</td></tr>
+                        <tr><th>Тестовый пример 30 тыс</th><td>45 мин (этап ЗАКРЫТИЕ)</td></tr>
+                    </table>
+                    <div class="note">Текущий статус по части оптимизаций партий остатков: "Вендор передал в UAT".</div>
+                </div>
+            </div>
+
+            <div class="block">
+                <div class="top"><div class="title">ДУ-ФИН. Обмены</div><div class="badge prod">ПРОД</div></div>
+                <div class="content">
+                    <div class="times">
+                        <div class="tbox old"><div class="lbl">Время было</div><div class="val">166 мин</div></div>
+                        <div class="tbox new"><div class="lbl">Время стало</div><div class="val">90 мин</div></div>
+                    </div>
+                    <div class="delta"><b>Изменение:</b> минус 76 мин (примерно минус 45.8%).</div>
+                    <table class="meta-table">
+                        <tr><th>Сценарий в Excel</th><td>Обмен ДУ-Финансы 3.0 многопоточно в ФИН</td></tr>
+                        <tr><th>Результат (было)</th><td>6 потоков 166 мин</td></tr>
+                        <tr><th>Тестовый пример 30 тыс</th><td>90 мин (передача 30 000 БП и 30 000 документов)</td></tr>
+                    </table>
+                    <div class="note">В Excel также зафиксирован ориентир "один поток отработал 256 мин".</div>
+                </div>
+            </div>
+
+            <div class="block">
+                <div class="top"><div class="title">ФИН. Исполнение: открытие позиций</div><div class="badge prod">ПРОД</div></div>
+                <div class="content">
+                    <div class="times">
+                        <div class="tbox old"><div class="lbl">Время было</div><div class="val">813 мин (общий цикл)</div></div>
+                        <div class="tbox new"><div class="lbl">Время стало</div><div class="val">30 мин (этап открытие)</div></div>
+                    </div>
+                    <div class="delta"><b>Комментарий:</b> в исходных замерах "было" дано для общего цикла "Исполнение сделок в ФИН", поэтому сравнение с отдельным этапом открытие условное.</div>
+                    <table class="meta-table">
+                        <tr><th>Сценарий в Excel</th><td>Исполнение сделок в ФИН</td></tr>
+                        <tr><th>Результат (было)</th><td>813 мин</td></tr>
+                        <tr><th>Тестовый пример 30 тыс</th><td>30 мин (ОТКРЫТИЕ)</td></tr>
+                    </table>
+                </div>
+            </div>
+
+            <div class="block">
+                <div class="top"><div class="title">ФИН. Исполнение: проведение сделок</div><div class="badge prod">ПРОД</div></div>
+                <div class="content">
+                    <div class="times">
+                        <div class="tbox old"><div class="lbl">Время было</div><div class="val">813 мин (общий цикл)</div></div>
+                        <div class="tbox new"><div class="lbl">Время стало</div><div class="val">110 мин (этап закрытие)</div></div>
+                    </div>
+                    <div class="delta"><b>Комментарий:</b> как и в блоке открытия, базовое "было" относится к общему сценарию исполнения в ФИН, а "стало" - к этапу закрытие.</div>
+                    <table class="meta-table">
+                        <tr><th>Сценарий в Excel</th><td>Исполнение сделок в ФИН</td></tr>
+                        <tr><th>Результат (было)</th><td>813 мин</td></tr>
+                        <tr><th>Тестовый пример 30 тыс</th><td>110 мин (ЗАКРЫТИЕ)</td></tr>
+                    </table>
+                </div>
+            </div>
+
+            <div class="block">
+                <div class="top"><div class="title">ДУ. Регламенты УТРО</div><div class="badge wait">Ожидание релиза</div></div>
+                <div class="content">
+                    <div class="times">
+                        <div class="tbox old"><div class="lbl">Время было</div><div class="val">36 мин на 3000</div></div>
+                        <div class="tbox new"><div class="lbl">Время стало</div><div class="val">25 мин</div></div>
+                    </div>
+                    <div class="delta"><b>Нормализация к 3000 договорам:</b> базовое время взято из замеров по старому алгоритму: 170 мин на 14000 договоров. Значение 36 мин на 3000 договоров экстраполировано линейно. Текущее 25 мин - ориентировочно быстрее на 30.6%.</div>
+                    <table class="meta-table">
+                        <tr><th>Сценарий в Excel</th><td>Утренние регламентные операции</td></tr>
+                        <tr><th>Результат (было)</th><td>170 мин (14 000 договоров)</td></tr>
+                        <tr><th>Оценка было на 3000</th><td>36 мин (линейно)</td></tr>
+                        <tr><th>Тестовый пример 30 тыс</th><td>25 мин</td></tr>
+                    </table>
+                </div>
+            </div>
+
+            <div class="block">
+                <div class="top"><div class="title">ДУ. Регламенты ВЕЧЕР</div><div class="badge vendor">Вендор передал в UAT</div></div>
+                <div class="content">
+                    <div class="times">
+                        <div class="tbox old"><div class="lbl">Время было</div><div class="val">167 мин на 3000</div></div>
+                        <div class="tbox new"><div class="lbl">Время стало</div><div class="val">110 мин</div></div>
+                    </div>
+                    <div class="delta"><b>Нормализация к 3000 договорам:</b> исходный замер выполнен на 15000 договоров (833 мин), значение 167 мин на 3000 договоров экстраполировано линейно. Текущее 110 мин - ориентировочно быстрее на 33.9%.</div>
+                    <table class="meta-table">
+                        <tr><th>Сценарий в Excel</th><td>Вечерние регламентные операции</td></tr>
+                        <tr><th>Результат (было)</th><td>833 мин (15 000 договоров)</td></tr>
+                        <tr><th>Оценка было на 3000</th><td>167 мин (линейно)</td></tr>
+                        <tr><th>Тестовый пример 30 тыс</th><td>110 мин</td></tr>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div class="table-wrap">
+            <h2>Сводная таблица входных параметров замеров</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Блок отчета</th>
+                        <th>Сценарий</th>
+                        <th>Время было</th>
+                        <th>Время стало (карточный отчет)</th>
+                        <th>Комментарий сопоставимости</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>ДУ. Загрузка сделок</td>
+                        <td>Загрузка сделок</td>
+                        <td>667 мин (экстраполяция от 20 мин на 900)</td>
+                        <td>50 мин</td>
+                        <td>Исходный замер был на 900 сделок, значение на 30000 экстраполировано линейно.</td>
+                    </tr>
+                    <tr>
+                        <td>ДУ. Исполнение: открытие позиций</td>
+                        <td>Исполнение сделок Т</td>
+                        <td>36 мин</td>
+                        <td>15 мин</td>
+                        <td>Сопоставимо по сценарию 30 тыс сделок.</td>
+                    </tr>
+                    <tr>
+                        <td>ДУ. Исполнение: проведение сделок</td>
+                        <td>Исполнение сделок Т-1</td>
+                        <td>216 мин</td>
+                        <td>45 мин</td>
+                        <td>Сопоставимо по этапу закрытие.</td>
+                    </tr>
+                    <tr>
+                        <td>ДУ-ФИН. Обмены</td>
+                        <td>Обмен ДУ-Финансы 3.0 многопоточно в ФИН</td>
+                        <td>166 мин</td>
+                        <td>90 мин</td>
+                        <td>Сопоставимо, есть доп ориентир по одному потоку 256 мин.</td>
+                    </tr>
+                    <tr>
+                        <td>ФИН. Исполнение (открытие/проведение)</td>
+                        <td>Исполнение сделок в ФИН</td>
+                        <td>813 мин (общий цикл)</td>
+                        <td>30 мин / 110 мин (этапы)</td>
+                        <td>Сравнение условное, разные уровни детализации.</td>
+                    </tr>
+                    <tr>
+                        <td>ДУ. Регламенты УТРО</td>
+                        <td>Утренние регламентные операции</td>
+                        <td>36 мин на 3000 (экстраполяция от 170 мин на 14000)</td>
+                        <td>25 мин</td>
+                        <td>После нормализации к 3000 ориентировочное ускорение около 30.6%.</td>
+                    </tr>
+                    <tr>
+                        <td>ДУ. Регламенты ВЕЧЕР</td>
+                        <td>Вечерние регламентные операции</td>
+                        <td>167 мин на 3000 (экстраполяция от 833 мин на 15000)</td>
+                        <td>110 мин</td>
+                        <td>После нормализации к 3000 ориентировочное ускорение около 33.9%.</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="table-wrap">
+            <h2>Детальная расшифровка общего контура оптимизации</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Направление</th>
+                        <th>Результат</th>
+                        <th>Исполнитель</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Перенос клиентских вызовов расчета операций на сервер</td>
+                        <td>Снижение нагрузки на сервер и процессор, готово к выводу в ПРОД</td>
+                        <td>АВАНКОР</td>
+                    </tr>
+                    <tr>
+                        <td>Параллельный расчет ПИФ в ГрупповоеСозданиеПланаРеглОпераций</td>
+                        <td>Сокращение длительности регламентных операций</td>
+                        <td>АВАНКОР</td>
+                    </tr>
+                    <tr>
+                        <td>Оптимизация проблемных операций и выгрузки УК-Фонд 2.0</td>
+                        <td>Снижение риска жестких зависаний и ускорение выгрузок</td>
+                        <td>АВАНКОР</td>
+                    </tr>
+                    <tr>
+                        <td>Оптимизация отчета расшифровка финвложений</td>
+                        <td>Ускорение с 2 часов до 1 минуты</td>
+                        <td>ЛИЧНО Я</td>
+                    </tr>
+                    <tr>
+                        <td>Оптимизация отчета о финансовом результате по данным ЕПС</td>
+                        <td>Сокращение времени формирования отчетности</td>
+                        <td>ЛИЧНО Я</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="summary">
+            <h2>Выводы</h2>
+            <ul>
+                <li>По сопоставимым сценариям подтверждается устойчивое сокращение времени выполнения после оптимизаций.</li>
+                <li>Наибольший эффект в блоке проведения сделок ДУ: 216 мин -> 45 мин (около минус 79.2%).</li>
+                <li>По обменам ДУ-ФИН также фиксируется заметное ускорение: 166 мин -> 90 мин (около минус 45.8%).</li>
+                <li>Для загрузки сделок использована линейная нормализация масштаба: 20 мин на 900 сделок эквивалентно 667 мин, текущее значение 50 мин.</li>
+                <li>Для регламентов применена линейная экстраполяция к 3000 договорам: УТРО 36 -> 25 мин, ВЕЧЕР 167 -> 110 мин.</li>
+                <li>Для ФИН исполнения baseline дан по общему циклу, поэтому разбиение на этапы открытие/закрытие рекомендуется подтвердить отдельными контрольными замерами.</li>
+                <li>По блокам со статусом "Вендор передал в UAT" итоговый эффект должен быть подтвержден по результатам UAT и после выката.</li>
+            </ul>
+        </div>
+    </div>
+</body>
+</html>
