@@ -1,0 +1,648 @@
+<!doctype html>
+<html lang="ru">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Отчет об оптимизации производительности — ДУ, ФИН, ПИФ</title>
+    <style>
+        :root {
+            --bg: #f2f5fb;
+            --paper: #fff;
+            --border: #d4dded;
+            --text: #1a2333;
+            --muted: #5a6780;
+            --du: #1d4fa0;
+            --fin: #0e7a5f;
+            --pif: #7b3aa8;
+            --du-light: #e8f0ff;
+            --fin-light: #e2f5f0;
+            --pif-light: #f3ecff;
+            --yellow-bg: #fffbe6;
+            --yellow-br: #efc94c;
+            --research-bg: #f0f6ff;
+            --research-br: #a0c0f0;
+            --sub-bg: #f5f5f5;
+            --sub-br: #b0bac8;
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            margin: 0;
+            background: var(--bg);
+            color: var(--text);
+            font: 13.5px/1.55 "Segoe UI", Arial, sans-serif;
+        }
+
+        .wrap { max-width: 1280px; margin: 0 auto; padding: 20px; }
+
+        /* ── Шапка ── */
+        .header {
+            background: linear-gradient(130deg, #112952, #1b4799);
+            color: #fff;
+            border-radius: 10px;
+            padding: 18px 22px;
+            margin-bottom: 18px;
+        }
+        .header h1 { margin: 0 0 6px; font-size: 22px; }
+        .header .meta { font-size: 12px; opacity: 0.82; line-height: 1.7; }
+
+        /* ── Раздел (В работе / В планах) ── */
+        .block {
+            background: var(--paper);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            margin-bottom: 14px;
+            overflow: hidden;
+        }
+        .block-title {
+            margin: 0;
+            padding: 10px 14px;
+            font-size: 14px;
+            font-weight: 700;
+            background: #f6f8ff;
+            border-bottom: 1px solid var(--border);
+        }
+        .block-body { padding: 14px 14px 6px; }
+
+        /* ── База ── */
+        .base { margin-bottom: 16px; }
+        .base-label {
+            display: inline-block;
+            font-size: 13px;
+            font-weight: 700;
+            border-radius: 5px;
+            padding: 3px 11px;
+            margin-bottom: 8px;
+            background: transparent;
+        }
+        .base-label.du    { color: var(--fin); border: 2px solid var(--fin); }
+        .base-label.fin   { color: var(--fin); border: 2px solid var(--fin); }
+        .base-label.pif   { color: var(--fin); border: 2px solid var(--fin); }
+        .base-label.cross { color: var(--fin); border: 2px solid var(--fin); }
+
+        /* ── Задача — таблица ── */
+        .task { margin-bottom: 10px; }
+        .task-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-weight: 600;
+            font-size: 13px;
+            padding: 7px 10px;
+            border-radius: 6px 6px 0 0;
+            border: 1px solid var(--border);
+            border-bottom: none;
+            background: var(--du-light);
+            color: var(--du);
+        }
+
+        .task-badge {
+            display: inline-block;
+            font-size: 10px;
+            font-weight: 700;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+            border-radius: 4px;
+            padding: 2px 6px;
+            flex-shrink: 0;
+            color: #fff;
+            background: var(--du);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 12.5px;
+            border: 1px solid var(--border);
+            border-radius: 0 0 6px 6px;
+            overflow: hidden;
+        }
+        th {
+            background: #f0f4fc;
+            font-weight: 700;
+            padding: 6px 8px;
+            border: 1px solid var(--border);
+            text-align: left;
+            white-space: nowrap;
+        }
+        td {
+            padding: 5px 8px;
+            border: 1px solid var(--border);
+            vertical-align: top;
+        }
+        .ok   { color: #1a7d35; font-weight: 700; }
+        .warn { color: #b56c00; font-weight: 700; }
+        .bad  { color: #b52020; font-weight: 700; }
+        .muted { color: var(--muted); }
+
+        /* ── Дерево: исследования и подзадачи ── */
+        .tree { margin: 6px 0 10px 10px; }
+
+        .research {
+            display: flex;
+            gap: 6px;
+            margin-bottom: 5px;
+        }
+        .research-icon {
+            flex-shrink: 0;
+            color: #b07800;
+            font-weight: 700;
+            font-size: 11px;
+            padding-top: 2px;
+            white-space: nowrap;
+        }
+        .research-body {
+            background: #fffbe6;
+            border: 1px solid #f0c940;
+            border-left: 3px solid #e0a800;
+            border-radius: 6px;
+            padding: 5px 8px;
+            font-size: 12px;
+            flex: 1;
+        }
+        .research-body b { color: #7a5500; }
+
+        .subtask {
+            display: flex;
+            gap: 6px;
+            margin-top: 4px;
+            margin-left: 18px;
+        }
+        .subtask-icon {
+            flex-shrink: 0;
+            color: #555;
+            font-size: 10px;
+            font-weight: 700;
+            padding-top: 2px;
+            white-space: nowrap;
+        }
+        .subtask-body {
+            background: var(--sub-bg);
+            border: 1px solid var(--sub-br);
+            border-radius: 5px;
+            padding: 4px 8px;
+            font-size: 12px;
+        }
+
+        .note {
+            background: #fff5f5;
+            border: 1px solid #f5c0c0;
+            border-left: 3px solid #dc3545;
+            border-radius: 5px;
+            padding: 4px 8px;
+            font-size: 12px;
+            color: #7a1a1a;
+            margin-top: 5px;
+        }
+
+        /* ── Статус цели ── */
+        .status {
+            display: inline-block;
+            border-radius: 4px;
+            padding: 3px 8px;
+            font-size: 11px;
+            font-weight: 700;
+            white-space: nowrap;
+        }
+        .status.done    { background: #d4f0dc; color: #1a6b35; border: 1px solid #90d4a8; }
+        .status.close   { background: #fff3cd; color: #856404; border: 1px solid #ffc107; }
+        .status.not-done { background: #fde8e8; color: #9b2020; border: 1px solid #f5a0a0; }
+        .status.no-data { background: #f0f2f5; color: #6b7280; border: 1px solid #d1d5db; }
+        .status.pending { background: #e8f0ff; color: #1d4fa0; border: 1px solid #9ec0ff; }
+
+        /* ── Топ медленных операций ── */
+        .timing-list {
+            margin: 4px 0 0 0;
+            padding: 0;
+            list-style: none;
+        }
+        .timing-list li {
+            display: flex;
+            justify-content: space-between;
+            border-bottom: 1px dashed #d4dded;
+            padding: 2px 0;
+            font-size: 11.5px;
+        }
+        .timing-list li:last-child { border-bottom: none; }
+        .timing-time { font-family: monospace; color: #b04000; }
+    </style>
+</head>
+<body>
+<div class="wrap">
+
+    <div class="header">
+        <h1>Отчет о ходе оптимизации производительности — ДУ, ФИН, ПИФ</h1>
+        <div class="meta">
+            Шаблон по файлу Задачи_01042026.txt &nbsp;|&nbsp; Базы: ДУ (ДУ 1.5), ФИН (ДУ 2.0), ПИФ &nbsp;|&nbsp; 05.04.2026
+        </div>
+    </div>
+
+    <!-- ==================== 1.1 В РАБОТЕ ==================== -->
+    <div class="block">
+        <h2 class="block-title">1.1 В РАБОТЕ</h2>
+        <div class="block-body">
+
+            <!-- === БАЗА ДУ === -->
+            <div class="base">
+                <div class="base-label du">ДУ (ДУ 1.5)</div>
+
+                <!-- Загрузка сделок -->
+                <div class="task">
+                    <div class="task-header"><span class="task-badge">Задача</span> Загрузка сделок</div>
+                    <table>
+                        <tr>
+                            <th>БЫЛО</th>
+                            <th>СТАЛО</th>
+                            <th>Доп. тест</th>
+                            <th>Потоки (тест)</th>
+                            <th>Целевое время</th>
+                            <th>Статус цели</th>
+                        </tr>
+                        <tr>
+                            <td>20 мин на 900 сделок<br><span class="muted" style="font-size:11px">= 22.2 мин / 1 000 сд.</span></td>
+                            <td class="ok">50 мин на 30 000 сделок<br><span class="muted" style="font-size:11px">= 1.67 мин / 1 000 сд.</span></td>
+                            <td>100 000 сделок: генерация 20 мин + загрузка 25 мин<br><span class="muted" style="font-size:11px">= 0.25 мин / 1 000 сд.</span></td>
+                            <td>10</td>
+                            <td class="muted">не указано</td>
+                            <td><span class="status no-data">Цель не задана</span></td>
+                        </tr>
+                    </table>
+                </div>
+
+                <!-- Исполнение Т -->
+                <div class="task">
+                    <div class="task-header"><span class="task-badge">Задача</span> Исполнение сделок Т (открытие, запись)</div>
+                    <table>
+                        <tr>
+                            <th>БЫЛО</th>
+                            <th>СТАЛО (осн.)</th>
+                            <th>СТАЛО (доп. опт.)</th>
+                            <th>Потоки (тест)</th>
+                            <th>Целевое время</th>
+                            <th>Статус цели</th>
+                        </tr>
+                        <tr>
+                            <td>36 мин на 30 000 сделок<br><span class="muted" style="font-size:11px">= 1.20 мин / 1 000 сд.</span></td>
+                            <td class="ok">15 мин на 30 000 сделок<br><span class="muted" style="font-size:11px">= 0.50 мин / 1 000 сд.</span></td>
+                            <td class="ok">32 мин на 100 000 сделок<br><span class="muted" style="font-size:11px">= 0.32 мин / 1 000 сд.</span></td>
+                            <td>12</td>
+                            <td>30 мин на 30 000 сделок<br><span class="muted" style="font-size:11px">= 1.00 мин / 1 000 сд.</span></td>
+                            <td><span class="status done">Достигнута</span><br><span class="muted" style="font-size:11px">0.50 мин/1000 &lt; цели 1.00 мин/1000</span></td>
+                        </tr>
+                    </table>
+                    <div class="note">Примечание: Выйдет в релизе 1.5.27.11 во второй половине апреля 2026</div>
+                </div>
+
+                <!-- Исполнение Т-1 -->
+                <div class="task">
+                    <div class="task-header"><span class="task-badge">Задача</span> Исполнение сделок Т-1 (проведение)</div>
+                    <table>
+                        <tr>
+                            <th>БЫЛО</th>
+                            <th>СТАЛО (осн.)</th>
+                            <th>СТАЛО (доп. опт.)</th>
+                            <th>Потоки (тест)</th>
+                            <th>Целевое время</th>
+                            <th>Статус цели</th>
+                        </tr>
+                        <tr>
+                            <td>3 ч 36 мин на 30 000 сделок<br><span class="muted" style="font-size:11px">= 7.20 мин / 1 000 сд.</span></td>
+                            <td class="ok">45 мин на 30 000 сделок<br><span class="muted" style="font-size:11px">= 1.50 мин / 1 000 сд.</span></td>
+                            <td class="ok">1 ч 47 мин на 100 000 сделок<br><span class="muted" style="font-size:11px">= 1.07 мин / 1 000 сд.</span></td>
+                            <td>12</td>
+                            <td>2 ч на 100 000 сделок<br><span class="muted" style="font-size:11px">= 1.20 мин / 1 000 сд.</span></td>
+                            <td><span class="status done">Достигнута</span><br><span class="muted" style="font-size:11px">1.07 мин/1000 &lt; цели 1.20 мин/1000</span></td>
+                        </tr>
+                    </table>
+                    <div class="note">Примечание: Выйдет в релизе 1.5.27.11 во второй половине апреля 2026</div>
+                </div>
+
+                <!-- Обмен ДУ-Финансы -->
+                <div class="task">
+                    <div class="task-header"><span class="task-badge">Задача</span> Обмен ДУ-Финансы 3.0 многопоточно в ФИН</div>
+                    <table>
+                        <tr>
+                            <th>БЫЛО</th>
+                            <th>СТАЛО</th>
+                            <th>Потоки (тест)</th>
+                            <th>Целевое время</th>
+                            <th>Статус цели</th>
+                        </tr>
+                        <tr>
+                            <td>4 ч 16 мин на 15 000 сделок<br><span class="muted" style="font-size:11px">= 17.1 мин / 1 000 сд.</span></td>
+                            <td class="ok">1 ч 50 мин на 30 000 сделок<br><span class="muted" style="font-size:11px">= 3.67 мин / 1 000 сд.</span></td>
+                            <td>1 + 6</td>
+                            <td>2 ч на 15 000 сделок<br><span class="muted" style="font-size:11px">= 8.00 мин / 1 000 сд.</span></td>
+                            <td><span class="status done">Достигнута</span><br><span class="muted" style="font-size:11px">3.67 мин/1000 &lt; цели 8.00 мин/1000</span></td>
+                        </tr>
+                    </table>
+                    <div class="tree">
+                        <div class="research">
+                            <div class="research-icon">[Research]</div>
+                            <div class="research-body">
+                                <b>Улучшение параллельности:</b> сейчас БП разбиваются на 6 потоков, а все Сделки идут в 1 поток — обмен Сделок самый долгий.
+                                Изучить возможность разбивать поток Сделок (Перерегистраций) на несколько потоков обмена.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Вечерние регламенты -->
+                <div class="task">
+                    <div class="task-header"><span class="task-badge">Задача</span> Вечерние регламентные операции</div>
+                    <table>
+                        <tr>
+                            <th>БЫЛО</th>
+                            <th>СТАЛО (опт. 1)</th>
+                            <th>СТАЛО (доп. опт.)</th>
+                            <th>Потоки (тест)</th>
+                            <th>Целевое время</th>
+                            <th>Статус цели</th>
+                        </tr>
+                        <tr>
+                            <td rowspan="3">13 ч 52 мин на 15 000 договоров, 1 поток<br><span class="muted" style="font-size:11px">= 55.5 мин / 1 000 дог.</span></td>
+                            <td rowspan="3">1 ч 50 мин на 3 000 договоров<br><span class="muted" style="font-size:11px">= 36.7 мин / 1 000 дог.</span></td>
+                            <td class="ok">2 ч 48 мин на 13 578 договоров<br><span class="muted" style="font-size:11px">= 12.4 мин / 1 000 дог.</span></td>
+                            <td>5</td>
+                            <td rowspan="3">2 ч 30 мин на 25 000 договоров<br><span class="muted" style="font-size:11px">= 6.0 мин / 1 000 дог.</span></td>
+                            <td rowspan="3"><span class="status done">Достигнута</span><br><span class="muted" style="font-size:11px">5.3 мин/1000 &lt; цели 6.0 мин/1000<br>(замер 12 пот., 30 000 дог.)</span></td>
+                        </tr>
+                        <tr>
+                            <td class="ok">2 ч 23 мин на 15 000 договоров<br><span class="muted" style="font-size:11px">= 9.5 мин / 1 000 дог.</span></td>
+                            <td>7</td>
+                        </tr>
+                        <tr>
+                            <td class="ok">2 ч 38 мин на 30 000 договоров<br><span class="muted" style="font-size:11px">= 5.3 мин / 1 000 дог.</span></td>
+                            <td>12</td>
+                        </tr>
+                    </table>
+                    <div class="note">Примечание: Выйдет в релизе 1.5.27.11 во второй половине апреля 2026</div>
+                    <div class="tree">
+                        <div class="research">
+                            <div class="research-icon">[Research]</div>
+                            <div class="research-body">
+                                <b>IMAPPS-35039 (в процессе):</b> изучить в 1 поток топ самых медленных блоков кода на расчете вечернего регламента на 15 000 договорах.
+                            </div>
+                        </div>
+                        <div class="research">
+                            <div class="research-icon">[Research]</div>
+                            <div class="research-body">
+                                <b>Оптимизация расчета СЧА через пост-обработку:</b> двухпроходный расчет — сначала все расчеты кроме СЧА, затем сводный запрос по итогам СЧА,
+                                потом цикл по договорам без обращения к регистрам.
+                            </div>
+                        </div>
+                        <div class="research">
+                            <div class="research-icon">[Research]</div>
+                            <div class="research-body">
+                                <b>Параллельность пачками:</b> изучить замену последовательного запуска каждого договора на разбивку по пачкам с параллельным запуском.
+                                Гипотеза: пачки быстрее за счет отсутствия простоя в ожидании самого медленного задания группы.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <!-- конец БАЗА ДУ -->
+
+            <!-- === БАЗА ФИН === -->
+            <div class="base">
+                <div class="base-label fin">ФИН (ДУ 2.0)</div>
+
+                <!-- Исполнение ФИН -->
+                <div class="task">
+                    <div class="task-header"><span class="task-badge">Задача</span> Исполнение, в т.ч. обработка после загрузки</div>
+                    <table>
+                        <tr>
+                            <th>БЫЛО</th>
+                            <th>СТАЛО</th>
+                            <th>В т.ч. открытие / исполнение</th>
+                            <th>Потоки (тест)</th>
+                            <th>Целевое время</th>
+                            <th>Статус цели</th>
+                        </tr>
+                        <tr>
+                            <td>13 ч 33 мин на 15 000 сделок<br><span class="muted" style="font-size:11px">= 54.2 мин / 1 000 сд.</span></td>
+                            <td class="ok">2 ч 20 мин на 30 000 сделок<br><span class="muted" style="font-size:11px">= 4.67 мин / 1 000 сд.</span></td>
+                            <td>Открытие 30 мин + Исполнение 1 ч 50 мин</td>
+                            <td>обмен 7 (1 сделки + 6 БП); проведение 12; БП 2 (при &gt;1000 в потоке)</td>
+                            <td>2 ч на 15 000 сделок (Открытие + Исполнение)<br><span class="muted" style="font-size:11px">= 8.00 мин / 1 000 сд.</span></td>
+                            <td><span class="status done">Достигнута</span><br><span class="muted" style="font-size:11px">4.67 мин/1000 &lt; цели 8.00 мин/1000</span></td>
+                        </tr>
+                    </table>
+                    <div class="tree">
+                        <div class="research">
+                            <div class="research-icon">[Research]</div>
+                            <div class="research-body">
+                                <b>Оптимизация запросов по проведению Перерегистрации (сделки):</b>
+                                изучить слабые места проведения, использовать опыт аналогичных доработок в ДУ (ДУ 1.5), например: Партия.Дата.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Регламенты РДУ -->
+                <div class="task">
+                    <div class="task-header"><span class="task-badge">Задача</span> Оптимизация выполнения регламентных операций в ФИН под РДУ</div>
+                    <table>
+                        <tr>
+                            <th>БЫЛО</th>
+                            <th>СТАЛО (текущее, без оптимизации)</th>
+                            <th>Потоки (тест)</th>
+                            <th>Целевое время</th>
+                            <th>Статус цели</th>
+                        </tr>
+                        <tr>
+                            <td class="muted">нет данных</td>
+                            <td class="warn">1.5 ч на 10 500 договоров за 1 день<br><span class="muted" style="font-size:11px">= 8.57 мин / 1 000 дог.</span></td>
+                            <td class="muted">—</td>
+                            <td>1.5 ч на 30 000 договоров за 1 день<br><span class="muted" style="font-size:11px">= 3.00 мин / 1 000 дог.</span></td>
+                            <td><span class="status not-done">Не достигнута</span><br><span class="muted" style="font-size:11px">8.57 мин/1000 &gt; цели 3.00 мин/1000</span></td>
+                        </tr>
+                    </table>
+                    <div class="tree">
+                        <div class="research">
+                            <div class="research-icon">[Research]</div>
+                            <div class="research-body">
+                                <b>Разделение регламентов РДУ и прочих</b> с целью не замедлять основной расчет договорами РДУ.
+                            </div>
+                        </div>
+                        <div class="subtask">
+                            <div class="subtask-icon">[SubTask]</div>
+                            <div class="subtask-body">
+                                <b>IMAPPS-36274 (в процессе)</b> — возможность настройки запуска регламентных операций по фильтру без РДУ.
+                            </div>
+                        </div>
+                        <div class="research">
+                            <div class="research-icon">[Research]</div>
+                            <div class="research-body">
+                                <b>Статистика исполнения регламентов, отличия РДУ от прочих:</b> автоматическое исключение расчетов по операциям, где РДУ не нужен.
+                            </div>
+                        </div>
+                        <div class="subtask">
+                            <div class="subtask-icon">[SubTask]</div>
+                            <div class="subtask-body"><b>IMAPPS-36275</b></div>
+                        </div>
+                        <div class="research">
+                            <div class="research-icon">[Research]</div>
+                            <div class="research-body">
+                                <b>Замеры времени расчетов РДУ в 1 поток</b> — топ самых медленных операций.<br>
+                                Предварительные данные (10 620 договоров):
+                                <ul class="timing-list">
+                                    <li><span>%% по банковским счетам по графику выплат</span><span class="timing-time">00:44:50</span></li>
+                                    <li><span>Погашение НКД (БУ)</span><span class="timing-time">00:40:05</span></li>
+                                    <li><span>Определение сделок с отклонением цен (БУ)</span><span class="timing-time">00:26:13</span></li>
+                                    <li><span>Погашение облигаций до переоценки (БУ)</span><span class="timing-time">00:21:42</span></li>
+                                    <li><span>Частичное погашение облигаций (БУ)</span><span class="timing-time">00:18:07</span></li>
+                                    <li><span>Погашение %% по займам (БУ)</span><span class="timing-time">00:10:16</span></li>
+                                    <li><span>Операция по дефолтным облигациям (БУ)</span><span class="timing-time">00:05:52</span></li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <!-- конец БАЗА ФИН -->
+
+            <!-- === БАЗА ПИФ === -->
+            <div class="base">
+                <div class="base-label pif">ПИФ</div>
+
+                <div class="task">
+                    <div class="task-header"><span class="task-badge">Задача</span> Медленное исполнение сделок (один ПИФ, одна ЦБ — нет возможности распараллелить)</div>
+                    <table>
+                        <tr>
+                            <th>БЫЛО</th>
+                            <th>СТАЛО (после опт.)</th>
+                            <th>Потоки (тест)</th>
+                            <th>Целевое время</th>
+                            <th>Статус цели</th>
+                        </tr>
+                        <tr>
+                            <td class="bad">62 ч на 30 000 документов<br><span class="muted" style="font-size:11px">= 124.0 мин / 1 000 док.</span></td>
+                            <td class="warn">30 ч на 30 000 документов<br><span class="muted" style="font-size:11px">= 60.0 мин / 1 000 док.</span></td>
+                            <td class="muted">—</td>
+                            <td>12 ч на 30 000 документов<br><span class="muted" style="font-size:11px">= 24.0 мин / 1 000 док.</span></td>
+                            <td><span class="status not-done">Не достигнута</span><br><span class="muted" style="font-size:11px">60.0 мин/1000 &gt; цели 24.0 мин/1000</span></td>
+                        </tr>
+                    </table>
+                    <div class="tree">
+                        <div class="research">
+                            <div class="research-icon">[Research]</div>
+                            <div class="research-body">
+                                <b>Дополнительная оптимизация существующего механизма:</b>
+                                разделить два тяжелых этапа — запускать параллельно в 19:30 цепочку T+n и массовое перепроведение документов.
+                                Тогда длительность ночи определяется не суммой, а более долгим из двух процессов (ориентир 12–16 ч вместо 30).
+                                На шаге проведения документа «Сделка» в БП — оставить заполнение/сохранение, но не проводить в момент маршрута.
+                            </div>
+                        </div>
+                        <div class="subtask">
+                            <div class="subtask-icon">[SubTask]</div>
+                            <div class="subtask-body">Доработка по результатам исследования (подзадача ещё не создана)</div>
+                        </div>
+                        <div class="research">
+                            <div class="research-icon">[Research]</div>
+                            <div class="research-body">
+                                <b>Глобальное переписывание архитектуры учета и/или алгоритмов исполнения сделок.</b>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <!-- конец БАЗА ПИФ -->
+
+        </div><!-- block-body -->
+    </div><!-- 1.1 В РАБОТЕ -->
+
+
+    <!-- ==================== 1.2 В ПЛАНАХ ==================== -->
+    <div class="block">
+        <h2 class="block-title">1.2 В ПЛАНАХ К РАБОТЕ</h2>
+        <div class="block-body">
+
+            <!-- ДУ -->
+            <div class="base">
+                <div class="base-label du">ДУ (ДУ 1.5)</div>
+                <div class="task">
+                    <div class="task-header"><span class="task-badge">Задача</span> Формирование платежных поручений</div>
+                    <table>
+                        <tr>
+                            <th>БЫЛО</th>
+                            <th>СТАЛО</th>
+                            <th>Потоки (тест)</th>
+                            <th>Целевое время</th>
+                            <th>Статус цели</th>
+                        </tr>
+                        <tr>
+                            <td>1 ч 9 мин на 15 000 документов<br><span class="muted" style="font-size:11px">= 4.60 мин / 1 000 док.</span></td>
+                            <td class="muted">не измерялось</td>
+                            <td class="muted">—</td>
+                            <td>1 ч на 20 000 документов<br><span class="muted" style="font-size:11px">= 3.00 мин / 1 000 док.</span></td>
+                            <td><span class="status pending">В планах</span></td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+
+            <!-- ФИН -->
+            <div class="base">
+                <div class="base-label fin">ФИН (ДУ 2.0)</div>
+                <div class="task">
+                    <div class="task-header"><span class="task-badge">Задача</span> Расчет НДФЛ в ФИН</div>
+                    <table>
+                        <tr>
+                            <th>БЫЛО</th>
+                            <th>СТАЛО</th>
+                            <th>Потоки (тест)</th>
+                            <th>Целевое время</th>
+                            <th>Статус цели</th>
+                        </tr>
+                        <tr>
+                            <td>2 ч 33 мин на 1 000 операций<br><span class="muted" style="font-size:11px">= 153.0 мин / 1 000 оп.</span></td>
+                            <td class="muted">не измерялось</td>
+                            <td class="muted">—</td>
+                            <td>1 ч на 1 000 операций<br><span class="muted" style="font-size:11px">= 60.0 мин / 1 000 оп.</span></td>
+                            <td><span class="status pending">В планах</span></td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Сквозная ДУ + ФИН -->
+            <div class="base">
+                <div class="base-label cross">ДУ + ФИН (сквозная)</div>
+                <div class="task">
+                    <div class="task-header"><span class="task-badge">Задача</span> Сквозной нагрузочный тест — мега-задача</div>
+                    <table>
+                        <tr>
+                            <th>БЫЛО</th>
+                            <th>СТАЛО</th>
+                            <th>Потоки (тест)</th>
+                            <th>Целевое время</th>
+                            <th>Статус цели</th>
+                        </tr>
+                        <tr>
+                            <td class="muted">— на 100 000 сделок + 30 000 договоров</td>
+                            <td class="muted">— на 100 000 сделок + 30 000 договоров</td>
+                            <td class="muted">—</td>
+                            <td class="muted">не задано</td>
+                            <td><span class="status pending">В планах</span></td>
+                        </tr>
+                    </table>
+                    <div class="tree">
+                        <div class="research">
+                            <div class="research-icon">[Research]</div>
+                            <div class="research-body">
+                                Полный контур: загрузка сделок в ДУ → исполнение в ДУ → обмен в ФИН → исполнение в ФИН
+                                → расчет регламентов в ДУ → расчет регламентов в ФИН.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div><!-- block-body -->
+    </div><!-- 1.2 В ПЛАНАХ -->
+
+</div><!-- wrap -->
+</body>
+</html>
