@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Дашборд: оптимизация производительности (бизнес)</title>
+    <style>
+        :root {
+            --bg: #f4f6f9;
+            --card: #fff;
+            --text: #1e293b;
+            --muted: #64748b;
+            --border: #e2e8f0;
+            --ok: #059669;
+            --ok-bg: #ecfdf5;
+            --warn: #d97706;
+            --warn-bg: #fffbeb;
+            --bad: #dc2626;
+            --bad-bg: #fef2f2;
+            --info: #1d4fa0;
+            --info-bg: #eff6ff;
+            --neutral: #64748b;
+        }
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            font-family: "Segoe UI", Arial, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            font-size: 14px;
+            line-height: 1.5;
+        }
+        .wrap { max-width: 1200px; margin: 0 auto; padding: 24px 20px 40px; }
+
+        .hero {
+            background: linear-gradient(135deg, #0f172a 0%, #1e3a5f 50%, #1d4fa0 100%);
+            color: #fff;
+            border-radius: 14px;
+            padding: 28px 32px;
+            margin-bottom: 24px;
+        }
+        .hero h1 { margin: 0 0 10px; font-size: 26px; font-weight: 700; }
+        .hero .lead { margin: 0; font-size: 15px; opacity: 0.92; max-width: 900px; }
+        .hero .meta { margin-top: 14px; font-size: 12px; opacity: 0.75; }
+        .hero a { color: #93c5fd; }
+
+        .exec-strip {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 14px;
+            margin-bottom: 28px;
+        }
+        @media (max-width: 900px) {
+            .exec-strip { grid-template-columns: repeat(2, 1fr); }
+        }
+        @media (max-width: 480px) {
+            .exec-strip { grid-template-columns: 1fr; }
+        }
+        .exec-card {
+            background: var(--card);
+            border-radius: 12px;
+            padding: 18px 16px;
+            border: 1px solid var(--border);
+            text-align: center;
+        }
+        .exec-card .num {
+            font-size: 32px;
+            font-weight: 800;
+            line-height: 1.1;
+            letter-spacing: -0.02em;
+        }
+        .exec-card .lbl { font-size: 12px; color: var(--muted); margin-top: 6px; }
+        .exec-card.ok .num { color: var(--ok); }
+        .exec-card.bad .num { color: var(--bad); }
+        .exec-card.info .num { color: var(--info); }
+        .exec-card.neutral .num { color: var(--neutral); }
+
+        h2.section {
+            font-size: 13px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            color: var(--muted);
+            margin: 0 0 12px;
+        }
+
+        .products {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 16px;
+            margin-bottom: 28px;
+        }
+        @media (max-width: 800px) {
+            .products { grid-template-columns: 1fr; }
+        }
+        .product-card {
+            background: var(--card);
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            overflow: hidden;
+        }
+        .product-card .ph {
+            padding: 12px 16px;
+            font-weight: 700;
+            font-size: 13px;
+            border-bottom: 1px solid var(--border);
+        }
+        .product-card.du .ph { background: #eff6ff; color: #1e40af; }
+        .product-card.fin .ph { background: #ecfdf5; color: #047857; }
+        .product-card.pif .ph { background: #faf5ff; color: #6b21a8; }
+        .product-card .pb { padding: 14px 16px; font-size: 13px; }
+        .product-card .stat-line {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 8px;
+            font-size: 12.5px;
+        }
+        .product-card .stat-line:last-child { margin-bottom: 0; }
+        .dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+        .dot.ok { background: var(--ok); }
+        .dot.warn { background: var(--warn); }
+        .dot.bad { background: var(--bad); }
+        .dot.neutral { background: #94a3b8; }
+
+        .two-col {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+            margin-bottom: 28px;
+        }
+        @media (max-width: 768px) {
+            .two-col { grid-template-columns: 1fr; }
+        }
+        .panel {
+            background: var(--card);
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            padding: 18px 20px;
+        }
+        .panel h3 { margin: 0 0 12px; font-size: 15px; }
+        .panel ul { margin: 0; padding-left: 18px; }
+        .panel li { margin-bottom: 8px; font-size: 13px; }
+        .panel.positive { border-left: 4px solid var(--ok); background: linear-gradient(90deg, var(--ok-bg) 0%, #fff 18%); }
+        .panel.risk { border-left: 4px solid var(--bad); background: linear-gradient(90deg, var(--bad-bg) 0%, #fff 18%); }
+
+        .release-box {
+            background: #fff5f5;
+            border: 1px solid #fecaca;
+            border-left: 4px solid var(--bad);
+            border-radius: 12px;
+            padding: 14px 18px;
+            margin-bottom: 28px;
+            font-size: 13px;
+            font-weight: 600;
+            color: #7f1d1d;
+        }
+
+        .table-card {
+            background: var(--card);
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            padding: 18px 20px;
+            margin-bottom: 20px;
+        }
+        .table-card h3 { margin: 0 0 14px; font-size: 15px; }
+        .table-scroll { overflow-x: auto; }
+        table.biz {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 12.5px;
+            min-width: 640px;
+        }
+        table.biz th, table.biz td {
+            border: 1px solid var(--border);
+            padding: 8px 10px;
+            text-align: left;
+            vertical-align: top;
+        }
+        table.biz th { background: #f8fafc; font-weight: 700; color: #475569; }
+        .tag {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 999px;
+            font-size: 11px;
+            font-weight: 700;
+            white-space: nowrap;
+        }
+        .tag.ok { background: #d1fae5; color: #065f46; }
+        .tag.warn { background: #fef3c7; color: #92400e; }
+        .tag.bad { background: #fee2e2; color: #991b1b; }
+        .tag.pending { background: #dbeafe; color: #1e40af; }
+        .tag.na { background: #f1f5f9; color: #64748b; }
+
+        .footnote {
+            font-size: 12px;
+            color: var(--muted);
+            margin-top: 24px;
+            padding-top: 16px;
+            border-top: 1px solid var(--border);
+        }
+    </style>
+</head>
+<body>
+<div class="wrap">
+
+    <div class="hero">
+        <h1>Оптимизация производительности: сводка для руководства</h1>
+        <p class="lead">
+            По замерам нагрузочных тестов (ДУ 1.5, ФИН / ДУ 2.0, ПИФ) по большинству критичных операций целевые показатели достигнуты.
+            Два направления остаются в зоне риска: регламенты под РДУ в ФИН и ночное исполнение в ПИФ. Часть улучшений выйдет в релизе 1.5.27.11 (вторая половина апреля 2026).
+        </p>
+        <p class="meta">Данные на 05.04.2026. Детальные карточки и методика: report_cards_2026_04_05.html</p>
+    </div>
+
+    <div class="exec-strip">
+        <div class="exec-card neutral">
+            <div class="num">10</div>
+            <div class="lbl">Направлений в работе и в планах</div>
+        </div>
+        <div class="exec-card ok">
+            <div class="num">5</div>
+            <div class="lbl">Цель по скорости достигнута</div>
+        </div>
+        <div class="exec-card bad">
+            <div class="num">2</div>
+            <div class="lbl">Цель пока не достигнута</div>
+        </div>
+        <div class="exec-card info">
+            <div class="num">3</div>
+            <div class="lbl">В очереди / без цели</div>
+        </div>
+    </div>
+
+    <h2 class="section">Статус по продуктам</h2>
+    <div class="products">
+        <div class="product-card du">
+            <div class="ph">ДУ (ДУ 1.5)</div>
+            <div class="pb">
+                <div class="stat-line"><span class="dot ok"></span> Загрузка и исполнение сделок, обмен с ФИН, вечерние регламенты — ускорение подтверждено замерами.</div>
+                <div class="stat-line"><span class="dot neutral"></span> По загрузке сделок формальная цель не зафиксирована; фактическое ускорение существенное.</div>
+                <div class="stat-line"><span class="dot pending"></span> Платежные поручения — в планах, замеров после доработок ещё нет.</div>
+            </div>
+        </div>
+        <div class="product-card fin">
+            <div class="ph">ФИН (ДУ 2.0)</div>
+            <div class="pb">
+                <div class="stat-line"><span class="dot ok"></span> Исполнение и обработка после загрузки — цель достигнута.</div>
+                <div class="stat-line"><span class="dot bad"></span> Регламенты под РДУ — текущая скорость в ~2.9 раза хуже цели; ведутся задачи IMAPPS-36274, IMAPPS-36275.</div>
+                <div class="stat-line"><span class="dot pending"></span> Расчет НДФЛ — в планах.</div>
+            </div>
+        </div>
+        <div class="product-card pif">
+            <div class="ph">ПИФ</div>
+            <div class="pb">
+                <div class="stat-line"><span class="dot warn"></span> Время ночного цикла сократилось примерно вдвое, до цели ещё ~2.5 раза по нормализованному показателю.</div>
+                <div class="stat-line"><span class="dot neutral"></span> Ограничение: один фонд / одна бумага — слабая естественная параллельность.</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="release-box">
+        В релиз 1.5.27.11 (вторая половина апреля 2026) войдут результаты по исполнению сделок Т и Т-1 в ДУ и по вечерним регламентным операциям в ДУ.
+    </div>
+
+    <div class="two-col">
+        <div class="panel positive">
+            <h3>Что уже дает эффект</h3>
+            <ul>
+                <li>Критичные цепочки в ДУ (загрузка, исполнение, обмен с ФИН, вечерние регламенты) укладываются в целевые оценки или сильно быстрее исходных замеров.</li>
+                <li>В ФИН исполнение после загрузки ускорено более чем в 11 раз относительно исходного замера.</li>
+                <li>Запланирован сквозной нагрузочный тест ДУ + ФИН после стабилизации доработок.</li>
+            </ul>
+        </div>
+        <div class="panel risk">
+            <h3>Где нужны решения и контроль</h3>
+            <ul>
+                <li><b>ФИН, РДУ:</b> без доработок регламентов цель по времени не выполняется; приоритет — разделение сценариев и исключение лишних расчетов.</li>
+                <li><b>ПИФ:</b> до целевой ночи остается заметный разрыв; рассматривается перестройка расписания этапов (параллельный запуск тяжелых процессов).</li>
+                <li><b>Очередь:</b> платежные поручения (ДУ) и НДФЛ (ФИН) — только постановка работ по измеренным «было» и целям.</li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="table-card">
+        <h3>Все направления: статус одним взглядом</h3>
+        <div class="table-scroll">
+            <table class="biz">
+                <thead>
+                    <tr>
+                        <th>Продукт</th>
+                        <th>Направление</th>
+                        <th>Статус для бизнеса</th>
+                        <th>Кратко о динамике</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>ДУ</td>
+                        <td>Загрузка сделок</td>
+                        <td><span class="tag na">Цель не задана</span></td>
+                        <td>Сильное ускорение по замерам (в т.ч. тест 100 000 сделок).</td>
+                    </tr>
+                    <tr>
+                        <td>ДУ</td>
+                        <td>Исполнение Т</td>
+                        <td><span class="tag ok">Цель достигнута</span></td>
+                        <td>Нормализованное время ниже цели; выход в релизе 1.5.27.11.</td>
+                    </tr>
+                    <tr>
+                        <td>ДУ</td>
+                        <td>Исполнение Т-1</td>
+                        <td><span class="tag ok">Цель достигнута</span></td>
+                        <td>Нормализованное время ниже цели; выход в релизе 1.5.27.11.</td>
+                    </tr>
+                    <tr>
+                        <td>ДУ</td>
+                        <td>Обмен ДУ - Финансы 3.0</td>
+                        <td><span class="tag ok">Цель достигнута</span></td>
+                        <td>Многопоточный обмен; запас до цели.</td>
+                    </tr>
+                    <tr>
+                        <td>ДУ</td>
+                        <td>Вечерние регламенты</td>
+                        <td><span class="tag ok">Цель достигнута</span></td>
+                        <td>Лучший замер существенно лучше цели; релиз 1.5.27.11.</td>
+                    </tr>
+                    <tr>
+                        <td>ФИН</td>
+                        <td>Исполнение после загрузки</td>
+                        <td><span class="tag ok">Цель достигнута</span></td>
+                        <td>Крупное ускорение относительно исходного замера.</td>
+                    </tr>
+                    <tr>
+                        <td>ФИН</td>
+                        <td>Регламенты под РДУ</td>
+                        <td><span class="tag bad">Цель не достигнута</span></td>
+                        <td>Текущая скорость ~в 2.9 раза хуже цели; работы в Jira (36274, 36275).</td>
+                    </tr>
+                    <tr>
+                        <td>ПИФ</td>
+                        <td>Исполнение сделок</td>
+                        <td><span class="tag warn">Цель не достигнута</span></td>
+                        <td>Прогресс ~50% от исходного времени; до цели еще ~2.5x.</td>
+                    </tr>
+                    <tr>
+                        <td>ДУ</td>
+                        <td>Платежные поручения</td>
+                        <td><span class="tag pending">В планах</span></td>
+                        <td>Есть замер «было» и цель; оптимизация не начата.</td>
+                    </tr>
+                    <tr>
+                        <td>ФИН</td>
+                        <td>Расчет НДФЛ</td>
+                        <td><span class="tag pending">В планах</span></td>
+                        <td>Есть замер «было» и цель; оптимизация не начата.</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <p class="footnote">
+        Показатели в полном отчете приведены в сопоставимых единицах (минуты на 1000 объектов: сделок, договоров или документов), чтобы корректно сравнивать тесты разного объема.
+        Технические детали, таблицы замеров и план исследований — в файле report_cards_2026_04_05.html.
+    </p>
+
+</div>
+</body>
+</html>
