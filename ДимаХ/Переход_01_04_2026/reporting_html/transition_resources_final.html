@@ -1,0 +1,689 @@
+<!doctype html>
+<html lang="ru">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Ресурсы при переходе из supp в dev — Чмыхалов А.</title>
+    <style>
+        :root {
+            --bg:       #f4f6fb;
+            --paper:    #ffffff;
+            --border:   #dce4f0;
+            --text:     #1a2133;
+            --muted:    #5a6680;
+            --code-bg:  #0f1a2e;
+            --code-fg:  #d4e5ff;
+            --q-bg:     #fffbe6;
+            --q-border: #f0c940;
+            --action:   #1d6ff2;
+            --tag-new:  #1d6ff2;
+            --tag-q:    #e07b00;
+            --tag-risk: #dc3545;
+            --tag-ok:   #28a745;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            background: var(--bg);
+            color: var(--text);
+            font: 14px/1.6 "Segoe UI", Arial, sans-serif;
+        }
+
+        /* ---- Шапка ---- */
+        .header {
+            background: linear-gradient(135deg, #0f1e3d 0%, #1d3c75 100%);
+            color: #fff;
+            padding: 28px 40px 22px;
+        }
+        .header h1 {
+            font-size: 22px;
+            font-weight: 700;
+            margin-bottom: 6px;
+        }
+        .header .meta {
+            font-size: 13px;
+            opacity: 0.75;
+            line-height: 1.8;
+        }
+        .header .persons {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 14px;
+        }
+        .person-pill {
+            background: rgba(255,255,255,0.12);
+            border: 1px solid rgba(255,255,255,0.25);
+            border-radius: 20px;
+            padding: 4px 12px;
+            font-size: 12px;
+        }
+        .person-pill b { color: #a8d0ff; }
+
+        /* ---- Навигация ---- */
+        .nav {
+            background: #fff;
+            border-bottom: 1px solid var(--border);
+            padding: 0 40px;
+            display: flex;
+            gap: 0;
+        }
+        .nav a {
+            display: block;
+            padding: 10px 14px;
+            font-size: 13px;
+            color: var(--muted);
+            text-decoration: none;
+            border-bottom: 2px solid transparent;
+            white-space: nowrap;
+        }
+        .nav a:hover {
+            color: var(--action);
+            border-bottom-color: var(--action);
+        }
+
+        /* ---- Контент ---- */
+        .page { max-width: 960px; margin: 24px auto; padding: 0 20px 40px; }
+
+        /* ---- Секция ---- */
+        .section {
+            background: var(--paper);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            margin-bottom: 18px;
+            overflow: hidden;
+        }
+        .section-head {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 14px 18px;
+            border-bottom: 1px solid var(--border);
+            background: #f8faff;
+        }
+        .section-num {
+            width: 28px; height: 28px;
+            border-radius: 50%;
+            background: #1d3c75;
+            color: #fff;
+            font-size: 14px;
+            font-weight: 700;
+            display: flex; align-items: center; justify-content: center;
+            flex-shrink: 0;
+        }
+        .section-title {
+            font-size: 16px;
+            font-weight: 700;
+        }
+        .section-body { padding: 16px 18px; }
+
+        /* ---- Подраздел ---- */
+        .subsection {
+            margin-bottom: 18px;
+        }
+        .subsection:last-child { margin-bottom: 0; }
+        .subsection-title {
+            font-size: 13px;
+            font-weight: 700;
+            color: var(--muted);
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            margin-bottom: 8px;
+            padding-bottom: 4px;
+            border-bottom: 1px dashed var(--border);
+        }
+
+        /* ---- Строки данных ---- */
+        .data-row {
+            display: flex;
+            align-items: baseline;
+            gap: 8px;
+            margin-bottom: 6px;
+            font-size: 13.5px;
+        }
+        .data-label {
+            color: var(--muted);
+            white-space: nowrap;
+            min-width: 60px;
+        }
+        code {
+            font-family: Consolas, "Courier New", monospace;
+            font-size: 12.5px;
+            background: #eef3ff;
+            color: #1d3c75;
+            border: 1px solid #c5d5f7;
+            border-radius: 4px;
+            padding: 2px 6px;
+        }
+
+        /* ---- Блок подключения (тёмный) ---- */
+        .conn-block {
+            background: var(--code-bg);
+            border-radius: 7px;
+            padding: 10px 14px;
+            margin: 6px 0 10px;
+        }
+        .conn-line {
+            display: flex;
+            align-items: baseline;
+            gap: 10px;
+            margin-bottom: 5px;
+        }
+        .conn-line:last-child { margin-bottom: 0; }
+        .conn-tag {
+            font-family: monospace;
+            font-size: 12px;
+            font-weight: 700;
+            color: #7eb8ff;
+            min-width: 42px;
+        }
+        .conn-val {
+            font-family: Consolas, "Courier New", monospace;
+            font-size: 12px;
+            color: var(--code-fg);
+            word-break: break-all;
+        }
+        .conn-note {
+            font-size: 11.5px;
+            color: #7eb8ff;
+            margin-left: 4px;
+        }
+        .conn-server {
+            font-family: Consolas, "Courier New", monospace;
+            font-size: 12px;
+            color: #a8d0ff;
+            margin-bottom: 6px;
+        }
+        .conn-server span { color: #7eb8ff; }
+
+        /* ---- Блок вопросов ---- */
+        .q-block {
+            background: var(--q-bg);
+            border-left: 4px solid var(--q-border);
+            border-radius: 0 6px 6px 0;
+            padding: 10px 14px;
+            margin-top: 10px;
+        }
+        .q-title {
+            font-size: 12px;
+            font-weight: 700;
+            color: #8a6000;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 7px;
+        }
+        .q-item {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 6px;
+            font-size: 13.5px;
+            line-height: 1.5;
+        }
+        .q-item:last-child { margin-bottom: 0; }
+        .q-icon {
+            flex-shrink: 0;
+            width: 18px; height: 18px;
+            border-radius: 50%;
+            background: var(--q-border);
+            color: #fff;
+            font-size: 11px;
+            font-weight: 900;
+            display: flex; align-items: center; justify-content: center;
+            margin-top: 2px;
+        }
+        .q-text { color: var(--text); }
+        .q-text b { color: #8a4700; }
+
+        /* ---- Блок действий (ключевые вещи) ---- */
+        .action-block {
+            background: #eaf4ff;
+            border-left: 4px solid var(--action);
+            border-radius: 0 6px 6px 0;
+            padding: 10px 14px;
+            margin-top: 10px;
+        }
+        .action-title {
+            font-size: 12px;
+            font-weight: 700;
+            color: #0a4a90;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 7px;
+        }
+        .action-item {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 6px;
+            font-size: 13.5px;
+            line-height: 1.5;
+        }
+        .action-item:last-child { margin-bottom: 0; }
+        .action-num {
+            flex-shrink: 0;
+            width: 18px; height: 18px;
+            border-radius: 50%;
+            background: var(--action);
+            color: #fff;
+            font-size: 10px;
+            font-weight: 900;
+            display: flex; align-items: center; justify-content: center;
+            margin-top: 2px;
+        }
+
+        /* ---- Разделитель ---- */
+        hr.sep {
+            border: none;
+            border-top: 1px dashed var(--border);
+            margin: 14px 0;
+        }
+
+        /* ---- Тег ---- */
+        .tag {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: 700;
+            color: #fff;
+            margin-left: 6px;
+            vertical-align: middle;
+        }
+        .tag-new    { background: var(--tag-new); }
+        .tag-q      { background: var(--tag-q); }
+        .tag-risk   { background: var(--tag-risk); }
+        .tag-ok     { background: var(--tag-ok); }
+
+        /* ---- Список Confluence ---- */
+        .cf-list {
+            margin: 8px 0 0 4px;
+        }
+        .cf-list li {
+            margin-bottom: 5px;
+            list-style: none;
+            padding-left: 16px;
+            position: relative;
+            font-size: 13.5px;
+        }
+        .cf-list li::before {
+            content: "—";
+            position: absolute;
+            left: 0;
+            color: var(--muted);
+        }
+        .cf-list .sub {
+            margin-top: 4px;
+            margin-left: 16px;
+        }
+        .cf-list .sub li::before { content: "•"; }
+
+        /* ---- Рабочее место ---- */
+        .workplace-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+        @media (max-width: 600px) {
+            .workplace-grid { grid-template-columns: 1fr; }
+            .nav { padding: 0 16px; }
+            .header { padding: 18px 16px; }
+        }
+        .wp-card {
+            border: 1px solid var(--border);
+            border-radius: 7px;
+            padding: 10px;
+        }
+        .wp-card .wlabel {
+            font-size: 11px;
+            color: var(--muted);
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            margin-bottom: 4px;
+        }
+        .wp-card .wval {
+            font-size: 13.5px;
+            font-weight: 700;
+        }
+    </style>
+</head>
+<body>
+
+<!-- ШАПКА -->
+<div class="header">
+    <h1>Текущие ресурсы и вопросы по переходу из отдела в отдел</h1>
+    <div class="meta">
+        Сотрудник: <b>Чмыхалов Алексей</b> &nbsp;|&nbsp; Переход: <b>supp → dev</b><br>
+        Куратор: <b>Дмитрий Харитнов</b> (директор ИТ)
+    </div>
+    <div class="persons">
+        <div class="person-pill">Руководитель supp: <b>Кирилл Иконников</b></div>
+        <div class="person-pill">Руководитель dev: <b>Алексей Константинов</b></div>
+    </div>
+</div>
+
+<!-- НАВИГАЦИЯ -->
+<nav class="nav">
+    <a href="#bases">1. Базы</a>
+    <a href="#storage">2. Хранилища</a>
+    <a href="#comms">3. Коммуникации</a>
+    <a href="#workplace">4. Рабочее место</a>
+</nav>
+
+<div class="page">
+
+    <!-- ===== 1. БАЗЫ ===== -->
+    <div class="section" id="bases">
+        <div class="section-head">
+            <div class="section-num">1</div>
+            <div class="section-title">Базы</div>
+        </div>
+        <div class="section-body">
+
+            <!-- Разработческие -->
+            <div class="subsection">
+                <div class="subsection-title">Разработческие базы &nbsp;(в т.ч. для ИТ тестирования)</div>
+                <div class="conn-block">
+                    <div class="conn-server"><span>SQL сервер:</span> SMSK02DB310U\DBMAM1C06</div>
+                    <div class="conn-server"><span>1С сервер:</span></div>
+                    <div class="conn-line">
+                        <span class="conn-tag">ПИФ</span>
+                        <span class="conn-val">Srvr="SMSK02MG138U:6541";Ref="AVC_REGR_CLEAN_PIF";</span>
+                    </div>
+                    <div class="conn-line">
+                        <span class="conn-tag">ДУ</span>
+                        <span class="conn-val">Srvr="SMSK02MG138U:6541";Ref="AVC_REGR_CLEAN_DU";</span>
+                    </div>
+                    <div class="conn-line">
+                        <span class="conn-tag">ФИН</span>
+                        <span class="conn-val">Srvr="SMSK02MG138U:6541";Ref="AVC_REGR_CLEAN_FIN";</span>
+                    </div>
+                </div>
+                <div class="q-block">
+                    <div class="q-title">Вопросы по разработческим базам</div>
+                    <div class="q-item">
+                        <div class="q-icon">?</div>
+                        <div class="q-text">
+                            Эти базы принадлежат supp и подлежат передаче.
+                            <b>Необходимы аналогичные базы в среде dev.</b>
+                            <span class="tag tag-risk">Требует решения</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="action-block" style="margin-top:8px;">
+                    <div class="action-title">Что нужно сделать</div>
+                    <div class="action-item">
+                        <div class="action-num">1</div>
+                        <div>Выделить аналогичные контуры <b>ПИФ / ДУ / ФИН</b> в среде dev</div>
+                    </div>
+                </div>
+            </div>
+
+            <hr class="sep">
+
+            <!-- Нагрузочное -->
+            <div class="subsection">
+                <div class="subsection-title">Базы нагрузочного тестирования &nbsp;(среда DR — полная копия ПРОД)</div>
+                <div class="conn-block">
+                    <div class="conn-server"><span>SQL сервер:</span> SMSK02DB310U\DBMAM1C06</div>
+                    <div class="conn-server"><span>1С сервер:</span> SMSK02DB338\DBMIM12</div>
+                    <div class="conn-line">
+                        <span class="conn-tag">ДУ</span>
+                        <span class="conn-val">Srvr="SMSK02MG138:8541";Ref="AVC_UAT_RDU_PERFTEST";</span>
+                        <span class="conn-note">(sql: tmp_PerformanceTest_2)</span>
+                    </div>
+                    <div class="conn-line">
+                        <span class="conn-tag">ПИФ</span>
+                        <span class="conn-val">Srvr="SMSK02MG138:8541";Ref="AVC_UAT_YPIF_PERFTEST";</span>
+                        <span class="conn-note">(sql: tmp_PerformanceTest_3)</span>
+                    </div>
+                </div>
+                <div class="q-block">
+                    <div class="q-title">Вопросы по нагрузочным базам</div>
+                    <div class="q-item">
+                        <div class="q-icon">?</div>
+                        <div class="q-text">
+                            Можно ли продолжать их использовать, или они тоже остаются только в supp?
+                            <b>Если остаются — нужно заказать аналогичный контур нагрузочного тестирования для dev.</b>
+                            <span class="tag tag-q">Уточнить</span>
+                        </div>
+                    </div>
+                    <div class="q-item">
+                        <div class="q-icon">?</div>
+                        <div class="q-text">
+                            <b>Необходимо заказать создание дополнительной связки база / сервер 1С для ФИН (ДУ 2.0).</b>
+                            <span class="tag tag-risk">Требует решения</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="action-block" style="margin-top:8px;">
+                    <div class="action-title">Что нужно сделать</div>
+                    <div class="action-item">
+                        <div class="action-num">1</div>
+                        <div>Принять решение: <b>совместное использование DR</b> или выделение отдельного dev контура</div>
+                    </div>
+                    <div class="action-item">
+                        <div class="action-num">2</div>
+                        <div>Оформить заявку на <b>связку ФИН (ДУ 2.0)</b> — база + сервер 1С</div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- ===== 2. ХРАНИЛИЩА ===== -->
+    <div class="section" id="storage">
+        <div class="section-head">
+            <div class="section-num">2</div>
+            <div class="section-title">Хранилища</div>
+        </div>
+        <div class="section-body">
+            <div class="subsection">
+                <div class="subsection-title">Учетная запись &nbsp;<code>supp_AChmykhalov</code></div>
+                <div class="conn-block">
+                    <div class="conn-line">
+                        <span class="conn-tag">ДУ</span>
+                        <span class="conn-val">tcp://smsk01ap263/du/vendor</span>
+                    </div>
+                    <div class="conn-line">
+                        <span class="conn-tag">ПИФ</span>
+                        <span class="conn-val">tcp://smsk01ap263/pif/vendor</span>
+                    </div>
+                    <div class="conn-line">
+                        <span class="conn-tag">FIN</span>
+                        <span class="conn-val">tcp://smsk01ap263/fin/vendor</span>
+                    </div>
+                    <div class="conn-line">
+                        <span class="conn-tag">ДУ</span>
+                        <span class="conn-val">tcp://smsk01ap263/du/dev</span>
+                    </div>
+                    <div class="conn-line">
+                        <span class="conn-tag">ПИФ</span>
+                        <span class="conn-val">tcp://smsk01ap263/pif/dev</span>
+                    </div>
+                    <div class="conn-line">
+                        <span class="conn-tag">FIN</span>
+                        <span class="conn-val">tcp://smsk01ap263/fin/dev</span>
+                    </div>
+                </div>
+                <div class="q-block">
+                    <div class="q-title">Вопросы по учетной записи</div>
+                    <div class="q-item">
+                        <div class="q-icon">?</div>
+                        <div class="q-text">
+                            <b>Создать новую учетную запись dev</b> и предоставить ей аналогичный доступ ко всем указанным хранилищам.
+                            <span class="tag tag-risk">Требует решения</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="action-block" style="margin-top:8px;">
+                    <div class="action-title">Что нужно сделать</div>
+                    <div class="action-item">
+                        <div class="action-num">1</div>
+                        <div>Создать учетную запись <b>dev_AChmykhalov</b> (или аналог по соглашению об именовании dev)</div>
+                    </div>
+                    <div class="action-item">
+                        <div class="action-num">2</div>
+                        <div>Выдать доступ ко всем 6 хранилищам из текущего списка</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== 3. КОММУНИКАЦИИ ===== -->
+    <div class="section" id="comms">
+        <div class="section-head">
+            <div class="section-num">3</div>
+            <div class="section-title">Коммуникации, задачи</div>
+        </div>
+        <div class="section-body">
+
+            <div class="subsection">
+                <div class="subsection-title">Jira — Канбан-доска</div>
+                <div class="data-row">
+                    <span class="data-label">Текущая доска:</span>
+                    <a href="https://jira/secure/RapidBoard.jspa?rapidView=308&amp;projectKey=IMAPPS&amp;quickFilter=2048"
+                       style="font-size:13px; color: var(--action);">
+                        IMAPPS, rapidView=308, quickFilter=2048
+                    </a>
+                </div>
+                <div class="q-block">
+                    <div class="q-title">Вопросы по Jira</div>
+                    <div class="q-item">
+                        <div class="q-icon">?</div>
+                        <div class="q-text">
+                            <b>Добавить в доску задач dev</b> и убрать из доски задач supp.
+                            <span class="tag tag-risk">Требует решения</span>
+                        </div>
+                    </div>
+                    <div class="q-item">
+                        <div class="q-icon">?</div>
+                        <div class="q-text">
+                            <b>Подключить к дейли команды dev.</b>
+                            <span class="tag tag-q">Уточнить</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <hr class="sep">
+
+            <div class="subsection">
+                <div class="subsection-title">Confluence</div>
+                <div class="data-row">
+                    <span class="data-label">Сейчас:</span>
+                    <span>доступ к области <code>confluence supp</code></span>
+                </div>
+                <div class="q-block">
+                    <div class="q-title">Вопросы по Confluence</div>
+                    <div class="q-item">
+                        <div class="q-icon">?</div>
+                        <div class="q-text">
+                            <b>Предоставить доступ к областям Confluence dev.</b>
+                            <span class="tag tag-risk">Требует решения</span>
+                        </div>
+                    </div>
+                    <div class="q-item">
+                        <div class="q-icon">?</div>
+                        <div class="q-text">
+                            Желательно предоставить право заводить описания по блоку задач в области dev — чтобы оставлять там:
+                            <ul class="cf-list sub" style="margin-top:5px;">
+                                <li>документацию</li>
+                                <li>общие данные по эпикам и ходу работ (для видимости внутри компании, вместо Excel)</li>
+                            </ul>
+                            <span class="tag tag-q">Уточнить</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="action-block" style="margin-top:8px;">
+                    <div class="action-title">Что нужно сделать</div>
+                    <div class="action-item">
+                        <div class="action-num">1</div>
+                        <div>Перевести в <b>dev Jira доску</b>, убрать из supp</div>
+                    </div>
+                    <div class="action-item">
+                        <div class="action-num">2</div>
+                        <div>Подключить к <b>dev дейли</b></div>
+                    </div>
+                    <div class="action-item">
+                        <div class="action-num">3</div>
+                        <div>Открыть <b>Confluence dev</b> с правом публикации материалов</div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- ===== 4. РАБОЧЕЕ МЕСТО ===== -->
+    <div class="section" id="workplace">
+        <div class="section-head">
+            <div class="section-num">4</div>
+            <div class="section-title">Решение вопроса с рабочим местом</div>
+        </div>
+        <div class="section-body">
+
+            <div class="subsection">
+                <div class="subsection-title">Текущее состояние</div>
+                <div class="workplace-grid">
+                    <div class="wp-card">
+                        <div class="wlabel">Компьютер</div>
+                        <div class="wval"><code>DMSK5034</code></div>
+                    </div>
+                    <div class="wp-card">
+                        <div class="wlabel">Физическое расположение</div>
+                        <div class="wval">Башня на Набережной, корпус А, 3-й этаж</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="q-block">
+                <div class="q-title">Что требуется</div>
+                <div class="q-item">
+                    <div class="q-icon">?</div>
+                    <div class="q-text">
+                        <b>Новый компьютер</b> с переносом данных со старого, с увеличенным дисковым пространством,
+                        плюс <b>3 монитора 24"</b>.
+                        <span class="tag tag-risk">Требует решения</span>
+                    </div>
+                </div>
+                <div class="q-item">
+                    <div class="q-icon">?</div>
+                    <div class="q-text">
+                        Желательное размещение: <b>БЦ Лефорт</b>.
+                        <span class="tag tag-q">Уточнить</span>
+                    </div>
+                </div>
+                <div class="q-item">
+                    <div class="q-icon">?</div>
+                    <div class="q-text">
+                        <b>Сроки получения рабочего места</b> и порядок переезда —
+                        важно знать в какой день будет недоступен текущий рабочий компьютер.
+                        <span class="tag tag-q">Уточнить</span>
+                    </div>
+                </div>
+            </div>
+            <div class="action-block" style="margin-top:8px;">
+                <div class="action-title">Что нужно сделать</div>
+                <div class="action-item">
+                    <div class="action-num">1</div>
+                    <div>Оформить заявку на <b>новый ПК</b> с переносом данных и увеличенным диском</div>
+                </div>
+                <div class="action-item">
+                    <div class="action-num">2</div>
+                    <div>Согласовать <b>3 монитора 24"</b></div>
+                </div>
+                <div class="action-item">
+                    <div class="action-num">3</div>
+                    <div>Подтвердить <b>локацию (БЦ Лефорт)</b> и получить дату переезда</div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+</div>
+</body>
+</html>

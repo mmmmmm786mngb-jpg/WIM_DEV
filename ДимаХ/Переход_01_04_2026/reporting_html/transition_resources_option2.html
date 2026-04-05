@@ -1,0 +1,415 @@
+<!doctype html>
+<html lang="ru">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Протокол перехода supp -> dev</title>
+    <style>
+        :root {
+            --ok: #28a745;
+            --err: #dc3545;
+            --info: #17a2b8;
+            --dark: #0b1220;
+            --text: #202938;
+            --muted: #5f6b7a;
+            --line: #d9e2ef;
+            --paper: #ffffff;
+            --bg: #eef3f9;
+            --yellow: #fff4cc;
+            --blue: #eaf3ff;
+            --cyan: #e8fbff;
+            --violet: #f1e8ff;
+        }
+
+        body {
+            margin: 0;
+            font: 14px/1.5 Arial, sans-serif;
+            color: var(--text);
+            background: var(--bg);
+        }
+
+        .page {
+            max-width: 1280px;
+            margin: 20px auto;
+            padding: 0 16px 30px;
+        }
+
+        .panel {
+            background: var(--paper);
+            border: 1px solid var(--line);
+            border-radius: 10px;
+            padding: 16px;
+            margin-bottom: 14px;
+        }
+
+        h1, h2, h3 {
+            margin: 0 0 10px;
+            line-height: 1.25;
+        }
+
+        h1 { font-size: 23px; }
+        h2 { font-size: 19px; }
+        h3 { font-size: 16px; }
+
+        .subtitle {
+            color: var(--muted);
+            font-size: 13px;
+        }
+
+        .ribbon {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 10px;
+        }
+
+        .badge {
+            border-radius: 20px;
+            padding: 5px 10px;
+            font-size: 12px;
+            color: #fff;
+            font-weight: 700;
+        }
+        .b-ok { background: var(--ok); }
+        .b-risk { background: var(--err); }
+        .b-info { background: var(--info); }
+
+        .box-yellow, .box-blue, .box-cyan, .box-violet {
+            border: 1px solid var(--line);
+            border-radius: 8px;
+            padding: 10px;
+            margin: 8px 0;
+        }
+        .box-yellow { background: var(--yellow); }
+        .box-blue { background: var(--blue); }
+        .box-cyan { background: var(--cyan); }
+        .box-violet { background: var(--violet); }
+
+        .cols {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+            gap: 10px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 8px 0;
+            background: #fff;
+        }
+        th, td {
+            border: 1px solid var(--line);
+            padding: 8px;
+            text-align: left;
+            vertical-align: top;
+        }
+        th {
+            background: #f2f7ff;
+            font-size: 13px;
+        }
+
+        ul {
+            margin: 6px 0 6px 20px;
+            padding: 0;
+        }
+
+        .timeline {
+            border-left: 3px solid #9ab6de;
+            margin-left: 6px;
+            padding-left: 12px;
+        }
+        .timeline-item {
+            margin-bottom: 12px;
+        }
+        .timeline-item b {
+            color: var(--dark);
+        }
+
+        code, pre {
+            font-family: Consolas, "Courier New", monospace;
+            font-size: 12px;
+        }
+        pre {
+            background: #101826;
+            color: #dbe8ff;
+            border-radius: 8px;
+            padding: 12px;
+            overflow-x: auto;
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+    </style>
+</head>
+<body>
+    <div class="page">
+        <section class="panel">
+            <h1>Протокол ресурсного перехода из supp в dev</h1>
+            <div class="subtitle">
+                Рабочий документ для руководителя dev с фокусом на корректный перевод доступов, инфраструктуры и коммуникаций.
+            </div>
+            <div class="ribbon">
+                <span class="badge b-info">Переход сотрудника</span>
+                <span class="badge b-ok">Согласование ресурсов</span>
+                <span class="badge b-risk">Контроль рисков</span>
+            </div>
+        </section>
+
+        <section class="panel">
+            <h2>Контекст и роли</h2>
+            <div class="cols">
+                <div class="box-blue">
+                    <b>Сотрудник:</b> Чмыхалов Алексей<br>
+                    <b>Текущий отдел:</b> supp<br>
+                    <b>Целевой отдел:</b> dev
+                </div>
+                <div class="box-cyan">
+                    <b>Согласующие руководители:</b><br>
+                    Кирилл Иконников (supp)<br>
+                    Алексей Константинов (dev)
+                </div>
+                <div class="box-violet">
+                    <b>Куратор перехода:</b><br>
+                    Дмитрий Харитнов, директор ИТ
+                </div>
+            </div>
+            <div class="box-yellow">
+                <b>Цель:</b> зафиксировать все текущие ресурсы, определить необходимые действия для корректного перехода
+                и согласовать общие ресурсы между supp и dev.
+            </div>
+        </section>
+
+        <section class="panel">
+            <h2>Дорожная карта перехода</h2>
+            <div class="timeline">
+                <div class="timeline-item">
+                    <b>Этап 1. Инфраструктура баз</b><br>
+                    Подтвердить что остается в supp, что выделяется в dev, и какой контур нужен для нагрузочного тестирования.
+                </div>
+                <div class="timeline-item">
+                    <b>Этап 2. Доступы к хранилищам</b><br>
+                    Создать dev учетную запись и воспроизвести набор прав из текущей учетки supp.
+                </div>
+                <div class="timeline-item">
+                    <b>Этап 3. Коммуникации и задачи</b><br>
+                    Перевести в dev контуры Jira, Confluence и ежедневных синхронизаций.
+                </div>
+                <div class="timeline-item">
+                    <b>Этап 4. Рабочее место</b><br>
+                    Согласовать целевой комплект оборудования, локацию и план переезда.
+                </div>
+            </div>
+        </section>
+
+        <section class="panel">
+            <h2>Детали ресурсов и действий</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Категория</th>
+                        <th>Текущие ресурсы</th>
+                        <th>Что требуется сделать</th>
+                        <th>Общие ресурсы supp/dev</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Разработческие базы</td>
+                        <td>
+                            SQL: <code>SMSK02DB310U\DBMAM1C06</code><br>
+                            1С ПИФ: <code>Srvr="SMSK02MG138U:6541";Ref="AVC_REGR_CLEAN_PIF";</code><br>
+                            1С ДУ: <code>Srvr="SMSK02MG138U:6541";Ref="AVC_REGR_CLEAN_DU";</code><br>
+                            1С ФИН: <code>Srvr="SMSK02MG138U:6541";Ref="AVC_REGR_CLEAN_FIN";</code>
+                        </td>
+                        <td>
+                            Эти базы относятся к supp и подлежат передаче.<br>
+                            Для dev требуются аналогичные базы.
+                        </td>
+                        <td>Согласовать разделение и выделение dev контуров.</td>
+                    </tr>
+                    <tr>
+                        <td>Нагрузочные базы DR</td>
+                        <td>
+                            SQL: <code>SMSK02DB310U\DBMAM1C06</code><br>
+                            1С сервер: <code>SMSK02DB338\DBMIM12</code><br>
+                            ДУ: <code>Srvr="SMSK02MG138:8541";Ref="AVC_UAT_RDU_PERFTEST";</code>, sql <code>tmp_PerformanceTest_2</code><br>
+                            ПИФ: <code>Srvr="SMSK02MG138:8541";Ref="AVC_UAT_YPIF_PERFTEST";</code>, sql <code>tmp_PerformanceTest_3</code>
+                        </td>
+                        <td>
+                            Определить можно ли продолжать использование этих баз.<br>
+                            Если нет - заказать аналогичный dev контур нагрузочного тестирования.<br>
+                            Отдельно заказать связку база/сервер 1С для ФИН (ДУ 2.0).
+                        </td>
+                        <td>Да, требуется отдельное решение по совместному использованию.</td>
+                    </tr>
+                    <tr>
+                        <td>Хранилища</td>
+                        <td>
+                            Учетка: <code>supp_AChmykhalov</code><br>
+                            <code>tcp://smsk01ap263/du/vendor</code><br>
+                            <code>tcp://smsk01ap263/pif/vendor</code><br>
+                            <code>tcp://smsk01ap263/fin/vendor</code><br>
+                            <code>tcp://smsk01ap263/du/dev</code><br>
+                            <code>tcp://smsk01ap263/pif/dev</code><br>
+                            <code>tcp://smsk01ap263/fin/dev</code>
+                        </td>
+                        <td>
+                            Создать новую dev учетную запись и предоставить аналогичные доступы.
+                        </td>
+                        <td>Да, общие хранилища и права требуют двустороннего согласования.</td>
+                    </tr>
+                    <tr>
+                        <td>Коммуникации и задачи</td>
+                        <td>
+                            Jira доска: <code>https://jira/secure/RapidBoard.jspa?rapidView=308&amp;projectKey=IMAPPS&amp;quickFilter=2048</code><br>
+                            Confluence: доступ сейчас к области supp
+                        </td>
+                        <td>
+                            Добавить в dev доску, убрать из supp доски.<br>
+                            Подключить к дейли dev.<br>
+                            Открыть доступы к областям Confluence dev и правам на публикацию материалов.
+                        </td>
+                        <td>Да, требуется аккуратное переключение без потери видимости задач.</td>
+                    </tr>
+                    <tr>
+                        <td>Рабочее место</td>
+                        <td>
+                            ПК: <code>DMSK5034</code>, Башня на Набережной, корпус А, 3-й этаж
+                        </td>
+                        <td>
+                            Новый ПК, перенос данных, больше дискового пространства, 3 монитора 24".<br>
+                            Желательная локация: БЦ Лефорт.<br>
+                            Зафиксировать сроки и порядок переезда, включая день недоступности старого ПК.
+                        </td>
+                        <td>Требуется согласование с ИТ по сервисным срокам.</td>
+                    </tr>
+                </tbody>
+            </table>
+        </section>
+
+        <section class="panel">
+            <h2>Лист решений для согласования</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Вопрос</th>
+                        <th>Решение</th>
+                        <th>Кто согласует</th>
+                        <th>Кто выполняет</th>
+                        <th>Срок</th>
+                        <th>Статус</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Аналогичные dev базы вместо supp</td>
+                        <td>Выделить отдельные dev базы</td>
+                        <td>Иконников + Константинов</td>
+                        <td>Инфраструктура 1С</td>
+                        <td>Заполнить</td>
+                        <td>Открыто</td>
+                    </tr>
+                    <tr>
+                        <td>Использование DR нагрузочного контура</td>
+                        <td>Подтвердить совместный режим или создать отдельный dev контур</td>
+                        <td>Иконников + Константинов + Харитнов</td>
+                        <td>Инфраструктура 1С</td>
+                        <td>Заполнить</td>
+                        <td>Открыто</td>
+                    </tr>
+                    <tr>
+                        <td>Доп. связка для ФИН (ДУ 2.0)</td>
+                        <td>Оформить заявку на создание</td>
+                        <td>Константинов + Харитнов</td>
+                        <td>Инфраструктура 1С</td>
+                        <td>Заполнить</td>
+                        <td>Открыто</td>
+                    </tr>
+                    <tr>
+                        <td>Новая dev учетка к хранилищам</td>
+                        <td>Создать учетку и выдать права по аналогии</td>
+                        <td>Иконников + Константинов</td>
+                        <td>Администратор хранилищ</td>
+                        <td>Заполнить</td>
+                        <td>Открыто</td>
+                    </tr>
+                    <tr>
+                        <td>Перевод Jira/Confluence/дейли</td>
+                        <td>Переключить коммуникационный контур на dev</td>
+                        <td>Константинов</td>
+                        <td>Team Lead dev / Jira admin</td>
+                        <td>Заполнить</td>
+                        <td>Открыто</td>
+                    </tr>
+                    <tr>
+                        <td>Новое рабочее место и переезд</td>
+                        <td>Согласовать дату и порядок миграции</td>
+                        <td>Харитнов</td>
+                        <td>IT Service Desk</td>
+                        <td>Заполнить</td>
+                        <td>Открыто</td>
+                    </tr>
+                </tbody>
+            </table>
+        </section>
+
+        <section class="panel">
+            <h2>Приложение A. Полный исходный текст</h2>
+            <pre>Текущие ресурсы которыми я пользуюсь и вопросы по переходу из отдела в отдел:
+
+1. Базы
+Разработческие базы (в т.ч. для ИТ тестирования):
+sql сервер: SMSK02DB310U\DBMAM1C06
+1С сервер:
+ - ПИФ  Srvr="SMSK02MG138U:6541";Ref="AVC_REGR_CLEAN_PIF";
+ - ДУ   Srvr="SMSK02MG138U:6541";Ref="AVC_REGR_CLEAN_DU";
+ - ФИН  Srvr="SMSK02MG138U:6541";Ref="AVC_REGR_CLEAN_FIN";
+
+По разработческим базам вопросы:
+  - Эти базы принадлежать саппорту, их надо будет отдать, соотвественно мне необходимы аналогичные базы в среде dev
+
+Базы нагрузочного тестирования в среде DR - полная копия ПРОД среды
+sql сервер: SMSK02DB310U\DBMAM1C06
+1С сервер: SMSK02DB338\DBMIM12
+ - ДУ   Srvr="SMSK02MG138:8541";Ref="AVC_UAT_RDU_PERFTEST";   (sql база: tmp_PerformanceTest_2)
+ - ПИФ  Srvr="SMSK02MG138:8541";Ref="AVC_UAT_YPIF_PERFTEST";  (sql база: tmp_PerformanceTest_3)
+
+По базам нагрузочного тестирования вопросы:
+ - их можно будет и дельше мне использовать, либо они тоже остаются в поддержке ?
+   (если остаются - то надо заказать аналогичный контур для dev нагрузочного тестирования)
+ - необходимо заказать создание еще однйо связки база\сервер 1С  для ФИН (ДУ 2.0)
+
+2. Хранилища
+Учетная запись supp_AChmykhalov Для работы с хранилищами
+ДУ:     tcp://smsk01ap263/du/vendor
+ПИФ:    tcp://smsk01ap263/pif/vendor
+FIN:    tcp://smsk01ap263/fin/vendor
+ДУ:     tcp://smsk01ap263/du/dev
+ПИФ:    tcp://smsk01ap263/pif/dev
+FIN:    tcp://smsk01ap263/fin/dev
+
+Вопросы по учетной записи:
+ - Скорее всего необходимо создать новую учетную запись dev и предоставить ей аналогичный доступ для данных хранилищ
+
+3. Коммуникации, задачи
+ Канбан-доска задач: https://jira/secure/RapidBoard.jspa?rapidView=308&projectKey=IMAPPS&quickFilter=2048
+ Вопросы:
+  - необходимо добавить меня в доску задач dev, и соотвественно убрать меня из доски задач supp
+  - также подключить меня к дейли команды dev
+
+ Confluence - область: сейчас у меня доступ к confluence supp
+  - необходимо предоставить доступ к областям Confluence dev
+  - желательно в области confluence dev предоставить мне доступ на заведение описаний по моему блоку задач,
+    чтобы я мог оставлять там
+      - документацию
+      - общие данные по эпикам и ходу работ по эпикам (чтобы могли видеть другие пользователи компании, вместо Excel)
+
+4. Решение вопроса с рабочим местом
+ - Сейчас мой компьютер DMSK5034      расположен физически на 3-м этаже Башня на Набережной корпус А , 3 этаж.
+ - Желательно получить новый компьютер с переносом данных со старого, с увеличенным дисковым пространством,
+   также 3 24'' монитора.
+ - Желательно размещение БЦ Лефорт
+ - Интересуют приблизительные сроки получения рабочего места, а также порядок переезда (в какой день будет недоступен мой рабочий компьютер)</pre>
+        </section>
+    </div>
+</body>
+</html>
