@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IMAPPS-35039 — топ медленных блоков, замер 06.04.2026</title>
+    <style>
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background: #f1f5f9;
+            color: #0f172a;
+            font-size: 13px;
+        }
+        .wrap {
+            max-width: 1280px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .header {
+            background: linear-gradient(90deg, #1d4fa0, #6366f1);
+            color: #fff;
+            border-radius: 10px;
+            padding: 18px;
+            margin-bottom: 16px;
+        }
+        .header h1 {
+            margin: 0 0 10px 0;
+            font-size: 22px;
+            line-height: 1.3;
+        }
+        .header p {
+            margin: 0;
+            font-size: 13px;
+            line-height: 1.55;
+            opacity: 0.95;
+        }
+        .source-box {
+            background: #fff;
+            border: 1px solid #dbeafe;
+            border-radius: 10px;
+            padding: 12px 14px;
+            margin-bottom: 14px;
+            font-size: 12px;
+            color: #334155;
+        }
+        .source-box code {
+            font-size: 11px;
+            word-break: break-all;
+        }
+        .meta {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+            gap: 10px;
+            margin-bottom: 14px;
+        }
+        .meta-item {
+            background: #fff;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 10px 12px;
+        }
+        .meta-item .lbl {
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            color: #64748b;
+            margin-bottom: 4px;
+        }
+        .meta-item .val {
+            font-weight: 700;
+            font-size: 15px;
+            color: #0f766e;
+        }
+        .table-wrap {
+            background: #fff;
+            border: 1px solid #e2e8f0;
+            border-radius: 10px;
+            padding: 14px;
+            overflow-x: auto;
+        }
+        .table-wrap h2 {
+            margin: 0 0 12px 0;
+            font-size: 15px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 12px;
+        }
+        th, td {
+            border: 1px solid #e2e8f0;
+            padding: 8px 10px;
+            vertical-align: top;
+            text-align: left;
+        }
+        th {
+            background: #f8fafc;
+            font-weight: 700;
+            color: #334155;
+            white-space: nowrap;
+        }
+        td.num {
+            text-align: right;
+            font-variant-numeric: tabular-nums;
+            white-space: nowrap;
+        }
+        td.rank {
+            font-weight: 800;
+            text-align: center;
+            width: 44px;
+            background: #eef2ff;
+            color: #3730a3;
+        }
+        td.code {
+            font-family: Consolas, "Courier New", monospace;
+            font-size: 11.5px;
+            word-break: break-word;
+            max-width: 420px;
+        }
+        td.module {
+            font-size: 11.5px;
+            word-break: break-word;
+            max-width: 280px;
+        }
+        tbody tr:nth-child(even) {
+            background: #fafafa;
+        }
+        .note {
+            margin-top: 12px;
+            font-size: 11.5px;
+            color: #64748b;
+            line-height: 1.5;
+        }
+    </style>
+</head>
+<body>
+<div class="wrap">
+
+    <div class="header">
+        <h1>IMAPPS-35039 (в процессе): топ самых медленных блоков кода</h1>
+        <p>
+            Замер вечернего регламента в одном потоке на объеме 15&nbsp;000 договоров.
+            Цель задачи: изучить наиболее затратные по времени участки кода при расчете регламента.
+        </p>
+    </div>
+
+    <div class="source-box">
+        <b>Источник замеров (DOCX, 06.04.2026):</b><br>
+        <code>bases/Wim_Du/projects/IMAPPS-36018 Тестирование Регламентов 14 тыс. Договоров Розница ДУ/6 апреля_1поток_ТопМедленных.docx</code>
+    </div>
+
+    <div class="meta">
+        <div class="meta-item">
+            <div class="lbl">Условия</div>
+            <div class="val" style="font-size:13px">15 тыс. дог., 1 поток</div>
+        </div>
+        <div class="meta-item">
+            <div class="lbl">Старт</div>
+            <div class="val">6:01</div>
+        </div>
+        <div class="meta-item">
+            <div class="lbl">Финиш</div>
+            <div class="val">11:56</div>
+        </div>
+        <div class="meta-item">
+            <div class="lbl">Длительность</div>
+            <div class="val">5 ч 55 мин</div>
+        </div>
+    </div>
+
+    <div class="table-wrap">
+        <h2>Таблица замеров (топ строк по времени выполнения)</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>№</th>
+                    <th>Модуль / объект</th>
+                    <th>Строка</th>
+                    <th>Контекст (фрагмент кода)</th>
+                    <th>Вызовов</th>
+                    <th>Время, с</th>
+                    <th>Доля, %</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td class="rank">1</td>
+                    <td class="module">РегистрСведений.ЗначенияПараметровДоговораДУ.МодульМенеджера</td>
+                    <td class="num">73</td>
+                    <td class="code">Результат = Запрос.Выполнить();</td>
+                    <td class="num">131&nbsp;670</td>
+                    <td class="num">1&nbsp;171,558368</td>
+                    <td class="num">5,91</td>
+                </tr>
+                <tr>
+                    <td class="rank">2</td>
+                    <td class="module">Документ.РасчетСЧА_РСА.МодульОбъекта</td>
+                    <td class="num">154</td>
+                    <td class="code">Результат = Запрос.Выполнить();</td>
+                    <td class="num">14&nbsp;999</td>
+                    <td class="num">718,263072</td>
+                    <td class="num">3,62</td>
+                </tr>
+                <tr>
+                    <td class="rank">3</td>
+                    <td class="module">ОбщийМодуль.ОбщегоНазначенияДУПовтИсп.Модуль</td>
+                    <td class="num">130</td>
+                    <td class="code">Результат = Запрос.Выполнить();</td>
+                    <td class="num">129&nbsp;542</td>
+                    <td class="num">717,817123</td>
+                    <td class="num">3,62</td>
+                </tr>
+                <tr>
+                    <td class="rank">4</td>
+                    <td class="module">Документ.РасчетСЧА_РСА.МодульМенеджера</td>
+                    <td class="num">216</td>
+                    <td class="code">Результат = Запрос.Выполнить();</td>
+                    <td class="num">15&nbsp;005</td>
+                    <td class="num">694,776112</td>
+                    <td class="num">3,51</td>
+                </tr>
+                <tr>
+                    <td class="rank">5</td>
+                    <td class="module">Перечисление.МетодыРасчетаКотировок.МодульМенеджера</td>
+                    <td class="num">166</td>
+                    <td class="code">Результат = Запрос.Выполнить();</td>
+                    <td class="num">5&nbsp;406</td>
+                    <td class="num">605,135002</td>
+                    <td class="num">3,05</td>
+                </tr>
+                <tr>
+                    <td class="rank">6</td>
+                    <td class="module">ОбщийМодуль.ИсполняемыеПроцедурыЗакрытияПериода.Модуль</td>
+                    <td class="num">784</td>
+                    <td class="code">ДокументНКД.Записать(РежимЗаписиДокумента.Проведение);</td>
+                    <td class="num">12&nbsp;759</td>
+                    <td class="num">566,653265</td>
+                    <td class="num">2,86</td>
+                </tr>
+                <tr>
+                    <td class="rank">7</td>
+                    <td class="module">Документ.РасчетСЧА_РСА.МодульМенеджера</td>
+                    <td class="num">505</td>
+                    <td class="code">РезультатУУ = ЗапросУУ.Выполнить();</td>
+                    <td class="num">15&nbsp;005</td>
+                    <td class="num">541,924163</td>
+                    <td class="num">2,73</td>
+                </tr>
+                <tr>
+                    <td class="rank">8</td>
+                    <td class="module">Документ.НачислениеКупонногоДохода.МодульОбъекта</td>
+                    <td class="num">2&nbsp;005</td>
+                    <td class="code">Результат = Запрос.Выполнить().Выгрузить();</td>
+                    <td class="num">12&nbsp;757</td>
+                    <td class="num">533,377743</td>
+                    <td class="num">2,69</td>
+                </tr>
+                <tr>
+                    <td class="rank">9</td>
+                    <td class="module">Документ.УстановкаКотировокЦБ.МодульОбъекта</td>
+                    <td class="num">539</td>
+                    <td class="code">Запрос.Выполнить();</td>
+                    <td class="num">14&nbsp;095</td>
+                    <td class="num">523,235086</td>
+                    <td class="num">2,64</td>
+                </tr>
+                <tr>
+                    <td class="rank">10</td>
+                    <td class="module">ОбщийМодуль.ИсполняемыеПроцедурыЗакрытияПериода.Модуль</td>
+                    <td class="num">1&nbsp;430</td>
+                    <td class="code">ДокументПереоценки.Записать(РежимЗаписиДокумента.Проведение);</td>
+                    <td class="num">13&nbsp;858</td>
+                    <td class="num">515,053019</td>
+                    <td class="num">2,60</td>
+                </tr>
+                <tr>
+                    <td class="rank">11</td>
+                    <td class="module">ОбщийМодуль.ИсполняемыеПроцедурыЗакрытияПериода.Модуль</td>
+                    <td class="num">502</td>
+                    <td class="code">ДокОбъект.Записать(РежимЗаписиДокумента.Проведение);</td>
+                    <td class="num">13&nbsp;112</td>
+                    <td class="num">497,166406</td>
+                    <td class="num">2,51</td>
+                </tr>
+                <tr>
+                    <td class="rank">12</td>
+                    <td class="module">Документ.УстановкаКотировокЦБ.МодульОбъекта</td>
+                    <td class="num">391</td>
+                    <td class="code">Запрос.Выполнить();</td>
+                    <td class="num">14&nbsp;095</td>
+                    <td class="num">495,747723</td>
+                    <td class="num">2,50</td>
+                </tr>
+                <tr>
+                    <td class="rank">13</td>
+                    <td class="module">Документ.ДефолтноеСобытиеЭмитента.МодульМенеджера</td>
+                    <td class="num">85</td>
+                    <td class="code">Результат = Запрос.Выполнить().Выгрузить();</td>
+                    <td class="num">72&nbsp;755</td>
+                    <td class="num">492,354992</td>
+                    <td class="num">2,48</td>
+                </tr>
+                <tr>
+                    <td class="rank">14</td>
+                    <td class="module">Документ.ПереоценкаАктивов.МодульОбъекта</td>
+                    <td class="num">633</td>
+                    <td class="code">Результат = Запрос.Выполнить();</td>
+                    <td class="num">14&nbsp;999</td>
+                    <td class="num">463,641137</td>
+                    <td class="num">2,34</td>
+                </tr>
+                <tr>
+                    <td class="rank">15</td>
+                    <td class="module">Документ.ПереоценкаАктивов.МодульОбъекта</td>
+                    <td class="num">880</td>
+                    <td class="code">РезультатЗапроса = Запрос.Выполнить();</td>
+                    <td class="num">14&nbsp;999</td>
+                    <td class="num">435,208018</td>
+                    <td class="num">2,20</td>
+                </tr>
+                <tr>
+                    <td class="rank">16</td>
+                    <td class="module">Документ.УстановкаКотировокЦБ.МодульОбъекта</td>
+                    <td class="num">462</td>
+                    <td class="code">Запрос.Выполнить();</td>
+                    <td class="num">14&nbsp;095</td>
+                    <td class="num">427,043887</td>
+                    <td class="num">2,15</td>
+                </tr>
+                <tr>
+                    <td class="rank">17</td>
+                    <td class="module">ОбщийМодуль.ОбщегоНазначения.Модуль</td>
+                    <td class="num">2&nbsp;806</td>
+                    <td class="code">Выборка = Запрос.Выполнить().Выбрать();</td>
+                    <td class="num">395&nbsp;650</td>
+                    <td class="num">382,113054</td>
+                    <td class="num">1,93</td>
+                </tr>
+            </tbody>
+        </table>
+        <p class="note">
+            Числа в столбцах «Время» и «Доля» переданы как в файле-источнике (десятичный разделитель — запятая).
+            В DOCX данные набраны в виде абзацев с табуляцией; скриншот или вложенная графика в документе в HTML не переносились.
+        </p>
+    </div>
+
+</div>
+</body>
+</html>
