@@ -2,6 +2,7 @@
 
 Specifications and notes for this project.
 
+- [imdev8641_brief_development_tz.html](imdev8641_brief_development_tz.html) — краткое ТЗ на разработку (цели, границы, принципы, приёмка, свод по запросам BSL).
 - [work_plan_imdev8641.md](work_plan_imdev8641.md) — календарный план работ (анализ базы, разбор операций, код, тесты, расширение Аванкор).
 - [plan_reg_oper_du_group_closure_chain.md](plan_reg_oper_du_group_closure_chain.md) — аналитика цепочки `ПланРегламентныхОперацийДУ` и `ГрупповоеВыполнениеЗакрытияПериодов` (код базы WIM_FIn).
 - [imdev8641_development_brief.md](imdev8641_development_brief.md) — постановка на разработку (бизнес + технические вставки, пример запроса, критерии приёмки).
