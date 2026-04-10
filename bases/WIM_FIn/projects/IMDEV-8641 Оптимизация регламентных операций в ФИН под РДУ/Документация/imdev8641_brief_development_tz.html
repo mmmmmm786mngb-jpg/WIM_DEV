@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>IMDEV-8641 — краткое техническое задание на разработку</title>
     <style>
-        body { font-family: "Segoe UI", Tahoma, sans-serif; line-height: 1.45; max-width: 920px; margin: 0 auto; padding: 1.25rem 1.5rem; color: #222; }
+        body { font-family: "Segoe UI", Tahoma, sans-serif; line-height: 1.45; max-width: 980px; margin: 0 auto; padding: 1.25rem 1.5rem; color: #222; }
         header { border-bottom: 2px solid #333; margin-bottom: 1.5rem; padding-bottom: 0.75rem; }
         h1 { font-size: 1.35rem; margin: 0 0 0.35rem 0; }
         .meta { font-size: 0.9rem; color: #444; }
@@ -25,6 +25,49 @@
         .note { font-size: 0.88rem; color: #444; margin-top: 0.5rem; }
         code { font-family: Consolas, monospace; font-size: 0.86em; background: #f0f0f0; padding: 0.05rem 0.25rem; }
         .doc-ref { font-family: Consolas, monospace; font-size: 0.88rem; }
+        .flowchart-card {
+            margin: 1rem 0 1.25rem 0;
+            padding: 0;
+            border: 1px solid #c5d4e0;
+            border-radius: 10px;
+            background: linear-gradient(180deg, #fafcfe 0%, #f0f4f8 100%);
+            box-shadow: 0 4px 14px rgba(0, 40, 80, 0.08);
+            overflow: hidden;
+        }
+        .flowchart-card figcaption {
+            margin: 0;
+            padding: 0.65rem 1rem;
+            font-size: 0.92rem;
+            font-weight: 600;
+            color: #1a3a52;
+            background: #e8f1f8;
+            border-bottom: 1px solid #c5d4e0;
+        }
+        .flowchart-scroll {
+            overflow-x: auto;
+            overflow-y: hidden;
+            padding: 1rem 0.75rem 1.25rem;
+            -webkit-overflow-scrolling: touch;
+        }
+        .flowchart-scroll svg { display: block; margin: 0 auto; min-width: 640px; }
+        .flow-legend {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.75rem 1.25rem;
+            font-size: 0.82rem;
+            color: #444;
+            padding: 0.5rem 1rem 0.85rem;
+            border-top: 1px solid #dde8f0;
+            background: #fff;
+        }
+        .flow-legend span { display: inline-flex; align-items: center; gap: 0.35rem; }
+        .flow-legend i {
+            display: inline-block;
+            width: 14px;
+            height: 14px;
+            border-radius: 3px;
+            border: 1px solid rgba(0,0,0,0.12);
+        }
     </style>
 </head>
 <body>
@@ -42,6 +85,7 @@
         <li><a href="#s3">Условия включения оптимизации</a></li>
         <li><a href="#s4">Границы объёма</a></li>
         <li><a href="#s5">Принципы реализации</a></li>
+        <li><a href="#s5-flowchart">Блок-схема алгоритма фильтра плана</a></li>
         <li><a href="#s6">Связь с цепочкой исполнения</a></li>
         <li><a href="#s7">Реализованные запросы (черновик BSL)</a></li>
         <li><a href="#s8">Критерии приёмки</a></li>
@@ -97,6 +141,151 @@
         <li>Момент среза для запросов (<code>День</code> и при необходимости время группы): приоритет — колонка <code>ВремяРеглОпераций</code> строки плана; если в контексте доступен только календарный день — собрать момент по правилам раздела 5.1 постановки (<span class="doc-ref">imdev8641_development_brief.md</span>).</li>
         <li>Производительность: ранний выход при пустой константе пула; не обходить десятки тысяч портфелей по одному; шаги 1 и 2 — пакетно; шаг 3 — цикл по видам (их мало).</li>
     </ol>
+
+    <figure id="s5-flowchart" class="flowchart-card">
+        <figcaption>Блок-схема алгоритма фильтрации таблицы плана (шаги 1–3)</figcaption>
+        <div class="flowchart-scroll" role="img" aria-label="Блок-схема: от таблицы плана через проверки пула и регистра видов к корректировке Выполнять и выходу">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 900" width="720" height="900" font-family="Segoe UI, Tahoma, sans-serif" font-size="13px">
+                <defs>
+                    <linearGradient id="gStart" x1="0%" y1="0%" x2="0%" y2="100%">
+                        <stop offset="0%" style="stop-color:#e3f2fd"/>
+                        <stop offset="100%" style="stop-color:#bbdefb"/>
+                    </linearGradient>
+                    <linearGradient id="gProc" x1="0%" y1="0%" x2="0%" y2="100%">
+                        <stop offset="0%" style="stop-color:#fffde7"/>
+                        <stop offset="100%" style="stop-color:#fff9c4"/>
+                    </linearGradient>
+                    <linearGradient id="gDec" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" style="stop-color:#e8f5e9"/>
+                        <stop offset="100%" style="stop-color:#c8e6c9"/>
+                    </linearGradient>
+                    <linearGradient id="gExit" x1="0%" y1="0%" x2="0%" y2="100%">
+                        <stop offset="0%" style="stop-color:#ffebee"/>
+                        <stop offset="100%" style="stop-color:#ffcdd2"/>
+                    </linearGradient>
+                    <linearGradient id="gEnd" x1="0%" y1="0%" x2="0%" y2="100%">
+                        <stop offset="0%" style="stop-color:#e0f7fa"/>
+                        <stop offset="100%" style="stop-color:#b2ebf2"/>
+                    </linearGradient>
+                    <marker id="arrowHead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+                        <polygon points="0 0, 10 3.5, 0 7" fill="#455a64"/>
+                    </marker>
+                    <filter id="softShadow" x="-8%" y="-8%" width="116%" height="116%">
+                        <feDropShadow dx="0" dy="2" stdDeviation="2" flood-opacity="0.15"/>
+                    </filter>
+                </defs>
+
+                <rect x="0" y="0" width="720" height="900" fill="#fafbfc"/>
+
+                <!-- Start -->
+                <rect x="210" y="16" width="300" height="44" rx="10" fill="url(#gStart)" stroke="#1976d2" stroke-width="1.5" filter="url(#softShadow)"/>
+                <text x="360" y="34" text-anchor="middle" fill="#0d47a1" font-weight="600">Начало: таблица плана за день</text>
+                <text x="360" y="50" text-anchor="middle" fill="#1565c0" font-size="11px">после ПланРеглОпераций, до ПланРеглОперацийПоДням.Вставить</text>
+
+                <line x1="360" y1="60" x2="360" y2="78" stroke="#455a64" stroke-width="1.5" marker-end="url(#arrowHead)"/>
+
+                <!-- D1: constant -->
+                <path d="M 360 78 L 430 118 L 360 158 L 290 118 Z" fill="url(#gDec)" stroke="#2e7d32" stroke-width="1.5" filter="url(#softShadow)"/>
+                <text x="360" y="108" text-anchor="middle" fill="#1b5e20" font-size="12px">Константа</text>
+                <text x="360" y="124" text-anchor="middle" fill="#1b5e20" font-size="12px">ПулРозницаДУ</text>
+                <text x="360" y="140" text-anchor="middle" fill="#1b5e20" font-size="11px">заполнена?</text>
+
+                <line x1="290" y1="118" x2="118" y2="118" stroke="#455a64" stroke-width="1.5" marker-end="url(#arrowHead)"/>
+                <text x="200" y="108" text-anchor="middle" fill="#c62828" font-size="11px">Нет</text>
+                <rect x="8" y="88" width="110" height="60" rx="8" fill="url(#gExit)" stroke="#c62828" stroke-width="1.2"/>
+                <text x="63" y="115" text-anchor="middle" fill="#b71c1c" font-size="11px">План без</text>
+                <text x="63" y="130" text-anchor="middle" fill="#b71c1c" font-size="11px">изменений</text>
+
+                <line x1="360" y1="158" x2="360" y2="188" stroke="#455a64" stroke-width="1.5" marker-end="url(#arrowHead)"/>
+                <text x="378" y="178" fill="#2e7d32" font-size="11px">Да</text>
+
+                <!-- D2: pool -->
+                <path d="M 360 188 L 445 238 L 360 288 L 275 238 Z" fill="url(#gDec)" stroke="#2e7d32" stroke-width="1.5" filter="url(#softShadow)"/>
+                <text x="360" y="225" text-anchor="middle" fill="#1b5e20" font-size="11px">Все портфели плана:</text>
+                <text x="360" y="242" text-anchor="middle" fill="#1b5e20" font-size="11px">Пул = ПулРозницаДУ,</text>
+                <text x="360" y="258" text-anchor="middle" fill="#1b5e20" font-size="11px">без чужих пулов?</text>
+
+                <line x1="275" y1="238" x2="118" y2="238" stroke="#455a64" stroke-width="1.5" marker-end="url(#arrowHead)"/>
+                <text x="190" y="228" text-anchor="middle" fill="#c62828" font-size="11px">Нет</text>
+                <rect x="8" y="208" width="110" height="60" rx="8" fill="url(#gExit)" stroke="#c62828" stroke-width="1.2"/>
+                <text x="63" y="235" text-anchor="middle" fill="#b71c1c" font-size="11px">План без</text>
+                <text x="63" y="250" text-anchor="middle" fill="#b71c1c" font-size="11px">изменений</text>
+
+                <line x1="360" y1="288" x2="360" y2="318" stroke="#455a64" stroke-width="1.5" marker-end="url(#arrowHead)"/>
+                <text x="378" y="308" fill="#2e7d32" font-size="11px">Да</text>
+
+                <!-- Step 2 box -->
+                <rect x="175" y="318" width="370" height="52" rx="10" fill="url(#gProc)" stroke="#f9a825" stroke-width="1.5" filter="url(#softShadow)"/>
+                <text x="360" y="342" text-anchor="middle" fill="#5d4037" font-weight="600">Шаг 2: свод уникальных ВидОперации</text>
+                <text x="360" y="358" text-anchor="middle" fill="#6d4c41" font-size="11px">только строки, где Выполнять &lt;&gt; 0</text>
+
+                <line x1="360" y1="370" x2="360" y2="398" stroke="#455a64" stroke-width="1.5" marker-end="url(#arrowHead)"/>
+
+                <!-- D3: more kinds -->
+                <path d="M 360 398 L 430 438 L 360 478 L 290 438 Z" fill="url(#gDec)" stroke="#00838f" stroke-width="1.5" filter="url(#softShadow)"/>
+                <text x="360" y="432" text-anchor="middle" fill="#006064" font-size="12px">Есть следующий</text>
+                <text x="360" y="448" text-anchor="middle" fill="#006064" font-size="12px">вид из свода?</text>
+
+                <line x1="360" y1="478" x2="360" y2="508" stroke="#455a64" stroke-width="1.5" marker-end="url(#arrowHead)"/>
+                <text x="378" y="498" fill="#2e7d32" font-size="11px">Да</text>
+
+                <line x1="290" y1="438" x2="130" y2="438" stroke="#455a64" stroke-width="1.5" marker-end="url(#arrowHead)"/>
+                <text x="205" y="428" text-anchor="middle" fill="#1565c0" font-size="11px">Нет</text>
+
+                <rect x="8" y="408" width="122" height="60" rx="8" fill="url(#gEnd)" stroke="#00838f" stroke-width="1.2"/>
+                <text x="69" y="432" text-anchor="middle" fill="#006064" font-size="11px">Конец:</text>
+                <text x="69" y="448" text-anchor="middle" fill="#006064" font-size="11px">план готов</text>
+
+                <!-- Collect portfolios -->
+                <rect x="195" y="508" width="330" height="44" rx="8" fill="url(#gProc)" stroke="#f9a825" stroke-width="1.3" filter="url(#softShadow)"/>
+                <text x="360" y="528" text-anchor="middle" fill="#5d4037" font-weight="600">Собрать МассивПортфелей по виду</text>
+                <text x="360" y="542" text-anchor="middle" fill="#6d4c41" font-size="11px">(Выполнять &lt;&gt; 0)</text>
+
+                <line x1="360" y1="552" x2="360" y2="580" stroke="#455a64" stroke-width="1.5" marker-end="url(#arrowHead)"/>
+
+                <!-- D4: in register -->
+                <path d="M 360 580 L 448 630 L 360 680 L 272 630 Z" fill="url(#gDec)" stroke="#6a1b9a" stroke-width="1.5" filter="url(#softShadow)"/>
+                <text x="360" y="618" text-anchor="middle" fill="#4a148c" font-size="11px">Вид в РС</text>
+                <text x="360" y="634" text-anchor="middle" fill="#4a148c" font-size="10px">ВидыОптимизируемых...</text>
+                <text x="360" y="650" text-anchor="middle" fill="#4a148c" font-size="11px">?</text>
+
+                <line x1="272" y1="630" x2="360" y2="398" stroke="#78909c" stroke-width="1.5" stroke-dasharray="6 4" marker-end="url(#arrowHead)"/>
+                <text x="280" y="500" fill="#546e7a" font-size="10px" transform="rotate(-58 280 500)">Нет, следующий вид</text>
+
+                <line x1="360" y1="680" x2="360" y2="696" stroke="#455a64" stroke-width="1.5" marker-end="url(#arrowHead)"/>
+                <text x="378" y="692" fill="#2e7d32" font-size="11px">Да</text>
+
+                <rect x="165" y="696" width="390" height="34" rx="6" fill="#f3e5f5" stroke="#7b1fa2" stroke-width="1.2" filter="url(#softShadow)"/>
+                <text x="360" y="717" text-anchor="middle" fill="#4a148c" font-size="11px">ПолучитьДанныеОптимизацииПланаПоВидуОперации (вызов из ветки «Да»)</text>
+
+                <line x1="360" y1="730" x2="360" y2="748" stroke="#455a64" stroke-width="1.5" marker-end="url(#arrowHead)"/>
+
+                <!-- Get portfolios function -->
+                <rect x="155" y="748" width="410" height="44" rx="8" fill="#fff3e0" stroke="#ef6c00" stroke-width="1.4" filter="url(#softShadow)"/>
+                <text x="360" y="768" text-anchor="middle" fill="#e65100" font-weight="600">ПолучитьПортфелиДляСохраненияВыполненияВПлане</text>
+                <text x="360" y="782" text-anchor="middle" fill="#bf360c" font-size="11px">массив «оставить Выполнять = 1» (может быть пустым)</text>
+
+                <line x1="360" y1="792" x2="360" y2="812" stroke="#455a64" stroke-width="1.5" marker-end="url(#arrowHead)"/>
+
+                <!-- Apply -->
+                <rect x="120" y="812" width="480" height="48" rx="10" fill="url(#gProc)" stroke="#f9a825" stroke-width="1.5" filter="url(#softShadow)"/>
+                <text x="360" y="834" text-anchor="middle" fill="#5d4037" font-weight="600">По строкам плана этого вида:</text>
+                <text x="360" y="850" text-anchor="middle" fill="#6d4c41" font-size="11px">если Портфель не в массиве ответа — Выполнять := 0</text>
+
+                <polyline points="360,860 360,888 698,888 698,438 432,438" fill="none" stroke="#546e7a" stroke-width="1.5" stroke-dasharray="6 4" marker-end="url(#arrowHead)"/>
+                <text x="708" y="680" text-anchor="start" fill="#546e7a" font-size="11px">следующий</text>
+                <text x="708" y="696" text-anchor="start" fill="#546e7a" font-size="11px">вид из свода</text>
+            </svg>
+        </div>
+        <div class="flow-legend">
+            <span><i style="background:linear-gradient(180deg,#e3f2fd,#bbdefb)"></i> начало / ввод данных</span>
+            <span><i style="background:linear-gradient(180deg,#e8f5e9,#c8e6c9)"></i> условие (решение)</span>
+            <span><i style="background:linear-gradient(180deg,#fffde7,#fff9c4)"></i> действие / обработка</span>
+            <span><i style="background:linear-gradient(180deg,#ffebee,#ffcdd2)"></i> ранний выход без изменений</span>
+            <span><i style="background:linear-gradient(180deg,#e0f7fa,#b2ebf2)"></i> нормальное завершение цикла</span>
+        </div>
+        <p class="note" style="margin:0;padding:0 1rem 0.85rem;">Текстовая копия и вариант в Mermaid: файл <span class="doc-ref">filter_plan_regl_operations_table_integration.md</span> (папка <code>Документация</code>).</p>
+    </figure>
 </section>
 
 <section id="s6">
@@ -195,7 +384,7 @@
         <li>work_plan_imdev8641_jira.txt</li>
         <li>imdev8641_brief_development_tz.html (настоящий документ)</li>
     </ul>
-    <p>Корень проекта IMDEV-8641: <span class="doc-ref">ГлобальнаяЛогика</span>, <span class="doc-ref">ПеречеьВидовОпераций</span>, <span class="doc-ref">Дорабоки_8641.txt</span>. Папка <code>Скрипты/bsl</code>: <span class="doc-ref">get_portfolios_for_plan_execution.bsl</span>. Блок-схема алгоритма фильтра в формате Mermaid: <span class="doc-ref">filter_plan_regl_operations_table_integration.md</span>.</p>
+    <p>Корень проекта IMDEV-8641: <span class="doc-ref">ГлобальнаяЛогика</span>, <span class="doc-ref">ПеречеьВидовОпераций</span>, <span class="doc-ref">Дорабоки_8641.txt</span>. Папка <code>Скрипты/bsl</code>: <span class="doc-ref">get_portfolios_for_plan_execution.bsl</span>. Блок-схема алгоритма фильтра: раздел 5 настоящего HTML (SVG) и вариант в Mermaid в файле <span class="doc-ref">filter_plan_regl_operations_table_integration.md</span>.</p>
 </section>
 
 </main>
