@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>IMDEV-8641 — окончательное техническое задание на доработку</title>
+    <style>
+        body { font-family: "Segoe UI", Tahoma, sans-serif; line-height: 1.45; max-width: 980px; margin: 0 auto; padding: 1.25rem 1.5rem; color: #222; }
+        header { border-bottom: 2px solid #333; margin-bottom: 1.5rem; padding-bottom: 0.75rem; }
+        h1 { font-size: 1.35rem; margin: 0 0 0.35rem 0; }
+        .meta { font-size: 0.9rem; color: #444; }
+        nav { background: #f4f6f8; padding: 0.75rem 1rem; margin-bottom: 1.5rem; border-radius: 4px; }
+        nav ol { margin: 0; padding-left: 1.25rem; }
+        nav a { color: #0b5cab; text-decoration: none; }
+        nav a:hover { text-decoration: underline; }
+        section { margin-bottom: 1.75rem; }
+        h2 { font-size: 1.1rem; margin-top: 0; border-left: 4px solid #17a2b8; padding-left: 0.5rem; }
+        h3 { font-size: 1rem; margin: 1rem 0 0.5rem 0; }
+        ul, ol { margin: 0.35rem 0; padding-left: 1.25rem; }
+        table { width: 100%; border-collapse: collapse; font-size: 0.88rem; margin: 0.5rem 0; }
+        th, td { border: 1px solid #ccc; padding: 0.4rem 0.5rem; text-align: left; vertical-align: top; }
+        th { background: #e9ecef; }
+        .tag-in { color: #28a745; font-weight: 600; }
+        .tag-out { color: #dc3545; font-weight: 600; }
+        .note { font-size: 0.88rem; color: #444; margin-top: 0.5rem; }
+        code { font-family: Consolas, monospace; font-size: 0.86em; background: #f0f0f0; padding: 0.05rem 0.25rem; }
+        .doc-ref { font-family: Consolas, monospace; font-size: 0.88rem; }
+        pre.bsl { font-family: Consolas, monospace; font-size: 0.82rem; background: #f8f9fa; border: 1px solid #dee2e6; padding: 0.65rem 0.75rem; overflow-x: auto; white-space: pre-wrap; }
+        .flowchart-card {
+            margin: 1rem 0 1.25rem 0;
+            padding: 0;
+            border: 1px solid #c5d4e0;
+            border-radius: 10px;
+            background: linear-gradient(180deg, #fafcfe 0%, #f0f4f8 100%);
+            box-shadow: 0 4px 14px rgba(0, 40, 80, 0.08);
+            overflow: hidden;
+        }
+        .flowchart-card figcaption {
+            margin: 0;
+            padding: 0.65rem 1rem;
+            font-size: 0.92rem;
+            font-weight: 600;
+            color: #1a3a52;
+            background: #e8f1f8;
+            border-bottom: 1px solid #c5d4e0;
+        }
+        .flowchart-scroll {
+            overflow-x: hidden;
+            overflow-y: auto;
+            max-height: 78vh;
+            padding: 0.65rem 0.4rem 0.85rem;
+            -webkit-overflow-scrolling: touch;
+        }
+        .flowchart-scroll svg {
+            display: block;
+            margin: 0 auto;
+            width: 100%;
+            max-width: 100%;
+            height: auto;
+            min-width: 0;
+        }
+        .flow-legend {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.75rem 1.25rem;
+            font-size: 0.82rem;
+            color: #444;
+            padding: 0.5rem 1rem 0.85rem;
+            border-top: 1px solid #dde8f0;
+            background: #fff;
+        }
+        .flow-legend span { display: inline-flex; align-items: center; gap: 0.35rem; }
+        .flow-legend i {
+            display: inline-block;
+            width: 14px;
+            height: 14px;
+            border-radius: 3px;
+            border: 1px solid rgba(0,0,0,0.12);
+        }
+    </style>
+</head>
+<body>
+
+<header>
+    <h1>IMDEV-8641 — окончательное техническое задание на доработку</h1>
+    <p class="meta">Целевая конфигурация: WIM_FIn. Расширение: RduPF. Версия текста: 11.04.2026. Кодировка: UTF-8.</p>
+    <p class="meta">Назначение: зафиксировать уже выполненные шаги, нормативный алгоритм реализации модуля менеджера нового РС и связку с перехватом; полные тексты SQL в BSL не дублируются (имена файлов в пакете проекта, без URL и путей к файловой системе).</p>
+</header>
+
+<nav aria-label="Оглавление">
+    <ol>
+        <li><a href="#s1">Статус: что уже сделано</a></li>
+        <li><a href="#s2">Нормативный алгоритм (источник)</a></li>
+        <li><a href="#s3">Цели и границы</a></li>
+        <li><a href="#s4">Метаданные расширения (к добавлению)</a></li>
+        <li><a href="#s5">Модуль менеджера РС: состав и перенос кода</a></li>
+        <li><a href="#s6">Процедура фильтра плана (пошагово)</a></li>
+        <li><a href="#s6-flowchart">Блок-схема окончательного алгоритма</a></li>
+        <li><a href="#s7">Связь с перехватом в RduPF</a></li>
+        <li><a href="#s8">Черновик запросов и ветвление по видам</a></li>
+        <li><a href="#s9">Критерии приёмки</a></li>
+        <li><a href="#s10">Смежные материалы (имена файлов)</a></li>
+    </ol>
+</nav>
+
+<main>
+
+<section id="s1">
+    <h2>1. Статус: что уже сделано</h2>
+    <ul>
+        <li><strong>Расширение конфигурации RduPF</strong> (XML-исходники в каталоге <code>RduPF</code>, префикс <code>RduPF_</code>, совместимость с базой по правилам проекта).</li>
+        <li><strong>Заимствована</strong> обработка <code>ГрупповоеВыполнениеЗакрытияПериодов</code>; в модуле объекта оформлен перехват <strong>&ИзменениеИКонтроль</strong> процедуры <code>ВыполнитьМногопоточноеЗакрытиеПериодовПортфелей</code> с полным телом типовой процедуры и маркерами <code>#Вставка</code> / <code>#КонецВставки</code> между вызовом <code>РегистрыСведений.НастройкиЗакрытияПериода.ПланРеглОпераций</code> и <code>ПланРеглОперацийПоДням.Вставить</code>.</li>
+        <li><strong>Бинарный артефакт</strong> для поставки и проверки в ИБ: файл <span class="doc-ref">RduPF.cfe</span> (в каталоге <code>Расширения</code> рядом с папкой <code>RduPF</code>); после загрузки XML в базу выполняется выгрузка расширения в этот файл (см. <span class="doc-ref">README.md</span> внутри <code>RduPF</code>).</li>
+        <li><strong>Черновик BSL</strong> с пакетными запросами и функцией <code>ПолучитьПортфелиДляСохраненияВыполненияВПлане</code>: файл <span class="doc-ref">get_portfolios_for_plan_execution.bsl</span> (папка <code>Скрипты/bsl</code>).</li>
+    </ul>
+    <p class="note">Контекст колонок таблицы плана (состав полей после <code>ПланРеглОпераций</code>) и цепочка исполнения: <span class="doc-ref">filter_plan_regl_operations_table_integration.md</span>, <span class="doc-ref">imdev8641_development_brief.md</span>.</p>
+</section>
+
+<section id="s2">
+    <h2>2. Нормативный алгоритм (источник)</h2>
+    <p>Описание разработки модуля менеджера нового регистра сведений и процедуры фильтра плана в настоящем документе приведено <strong>в соответствии</strong> с файлом <span class="doc-ref">ТЗ_на_модульМенеджера_новогоРС_ВидыОптимизируемыхРегламентныхОперацийДУ .txt</span> (в корне проекта IMDEV-8641; в имени файла перед расширением допускается пробел). Отличия от раннего краткого ТЗ: в окончательном варианте свод строк по видам строится через временные таблицы запроса и соединение с РС в запросе; итоговая корректировка <code>Выполнять</code> выполняется одним пакетным запросом с левым соединением к ВТ портфелей, возвращённых функцией отбора портфелей; отдельная функция вида «есть ли вид в РС» в тексте нормативного файла не выделяется (роль РС выполняет соединение на шаге подготовки свода).</p>
+</section>
+
+<section id="s3">
+    <h2>3. Цели и границы</h2>
+    <h3>3.1. Цели</h3>
+    <ul>
+        <li>Ускорить массовое закрытие в сценарии «розница ДУ / РДУ» за счёт снятия признака выполнения (<code>Выполнять</code> в таблице плана как число 0/1) без удаления строк.</li>
+        <li>Перечень видов операций, для которых допускается оптимизация, вести в РС <code>ВидыОптимизируемыхРегламентныхОперацийДУ</code>.</li>
+        <li>Условие «только пул розницы ДУ»: константа <code>ПулРозницаДУ</code> и однородность портфелей в таблице плана за день.</li>
+    </ul>
+    <h3>3.2. Границы</h3>
+    <ul>
+        <li><span class="tag-in">В объём:</span> константа и РС в расширении; модуль менеджера РС; экспортная процедура фильтра; вызов из маркера <code>#Вставка</code>; перенос блока из <span class="doc-ref">get_portfolios_for_plan_execution.bsl</span>; первичное наполнение РС (согласовать с перечнем видов в материалах проекта).</li>
+        <li><span class="tag-out">Вне объёма:</span> прямое изменение типовой конфигурации; однопоточная ветка без кэша <code>ПланРеглОперацийПоДням</code> (см. <span class="doc-ref">filter_plan_regl_operations_table_integration.md</span>).</li>
+    </ul>
+</section>
+
+<section id="s4">
+    <h2>4. Метаданные расширения (к добавлению)</h2>
+    <ol>
+        <li><strong>Константа</strong> <code>ПулРозницаДУ</code> — тип ссылки на справочник <code>Пул</code> (точное имя типа и квалификаторы сверить с выгрузкой базовой конфигурации WIM_FIn).</li>
+        <li><strong>Регистр сведений</strong> <code>ВидыОптимизируемыхРегламентныхОперацийДУ</code> с измерением <strong>ВидОперации</strong> типа <code>СправочникСсылка.ВидыОперацийЗакрытияПериода</code> (записи только на элементы, не на группы; правила записи согласовать с владельцем метаданных).</li>
+    </ol>
+    <p class="note">ИБ для сборки и проверки: строка подключения с <code>Srvr="localhost"</code> и <code>Ref="WIM_FIN"</code> (как в нормативном файле алгоритма).</p>
+</section>
+
+<section id="s5">
+    <h2>5. Модуль менеджера РС: состав и перенос кода</h2>
+    <h3>5.1. Блок из черновика</h3>
+    <p>В модуль менеджера регистра <code>ВидыОптимизируемыхРегламентныхОперацийДУ</code> переносится код из файла <span class="doc-ref">get_portfolios_for_plan_execution.bsl</span>: вспомогательные функции с текстами запросов, обёртка <code>ПолучитьПортфелиДляСохраненияВыполненияВПлане(МассивПортфелей, День, ВидОперации) Экспорт</code> и ветвление по предопределённым видам операций. При переносе сверить предопределённые ссылки с фактической базой.</p>
+    <h3>5.2. Новая экспортная процедура фильтра</h3>
+    <p>Разместить <strong>новую экспортную процедуру</strong> (имя согласовать с префиксом расширения или принятым в команде стилем), вызываемую из места перехвата (между <code>#Вставка</code> и <code>#КонецВставки</code>) в <code>ВыполнитьМногопоточноеЗакрытиеПериодовПортфелей</code>.</p>
+    <table>
+        <thead>
+            <tr><th>Параметр</th><th>Смысл</th></tr>
+        </thead>
+        <tbody>
+            <tr><td><code>День</code></td><td>Дата дня плана в цикле (тот же смысл, что у переменной <code>День</code> в типовой процедуре до вставки в соответствие).</td></tr>
+            <tr><td><code>тПланРеглОперацийПоДням</code></td><td><code>ТаблицаЗначений</code> результата <code>ПланРеглОпераций</code> на этот день; процедура может изменять только колонку <code>Выполнять</code>.</td></tr>
+        </tbody>
+    </table>
+    <p>Состав колонок результата <code>ПланРеглОпераций</code> для ориентира (нормативный файл): <code>Выполнять</code>, <code>Портфель</code>, <code>ВидОперации</code>, <code>ВремяРеглОпераций</code>, <code>Родитель</code>.</p>
+</section>
+
+<section id="s6">
+    <h2>6. Процедура фильтра плана (пошагово по нормативному алгоритму)</h2>
+
+    <h3>6.1. ПРОВЕРКА 1</h3>
+    <p>Сразу в начале процедуры: заполнена ли константа <code>ПулРозницаДУ</code>? Если <strong>нет</strong> — <strong>выход</strong> без изменений <code>тПланРеглОперацийПоДням</code>.</p>
+
+    <h3>6.2. ПРОВЕРКА 2</h3>
+    <p>У всех строк таблицы <code>тПланРеглОперацийПоДням</code> значение <code>Портфель.Пул</code> должно быть <strong>строго равно</strong> значению константы <code>ПулРозницаДУ</code>. Если условие не выполняется — <strong>выход</strong> без изменений. Рекомендация по реализации: выполнить проверку <strong>запросом</strong> к временной таблице, полученной помещением плана (минимизировать обращения к реквизитам ссылок в цикле на стороне встроенного языка).</p>
+
+    <h3>6.3. Подготовка данных в запросе (после успешных проверок)</h3>
+    <ol>
+        <li>Поместить <code>тПланРеглОперацийПоДням</code> во временную таблицу запроса (пять полей плана).</li>
+        <li>Выбрать во вторую временную таблицу строки с <code>Выполнять = 1</code> (в нормативном тексте указано «Выполнить = 1»; в конфигурации колонка плана — <code>Выполнять</code>, тип число 0/1; при реализации использовать фактическое имя и согласованное сравнение с ненулём).</li>
+        <li>Соединить с регистром <code>ВидыОптимизируемыхРегламентныхОперацийДУ</code> по <code>ВидОперации</code> (остаются только строки плана по видам, участвующим в оптимизации).</li>
+        <li>В отдельной временной таблице сгруппировать по <code>ВидОперации</code>, <code>ВремяРеглОпераций</code>, <code>Родитель</code> и выгрузить результат во вспомогательную <code>ТаблицаЗначений</code> (далее «ТЗ свода»).</li>
+    </ol>
+
+    <h3>6.4. Цикл по ТЗ свода</h3>
+    <p>Для каждой строки свода:</p>
+    <ul>
+        <li>По отбору <code>ВидОперации</code>, <code>ВремяРеглОпераций</code>, <code>Родитель</code> получить массив портфелей из плана (запросом или <code>НайтиСтроки</code> по <code>тПланРеглОперацийПоДням</code> — на усмотрение разработчика при сохранении эквивалентности результата).</li>
+        <li>Добавить в строку свода колонку <code>МассивПортфелей</code> и записать туда полученный массив.</li>
+        <li>Добавить колонку <code>День</code> в строку свода и вычислить по правилу из нормативного файла (дата-время момента для вызова функции отбора портфелей):</li>
+    </ul>
+    <pre class="bsl">Если ЗначениеЗаполнено(СтрокаТЗ.Родитель) Тогда
+    СтрокаТЗ.День = Дата(Формат(День, "ДФ=""ггггММдд""") + Формат(СтрокаТЗ.Родитель.ВремяРеглОпераций,"ДФ=""ЧЧммсс"""));
+Иначе
+    СтрокаТЗ.День = Дата(Формат(День, "ДФ=""ггггММдд""") + Формат(ПолныеПрава.ОкончаниеРабочегоДня(),"ДФ=""ЧЧммсс"""));
+КонецЕсли;</pre>
+    <p>Далее для строки свода вызвать <code>ПолучитьПортфелиДляСохраненияВыполненияВПлане(МассивПортфелей, День, ВидОперации) Экспорт</code>. На выходе функции возможны три случая (для понимания последующего запроса): тот же состав портфелей; пустой массив; подмножество входного массива.</p>
+
+    <h3>6.5. Пакетный запрос корректировки <code>Выполнять</code> (на одну итерацию цикла по строке свода)</h3>
+    <p>Выполнить запрос, в котором:</p>
+    <ol>
+        <li>Временной таблицей в начале помещается актуальная <code>тПланРеглОперацийПоДням</code> (пять полей).</li>
+        <li>В следующей ВТ (<code>ВТ_ТаблицаПлана1</code>) выбрать все поля плана и добавить поле-признак «потенциально изменяемая строка» для текущего шага цикла: в нормативном тексте указано как сравнение с параметром <code>&amp;ВидОперации</code> с именем колонки <code>ПотенциальноИзменяемаяСтрока</code> (реализовать как булево условие «строка относится к обрабатываемому в этой итерации виду операции»).</li>
+        <li>Построить <code>ВТ_Портфели</code> из справочника <code>Портфели</code> с отбором по входящему массиву портфелей, возвращённому функцией <code>ПолучитьПортфелиДляСохраненияВыполненияВПлане</code> (портфели, для которых выполнение в плане <strong>сохраняется</strong>).</li>
+        <li>Построить <code>ВТ_ТаблицаПлана2</code>: соединение строк <code>ВТ_ТаблицаПлана1</code> с <code>ВТ_Портфели</code> по <code>Портфель</code> типа <strong>ЛЕВОЕ</strong>. Поле <code>Выполнять</code> заменить выражением:
+            <br><code>ВЫБОР КОГДА ВТ_ТаблицаПлана1.Выполнять = 1 И ВТ_ТаблицаПлана1.ПотенциальноИзменяемаяСтрока И ВТ_Портфели.Ссылка ЕСТЬ NULL ТОГДА 0 ИНАЧЕ ВТ_ТаблицаПлана1.Выполнять КОНЕЦ</code>
+        </li>
+        <li>Результат запроса выгрузить в <code>тПланРеглОперацийПоДням</code>, <strong>заменив</strong> таблицу новой версией (отличаться по смыслу могут только значения колонки <code>Выполнять</code>).</li>
+    </ol>
+    <p class="note">Цикл по строкам ТЗ свода повторяется; на каждой итерации таблица плана пересобирается из результата запроса (кумулятивное ужесточение <code>Выполнять</code> по видам из свода). Порядок обхода строк свода должен быть согласован с отсутствием взаимного пересечения изменений по одной и той же строке плана в разных итерациях (при группировке по виду, времени и родителю строки свода не дублируют один и тот же <code>ВидОперации</code> с разными ключами, если типовая таблица это гарантирует).</p>
+</section>
+
+<section id="s6-flowchart">
+    <h2>7. Блок-схема окончательного алгоритма (флипчарт)</h2>
+    <figure class="flowchart-card">
+        <figcaption>Детальная блок-схема: точки встраивания (модуль объекта обработки и модуль менеджера РС), регистр ВидыОптимизируемыхРегламентныхОперацийДУ, алгоритм до Вставить; масштаб по ширине страницы</figcaption>
+        <div class="flowchart-scroll" role="img" aria-label="Схема: встраивание в ГрупповоеВыполнениеЗакрытияПериодов, регистр ВидыОптимизируемыхРегламентныхОперацийДУ, фильтр плана">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 680 1588" preserveAspectRatio="xMidYMin meet" font-family="Segoe UI, Tahoma, sans-serif" font-size="10px">
+                <defs>
+                    <linearGradient id="fcGStart" x1="0%" y1="0%" x2="0%" y2="100%">
+                        <stop offset="0%" style="stop-color:#e3f2fd"/><stop offset="100%" style="stop-color:#bbdefb"/>
+                    </linearGradient>
+                    <linearGradient id="fcGAct" x1="0%" y1="0%" x2="0%" y2="100%">
+                        <stop offset="0%" style="stop-color:#fffde7"/><stop offset="100%" style="stop-color:#fff9c4"/>
+                    </linearGradient>
+                    <linearGradient id="fcGDec" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" style="stop-color:#e8f5e9"/><stop offset="100%" style="stop-color:#c8e6c9"/>
+                    </linearGradient>
+                    <linearGradient id="fcGExit" x1="0%" y1="0%" x2="0%" y2="100%">
+                        <stop offset="0%" style="stop-color:#ffebee"/><stop offset="100%" style="stop-color:#ffcdd2"/>
+                    </linearGradient>
+                    <linearGradient id="fcGSql" x1="0%" y1="0%" x2="0%" y2="100%">
+                        <stop offset="0%" style="stop-color:#ede7f6"/><stop offset="100%" style="stop-color:#d1c4e9"/>
+                    </linearGradient>
+                    <linearGradient id="fcGCall" x1="0%" y1="0%" x2="0%" y2="100%">
+                        <stop offset="0%" style="stop-color:#fff3e0"/><stop offset="100%" style="stop-color:#ffe0b2"/>
+                    </linearGradient>
+                    <marker id="fcAh" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+                        <polygon points="0 0, 8 3, 0 6" fill="#455a64"/>
+                    </marker>
+                    <filter id="fcSh" x="-5%" y="-5%" width="110%" height="110%">
+                        <feDropShadow dx="0" dy="1" stdDeviation="1.5" flood-opacity="0.12"/>
+                    </filter>
+                </defs>
+                <rect width="680" height="1588" fill="#fafbfc"/>
+
+                <!-- column center cx=340 -->
+                <rect x="40" y="8" width="600" height="80" rx="8" fill="url(#fcGStart)" stroke="#1565c0" stroke-width="1.2" filter="url(#fcSh)"/>
+                <text x="340" y="24" text-anchor="middle" fill="#0d47a1" font-weight="700" font-size="11px">Контекст: расширение RduPF</text>
+                <text x="340" y="38" text-anchor="middle" fill="#1565c0" font-size="9px">Точка 1 (типовая цепочка): обработка ГрупповоеВыполнениеЗакрытияПериодов — модуль объекта</text>
+                <text x="340" y="50" text-anchor="middle" fill="#1565c0" font-size="9px">Процедура ВыполнитьМногопоточноеЗакрытиеПериодовПортфелей (&amp;ИзменениеИКонтроль)</text>
+                <text x="340" y="62" text-anchor="middle" fill="#1565c0" font-size="9px">Между РегистрыСведений.НастройкиЗакрытияПериода.ПланРеглОпераций(...) и ПланРеглОперацийПоДням.Вставить — #Вставка / #КонецВставки</text>
+                <text x="340" y="76" text-anchor="middle" fill="#0d47a1" font-weight="600" font-size="9px">Точка 2 (новый код): РегистрСведений.ВидыОптимизируемыхРегламентныхОперацийДУ — модуль менеджера: фильтр плана, ПолучитьПортфели..., ПолучитьДанные...</text>
+
+                <line x1="340" y1="88" x2="340" y2="104" stroke="#455a64" stroke-width="1.2" marker-end="url(#fcAh)"/>
+                <rect x="60" y="104" width="560" height="62" rx="8" fill="url(#fcGStart)" stroke="#0277bd" stroke-width="1.2" filter="url(#fcSh)"/>
+                <text x="340" y="122" text-anchor="middle" fill="#01579b" font-weight="700" font-size="11px">Вызов: процедура фильтра (модуль менеджера РС)</text>
+                <text x="340" y="136" text-anchor="middle" fill="#0277bd" font-size="10px">Вход: День (дата дня цикла типовой процедуры)</text>
+                <text x="340" y="150" text-anchor="middle" fill="#0277bd" font-size="10px">Вход: тПланРеглОперацийПоДням (5 колонок: Выполнять, Портфель, ВидОперации,</text>
+                <text x="340" y="162" text-anchor="middle" fill="#0277bd" font-size="10px">ВремяРеглОпераций, Родитель) — менять только Выполнять</text>
+
+                <line x1="340" y1="166" x2="340" y2="176" stroke="#455a64" stroke-width="1.2" marker-end="url(#fcAh)"/>
+
+                <path d="M 340 186 L 410 236 L 340 286 L 270 236 Z" fill="url(#fcGDec)" stroke="#2e7d32" stroke-width="1.2" filter="url(#fcSh)"/>
+                <text x="340" y="226" text-anchor="middle" fill="#1b5e20" font-weight="700" font-size="11px">ПРОВЕРКА 1</text>
+                <text x="340" y="242" text-anchor="middle" fill="#1b5e20" font-size="10px">Константы.ПулРозницаДУ (или имя в метаданных)</text>
+                <text x="340" y="256" text-anchor="middle" fill="#1b5e20" font-size="10px">значение заполнено?</text>
+                <line x1="270" y1="236" x2="95" y2="236" stroke="#455a64" stroke-width="1.2" marker-end="url(#fcAh)"/>
+                <text x="175" y="228" text-anchor="middle" fill="#c62828" font-size="9px">Нет</text>
+                <rect x="8" y="210" width="86" height="52" rx="6" fill="url(#fcGExit)" stroke="#c62828" stroke-width="1"/>
+                <text x="51" y="232" text-anchor="middle" fill="#b71c1c" font-size="9px">ВЫХОД</text>
+                <text x="51" y="246" text-anchor="middle" fill="#b71c1c" font-size="8px">план без изменений</text>
+
+                <line x1="340" y1="286" x2="340" y2="306" stroke="#455a64" stroke-width="1.2" marker-end="url(#fcAh)"/>
+                <text x="356" y="300" fill="#2e7d32" font-size="9px">Да</text>
+
+                <path d="M 340 306 L 415 356 L 340 406 L 265 356 Z" fill="url(#fcGDec)" stroke="#2e7d32" stroke-width="1.2" filter="url(#fcSh)"/>
+                <text x="340" y="346" text-anchor="middle" fill="#1b5e20" font-weight="700" font-size="11px">ПРОВЕРКА 2</text>
+                <text x="340" y="362" text-anchor="middle" fill="#1b5e20" font-size="10px">Для каждой строки плана: Портфель.Пул = константе?</text>
+                <text x="340" y="376" text-anchor="middle" fill="#1b5e20" font-size="9px">Рекомендация: один запрос (план во ВТ + соединение с Пулом)</text>
+                <line x1="265" y1="356" x2="95" y2="356" stroke="#455a64" stroke-width="1.2" marker-end="url(#fcAh)"/>
+                <text x="175" y="348" text-anchor="middle" fill="#c62828" font-size="9px">Нет</text>
+                <line x1="95" y1="356" x2="51" y2="262" stroke="#c62828" stroke-width="1" stroke-dasharray="3 2" opacity="0.7"/>
+
+                <line x1="340" y1="406" x2="340" y2="426" stroke="#455a64" stroke-width="1.2" marker-end="url(#fcAh)"/>
+                <text x="356" y="420" fill="#2e7d32" font-size="9px">Да</text>
+
+                <rect x="30" y="426" width="620" height="22" rx="4" fill="#eceff1" stroke="#90a4ae" stroke-width="1"/>
+                <text x="340" y="441" text-anchor="middle" fill="#37474f" font-weight="700" font-size="10px">Блок А: запрос построения ТЗ свода (один пакет или несколько подряд)</text>
+
+                <rect x="40" y="454" width="600" height="34" rx="6" fill="url(#fcGSql)" stroke="#5e35b1" stroke-width="1" filter="url(#fcSh)"/>
+                <text x="340" y="470" text-anchor="middle" fill="#311b92" font-size="10px">А1. ПОМЕСТИТЬ: текущая тПланРеглОперацийПоДням во временную таблицу (все 5 полей)</text>
+                <rect x="40" y="492" width="600" height="34" rx="6" fill="url(#fcGSql)" stroke="#5e35b1" stroke-width="1" filter="url(#fcSh)"/>
+                <text x="340" y="508" text-anchor="middle" fill="#311b92" font-size="10px">А2. Отбор строк: Выполнять = 1 (число; не путать с именем из черновика ТЗ)</text>
+                <rect x="40" y="530" width="600" height="34" rx="6" fill="url(#fcGSql)" stroke="#5e35b1" stroke-width="1" filter="url(#fcSh)"/>
+                <text x="340" y="546" text-anchor="middle" fill="#311b92" font-size="10px">А3. Соединение с РегистрСведений.ВидыОптимизируемыхРегламентныхОперацийДУ по ВидОперации</text>
+                <rect x="40" y="568" width="600" height="34" rx="6" fill="url(#fcGSql)" stroke="#5e35b1" stroke-width="1" filter="url(#fcSh)"/>
+                <text x="340" y="584" text-anchor="middle" fill="#311b92" font-size="10px">А4. СГРУППИРОВАТЬ ПО: ВидОперации, ВремяРеглОпераций, Родитель</text>
+                <rect x="40" y="606" width="600" height="34" rx="6" fill="url(#fcGSql)" stroke="#5e35b1" stroke-width="1" filter="url(#fcSh)"/>
+                <text x="340" y="622" text-anchor="middle" fill="#311b92" font-size="10px">А5. Выгрузить результат во вспомогательную ТЗ свода (по одной строке на комбинацию ключа)</text>
+
+                <line x1="340" y1="640" x2="340" y2="660" stroke="#455a64" stroke-width="1.2" marker-end="url(#fcAh)"/>
+
+                <path d="M 340 660 L 405 710 L 340 760 L 275 710 Z" fill="url(#fcGDec)" stroke="#006064" stroke-width="1.2" filter="url(#fcSh)"/>
+                <text x="340" y="700" text-anchor="middle" fill="#004d40" font-weight="700" font-size="11px">Цикл: есть строка ТЗ свода?</text>
+                <text x="340" y="716" text-anchor="middle" fill="#004d40" font-size="9px">Обход всех строк свода; на каждой итерации тПлан пересобирается</text>
+                <line x1="275" y1="710" x2="100" y2="710" stroke="#455a64" stroke-width="1.2" marker-end="url(#fcAh)"/>
+                <text x="180" y="702" text-anchor="middle" fill="#1565c0" font-size="9px">Нет</text>
+                <rect x="8" y="686" width="90" height="48" rx="6" fill="url(#fcGStart)" stroke="#0277bd" stroke-width="1"/>
+                <text x="53" y="708" text-anchor="middle" fill="#01579b" font-size="9px">Конец</text>
+                <text x="53" y="722" text-anchor="middle" fill="#01579b" font-size="8px">цикла свода</text>
+
+                <line x1="340" y1="760" x2="340" y2="780" stroke="#455a64" stroke-width="1.2" marker-end="url(#fcAh)"/>
+                <text x="356" y="774" fill="#2e7d32" font-size="9px">Да</text>
+
+                <rect x="40" y="780" width="600" height="40" rx="6" fill="url(#fcGAct)" stroke="#f9a825" stroke-width="1.1" filter="url(#fcSh)"/>
+                <text x="340" y="796" text-anchor="middle" fill="#5d4037" font-weight="700" font-size="10px">Б1. Собрать МассивПортфелей по текущей строке свода</text>
+                <text x="340" y="810" text-anchor="middle" fill="#6d4c41" font-size="9px">Отбор в плане: ВидОперации + ВремяРеглОпераций + Родитель (запрос или НайтиСтроки)</text>
+
+                <rect x="40" y="824" width="600" height="52" rx="6" fill="url(#fcGAct)" stroke="#f9a825" stroke-width="1.1" filter="url(#fcSh)"/>
+                <text x="340" y="840" text-anchor="middle" fill="#5d4037" font-weight="700" font-size="10px">Б2. Колонки в строке ТЗ свода (если ещё нет): МассивПортфелей, День</text>
+                <text x="340" y="854" text-anchor="middle" fill="#6d4c41" font-size="9px">День = дата(ггггММдд от День цикла + ЧЧммсс)</text>
+                <text x="340" y="866" text-anchor="middle" fill="#6d4c41" font-size="9px">если Родитель заполнен: время из Родитель.ВремяРеглОпераций; иначе ПолныеПрава.ОкончаниеРабочегоДня()</text>
+
+                <line x1="340" y1="876" x2="340" y2="892" stroke="#455a64" stroke-width="1.2" marker-end="url(#fcAh)"/>
+
+                <rect x="50" y="892" width="580" height="44" rx="6" fill="url(#fcGCall)" stroke="#ef6c00" stroke-width="1.1" filter="url(#fcSh)"/>
+                <text x="340" y="908" text-anchor="middle" fill="#e65100" font-weight="700" font-size="9px">Б3. РегистрыСведений.ВидыОптимизируемыхРегламентныхОперацийДУ.ПолучитьПортфелиДляСохраненияВыполненияВПлане(...)</text>
+                <text x="340" y="922" text-anchor="middle" fill="#bf360c" font-size="9px">МассивПортфелей, День, ВидОперации — модуль менеджера РС ВидыОптимизируемыхРегламентныхОперацийДУ</text>
+                <text x="340" y="934" text-anchor="middle" fill="#bf360c" font-size="8px">Черновик: get_portfolios_for_plan_execution.bsl (ветви по видам операций)</text>
+
+                <rect x="60" y="940" width="560" height="50" rx="6" fill="#fff8e1" stroke="#ffb300" stroke-width="1" filter="url(#fcSh)"/>
+                <text x="340" y="956" text-anchor="middle" fill="#795548" font-size="9px">Исход функции (для логики ЛЕВОГО соединения ниже):</text>
+                <text x="340" y="970" text-anchor="middle" fill="#795548" font-size="9px">тот же массив | пустой массив | подмножество — портфели, у которых оставить Выполнять=1</text>
+                <text x="340" y="984" text-anchor="middle" fill="#795548" font-size="9px">Пустой массив: у всех строк плана с этим видом в шаге будет NULL в ВТ_Портфели</text>
+
+                <line x1="340" y1="990" x2="340" y2="1006" stroke="#455a64" stroke-width="1.2" marker-end="url(#fcAh)"/>
+
+                <rect x="30" y="1006" width="620" height="20" rx="4" fill="#eceff1" stroke="#90a4ae" stroke-width="1"/>
+                <text x="340" y="1020" text-anchor="middle" fill="#37474f" font-weight="700" font-size="10px">Блок В: пакетный запрос одной итерации (замена тПланРеглОперацийПоДням)</text>
+
+                <rect x="40" y="1032" width="600" height="30" rx="6" fill="url(#fcGSql)" stroke="#5e35b1" stroke-width="1" filter="url(#fcSh)"/>
+                <text x="340" y="1050" text-anchor="middle" fill="#311b92" font-size="10px">В1. ПОМЕСТИТЬ: актуальная тПланРеглОперацийПоДням (после предыдущих итераций)</text>
+                <rect x="40" y="1066" width="600" height="36" rx="6" fill="url(#fcGSql)" stroke="#5e35b1" stroke-width="1" filter="url(#fcSh)"/>
+                <text x="340" y="1082" text-anchor="middle" fill="#311b92" font-size="10px">В2. ВТ_ТаблицаПлана1: все поля плана + ПотенциальноИзменяемаяСтрока</text>
+                <text x="340" y="1096" text-anchor="middle" fill="#4527a0" font-size="9px">(истина для строк с ВидОперации = текущий из свода; параметр &amp;ВидОперации в запросе)</text>
+                <rect x="40" y="1106" width="600" height="30" rx="6" fill="url(#fcGSql)" stroke="#5e35b1" stroke-width="1" filter="url(#fcSh)"/>
+                <text x="340" y="1124" text-anchor="middle" fill="#311b92" font-size="10px">В3. ВТ_Портфели: Справочник.Портфели, ссылка В (ответ функции Б3)</text>
+                <rect x="40" y="1140" width="600" height="44" rx="6" fill="url(#fcGSql)" stroke="#5e35b1" stroke-width="1" filter="url(#fcSh)"/>
+                <text x="340" y="1156" text-anchor="middle" fill="#311b92" font-size="10px">В4. ВТ_ТаблицаПлана2: ВТ_ТаблицаПлана1 ЛЕВОЕ ВТ_Портфели по Портфель</text>
+                <text x="340" y="1172" text-anchor="middle" fill="#4527a0" font-size="9px">ВЫБОР: Выполнять=1 И ПотенциальноИзменяемаяСтрока И ВТ_Портфели.Ссылка ЕСТЬ NULL ТОГДА 0 ИНАЧЕ Выполнять</text>
+                <rect x="40" y="1188" width="600" height="34" rx="6" fill="url(#fcGSql)" stroke="#5e35b1" stroke-width="1" filter="url(#fcSh)"/>
+                <text x="340" y="1206" text-anchor="middle" fill="#311b92" font-size="10px">В5. Выгрузить в тПланРеглОперацийПоДням, заменив таблицу (остальные колонки без изменений)</text>
+
+                <line x1="340" y1="1222" x2="340" y2="1242" stroke="#546e7a" stroke-width="1.3" stroke-dasharray="5 3" marker-end="url(#fcAh)"/>
+                <text x="340" y="1236" text-anchor="middle" fill="#546e7a" font-size="9px">следующая строка ТЗ свода</text>
+
+                <path d="M 340 1242 L 340 1258 L 620 1258 L 620 710 L 405 710" fill="none" stroke="#546e7a" stroke-width="1.3" stroke-dasharray="5 3" marker-end="url(#fcAh)"/>
+
+                <line x1="53" y1="734" x2="53" y2="1278" stroke="#0277bd" stroke-width="1" stroke-dasharray="4 3"/>
+                <line x1="53" y1="1278" x2="300" y2="1278" stroke="#0277bd" stroke-width="1" stroke-dasharray="4 3" marker-end="url(#fcAh)"/>
+                <line x1="340" y1="1278" x2="340" y2="1298" stroke="#455a64" stroke-width="1.2" marker-end="url(#fcAh)"/>
+
+                <rect x="80" y="1298" width="520" height="48" rx="8" fill="url(#fcGStart)" stroke="#1565c0" stroke-width="1.2" filter="url(#fcSh)"/>
+                <text x="340" y="1318" text-anchor="middle" fill="#0d47a1" font-weight="700" font-size="11px">После цикла: возврат в типовую процедуру перехвата</text>
+                <text x="340" y="1334" text-anchor="middle" fill="#1565c0" font-size="10px">ПланРеглОперацийПоДням.Вставить(День, тПланРеглОперацийПоДням)</text>
+
+                <line x1="340" y1="1346" x2="340" y2="1366" stroke="#455a64" stroke-width="1.2" marker-end="url(#fcAh)"/>
+
+                <rect x="60" y="1366" width="560" height="40" rx="8" fill="#e8eaf6" stroke="#5c6bc0" stroke-width="1" filter="url(#fcSh)"/>
+                <text x="340" y="1384" text-anchor="middle" fill="#283593" font-weight="700" font-size="10px">Дальше без изменений в расширении</text>
+                <text x="340" y="1398" text-anchor="middle" fill="#3949ab" font-size="9px">Очередь, документы плана, фоновые задания — типовая цепочка WIM_FIn</text>
+
+                <rect x="20" y="1428" width="640" height="130" rx="8" fill="#fff" stroke="#b0bec5" stroke-width="1" filter="url(#fcSh)"/>
+                <text x="340" y="1448" text-anchor="middle" fill="#263238" font-weight="700" font-size="10px">Легенда и масштаб</text>
+                <text x="340" y="1468" text-anchor="middle" fill="#455a64" font-size="9px">Схема вписывается в ширину контейнера (preserveAspectRatio meet). Высота прокручивается внутри карточки.</text>
+                <text x="340" y="1484" text-anchor="middle" fill="#455a64" font-size="9px">Пунктир: возврат к следующей итерации цикла по ТЗ свода.</text>
+                <text x="340" y="1500" text-anchor="middle" fill="#455a64" font-size="9px">Синяя пунктирная линия: от «Конец цикла свода» к слиянию с основной веткой перед Вставить.</text>
+                <text x="30" y="1524" text-anchor="start" fill="#1565c0" font-size="9px">Голубой блок</text>
+                <text x="120" y="1524" text-anchor="start" fill="#455a64" font-size="9px">— контекст, вход, выход в типовой код</text>
+                <text x="30" y="1540" text-anchor="start" fill="#2e7d32" font-size="9px">Зелёный ромб</text>
+                <text x="120" y="1540" text-anchor="start" fill="#455a64" font-size="9px">— условие; красный прямоугольник слева — ранний выход</text>
+                <text x="30" y="1556" text-anchor="start" fill="#5e35b1" font-size="9px">Фиолетовый блок</text>
+                <text x="120" y="1556" text-anchor="start" fill="#455a64" font-size="9px">— пакет запроса / ВТ</text>
+            </svg>
+        </div>
+        <div class="flow-legend">
+            <span><i style="background:linear-gradient(180deg,#e3f2fd,#bbdefb)"></i> контекст RduPF / вход-выход</span>
+            <span><i style="background:linear-gradient(180deg,#e8f5e9,#c8e6c9)"></i> условие (ромб)</span>
+            <span><i style="background:linear-gradient(180deg,#fffde7,#fff9c4)"></i> код на встроенном языке</span>
+            <span><i style="background:linear-gradient(180deg,#ede7f6,#d1c4e9)"></i> запрос и ВТ</span>
+            <span><i style="background:linear-gradient(180deg,#fff3e0,#ffe0b2)"></i> вызов функции отбора портфелей</span>
+            <span><i style="background:linear-gradient(180deg,#ffebee,#ffcdd2)"></i> выход без изменений плана</span>
+        </div>
+        <p class="note" style="margin:0;padding:0 1rem 0.85rem;">Краткая схема шагов 1-3 (другая декомпозиция): <span class="doc-ref">filter_plan_regl_operations_table_integration.md</span>, <span class="doc-ref">imdev8641_brief_development_tz.html</span>.</p>
+    </figure>
+</section>
+
+<section id="s7">
+    <h2>8. Связь с перехватом в RduPF</h2>
+    <p>Внутри маркеров <code>#Вставка</code> / <code>#КонецВставки</code> модуля объекта <code>ГрупповоеВыполнениеЗакрытияПериодов</code> вызвать экспортную процедуру модуля менеджера РС, передав <code>День</code> и <code>тПланРеглОперацийПоДням</code>. Имя процедуры: по соглашению команды (префикс <code>RduPF_</code> или вызов через полное имя общего контракта). После выхода из процедуры типовой код выполняет <code>ПланРеглОперацийПоДням.Вставить(День, тПланРеглОперацийПоДням)</code> без изменений.</p>
+</section>
+
+<section id="s8">
+    <h2>9. Черновик запросов и ветвление по видам</h2>
+    <p>Источник переноса: <span class="doc-ref">get_portfolios_for_plan_execution.bsl</span>. Экспортная функция <code>ПолучитьПортфелиДляСохраненияВыполненияВПлане</code> ветвится по предопределённым элементам <code>ВидыОперацийЗакрытияПериода</code>; для прочих видов возвращается входной массив (строки плана по таким видам в итоговом запросе не получают <code>Выполнять = 0</code> из-за ветки <code>ВТ_Портфели</code>, так как соединение даёт строку для каждого портфеля). Детализация по веткам: таблица в <span class="doc-ref">imdev8641_brief_development_tz.html</span> (раздел про запросы) и файлы <span class="doc-ref">query_branch_*.md</span>.</p>
+</section>
+
+<section id="s9">
+    <h2>10. Критерии приёмки (минимум)</h2>
+    <ol>
+        <li>Незаполненная <code>ПулРозницаДУ</code> или неоднородный пул портфелей в <code>тПланРеглОперацийПоДням</code>: колонка <code>Выполнять</code> после вызова фильтра совпадает с входом.</li>
+        <li>При выполненных проверках 1-2 строки по видам, отсутствующим в РС <code>ВидыОптимизируемыхРегламентныхОперацийДУ</code>, не меняют <code>Выполнять</code> на итерациях, относящихся к другим видам (согласованность кумулятивных проходов).</li>
+        <li>Для вида из РС: после полного прохода цикла по своду строки с портфелем, не попавшим в «сохранить» по результату функции, имеют <code>Выполнять = 0</code>; остальные строки этого вида в шаге остаются с 1.</li>
+        <li>Пустой ответ функции отбора портфелей для вида из РС приводит к обнулению <code>Выполнять</code> у всех строк плана с этим видом в рамках соответствующей итерации (логика <code>ЕСТЬ NULL</code> в левом соединении).</li>
+        <li>Документ <code>ПланРегламентныхОперацийДУ</code> и типовой отбор к исполнению согласованы с итоговой таблицей плана (как в <span class="doc-ref">filter_plan_regl_operations_table_integration.md</span>).</li>
+        <li>После изменений в конфигураторе: успешная загрузка XML расширения в ИБ и актуальный файл <span class="doc-ref">RduPF.cfe</span> в каталоге <code>Расширения</code>.</li>
+    </ol>
+</section>
+
+<section id="s10">
+    <h2>11. Смежные материалы (имена файлов)</h2>
+    <ul>
+        <li>ТЗ_на_модульМенеджера_новогоРС_ВидыОптимизируемыхРегламентныхОперацийДУ .txt</li>
+        <li>imdev8641_brief_development_tz.html</li>
+        <li>imdev8641_final_development_tz.html (настоящий документ)</li>
+        <li>imdev8641_development_brief.md</li>
+        <li>filter_plan_regl_operations_table_integration.md</li>
+        <li>get_portfolios_for_plan_execution.bsl</li>
+        <li>index.md</li>
+        <li>work_plan_imdev8641_jira.txt</li>
+        <li>README.md (внутри каталога исходников RduPF)</li>
+        <li>RduPF.cfe</li>
+        <li>query_branch_nachislenie_procentov_bank_accounts.md</li>
+        <li>query_branch_perevod_nkd_emitenta_bu.md</li>
+        <li>plan_reg_oper_du_group_closure_chain.md</li>
+    </ul>
+</section>
+
+</main>
+</body>
+</html>
