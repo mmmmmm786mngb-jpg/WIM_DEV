@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="ru">
+
+<head>
+  <meta charset="utf-8">
+  <title>IMDEV-8641 — дерево изменяемых объектов расширения RduPF (Аванкор)</title>
+  <style>
+    :root {
+      --p1: #2c5282;
+      --p2: #276749;
+      --p3: #9c4221;
+      --p4: #702459;
+      --p5: #744210;
+      --common: #4a5568;
+    }
+
+    body {
+      font-family: 'Segoe UI', Tahoma, sans-serif;
+      margin: 1rem 2rem;
+      background: #fafafa;
+      color: #1a202c;
+    }
+
+    h1 {
+      font-size: 1.4rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .subtitle {
+      color: #718096;
+      font-size: 0.9rem;
+      margin-bottom: 1.5rem;
+    }
+
+    ul.tree {
+      list-style: none;
+      padding-left: 1.2rem;
+      margin: 0.2rem 0;
+    }
+
+    ul.tree ul {
+      padding-left: 1.2rem;
+      border-left: 1px solid #e2e8f0;
+      margin-left: 0.35rem;
+    }
+
+    .branch {
+      margin: 0.25rem 0;
+    }
+
+    .branch>.cap {
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      padding: 0.15rem 0;
+    }
+
+    .branch>.cap:hover {
+      background: #edf2f7;
+      border-radius: 3px;
+    }
+
+    .toggle {
+      font-size: 0.7rem;
+      color: #718096;
+      user-select: none;
+    }
+
+    .name {
+      font-weight: 600;
+    }
+
+    .pts {
+      font-size: 0.75rem;
+      padding: 0.1rem 0.4rem;
+      border-radius: 4px;
+      white-space: nowrap;
+    }
+
+    .pts.p1 {
+      background: #bee3f8;
+      color: var(--p1);
+    }
+
+    .pts.p2 {
+      background: #c6f6d5;
+      color: var(--p2);
+    }
+
+    .pts.p3 {
+      background: #feebc8;
+      color: var(--p3);
+    }
+
+    .pts.p4 {
+      background: #fbd38d;
+      color: var(--p4);
+    }
+
+    .pts.p5 {
+      background: #e9d8fd;
+      color: var(--p5);
+    }
+
+    .pts.common {
+      background: #e2e8f0;
+      color: var(--common);
+    }
+
+    .leaf {
+      padding-left: 1.5rem;
+      margin: 0.15rem 0;
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      flex-wrap: wrap;
+    }
+
+    .leaf .name {
+      font-weight: 400;
+      font-family: Consolas, monospace;
+      font-size: 0.9rem;
+    }
+
+    .legend {
+      margin-top: 1.5rem;
+      padding: 0.75rem 1rem;
+      background: #fff;
+      border: 1px solid #e2e8f0;
+      border-radius: 6px;
+      font-size: 0.85rem;
+    }
+
+    .legend h3 {
+      margin: 0 0 0.5rem 0;
+      font-size: 0.95rem;
+    }
+
+    .legend span {
+      display: inline-block;
+      margin-right: 0.75rem;
+      margin-bottom: 0.25rem;
+    }
+
+    .ref-block {
+      margin-bottom: 1.5rem;
+      padding: 0.75rem 1rem;
+      background: #ebf8ff;
+      border: 1px solid #90cdf4;
+      border-radius: 6px;
+      font-size: 0.9rem;
+    }
+
+    .ref-block strong {
+      color: #2b6cb0;
+    }
+
+    .ref-block .cf-note {
+      margin-top: 0.5rem;
+      font-size: 0.85rem;
+      color: #4a5568;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="ref-block">
+    <strong>Вендор: Аванкор.</strong> Базовая конфигурация WIM_FIn (типовая часть) в рамках IMDEV-8641 не изменяется; доработки выполняются только в расширении <code>RduPF</code> (префикс <code>RduPF_</code>, поставка <code>RduPF.cfe</code>).
+    <p class="cf-note">Нормативное описание: <code>imdev8641_final_development_tz.html</code> (разделы 1&ndash;10). Первичное наполнение регистра <code>ВидыОптимизируемыхРегламентныхОперацийДУ</code> по таблице 8.1 ТЗ — задача сопровождения ИБ, не кода расширения.</p>
+    <p class="cf-note">Константа <code>ПулРозницаДУ</code> объявлена в расширении; в коде чтение только через <code>ОбщегоНазначенияДУПовтИсп.ПолучитьЗначениеКонстанты(&quot;ПулРозницаДУ&quot;)</code>, как в разделе 6 ТЗ.</p>
+  </div>
+
+  <h1>Дерево изменяемых объектов и процедур расширения RduPF</h1>
+  <p class="subtitle">Задача IMDEV-8641. У веток указаны разделы окончательного ТЗ (<code>imdev8641_final_development_tz.html</code>). Заимствованные из базовой конфигурации объекты помечены; изменения только перехватами и вставками в расширении.</p>
+
+  <ul class="tree">
+    <li class="branch">
+      <span class="cap"><span class="toggle">[+]</span> <span class="name">Расширение RduPF</span> <span
+          class="pts common">1&ndash;10</span></span>
+      <ul>
+        <li class="branch">
+          <span class="cap"><span class="toggle">[+]</span> <span class="name">Константы</span> <span
+              class="pts p1">2, 3, 6.1</span></span>
+          <ul>
+            <li class="leaf"><span class="name">ПулРозницаДУ</span> <span class="pts p1">2, 3, 6.1</span> <span
+                style="font-size:0.8rem;color:#64748b;">(тип: СправочникСсылка.Пул)</span></li>
+          </ul>
+        </li>
+        <li class="branch">
+          <span class="cap"><span class="toggle">[+]</span> <span class="name">Справочники (заимствование)</span> <span
+              class="pts common">2, 8</span></span>
+          <ul>
+            <li class="leaf"><span class="name">ВидыОперацийЗакрытияПериода</span> <span class="pts common">2,
+                8</span> <span style="font-size:0.8rem;color:#64748b;">(без изменения логики типовой части; ветвление по предопределённым в модуле менеджера РС)</span></li>
+            <li class="leaf"><span class="name">Пул</span> <span class="pts p1">2, 6.2</span></li>
+          </ul>
+        </li>
+        <li class="branch">
+          <span class="cap"><span class="toggle">[+]</span> <span class="name">Регистры сведений</span></span>
+          <ul>
+            <li class="branch">
+              <span class="cap"><span class="toggle">[+]</span> <span
+                  class="name">ВидыОптимизируемыхРегламентныхОперацийДУ</span> <span
+                  class="pts common">2, 5&ndash;8, 10</span></span>
+              <ul>
+                <li class="branch">
+                  <span class="cap"><span class="toggle">[+]</span> <span class="name">ФормаСписка</span> <span
+                      class="pts p1">2</span></span>
+                  <ul>
+                    <li class="leaf"><span class="name">Модуль формы (комментарии о назначении по ТЗ)</span> <span
+                        class="pts p1">2</span></li>
+                  </ul>
+                </li>
+                <li class="branch">
+                  <span class="cap"><span class="toggle">[+]</span> <span class="name">ФормаЗаписи</span> <span
+                      class="pts p1">2</span></span>
+                  <ul>
+                    <li class="leaf"><span class="name">Модуль формы (комментарии о назначении по ТЗ)</span> <span
+                        class="pts p1">2</span></li>
+                  </ul>
+                </li>
+                <li class="branch">
+                  <span class="cap"><span class="toggle">[+]</span> <span class="name">Модуль менеджера</span> <span
+                      class="pts common">5, 6, 8</span></span>
+                  <ul>
+                    <li class="branch">
+                      <span class="cap"><span class="toggle">[+]</span> <span class="name">#Область
+                          ОтборПортфелейДляСохраненияВыполненияВПлане</span> <span class="pts p4">5.1, 6.4,
+                          8</span></span>
+                      <ul>
+                        <li class="leaf"><span class="name">ПолучитьПортфелиДляСохраненияВыполненияВПлане</span>
+                          (функция, экспорт) <span class="pts p4">5.1, 6.4, 8</span></li>
+                        <li class="leaf"><span class="name">ПортфелиДляНачисленияПроцентовПоБанковскимСчетамИДепозитам</span>
+                          <span class="pts p4">8.1</span> <span style="font-size:0.8rem;color:#64748b;">(вид
+                            НачислениеПроцентовПоБанковскимСчетамПоГрафику)</span></li>
+                        <li class="leaf"><span class="name">ПортфелиДляПереводаНКДЭмитентаБу</span> <span
+                            class="pts p4">8.1</span> <span style="font-size:0.8rem;color:#64748b;">(вид
+                            ПереводНКДЭмитента_БУ)</span></li>
+                        <li class="leaf"><span class="name">ПортфелиДляОпределенияСделокСОтклонениемЦенБу</span>
+                          <span class="pts p4">8.1</span> <span style="font-size:0.8rem;color:#64748b;">(вид
+                            ОпределениеСделокСОтклонениемЦен_БУ)</span></li>
+                        <li class="leaf"><span class="name">ПортфелиДляПогашенияОблигацийБуДоПереоценки</span> <span
+                            class="pts p4">8.1</span> <span style="font-size:0.8rem;color:#64748b;">(вид
+                            ПогашениеОблигаций_БУ_ДоПереоценки)</span></li>
+                        <li class="leaf"><span class="name">ПортфелиДляЧастичногоПогашенияОблигацийИСтруктурныхНот</span>
+                          <span class="pts p4">8.1</span> <span style="font-size:0.8rem;color:#64748b;">(вид
+                            ЧастичноеПогашениеОблигаций_БУ; внутри — вызовы вспомогательных функций по облигациям и
+                            структурным нотам)</span></li>
+                        <li class="leaf"><span class="name">ПортфелиДляЧастичногоПогашенияОблигацийБу</span> <span
+                            class="pts p4">8.1</span></li>
+                        <li class="leaf"><span class="name">ПортфелиДляЧастичногоПогашенияСтруктурныхНотБу</span>
+                          <span class="pts p4">8.1</span></li>
+                      </ul>
+                    </li>
+                    <li class="branch">
+                      <span class="cap"><span class="toggle">[+]</span> <span class="name">#Область
+                          ФильтрацияПланаРегламентныхОпераций</span> <span class="pts p3">5.2, 6, 7</span></span>
+                      <ul>
+                        <li class="leaf"><span class="name">ОтфильтроватьПланРеглОперацийНаДень</span> (процедура,
+                          экспорт) <span class="pts p3">5.2, 6, 7</span></li>
+                      </ul>
+                    </li>
+                  </ul>
+                </li>
+                <li class="leaf"><span class="name">Модуль набора записей</span> <span style="font-size:0.8rem;color:#64748b;">(пустой, изменений нет)</span></li>
+              </ul>
+            </li>
+          </ul>
+        </li>
+        <li class="branch">
+          <span class="cap"><span class="toggle">[+]</span> <span class="name">Обработки (заимствование)</span> <span
+              class="pts common">4, 7, 9</span></span>
+          <ul>
+            <li class="branch">
+              <span class="cap"><span class="toggle">[+]</span> <span
+                  class="name">ГрупповоеВыполнениеЗакрытияПериодов</span> <span class="pts common">4, 7,
+                  9</span></span>
+              <ul>
+                <li class="branch">
+                  <span class="cap"><span class="toggle">[+]</span> <span class="name">Модуль объекта</span> <span
+                      class="pts common">4, 7, 9</span></span>
+                  <ul>
+                    <li class="leaf"><span class="name">RduPF_ВыполнитьМногопоточноеЗакрытиеПериодовПортфелей</span>
+                      <span class="pts p2">4, 7</span> <span style="font-size:0.8rem;color:#64748b;">перехват
+                        &amp;ИзменениеИКонтроль(&quot;ВыполнитьМногопоточноеЗакрытиеПериодовПортфелей&quot;); маркеры
+                        #Вставка: вызов ОтфильтроватьПланРеглОперацийНаДень до ПланРеглОперацийПоДням.Вставить</span>
+                    </li>
+                    <li class="leaf"><span class="name">RduPF_СформироватьРеглОперацииПоГруппе</span> <span
+                        class="pts p5">9</span> <span style="font-size:0.8rem;color:#64748b;">перехват
+                        &amp;ИзменениеИКонтроль(&quot;СформироватьРеглОперацииПоГруппе&quot;); при отсутствии плана и
+                        нуле выполняемых строк группы — Продолжить цикла по группам</span></li>
+                  </ul>
+                </li>
+              </ul>
+            </li>
+          </ul>
+        </li>
+        <li class="branch">
+          <span class="cap"><span class="toggle">[+]</span> <span class="name">Базовая конфигурация WIM_FIn (не
+              изменяется расширением как состав CF)</span> <span class="pts common">3.2</span></span>
+          <ul>
+            <li class="leaf"><span class="name">Типовые модули и процедуры (в т.ч. НастройкиЗакрытияПериода.ПланРеглОпераций, РегламентноеЗакрытиеПериода.НайтиПланРегламентныхОперацийДУ, ФоновыеЗаданияСервер.СоздатьПланРегламентныхОперацийДУ) — без правок в объёме IMDEV-8641</span> <span class="pts common">3.2, 9.4</span></li>
+          </ul>
+        </li>
+      </ul>
+    </li>
+  </ul>
+
+  <div class="legend">
+    <h3>Связь с разделами ТЗ (imdev8641_final_development_tz.html)</h3>
+    <span><span class="pts p1">1&ndash;3</span> Задача, состав расширения, цели и границы</span><br>
+    <span><span class="pts p2">4</span> Встраивание в типовую цепочку (таблица плана, перехват многопоточного закрытия)</span><br>
+    <span><span class="pts p3">5&ndash;6, 7</span> Модуль менеджера РС, алгоритм фильтра, словесная цепочка</span><br>
+    <span><span class="pts p4">8</span> Отбор портфелей по видам операций и таблица 8.1</span><br>
+    <span><span class="pts p5">9</span> Пропуск создания документа плана при нуле выполняемых операций</span><br>
+    <span><span class="pts common">10</span> Критерии приёмки (проверка на ИБ, регрессия)</span>
+  </div>
+
+  <script>
+    document.querySelectorAll('.branch > .cap').forEach(function (cap) {
+      cap.addEventListener('click', function () {
+        var ul = this.nextElementSibling;
+        if (!ul) return;
+        var toggle = this.querySelector('.toggle');
+        if (ul.style.display === 'none') {
+          ul.style.display = 'block';
+          if (toggle) toggle.textContent = '[−]';
+        } else {
+          ul.style.display = 'none';
+          if (toggle) toggle.textContent = '[+]';
+        }
+      });
+    });
+    document.querySelectorAll('.branch > ul').forEach(function (ul) {
+      ul.style.display = 'block';
+      var t = ul.previousElementSibling.querySelector('.toggle');
+      if (t) t.textContent = '[−]';
+    });
+  </script>
+</body>
+
+</html>

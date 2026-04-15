@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+<html lang="ru">
+
+<head>
+  <meta charset="utf-8">
+  <title>Дерево изменяемых объектов расширения rm</title>
+  <style>
+    :root {
+      --p1: #2c5282;
+      --p2: #276749;
+      --p3: #9c4221;
+      --p4: #702459;
+      --p5: #744210;
+      --common: #4a5568;
+    }
+
+    body {
+      font-family: 'Segoe UI', Tahoma, sans-serif;
+      margin: 1rem 2rem;
+      background: #fafafa;
+      color: #1a202c;
+    }
+
+    h1 {
+      font-size: 1.4rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .subtitle {
+      color: #718096;
+      font-size: 0.9rem;
+      margin-bottom: 1.5rem;
+    }
+
+    ul.tree {
+      list-style: none;
+      padding-left: 1.2rem;
+      margin: 0.2rem 0;
+    }
+
+    ul.tree ul {
+      padding-left: 1.2rem;
+      border-left: 1px solid #e2e8f0;
+      margin-left: 0.35rem;
+    }
+
+    .branch {
+      margin: 0.25rem 0;
+    }
+
+    .branch>.cap {
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      padding: 0.15rem 0;
+    }
+
+    .branch>.cap:hover {
+      background: #edf2f7;
+      border-radius: 3px;
+    }
+
+    .toggle {
+      font-size: 0.7rem;
+      color: #718096;
+      user-select: none;
+    }
+
+    .name {
+      font-weight: 600;
+    }
+
+    .pts {
+      font-size: 0.75rem;
+      padding: 0.1rem 0.4rem;
+      border-radius: 4px;
+      white-space: nowrap;
+    }
+
+    .pts.p1 {
+      background: #bee3f8;
+      color: var(--p1);
+    }
+
+    .pts.p2 {
+      background: #c6f6d5;
+      color: var(--p2);
+    }
+
+    .pts.p3 {
+      background: #feebc8;
+      color: var(--p3);
+    }
+
+    .pts.p4 {
+      background: #fbd38d;
+      color: var(--p4);
+    }
+
+    .pts.p5 {
+      background: #e9d8fd;
+      color: var(--p5);
+    }
+
+    .pts.common {
+      background: #e2e8f0;
+      color: var(--common);
+    }
+
+    .leaf {
+      padding-left: 1.5rem;
+      margin: 0.15rem 0;
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+
+    .leaf .name {
+      font-weight: 400;
+      font-family: Consolas, monospace;
+      font-size: 0.9rem;
+    }
+
+    .legend {
+      margin-top: 1.5rem;
+      padding: 0.75rem 1rem;
+      background: #fff;
+      border: 1px solid #e2e8f0;
+      border-radius: 6px;
+      font-size: 0.85rem;
+    }
+
+    .legend h3 {
+      margin: 0 0 0.5rem 0;
+      font-size: 0.95rem;
+    }
+
+    .legend span {
+      display: inline-block;
+      margin-right: 0.75rem;
+      margin-bottom: 0.25rem;
+    }
+
+    .ref-block {
+      margin-bottom: 1.5rem;
+      padding: 0.75rem 1rem;
+      background: #ebf8ff;
+      border: 1px solid #90cdf4;
+      border-radius: 6px;
+      font-size: 0.9rem;
+    }
+
+    .ref-block strong {
+      color: #2b6cb0;
+    }
+
+    .ref-block .cf-note {
+      margin-top: 0.5rem;
+      font-size: 0.85rem;
+      color: #4a5568;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="ref-block">
+    <strong>Справочно.</strong> Обязательно добавить константу <code>ИспользоватьПредварительныеЗапросыДляУтреннихРегламентов</code>.
+    Она не внесена в расширение rm — добавлять сразу в базовую конфигурацию (CF). Тип: булево.
+    <p class="cf-note">Форма «Регламентный период» уже есть в базовой конфигурации (CF), поэтому из расширения rm процедуры этой формы убраны.</p>
+  </div>
+
+  <h1>Дерево изменяемых объектов и процедур расширения rm</h1>
+  <p class="subtitle">Относительно оригинальной конфигурации 1.5.27.0. У каждой ветки указаны пункты оптимизации (1, 2,
+    3.1&ndash;3.4, 4, 5). Под ИсполняемыеПроцедурыЗакрытияПериода — веточки от операций к изменённым процедурам
+    документов.</p>
+
+  <ul class="tree">
+    <li class="branch">
+      <span class="cap"><span class="toggle">[+]</span> <span class="name">Расширение rm</span> <span
+          class="pts common">1, 2, 3.1&ndash;3.4, 4, 5</span></span>
+      <ul>
+        <li class="branch">
+          <span class="cap"><span class="toggle">[+]</span> <span class="name">Справочники</span></span>
+          <ul>
+            <li class="branch">
+              <span class="cap"><span class="toggle">[+]</span> <span class="name">РегламентныеПериоды</span> <span
+                  class="pts common">1, 2, 3.1, 3.2, 3.3, 4, 5</span></span>
+              <ul>
+                <li class="branch">
+                  <span class="cap"><span class="toggle">[+]</span> <span class="name">Форма РегламентныйПериод</span>
+                    <span class="pts p1">1</span> <span class="pts common">в CF</span></span>
+                  <ul>
+                    <li class="leaf"><span class="name">Форма и логика в базовой конфигурации (CF); в расширении rm процедуры убраны</span></li>
+                  </ul>
+                </li>
+                <li class="branch">
+                  <span class="cap"><span class="toggle">[+]</span> <span class="name">Модуль менеджера</span> <span
+                      class="pts common">1, 2, 3.1, 3.2, 3.3, 4, 5</span></span>
+                  <ul>
+                    <li class="leaf"><span class="name">СформироватьРегламентныеОперацииНаСервере</span> (процедура)
+                      <span class="pts common">1, 2, 3.1, 3.2, 3.3, 4, 5</span>
+                    </li>
+                    <li class="leaf"><span
+                        class="name">ЗаполнитьПараметрыСохраненияПакетнымиДаннымиУтреннихОпераций</span> <span
+                        class="pts common">2, 3.1, 3.2, 3.3, 4, 5</span></li>
+                    <li class="leaf"><span class="name">СформироватьДокументыЗакрытияПериода</span> <span
+                        class="pts common">1, 2, 3.1, 3.2, 3.3, 4, 5</span></li>
+                  </ul>
+                </li>
+              </ul>
+            </li>
+            <li class="branch">
+              <span class="cap"><span class="toggle">[+]</span> <span class="name">ВидыОперацийЗакрытияПериода</span>
+                <span class="pts common">2, 3, 4, 5</span></span>
+              <ul>
+                <li class="branch">
+                  <span class="cap"><span class="toggle">[+]</span> <span class="name">Модуль менеджера</span></span>
+                  <ul>
+                    <li class="leaf"><span class="name">reg_m_ВыполнитьИсполняемуюПроцедуруЗакрытияПериода</span> <span
+                        class="pts common">2, 3, 4, 5</span></li>
+                  </ul>
+                </li>
+              </ul>
+            </li>
+          </ul>
+        </li>
+        <li class="branch">
+          <span class="cap"><span class="toggle">[+]</span> <span class="name">Документы</span></span>
+          <ul>
+            <li class="branch">
+              <span class="cap"><span class="toggle">[+]</span> <span class="name">ПереоценкаВзаиморасчетов</span> <span
+                  class="pts p2">2</span></span>
+              <ul>
+                <li class="branch">
+                  <span class="cap"><span class="toggle">[+]</span> <span class="name">Модуль объекта</span></span>
+                  <ul>
+                    <li class="leaf"><span class="name">reg_m_ЗаполнитьТабличнуюЧастьВзаиморасчеты</span> <span
+                        class="pts p2">2</span></li>
+                    <li class="leaf"><span class="name">ЗаполнитьПоГотовойТаблице</span> <span class="pts p2">2</span>
+                    </li>
+                    <li class="leaf"><span class="name">ЗаполнитьПакетно</span> <span class="pts p2">2</span></li>
+                    <li class="leaf"><span class="name">ЗаполнитьОбычныйРежим</span> <span class="pts p2">2</span></li>
+                    <li class="leaf"><span class="name">ТекстЗапросаПереоценкиВзаиморасчетов</span> <span
+                        class="pts p2">2</span></li>
+                    <li class="leaf"><span class="name">НастроитьЗапросДляРежима</span> <span class="pts p2">2</span>
+                    </li>
+                    <li class="leaf"><span class="name">ПодготовитьТаблицуДоговорыВалютаРегл</span> <span
+                        class="pts p2">2</span></li>
+                    <li class="leaf"><span class="name">ИсключаемыеСчетаРасчетов</span> <span class="pts p2">2</span>
+                    </li>
+                  </ul>
+                </li>
+              </ul>
+            </li>
+            <li class="branch">
+              <span class="cap"><span class="toggle">[+]</span> <span
+                  class="name">ПереводНКДВЗадолженностьЭмитента</span> <span class="pts p3">3.1, 3.2, 3.3,
+                  3.4</span></span>
+              <ul>
+                <li class="branch">
+                  <span class="cap"><span class="toggle">[+]</span> <span class="name">Модуль объекта</span></span>
+                  <ul>
+                    <li class="leaf"><span class="name">nkd_m_ЗаполнитьКупоннымиПериодами</span> <span
+                        class="pts p3">3.1</span></li>
+                    <li class="leaf"><span class="name">ЗаполнитьКупоннымиПериодамиОбычныйРежим</span> <span
+                        class="pts p3">3.1</span></li>
+                    <li class="leaf"><span class="name">ЗаполнитьОблигацииПоГотовойТаблице</span> <span
+                        class="pts p3">3.1</span></li>
+                    <li class="leaf"><span class="name">ЗаполнитьКупоннымиПериодамиПакетно</span> <span
+                        class="pts p3">3.1</span></li>
+                    <li class="leaf"><span class="name">ПодготовитьСчетаОблигаций</span>, <span
+                        class="name">ПодготовитьСчетаНКД</span> <span class="pts p3">3.1</span></li>
+                    <li class="leaf"><span class="name">ТекстЗапросаКупонныхПериодов</span>, <span
+                        class="name">НастроитьЗапросКупонныхПериодов</span> <span class="pts p3">3.1</span></li>
+                    <li class="leaf"><span class="name">nkd_m_ТаблицаНКД_УУ</span> <span class="pts p3">3.2</span></li>
+                    <li class="leaf"><span class="name">ТекстЗапросаТаблицаНКД_УУ</span>, <span
+                        class="name">НастроитьЗапросТаблицаНКД_УУ</span> <span class="pts p3">3.2</span></li>
+                    <li class="leaf"><span class="name">nkd_m_СформироватьДвиженияУУ</span> <span
+                        class="pts p3">3.2</span></li>
+                    <li class="leaf"><span class="name">nkd_m_СформироватьТаблицыДанных</span> <span
+                        class="pts p3">3.3</span></li>
+                    <li class="leaf"><span class="name">НастроитьЗапросСформироватьТаблицыДанных</span> <span
+                        class="pts p3">3.3</span></li>
+                    <li class="leaf"><span class="name">nkd_m_СформироватьДвиженияБУ</span> <span
+                        class="pts p3">3.3</span></li>
+                    <li class="leaf"><span class="name">nkd_m_ПередЗаписью</span> <span class="pts p3">3.4</span></li>
+                  </ul>
+                </li>
+              </ul>
+            </li>
+            <li class="branch">
+              <span class="cap"><span class="toggle">[+]</span> <span class="name">ПогашениеОблигаций</span> <span
+                  class="pts p4">4</span></span>
+              <ul>
+                <li class="branch">
+                  <span class="cap"><span class="toggle">[+]</span> <span class="name">Модуль объекта</span></span>
+                  <ul>
+                    <li class="leaf"><span class="name">rm_ЗаполнитьСписокОблигаций</span> <span class="pts p4">4</span>
+                    </li>
+                    <li class="leaf"><span class="name">СформироватьМассивТекстовЗапросаСписокАктивовОблигаций</span>
+                      <span class="pts p4">4</span>
+                    </li>
+                    <li class="leaf"><span class="name">НастроитьЗапросСписокАктивовСОстатками</span> <span
+                        class="pts p4">4</span></li>
+                  </ul>
+                </li>
+              </ul>
+            </li>
+            <li class="branch">
+              <span class="cap"><span class="toggle">[+]</span> <span
+                  class="name">НачислениеПроцентовПоБанковскимСчетам</span> <span class="pts p5">5</span></span>
+              <ul>
+                <li class="branch">
+                  <span class="cap"><span class="toggle">[+]</span> <span class="name">Модуль объекта</span></span>
+                  <ul>
+                    <li class="leaf"><span class="name">rm_ЗаполнитьТЧ</span> <span class="pts p5">5</span></li>
+                    <li class="leaf"><span class="name">СформироватьМассивТекстовЗапросаОстаткиПоБанковскимСчетам</span>
+                      <span class="pts p5">5</span>
+                    </li>
+                    <li class="leaf"><span class="name">НастроитьЗапросОстаткиПоБанковскимСчетам</span> <span
+                        class="pts p5">5</span></li>
+                  </ul>
+                </li>
+              </ul>
+            </li>
+            <li class="branch">
+              <span class="cap"><span class="toggle">[+]</span> <span class="name">ПланРегламентныхОперацийДУ</span>
+                <span class="pts common">1, 2, 3, 4, 5</span></span>
+              <ul>
+                <li class="branch">
+                  <span class="cap"><span class="toggle">[+]</span> <span class="name">Модуль объекта</span></span>
+                  <ul>
+                    <li class="leaf"><span class="name">reg_m_ВыполнитьРегламентныеПроцедуры</span> <span
+                        class="pts common">1, 2, 3, 4, 5</span></li>
+                  </ul>
+                </li>
+              </ul>
+            </li>
+          </ul>
+        </li>
+        <li class="branch">
+          <span class="cap"><span class="toggle">[+]</span> <span class="name">Общие модули</span></span>
+          <ul>
+            <li class="branch">
+              <span class="cap"><span class="toggle">[+]</span> <span
+                  class="name">ИсполняемыеПроцедурыЗакрытияПериода</span> <span class="pts common">2, 3, 4,
+                  5</span></span>
+              <ul>
+                <li class="branch">
+                  <span class="cap"><span class="toggle">[+]</span> <span
+                      class="name">reg_m_Операция_0200_ПереоценкаВзаиморасчетов</span> <span
+                      class="pts p2">2</span></span>
+                  <ul>
+                    <li class="leaf"><span class="name">→ Документ.ПереоценкаВзаиморасчетов</span></li>
+                    <li class="leaf"><span class="name">reg_m_ЗаполнитьТабличнуюЧастьВзаиморасчеты</span>, <span
+                        class="name">ЗаполнитьПоГотовойТаблице</span> <span class="pts p2">2</span></li>
+                  </ul>
+                </li>
+                <li class="branch">
+                  <span class="cap"><span class="toggle">[+]</span> <span
+                      class="name">nkd_m_Операция_0050_ПереводНКДВЗадолженностьЭмитента</span> <span class="pts p3">3.1,
+                      3.2, 3.3</span></span>
+                  <ul>
+                    <li class="leaf"><span class="name">→ Документ.ПереводНКДВЗадолженностьЭмитента</span></li>
+                    <li class="leaf"><span class="name">nkd_m_ЗаполнитьКупоннымиПериодами</span> <span
+                        class="pts p3">3.1</span></li>
+                    <li class="leaf"><span class="name">nkd_m_СформироватьДвиженияУУ</span> <span
+                        class="pts p3">3.2</span></li>
+                    <li class="leaf"><span class="name">nkd_m_СформироватьДвиженияБУ</span> <span
+                        class="pts p3">3.3</span></li>
+                    <li class="leaf"><span class="name">nkd_m_ПередЗаписью</span> <span class="pts p3">3.4</span></li>
+                  </ul>
+                </li>
+                <li class="branch">
+                  <span class="cap"><span class="toggle">[+]</span> <span
+                      class="name">rm_Операция_0055_ПогашениеОблигаций</span> <span class="pts p4">4</span></span>
+                  <ul>
+                    <li class="leaf"><span class="name">→ Документ.ПогашениеОблигаций</span></li>
+                    <li class="leaf"><span class="name">rm_ЗаполнитьСписокОблигаций</span>, <span
+                        class="name">СформироватьМассивТекстовЗапросаСписокАктивовОблигаций</span>, <span
+                        class="name">НастроитьЗапросСписокАктивовСОстатками</span> <span class="pts p4">4</span></li>
+                  </ul>
+                </li>
+                <li class="branch">
+                  <span class="cap"><span class="toggle">[+]</span> <span
+                      class="name">rm_Операция_0030_НачислениеПроцентовПоБанковскимСчетам</span> <span
+                      class="pts p5">5</span></span>
+                  <ul>
+                    <li class="leaf"><span class="name">→ Документ.НачислениеПроцентовПоБанковскимСчетам</span></li>
+                    <li class="leaf"><span class="name">rm_ЗаполнитьТЧ</span>, <span
+                        class="name">СформироватьМассивТекстовЗапросаОстаткиПоБанковскимСчетам</span>, <span
+                        class="name">НастроитьЗапросОстаткиПоБанковскимСчетам</span> <span class="pts p5">5</span></li>
+                  </ul>
+                </li>
+              </ul>
+            </li>
+            <li class="branch">
+              <span class="cap"><span class="toggle">[+]</span> <span class="name">ФоновыеЗаданияСервер</span> <span
+                  class="pts common">1, 2, 3, 4, 5</span></span>
+              <ul>
+                <li class="leaf"><span class="name">reg_m_СоздатьПланРегламентныхОперацийДУ</span> <span
+                    class="pts common">1, 2, 3, 4, 5</span></li>
+              </ul>
+            </li>
+            <li class="branch">
+              <span class="cap"><span class="toggle">[+]</span> <span class="name">ОбщегоНазначенияДУ</span> <span
+                  style="font-weight:normal;color:#64748b;">(добавлены в rm, не терять при переносе в CF)</span> <span
+                  class="pts common">2, 3, 4, 5</span></span>
+              <ul>
+                <li class="leaf"><span class="name">СоответствиеТаблицПоДоговорамДУ</span> <span class="pts common">2,
+                    3.1, 3.2, 3.3, 4, 5</span></li>
+                <li class="leaf"><span class="name">ДатаСЗаданнымиСекундами</span> <span class="pts common">2, 3, 4,
+                    5</span></li>
+              </ul>
+            </li>
+          </ul>
+        </li>
+      </ul>
+    </li>
+  </ul>
+
+  <div class="legend">
+    <h3>Пункты оптимизации</h3>
+    <span><span class="pts p1">1</span> Перенос цикла на сервер (РегламентныеПериоды)</span><br>
+    <span><span class="pts p2">2</span> Переоценка взаиморасчетов (строка 1)</span><br>
+    <span><span class="pts p3">3.1</span> НКД: купонные периоды (247)</span>
+    <span><span class="pts p3">3.2</span> НКД: ТаблицаНКД_УУ (2004)</span>
+    <span><span class="pts p3">3.3</span> НКД: СформироватьТаблицыДанных (795)</span>
+    <span><span class="pts p3">3.4</span> НКД: ПередЗаписью (424)</span><br>
+    <span><span class="pts p4">4</span> Погашение облигаций (строка 141)</span><br>
+    <span><span class="pts p5">5</span> Начисление процентов по банковским счетам (строка 110)</span><br>
+    <span><span class="pts common">общее</span> Несколько пунктов</span>
+  </div>
+
+  <script>
+    document.querySelectorAll('.branch > .cap').forEach(function (cap) {
+      cap.addEventListener('click', function () {
+        var ul = this.nextElementSibling;
+        if (!ul) return;
+        var toggle = this.querySelector('.toggle');
+        if (ul.style.display === 'none') {
+          ul.style.display = 'block';
+          if (toggle) toggle.textContent = '[−]';
+        } else {
+          ul.style.display = 'none';
+          if (toggle) toggle.textContent = '[+]';
+        }
+      });
+    });
+    document.querySelectorAll('.branch > ul').forEach(function (ul) {
+      ul.style.display = 'block';
+      var t = ul.previousElementSibling.querySelector('.toggle');
+      if (t) t.textContent = '[−]';
+    });
+  </script>
+</body>
+
+</html>
