@@ -263,8 +263,7 @@ $typesWithChildObjects = @(
 	"Catalog","Document","ExchangePlan","ChartOfAccounts",
 	"ChartOfCharacteristicTypes","ChartOfCalculationTypes",
 	"BusinessProcess","Task","Enum",
-	"InformationRegister","AccumulationRegister","AccountingRegister","CalculationRegister",
-	"DataProcessor","Report"
+	"InformationRegister","AccumulationRegister","AccountingRegister","CalculationRegister"
 )
 
 # CommonModule properties to copy from source
