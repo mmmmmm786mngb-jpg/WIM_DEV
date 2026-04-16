@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>IMDEV-8662 — узкие места проведения «Сделка»: четыре запроса и строка 137</title>
+  <style>
+    :root {
+      --ok: #28a745;
+      --info: #17a2b8;
+      --text: #212529;
+      --muted: #6c757d;
+      --border: #dee2e6;
+      --head-bg: #e7f5f8;
+      --row-alt: #f8f9fa;
+    }
+    body {
+      font-family: "Segoe UI", system-ui, sans-serif;
+      color: var(--text);
+      line-height: 1.5;
+      max-width: 960px;
+      margin: 1.5rem auto;
+      padding: 0 1rem;
+    }
+    h1 {
+      font-size: 1.35rem;
+      font-weight: 600;
+      margin-bottom: 0.35rem;
+      color: #0c5460;
+    }
+    .lead {
+      font-size: 0.98rem;
+      color: var(--text);
+      margin: 0 0 1rem 0;
+      line-height: 1.55;
+    }
+    .meta {
+      color: var(--muted);
+      font-size: 0.88rem;
+      margin-bottom: 1.25rem;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.9rem;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+    }
+    caption {
+      caption-side: bottom;
+      text-align: left;
+      color: var(--muted);
+      font-size: 0.8rem;
+      padding-top: 0.75rem;
+    }
+    th, td {
+      border: 1px solid var(--border);
+      padding: 0.6rem 0.65rem;
+      vertical-align: top;
+    }
+    th {
+      background: var(--head-bg);
+      color: #0c5460;
+      font-weight: 600;
+      text-align: left;
+    }
+    tbody tr:nth-child(even) {
+      background: var(--row-alt);
+    }
+    .num { width: 2.5rem; text-align: center; }
+    .code { font-family: Consolas, "Courier New", monospace; font-size: 0.82rem; word-break: break-word; }
+    .metrics { font-family: Consolas, "Courier New", monospace; font-size: 0.78rem; color: #0d5e6e; }
+    .note {
+      margin-top: 1.5rem;
+      padding: 1rem;
+      border-left: 4px solid var(--info);
+      background: #f0f9fb;
+    }
+    .note h2 {
+      font-size: 1rem;
+      margin: 0 0 0.5rem 0;
+      color: #0c5460;
+    }
+    .note p { margin: 0.35rem 0; }
+    .note ul { margin: 0.35rem 0 0 1.2rem; padding: 0; }
+    .note li { margin: 0.4rem 0; }
+    .src { font-size: 0.8rem; color: var(--muted); margin-top: 0.75rem; }
+    .diagram-section {
+      margin-top: 2rem;
+      padding: 1.25rem 1rem;
+      background: linear-gradient(180deg, #fafdff 0%, #f5f9fc 100%);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+    }
+    .diagram-section h2 {
+      font-size: 1.05rem;
+      margin: 0 0 0.5rem 0;
+      color: #0c5460;
+    }
+    .diagram-section > p { margin: 0 0 1rem 0; font-size: 0.9rem; color: var(--text); }
+    .mermaid { text-align: center; min-height: 120px; }
+    .diagram-legend {
+      margin-top: 1rem;
+      font-size: 0.82rem;
+      color: var(--muted);
+      border-top: 1px solid var(--border);
+      padding-top: 0.75rem;
+    }
+    details.fallback { margin-top: 0.75rem; font-size: 0.82rem; color: var(--muted); }
+    footer {
+      margin-top: 2rem;
+      font-size: 0.8rem;
+      color: var(--muted);
+    }
+  </style>
+</head>
+<body>
+
+  <h1>Узкие места проведения документа «Сделка»</h1>
+  <p class="lead">Для задачи по оптимизации перерегистрации сделок в плане выделены <strong>четыре тяжёлых запроса</strong> в модуле объекта документа и <strong>дополнительно</strong> — массовые вызовы в общем модуле параметров портфеля (строка 137, не запрос к СУБД). Ниже сводная таблица: что измерялось и какие показатели дал замер по проблемной сделке (количество обращений, суммарное время в секундах, доля в общем времени замера).</p>
+  <p class="meta">Описание и номера строк — из <code>ПланИТТестирования_8662_Замеры.docx</code>. Цифры замера — из того же плана (профилирование по «медленной» сделке). Строки <strong>1160 / 1769 / 2551 / 2485</strong> — <code>Documents/Сделка/Ext/ObjectModule.bsl</code>; строка <strong>137</strong> — <code>CommonModules/УправлениеПараметрамиПортфеляПовтИспНаВремяСеанса/Ext/Module.bsl</code>.</p>
+
+  <table>
+    <thead>
+      <tr>
+        <th class="num">№</th>
+        <th>Строка модуля</th>
+        <th>Функция и запрос (как в плане)</th>
+        <th>Операция в точке замера</th>
+        <th>Кол-во</th>
+        <th>Время (сек)</th>
+        <th>%</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td class="num">1</td>
+        <td class="metrics">1160</td>
+        <td class="code">ТаблицыПоПродажам_БУ: ТекстЗапросаТаблицыПоПродажамБУ_БезНКД + ТекстЗапросаНКД</td>
+        <td class="code">ВыполнитьПакет()</td>
+        <td class="metrics">540</td>
+        <td class="metrics">176,020914</td>
+        <td class="metrics">15,57</td>
+      </tr>
+      <tr>
+        <td class="num">2</td>
+        <td class="metrics">1769</td>
+        <td class="code">ПолучитьСуммуОНВ (текст запроса в той же функции)</td>
+        <td class="code">Выполнить()</td>
+        <td class="metrics">2&nbsp;081</td>
+        <td class="metrics">51,404323</td>
+        <td class="metrics">4,55</td>
+      </tr>
+      <tr>
+        <td class="num">3</td>
+        <td class="metrics">2551</td>
+        <td class="code">ПолучитьАвансы: ТекстЗапроса_ПолучитьАвансы</td>
+        <td class="code">Выполнить()</td>
+        <td class="metrics">2&nbsp;081</td>
+        <td class="metrics">36,278445</td>
+        <td class="metrics">3,21</td>
+      </tr>
+      <tr>
+        <td class="num">4</td>
+        <td class="metrics">2485</td>
+        <td class="code">ТаблицыАванса (текст запроса в той же функции)</td>
+        <td class="code">ВыполнитьПакет()</td>
+        <td class="metrics">2&nbsp;081</td>
+        <td class="metrics">28,387758</td>
+        <td class="metrics">2,51</td>
+      </tr>
+      <tr>
+        <td class="num">5</td>
+        <td class="metrics">137</td>
+        <td class="code">УправлениеПараметрамиПортфеляПовтИспНаВремяСеанса.СлужебныеПараметрыУчета: присвоение пустого значения по типу параметра</td>
+        <td class="code">СтрокаТЗ.Параметр.ТипЗначения.ПривестиЗначение()</td>
+        <td class="metrics">47&nbsp;940</td>
+        <td class="metrics">42,380083</td>
+        <td class="metrics">3,75</td>
+      </tr>
+    </tbody>
+    <caption>Показатели: число вызовов, суммарное время (сек), доля от общего времени замера по сценарию из плана.</caption>
+  </table>
+
+  <div class="note">
+    <h2>Смысл строк в базовой конфигурации (документ «Сделка»)</h2>
+    <p>Строки 1–4 таблицы относятся к <code>Документ.Сделка.МодульОбъекта</code> (подготовка данных к проведению по БУ и зачету авансов). При продаже/выбытии актива последовательно вызываются подготовка таблиц продажи по бухучету, расчет сумм по облигациям и блок авансов — в плане это <strong>четыре запроса к оптимизации</strong>. Строка 5 — отдельный общий модуль, см. ниже.</p>
+    <ul>
+      <li><strong>Строка 1160 — <code>ТаблицыПоПродажам_БУ</code></strong> (область <code>ПОДГОТОВКА_ДАННЫХ / БУ</code>). Функция собирает большой <strong>пакет запросов</strong> к регистру бухгалтерии: остатки по счетам актива, переоценке, дисконту, при необходимости дополнительным счетам (облигации, векселя). Текст начинается с <code>ТекстЗапросаТаблицыПоПродажамБУ_БезНКД</code>; для облигаций к пакету добавляются запросы по НКД (и при необходимости по НУ индексируемых облигаций), для векселей — проценты. Результат <code>ВыполнитьПакет()</code> раскладывается по номерам временных таблиц и дальше используется при списании активов и движениях по реализации (см. ветку проведения, где вызывается <code>ТаблицыПоПродажам_БУ</code>).</li>
+      <li><strong>Строка 1769 — <code>ПолучитьСуммуОНВ</code></strong>. Выполняется при включенном БУ. Запрос обращается к <strong>остаткам «Хозрасчетный»</strong> по счету тела облигаций и по счету <strong>ОНВ</strong>, затем вычисляется доля суммы ОНВ на количество в текущей сделке (пропорционально остатку тела). Возвращается таблица значений с суммой ОНВ для последующих проводок.</li>
+      <li><strong>Строка 2551 — <code>ПолучитьАвансы</code></strong>. Если зачет авансов не отключен, подбираются счета авансов, формируется текст <code>ТекстЗапроса_ПолучитьАвансы</code> (с учетом субконто «документы расчетов» при необходимости). Выполняется запрос <code>Выполнить()</code>, в результате получается таблица <strong>остатков авансов</strong> по портфелю, контрагенту и договору для зачета в сделке; при большом числе строк добавляется индекс для ускорения последующей обработки.</li>
+      <li><strong>Строка 2485 — <code>ТаблицыАванса</code></strong>. Готовит структуру данных для зачета авансов: пакет запросов строит временные таблицы по суммам и НКД документа, дополнительным расходам, строкам взаиморасчетов с контрагентом. Результат пакета используется в <code>СформироватьДвиженияЗачетАвансов</code> вместе с таблицей из <code>ПолучитьАвансы</code>.</li>
+      <li><strong>Строка 137 — <code>УправлениеПараметрамиПортфеляПовтИспНаВремяСеанса</code>, функция <code>СлужебныеПараметрыУчета</code></strong>. После запроса к регистру <code>ЗначенияПараметровПортфеля</code> и соединения с ПВХ <code>ПараметрыПортфеля</code> для строк без значения в срезе выполняется цикл: <code>СтрокаТЗ.Значение = СтрокаТЗ.Параметр.ТипЗначения.ПривестиЗначение()</code> — подстановка пустого значения по описанию типа реквизита параметра. В замере по перепроведению накопилось много вызовов (десятки тысяч на пакет сделок); по доле времени точка второстепенна по сравнению с запросом на строке 1160, но даёт заметный вклад при массовом проведении.</li>
+    </ul>
+  </div>
+
+  <section class="diagram-section" aria-labelledby="diagram-title">
+    <h2 id="diagram-title">Порядок вызовов при проведении (БУ)</h2>
+    <p>Схема отражает цепочку в <code>ОбработкаПроведения</code> и внутри <code>СформироватьДвиженияБУ</code>: сначала подготовка параметров и ОНВ, затем движения по бухучету с ветвлением по виду операции. <strong>Связь между четырьмя точками замера в модуле «Сделка» (строки 1–4 таблицы):</strong> <code>ПолучитьСуммуОНВ</code> выполняется отдельно и раньше блока зачёта авансов; <code>ТаблицыПоПродажам_БУ</code> при выбытии идёт перед зачётом авансов и не передаёт данные напрямую в <code>ТаблицыАванса</code> / <code>ПолучитьАвансы</code>. <code>ТаблицыАванса</code> и <code>ПолучитьАвансы</code> вызываются подряд внутри <code>СформироватьДвиженияЗачетАвансов</code> и вместе питают <code>ПодготовитьТаблицуВзаиморасчетовЗачетАвансов</code>. <strong>Строка 5 таблицы</strong> (<code>УправлениеПараметрамиПортфеляПовтИспНаВремяСеанса</code>, строка 137) на схеме не показана: это другой модуль, вызовы при проведении не укладываются в ту же линейную цепочку БУ.</p>
+    <div class="mermaid">
+flowchart TB
+  subgraph S1["Этап 1: подготовка"]
+    A["ОбработкаПроведения"]
+    B["УстановкаДополнительныхПараметровПроведения"]
+    C["ПолучитьСуммуОНВ"]
+    A --> B --> C
+  end
+  subgraph S2["Этап 2: движения БУ"]
+    D["СформироватьДвиженияБУ"]
+    E{"ВидОперации"}
+    F["ТаблицыПоПродажам_БУ"]
+    G["СформироватьДвиженияЗачетАвансов"]
+    H["ТаблицыАванса"]
+    I["ПолучитьАвансы"]
+    J["ПодготовитьТаблицуВзаиморасчетовЗачетАвансов и проводки Хозрасчетный"]
+    D --> E
+    E -->|Поступление| G
+    E -->|Выбытие| F
+    F --> G
+    G --> H --> I --> J
+  end
+  C --> D
+    </div>
+    <p class="diagram-legend">Узлы «Поступление» / «Выбытие» — взаимоисключающие ветки из <code>СформироватьДвиженияБУ</code> (<code>ObjectModule.bsl</code>, строки около 5380–5470). Диаграмма строится Mermaid; при отключённом интернете откройте текстовый вариант ниже.</p>
+    <details class="fallback">
+      <summary>Текстовая последовательность</summary>
+      <ol>
+        <li><code>ОбработкаПроведения</code> вызывает <code>УстановкаДополнительныхПараметровПроведения</code>, внутри — <code>ПолучитьСуммуОНВ</code>.</li>
+        <li>Затем <code>СформироватьДвиженияБУ</code>: при <strong>поступлении</strong> сразу <code>СформироватьДвиженияЗачетАвансов</code>; при <strong>выбытии</strong> сначала <code>ТаблицыПоПродажам_БУ</code>, затем <code>СформироватьДвиженияЗачетАвансов</code>.</li>
+        <li>Внутри зачёта авансов: сначала <code>ТаблицыАванса</code> (пакет по данным документа), затем <code>ПолучитьАвансы</code> (остатки из учёта), затем подготовка таблицы взаиморасчётов и проводки.</li>
+      </ol>
+    </details>
+  </section>
+
+  <footer>IMDEV-8662. Таблица замеров для ИТ-тестирования и оптимизации запросов при перерегистрации.</footer>
+
+  <script type="module">
+    import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs";
+    mermaid.initialize({
+      startOnLoad: false,
+      theme: "neutral",
+      securityLevel: "loose",
+      flowchart: { curve: "basis", padding: 12 },
+      fontFamily: "Segoe UI, system-ui, sans-serif"
+    });
+    await mermaid.run({ querySelector: ".mermaid" });
+  </script>
+
+</body>
+</html>
