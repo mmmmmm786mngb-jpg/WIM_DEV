@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Оптимизация1160 (IMDEV-8662) - явное получение даты через ВЫРАЗИТЬ</title>
+  <style>
+    :root {
+      --text: #1f2a37;
+      --muted: #5f6b7a;
+      --border: #d9e2ec;
+      --head: #0c5460;
+      --accent: #17a2b8;
+      --accent-soft: #eef9fc;
+      --panel: #f8fafc;
+      --white: #ffffff;
+    }
+    * {
+      box-sizing: border-box;
+    }
+    body {
+      font-family: "Segoe UI", system-ui, sans-serif;
+      color: var(--text);
+      line-height: 1.58;
+      max-width: 980px;
+      margin: 1.5rem auto;
+      padding: 0 1rem 2rem 1rem;
+      background: #fbfdff;
+    }
+    h1 {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: var(--head);
+      margin: 0 0 0.5rem 0;
+    }
+    h2 {
+      font-size: 1.08rem;
+      color: var(--head);
+      margin-top: 1.6rem;
+      margin-bottom: 0.55rem;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 0.3rem;
+    }
+    h3 {
+      font-size: 0.98rem;
+      color: var(--head);
+      margin-top: 1.15rem;
+      margin-bottom: 0.45rem;
+    }
+    p {
+      margin: 0.55rem 0;
+    }
+    ul {
+      margin: 0.45rem 0 0.7rem 1.2rem;
+      padding: 0;
+    }
+    li {
+      margin: 0.35rem 0;
+    }
+    a {
+      color: #117a8b;
+    }
+    code {
+      font-family: Consolas, "Courier New", monospace;
+      font-size: 0.88em;
+    }
+    .hero {
+      background: linear-gradient(180deg, #f6fcfe 0%, #ffffff 100%);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 1.2rem 1.25rem;
+      box-shadow: 0 8px 24px rgba(17, 122, 139, 0.05);
+    }
+    .lead {
+      font-size: 1rem;
+      margin: 0.45rem 0 0.9rem 0;
+    }
+    .meta {
+      font-size: 0.9rem;
+      color: var(--muted);
+      margin: 0;
+    }
+    .metrics {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 0.75rem;
+      margin-top: 1rem;
+    }
+    .metric {
+      background: var(--white);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 0.9rem 1rem;
+    }
+    .metric-label {
+      font-size: 0.82rem;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+      margin-bottom: 0.35rem;
+    }
+    .metric-value {
+      font-size: 1.2rem;
+      font-weight: 700;
+      color: var(--head);
+      line-height: 1.2;
+    }
+    .panel {
+      background: var(--white);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1rem 1.05rem;
+      margin-top: 0.9rem;
+    }
+    .highlight {
+      background: var(--accent-soft);
+      border-left: 4px solid var(--accent);
+      border-radius: 8px;
+      padding: 0.95rem 1rem;
+      margin-top: 0.9rem;
+    }
+    .cols {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 0.9rem;
+    }
+    .chip-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.45rem;
+      margin-top: 0.7rem;
+    }
+    .chip {
+      display: inline-block;
+      padding: 0.38rem 0.6rem;
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      background: #f8fbfd;
+      font-size: 0.88rem;
+    }
+    .biz {
+      margin-top: 1.25rem;
+      padding: 1rem 1.05rem;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      background: var(--panel);
+      font-size: 0.95rem;
+    }
+    .biz h2 {
+      margin-top: 0;
+      border-bottom: none;
+      padding-bottom: 0;
+    }
+    @media (max-width: 760px) {
+      .metrics,
+      .cols {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="hero">
+    <h1>Оптимизация1160 - <code>ТаблицыПоПродажам_БУ</code> (строка 1160)</h1>
+    <p class="lead">Материал описывает доработку двух функций модуля объекта <code>Документ.Сделка</code> для задачи IMDEV-8662: <code>ТекстЗапросаТаблицыПоПродажамБУ_БезНКД</code> и <code>ТекстЗапросаНКД</code>. Цель правки - убрать неоднозначное получение <code>Дата</code> через точку у полей ссылочного состава и сделать извлечение даты явным и типобезопасным.</p>
+    <p class="meta">Источник замеров: <a href="measurements_table_IMDEV-8662.html">measurements_table_IMDEV-8662.html</a>, строка 1160. Черновик BSL: <code>..\Скрипты\Optimization1160_DateCast_Draft.bsl</code>.</p>
+
+    <div class="metrics">
+      <div class="metric">
+        <div class="metric-label">Операция</div>
+        <div class="metric-value"><code>ВыполнитьПакет()</code></div>
+      </div>
+      <div class="metric">
+        <div class="metric-label">Количество вызовов</div>
+        <div class="metric-value">540</div>
+      </div>
+      <div class="metric">
+        <div class="metric-label">Суммарное время замера</div>
+        <div class="metric-value">176,020914 сек (15,57%)</div>
+      </div>
+    </div>
+  </div>
+
+  <h2>Почему эта точка тяжелая</h2>
+  <p>Строка 1160 относится к подготовке таблиц продажи по БУ и попадает в тяжелый пакет запросов, который выполняется через <code>ВыполнитьПакет()</code>. Внутри пакета есть выражения вида <code>Ссылка.Дата</code>, где одна и та же колонка может содержать ссылки разных типов: документы и бизнес-процессы.</p>
+  <p>Для платформы это означает, что дата извлекается не из заранее известного типа, а из полиморфного значения. В таких местах SQL получается менее прозрачным: движку нужно учитывать несколько вариантов ссылок, а план выполнения становится менее предсказуемым.</p>
+
+  <div class="highlight">
+    <strong>Ключевая идея:</strong> мы не меняем бизнес-логику списания и не перестраиваем пакет запросов целиком. Мы точечно делаем явным только одно место - как именно из ссылочного поля получается <code>Дата</code>.
+  </div>
+
+  <h2>Основная идея оптимизации</h2>
+  <p><strong>Заменить прямой доступ <code>.Дата</code> на явный шаблон <code>ВЫБОР + ТИПЗНАЧЕНИЯ + ВЫРАЗИТЬ(...).Дата</code>.</strong> Такой подход заранее раскладывает ссылочное поле по допустимым типам и для каждого типа обращается к реквизиту <code>Дата</code> уже после точного приведения.</p>
+  <div class="panel">
+    <p><strong>Что это дает технически:</strong></p>
+    <ul>
+      <li>убирает неявную работу с составным ссылочным типом;</li>
+      <li>делает выражение чтения даты детерминированным и читаемым;</li>
+      <li>повторяет уже проверенный паттерн из аналогичной доработки в другом проекте;</li>
+      <li>снижает риск нестабильного SQL-плана в местах, где поле содержит разные виды ссылок.</li>
+    </ul>
+  </div>
+
+  <h2>Где именно меняем</h2>
+  <div class="cols">
+    <div class="panel">
+      <h3>1. <code>ТекстЗапросаТаблицыПоПродажамБУ_БезНКД</code></h3>
+      <ul>
+        <li>заменяется получение даты по <code>Субконто2</code>;</li>
+        <li>заменяется получение даты по <code>Партия</code> через <code>ЕСТЬNULL(...)</code>;</li>
+        <li>подстановка выполняется через текстовые блоки <code>ТекстДатаПоСубконто2</code> и <code>ТекстДатаПоПартии</code>.</li>
+      </ul>
+      <p>То есть меняется не смысл запроса, а только форма выражения, которое возвращает дату документа.</p>
+    </div>
+
+    <div class="panel">
+      <h3>2. <code>ТекстЗапросаНКД</code></h3>
+      <ul>
+        <li>в ветке учета НКД в разрезе партий заменяется <code>ВТ_ОстаткиТело.Партия.Дата</code>;</li>
+        <li>для этого используется отдельный шаблон <code>ТекстДатаПоПартииНКД</code>;</li>
+        <li>замена также делается до возврата итогового текста запроса.</li>
+      </ul>
+      <p>В результате обе функции используют одинаковый принцип явного приведения типа перед чтением реквизита <code>Дата</code>.</p>
+    </div>
+  </div>
+
+  <h2>Почему идея корректна по смыслу</h2>
+  <p>В исходном коде система уже ожидала, что в этих полях лежат ссылки на документы и бизнес-процессы, у которых есть дата. Новая версия не меняет эту семантику, а только описывает ее явно: сначала проверяем тип, затем приводим значение, затем читаем <code>Дата</code>.</p>
+  <p>Для неизвестных или неподдержанных типов используется безопасный fallback <code>ДАТАВРЕМЯ(1, 1, 1, 0, 0, 0)</code>. Это сохраняет защитное поведение и не ломает сценарии, где значение не попало в целевой перечень.</p>
+
+  <h2>Перечень типов для явного приведения</h2>
+  <p>В шаблонах <code>ВЫБОР</code> последовательно обрабатываются следующие типы ссылок:</p>
+  <div class="chip-list">
+    <span class="chip"><code>ДокументСсылка.ДокументРасчетовСКонтрагентом</code></span>
+    <span class="chip"><code>БизнесПроцессСсылка.СделкиTn</code></span>
+    <span class="chip"><code>ДокументСсылка.КонвертацияАктивов</code></span>
+    <span class="chip"><code>ДокументСсылка.СделкаРЕПОПерваяНога</code></span>
+    <span class="chip"><code>БизнесПроцессСсылка.ВнебиржеваяСделка</code></span>
+    <span class="chip"><code>ДокументСсылка.СделкаНаФондовомРынке</code></span>
+    <span class="chip"><code>ДокументСсылка.ВводВыводЦенныхБумагИзДУ</code></span>
+    <span class="chip"><code>ДокументСсылка.ПринятиеКУчету</code></span>
+    <span class="chip"><code>ДокументСсылка.СделкаРЕПОВтораяНога</code></span>
+    <span class="chip"><code>ДокументСсылка.Сделка</code></span>
+    <span class="chip"><code>ДокументСсылка.СделкаНаСрочномРынке</code></span>
+    <span class="chip"><code>ДокументСсылка.ПогашениеОблигаций</code></span>
+  </div>
+
+  <h2>Как это оформляется в расширении</h2>
+  <div class="panel">
+    <p><strong>Обе функции заимствуются методом <code>ИзменениеИКонтроль</code>.</strong> Это важно для демонстрационного расширения: логика методов сохраняется, а измененные места хорошо видны через вставки и удаляемые блоки.</p>
+    <ul>
+      <li><code>ТекстЗапросаТаблицыПоПродажамБУ_БезНКД</code> - <code>&amp;ИзменениеИКонтроль</code></li>
+      <li><code>ТекстЗапросаНКД</code> - <code>&amp;ИзменениеИКонтроль</code></li>
+    </ul>
+    <p>Практически это означает точечные <code>#Удаление / #Вставка</code> или добавление новых блоков <code>СтрЗаменить</code> без полной переписи метода.</p>
+  </div>
+
+  <h2>Что важно подчеркнуть разработчикам</h2>
+  <ul>
+    <li>Оптимизация направлена не на сокращение количества таблиц и не на отказ от <code>ВыполнитьПакет()</code>, а именно на упрощение вычисления даты внутри тяжелого пакета.</li>
+    <li>Изменение локальное: меняются только выражения, где дата читалась через точку у составной ссылки.</li>
+    <li>Результат запроса по смыслу должен сохраниться: на тех же поддержанных типах возвращается та же самая дата, что и раньше.</li>
+    <li>Черновик BSL нужен как наглядная карта переноса в расширение и место для ревью конкретных вставок.</li>
+  </ul>
+
+  <div class="biz">
+    <h2>Для бизнеса</h2>
+    <p>Строка 1160 дает заметный вклад в общее время перепроведения: 176,020914 сек суммарно, или 15,57% по профилированию проблемной сделки. Предлагаемая доработка не меняет проводки и алгоритм учета, а делает тяжелый фрагмент запроса более предсказуемым для платформы за счет явного чтения даты из ссылок разных типов.</p>
+  </div>
+
+</body>
+</html>
