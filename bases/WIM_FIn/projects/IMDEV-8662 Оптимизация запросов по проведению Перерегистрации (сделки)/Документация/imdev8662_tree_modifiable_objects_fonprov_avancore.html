@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <title>IMDEV-8662 - дерево изменяемых объектов FonProv (Аванкор)</title>
+  <style>
+    :root {
+      --s137: #6b46c1;
+      --s1160: #2b6cb0;
+      --s1769: #c05621;
+      --s2485: #2f855a;
+      --s2551: #9b2c2c;
+      --common: #4a5568;
+    }
+    body {
+      font-family: "Segoe UI", Tahoma, sans-serif;
+      margin: 1rem 2rem;
+      background: #fafafa;
+      color: #1a202c;
+    }
+    h1 {
+      font-size: 1.4rem;
+      margin-bottom: 0.4rem;
+    }
+    .subtitle {
+      color: #718096;
+      font-size: 0.92rem;
+      margin-bottom: 1rem;
+    }
+    .ref-block {
+      margin-bottom: 1rem;
+      padding: 0.75rem 1rem;
+      background: #ebf8ff;
+      border: 1px solid #90cdf4;
+      border-radius: 6px;
+      font-size: 0.9rem;
+    }
+    .ref-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.8rem;
+      margin-bottom: 1rem;
+    }
+    .ref-card {
+      background: #ffffff;
+      border: 1px solid #e2e8f0;
+      border-radius: 6px;
+      padding: 0.75rem 0.9rem;
+      font-size: 0.9rem;
+    }
+    .ref-card h2 {
+      margin: 0 0 0.45rem 0;
+      font-size: 0.98rem;
+    }
+    .ref-card ul {
+      margin: 0.2rem 0 0 1rem;
+      padding: 0;
+    }
+    .warn {
+      background: #fffaf0;
+      border-color: #f6ad55;
+    }
+    ul.tree {
+      list-style: none;
+      padding-left: 1.2rem;
+      margin: 0.2rem 0;
+    }
+    ul.tree ul {
+      padding-left: 1.2rem;
+      border-left: 1px solid #e2e8f0;
+      margin-left: 0.35rem;
+    }
+    .branch {
+      margin: 0.22rem 0;
+    }
+    .branch > .cap {
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      padding: 0.1rem 0.15rem;
+    }
+    .branch > .cap:hover {
+      background: #edf2f7;
+      border-radius: 4px;
+    }
+    .toggle {
+      font-size: 0.72rem;
+      color: #718096;
+      user-select: none;
+    }
+    .name {
+      font-weight: 600;
+    }
+    .leaf {
+      padding-left: 1.5rem;
+      margin: 0.14rem 0;
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      flex-wrap: wrap;
+    }
+    .leaf .name {
+      font-weight: 400;
+      font-family: Consolas, monospace;
+      font-size: 0.9rem;
+    }
+    .tag {
+      font-size: 0.74rem;
+      padding: 0.1rem 0.42rem;
+      border-radius: 4px;
+      white-space: nowrap;
+    }
+    .tag.s137 { background: #e9d8fd; color: var(--s137); }
+    .tag.s1160 { background: #bee3f8; color: var(--s1160); }
+    .tag.s1769 { background: #fbd38d; color: var(--s1769); }
+    .tag.s2485 { background: #c6f6d5; color: var(--s2485); }
+    .tag.s2551 { background: #fed7d7; color: var(--s2551); }
+    .tag.common { background: #e2e8f0; color: var(--common); }
+    .legend {
+      margin-top: 1.2rem;
+      padding: 0.75rem 1rem;
+      background: #fff;
+      border: 1px solid #e2e8f0;
+      border-radius: 6px;
+      font-size: 0.85rem;
+    }
+    .legend h3 {
+      margin: 0 0 0.45rem 0;
+      font-size: 0.95rem;
+    }
+    .legend span {
+      display: inline-block;
+      margin-right: 0.7rem;
+      margin-bottom: 0.2rem;
+    }
+  </style>
+</head>
+<body>
+  <div class="ref-block">
+    <strong>Вендор: Аванкор.</strong> В рамках IMDEV-8662 доработки выполняются в расширении <code>FonProv</code>.
+    Базовая конфигурация WIM_FIn как состав CF не изменяется.
+  </div>
+
+  <h1>Дерево изменяемых объектов и процедур расширения FonProv</h1>
+  <p class="subtitle">Группировка по 5 оптимизациям из замеров (строки 137, 1160, 1769, 2485, 2551).</p>
+
+  <div class="ref-grid">
+    <div class="ref-card">
+      <h2>Справочно: заимствованные объекты без изменений</h2>
+      <ul>
+        <li><code>Catalog.Портфели</code></li>
+        <li><code>Catalog.Пул</code></li>
+        <li><code>Enum.СпособыЗачетаАвансов</code></li>
+        <li><code>ChartOfAccounts.Хозрасчетный</code></li>
+      </ul>
+      <p>Эти объекты в рамках IMDEV-8662 используются как заимствованные зависимости, без целевых изменений бизнес-логики.</p>
+    </div>
+
+    <div class="ref-card warn">
+      <h2>Справочно: новые тестовые объекты (не переносить в прод)</h2>
+      <ul>
+        <li><code>DataProcessor.FonProv_ПерепроведениеСделок</code> (включая форму)</li>
+        <li><code>CommonModule.FonProv_ПерепроведениеСделок</code></li>
+      </ul>
+      <p>Назначение: сервис перепроведения и проверка сценариев тестирования. В рабочую конфигурацию Аванкор применять не требуется.</p>
+    </div>
+  </div>
+
+  <ul class="tree">
+    <li class="branch">
+      <span class="cap"><span class="toggle">[+]</span><span class="name">Расширение FonProv</span><span class="tag common">IMDEV-8662</span></span>
+      <ul>
+        <li class="branch">
+          <span class="cap"><span class="toggle">[+]</span><span class="name">Общие модули (заимствование)</span><span class="tag s137">стр. 137</span></span>
+          <ul>
+            <li class="branch">
+              <span class="cap"><span class="toggle">[+]</span><span class="name">УправлениеПараметрамиПортфеляПовтИспНаВремяСеанса</span></span>
+              <ul>
+                <li class="leaf"><span class="name">ПустоеЗначениеПараметраПортфеля(Параметр)</span><span class="tag s137">стр. 137</span></li>
+                <li class="leaf"><span class="name">FonProv_СлужебныеПараметрыУчета(...)</span><span class="tag s137">стр. 137</span><span class="tag common">&amp;ИзменениеИКонтроль</span></li>
+              </ul>
+            </li>
+          </ul>
+        </li>
+
+        <li class="branch">
+          <span class="cap"><span class="toggle">[+]</span><span class="name">Документ Сделка (заимствование)</span><span class="tag common">стр. 1160/1769/2485/2551</span></span>
+          <ul>
+            <li class="leaf"><span class="name">FonProv_ТекстЗапросаТаблицыПоПродажамБУ_БезНКД(...)</span><span class="tag s1160">стр. 1160</span><span class="tag common">&amp;ИзменениеИКонтроль</span></li>
+            <li class="leaf"><span class="name">FonProv_ТекстЗапросаНКД(...)</span><span class="tag s1160">стр. 1160</span><span class="tag common">&amp;ИзменениеИКонтроль</span></li>
+
+            <li class="leaf"><span class="name">FonProv_УстановкаДополнительныхПараметровПроведения(...)</span><span class="tag s1769">стр. 1769</span><span class="tag common">&amp;ИзменениеИКонтроль</span></li>
+            <li class="leaf"><span class="name">FonProv_СформироватьДвиженияРеализация(...)</span><span class="tag s1769">стр. 1769</span><span class="tag common">&amp;ИзменениеИКонтроль</span></li>
+
+            <li class="leaf"><span class="name">FonProv_ТаблицыАванса(...)</span><span class="tag s2485">стр. 2485</span><span class="tag common">&amp;Вместо</span></li>
+
+            <li class="leaf"><span class="name">FonProv_ТекстЗапроса_ПолучитьАвансы(...)</span><span class="tag s2551">стр. 2551</span><span class="tag common">&amp;Вместо</span></li>
+            <li class="leaf"><span class="name">FonProv_ПустаяТаблицаОстаткиАвансов()</span><span class="tag s2551">стр. 2551</span><span class="tag common">&amp;ИзменениеИКонтроль</span></li>
+            <li class="leaf"><span class="name">FonProv_ДобавитьСтрокиЗачтенныхАвансов(...)</span><span class="tag s2551">стр. 2551</span><span class="tag common">&amp;ИзменениеИКонтроль</span></li>
+          </ul>
+        </li>
+      </ul>
+    </li>
+  </ul>
+
+  <div class="legend">
+    <h3>Легенда групп оптимизации</h3>
+    <span><span class="tag s137">стр. 137</span> ПовтИсп параметров портфеля</span><br>
+    <span><span class="tag s1160">стр. 1160</span> типобезопасное получение даты в запросах БУ/НКД</span><br>
+    <span><span class="tag s1769">стр. 1769</span> ленивый вызов ПолучитьСуммуОНВ</span><br>
+    <span><span class="tag s2485">стр. 2485</span> упрощение ТаблицыАванса</span><br>
+    <span><span class="tag s2551">стр. 2551</span> удаление СуммаНУ в цепочке ПолучитьАвансы</span>
+  </div>
+
+  <script>
+    document.querySelectorAll(".branch > .cap").forEach(function (cap) {
+      cap.addEventListener("click", function () {
+        var ul = this.nextElementSibling;
+        if (!ul) return;
+        var toggle = this.querySelector(".toggle");
+        if (ul.style.display === "none") {
+          ul.style.display = "block";
+          if (toggle) toggle.textContent = "[−]";
+        } else {
+          ul.style.display = "none";
+          if (toggle) toggle.textContent = "[+]";
+        }
+      });
+    });
+    document.querySelectorAll(".branch > ul").forEach(function (ul) {
+      ul.style.display = "block";
+      var t = ul.previousElementSibling.querySelector(".toggle");
+      if (t) t.textContent = "[−]";
+    });
+  </script>
+</body>
+</html>

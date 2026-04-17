@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>IMDEV-8662 - сводка оптимизаций и реализации в FonProv</title>
+  <style>
+    body {
+      font-family: "Segoe UI", Tahoma, sans-serif;
+      margin: 1rem 2rem;
+      color: #1f2937;
+      background: #fafafa;
+    }
+    h1 {
+      font-size: 1.35rem;
+      margin-bottom: 0.4rem;
+    }
+    .meta {
+      color: #6b7280;
+      font-size: 0.92rem;
+      margin-bottom: 1rem;
+    }
+    .note {
+      background: #eff6ff;
+      border: 1px solid #bfdbfe;
+      border-radius: 8px;
+      padding: 0.7rem 0.9rem;
+      margin-bottom: 1rem;
+      font-size: 0.92rem;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      background: #fff;
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      overflow: hidden;
+      margin-bottom: 1rem;
+    }
+    th, td {
+      border-bottom: 1px solid #e5e7eb;
+      padding: 0.55rem 0.6rem;
+      vertical-align: top;
+      font-size: 0.9rem;
+      text-align: left;
+    }
+    th {
+      background: #f3f4f6;
+      font-weight: 600;
+    }
+    tr:last-child td {
+      border-bottom: none;
+    }
+    code {
+      font-family: Consolas, "Courier New", monospace;
+      font-size: 0.88em;
+    }
+    ul {
+      margin-top: 0.3rem;
+      margin-bottom: 0.3rem;
+    }
+    li {
+      margin-bottom: 0.2rem;
+    }
+    .docs {
+      background: #ffffff;
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      padding: 0.8rem 1rem;
+    }
+    .docs h2 {
+      margin-top: 0;
+      font-size: 1rem;
+    }
+    .breakdown {
+      background: #ffffff;
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      padding: 0.8rem 1rem;
+      margin-bottom: 1rem;
+    }
+    .breakdown h2 {
+      margin-top: 0;
+      font-size: 1rem;
+    }
+    .group {
+      border-top: 1px dashed #d1d5db;
+      padding-top: 0.75rem;
+      margin-top: 0.75rem;
+    }
+    .group:first-of-type {
+      border-top: none;
+      padding-top: 0;
+      margin-top: 0;
+    }
+    .group h3 {
+      margin: 0 0 0.35rem 0;
+      font-size: 0.97rem;
+    }
+    .label {
+      color: #374151;
+      font-weight: 600;
+    }
+  </style>
+</head>
+<body>
+  <h1>IMDEV-8662: сводка 5 оптимизаций и реализация в FonProv</h1>
+  <p class="meta">Документ фиксирует связь: <code>точка замера -> описание -> реализованные перехваты в расширении</code>.</p>
+
+  <div class="note">
+    Во всех измененных местах в коде расширения добавлены унифицированные маркеры:
+    <code>// IMDEV-8662, стр. N</code>, где <code>N</code> - номер оптимизируемой строки из таблицы замеров.
+  </div>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Стр.</th>
+        <th>Точка замера</th>
+        <th>Метрика (кол-во / сек / %)</th>
+        <th>Реализация в расширении FonProv</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>137</strong></td>
+        <td><code>СлужебныеПараметрыУчета</code> (Общий модуль)</td>
+        <td>47 940 / 42,380083 / 3,75</td>
+        <td>
+          <ul>
+            <li><code>CommonModules/УправлениеПараметрамиПортфеляПовтИспНаВремяСеанса/Ext/Module.bsl</code></li>
+            <li>Добавлена <code>ПустоеЗначениеПараметраПортфеля</code></li>
+            <li><code>&ИзменениеИКонтроль("СлужебныеПараметрыУчета")</code>, замена прямого <code>ПривестиЗначение()</code></li>
+          </ul>
+        </td>
+      </tr>
+      <tr>
+        <td><strong>1160</strong></td>
+        <td><code>ТаблицыПоПродажам_БУ</code>: тексты запросов БУ и НКД</td>
+        <td>540 / 176,020914 / 15,57</td>
+        <td>
+          <ul>
+            <li><code>&ИзменениеИКонтроль("ТекстЗапросаТаблицыПоПродажамБУ_БезНКД")</code></li>
+            <li><code>&ИзменениеИКонтроль("ТекстЗапросаНКД")</code></li>
+            <li>Типобезопасные блоки <code>ВЫБОР + ТИПЗНАЧЕНИЯ + ВЫРАЗИТЬ(...).Дата</code></li>
+          </ul>
+        </td>
+      </tr>
+      <tr>
+        <td><strong>1769</strong></td>
+        <td><code>ПолучитьСуммуОНВ</code> (ленивый callsite)</td>
+        <td>2 081 / 51,404323 / 4,55</td>
+        <td>
+          <ul>
+            <li><code>&ИзменениеИКонтроль("УстановкаДополнительныхПараметровПроведения")</code></li>
+            <li><code>&ИзменениеИКонтроль("СформироватьДвиженияРеализация")</code></li>
+            <li>Вызов <code>ПолучитьСуммуОНВ()</code> перенесен в точку фактической потребности</li>
+          </ul>
+        </td>
+      </tr>
+      <tr>
+        <td><strong>2485</strong></td>
+        <td><code>ТаблицыАванса</code></td>
+        <td>2 081 / 28,387758 / 2,51</td>
+        <td>
+          <ul>
+            <li><code>&Вместо("ТаблицыАванса")</code></li>
+            <li>Основная таблица через <code>Запрос.Выполнить().Выгрузить()</code></li>
+            <li>Упрощение без пакетного разнесения по <code>НомераТаблиц</code></li>
+          </ul>
+        </td>
+      </tr>
+      <tr>
+        <td><strong>2551</strong></td>
+        <td><code>ПолучитьАвансы: ТекстЗапроса_ПолучитьАвансы</code></td>
+        <td>2 081 / 36,278445 / 3,21</td>
+        <td>
+          <ul>
+            <li><code>&Вместо("ТекстЗапроса_ПолучитьАвансы")</code></li>
+            <li><code>&ИзменениеИКонтроль("ПустаяТаблицаОстаткиАвансов")</code></li>
+            <li><code>&ИзменениеИКонтроль("ДобавитьСтрокиЗачтенныхАвансов")</code></li>
+            <li>Удалены <code>СуммаНУ</code> и зависимый расчет коэффициента НУ</li>
+          </ul>
+        </td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="breakdown">
+    <h2>Детальная разбивка доработок FonProv на 5 групп</h2>
+    <p class="meta">Ниже расширенная версия с контекстом, файлами, конкретными изменениями и стандартным маркером комментариев.</p>
+
+    <div class="group">
+      <h3>1) Оптимизация стр. 137</h3>
+      <p><span class="label">Контекст:</span> общий модуль параметров портфеля, не <code>Документ.Сделка</code>.</p>
+      <p><span class="label">Файл:</span><br><code>Расширения/FonProv/CommonModules/УправлениеПараметрамиПортфеляПовтИспНаВремяСеанса/Ext/Module.bsl</code></p>
+      <p><span class="label">Изменения:</span></p>
+      <ul>
+        <li>добавлена функция <code>ПустоеЗначениеПараметраПортфеля(Параметр)</code>;</li>
+        <li>перехвачен метод <code>СлужебныеПараметрыУчета</code> через <code>&amp;ИзменениеИКонтроль</code>;</li>
+        <li>в цикле замена:
+          было <code>СтрокаТЗ.Параметр.ТипЗначения.ПривестиЗначение()</code>,
+          стало вызов <code>УправлениеПараметрамиПортфеляПовтИспНаВремяСеанса.ПустоеЗначениеПараметраПортфеля(...)</code>.
+        </li>
+      </ul>
+      <p><span class="label">Маркер-комментарий группы:</span> <code>// IMDEV-8662, стр. 137</code></p>
+    </div>
+
+    <div class="group">
+      <h3>2) Оптимизация стр. 1160</h3>
+      <p><span class="label">Контекст:</span> типобезопасное получение <code>.Дата</code> в тяжелом пакете БУ/НКД.</p>
+      <p><span class="label">Файл:</span><br><code>Расширения/FonProv/Documents/Сделка/Ext/ObjectModule.bsl</code></p>
+      <p><span class="label">Изменения:</span></p>
+      <ul>
+        <li><code>FonProv_ТекстЗапросаТаблицыПоПродажамБУ_БезНКД</code> (<code>&amp;ИзменениеИКонтроль</code>):
+          добавлены блоки <code>ТекстДатаПоСубконто2</code> и <code>ТекстДатаПоПартии</code>
+          (<code>ВЫБОР + ТИПЗНАЧЕНИЯ + ВЫРАЗИТЬ</code>);
+          добавлены <code>СтрЗаменить</code> для замены прямых <code>.Дата</code>.
+        </li>
+        <li><code>FonProv_ТекстЗапросаНКД</code> (<code>&amp;ИзменениеИКонтроль</code>):
+          добавлен <code>ТекстДатаПоПартииНКД</code>;
+          замена <code>ВТ_ОстаткиТело.Партия.Дата</code> через <code>СтрЗаменить</code>.
+        </li>
+      </ul>
+      <p><span class="label">Маркер-комментарий группы:</span> <code>// IMDEV-8662, стр. 1160</code></p>
+    </div>
+
+    <div class="group">
+      <h3>3) Оптимизация стр. 1769</h3>
+      <p><span class="label">Контекст:</span> ленивый вызов <code>ПолучитьСуммуОНВ</code> (не трогаем текст запроса, меняем callsite).</p>
+      <p><span class="label">Файл:</span><br><code>Расширения/FonProv/Documents/Сделка/Ext/ObjectModule.bsl</code></p>
+      <p><span class="label">Изменения:</span></p>
+      <ul>
+        <li><code>FonProv_УстановкаДополнительныхПараметровПроведения</code> (<code>&amp;ИзменениеИКонтроль</code>):
+          удален ранний вызов <code>ТаблицаОНВ = ПолучитьСуммуОНВ();</code>,
+          вместо этого <code>ТаблицаОНВ = Неопределено</code>.
+        </li>
+        <li><code>FonProv_СформироватьДвиженияРеализация</code> (<code>&amp;ИзменениеИКонтроль</code>):
+          добавлен ленивый вызов <code>ПолучитьСуммуОНВ()</code> только в нужной ветке;
+          добавлена безопасная проверка перед <code>Итог("СуммаОНВ")</code>.
+        </li>
+      </ul>
+      <p><span class="label">Маркер-комментарий группы:</span> <code>// IMDEV-8662, стр. 1769</code></p>
+    </div>
+
+    <div class="group">
+      <h3>4) Оптимизация стр. 2485</h3>
+      <p><span class="label">Контекст:</span> <code>ТаблицыАванса</code> - упрощение выполнения запроса.</p>
+      <p><span class="label">Файл:</span><br><code>Расширения/FonProv/Documents/Сделка/Ext/ObjectModule.bsl</code></p>
+      <p><span class="label">Изменения:</span></p>
+      <ul>
+        <li><code>FonProv_ТаблицыАванса</code> (<code>&amp;Вместо("ТаблицыАванса")</code>):</li>
+        <li>отказ от пакетного сценария с <code>НомераТаблиц</code>;</li>
+        <li>результат основной таблицы формируется через <code>Запрос.Выполнить().Выгрузить()</code>;</li>
+        <li>отдельная логика таблицы документов авансов сохранена.</li>
+      </ul>
+      <p><span class="label">Маркер-комментарий группы:</span> <code>// IMDEV-8662, стр. 2485</code></p>
+    </div>
+
+    <div class="group">
+      <h3>5) Оптимизация стр. 2551</h3>
+      <p><span class="label">Контекст:</span> удаление неиспользуемой ветки <code>СуммаНУ</code> в цепочке авансов.</p>
+      <p><span class="label">Файл:</span><br><code>Расширения/FonProv/Documents/Сделка/Ext/ObjectModule.bsl</code></p>
+      <p><span class="label">Изменения:</span></p>
+      <ul>
+        <li><code>FonProv_ТекстЗапроса_ПолучитьАвансы</code> (<code>&amp;Вместо</code>):
+          из текста запроса убраны поля/расчеты <code>СуммаНУ</code>.
+        </li>
+        <li><code>FonProv_ПустаяТаблицаОстаткиАвансов</code> (<code>&amp;ИзменениеИКонтроль</code>):
+          удалена колонка <code>СуммаНУ</code>.
+        </li>
+        <li><code>FonProv_ДобавитьСтрокиЗачтенныхАвансов</code> (<code>&amp;ИзменениеИКонтроль</code>):
+          удален расчет <code>КоэффициентКурсаАвансаНУ</code>.
+        </li>
+      </ul>
+      <p><span class="label">Маркер-комментарий группы:</span> <code>// IMDEV-8662, стр. 2551</code></p>
+    </div>
+  </div>
+
+  <div class="docs">
+    <h2>Связанные материалы</h2>
+    <ul>
+      <li><a href="measurements_table_IMDEV-8662.html">measurements_table_IMDEV-8662.html</a></li>
+      <li><a href="Optimization137.html">Optimization137.html</a></li>
+      <li><a href="Optimization1160_DateCast_querypack.html">Optimization1160_DateCast_querypack.html</a></li>
+      <li><a href="Optimization1769_ONV_lazy_callsite.html">Optimization1769_ONV_lazy_callsite.html</a></li>
+      <li><a href="Optimization2485_TablitsyAvansa_querypack.html">Optimization2485_TablitsyAvansa_querypack.html</a></li>
+      <li><a href="Optimization2551_PoluchitAvansy_query.html">Optimization2551_PoluchitAvansy_query.html</a></li>
+    </ul>
+  </div>
+</body>
+</html>
