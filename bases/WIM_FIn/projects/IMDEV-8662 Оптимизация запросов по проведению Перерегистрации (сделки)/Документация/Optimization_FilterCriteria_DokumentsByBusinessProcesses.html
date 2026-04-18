@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="ru">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Оптимизация критерия отбора ДокументыПоБизнеспроцессам (IMDEV-8662)</title>
+  <style>
+    :root {
+      --text: #212529;
+      --muted: #6c757d;
+      --border: #dee2e6;
+      --head: #0c5460;
+      --info: #17a2b8;
+      --note-bg: #f0f9fb;
+    }
+
+    body {
+      font-family: "Segoe UI", system-ui, sans-serif;
+      color: var(--text);
+      line-height: 1.55;
+      max-width: 920px;
+      margin: 1.5rem auto;
+      padding: 0 1rem;
+    }
+
+    h1 {
+      font-size: 1.35rem;
+      font-weight: 600;
+      color: var(--head);
+      margin-bottom: 0.35rem;
+    }
+
+    h2 {
+      font-size: 1.08rem;
+      color: var(--head);
+      margin-top: 1.5rem;
+      margin-bottom: 0.5rem;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 0.25rem;
+    }
+
+    h3 {
+      font-size: 0.98rem;
+      color: var(--head);
+      margin-top: 1rem;
+      margin-bottom: 0.4rem;
+    }
+
+    .lead {
+      font-size: 0.98rem;
+      margin: 0 0 1rem 0;
+    }
+
+    .meta {
+      font-size: 0.88rem;
+      color: var(--muted);
+      margin-bottom: 1.25rem;
+    }
+
+    p {
+      margin: 0.5rem 0;
+    }
+
+    ul {
+      margin: 0.4rem 0 0.6rem 1.2rem;
+      padding: 0;
+    }
+
+    li {
+      margin: 0.35rem 0;
+    }
+
+    pre {
+      font-family: Consolas, "Courier New", monospace;
+      font-size: 0.8rem;
+      background: #f8f9fa;
+      border: 1px solid var(--border);
+      padding: 0.85rem 1rem;
+      overflow-x: auto;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    code {
+      font-family: Consolas, "Courier New", monospace;
+      font-size: 0.88em;
+    }
+
+    .note {
+      margin-top: 1.25rem;
+      padding: 1rem;
+      border-left: 4px solid var(--info);
+      background: var(--note-bg);
+      font-size: 0.92rem;
+    }
+
+    .note strong {
+      color: var(--head);
+    }
+
+    footer {
+      margin-top: 2rem;
+      font-size: 0.8rem;
+      color: var(--muted);
+    }
+  </style>
+</head>
+
+<body>
+
+  <h1>Оптимизация запроса критерия отбора ДокументыПоБизнеспроцессам</h1>
+  <p class="lead">Контекст: задача <strong>IMDEV-8662</strong>, расширение <strong>FonProv</strong>, модуль менеджера
+    критерия отбора <code>ДокументыПоБизнеспроцессам</code>, функция <code>НайтиДокументы</code>.</p>
+  <p class="meta">Файл доработки:
+    <code>Расширения/FonProv/FilterCriteria/ДокументыПоБизнеспроцессам/Ext/ManagerModule.bsl</code>. Тип перехвата:
+    <code>&amp;ИзменениеИКонтроль("НайтиДокументы")</code>.</p>
+
+  <h2>Что оптимизировано</h2>
+  <p>Ранее запрос сразу обращался к <code>КритерийОтбора.ДокументыПоБизнеспроцессам(&amp;Основание)</code> и в том же
+    SELECT применял условие <code>&amp;ОтборПометкаУдаления</code> через ссылочный реквизит
+    <code>Ссылка.ПометкаУдаления</code>.</p>
+  <p>В новой реализации выборка по критерию отбора выделена в отдельную временную таблицу
+    <code>ВТ_ДокументыПоОснованию</code>, а фильтрация по признаку удаления выполняется на втором шаге.</p>
+
+  <h2>Идея и ожидаемый эффект</h2>
+  <ul>
+    <li>Разделить тяжелую часть получения набора ссылок и последующую фильтрацию на два предсказуемых этапа.</li>
+    <li>Стабилизировать план выполнения запроса при работе с критерием отбора и динамическим условием по
+      <code>ПометкаУдаления</code>.</li>
+    <li>Сохранить текущую бизнес-логику функции и формат возвращаемого результата (массив ссылок документов).</li>
+  </ul>
+
+  <h2>Текст запроса: было</h2>
+  <pre>ВЫБРАТЬ
+	ДокументыПоБизнеспроцессам.Ссылка КАК Ссылка
+ИЗ
+	КритерийОтбора.ДокументыПоБизнеспроцессам(&Основание) КАК ДокументыПоБизнеспроцессам
+ГДЕ
+	&ОтборПометкаУдаления</pre>
+
+  <h2>Текст запроса: стало</h2>
+  <pre>ВЫБРАТЬ
+	ДокументыПоБизнеспроцессам.Ссылка КАК Ссылка
+ПОМЕСТИТЬ ВТ_ДокументыПоОснованию
+ИЗ
+	КритерийОтбора.ДокументыПоБизнеспроцессам(&Основание) КАК ДокументыПоБизнеспроцессам
+;
+
+////////////////////////////////////////////////////////////////////////////////
+ВЫБРАТЬ
+	ДокументыПоБизнеспроцессам.Ссылка КАК Ссылка
+ИЗ
+	ВТ_ДокументыПоОснованию КАК ДокументыПоБизнеспроцессам
+ГДЕ
+	&ОтборПометкаУдаления</pre>
+
+  <h2>Условие отбора по пометке удаления</h2>
+  <p>Формирование условия в коде осталось совместимым с прежним поведением:</p>
+  <ul>
+    <li>если <code>ПометкаУдаления = Неопределено</code> - в запрос подставляется <code>Истина</code>;</li>
+    <li>иначе подставляется условие
+      <code>ДокументыПоБизнеспроцессам.Ссылка.ПометкаУдаления = &amp;ПометкаУдаления</code>.</li>
+  </ul>
+
+  <div class="note">
+    <strong>Важно:</strong> доработка выполнена именно как точечное изменение функции <code>НайтиДокументы</code> в
+    расширении
+    (<code>&amp;ИзменениеИКонтроль</code>) без изменения внешнего контракта модуля и без изменения формата результата.
+  </div>
+
+  <footer>IMDEV-8662. Отдельное описание оптимизации запроса к критерию отбора ДокументыПоБизнеспроцессам.</footer>
+
+</body>
+
+</html>
