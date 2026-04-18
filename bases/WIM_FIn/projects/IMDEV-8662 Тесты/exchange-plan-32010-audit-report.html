@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>IMDEV-8662 / IMAPPS-32010: сверка изменений плана обмена</title>
+    <style>
+        body { font-family: "Segoe UI", Tahoma, sans-serif; margin: 24px 32px; line-height: 1.5; color: #212529; max-width: 960px; }
+        h1 { font-size: 1.45rem; border-bottom: 2px solid #17a2b8; padding-bottom: 8px; }
+        h2 { font-size: 1.15rem; margin-top: 28px; color: #343a40; }
+        .meta { color: #6c757d; font-size: 0.9rem; margin-bottom: 24px; }
+        table { width: 100%; border-collapse: collapse; margin: 12px 0 20px; font-size: 0.95rem; }
+        th, td { border: 1px solid #dee2e6; padding: 10px 12px; text-align: left; vertical-align: top; }
+        th { background: #e9ecef; }
+        .ok { background: #d4edda; color: #155724; font-weight: 600; }
+        .miss { background: #f8d7da; color: #721c24; font-weight: 600; }
+        .part { background: #fff3cd; color: #856404; font-weight: 600; }
+        code, pre { font-family: Consolas, "Courier New", monospace; font-size: 0.88rem; }
+        pre { background: #f8f9fa; border: 1px solid #dee2e6; padding: 14px; overflow-x: auto; margin: 10px 0; }
+        .path { word-break: break-all; color: #0c5460; }
+        .note { border-left: 4px solid #17a2b8; padding: 10px 14px; background: #e7f5f8; margin: 16px 0; }
+        ul { margin: 8px 0; padding-left: 22px; }
+        .legend span { display: inline-block; margin-right: 16px; padding: 2px 8px; border-radius: 4px; font-size: 0.85rem; }
+        .legend .ok { background: #28a745; color: #fff; }
+        .legend .miss { background: #dc3545; color: #fff; }
+        .legend .part { background: #ffc107; color: #212529; }
+    </style>
+</head>
+<body>
+
+<h1>Сверка изменений по заметке IMAPPS-32010 (план обмена ДУ - Финансы, потоки)</h1>
+<p class="meta">Сформировано по состоянию репозитория WIM_DEV и каталога базовой конфигурации из bases/Wim_Du/source-path.txt.</p>
+
+<p class="legend">
+    <span class="ok">есть</span>
+    <span class="part">частично</span>
+    <span class="miss">нет / вставить</span>
+</p>
+
+<h2>Пункт 1: макет правил, правило конвертации СделкиTn</h2>
+<p><strong>Файл в репозитории (основной для тестов):</strong><br>
+<span class="path">c:\1c\Cursor_1c\WIM_DEV\bases\WIM_FIn\projects\IMDEV-8662 Тесты\ПравилаОбмена.txt</span></p>
+<p><strong>Дубликат макета внутри EPF (при сборке обработки держать в синхроне):</strong><br>
+<span class="path">c:\1c\Cursor_1c\WIM_DEV\bases\WIM_FIn\projects\IMDEV-8662 Тесты\EPF\внОбменДУ-Финансы3.0(потоки)\Templates\МакетПравил\Ext\Template.txt</span></p>
+
+<table>
+    <thead>
+        <tr>
+            <th>Элемент</th>
+            <th>Статус</th>
+            <th>Где в файле</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr>
+            <td><code>НеВыгружатьОбъектыСвойствПоСсылкам</code> в правиле <strong>СделкиTn</strong></td>
+            <td class="miss">нет</td>
+            <td>Тег есть только у другого правила (стр. <strong>4434</strong>, не у СделкиTn). В правиле СделкиTn (блок с <code>&lt;Код&gt;СделкиTn&lt;/Код&gt;</code> около стр. <strong>23682</strong>) отсутствует.</td>
+        </tr>
+        <tr>
+            <td><code>СинхронизироватьПоИдентификатору</code></td>
+            <td class="ok">есть</td>
+            <td><strong>ПравилаОбмена.txt</strong>, стр. <strong>23781</strong> (внутри того же правила СделкиTn).</td>
+        </tr>
+        <tr>
+            <td><code>ПродолжитьПоискПоПолямПоискаЕслиПоИдентификаторуНеНашли</code></td>
+            <td class="ok">есть</td>
+            <td>Стр. <strong>23782</strong>.</td>
+        </tr>
+        <tr>
+            <td><code>Источник</code> / <code>Приемник</code> <code>БизнесПроцессСсылка.СделкиTn</code></td>
+            <td class="ok">есть</td>
+            <td>Стр. <strong>23783</strong> - <strong>23784</strong>.</td>
+        </tr>
+    </tbody>
+</table>
+
+<p><strong>Что вставить и куда (ПравилаОбмена.txt и при необходимости Template.txt):</strong></p>
+<p>После закрытия <code>&lt;/ПоследовательностьПолейПоиска&gt;</code> (около стр. <strong>23780</strong>) и <strong>перед</strong> строкой с <code>&lt;СинхронизироватьПоИдентификатору&gt;</code> (стр. <strong>23781</strong>) добавить одну строку с отступом как у соседних тегов правила:</p>
+<pre>&lt;НеВыгружатьОбъектыСвойствПоСсылкам&gt;true&lt;/НеВыгружатьОбъектыСвойствПоСсылкам&gt;</pre>
+<p class="note">Второе вхождение <code>&lt;Код&gt;СделкиTn&lt;/Код&gt;</code> (стр. <strong>25331</strong>) относится к группе <strong>ПравилаВыгрузкиДанных</strong> (краткое правило с <code>ОбъектВыборки</code>), это не тот же XML-фрагмент, что полное правило конвертации со стр. 23681.</p>
+
+<h2>Пункт 2: обработчик ПередВыгрузкой, параметр ЭтоОбщийПакет</h2>
+<p><strong>Файл:</strong> <span class="path">...IMDEV-8662 Тесты\ПравилаОбмена.txt</span> (аналогично в <span class="path">...\МакетПравил\Ext\Template.txt</span>).</p>
+<table>
+    <thead>
+        <tr><th>Элемент</th><th>Статус</th><th>Где</th></tr>
+    </thead>
+    <tbody>
+        <tr>
+            <td><code>ТолькоПолучитьУзелСсылки = Параметры.Свойство("ЭтоОбщийПакет") И Параметры.ЭтоОбщийПакет; // IMAPPS - 32010</code> в <code>&lt;ПередВыгрузкой&gt;</code> правила СделкиTn после блока AVANCORE</td>
+            <td class="ok">есть</td>
+            <td><strong>ПравилаОбмена.txt</strong>, стр. <strong>23692</strong> (сразу после <code>// AVANCORE  - 15.02.2017 }</code>).</td>
+        </tr>
+    </tbody>
+</table>
+
+<h2>Пункт 3: общий модуль VTB_ОбщийМодуль, процедура ВыполнитьОбменДУ_Финансы</h2>
+<p><strong>Каталог базовой конфигурации</strong> (не в репозитории WIM_DEV, путь из bases/Wim_Du/README.md и source-path.txt):<br>
+<span class="path">C:\1c\Cursor_1c\WORK\Wim_Du</span></p>
+<p><strong>Модуль:</strong><br>
+<span class="path">C:\1c\Cursor_1c\WORK\Wim_Du\SRC\CF\CommonModules\VTB_ОбщийМодуль\Ext\Module.bsl</span></p>
+
+<table>
+    <thead>
+        <tr><th>Элемент</th><th>Статус</th><th>Где</th></tr>
+    </thead>
+    <tbody>
+        <tr>
+            <td><code>ОбработкаXML.Параметры.Вставить("ДатаНачалаРегистрации", ...)</code></td>
+            <td class="ok">есть</td>
+            <td>Процедура <code>ВыполнитьОбменДУ_Финансы</code>, стр. <strong>613</strong> (нумерация по файлу Module.bsl).</td>
+        </tr>
+        <tr>
+            <td><code>ОбработкаXML.Параметры.Вставить("СписокДоговоров", ...)</code></td>
+            <td class="ok">есть</td>
+            <td>Стр. <strong>614</strong> (<code>// IMAPPS-30616</code>).</td>
+        </tr>
+        <tr>
+            <td><code>ОбработкаXML.Параметры.Вставить("ОбменРГС", ...)</code></td>
+            <td class="ok">есть</td>
+            <td>Стр. <strong>615</strong>.</td>
+        </tr>
+        <tr>
+            <td><code>ОбработкаXML.Параметры.Вставить("ЭтоОбщийПакет", Не ЭтоПакетСделокTn)</code></td>
+            <td class="ok">есть</td>
+            <td>Стр. <strong>616</strong>.</td>
+        </tr>
+        <tr>
+            <td>Закомментированная <code>ЗаписьЖурналаРегистрации</code> по обмену</td>
+            <td class="ok">есть (закомментировано)</td>
+            <td>Стр. <strong>617</strong>.</td>
+        </tr>
+        <tr>
+            <td>Установка узла обмена для строк дерева правил выгрузки</td>
+            <td class="ok">есть</td>
+            <td>Стр. <strong>619</strong>: вызов <code>УстановитьУзелОбменаУСтрокДерева(ОбработкаXML.ТаблицаПравилВыгрузки.Строки, УзелОбмена)</code>. В заметке могло быть указано имя с «СтрокиДерева»; в коде процедура называется <strong>УстановитьУзелОбменаУСтрокДерева</strong>.</td>
+        </tr>
+    </tbody>
+</table>
+
+<p>Дополнительно в том же блоке после <code>ОбработкаXML.Параметры.Очистить()</code> вставляются параметры со списками статей затрат (стр. <strong>610-612</strong>) - в краткой заметке не перечислены, в конфигурации присутствуют.</p>
+
+<h2>Краткий итог</h2>
+<ul>
+    <li><strong>Полностью по заметке в репозитории:</strong> пункт 2 (<code>ПравилаОбмена.txt</code>).</li>
+    <li><strong>Частично:</strong> пункт 1 - не хватает только <code>НеВыгружатьОбъектыСвойствПоСсылкам</code> в правиле <strong>СделкиTn</strong>; вставка между стр. 23780 и 23781 (и то же в <code>Template.txt</code> обработки, если макет копируют из него).</li>
+    <li><strong>В базовой конфигурации Wim_Du:</strong> пункт 3 выполнен в <code>VTB_ОбщийМодуль</code>.</li>
+</ul>
+
+</body>
+</html>
