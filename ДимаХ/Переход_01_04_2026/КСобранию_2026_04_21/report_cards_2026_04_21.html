@@ -1,0 +1,1097 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Отчет об оптимизации производительности — карточки (14.04.2026)</title>
+    <style>
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background: #f1f5f9;
+            color: #0f172a;
+        }
+        .wrap {
+            max-width: 1250px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .header {
+            background: linear-gradient(90deg, #1d4fa0, #6366f1);
+            color: #ffffff;
+            border-radius: 10px;
+            padding: 18px;
+            margin-bottom: 16px;
+        }
+        .header h1 { margin: 0 0 8px 0; font-size: 26px; }
+        .header p  { margin: 0; font-size: 13px; line-height: 1.5; opacity: 0.9; }
+
+        .source-box {
+            background: #ffffff;
+            border: 1px solid #dbeafe;
+            border-radius: 10px;
+            padding: 12px;
+            margin-bottom: 14px;
+            font-size: 13px;
+        }
+
+        /* KPI */
+        .kpi {
+            display: grid;
+            grid-template-columns: repeat(5, minmax(160px, 1fr));
+            gap: 10px;
+            margin-bottom: 16px;
+        }
+        .kpi-item {
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 10px;
+            text-align: center;
+        }
+        .kpi-item .v { font-size: 24px; font-weight: bold; color: #0f766e; }
+        .kpi-item .l { font-size: 12px; color: #64748b; }
+
+        /* Заголовок раздела */
+        .section-title {
+            font-size: 16px;
+            font-weight: 700;
+            margin: 20px 0 12px;
+            padding: 10px 14px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .section-title.results {
+            background: #eff6ff;
+            border: 1px solid #bfdbfe;
+            color: #1e40af;
+        }
+        .section-title.actions {
+            background: #f0fdf4;
+            border: 1px solid #bbf7d0;
+            color: #166534;
+        }
+        .section-title .st-icon {
+            font-size: 18px;
+            line-height: 1;
+        }
+        .section-title .st-sub {
+            font-size: 12px;
+            font-weight: 400;
+            opacity: 0.75;
+            margin-left: auto;
+        }
+
+        /* План дальнейших действий: свернут по умолчанию */
+        details.collapsible-plan {
+            margin-bottom: 4px;
+        }
+        details.collapsible-plan > summary.section-title {
+            list-style: none;
+            cursor: pointer;
+            user-select: none;
+            margin-top: 20px;
+            margin-bottom: 0;
+        }
+        details.collapsible-plan > summary.section-title::-webkit-details-marker {
+            display: none;
+        }
+        details.collapsible-plan > summary.section-title::before {
+            content: "[+]";
+            flex-shrink: 0;
+            font-size: 11px;
+            font-weight: 700;
+            opacity: 0.8;
+            margin-right: 6px;
+            font-family: Consolas, monospace;
+            color: #166534;
+        }
+        details.collapsible-plan[open] > summary.section-title {
+            margin-bottom: 12px;
+        }
+        details.collapsible-plan[open] > summary.section-title::before {
+            content: "[-]";
+        }
+
+        /* Подзаголовок базы внутри секции */
+        .base-label {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 12px;
+            font-weight: 700;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+            border-radius: 5px;
+            padding: 3px 10px;
+            margin: 14px 0 8px;
+            background: transparent;
+        }
+        .base-label.du  { color: #0e7a5f; border: 1.5px solid #0e7a5f; }
+        .base-label.fin { color: #0e7a5f; border: 1.5px solid #0e7a5f; }
+        .base-label.pif { color: #0e7a5f; border: 1.5px solid #0e7a5f; }
+        .base-label.mo { color: #b45309; border: 1.5px solid #d97706; }
+
+        /* Сетка карточек */
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(320px, 1fr));
+            gap: 14px;
+            margin-bottom: 18px;
+        }
+        .block {
+            background: #ffffff;
+            border: 1px solid #dbeafe;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+        .top {
+            padding: 10px 12px;
+            border-bottom: 1px solid #e2e8f0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 8px;
+        }
+        .title { font-weight: 700; font-size: 14px; }
+        .badge {
+            font-size: 11px;
+            color: #ffffff;
+            border-radius: 12px;
+            padding: 4px 10px;
+            white-space: nowrap;
+            font-weight: 700;
+        }
+        .done    { background: #28a745; }
+        .close   { background: #f59e0b; }
+        .not-done { background: #dc3545; }
+        .pending  { background: #1d4fa0; }
+        .no-data  { background: #8a94a6; }
+
+        .content { padding: 12px; font-size: 13px; }
+
+        /* Блок времени */
+        .times {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            margin-bottom: 10px;
+        }
+        .tbox {
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 8px;
+            background: #f8fafc;
+        }
+        .tbox .lbl { color: #64748b; font-size: 11px; text-transform: uppercase; margin-bottom: 3px; }
+        .tbox .val { font-size: 16px; font-weight: 700; line-height: 1.3; }
+        .tbox .sub { font-size: 11px; color: #64748b; margin-top: 3px; }
+        .old .val { color: #dc2626; }
+        .new .val { color: #0f766e; }
+
+        /* Блок дельты */
+        .delta {
+            border-radius: 8px;
+            padding: 8px;
+            font-size: 12px;
+            margin-bottom: 10px;
+            border: 1px solid #e2e8f0;
+            background: #ecfeff;
+        }
+        .delta.warn { background: #fff7ed; border-color: #fed7aa; }
+        .delta.bad  { background: #fff1f2; border-color: #fca5a5; }
+        .delta.grey { background: #f8fafc; border-color: #e2e8f0; }
+        .delta.release {
+            background: #fff5f5;
+            border-color: #f5c0c0;
+            border-left: 3px solid #dc3545;
+            color: #7a1a1a;
+            font-weight: 600;
+        }
+
+        /* Мета-таблица */
+        .meta-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 12px;
+            margin-bottom: 8px;
+        }
+        .meta-table th, .meta-table td {
+            border: 1px solid #e2e8f0;
+            padding: 5px 7px;
+            vertical-align: top;
+            text-align: left;
+        }
+        .meta-table th { width: 38%; background: #f8fafc; color: #334155; }
+
+        /* Целевое время / целевой показатель — визуальный акцент */
+        .meta-table tr.meta-target th {
+            width: 38%;
+            background: linear-gradient(90deg, #e0e7ff 0%, #eef2ff 100%);
+            color: #312e81;
+            font-weight: 800;
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            border-left: 4px solid #4338ca;
+            border-top: 2px solid #c7d2fe;
+        }
+        .meta-table tr.meta-target td {
+            background: #f5f3ff;
+            font-weight: 700;
+            font-size: 13px;
+            color: #1e1b4b;
+            line-height: 1.45;
+            border-top: 2px solid #c7d2fe;
+        }
+        .meta-table tr.meta-target td.muted-target {
+            color: #64748b;
+            font-weight: 600;
+            font-style: italic;
+        }
+
+        /* Сводная таблица */
+        .table-wrap {
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 10px;
+            padding: 14px;
+            margin-bottom: 14px;
+        }
+        .table-wrap h2 { margin: 0 0 10px; font-size: 15px; }
+        table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+        th, td { border: 1px solid #e2e8f0; padding: 7px 8px; vertical-align: top; text-align: left; }
+        th { background: #f8fafc; font-weight: 700; }
+        td.ok  { color: #0f766e; font-weight: 700; }
+        td.bad { color: #dc2626; font-weight: 700; }
+        td.warn { color: #b45309; font-weight: 700; }
+        td.muted { color: #94a3b8; }
+
+        /* Колонка «Цель (минут/1000 объектов)» в сводной таблице */
+        .table-wrap table thead th:nth-child(5) {
+            background: linear-gradient(180deg, #e0e7ff 0%, #eef2ff 100%);
+            color: #312e81;
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            border-bottom: 2px solid #818cf8;
+            white-space: nowrap;
+        }
+        .table-wrap table tbody td:nth-child(5) {
+            background: #faf5ff;
+            font-weight: 800;
+            font-size: 13px;
+            color: #3730a3;
+            border-left: 3px solid #7c3aed;
+        }
+        .table-wrap table tbody td:nth-child(5).muted {
+            background: #f1f5f9;
+            color: #64748b;
+            font-weight: 700;
+            border-left-color: #cbd5e1;
+        }
+
+        /* ── Зоны-фоны двух блоков ── */
+        .zone {
+            margin: 0 -20px;
+            padding: 20px 20px 8px;
+        }
+        .zone.zone-results {
+            background: #eef4ff;
+        }
+        .zone.zone-actions {
+            background: #f0faf5;
+        }
+
+        .summary {
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 10px;
+            padding: 14px;
+            font-size: 13px;
+            line-height: 1.6;
+        }
+        .summary h2 { margin: 0 0 8px; font-size: 15px; }
+        .summary ul { margin: 0; padding-left: 18px; }
+        .summary li { margin-bottom: 5px; }
+
+        /* Блок исследований */
+        .research-section {
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 10px;
+            padding: 14px;
+            margin-bottom: 14px;
+        }
+        .research-section h2 { margin: 0 0 12px; font-size: 15px; }
+        .research-group { margin-bottom: 16px; }
+        .research-group-title {
+            font-size: 12px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: #64748b;
+            margin-bottom: 8px;
+            padding-bottom: 4px;
+            border-bottom: 1px solid #e2e8f0;
+        }
+        .research-card {
+            display: flex;
+            gap: 10px;
+            align-items: flex-start;
+            background: #fffbe6;
+            border: 1px solid #f0c940;
+            border-left: 3px solid #e0a800;
+            border-radius: 7px;
+            padding: 9px 11px;
+            margin-bottom: 8px;
+            font-size: 12.5px;
+        }
+        .research-card.in-progress {
+            background: #f0f9ff;
+            border-color: #7dd3fc;
+            border-left-color: #0ea5e9;
+        }
+        .research-card.planned {
+            background: #f8fafc;
+            border-color: #cbd5e1;
+            border-left-color: #94a3b8;
+        }
+        .rc-icon {
+            flex-shrink: 0;
+            font-size: 10px;
+            font-weight: 700;
+            border-radius: 4px;
+            padding: 2px 6px;
+            margin-top: 1px;
+            white-space: nowrap;
+            color: #fff;
+        }
+        .rc-icon.active { background: #0ea5e9; }
+        .rc-icon.plan   { background: #94a3b8; }
+        .rc-icon.idea   { background: #e0a800; color: #fff; }
+        .rc-body { flex: 1; }
+        .rc-body b { color: #0f172a; }
+        .rc-imapps {
+            display: inline-block;
+            font-size: 10.5px;
+            font-weight: 700;
+            background: #0ea5e9;
+            color: #fff;
+            border-radius: 4px;
+            padding: 1px 6px;
+            margin-left: 6px;
+            vertical-align: middle;
+        }
+        .rc-subtask {
+            margin-top: 5px;
+            margin-left: 10px;
+            padding: 5px 8px;
+            background: #f1f5f9;
+            border-left: 2px solid #94a3b8;
+            border-radius: 4px;
+            font-size: 11.5px;
+        }
+    </style>
+</head>
+<body>
+<div class="wrap">
+
+    <div class="header">
+        <h1>Отчет об оптимизации производительности — ДУ, ФИН, ПИФ (14.04.2026)</h1>
+        <p>
+            Карточки с входными параметрами замеров, нормализацией к сопоставимому объему и статусом достижения целевых показателей.<br>
+            Источник: Задачи_01042026.txt, сводка группировки 1.1–1.5 (tasks_tree_table_grouped_2026_04_21.html) | Дата: 14.04.2026
+        </p>
+    </div>
+
+    <div class="source-box">
+        <b>Методика расчета нормализации:</b>
+        Для задач с разным объемом данных рассчитывается <b>мин / 1 000 объектов</b> (сделок, договоров, документов).
+        Сравнение было/стало выполняется на нормализованных значениях, что исключает искажения при разных объемах тестирования.
+        Статус цели определяется по лучшему зафиксированному результату относительно нормализованного целевого значения.
+    </div>
+
+    <div class="kpi">
+        <div class="kpi-item"><div class="v">12</div><div class="l">Задач в своде отчета</div></div>
+        <div class="kpi-item"><div class="v" style="color:#28a745">7</div><div class="l">Цель достигнута</div></div>
+        <div class="kpi-item"><div class="v" style="color:#dc3545">1</div><div class="l">Цель не достигнута</div></div>
+        <div class="kpi-item"><div class="v" style="color:#f59e0b">2</div><div class="l">Ближайшие планы</div></div>
+        <div class="kpi-item"><div class="v" style="color:#1d4fa0">2</div><div class="l">В планах</div></div>
+    </div>
+
+    <!-- ===== БЛОК 1: РЕЗУЛЬТАТЫ ЗАМЕРОВ ===== -->
+    <div class="zone zone-results">
+    <div class="section-title results">
+        <span class="st-icon">&#128200;</span>
+        Результаты замеров производительности
+        <span class="st-sub">Сводная таблица: 12 строк задач · нормализация мин / 1 000 объектов · блоки 1.1–1.5 как в tasks_tree_table_grouped_2026_04_14</span>
+    </div>
+
+    <p style="font-size:12px;font-weight:700;color:#1e40af;margin:4px 0 8px;padding:8px 10px;background:#eff6ff;border-radius:8px;border:1px solid #bfdbfe;">1.1 ВЫПОЛНЕНО — ДУ: загрузка сделок и обмен ДУ–Финансы 3.0 (ФИН)</p>
+    <div class="base-label du">&#9655; База ДУ (ДУ 1.5)</div>
+    <div class="grid">
+
+        <div class="block">
+            <div class="top">
+                <div class="title">Загрузка сделок</div>
+                <div class="badge done">Достигнута</div>
+            </div>
+            <div class="content">
+                <div class="times">
+                    <div class="tbox old">
+                        <div class="lbl">Было</div>
+                        <div class="val">20 мин на 900 сделок</div>
+                        <div class="sub">= 22.2 мин / 1 000 сделок</div>
+                    </div>
+                    <div class="tbox new">
+                        <div class="lbl">Стало (доп. тест, финал)</div>
+                        <div class="val">45 минут на 100 000 сделок</div>
+                        <div class="sub">(генерация/получение 20 минут + создание БП 25 минут). = 0.45 мин / 1 000 сделок (10 потоков)</div>
+                    </div>
+                </div>
+                <div class="delta"><b>Достигнута по фактическим замерам и доп. тесту на 100 000 сделок:</b> лучший нормализованный результат 0.45 минут/1000 объектов (против 22.2 было). Промежуточный результат: 50 мин на 30 000 = 1.67 минут/1000 объектов. Формальная цель в регламенте не зафиксирована; ориентир — показатель доп. теста.</div>
+                <table class="meta-table">
+                    <tr><th>Было</th><td>20 мин на 900 сделок (22.2 минут/1000 объектов)</td></tr>
+                    <tr><th>Стало (осн.)</th><td>50 мин на 30 000 сделок (1.67 минут/1000 объектов)</td></tr>
+                    <tr><th>Стало (доп. тест, финал)</th><td>45 минут на 100 000 сделок (генерация/получение 20 минут + создание БП 25 минут), 10 потоков (0.45 минут/1000 объектов)</td></tr>
+                    <tr class="meta-target"><th>Целевое время</th><td class="muted-target">формально не зафиксировано; ориентир по доп. тесту ~0.45 мин / 1000 сделок</td></tr>
+                </table>
+            </div>
+        </div>
+
+        <div class="block">
+            <div class="top">
+                <div class="title">Обмен ДУ-Финансы 3.0 многопоточно в ФИН</div>
+                <div class="badge done">Достигнута</div>
+            </div>
+            <div class="content">
+                <div class="times">
+                    <div class="tbox old">
+                        <div class="lbl">Было</div>
+                        <div class="val">4 ч 16 мин на 15 000 сделок</div>
+                        <div class="sub">= 17.1 мин / 1 000 сделок</div>
+                    </div>
+                    <div class="tbox new">
+                        <div class="lbl">Стало</div>
+                        <div class="val">1 ч 50 мин на 30 000 сделок</div>
+                        <div class="sub">= 3.67 мин / 1 000 сделок</div>
+                    </div>
+                </div>
+                <div class="delta"><b>3.67 минут/1000 объектов &lt; цели 8.00 минут/1000 объектов.</b> Нормализация: было 17.1 минут/1000 объектов, стало 3.67 минут/1000 объектов. Ускорение в 4.7 раза. Исследования по параллельности обмена вынесены в блок 1.5 сводной таблицы задач.</div>
+                <table class="meta-table">
+                    <tr><th>Было</th><td>4 ч 16 мин на 15 000 сделок (1+6 потоков)</td></tr>
+                    <tr><th>Стало</th><td>1 ч 50 мин на 30 000 сделок (1+6 потоков)</td></tr>
+                    <tr class="meta-target"><th>Целевое</th><td>2 ч на 15 000 = 8.00 минут/1000 объектов</td></tr>
+                </table>
+            </div>
+        </div>
+
+    </div>
+
+    <p style="font-size:12px;font-weight:700;color:#166534;margin:14px 0 8px;padding:8px 10px;background:#f0fdf4;border-radius:8px;border:1px solid #bbf7d0;">1.2 К РЕЛИЗУ — релиз 1.5.27.11 (вторая половина апреля 2026)</p>
+    <div class="base-label du">&#9655; База ДУ — к релизу 1.5.27.11</div>
+    <div class="grid">
+
+        <div class="block">
+            <div class="top">
+                <div class="title">Исполнение сделок Т (открытие, запись)</div>
+                <div class="badge done">Достигнута</div>
+            </div>
+            <div class="content">
+                <div class="times">
+                    <div class="tbox old">
+                        <div class="lbl">Было</div>
+                        <div class="val">36 мин на 30 000 сделок</div>
+                        <div class="sub">= 1.20 мин / 1 000 сделок</div>
+                    </div>
+                    <div class="tbox new">
+                        <div class="lbl">Стало (доп. опт., финал)</div>
+                        <div class="val">32 мин на 100 000 сделок</div>
+                        <div class="sub">= 0.32 мин / 1 000 сделок (12 потоков)</div>
+                    </div>
+                </div>
+                <div class="delta"><b>0.32 минут/1000 объектов &lt; цели 1.00 минут/1000 объектов.</b> Промежуточный результат (осн.): 15 мин на 30 000 = 0.50 минут/1000 объектов. Ускорение от исходного: -73.3%.</div>
+                <table class="meta-table">
+                    <tr><th>Было</th><td>36 мин на 30 000 сделок (1.20 минут/1000 объектов)</td></tr>
+                    <tr><th>Стало (осн.)</th><td>15 мин на 30 000 сделок, 12 потоков (0.50 минут/1000 объектов)</td></tr>
+                    <tr><th>Стало (доп. опт., финал)</th><td>32 мин на 100 000 сделок, 12 потоков (0.32 минут/1000 объектов)</td></tr>
+                    <tr class="meta-target"><th>Целевое</th><td>30 мин на 30 000 = 1.00 минут/1000 объектов</td></tr>
+                </table>
+                <div class="delta release" style="margin-top:6px">Релиз 1.5.27.11 — вторая половина апреля 2026</div>
+            </div>
+        </div>
+
+        <div class="block">
+            <div class="top">
+                <div class="title">Исполнение сделок Т-1 (проведение)</div>
+                <div class="badge done">Достигнута</div>
+            </div>
+            <div class="content">
+                <div class="times">
+                    <div class="tbox old">
+                        <div class="lbl">Было</div>
+                        <div class="val">3 ч 36 мин на 30 000 сделок</div>
+                        <div class="sub">= 7.20 мин / 1 000 сделок</div>
+                    </div>
+                    <div class="tbox new">
+                        <div class="lbl">Стало (доп. опт., финал)</div>
+                        <div class="val">1 ч 47 мин на 100 000 сделок</div>
+                        <div class="sub">= 1.07 мин / 1 000 сделок (12 потоков)</div>
+                    </div>
+                </div>
+                <div class="delta"><b>1.07 минут/1000 объектов &lt; цели 1.20 минут/1000 объектов.</b> Промежуточный результат (осн.): 45 мин на 30 000 = 1.50 минут/1000 объектов. Ускорение от исходного: -85.1%.</div>
+                <table class="meta-table">
+                    <tr><th>Было</th><td>3 ч 36 мин на 30 000 сделок (7.20 минут/1000 объектов)</td></tr>
+                    <tr><th>Стало (осн.)</th><td>45 мин на 30 000 сделок, 12 потоков (1.50 минут/1000 объектов)</td></tr>
+                    <tr><th>Стало (доп. опт., финал)</th><td>1 ч 47 мин на 100 000 сделок, 12 потоков (1.07 минут/1000 объектов)</td></tr>
+                    <tr class="meta-target"><th>Целевое</th><td>2 ч на 100 000 = 1.20 минут/1000 объектов</td></tr>
+                </table>
+                <div class="delta release" style="margin-top:6px">Релиз 1.5.27.11 — вторая половина апреля 2026</div>
+            </div>
+        </div>
+
+    </div>
+
+    <div class="grid">
+        <div class="block" style="grid-column: 1 / -1">
+            <div class="top">
+                <div class="title">Вечерние регламентные операции</div>
+                <div class="badge done">Достигнута</div>
+            </div>
+            <div class="content">
+                <div class="times">
+                    <div class="tbox old">
+                        <div class="lbl">Было</div>
+                        <div class="val">13 ч 52 мин на 15 000 договоров</div>
+                        <div class="sub">= 55.5 мин / 1 000 договоров (1 поток)</div>
+                    </div>
+                    <div class="tbox new">
+                        <div class="lbl">Стало (лучший замер)</div>
+                        <div class="val">2 ч 38 мин на 30 000 договоров</div>
+                        <div class="sub">= 5.3 мин / 1 000 договоров (12 потоков)</div>
+                    </div>
+                </div>
+                <div class="delta"><b>5.3 минут/1000 объектов &lt; цели 6.0 минут/1000 объектов.</b> Все три замера доп. оптимизации ниже 13 минут/1000 объектов. Ускорение от исходного: в 10.5 раза. Исследования по топу блоков и СЧА вынесены в блок 1.5 сводной таблицы задач.</div>
+                <table class="meta-table">
+                    <tr><th>Было</th><td>13 ч 52 мин на 15 000 дог., 1 поток (55.5 минут/1000 объектов)</td></tr>
+                    <tr><th>После опт. 1</th><td>1 ч 50 мин на 3 000 дог. (36.7 минут/1000 объектов)</td></tr>
+                    <tr><th>Доп. опт. 5 потоков</th><td>2 ч 48 мин на 13 578 дог. (12.4 минут/1000 объектов)</td></tr>
+                    <tr><th>Доп. опт. 7 потоков</th><td>2 ч 23 мин на 15 000 дог. (9.5 минут/1000 объектов)</td></tr>
+                    <tr><th>Доп. опт. 12 потоков</th><td>2 ч 38 мин на 30 000 дог. (5.3 минут/1000 объектов) — лучший</td></tr>
+                    <tr class="meta-target"><th>Целевое</th><td>2 ч 30 мин на 25 000 дог. = 6.0 минут/1000 объектов</td></tr>
+                </table>
+                <div class="delta release" style="margin-top:6px">Релиз 1.5.27.11 — вторая половина апреля 2026</div>
+            </div>
+        </div>
+    </div>
+
+    <p style="font-size:12px;font-weight:700;color:#1e40af;margin:4px 0 8px;padding:8px 10px;background:#eff6ff;border-radius:8px;border:1px solid #bfdbfe;">1.1 ВЫПОЛНЕНО — ФИН: исполнение после загрузки</p>
+    <div class="base-label fin">&#9655; База ФИН (ДУ 2.0)</div>
+    <div class="grid">
+
+        <div class="block">
+            <div class="top">
+                <div class="title">Исполнение, в т.ч. обработка после загрузки</div>
+                <div class="badge done">Достигнута</div>
+            </div>
+            <div class="content">
+                <div class="times">
+                    <div class="tbox old">
+                        <div class="lbl">Было</div>
+                        <div class="val">13 ч 33 мин на 15 000 сделок</div>
+                        <div class="sub">= 54.2 мин / 1 000 сделок</div>
+                    </div>
+                    <div class="tbox new">
+                        <div class="lbl">Стало</div>
+                        <div class="val">2 ч 20 мин на 30 000 сделок</div>
+                        <div class="sub">= 4.67 мин / 1 000 сделок (12 потоков)</div>
+                    </div>
+                </div>
+                <div class="delta"><b>4.67 минут/1000 объектов &lt; цели 8.00 минут/1000 объектов.</b> В т.ч.: открытие 30 мин + исполнение 1 ч 50 мин. Ускорение: в 11.6 раза.</div>
+                <table class="meta-table">
+                    <tr><th>Было</th><td>13 ч 33 мин на 15 000 сделок (54.2 минут/1000 объектов)</td></tr>
+                    <tr><th>Стало</th><td>2 ч 20 мин на 30 000 сделок, 12 потоков (4.67 минут/1000 объектов)</td></tr>
+                    <tr><th>Состав</th><td>Открытие 30 мин + Исполнение 1 ч 50 мин</td></tr>
+                    <tr><th>Потоки</th><td>Обмен 7 (1 сд. + 6 БП); проведение 12; БП 2</td></tr>
+                    <tr class="meta-target"><th>Целевое</th><td>2 ч на 15 000 = 8.00 минут/1000 объектов</td></tr>
+                </table>
+                <div class="delta grey" style="margin-top:8px;font-size:11.5px">По сводной таблице задач (блок 1.5): исследования по проведению Перерегистраций вынесены из этого раздела.</div>
+            </div>
+        </div>
+
+    </div>
+
+    <p style="font-size:12px;font-weight:700;color:#9a3412;margin:14px 0 8px;padding:8px 10px;background:#fff7ed;border-radius:8px;border:1px solid #fdba74;">1.3 В РАБОТЕ — ФИН: исполнение после загрузки</p>
+    <div class="grid">
+        <div class="block" style="grid-column: 1 / -1">
+            <div class="top">
+                <div class="title">Исполнение после загрузки (ФИН): оптимизация запросов проведения Перерегистрации</div>
+                <div class="badge pending">В работе</div>
+            </div>
+            <div class="content">
+                <div class="delta warn"><b>Задача переведена из блока исследований 1.5 в отдельный блок 1.3.</b> Выполняется оптимизация запросов по проведению Перерегистрации (сделки) для дополнительного ускорения этапа исполнения после загрузки в ФИН.</div>
+                <table class="meta-table">
+                    <tr><th>Статус</th><td>В работе</td></tr>
+                    <tr><th>Ранее</th><td>Блок исследований 1.5 (без отдельного статуса выполнения)</td></tr>
+                    <tr><th>Текущее действие</th><td>Оптимизация запросов по проведению Перерегистрации (сделки)</td></tr>
+                    <tr><th>Цель</th><td>Стабилизировать и дополнительно ускорить этап исполнения после загрузки в ФИН</td></tr>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <p style="font-size:12px;font-weight:700;color:#1e40af;margin:14px 0 8px;padding:8px 10px;background:#eff6ff;border-radius:8px;border:1px solid #bfdbfe;">1.3.5 ПЕРЕДАНО ВЕНДОРУ АВАНКОР — ФИН: регламенты под РДУ (замеры DR-теста)</p>
+    <div class="grid">
+        <div class="block" style="grid-column: 1 / -1">
+            <div class="top">
+                <div class="title">Оптимизация выполнения регламентных операций под РДУ</div>
+                <div class="badge pending">Передано вендору</div>
+            </div>
+            <div class="content">
+                <div class="times">
+                    <div class="tbox old">
+                        <div class="lbl">Было</div>
+                        <div class="val">1.5 ч на 10 500 договоров</div>
+                        <div class="sub">= 8.57 мин / 1 000 договоров (до оптимизации)</div>
+                    </div>
+                    <div class="tbox new">
+                        <div class="lbl">Стало (новый алгоритм)</div>
+                        <div class="val">19 мин на 10 500 договоров</div>
+                        <div class="sub">DR-тест, повторный замер 14.04.2026 = 1.81 мин / 1 000 договоров; линейно на 30 000 ~ 54.3 мин</div>
+                    </div>
+                </div>
+                <div class="delta"><b>1.81 минут/1000 объектов &lt; цели 3.00 минут/1000 объектов.</b> DR-тест на 10 500 договорах: типовой расчет 95 минут (9.05 мин/1000), после оптимизации 20 мин (1.90 мин/1000) и 19 мин (1.81 мин/1000). Линейная экстраполяция времени на 30 000: ~271.4 мин (95 мин), ~57.1 мин (20 мин), ~54.3 мин (19 мин). Цель достигнута с запасом.</div>
+                <p style="font-size:12px;font-weight:700;color:#334155;margin:14px 0 8px;">Сравнение на 30 000 договоров (линейная экстраполяция от замеров на 10 500)</p>
+                <div class="times">
+                    <div class="tbox old">
+                        <div class="lbl">Было (отчет 14.04, линейно на 30 000)</div>
+                        <div class="val">~4 ч 17 мин</div>
+                        <div class="sub">~257 мин на 30 000 дог. = 8.57 мин / 1 000 дог.</div>
+                    </div>
+                    <div class="tbox new">
+                        <div class="lbl">Стало (DR-тест 14.04, линейно на 30 000)</div>
+                        <div class="val">~54 мин</div>
+                        <div class="sub">~54.3 мин на 30 000 дог. = 1.81 мин / 1 000 дог.</div>
+                    </div>
+                </div>
+                <div class="times" style="margin-top:10px">
+                    <div class="tbox old">
+                        <div class="lbl">Было (DR-тест, типовой алгоритм, линейно на 30 000)</div>
+                        <div class="val">~4 ч 31 мин</div>
+                        <div class="sub">~271.4 мин на 30 000 дог. = 9.05 мин / 1 000 дог.</div>
+                    </div>
+                    <div class="tbox new">
+                        <div class="lbl">Стало (DR-тест 14.04, линейно на 30 000)</div>
+                        <div class="val">~54 мин</div>
+                        <div class="sub">~54.3 мин на 30 000 дог. = 1.81 мин / 1 000 дог.</div>
+                    </div>
+                </div>
+                <p style="font-size:11px;color:#64748b;margin:6px 0 0;line-height:1.45">Оценка: время_30k = время_10.5k * (30 000 / 10 500) = время_10.5k * (20 / 7). Дополнительно: DR-тест 10.04 (20 мин на 10 500) линейно ~57.1 мин на 30 000 (1.90 мин / 1 000).</p>
+                <table class="meta-table">
+                    <tr><th>Было (по отчету 14.04)</th><td>1.5 ч на 10 500 договоров за 1 день (8.57 минут/1000 объектов)</td></tr>
+                    <tr><th>Типовой алгоритм (DR-тест)</th><td>95 минут на 10 500 договоров (9.05 минут/1000 объектов)</td></tr>
+                    <tr><th>Стало (DR-тест 10.04)</th><td>20 минут на 10 500 договоров (1.90 минут/1000 объектов)</td></tr>
+                    <tr><th>Стало (DR-тест 14.04)</th><td>19 минут на 10 500 договоров (1.81 минут/1000 объектов)</td></tr>
+                    <tr><th>Линейно на 30 000 (оценка)</th><td>95 мин -> ~271.4 мин; 20 мин -> ~57.1 мин; 19 мин -> ~54.3 мин (мин/1000 те же)</td></tr>
+                    <tr class="meta-target"><th>Целевое</th><td>1.5 ч на 30 000 договоров за 1 день (3.00 минут/1000 объектов)</td></tr>
+                    <tr><th>Итог</th><td>Цель достигнута. Ускорение относительно 8.57 минут/1000: примерно в 4.7 раза (по лучшему замеру 1.81)</td></tr>
+                </table>
+            </div>
+        </div>
+
+    </div>
+
+    <p style="font-size:12px;font-weight:700;color:#854d0e;margin:14px 0 8px;padding:8px 10px;background:#fffbeb;border-radius:8px;border:1px solid #fcd34d;">1.4 БЛИЖАЙШИЕ ПЛАНЫ</p>
+    <div class="base-label fin">&#9655; ФИН (ДУ 2.0)</div>
+    <div class="grid">
+        <div class="block">
+            <div class="top">
+                <div class="title">Расчет НДФЛ в ФИН</div>
+                <div class="badge close">Ближайшие планы</div>
+            </div>
+            <div class="content">
+                <div class="times">
+                    <div class="tbox old">
+                        <div class="lbl">Было</div>
+                        <div class="val">2 ч 33 мин на 1 000 операций</div>
+                        <div class="sub">= 153.0 мин / 1 000 оп.</div>
+                    </div>
+                    <div class="tbox" style="border-color:#e2e8f0; background:#f8fafc">
+                        <div class="lbl">Стало</div>
+                        <div class="val" style="font-size:13px; color:#94a3b8">не измерялось</div>
+                        <div class="sub">замеры после оптимизации не выполнялись</div>
+                    </div>
+                </div>
+                <div class="delta grey"><b>Целевое:</b> 1 ч на 1 000 операций (60.0 минут/1000 объектов). Разрыв к цели: 153.0 vs 60.0 — в 2.55 раза. В своде задач: блок 1.4.</div>
+                <table class="meta-table">
+                    <tr class="meta-target"><th>Целевое</th><td>1 ч на 1 000 операций = 60.0 минут/1000 объектов</td></tr>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="base-label mo">&#9655; МО</div>
+    <div class="grid">
+        <div class="block" style="grid-column: 1 / -1">
+            <div class="top">
+                <div class="title">Оптимизация регламентных операций в МО под РДУ</div>
+                <div class="badge close">Ближайшие планы</div>
+            </div>
+            <div class="content">
+                <div class="delta grey">По сводной таблице задач (14.04.2026): замеры не заданы, целевой показатель уточняется. Задача вынесена в ближайшие планы (блок 1.4).</div>
+                <table class="meta-table">
+                    <tr><th>Было</th><td class="muted-target">нет данных</td></tr>
+                    <tr><th>Стало</th><td class="muted-target">нет данных</td></tr>
+                    <tr class="meta-target"><th>Целевое</th><td class="muted-target">уточняется</td></tr>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <p style="font-size:12px;font-weight:700;color:#64748b;margin:14px 0 8px;padding:8px 10px;background:#f8fafc;border-radius:8px;border:1px solid #cbd5e1;">1.5 В ПЛАНАХ — ПИФ (и прочее в своде)</p>
+    <div class="base-label pif">&#9655; База ПИФ</div>
+    <div class="grid">
+
+        <div class="block" style="grid-column: 1 / -1">
+            <div class="top">
+                <div class="title">Исполнение сделок (один ПИФ, одна ЦБ — нет возможности распараллелить)</div>
+                <div class="badge not-done">Не достигнута</div>
+            </div>
+            <div class="content">
+                <div class="times">
+                    <div class="tbox old">
+                        <div class="lbl">Было</div>
+                        <div class="val">62 ч на 30 000 документов</div>
+                        <div class="sub">= 124.0 мин / 1 000 документов</div>
+                    </div>
+                    <div class="tbox" style="border-color:#fcd34d; background:#fff7ed">
+                        <div class="lbl">Стало (после опт.)</div>
+                        <div class="val" style="color:#b45309">30 ч на 30 000 документов</div>
+                        <div class="sub">= 60.0 мин / 1 000 документов</div>
+                    </div>
+                </div>
+                <div class="delta warn"><b>60.0 минут/1000 объектов &gt; цели 24.0 минут/1000 объектов.</b> Прогресс есть (снижение с 124 до 60), но до цели разрыв в 2.5 раза. Исследуется дополнительная оптимизация и параллельный запуск этапов.</div>
+                <table class="meta-table">
+                    <tr><th>Было</th><td>62 ч на 30 000 документов (124.0 минут/1000 объектов)</td></tr>
+                    <tr><th>Стало</th><td>30 ч на 30 000 документов (60.0 минут/1000 объектов)</td></tr>
+                    <tr class="meta-target"><th>Целевое</th><td>12 ч на 30 000 документов (24.0 минут/1000 объектов)</td></tr>
+                    <tr><th>Разрыв до цели</th><td>в 2.5 раза по нормализованному показателю</td></tr>
+                    <tr><th>Предложение</th><td>Параллельный запуск цепочки T+n и массового перепроведения с 19:30 — ориентир 12–16 ч</td></tr>
+                </table>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Сводная таблица -->
+    <div class="table-wrap">
+        <h2>Сводная таблица всех задач</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>База</th>
+                    <th>Задача</th>
+                    <th>БЫЛО (минут/1000 объектов)</th>
+                    <th>СТАЛО (минут/1000 объектов)</th>
+                    <th>Цель (минут/1000 объектов)</th>
+                    <th>Ускорение</th>
+                    <th>Статус</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>ДУ</td>
+                    <td>Загрузка сделок</td>
+                    <td>22.2</td>
+                    <td class="ok">0.45</td>
+                    <td class="muted">ориентир ~0.45</td>
+                    <td class="ok">в 49.3 раза</td>
+                    <td><span style="color:#28a745; font-weight:700">Достигнута</span></td>
+                </tr>
+                <tr>
+                    <td>ДУ</td>
+                    <td>Обмен ДУ-Финансы 3.0 в ФИН</td>
+                    <td>17.1</td>
+                    <td class="ok">3.67</td>
+                    <td>8.00</td>
+                    <td class="ok">-78.5%</td>
+                    <td><span style="color:#28a745; font-weight:700">Достигнута</span> <span style="color:#64748b;font-size:11px">(1.1)</span></td>
+                </tr>
+                <tr>
+                    <td>ФИН</td>
+                    <td>Исполнение + обработка после загрузки</td>
+                    <td>54.2</td>
+                    <td class="ok">4.67</td>
+                    <td>8.00</td>
+                    <td class="ok">-91.4%</td>
+                    <td><span style="color:#28a745; font-weight:700">Достигнута</span> <span style="color:#64748b;font-size:11px">(1.1)</span></td>
+                </tr>
+                <tr>
+                    <td>ДУ</td>
+                    <td>Исполнение Т (открытие, запись)</td>
+                    <td>1.20</td>
+                    <td class="ok">0.32</td>
+                    <td>1.00</td>
+                    <td class="ok">-73.3%</td>
+                    <td><span style="color:#28a745; font-weight:700">Достигнута</span> <span style="color:#64748b;font-size:11px">(1.2 к релизу)</span></td>
+                </tr>
+                <tr>
+                    <td>ДУ</td>
+                    <td>Исполнение Т-1 (проведение)</td>
+                    <td>7.20</td>
+                    <td class="ok">1.07</td>
+                    <td>1.20</td>
+                    <td class="ok">-85.1%</td>
+                    <td><span style="color:#28a745; font-weight:700">Достигнута</span> <span style="color:#64748b;font-size:11px">(1.2)</span></td>
+                </tr>
+                <tr>
+                    <td>ДУ</td>
+                    <td>Вечерние регламентные операции</td>
+                    <td>55.5</td>
+                    <td class="ok">5.3</td>
+                    <td>6.0</td>
+                    <td class="ok">-90.5%</td>
+                    <td><span style="color:#28a745; font-weight:700">Достигнута</span> <span style="color:#64748b;font-size:11px">(1.2)</span></td>
+                </tr>
+                <tr>
+                    <td>ФИН</td>
+                    <td>Регламентные операции под РДУ</td>
+                    <td>8.57</td>
+                    <td class="ok">1.81</td>
+                    <td>3.00</td>
+                    <td class="ok">-78.9%</td>
+                    <td><span style="color:#28a745; font-weight:700">Достигнута</span> <span style="color:#64748b;font-size:11px">(1.3.5, передано вендору Аванкор)</span></td>
+                </tr>
+                <tr>
+                    <td>ФИН</td>
+                    <td>Расчет НДФЛ</td>
+                    <td>153.0</td>
+                    <td class="muted">—</td>
+                    <td>60.0</td>
+                    <td class="muted">—</td>
+                    <td><span style="color:#f59e0b; font-weight:700">Ближайшие планы</span> <span style="color:#64748b;font-size:11px">(1.4)</span></td>
+                </tr>
+                <tr>
+                    <td>МО</td>
+                    <td>Регламенты под РДУ (МО)</td>
+                    <td class="muted">—</td>
+                    <td class="muted">—</td>
+                    <td class="muted">уточняется</td>
+                    <td class="muted">—</td>
+                    <td><span style="color:#f59e0b; font-weight:700">Ближайшие планы</span> <span style="color:#64748b;font-size:11px">(1.4)</span></td>
+                </tr>
+                <tr>
+                    <td>ПИФ</td>
+                    <td>Исполнение сделок (один ПИФ, одна ЦБ)</td>
+                    <td>124.0</td>
+                    <td class="warn">60.0</td>
+                    <td>24.0</td>
+                    <td class="warn">-51.6% (от цели x2.5)</td>
+                    <td><span style="color:#dc3545; font-weight:700">Не достигнута</span> <span style="color:#64748b;font-size:11px">(1.5)</span></td>
+                </tr>
+                <tr>
+                    <td>ДУ</td>
+                    <td>Формирование платежных поручений</td>
+                    <td>4.60</td>
+                    <td class="muted">—</td>
+                    <td>3.00</td>
+                    <td class="muted">—</td>
+                    <td><span style="color:#1d4fa0; font-weight:700">В планах</span> <span style="color:#64748b;font-size:11px">(1.5)</span></td>
+                </tr>
+                <tr>
+                    <td>ДУ+ФИН</td>
+                    <td>Сквозной нагрузочный тест</td>
+                    <td class="muted">—</td>
+                    <td class="muted">—</td>
+                    <td class="muted">—</td>
+                    <td class="muted">—</td>
+                    <td><span style="color:#1d4fa0; font-weight:700">В планах</span> <span style="color:#64748b;font-size:11px">(1.5)</span></td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    </div><!-- /zone-results -->
+
+    <!-- ===== БЛОК 2: ПЛАН ДАЛЬНЕЙШИХ ДЕЙСТВИЙ ===== -->
+    <div class="zone zone-actions">
+    <details class="collapsible-plan">
+    <summary class="section-title actions">
+        <span class="st-icon">&#128221;</span>
+        План дальнейших действий
+        <span class="st-sub">Исследования · Задачи в работе · Задачи в очереди</span>
+    </summary>
+
+    <div class="research-section">
+        <h2>Исследования и дальнейшие оптимизации</h2>
+
+        <!-- ДУ — Вечерние регламенты -->
+        <div class="research-group">
+            <div class="research-group-title">ДУ (ДУ 1.5) — Вечерние регламентные операции</div>
+
+            <div class="research-card planned">
+                <span class="rc-icon plan">Замер выполнен</span>
+                <div class="rc-body">
+                    <b>Топ медленных блоков вечернего регламента (ДУ):</b> замер 06.04.2026, 15 тыс. дог., 1 поток — таблица топа и источник вынесены в сводную таблицу задач (блок 1.5, к задаче «Вечерние регламентные операции»). Дальнейшие шаги: СЧА пост-обработкой и пачечная параллельность — ниже.
+                </div>
+            </div>
+
+            <div class="research-card planned">
+                <span class="rc-icon plan">Планируется</span>
+                <div class="rc-body">
+                    <b>Оптимизация расчёта СЧА через пост-обработку:</b> двухпроходный расчёт — сначала все операции кроме СЧА, затем сводный запрос по итогам СЧА для всех договоров,
+                    потом цикл без обращения к регистрам (данные из предварительно рассчитанной таблицы).
+                </div>
+            </div>
+
+            <div class="research-card planned">
+                <span class="rc-icon plan">Планируется</span>
+                <div class="rc-body">
+                    <b>Параллельность пачками:</b> заменить последовательный запуск каждого договора на разбивку по пачкам с параллельным запуском.
+                    Гипотеза: устранение простоя на ожидание самого медленного задания в группе даст дополнительное ускорение.
+                </div>
+            </div>
+        </div>
+
+        <!-- ДУ — Обмен ДУ-ФИН -->
+        <div class="research-group">
+            <div class="research-group-title">ДУ (ДУ 1.5) — Обмен ДУ-Финансы 3.0 (в своде задач: блок 1.5)</div>
+
+            <div class="research-card planned">
+                <span class="rc-icon idea">Идея</span>
+                <div class="rc-body">
+                    <b>Улучшение параллельности обмена:</b> сейчас БП разбиваются на 6 потоков, а все Сделки идут в 1 поток — обмен Сделок самый долгий этап.
+                    Изучить возможность разбивать поток Сделок (Перерегистраций) на несколько параллельных потоков обмена.
+                </div>
+            </div>
+        </div>
+
+        <!-- ФИН — Регламенты РДУ -->
+        <div class="research-group">
+            <div class="research-group-title">ФИН (ДУ 2.0) — Регламентные операции под РДУ</div>
+
+            <div class="research-card in-progress">
+                <span class="rc-icon active">В работе</span>
+                <div class="rc-body">
+                    <b>Разделение регламентов РДУ и прочих</b><span class="rc-imapps">IMAPPS-36274</span> —
+                    возможность настройки запуска регламентных операций по фильтру без РДУ, чтобы не замедлять основной расчёт. Работа передана вендору Avancore (Аванкор).
+                    <div class="rc-subtask">SubTask IMAPPS-36274 — у вендора (Avancore)</div>
+                </div>
+            </div>
+
+            <div class="research-card in-progress">
+                <span class="rc-icon active">В работе</span>
+                <div class="rc-body">
+                    <b>Статистика исполнения регламентов, отличия РДУ от прочих:</b><span class="rc-imapps">IMAPPS-36275</span>
+                    по Jira: Open (High), связана с IMAPPS-36274. В активной работе (анализ статистики РДУ), предварительный топ медленных операций собран.
+                    <div class="rc-subtask">SubTask IMAPPS-36275 — анализ статистики</div>
+                </div>
+            </div>
+
+            <div class="research-card planned">
+                <span class="rc-icon plan">Планируется</span>
+                <div class="rc-body">
+                    <b>Замеры времени расчётов РДУ в 1 поток</b> — выявить топ самых медленных операций.<br>
+                    Предварительные данные по 10 620 договорам:
+                    <div class="rc-subtask" style="margin-top:6px">
+                        %% по банковским счетам по графику выплат — <b>00:44:50</b><br>
+                        Погашение НКД (БУ) — <b>00:40:05</b><br>
+                        Определение сделок с отклонением цен (БУ) — <b>00:26:13</b><br>
+                        Погашение облигаций до переоценки (БУ) — <b>00:21:42</b><br>
+                        Частичное погашение облигаций (БУ) — <b>00:18:07</b><br>
+                        Погашение %% по займам (БУ) — <b>00:10:16</b><br>
+                        Операция по дефолтным облигациям (БУ) — <b>00:05:52</b>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ПИФ -->
+        <div class="research-group">
+            <div class="research-group-title">ПИФ — Исполнение сделок (один ПИФ, одна ЦБ)</div>
+
+            <div class="research-card planned">
+                <span class="rc-icon plan">Планируется</span>
+                <div class="rc-body">
+                    <b>Параллельный запуск двух тяжёлых этапов:</b> запускать одновременно в 19:30 цепочку T+n и массовое перепроведение документов.
+                    Длительность ночи определяется не суммой, а более долгим из двух процессов — ориентир 12–16 ч вместо 30.
+                    На шаге проведения документа «Сделка» в БП: оставить заполнение/сохранение, но не проводить в момент маршрута.
+                    <div class="rc-subtask">SubTask: доработка по результатам исследования (подзадача ещё не создана)</div>
+                </div>
+            </div>
+
+            <div class="research-card planned">
+                <span class="rc-icon idea">Идея</span>
+                <div class="rc-body">
+                    <b>Глобальное переписывание архитектуры учёта и/или алгоритмов исполнения сделок</b> — долгосрочная перспектива при недостаточности точечных оптимизаций.
+                </div>
+            </div>
+        </div>
+
+        <!-- В планах к работе — задачи без замеров -->
+        <div class="research-group">
+            <div class="research-group-title">Задачи в очереди / ближайшие планы (1.4–1.5 в своде)</div>
+
+            <div class="research-card planned">
+                <span class="rc-icon plan">Ближайшие планы</span>
+                <div class="rc-body">
+                    <b>МО — регламентные операции под РДУ.</b> В сводной таблице задач (14.04.2026): замеры не заданы, цель уточняется; блок 1.4.
+                </div>
+            </div>
+
+            <div class="research-card planned">
+                <span class="rc-icon plan">В планах</span>
+                <div class="rc-body">
+                    <b>ДУ — Формирование платёжных поручений.</b>
+                    Было: 1 ч 9 мин на 15 000 документов (4.60 минут/1000 объектов).
+                    Целевое: 1 ч на 20 000 документов (3.00 минут/1000 объектов).
+                    Разрыв: 4.60 vs 3.00 минут/1000 объектов — в 1.53 раза. Замеры после оптимизации не выполнялись.
+                </div>
+            </div>
+
+            <div class="research-card planned">
+                <span class="rc-icon plan">В планах</span>
+                <div class="rc-body">
+                    <b>ФИН — Расчёт НДФЛ (блок 1.4 «ближайшие планы»).</b>
+                    Было: 2 ч 33 мин на 1 000 операций (153.0 минут/1000 объектов).
+                    Целевое: 1 ч на 1 000 операций (60.0 минут/1000 объектов).
+                    Разрыв: 153.0 vs 60.0 минут/1000 объектов — в 2.55 раза. Замеры после оптимизации не выполнялись.
+                </div>
+            </div>
+        </div>
+
+        <!-- Сквозной тест -->
+        <div class="research-group">
+            <div class="research-group-title">ДУ + ФИН — Сквозной нагрузочный тест (мега-задача)</div>
+            <div class="research-card planned">
+                <span class="rc-icon plan">Планируется</span>
+                <div class="rc-body">
+                    <b>Сквозной тест:</b> 100 000 сделок + 30 000 договоров.
+                    Полный контур: загрузка сделок в ДУ → исполнение в ДУ → обмен в ФИН → исполнение в ФИН → расчёт регламентов ДУ → расчёт регламентов ФИН.
+                    Запускается после завершения основных доработок.
+                </div>
+            </div>
+        </div>
+    </div>
+    </details>
+    </div><!-- /zone-actions -->
+
+    <div class="summary">
+        <h2>Выводы</h2>
+        <ul>
+            <li><b>Группировка 1.1–1.5</b> (как в tasks_tree_table_grouped_2026_04_21): 1.1 — выполнено (ДУ: загрузка сделок, обмен; ФИН: исполнение после загрузки); 1.2 — к релизу 1.5.27.11 (Т, Т-1, вечерние регламенты ДУ); 1.3 — в работе (ФИН: оптимизация запросов Перерегистрации после загрузки); 1.3.5 — передано вендору АВАНКОР (РДУ в ФИН); 1.4 — ближайшие планы (НДФЛ, МО под РДУ); 1.5 — в планах (ПИФ, платежки ДУ, сквозной тест, продолжение исследований).</li>
+            <li><b>ДУ:</b> загрузка сделок — цель признана достигнутой по доп. тесту 0.45 мин/1000 (ориентир); обмен и вечерние регламенты — цели достигнуты; исполнение Т и Т-1 — достигнуты, ожидают релиза 1.5.27.11.</li>
+            <li><b>ФИН:</b> исполнение после загрузки — цель достигнута (4.67 мин/1000). РДУ — цель достигнута по DR-тесту на 10 500 договорах (1.81 vs 3.00 мин/1000); замеры: 95 минут до оптимизации, 20 и 19 минут после; линейно на 30 000 ~54.3 мин (лучший). IMAPPS-36274 передана вендору Avancore; IMAPPS-36275 — Open (High), анализ статистики.</li>
+            <li><b>ПИФ:</b> 124 → 60 мин/1000, цель 24 не достигнута; доработки в блоке 1.5.</li>
+            <li><b>Ближайшие планы:</b> НДФЛ (ФИН), регламенты РДУ в МО — без новых замеров в этой версии карточек.</li>
+            <li><b>Исследования:</b> топ вечернего регламента зафиксирован (см. сводную таблицу 1.5); параллельность обмена, СЧА, пачки, Перерегистрации — в плане по сводке.</li>
+            <li><b>Сквозной тест</b> ДУ+ФИН остаётся в блоке 1.5 до завершения основных доработок.</li>
+        </ul>
+    </div>
+
+</div>
+</body>
+</html>

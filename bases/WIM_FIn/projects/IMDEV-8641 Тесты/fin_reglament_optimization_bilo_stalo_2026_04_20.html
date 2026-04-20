@@ -1,0 +1,183 @@
+<!doctype html>
+<html lang="ru">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>ФИН: Было-Стало по регламентным операциям РДУ</title>
+    <style>
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background: #f3f6fb;
+            color: #0f172a;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .header {
+            background: linear-gradient(90deg, #1d4fa0, #0f766e);
+            color: #ffffff;
+            border-radius: 10px;
+            padding: 16px 20px;
+            margin-bottom: 14px;
+        }
+        .header h1 {
+            margin: 0 0 8px 0;
+            font-size: 24px;
+        }
+        .header p {
+            margin: 0;
+            font-size: 13px;
+            line-height: 1.5;
+            opacity: 0.95;
+        }
+        .card {
+            background: #ffffff;
+            border: 1px solid #dbe4f0;
+            border-radius: 10px;
+            padding: 14px;
+            margin-bottom: 14px;
+        }
+        .card h2 {
+            margin: 0 0 10px 0;
+            font-size: 16px;
+            color: #1e3a8a;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+        th, td {
+            border: 1px solid #dbe4f0;
+            padding: 8px;
+            text-align: left;
+            vertical-align: top;
+        }
+        th {
+            background: #eef4ff;
+            font-weight: 700;
+        }
+        .ok {
+            color: #15803d;
+            font-weight: 700;
+        }
+        .warn {
+            color: #b45309;
+            font-weight: 700;
+        }
+        .bad {
+            color: #dc2626;
+            font-weight: 700;
+        }
+        .note {
+            font-size: 12px;
+            color: #475569;
+            line-height: 1.5;
+            margin-top: 10px;
+        }
+        .summary {
+            background: #f0fdf4;
+            border: 1px solid #bbf7d0;
+            border-radius: 8px;
+            padding: 10px 12px;
+            font-size: 13px;
+            line-height: 1.6;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="header">
+        <h1>ФИН: Было-Стало по скорости регламентных операций РДУ</h1>
+        <p>
+            Задача: IMDEV-8641. Дата актуализации: 20.04.2026.<br>
+            Источники: ПланИТТестирования_DR_тест_скорости.docx, report_cards_2026_04_21.html, tasks_tree_table_grouped_2026_04_21.html.
+        </p>
+    </div>
+
+    <div class="card">
+        <h2>Сводная таблица измерений</h2>
+        <p class="note" style="margin-top:0;margin-bottom:10px">
+            DR-тест выполнялся на <b>10 500</b> договорах. Нормализация: минуты на 1 000 договоров = время (мин) / 10,5.
+            Линейная экстраполяция времени на 30 000 договоров: время * (30 000 / 10 500) = время * (20 / 7).
+            При линейной модели показатель мин/1000 от объема не зависит (остается как на 10 500).
+        </p>
+        <table>
+            <thead>
+                <tr>
+                    <th>Показатель</th>
+                    <th>Время (факт)</th>
+                    <th>Объем (факт)</th>
+                    <th>мин/1000</th>
+                    <th>Линейно на 30 000 (мин)</th>
+                    <th>Статус к цели 3.00</th>
+                    <th>Источник</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Было (до оптимизации, отчет 14.04)</td>
+                    <td>1.5 ч (90 мин)</td>
+                    <td>10 500 договоров</td>
+                    <td class="bad">8.57</td>
+                    <td class="warn">257.1 (90 * 20/7)</td>
+                    <td class="bad">Не соответствует</td>
+                    <td>report_cards/tasks_tree</td>
+                </tr>
+                <tr>
+                    <td>Типовой алгоритм (DR-тест)</td>
+                    <td>1 ч 35 мин (95 мин)</td>
+                    <td>10 500 договоров</td>
+                    <td class="warn">9.05</td>
+                    <td class="warn">271.4</td>
+                    <td class="warn">База сравнения до оптимизации</td>
+                    <td>docx</td>
+                </tr>
+                <tr>
+                    <td>Стало (новый алгоритм, 10.04)</td>
+                    <td>20 мин</td>
+                    <td>10 500 договоров</td>
+                    <td class="ok">1.90</td>
+                    <td class="ok">57.1</td>
+                    <td class="ok">Соответствует</td>
+                    <td>docx</td>
+                </tr>
+                <tr>
+                    <td>Стало (новый алгоритм, 14.04 повторный)</td>
+                    <td>19 мин</td>
+                    <td>10 500 договоров</td>
+                    <td class="ok">1.81</td>
+                    <td class="ok">54.3</td>
+                    <td class="ok">Соответствует</td>
+                    <td>docx</td>
+                </tr>
+                <tr>
+                    <td><b>Целевое время</b></td>
+                    <td><b>1.5 ч (90 мин)</b></td>
+                    <td><b>30 000 договоров</b></td>
+                    <td><b>3.00</b></td>
+                    <td><b>90</b></td>
+                    <td><b>Порог</b></td>
+                    <td>report_cards/tasks_tree</td>
+                </tr>
+            </tbody>
+        </table>
+        <div class="note">
+            В документе DR-теста зафиксировано ускорение с 95 до 20 минут (около 4.75 раза по времени на том же объеме 10 500),
+            повторный результат 19 минут. Относительно исходной нормализации 8.57 мин/1000: примерно в 4.7 раза быстрее лучший замер (1.81 против 8.57).
+        </div>
+    </div>
+
+    <div class="card">
+        <h2>Вывод по соответствию целевому времени</h2>
+        <div class="summary">
+            После оптимизации по DR-тесту на <b>10 500</b> договорах регламентные операции ФИН под РДУ укладываются в целевой порог по нормализации: лучший замер <b>1.81 мин/1000</b> при цели <b>3.00 мин/1000</b>.<br>
+            Линейная оценка времени на 30 000 договоров при той же производительности: около <b>54.3 мин</b> (лучший замер 19 мин на 10 500), что также дает <b>1.81 мин/1000</b> и остается ниже цели.
+        </div>
+    </div>
+</div>
+</body>
+</html>
