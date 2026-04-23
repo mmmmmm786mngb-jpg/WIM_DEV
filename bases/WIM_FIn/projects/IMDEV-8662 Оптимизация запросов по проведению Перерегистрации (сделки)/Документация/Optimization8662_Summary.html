@@ -101,22 +101,49 @@
       color: #374151;
       font-weight: 600;
     }
+    .table-scope-title {
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: #1e3a5f;
+      margin: 0.35rem 0 0.4rem 0;
+    }
+    .table-scope-title.ref {
+      color: #4b5563;
+      margin-top: 1rem;
+    }
+    .breakdown.ref-block {
+      background: #f9fafb;
+      border: 1px solid #d1d5db;
+    }
   </style>
 </head>
 <body>
   <h1>IMDEV-8662: сводка оптимизаций и реализация в FonProv</h1>
-  <p class="meta">Документ фиксирует связь: <code>точка замера -> описание -> реализованные перехваты в расширении</code>.</p>
+  <p class="meta">Документ фиксирует связь: <code>точка замера -> описание -> перехваты в расширении</code>. Контур
+    <strong>поставки вендору (Аванкор)</strong> отделён от блоков, которые в расширении приведены только
+    <strong>справочно</strong>.</p>
 
   <div class="note">
-    Во всех измененных местах в коде расширения добавлены унифицированные маркеры:
-    <code>// IMDEV-8662, стр. N</code>, где <code>N</code> - номер оптимизируемой строки из таблицы замеров.
+    В коде перехватов по <strong>пяти строкам замеров</strong> в расширении добавлены унифицированные маркеры:
+    <code>// IMDEV-8662, стр. N</code>, где <code>N</code> - номер строки из таблицы замеров. Для паузы и
+    справочного критерия маркеры - по соглашению в комментариях (см. разбивку ниже).
   </div>
 
   <div class="note">
-    Помимо 5 основных точек из таблицы замеров, в расширение добавлены дополнительные оптимизации/доработки:
-    перехват паузы в <code>АванкорСервер</code> и оптимизация запроса критерия отбора <code>ДокументыПоБизнеспроцессам</code>.
+    <strong>Поставка вендору (Аванкор):</strong> в продуктовую конфигурацию должны войти только изменения по
+    <strong>пяти строкам таблицы замеров</strong> (стр. 137, 1160, 1769, 2485, 2551) и доработка <strong>паузы</strong>
+    (<code>АванкорСервер.Пауза</code>, аналог IMAPPS-31419). Это единственный обязательный контур переноса из IMDEV-8662
+    к вендору.
   </div>
 
+  <div class="note">
+    <strong>Справочно в расширении FonProv:</strong> критерий отбора <code>ДокументыПоБизнеспроцессам</code> с перехватом
+    <code>НайтиДокументы</code> - текст запроса приведён к CF вендора <strong>2.8.3.2</strong> для сверки; в поставку
+    вендору по IMDEV-8662 <strong>не входит</strong> (уже в релизе 2.8.3.2). Патч <code>УниверсальныйОбменДаннымиXML</code>
+    из <code>FonProv</code> снят, оформляется отдельной задачей.
+  </div>
+
+  <p class="table-scope-title">Таблица 1. Поставка вендору: пять точек замеров и пауза</p>
   <table>
     <thead>
       <tr>
@@ -189,18 +216,6 @@
         </td>
       </tr>
       <tr>
-        <td><strong>FC</strong></td>
-        <td><code>КритерийОтбора.ДокументыПоБизнеспроцессам: НайтиДокументы</code></td>
-        <td>n/a (доп. оптимизация)</td>
-        <td>
-          <ul>
-            <li><code>FilterCriteria/ДокументыПоБизнеспроцессам/Ext/ManagerModule.bsl</code></li>
-            <li><code>&ИзменениеИКонтроль("НайтиДокументы")</code></li>
-            <li>Разделение запроса на 2 шага через <code>ПОМЕСТИТЬ ВТ_ДокументыПоОснованию</code> и последующую фильтрацию</li>
-          </ul>
-        </td>
-      </tr>
-      <tr>
         <td><strong>PAUSE</strong></td>
         <td><code>АванкорСервер.Пауза</code> (аналог IMAPPS-31419)</td>
         <td>n/a (доп. оптимизация)</td>
@@ -215,9 +230,36 @@
     </tbody>
   </table>
 
+  <p class="table-scope-title ref">Таблица 2. Справочно в FonProv (вне поставки вендору по IMDEV-8662)</p>
+  <table>
+    <thead>
+      <tr>
+        <th>Код</th>
+        <th>Объект</th>
+        <th>Комментарий</th>
+        <th>Реализация в расширении FonProv</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>FC</strong></td>
+        <td><code>КритерийОтбора.ДокументыПоБизнеспроцессам: НайтиДокументы</code></td>
+        <td>Уже в CF вендора 2.8.3.2; в FonProv для сверки</td>
+        <td>
+          <ul>
+            <li><code>FilterCriteria/ДокументыПоБизнеспроцессам/Ext/ManagerModule.bsl</code></li>
+            <li><code>&ИзменениеИКонтроль("НайтиДокументы")</code></li>
+            <li><code>ПОМЕСТИТЬ ВТ_Документы</code>, затем <code>ВТ_Документы.Ссылка.ПометкаУдаления</code> (как в 2.8.3.2)</li>
+          </ul>
+        </td>
+      </tr>
+    </tbody>
+  </table>
+
   <div class="breakdown">
-    <h2>Детальная разбивка доработок FonProv на 5 групп</h2>
-    <p class="meta">Ниже расширенная версия с контекстом, файлами, конкретными изменениями и стандартным маркером комментариев.</p>
+    <h2>Поставка вендору: детальная разбивка (5 строк замеров + пауза)</h2>
+    <p class="meta">Ниже только то, что Аванкор переносит в продукт: контекст, файлы, изменения, маркер
+      <code>// IMDEV-8662, стр. N</code> (для паузы - рекомендуемый маркер в комментарии).</p>
 
     <div class="group">
       <h3>1) Оптимизация стр. 137</h3>
@@ -306,20 +348,7 @@
     </div>
 
     <div class="group">
-      <h3>6) Доп. оптимизация критерия отбора ДокументыПоБизнеспроцессам</h3>
-      <p><span class="label">Контекст:</span> оптимизация запроса в критерии отбора, функция <code>НайтиДокументы</code>.</p>
-      <p><span class="label">Файл:</span><br><code>Расширения/FonProv/FilterCriteria/ДокументыПоБизнеспроцессам/Ext/ManagerModule.bsl</code></p>
-      <p><span class="label">Изменения:</span></p>
-      <ul>
-        <li><code>FonProv_НайтиДокументы</code> (<code>&amp;ИзменениеИКонтроль</code>);</li>
-        <li>выборка по критерию отбора вынесена во временную таблицу <code>ВТ_ДокументыПоОснованию</code>;</li>
-        <li>фильтрация по <code>ПометкаУдаления</code> выполняется отдельным шагом по временной таблице.</li>
-      </ul>
-      <p><span class="label">Маркер-комментарий группы:</span> рекомендуется <code>// IMDEV-8662, критерий отбора</code></p>
-    </div>
-
-    <div class="group">
-      <h3>7) Доп. оптимизация паузы в АванкорСервер</h3>
+      <h3>6) Пауза в АванкорСервер</h3>
       <p><span class="label">Контекст:</span> стабилизация паузы в разных режимах выполнения (фон / клиент-серверный вызов).</p>
       <p><span class="label">Файл:</span><br><code>Расширения/FonProv/CommonModules/АванкорСервер/Ext/Module.bsl</code></p>
       <p><span class="label">Изменения:</span></p>
@@ -332,9 +361,30 @@
     </div>
   </div>
 
+  <div class="breakdown ref-block">
+    <h2>Справочно в FonProv (не входит в поставку вендору по IMDEV-8662)</h2>
+    <p class="meta">Критерий отбора: исправление уже в релизе вендора <strong>2.8.3.2</strong>. В расширении перехват и
+      текст запроса приведены для сверки с типовой логикой до обновления CF у заказчика.</p>
+    <div class="group" style="border-top: none; margin-top: 0; padding-top: 0;">
+      <h3>Критерий отбора ДокументыПоБизнеспроцессам</h3>
+      <p><span class="label">Файл:</span><br><code>Расширения/FonProv/FilterCriteria/ДокументыПоБизнеспроцессам/Ext/ManagerModule.bsl</code></p>
+      <p><span class="label">Содержание:</span></p>
+      <ul>
+        <li><code>FonProv_НайтиДокументы</code> (<code>&ИзменениеИКонтроль("НайтиДокументы")</code>);</li>
+        <li>два шага, <code>ВТ_Документы</code>, условие по <code>ВТ_Документы.Ссылка.ПометкаУдаления</code> и
+          <code>СтрЗаменить</code> для <code>&amp;ОтборПометкаУдаления</code> как в CF 2.8.3.2.</li>
+      </ul>
+      <p><span class="label">Маркер в коде:</span> рекомендуется <code>// IMDEV-8662, критерий отбора</code></p>
+      <p><span class="label">После обновления базы</span> на CF с релизом не ниже 2.8.3.2 заимствование критерия в
+        расширении можно снять.</p>
+    </div>
+  </div>
+
   <div class="docs">
     <h2>Связанные материалы</h2>
     <ul>
+      <li><a href="imdev8662_tree_modifiable_objects_fonprov_avancore.html">imdev8662_tree_modifiable_objects_fonprov_avancore.html</a>
+        (дерево объектов и процедур FonProv)</li>
       <li><a href="measurements_table_IMDEV-8662.html">measurements_table_IMDEV-8662.html</a></li>
       <li><a href="Optimization137.html">Optimization137.html</a></li>
       <li><a href="Optimization1160_DateCast_querypack.html">Optimization1160_DateCast_querypack.html</a></li>
