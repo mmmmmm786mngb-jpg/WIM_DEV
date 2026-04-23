@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Оптимизация регламентного закрытия периода: цель, дерево решения и основные идеи</title>
+  <style>
+    :root {
+      --text: #1f2937;
+      --muted: #6b7280;
+      --bg: #f8fafc;
+      --card: #ffffff;
+      --line: #e5e7eb;
+      --accent: #0f766e;
+      --accent-soft: #ccfbf1;
+      --warn: #92400e;
+      --warn-soft: #fef3c7;
+      --info: #1d4ed8;
+      --info-soft: #dbeafe;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: "Segoe UI", Tahoma, sans-serif;
+      line-height: 1.55;
+      font-size: 16px;
+    }
+
+    .wrap {
+      max-width: 1120px;
+      margin: 0 auto;
+      padding: 24px;
+    }
+
+    .header {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 22px 24px;
+      margin-bottom: 18px;
+      box-shadow: 0 4px 14px rgba(15, 23, 42, 0.05);
+    }
+
+    h1 {
+      margin: 0;
+      font-size: 1.68rem;
+      line-height: 1.28;
+      letter-spacing: 0.01em;
+    }
+
+    .intro {
+      margin-top: 12px;
+      color: var(--text);
+      font-size: 1.02rem;
+      max-width: 980px;
+    }
+
+    .highlights {
+      margin-top: 14px;
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .highlight {
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 10px 12px;
+      background: #f9fafb;
+    }
+
+    .highlight-title {
+      margin-bottom: 4px;
+      font-weight: 600;
+      color: #0f172a;
+      font-size: 0.92rem;
+    }
+
+    .card {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 18px 20px;
+      margin-bottom: 16px;
+      box-shadow: 0 2px 10px rgba(15, 23, 42, 0.04);
+    }
+
+    h2 {
+      margin: 0 0 12px 0;
+      font-size: 1.18rem;
+      line-height: 1.3;
+      border-bottom: 1px solid #e2e8f0;
+      padding-bottom: 8px;
+    }
+
+    p {
+      margin: 0 0 10px 0;
+    }
+
+    ul {
+      margin: 8px 0;
+      padding-left: 20px;
+    }
+
+    li {
+      margin-bottom: 6px;
+    }
+
+    code {
+      background: #f3f4f6;
+      border: 1px solid #e5e7eb;
+      border-radius: 4px;
+      padding: 1px 5px;
+      font-family: Consolas, monospace;
+      font-size: 0.9em;
+    }
+
+    .grid2 {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .box {
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 14px;
+      background: #fff;
+    }
+
+    .box h3 {
+      margin: 0 0 10px 0;
+      font-size: 1.02rem;
+    }
+
+    .as-is {
+      border-left: 4px solid var(--warn);
+      background: var(--warn-soft);
+    }
+
+    .to-be {
+      border-left: 4px solid var(--accent);
+      background: var(--accent-soft);
+    }
+
+    .info {
+      border-left: 4px solid var(--info);
+      background: var(--info-soft);
+      padding: 10px 12px;
+      border-radius: 8px;
+      margin-top: 8px;
+    }
+
+    .tree {
+      margin-top: 8px;
+      border-left: 2px solid #cbd5e1;
+      padding-left: 14px;
+    }
+
+    .node {
+      margin: 10px 0;
+      padding: 10px 12px;
+      background: #fff;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+    }
+
+    .node-title {
+      font-weight: 700;
+      margin-bottom: 6px;
+      color: #0f172a;
+    }
+
+    .step-what-title {
+      margin-top: 4px;
+      margin-bottom: 4px;
+      font-weight: 600;
+      font-size: 0.88rem;
+      color: var(--accent);
+      letter-spacing: 0.02em;
+    }
+
+    .small {
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+
+    .answer {
+      margin-top: 8px;
+      padding: 8px 10px 8px 12px;
+      border-left: 3px solid #64748b;
+      background: #f8fafc;
+      color: #334155;
+      font-size: 0.92rem;
+    }
+
+    .answer strong {
+      color: #0f172a;
+    }
+
+    @media (max-width: 900px) {
+      .grid2, .highlights {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="header">
+      <h1>Оптимизация регламентного закрытия периода: цель, дерево решения и основные идеи</h1>
+      <div class="intro">
+        Ускорить массовое закрытие периода по портфелям РДУ за счет того, что заведомо лишние регламентные операции
+        не доходят до исполнения: до запуска типовой цепочки по портфелю заранее снимается признак выполнения
+        в плане на день (строки плана не удаляются), а при отсутствии выполняемых операций по группе не создаются
+        пустые планы. Изменения доставляются как расширение, без правок состава типовой конфигурации.
+      </div>
+      <div class="highlights">
+        <div class="highlight">
+          <div class="highlight-title">Главное 1</div>
+          <div>Фильтрация выполняется сразу по всему списку портфелей, а не по одному портфелю.</div>
+        </div>
+        <div class="highlight">
+          <div class="highlight-title">Главное 2</div>
+          <div>У лишних операций снимается только признак <code>Выполнять</code>, строки плана сохраняются.</div>
+        </div>
+        <div class="highlight">
+          <div class="highlight-title">Главное 3</div>
+          <div>Если по группе нет исполняемых строк, новый документ плана не создается.</div>
+        </div>
+      </div>
+    </div>
+
+    <section class="card">
+      <h2>1) Текущий процесс и целевое изменение</h2>
+      <div class="grid2">
+        <div class="box as-is">
+          <h3>Как сейчас (типовая методика)</h3>
+          <ul>
+            <li>Сначала строится общий план на день по списку портфелей: <code>ПланРеглОпераций</code>.</li>
+            <li>План кладется в <code>ПланРеглОперацийПоДням</code>.</li>
+            <li>
+              Дальше типовая цепочка закрытия идет <strong>по каждому портфелю отдельно</strong>: для портфеля
+              выбирается срез плана, затем по группам формируется и исполняется <code>ПланРегламентныхОперацийДУ</code>.
+            </li>
+            <li>
+              Выполняются строки, где <code>Выполнять = Истина</code>. При этом для <strong>каждой</strong> такой операции
+              типовая цепочка выполняет не только саму регламентную операцию, но и связанные с ней запросы к данным
+              (проверки, выборки, подготовка контекста), что на больших объемах накапливается по числу портфелей и строк плана.
+            </li>
+            <li>
+              На больших объемах это превращается в много повторяющихся проходов "портфель за портфелем"
+              (и внутри - по группам операций).
+            </li>
+          </ul>
+        </div>
+        <div class="box to-be">
+          <h3>Как будет после оптимизации</h3>
+          <ul>
+            <li>
+              Между построением плана и вставкой в кэш запускается фильтр <strong>сразу по всем портфелям</strong>
+              из списка закрытия: один общий план на день обрабатывается целиком, без предварительного разбиения
+              «портфель за портфелем» на этом этапе.
+            </li>
+            <li>
+              Отбор «нужен ли расчет этого вида по портфелю» выполняется в модуле менеджера регистра
+              <code>ВидыОптимизируемыхРегламентныхОперацийДУ</code> запросами к <strong>тем же источникам данных</strong>,
+              что и у соответствующей типовой регламентной операции (регистры бухгалтерии и накопления, справочники,
+              документы). В тексте запроса оставляют <strong>минимально достаточный фрагмент</strong> из той же логики:
+              он должен однозначно дать ответ «расчет по портфелю возможен в принципе», не воспроизводя полный набор
+              проверок типовой процедуры. Запросы выполняются <strong>пакетно по массиву портфелей</strong> из плана;
+              у портфелей вне найденного подмножества в строках плана снимается <code>Выполнять</code>.
+            </li>
+            <li>Если по группе после фильтра нет исполняемых строк, новый пустой план не создается.</li>
+            <li>Основная логика типового исполнения остается неизменной.</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>2) Дерево принятия решения</h2>
+      <div class="tree">
+        <div class="node">
+          <div class="node-title">Шаг 0. Проверка сценария и свод исполняемых строк плана</div>
+          <div class="step-what-title">Что делаем?</div>
+          <div>
+            Получаем план на день из <code>НастройкиЗакрытияПериода.ПланРеглОпераций</code>. Проверяем константу
+            <code>ПулРозницаДУ</code> и однородность пула у портфелей плана; если условия не выполнены - сразу выход,
+            план не меняется. Иначе берем только строки с <code>Выполнять = 1</code> и только виды операций из регистра
+            оптимизации.
+          </div>
+          <div class="answer">
+            <strong>Для чего?</strong> Чтобы либо не трогать типовой план при неверном сценарии
+            или неоднородном пуле, либо получить сжатый перечень строк для дальнейшего ускорения: видно, что потенциально
+            нужно и с каким признаком <code>Выполнять</code> операции стартуют в типовой цепочке, при этом в работу
+            попадают только целевой сценарий "розница ДУ" с однородным пулом, без лишних видов и без строк с уже снятым
+            выполнением.
+          </div>
+        </div>
+        <div class="node">
+          <div class="node-title">Шаг 1. Отбор портфелей по виду операции</div>
+          <div class="step-what-title">Что делаем?</div>
+          <div>Собираем массив портфелей из плана по текущему виду и вызываем <code>ПолучитьПортфелиДляСохраненияВыполненияВПлане</code>.</div>
+          <div class="answer">
+            <strong>Для чего?</strong> Чтобы по минимальным запросам к тем же данным, что и у типовой
+            операции, оставить в плане только портфели, по которым расчет данного вида в принципе возможен; остальным по этому
+            виду признак выполнения потом снимают пакетно.
+          </div>
+        </div>
+        <div class="node">
+          <div class="node-title">Шаг 2. Пакетное снятие признака выполнения в плане</div>
+          <div class="step-what-title">Что делаем?</div>
+          <div>
+            Одним пакетным запросом ставим <code>Выполнять = 0</code> строкам текущего вида, чей портфель не вошел
+            в список "оставить".
+          </div>
+          <div class="answer">
+            <strong>Для чего?</strong> Чтобы до запуска типовой цепочки убрать из исполнения заведомо
+            лишние строки плана, не удаляя сами строки и не меняя состав типовой конфигурации.
+          </div>
+        </div>
+        <div class="node">
+          <div class="node-title">Шаг 3. Запись плана в кэш дня и передача в типовую цепочку</div>
+          <div class="step-what-title">Что делаем?</div>
+          <div>Возвращаем обновленный план в <code>ПланРеглОперацийПоДням</code>, дальше работает типовой процесс.</div>
+          <div class="answer">
+            <strong>Для чего?</strong> Чтобы все потоки и последующие шаги закрытия видели уже
+            отфильтрованный план: меньше операций дойдет до исполнения и связанных запросов, при этом механизм закрытия
+            остается типовым.
+          </div>
+        </div>
+        <div class="node">
+          <div class="node-title">Шаг 4. Пропуск группы без исполняемых строк и без документа плана</div>
+          <div class="step-what-title">Что делаем?</div>
+          <div>
+            Если при формировании по группе нет существующего плана и количество строк с <code>Выполнять = 1</code>
+            равно нулю, группа пропускается.
+          </div>
+          <div class="small">Итог: не создается пустой документ плана.</div>
+          <div class="answer">
+            <strong>Для чего?</strong> Чтобы не создавать новый пустой <code>ПланРегламентныхОперацийДУ</code>
+            и не запускать связанный проход, если по срезу плана выполнять нечего и документа плана еще не было.
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>3) Ключевые принципы оптимизации</h2>
+      <ul>
+        <li>
+          <strong>Исполнение без удаления строк плана:</strong> таблица плана остается полной для прозрачности и совместимости,
+          меняется только признак <code>Выполнять</code>.
+        </li>
+        <li>
+          <strong>Состав оптимизируемых видов задается данными:</strong> перечень видов операций, на которые распространяется
+          ускорение, хранится в регистре <code>ВидыОптимизируемыхРегламентныхОперацийДУ</code>.
+        </li>
+        <li>
+          <strong>Пакетные запросы по всему набору портфелей:</strong> один запрос сразу по массиву портфелей обычно быстрее,
+          чем много отдельных запросов, каждый из которых обрабатывает один портфель.
+        </li>
+        <li>
+          <strong>Сразу завершать при несоответствии сценарию:</strong> если условия не соответствуют сценарию "розница ДУ",
+          ресурсоемкая часть доработки (фильтрация и корректировка плана) не выполняется.
+        </li>
+        <li>
+          <strong>Не создавать пустые планы по группе:</strong> если по группе нет строк с <code>Выполнять = 1</code>,
+          новый документ плана не формируется.
+        </li>
+      </ul>
+      <div class="info">
+        Формальный критерий "лишняя операция": после фильтрации по виду операции и портфелю строка остается с
+        <code>Выполнять = 0</code>; если в группе не осталось строк с <code>Выполнять = 1</code>, группа не запускается.
+      </div>
+    </section>
+  </div>
+</body>
+</html>
