@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IMDEV-8662 / сквозной 30k: сводка замеров (ФИН) — 24.04.2026</title>
+    <style>
+        :root { --ok: #28a745; --paper: #fff; --border: #d4dded; --text: #1a2333; --muted: #5a6780; --head: #1d4fa0; }
+        * { box-sizing: border-box; }
+        body { margin: 0; background: #f1f5f9; color: var(--text); font: 14px/1.55 "Segoe UI", Arial, sans-serif; }
+        .wrap { max-width: 1100px; margin: 0 auto; padding: 22px; }
+        .header {
+            background: linear-gradient(90deg, #1d4fa0, #0e7a5f);
+            color: #fff; border-radius: 10px; padding: 18px 20px; margin-bottom: 18px;
+        }
+        .header h1 { margin: 0 0 8px; font-size: 22px; }
+        .header .meta { font-size: 12.5px; opacity: 0.92; line-height: 1.65; }
+        h2 { font-size: 16px; color: var(--head); margin: 22px 0 10px; padding-bottom: 6px; border-bottom: 2px solid #bfdbfe; }
+        .box { background: var(--paper); border: 1px solid var(--border); border-radius: 10px; padding: 14px 16px; margin-bottom: 14px; }
+        .box p { margin: 0 0 10px; } .box p:last-child { margin-bottom: 0; }
+        .muted { color: var(--muted); font-size: 12.5px; }
+        table.svod { width: 100%; border-collapse: collapse; font-size: 13px; background: var(--paper); border: 1px solid var(--border); }
+        table.svod th, table.svod td { padding: 8px 10px; border: 1px solid var(--border); text-align: left; vertical-align: top; }
+        table.svod th { background: #eff6ff; font-weight: 700; }
+        .ok { color: var(--ok); font-weight: 700; }
+        .improve { color: var(--ok); }
+        .note { font-size: 12px; color: var(--muted); margin-top: 8px; }
+        ul.tight { margin: 6px 0; padding-left: 20px; } ul.tight li { margin: 4px 0; }
+        .kpi { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; margin: 12px 0; }
+        .kpi .k { background: #ecfdf5; border: 1px solid #a7f3d0; border-radius: 8px; padding: 10px 12px; }
+        .kpi .k .v { font-size: 20px; font-weight: 700; color: #0f766e; }
+        .kpi .k .l { font-size: 11px; color: var(--muted); margin-top: 4px; }
+        /* Карточки Было / Стало */
+        .cmp-sub { font-size: 13px; font-weight: 700; color: #334155; margin: 16px 0 10px; padding: 6px 10px; background: #f1f5f9; border-radius: 6px; border-left: 4px solid #1d4fa0; }
+        .cmp-pair { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 14px; }
+        @media (max-width: 720px) { .cmp-pair { grid-template-columns: 1fr; } }
+        .cmp-byl, .cmp-stal { border-radius: 10px; padding: 0; overflow: hidden; border: 1px solid var(--border); }
+        .cmp-byl h4, .cmp-stal h4 { margin: 0; padding: 8px 12px; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; }
+        .cmp-byl h4 { background: #fef2f2; color: #b91c1c; border-bottom: 1px solid #fecaca; }
+        .cmp-stal h4 { background: #ecfdf5; color: #047857; border-bottom: 1px solid #a7f3d0; }
+        .cmp-byl .cmp-body, .cmp-stal .cmp-body { padding: 10px 12px 12px; font-size: 13px; line-height: 1.5; }
+        .cmp-byl .cmp-body strong, .cmp-stal .cmp-body strong { color: #0f172a; }
+        .cmp-byl .cmp-val, .cmp-stal .cmp-val { font-size: 17px; font-weight: 700; margin: 4px 0 8px; }
+        .cmp-byl .cmp-val { color: #b91c1c; }
+        .cmp-stal .cmp-val { color: #047857; }
+        .cmp-delta { margin-top: 8px; padding: 8px 10px; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; font-size: 12.5px; color: #1e40af; }
+        table.cmp-meta { width: 100%; font-size: 12px; border-collapse: collapse; margin-top: 6px; }
+        table.cmp-meta th, table.cmp-meta td { padding: 4px 6px; border: 1px solid #e2e8f0; text-align: left; }
+        table.cmp-meta th { background: #f8fafc; width: 38%; }
+    </style>
+</head>
+<body>
+<div class="wrap">
+    <div class="header">
+        <h1>Сквозной тест 30 000 (ФИН) и зона IMDEV-8662 (Перерегистрация)</h1>
+        <div class="meta">
+            <strong>Источник фактических замеров:</strong> <code>СквозноеТестирование_Исполнение30000фин.docx</code> (папка IMDEV-8662).<br>
+            План в документе привязан к задаче <strong>IMDEV-7331</strong> (оптимизация исполнения в ФИН).<br>
+            Доработки по <strong>IMDEV-8662</strong> (запросы проведения Перерегистрации) относятся к фазе
+            <strong>п. 7 &mdash; «Проведение перерегистраций»</strong>.<br>
+            Сводка обновлена: 24.04.2026. Контекст 14.04.2026 (карточки) &mdash; для сопоставления «как раньше сообщалось в отчетах».
+        </div>
+    </div>
+
+    <h2>1. Сквозной сценарий: шаги 1&ndash;7 (из DOCX, замеры 23&ndash;24.04.2026)</h2>
+    <table class="svod">
+        <thead>
+            <tr>
+                <th>Шаг</th>
+                <th>Контур</th>
+                <th>Действие</th>
+                <th>Длительность</th>
+                <th>Замер / комментарий</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>1</td>
+                <td>ДУ</td>
+                <td>Загрузка 30 тыс. сделок РДУ</td>
+                <td>~11 мин</td>
+                <td>Генерация ~2 мин, создание ~9 мин (30 тыс.)</td>
+            </tr>
+            <tr>
+                <td>2</td>
+                <td>ДУ</td>
+                <td>Исполнение в Т-1 (открытие), 23.04.2026</td>
+                <td>6 мин</td>
+                <td>6 минут</td>
+            </tr>
+            <tr>
+                <td>3</td>
+                <td>ДУ&ndash;ФИН</td>
+                <td>Обмен ДУ &rarr; ФИН</td>
+                <td>1 ч 2 мин (62 мин)</td>
+                <td>7:03 &ndash; 8:05</td>
+            </tr>
+            <tr>
+                <td>4</td>
+                <td>ФИН</td>
+                <td>Т-1 после обмена, обработка БП</td>
+                <td>43 мин; БП ~28 мин</td>
+                <td>24.04.: обработка БП 08:22:32&ndash;08:50:31; в тексте: «Т-1 после обмена» 08:07&ndash;08:50 (43 мин)</td>
+            </tr>
+            <tr>
+                <td>5</td>
+                <td>ДУ</td>
+                <td>Т (проведение исполнений), 24.04.2026</td>
+                <td>28 мин</td>
+                <td>8:06 &ndash; 8:34</td>
+            </tr>
+            <tr>
+                <td>6</td>
+                <td>ДУ&ndash;ФИН</td>
+                <td>Обмен ДУ &rarr; ФИН</td>
+                <td>1 ч 13 мин (73 мин)</td>
+                <td>8:56 &ndash; 10:09</td>
+            </tr>
+            <tr class="improve" style="font-weight:700">
+                <td>7</td>
+                <td>ФИН</td>
+                <td>Т: проведение исполнений (в т.ч. перерегистрации, БП)</td>
+                <td>1 ч 20 мин (80 мин); перерег. 24 мин; БП TN 54 мин</td>
+                <td>См. раздел 2 (ключевой вывод документа)</td>
+            </tr>
+        </tbody>
+    </table>
+    <p class="note">В DOCX в шапке: «Целевое и время замеров от 05.2025» &mdash; ориентир; факт &mdash; интервалы 23&ndash;24.04.2026.</p>
+
+    <h2>2. Пункт 7 (ФИН) &mdash; итог по 30 000 сделок</h2>
+    <div class="kpi">
+        <div class="k">
+            <div class="v">80 мин</div>
+            <div class="l">Исполнение Т на 30 тыс. (10:15&ndash;11:35), целиком п. 7</div>
+        </div>
+        <div class="k">
+            <div class="v">24 мин</div>
+            <div class="l">Проведение перерегистраций (сделок) 10:17&ndash;10:41 &mdash; зона IMDEV-8662</div>
+        </div>
+        <div class="k">
+            <div class="v">~2,67 мин/1000</div>
+            <div class="l">Справочно: 80 мин / 30 000 на весь п. 7 (перерегистрации + БП Сделки TN)</div>
+        </div>
+    </div>
+    <div class="box">
+        <p><strong>Детализация п. 7 (из Word):</strong></p>
+        <ul class="tight">
+            <li><strong>Проведение перерегистраций (сделок):</strong> 10:17&ndash;10:41 &mdash; <strong>24 минуты</strong>.</li>
+            <li><strong>Исполнение БП Сделки TN:</strong> 10:41&ndash;11:35.</li>
+            <li><strong>Общее время исполнения Т</strong> на 30 тыс.: <strong>10:15&ndash;11:35 = 1 ч 20 мин (80 мин)</strong>.</li>
+        </ul>
+        <p class="muted" style="margin-top:10px">
+            Вывод, зафиксированный в документе: для отчетности по скорости важны <strong>замеры п. 7</strong> (исполнение Т в ФИН) &mdash;
+            <strong>1 ч 20 мин на 30 тыс. сделок</strong>.
+        </p>
+    </div>
+
+    <h2>3. Сопоставление с отчетом 14.04.2026 (карточки)</h2>
+    <p class="note" style="margin-bottom:12px">Источник цифр 14.04: <code>ДимаХ/.../report_cards_2026_04_21.html</code>, блок
+        «1.1 Выполнено &mdash; ФИН: исполнение после загрузки». Сквозной срез 24.04: <code>СквозноеТестирование_Исполнение30000фин.docx</code>.
+        Сценарии различаются: карточка &mdash; один сводный этап; сквозной документ &mdash; п. 7 в полном маршруте 1&ndash;7.</p>
+
+    <div class="cmp-sub">Карточка 14.04.2026: ФИН, исполнение (в т.ч. обработка после загрузки) &mdash; история «как в отчёте»</div>
+    <div class="cmp-pair">
+        <div class="cmp-byl">
+            <h4>Было (исходник до оптимизаций)</h4>
+            <div class="cmp-body">
+                <div class="cmp-val">13 ч 33 мин на 15 000</div>
+                <strong>54,2 мин / 1 000 сделок</strong> (оценка нормировки в карточке).
+                <table class="cmp-meta">
+                    <tr><th>Объём</th><td>15 000 сделок</td></tr>
+                </table>
+            </div>
+        </div>
+        <div class="cmp-stal">
+            <h4>Стало (зафиксировано на 14.04.2026)</h4>
+            <div class="cmp-body">
+                <div class="cmp-val">2 ч 20 мин на 30 000</div>
+                <strong>4,67 мин / 1 000 сделок</strong> &mdash; <span class="ok">ниже цели 8,00</span>.
+                <table class="cmp-meta">
+                    <tr><th>Объём</th><td>30 000 сделок, 12 потоков</td></tr>
+                    <tr><th>Состав</th><td>Открытие <strong>30 мин</strong> + Исполнение <strong>1 ч 50 мин</strong> (= 2 ч 20 мин)</td></tr>
+                    <tr><th>Потоки (карточка)</th><td>Обмен 7; проведение 12; БП 2</td></tr>
+                </table>
+            </div>
+        </div>
+    </div>
+    <div class="cmp-delta">В карточке: <strong>4,67 &lt; 8,00</strong> мин/1000; ускорение к «Было» на исходной базе
+        (15k) &mdash; «в 11,6 раза» (формулировка отчёта 14.04). <strong>Целевое</strong> в своде: 2 ч на 15 000 = 8,00 мин/1000.</div>
+
+    <div class="cmp-sub">Срез 23&ndash;24.04.2026: сквозной тест, пункт 7 (только ФИН, исполнение Т на 30 000)</div>
+    <div class="cmp-pair">
+        <div class="cmp-byl">
+            <h4>Опорно «Было» (исполнение, 14.04)</h4>
+            <div class="cmp-body">
+                В сквозном Word нет <strong>второй сессии «до/после»</strong> в одном файле. Чтобы сравнить
+                п. 7 с линией «только исполнение», берём из карточки 14.04 часть
+                <strong>Исполнение 1 ч 50 мин</strong> на 30k:
+                <div class="cmp-val" style="color:#9a3412">110 мин</div>
+                <span class="muted">(3,67 мин/1000: только «Исполнение» в разбивке 2 ч 20 мин на 30k)</span>
+            </div>
+        </div>
+        <div class="cmp-stal">
+            <h4>Стало (факт сквозного п. 7)</h4>
+            <div class="cmp-body">
+                <div class="cmp-val">1 ч 20 мин (80 мин) на 30 000</div>
+                <strong>2,67 мин / 1 000</strong> по <strong>всему</strong> п. 7 (перерегистрации + БП Сделки TN).
+                <table class="cmp-meta">
+                    <tr><th>Перерегистрации (сделки)</th><td>24 мин (10:17&ndash;10:41) &mdash; <strong>0,80 мин/1000</strong></td></tr>
+                    <tr><th>БП Сделки TN</th><td>54 мин (10:41&ndash;11:35) &mdash; <strong>1,80 мин/1000</strong></td></tr>
+                    <tr><th>Интервал п. 7 (в DOCX)</th><td>10:15&ndash;11:35 = 80 мин суммарно</td></tr>
+                </table>
+            </div>
+        </div>
+    </div>
+    <div class="cmp-delta"><strong>110 мин</strong> (строка «Исполнение» 14.04, 30k) и <strong>80 мин</strong> (п.7 сквозного
+        24.04) &mdash; <strong>разные</strong> контуры: карточка = один сводный тест; сквозной = шаг 7 после шагов 1&ndash;6
+        (даты, нагрузка, порядок обменов другие). Норм.:
+        110/30: около <strong>3,67</strong> мин/1000 (только исполнение в карточке); 80/30: около <strong>2,67</strong> мин/1000
+        (весь п.7). Вывод &mdash; осторожно, с явной ссылкой на сценарий.</div>
+
+    <div class="box" style="margin-top:10px">
+        <p style="margin:0;font-size:13px">
+            <strong>Итог по согласованию метрик.</strong> Карточка 14.04 задаёт <strong>базовую «Было/Стало»</strong> по
+            портфельному слайсу «исполнение после загрузки» в ФИН. Сквозной документ 24.04 добавляет
+            <strong>детализацию по п. 7</strong> (в т.ч. 24 мин на перерегистрации) и не отменяет цифры 14.04, а
+            развивает сценарий «в полном маршруте ДУ&ndash;ФИН».
+        </p>
+    </div>
+
+    <h2>4. Связь с IMDEV-8662 (оптимизация запросов Перерегистрации)</h2>
+    <div class="box" style="border-color:#a7f3d0; background:#f0fdf4;">
+        <p>
+            Задача <strong>IMDEV-8662</strong> &mdash; ускорение/стабилизация <strong>проведения Перерегистрации (сделки)</strong> в ФИН.
+            В сквозном отчёте зона, которую она бьёт в замерах, &mdash; блок
+            <strong>«Проведение перерегистраций &mdash; 24 мин»</strong> (п. 7). Остальное время п. 7
+            (БП Сделки TN 10:41&ndash;11:35) &mdash; смежные процессы, не сводимые к одной строке кода в IMDEV-8662.
+        </p>
+        <p class="ok" style="margin:0">Успех реализации по смыслу «после доработок» подтверждается сквозным плановым сценарием: на 30k в ФИН
+            зафиксировано <strong>80 мин</strong> на полный <strong>исполнение Т</strong> (включая
+            <strong>24 мин</strong> на перерегистрации) в <code>СквозноеТестирование_Исполнение30000фин.docx</code>.</p>
+    </div>
+
+    <p class="note">
+        Технические детали рефакторинга запросов (строки модулей, отдельные прогоны профилировщика), если велись в другом материале,
+        не дублируются здесь &mdash; опора только на <strong>именованный</strong> DOCX со сквозным тестом 30k.
+    </p>
+</div>
+</body>
+</html>
