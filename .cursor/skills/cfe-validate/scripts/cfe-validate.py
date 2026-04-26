@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# cfe-validate v1.3 — Validate 1C configuration extension XML structure (CFE)
+# cfe-validate v1.4 — Validate 1C configuration extension XML structure (CFE)
 # Source: https://github.com/Nikolay-Shirokov/cc-1c-skills
 """Validates extension Configuration.xml: root, InternalInfo, extension properties, ChildObjects, borrowed objects."""
 import sys, os, argparse, re
@@ -82,11 +82,14 @@ VALID_ENUM_VALUES = {
         'Version8_3_11', 'Version8_3_12', 'Version8_3_13', 'Version8_3_14', 'Version8_3_15',
         'Version8_3_16', 'Version8_3_17', 'Version8_3_18', 'Version8_3_19', 'Version8_3_20',
         'Version8_3_21', 'Version8_3_22', 'Version8_3_23', 'Version8_3_24', 'Version8_3_25',
-        'Version8_3_26', 'Version8_3_27', 'Version8_3_28',
+        'Version8_3_26', 'Version8_3_27', 'Version8_3_28', 'Version8_5_1',
     ],
     'DefaultRunMode': ['ManagedApplication', 'OrdinaryApplication', 'Auto'],
     'ScriptVariant': ['Russian', 'English'],
-    'InterfaceCompatibilityMode': ['Taxi', 'TaxiEnableVersion8_2', 'Version8_2'],
+    'InterfaceCompatibilityMode': [
+        'Version8_2', 'Version8_2EnableTaxi', 'Taxi', 'TaxiEnableVersion8_2',
+        'TaxiEnableVersion8_5', 'Version8_5EnableTaxi', 'Version8_5',
+    ],
 }
 
 EXPECTED_NS = 'http://v8.1c.ru/8.3/MDClasses'
@@ -147,7 +150,7 @@ def main():
     parser = argparse.ArgumentParser(
         description='Validate 1C configuration extension XML structure (CFE)', allow_abbrev=False
     )
-    parser.add_argument('-ExtensionPath', dest='ExtensionPath', required=True)
+    parser.add_argument('-ExtensionPath', '-Path', dest='ExtensionPath', required=True)
     parser.add_argument('-Detailed', action='store_true')
     parser.add_argument('-MaxErrors', dest='MaxErrors', type=int, default=30)
     parser.add_argument('-OutFile', dest='OutFile', default='')
@@ -213,8 +216,8 @@ def main():
     version = root.get('version', '')
     if not version:
         r.warn('1. Missing version attribute on MetaDataObject')
-    elif version not in ('2.17', '2.20'):
-        r.warn(f"1. Unusual version '{version}' (expected 2.17 or 2.20)")
+    elif version not in ('2.17', '2.20', '2.21'):
+        r.warn(f"1. Unusual version '{version}' (expected 2.17, 2.20 or 2.21)")
 
     # Must have Configuration child
     cfg_node = None

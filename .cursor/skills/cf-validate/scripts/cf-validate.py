@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# cf-validate v1.1 — Validate 1C configuration XML structure
+# cf-validate v1.2 — Validate 1C configuration XML structure
 # Source: https://github.com/Nikolay-Shirokov/cc-1c-skills
 """Validates Configuration.xml: root structure, InternalInfo, properties, ChildObjects, languages."""
 import sys, os, argparse, re
@@ -82,7 +82,7 @@ VALID_ENUM_VALUES = {
         'Version8_3_11', 'Version8_3_12', 'Version8_3_13', 'Version8_3_14', 'Version8_3_15',
         'Version8_3_16', 'Version8_3_17', 'Version8_3_18', 'Version8_3_19', 'Version8_3_20',
         'Version8_3_21', 'Version8_3_22', 'Version8_3_23', 'Version8_3_24', 'Version8_3_25',
-        'Version8_3_26', 'Version8_3_27', 'Version8_3_28',
+        'Version8_3_26', 'Version8_3_27', 'Version8_3_28', 'Version8_5_1',
     ],
     'DefaultRunMode': ['ManagedApplication', 'OrdinaryApplication', 'Auto'],
     'ScriptVariant': ['Russian', 'English'],
@@ -90,7 +90,10 @@ VALID_ENUM_VALUES = {
     'ObjectAutonumerationMode': ['NotAutoFree', 'AutoFree'],
     'ModalityUseMode': ['DontUse', 'Use', 'UseWithWarnings'],
     'SynchronousPlatformExtensionAndAddInCallUseMode': ['DontUse', 'Use', 'UseWithWarnings'],
-    'InterfaceCompatibilityMode': ['Taxi', 'TaxiEnableVersion8_2', 'Version8_2'],
+    'InterfaceCompatibilityMode': [
+        'Version8_2', 'Version8_2EnableTaxi', 'Taxi', 'TaxiEnableVersion8_2',
+        'TaxiEnableVersion8_5', 'Version8_5EnableTaxi', 'Version8_5',
+    ],
     'DatabaseTablespacesUseMode': ['DontUse', 'Use'],
     'MainClientApplicationWindowMode': ['Normal', 'Fullscreen', 'Kiosk'],
     'CompatibilityMode': [
@@ -100,7 +103,7 @@ VALID_ENUM_VALUES = {
         'Version8_3_11', 'Version8_3_12', 'Version8_3_13', 'Version8_3_14', 'Version8_3_15',
         'Version8_3_16', 'Version8_3_17', 'Version8_3_18', 'Version8_3_19', 'Version8_3_20',
         'Version8_3_21', 'Version8_3_22', 'Version8_3_23', 'Version8_3_24', 'Version8_3_25',
-        'Version8_3_26', 'Version8_3_27', 'Version8_3_28',
+        'Version8_3_26', 'Version8_3_27', 'Version8_3_28', 'Version8_5_1',
     ],
 }
 
@@ -162,7 +165,7 @@ def main():
     parser = argparse.ArgumentParser(
         description='Validate 1C configuration XML structure', allow_abbrev=False
     )
-    parser.add_argument('-ConfigPath', dest='ConfigPath', required=True)
+    parser.add_argument('-ConfigPath', '-Path', dest='ConfigPath', required=True)
     parser.add_argument('-Detailed', action='store_true')
     parser.add_argument('-MaxErrors', dest='MaxErrors', type=int, default=30)
     parser.add_argument('-OutFile', dest='OutFile', default='')
@@ -228,8 +231,8 @@ def main():
     version = root.get('version', '')
     if not version:
         r.warn('1. Missing version attribute on MetaDataObject')
-    elif version not in ('2.17', '2.20'):
-        r.warn(f"1. Unusual version '{version}' (expected 2.17 or 2.20)")
+    elif version not in ('2.17', '2.20', '2.21'):
+        r.warn(f"1. Unusual version '{version}' (expected 2.17, 2.20 or 2.21)")
 
     # Must have Configuration child
     cfg_node = None

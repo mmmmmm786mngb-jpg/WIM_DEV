@@ -1,7 +1,7 @@
 ﻿# interface-validate v1.1 — Validate 1C CommandInterface.xml structure
 # Source: https://github.com/Nikolay-Shirokov/cc-1c-skills
 param(
-	[Parameter(Mandatory)][string]$CIPath,
+	[Parameter(Mandatory)][Alias('Path')][string]$CIPath,
 	[switch]$Detailed,
 	[int]$MaxErrors = 30,
 	[string]$OutFile

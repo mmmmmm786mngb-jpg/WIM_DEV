@@ -13,7 +13,7 @@ sys.stderr.reconfigure(encoding="utf-8")
 
 # --- Argument parsing ---
 parser = argparse.ArgumentParser(description="Analyze 1C role rights", allow_abbrev=False)
-parser.add_argument("-RightsPath", required=True, help="Path to Rights.xml")
+parser.add_argument("-RightsPath", "-Path", required=True, help="Path to Rights.xml")
 parser.add_argument("-ShowDenied", action="store_true", default=False, help="Show denied rights")
 parser.add_argument("-Limit", type=int, default=150, help="Max lines to show")
 parser.add_argument("-Offset", type=int, default=0, help="Lines to skip")

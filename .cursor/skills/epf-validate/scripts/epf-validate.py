@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# epf-validate v1.1 — Validate 1C external data processor / report structure
+# epf-validate v1.2 — Validate 1C external data processor / report structure
 # Source: https://github.com/Nikolay-Shirokov/cc-1c-skills
 # Works for both EPF (ExternalDataProcessor) and ERF (ExternalReport) — auto-detects
 
@@ -46,7 +46,7 @@ def main():
     sys.stdout.reconfigure(encoding="utf-8")
     sys.stderr.reconfigure(encoding="utf-8")
     parser = argparse.ArgumentParser(description="Validate 1C external data processor/report structure", allow_abbrev=False)
-    parser.add_argument("-ObjectPath", required=True)
+    parser.add_argument("-ObjectPath", "-Path", required=True)
     parser.add_argument("-Detailed", action="store_true")
     parser.add_argument("-MaxErrors", type=int, default=30)
     parser.add_argument("-OutFile", default=None)
@@ -165,8 +165,8 @@ def main():
     version = root.get("version", "")
     if not version:
         report_warn("1. Missing version attribute on MetaDataObject")
-    elif version not in ("2.17", "2.20"):
-        report_warn(f"1. Unusual version '{version}' (expected 2.17 or 2.20)")
+    elif version not in ("2.17", "2.20", "2.21"):
+        report_warn(f"1. Unusual version '{version}' (expected 2.17, 2.20 or 2.21)")
 
     # Detect type
     child_elements = []

@@ -13,7 +13,7 @@ sys.stderr.reconfigure(encoding="utf-8")
 # ── arg parsing ──────────────────────────────────────────────
 
 parser = argparse.ArgumentParser(allow_abbrev=False)
-parser.add_argument("-ObjectPath", required=True)
+parser.add_argument("-ObjectPath", "-Path", required=True)
 parser.add_argument("-Mode", choices=["overview", "brief", "full"], default="overview")
 parser.add_argument("-Name", default="")
 parser.add_argument("-Limit", type=int, default=150)

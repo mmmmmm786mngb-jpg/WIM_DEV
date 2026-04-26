@@ -1,6 +1,6 @@
 ---
 name: db-load-git
-description: Загрузка изменений из Git в базу 1С. Используй когда пользователь просит загрузить изменения из гита, обновить базу из репозитория, partial load из коммита
+description: Загрузка изменений из Git в базу 1С. Используй когда нужно загрузить изменения из гита, обновить базу из репозитория, partial load из коммита
 argument-hint: "[database] [source]"
 allowed-tools:
   - Bash
@@ -62,53 +62,17 @@ powershell.exe -NoProfile -File .cursor/skills/db-load-git/scripts/db-load-git.p
 
 > `*` — нужен либо `-InfoBasePath`, либо пара `-InfoBaseServer` + `-InfoBaseRef`
 
-### Источники изменений
-
-| Source | Описание |
-|--------|----------|
-| `All` | Все незафиксированные: staged + unstaged + untracked |
-| `Staged` | Только проиндексированные (git add) |
-| `Unstaged` | Изменённые но не проиндексированные + новые (untracked) файлы |
-| `Commit` | Файлы из диапазона коммитов (требует `-CommitRange`) |
-
-### Логика маппинга BSL → XML
-
-Для `.bsl` файлов скрипт автоматически добавляет:
-1. XML объекта верхнего уровня (напр. `Catalogs/Номенклатура.xml`)
-2. Все файлы из каталога `Ext/` этого объекта (связанные модули)
-
-Пропускаются: `ConfigDumpInfo.xml`, файлы вне `ConfigDir`.
-
-## Коды возврата
-
-| Код | Описание |
-|-----|----------|
-| 0 | Успешно (или нет изменений) |
-| 1 | Ошибка (см. лог) |
-
 ## После выполнения
 
-1. Показать список загруженных файлов
+1. Показать список загруженных файлов и результат из лога
 2. Если `-UpdateDB` не был указан — **предложить `/db-update`** для применения изменений к БД
 
 ## Примеры
 
 ```powershell
-# Загрузить все незафиксированные изменения (файловая база)
-powershell.exe -NoProfile -File .cursor/skills/db-load-git/scripts/db-load-git.ps1 -V8Path "C:\Program Files\1cv8\8.3.25.1257\bin" -InfoBasePath "C:\Bases\MyDB" -UserName "Admin" -ConfigDir "C:\WS\cfsrc" -Source All
-
-# Только staged
-powershell.exe -NoProfile -File .cursor/skills/db-load-git/scripts/db-load-git.ps1 -InfoBasePath "C:\Bases\MyDB" -UserName "Admin" -ConfigDir "C:\WS\cfsrc" -Source Staged
-
-# Серверная база
-powershell.exe -NoProfile -File .cursor/skills/db-load-git/scripts/db-load-git.ps1 -InfoBaseServer "srv01" -InfoBaseRef "MyApp_Dev" -UserName "Admin" -Password "secret" -ConfigDir "C:\WS\cfsrc" -Source All
+# Все незафиксированные изменения
+powershell.exe -NoProfile -File .cursor/skills/db-load-git/scripts/db-load-git.ps1 -V8Path "C:\Program Files\1cv8\8.3.25.1257\bin" -InfoBasePath "C:\Bases\MyDB" -ConfigDir "C:\WS\cfsrc" -Source All -UpdateDB
 
 # Из диапазона коммитов
-powershell.exe -NoProfile -File .cursor/skills/db-load-git/scripts/db-load-git.ps1 -InfoBasePath "C:\Bases\MyDB" -UserName "Admin" -ConfigDir "C:\WS\cfsrc" -Source Commit -CommitRange "HEAD~3..HEAD"
-
-# Только посмотреть (DryRun)
-powershell.exe -NoProfile -File .cursor/skills/db-load-git/scripts/db-load-git.ps1 -InfoBasePath "C:\Bases\MyDB" -ConfigDir "C:\WS\cfsrc" -DryRun
-
-# Загрузка + обновление БД в одном запуске
-powershell.exe -NoProfile -File .cursor/skills/db-load-git/scripts/db-load-git.ps1 -InfoBasePath "C:\Bases\MyDB" -UserName "Admin" -ConfigDir "C:\WS\cfsrc" -Source All -UpdateDB
+powershell.exe -NoProfile -File .cursor/skills/db-load-git/scripts/db-load-git.ps1 -InfoBasePath "C:\Bases\MyDB" -ConfigDir "C:\WS\cfsrc" -Source Commit -CommitRange "HEAD~3..HEAD"
 ```

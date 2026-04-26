@@ -1,4 +1,4 @@
-﻿# web-publish v1.0 — Publish 1C infobase via Apache
+﻿# web-publish v1.2 — Publish 1C infobase via Apache
 # Source: https://github.com/Nikolay-Shirokov/cc-1c-skills
 <#
 .SYNOPSIS
@@ -117,6 +117,10 @@ if (-not $ApachePath) {
     $projectRoot = (Get-Item $PSScriptRoot).Parent.Parent.Parent.Parent.FullName
     $ApachePath = Join-Path $projectRoot "tools\apache24"
 }
+# Ensure absolute path (agent may pass relative like "tools/apache24")
+if (-not [System.IO.Path]::IsPathRooted($ApachePath)) {
+    $ApachePath = [System.IO.Path]::GetFullPath((Join-Path (Get-Location).Path $ApachePath))
+}
 
 # --- Check / Install Apache ---
 $httpdExe = Join-Path (Join-Path $ApachePath "bin") "httpd.exe"
@@ -133,14 +137,35 @@ if (-not (Test-Path $httpdExe)) {
     }
 
     Write-Host "Apache не найден. Скачиваю..." -ForegroundColor Cyan
-    $zipUrl = "https://www.apachelounge.com/download/VS18/binaries/httpd-2.4.66-260131-Win64-VS18.zip"
     $tmpZip = Join-Path $env:TEMP "apache24.zip"
     $tmpDir = Join-Path $env:TEMP "apache24_extract"
 
     try {
         [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
-        # WebClient works better than Invoke-WebRequest in PS 5.1 (handles redirects)
         $wc = New-Object System.Net.WebClient
+
+        # Parse Apache Lounge download page for latest Win64 zip URL
+        $downloadPage = "https://www.apachelounge.com/download/"
+        Write-Host "Определяю актуальную версию с $downloadPage ..."
+        $html = $wc.DownloadString($downloadPage)
+        # Links are typically relative (/download/...), try that first
+        $match = [regex]::Match($html, '(?i)href="(/download/[^"]*?httpd-[^"]*?Win64[^"]*?\.zip)"')
+        if (-not $match.Success) {
+            $match = [regex]::Match($html, '(?i)href="(https://[^"]*?httpd-[^"]*?Win64[^"]*?\.zip)"')
+        }
+
+        if ($match.Success) {
+            $zipUrl = $match.Groups[1].Value
+            if ($zipUrl.StartsWith('/')) {
+                $zipUrl = "https://www.apachelounge.com$zipUrl"
+            }
+            Write-Host "Найдено: $zipUrl" -ForegroundColor Green
+        } else {
+            Write-Host "Не удалось определить ссылку автоматически." -ForegroundColor Yellow
+            Write-Host "Скачайте вручную: $downloadPage" -ForegroundColor Yellow
+            exit 1
+        }
+
         $wc.DownloadFile($zipUrl, $tmpZip)
     } catch {
         Write-Host "Error: не удалось скачать Apache: $_" -ForegroundColor Red

@@ -1,6 +1,6 @@
 ---
 name: subsystem-compile
-description: Создать подсистему 1С — XML-исходники из JSON-определения. Используй когда пользователь просит добавить подсистему (раздел) в конфигурацию
+description: Создать подсистему 1С — XML-исходники из JSON-определения. Используй когда нужно добавить подсистему (раздел) в конфигурацию
 argument-hint: "[-DefinitionFile <json> | -Value <json-string>] -OutputDir <ConfigDir> [-Parent <path>]"
 allowed-tools:
   - Bash
@@ -38,8 +38,7 @@ powershell.exe -NoProfile -File '.cursor/skills/subsystem-compile/scripts/subsys
   "useOneCommand": false,
   "explanation": "Описание раздела",
   "picture": "CommonPicture.МояКартинка",
-  "content": ["Catalog.Товары", "Document.Заказ"],
-  "children": ["ДочерняяА", "ДочерняяБ"]
+  "content": ["Catalog.Товары", "Document.Заказ"]
 }
 ```
 
@@ -58,8 +57,3 @@ powershell.exe -NoProfile -File '.cursor/skills/subsystem-compile/scripts/subsys
 ... -Value '{"name":"Дочерняя"}' -OutputDir config/ -Parent config/Subsystems/Продажи.xml
 ```
 
-## Что генерируется
-
-- `{OutputDir}/Subsystems/{Name}.xml` — определение подсистемы
-- `{OutputDir}/Subsystems/{Name}/` — каталог (если есть children)
-- `Configuration.xml` или родительская подсистема — регистрация в `<ChildObjects>`

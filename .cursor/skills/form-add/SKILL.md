@@ -1,6 +1,6 @@
 ---
 name: form-add
-description: Добавить управляемую форму к объекту конфигурации 1С
+description: Добавить пустую управляемую форму к объекту 1С. Используй когда нужно создать у объекта новую форму
 argument-hint: <ObjectPath> <FormName> [Purpose] [--set-default]
 allowed-tools:
   - Bash
@@ -43,26 +43,6 @@ powershell.exe -NoProfile -File .cursor/skills/form-add/scripts/form-add.ps1 -Ob
 | List    | Все кроме DataProcessor | Список (DynamicList) | DefaultListForm |
 | Choice  | Document, Catalog, ChartOf*, ExchangePlan, BusinessProcess, Task | Список (DynamicList) | DefaultChoiceForm |
 | Record  | InformationRegister | Запись (InformationRegisterRecordManager) | DefaultRecordForm |
-
-## Что создаётся
-
-```
-<ObjectDir>/Forms/
-├── <FormName>.xml                    # Метаданные формы (UUID)
-└── <FormName>/
-    └── Ext/
-        ├── Form.xml                  # Описание формы (logform namespace)
-        └── Form/
-            └── Module.bsl           # BSL-модуль с 5 регионами + ПриСозданииНаСервере
-```
-
-## Что модифицируется
-
-- `<ObjectPath>` — добавляется `<Form>` в `ChildObjects` (перед `<Template>` или `<TabularSection>`), обновляется Default*Form (автоматически если пустое, или явно при `--set-default`)
-
-## Поддерживаемые типы объектов
-
-Document, Catalog, DataProcessor, Report, ExternalDataProcessor, ExternalReport, InformationRegister, ChartOfAccounts, ChartOfCharacteristicTypes, ExchangePlan, BusinessProcess, Task
 
 ## Примеры
 

@@ -47,7 +47,7 @@ def main():
     sys.stdout.reconfigure(encoding="utf-8")
     sys.stderr.reconfigure(encoding="utf-8")
     parser = argparse.ArgumentParser(description="Decompile 1C spreadsheet to JSON", allow_abbrev=False)
-    parser.add_argument("-TemplatePath", required=True, help="Path to Template.xml")
+    parser.add_argument("-TemplatePath", "-Path", required=True, help="Path to Template.xml")
     parser.add_argument("-OutputPath", default=None, help="Output JSON path (stdout if omitted)")
     args = parser.parse_args()
 

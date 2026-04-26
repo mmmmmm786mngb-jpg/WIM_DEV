@@ -14,7 +14,7 @@ sys.stderr.reconfigure(encoding="utf-8")
 
 # --- Argument parsing ---
 parser = argparse.ArgumentParser(description="Analyze 1C spreadsheet (MXL) structure", allow_abbrev=False)
-parser.add_argument("-TemplatePath", default="", help="Path to Template.xml")
+parser.add_argument("-TemplatePath", "-Path", default="", help="Path to Template.xml")
 parser.add_argument("-ProcessorName", default="", help="Processor name (used with -TemplateName)")
 parser.add_argument("-TemplateName", default="", help="Template name (used with -ProcessorName)")
 parser.add_argument("-SrcDir", default="src", help="Source directory (default: src)")

@@ -12,7 +12,7 @@ sys.stderr.reconfigure(encoding="utf-8")
 # ── arg parsing ──────────────────────────────────────────────
 
 parser = argparse.ArgumentParser(allow_abbrev=False)
-parser.add_argument("-TemplatePath", required=True)
+parser.add_argument("-TemplatePath", "-Path", required=True)
 parser.add_argument("-Detailed", action="store_true")
 parser.add_argument("-MaxErrors", type=int, default=20)
 parser.add_argument("-OutFile", default="")

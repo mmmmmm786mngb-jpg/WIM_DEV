@@ -2,6 +2,7 @@
 # Source: https://github.com/Nikolay-Shirokov/cc-1c-skills
 param(
 	[Parameter(Mandatory)]
+	[Alias('Path')]
 	[string]$TemplatePath,
 
 	[string]$OutputPath

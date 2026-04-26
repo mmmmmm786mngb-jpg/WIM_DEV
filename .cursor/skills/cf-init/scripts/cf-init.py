@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# cf-init v1.0 — Create empty 1C configuration scaffold
+# cf-init v1.1 — Create empty 1C configuration scaffold
 # Source: https://github.com/Nikolay-Shirokov/cc-1c-skills
 """Generates minimal XML source files for a 1C configuration."""
 import sys, os, argparse, uuid
@@ -155,7 +155,7 @@ def main():
 \t\t\t<ObjectAutonumerationMode>NotAutoFree</ObjectAutonumerationMode>
 \t\t\t<ModalityUseMode>DontUse</ModalityUseMode>
 \t\t\t<SynchronousPlatformExtensionAndAddInCallUseMode>DontUse</SynchronousPlatformExtensionAndAddInCallUseMode>
-\t\t\t<InterfaceCompatibilityMode>Taxi</InterfaceCompatibilityMode>
+\t\t\t<InterfaceCompatibilityMode>TaxiEnableVersion8_2</InterfaceCompatibilityMode>
 \t\t\t<DatabaseTablespacesUseMode>DontUse</DatabaseTablespacesUseMode>
 \t\t\t<CompatibilityMode>{compat}</CompatibilityMode>
 \t\t\t<DefaultConstantsForm/>

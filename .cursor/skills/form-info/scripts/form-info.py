@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# form-info v1.1 — Analyze 1C managed form structure
+# form-info v1.2 — Analyze 1C managed form structure
 # Source: https://github.com/Nikolay-Shirokov/cc-1c-skills
 
 import argparse
@@ -342,7 +342,7 @@ def main():
     sys.stdout.reconfigure(encoding="utf-8")
     sys.stderr.reconfigure(encoding="utf-8")
     parser = argparse.ArgumentParser(description="Analyze 1C managed form structure", allow_abbrev=False)
-    parser.add_argument("-FormPath", required=True, help="Path to Form.xml")
+    parser.add_argument("-FormPath", "-Path", required=True, help="Path to Form.xml")
     parser.add_argument("-Limit", type=int, default=150, help="Max lines to show")
     parser.add_argument("-Offset", type=int, default=0, help="Line offset for pagination")
     parser.add_argument("-Expand", default="", help="Expand collapsed section by name, or * for all")
@@ -353,7 +353,27 @@ def main():
     offset = args.Offset
     expand = args.Expand
 
-    # --- Validate path ---
+    # --- Resolve FormPath ---
+    if not os.path.isabs(form_path):
+        form_path = os.path.join(os.getcwd(), form_path)
+    # A: Directory → Ext/Form.xml
+    if os.path.isdir(form_path):
+        form_path = os.path.join(form_path, "Ext", "Form.xml")
+    # B1: Missing Ext/ (Forms/Форма/Form.xml → Forms/Форма/Ext/Form.xml)
+    if not os.path.isfile(form_path):
+        fn = os.path.basename(form_path)
+        if fn == "Form.xml":
+            c = os.path.join(os.path.dirname(form_path), "Ext", fn)
+            if os.path.isfile(c):
+                form_path = c
+    # B2: Descriptor (Forms/Форма.xml → Forms/Форма/Ext/Form.xml)
+    if not os.path.isfile(form_path) and form_path.endswith(".xml"):
+        stem = os.path.splitext(os.path.basename(form_path))[0]
+        parent = os.path.dirname(form_path)
+        c = os.path.join(parent, stem, "Ext", "Form.xml")
+        if os.path.isfile(c):
+            form_path = c
+
     if not os.path.isfile(form_path):
         print(f"File not found: {form_path}", file=sys.stderr)
         sys.exit(1)

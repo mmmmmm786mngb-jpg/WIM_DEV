@@ -79,7 +79,7 @@ def main():
     parser = argparse.ArgumentParser(
         description='Validate 1C CommandInterface.xml structure', allow_abbrev=False
     )
-    parser.add_argument('-CIPath', dest='CIPath', required=True)
+    parser.add_argument('-CIPath', '-Path', dest='CIPath', required=True)
     parser.add_argument('-Detailed', action='store_true')
     parser.add_argument('-MaxErrors', dest='MaxErrors', type=int, default=30)
     parser.add_argument('-OutFile', dest='OutFile', default='')

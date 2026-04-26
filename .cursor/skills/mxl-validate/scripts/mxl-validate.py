@@ -55,7 +55,7 @@ def main():
     parser = argparse.ArgumentParser(
         description='Validate 1C spreadsheet document Template.xml', allow_abbrev=False
     )
-    parser.add_argument('-TemplatePath', dest='TemplatePath', default='')
+    parser.add_argument('-TemplatePath', '-Path', dest='TemplatePath', default='')
     parser.add_argument('-ProcessorName', dest='ProcessorName', default='')
     parser.add_argument('-TemplateName', dest='TemplateName', default='')
     parser.add_argument('-SrcDir', dest='SrcDir', default='src')

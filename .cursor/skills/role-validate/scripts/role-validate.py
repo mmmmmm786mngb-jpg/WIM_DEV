@@ -179,7 +179,7 @@ def main():
     parser = argparse.ArgumentParser(
         description='Validate 1C role Rights.xml structure', allow_abbrev=False
     )
-    parser.add_argument('-RightsPath', dest='RightsPath', required=True)
+    parser.add_argument('-RightsPath', '-Path', dest='RightsPath', required=True)
     parser.add_argument('-OutFile', dest='OutFile', default='')
     parser.add_argument('-Detailed', dest='Detailed', action='store_true')
     parser.add_argument('-MaxErrors', dest='MaxErrors', type=int, default=30)

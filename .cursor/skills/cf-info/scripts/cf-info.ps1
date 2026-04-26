@@ -1,7 +1,7 @@
 ﻿# cf-info v1.0 — Compact summary of 1C configuration root
 # Source: https://github.com/Nikolay-Shirokov/cc-1c-skills
 param(
-	[Parameter(Mandatory=$true)][string]$ConfigPath,
+	[Parameter(Mandatory=$true)][Alias('Path')][string]$ConfigPath,
 	[ValidateSet("overview","brief","full")]
 	[string]$Mode = "overview",
 	[int]$Limit = 150,

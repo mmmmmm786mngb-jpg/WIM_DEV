@@ -1,8 +1,7 @@
-﻿# help-add v1.1 — Add built-in help to 1C object
+﻿# help-add v1.3 — Add built-in help to 1C object
 # Source: https://github.com/Nikolay-Shirokov/cc-1c-skills
 param(
 	[Parameter(Mandatory)]
-	[Alias("ProcessorName")]
 	[string]$ObjectName,
 
 	[string]$Lang = "ru",
@@ -12,13 +11,32 @@ param(
 
 $ErrorActionPreference = "Stop"
 
+# --- Detect format version ---
+
+function Detect-FormatVersion([string]$dir) {
+	$d = $dir
+	while ($d) {
+		$cfgPath = Join-Path $d "Configuration.xml"
+		if (Test-Path $cfgPath) {
+			$head = [System.IO.File]::ReadAllText($cfgPath, [System.Text.Encoding]::UTF8).Substring(0, [Math]::Min(2000, (Get-Item $cfgPath).Length))
+			if ($head -match '<MetaDataObject[^>]+version="(\d+\.\d+)"') { return $Matches[1] }
+		}
+		$parent = Split-Path $d -Parent
+		if ($parent -eq $d) { break }
+		$d = $parent
+	}
+	return "2.17"
+}
+
+$formatVersion = Detect-FormatVersion (Resolve-Path $SrcDir).Path
+
 # --- Проверки ---
 
-$processorDir = Join-Path $SrcDir $ObjectName
-$extDir = Join-Path $processorDir "Ext"
+$objectDir = Join-Path $SrcDir $ObjectName
+$extDir = Join-Path $objectDir "Ext"
 
 if (-not (Test-Path $extDir)) {
-	Write-Error "Каталог обработки не найден: $extDir. Сначала выполните epf-init."
+	Write-Error "Каталог объекта не найден: $extDir. Проверьте путь ObjectName (например Catalogs/МойСправочник)."
 	exit 1
 }
 
@@ -36,7 +54,7 @@ $encBom = New-Object System.Text.UTF8Encoding($true)
 
 $helpXml = @"
 <?xml version="1.0" encoding="UTF-8"?>
-<Help xmlns="http://v8.1c.ru/8.3/xcf/extrnprops" xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" version="2.17">
+<Help xmlns="http://v8.1c.ru/8.3/xcf/extrnprops" xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" version="$formatVersion">
 	<Page>$Lang</Page>
 </Help>
 "@
@@ -59,7 +77,7 @@ $helpHtml = @"
 </head>
 <body>
     <h1>$ObjectName</h1>
-    <p>Описание обработки.</p>
+    <p>Описание.</p>
 </body>
 </html>
 "@
@@ -68,7 +86,7 @@ $helpHtml = @"
 
 # --- 3. Проверка IncludeHelpInContents в метаданных форм ---
 
-$formsDir = Join-Path $processorDir "Forms"
+$formsDir = Join-Path $objectDir "Forms"
 if (Test-Path $formsDir) {
 	$formMetaFiles = Get-ChildItem -Path $formsDir -Filter "*.xml" -File
 	foreach ($formMeta in $formMetaFiles) {

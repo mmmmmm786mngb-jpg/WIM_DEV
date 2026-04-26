@@ -1,7 +1,8 @@
-﻿# form-info v1.1 — Analyze 1C managed form structure
+﻿# form-info v1.2 — Analyze 1C managed form structure
 # Source: https://github.com/Nikolay-Shirokov/cc-1c-skills
 param(
 	[Parameter(Mandatory=$true)]
+	[Alias('Path')]
 	[string]$FormPath,
 	[int]$Limit = 150,
 	[int]$Offset = 0,
@@ -11,7 +12,29 @@ param(
 $ErrorActionPreference = "Stop"
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
 
-# --- Validate path ---
+# --- Resolve FormPath ---
+if (-not [System.IO.Path]::IsPathRooted($FormPath)) {
+	$FormPath = Join-Path (Get-Location).Path $FormPath
+}
+# A: Directory → Ext/Form.xml
+if (Test-Path $FormPath -PathType Container) {
+	$FormPath = Join-Path (Join-Path $FormPath "Ext") "Form.xml"
+}
+# B1: Missing Ext/ (Forms/Форма/Form.xml → Forms/Форма/Ext/Form.xml)
+if (-not (Test-Path $FormPath)) {
+	$fn = [System.IO.Path]::GetFileName($FormPath)
+	if ($fn -eq "Form.xml") {
+		$c = Join-Path (Join-Path (Split-Path $FormPath) "Ext") $fn
+		if (Test-Path $c) { $FormPath = $c }
+	}
+}
+# B2: Descriptor (Forms/Форма.xml → Forms/Форма/Ext/Form.xml)
+if (-not (Test-Path $FormPath) -and $FormPath.EndsWith(".xml")) {
+	$stem = [System.IO.Path]::GetFileNameWithoutExtension($FormPath)
+	$dir = Split-Path $FormPath
+	$c = Join-Path (Join-Path (Join-Path $dir $stem) "Ext") "Form.xml"
+	if (Test-Path $c) { $FormPath = $c }
+}
 
 if (-not (Test-Path $FormPath)) {
 	Write-Error "File not found: $FormPath"

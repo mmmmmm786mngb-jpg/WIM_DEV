@@ -1,6 +1,6 @@
 ---
 name: epf-init
-description: Создать пустую внешнюю обработку 1С (scaffold XML-исходников)
+description: Создать пустую внешнюю обработку 1С (scaffold XML-исходников). Используй когда нужно создать новую внешнюю обработку с нуля
 argument-hint: <Name> [Synonym]
 allowed-tools:
   - Bash
@@ -33,23 +33,9 @@ allowed-tools:
 powershell.exe -NoProfile -File .cursor/skills/epf-init/scripts/init.ps1 -Name "<Name>" [-Synonym "<Synonym>"] [-SrcDir "<SrcDir>"]
 ```
 
-## Что создаётся
-
-```
-<SrcDir>/
-├── <Name>.xml          # Корневой файл метаданных (4 UUID)
-└── <Name>/
-    └── Ext/
-        └── ObjectModule.bsl  # Модуль объекта с 3 регионами
-```
-
-- Корневой XML содержит `MetaDataObject/ExternalDataProcessor` с пустыми `DefaultForm` и `ChildObjects`
-- ClassId фиксирован: `c3831ec8-d8d5-4f93-8a22-f9bfae07327f`
-- Файл создаётся в UTF-8 с BOM
-
 ## Дальнейшие шаги
 
-- Добавить форму: `/epf-add-form`
+- Добавить форму: `/form-add`
 - Добавить макет: `/template-add`
 - Добавить справку: `/help-add`
 - Собрать EPF: `/epf-build`

@@ -14,7 +14,7 @@ sys.stderr.reconfigure(encoding="utf-8")
 
 # --- Argument parsing ---
 parser = argparse.ArgumentParser(description="Analyze 1C subsystem structure", allow_abbrev=False)
-parser.add_argument("-SubsystemPath", required=True, help="Path to subsystem XML or Subsystems/ directory")
+parser.add_argument("-SubsystemPath", "-Path", required=True, help="Path to subsystem XML or Subsystems/ directory")
 parser.add_argument("-Mode", choices=["overview", "content", "ci", "tree", "full"], default="overview", help="Output mode")
 parser.add_argument("-Name", default="", help="Filter by name/type")
 parser.add_argument("-Limit", type=int, default=150, help="Max lines to show")

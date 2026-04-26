@@ -57,6 +57,7 @@ Start recording the browser viewport to an MP4 file.
 | `opts.fps` | number | 25 | Target framerate |
 | `opts.quality` | number | 80 | JPEG quality (1-100) |
 | `opts.ffmpegPath` | string | auto | Explicit path to ffmpeg binary |
+| `opts.speechRate` | number | 70 | Ms per character for smart TTS wait. Increase for slower TTS providers (e.g. 85 for ElevenLabs) |
 
 - Output directory is created automatically if it doesn't exist
 - Throws if already recording or browser not connected
@@ -88,10 +89,14 @@ Display a text overlay on the page (visible in recording). Calling again updates
 | `opts.fontSize` | number | 24 | Font size in px |
 | `opts.background` | string | `'rgba(0,0,0,0.7)'` | Background color |
 | `opts.color` | string | `'#fff'` | Text color |
+| `opts.speech` | string \| false | - | TTS narration text. Omit = use displayed text, string = custom narration, false = skip narration |
+| `opts.voice` | string | - | Per-caption voice override (provider-specific voice name/ID). Used by `addNarration` instead of the global voice |
+
+When `text` is empty but `speech` is a string, the caption is still recorded for TTS (no visible overlay). Useful for narration-only captions (e.g. podcast mode).
 
 The overlay uses `pointer-events: none` — does not interfere with clicking.
 
-**Smart TTS wait** (during recording): `showCaption` automatically pauses for the estimated TTS speech duration (~100ms per character, min 2s). The next `wait()` call accounts for this — if the explicit pause is shorter than the TTS wait already done, no extra delay is added. If longer, only the remaining difference is waited. This means script authors don't need to calculate TTS timing manually.
+**Smart TTS wait** (during recording): `showCaption` automatically pauses for the estimated TTS speech duration (default ~70ms per character, min 2s; configurable via `startRecording({ speechRate })`). The next `wait()` call accounts for this — if the explicit pause is shorter than the TTS wait already done, no extra delay is added. If longer, only the remaining difference is waited. This means script authors don't need to calculate TTS timing manually.
 
 ### `hideCaption()`
 
@@ -108,12 +113,39 @@ Display a full-screen title slide overlay (gradient background, centered text). 
 | `opts.background` | string | dark gradient | CSS background |
 | `opts.color` | string | `'#fff'` | Text color |
 | `opts.fontSize` | number | 36 | Title font size in px |
+| `opts.speech` | string \| false | - | TTS narration text. String = custom text, `true` = use title text, omit/false = no narration |
+| `opts.voice` | string | - | Per-caption voice override for `addNarration` |
 
 The overlay covers the entire viewport with `z-index: 999999` and `pointer-events: none`.
 
 ### `hideTitleSlide()`
 
 Remove the title slide overlay.
+
+### `showImage(imagePath, opts?)`
+
+Display a full-screen image overlay (e.g. presentation slide screenshot). Reads the file, base64-encodes it, and renders as `<img>` in a fixed overlay — captured by CDP screencast automatically.
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `imagePath` | string | required | Path to image file (PNG, JPG, GIF, WebP, SVG) |
+| `opts.style` | `'blur'` \| `'dark'` \| `'light'` \| `'full'` | `'blur'` | Display style preset |
+| `opts.background` | string | - | Custom background (overrides preset) |
+| `opts.shadow` | boolean | preset | Show drop shadow on image |
+| `opts.speech` | string \| false | - | TTS narration text while image is shown |
+| `opts.voice` | string | - | Per-caption voice override for `addNarration` |
+
+**Style presets:**
+- `blur` — blurred+dimmed copy of the image as background, centered image with shadow
+- `dark` — dark background (#2a2a2a) with shadow
+- `light` — white background with shadow
+- `full` — image fills entire screen (contain, no crop), black background, no shadow
+
+Images are auto-scaled: small images scale up (min 50% of viewport), large images scale down (max 92%).
+
+### `hideImage()`
+
+Remove the image overlay.
 
 ### `setHighlight(on)`
 
@@ -153,10 +185,21 @@ Remove the highlight overlay.
 ```js
 await startRecording('recordings/create-order.mp4');
 
-// Title slide — 4 seconds
-await showTitleSlide('Создание заказа клиента', { subtitle: 'Демонстрация' });
-await wait(4);
+// Title slide with narration
+await showTitleSlide('Создание заказа клиента', {
+  subtitle: 'Демонстрация',
+  speech: 'Создание заказа клиента. Демонстрация.'
+});
+await wait(1);
 await hideTitleSlide();
+
+// Presentation slide (optional)
+await showImage('slides/overview.png', {
+  speech: 'На этом слайде показана общая схема процесса'
+});
+await wait(1);
+await hideImage();
+
 setHighlight(true); // enable auto-highlight for all actions
 
 // Steps: caption → pause → action (highlight is automatic)
@@ -250,7 +293,7 @@ Generate TTS and merge audio with video. Call after `stopRecording()`.
 | Parameter | Type | Description |
 |-----------|------|-------------|
 | `videoPath` | `string` | Path to the recorded MP4 file |
-| `opts.captions` | `Array` | Explicit captions (default: from last recording or `.captions.json`) |
+| `opts.captions` | `Array` | Explicit captions (default: from last recording or `.captions.json`). Each caption may include a `voice` field to override the global voice for that segment |
 | `opts.provider` | `string` | `'edge'` (default), `'openai'`, or `'elevenlabs'` |
 | `opts.voice` | `string` | Voice name (provider-specific) |
 | `opts.apiKey` | `string` | API key (for openai) |
@@ -263,7 +306,7 @@ Generate TTS and merge audio with video. Call after `stopRecording()`.
 
 ### `getCaptions()`
 
-Returns captions from the current or last recording: `Array<{ text, speech, time }>`.
+Returns captions from the current or last recording: `Array<{ text, speech, time, voice? }>`.
 
 ### Example: Record and narrate
 

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# subsystem-validate v1.1 — Validate 1C subsystem XML structure
+# subsystem-validate v1.2 — Validate 1C subsystem XML structure
 # Source: https://github.com/Nikolay-Shirokov/cc-1c-skills
 """Validates subsystem XML file structure, properties, content items, child objects."""
 import sys, os, argparse, re
@@ -19,6 +19,18 @@ IDENT_PATTERN = re.compile(
     r'^[A-Za-z\u0410-\u042F\u0401\u0430-\u044F\u0451_]'
     r'[A-Za-z0-9\u0410-\u042F\u0401\u0430-\u044F\u0451_]*$'
 )
+
+KNOWN_PLURAL_TYPES = {
+    'Catalogs', 'Documents', 'Enums', 'Constants', 'Reports', 'DataProcessors',
+    'InformationRegisters', 'AccumulationRegisters', 'AccountingRegisters', 'CalculationRegisters',
+    'ChartsOfAccounts', 'ChartsOfCharacteristicTypes', 'ChartsOfCalculationTypes',
+    'BusinessProcesses', 'Tasks', 'ExchangePlans', 'DocumentJournals',
+    'CommonModules', 'CommonCommands', 'CommonForms', 'CommonPictures', 'CommonTemplates',
+    'CommonAttributes', 'CommandGroups', 'Roles', 'SessionParameters', 'FilterCriteria',
+    'XDTOPackages', 'WebServices', 'HTTPServices', 'WSReferences', 'EventSubscriptions',
+    'ScheduledJobs', 'SettingsStorages', 'FunctionalOptions', 'FunctionalOptionsParameters',
+    'DefinedTypes', 'DocumentNumerators', 'Sequences', 'Subsystems', 'StyleItems', 'IntegrationServices',
+}
 
 
 class Reporter:
@@ -70,7 +82,7 @@ def main():
     parser = argparse.ArgumentParser(
         description='Validate 1C subsystem XML structure', allow_abbrev=False
     )
-    parser.add_argument('-SubsystemPath', dest='SubsystemPath', required=True)
+    parser.add_argument('-SubsystemPath', '-Path', dest='SubsystemPath', required=True)
     parser.add_argument('-Detailed', action='store_true')
     parser.add_argument('-MaxErrors', dest='MaxErrors', type=int, default=30)
     parser.add_argument('-OutFile', dest='OutFile', default='')
@@ -233,6 +245,10 @@ def main():
                     content_ok = False
                 if not re.match(r'^[A-Za-z]+\..+$', text) and not GUID_PATTERN.match(text):
                     r.error(f'6. Content item "{text}": invalid format (expected Type.Name or UUID)')
+                    content_ok = False
+                m = re.match(r'^([A-Za-z]+)\.', text)
+                if m and m.group(1) in KNOWN_PLURAL_TYPES:
+                    r.error(f'6. Content item "{text}": uses plural form "{m.group(1)}" (platform requires singular, e.g. Catalog not Catalogs)')
                     content_ok = False
             if content_ok:
                 r.ok(f'6. Content: {len(xr_items)} items, all valid MDObjectRef format')

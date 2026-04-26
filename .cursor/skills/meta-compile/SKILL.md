@@ -1,6 +1,6 @@
 ---
 name: meta-compile
-description: Создать объект метаданных 1С. Используй когда пользователь просит создать или добавить справочник, документ, регистр, перечисление, константу, общий модуль, обработку, отчёт и др.
+description: Создать объект метаданных 1С. Используй когда нужно создать или добавить справочник, документ, регистр, перечисление, константу, общий модуль, обработку, отчёт и др.
 argument-hint: <JsonPath> <OutputDir>
 allowed-tools:
   - Bash
@@ -116,10 +116,4 @@ powershell.exe -NoProfile -File .cursor/skills/meta-compile/scripts/meta-compile
   { "type": "Constant", "name": "ОсновнаяВалюта", "valueType": "CatalogRef.Валюты" }
 ]
 ```
-
-## Что генерируется
-
-- `{TypePlural}/{Name}.xml` — метаданные объекта
-- `{TypePlural}/{Name}/Ext/*.bsl` — модули (ObjectModule, RecordSetModule, Module — зависит от типа)
-- `Configuration.xml` — автоматическая регистрация в `<ChildObjects>`
 

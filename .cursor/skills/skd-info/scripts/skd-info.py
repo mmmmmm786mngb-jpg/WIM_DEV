@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# skd-info v1.0 — Analyze 1C DCS structure
+# skd-info v1.3 — Analyze 1C DCS structure
 # Source: https://github.com/Nikolay-Shirokov/cc-1c-skills
 
 import argparse
@@ -269,7 +269,7 @@ def main():
     sys.stdout.reconfigure(encoding="utf-8")
     sys.stderr.reconfigure(encoding="utf-8")
     parser = argparse.ArgumentParser(description="Analyze 1C DCS structure", allow_abbrev=False)
-    parser.add_argument("-TemplatePath", required=True)
+    parser.add_argument("-TemplatePath", "-Path", required=True)
     parser.add_argument("-Mode", default="overview",
                         choices=["overview", "query", "fields", "links", "calculated",
                                  "resources", "params", "variant", "trace", "templates", "full"])
@@ -281,11 +281,47 @@ def main():
     args = parser.parse_args()
 
     # --- Resolve path ---
-    template_path = args.TemplatePath
+    original_path = args.TemplatePath
+    template_path = original_path
     if not template_path.endswith(".xml"):
         candidate = os.path.join(template_path, "Ext", "Template.xml")
         if os.path.isfile(candidate):
             template_path = candidate
+
+    # If still not found, try resolving from object directory (Reports/X, DataProcessors/X)
+    if not os.path.isfile(template_path) and not template_path.endswith(".xml"):
+        templates_dir = os.path.join(original_path, "Templates")
+        if os.path.isdir(templates_dir):
+            dcs_templates = []
+            for fname in os.listdir(templates_dir):
+                if not fname.endswith(".xml"):
+                    continue
+                meta_path = os.path.join(templates_dir, fname)
+                if not os.path.isfile(meta_path):
+                    continue
+                try:
+                    meta_tree = etree.parse(meta_path, etree.XMLParser(remove_blank_text=True))
+                    tt_nodes = meta_tree.xpath("//*[local-name()='TemplateType']")
+                    if tt_nodes and (tt_nodes[0].text or "").strip() == "DataCompositionSchema":
+                        tpl_name = os.path.splitext(fname)[0]
+                        tpl_path = os.path.join(templates_dir, tpl_name, "Ext", "Template.xml")
+                        if os.path.isfile(tpl_path):
+                            dcs_templates.append(tpl_path)
+                except Exception:
+                    continue
+            if len(dcs_templates) == 1:
+                template_path = dcs_templates[0]
+                resolved_display = os.path.relpath(os.path.abspath(template_path))
+                print(f"[i] Resolved: {resolved_display}")
+            elif len(dcs_templates) > 1:
+                print(f"Multiple DCS templates found in: {original_path}")
+                for i, p in enumerate(dcs_templates):
+                    print(f"  {i+1}. {os.path.relpath(os.path.abspath(p))}")
+                print("Specify the template path.")
+                sys.exit(1)
+            else:
+                print(f"No DCS templates found in: {original_path}", file=sys.stderr)
+                sys.exit(1)
 
     if not os.path.isabs(template_path):
         template_path = os.path.join(os.getcwd(), template_path)
@@ -417,7 +453,10 @@ def main():
             grp_count = len(group_tpls) + len(group_header_tpls) + len(group_footer_tpls)
             if grp_count > 0:
                 parts.append(f"{grp_count} group")
-            lines.append(f"Templates: {len(tpl_defs)} defined ({', '.join(parts)} bindings)")
+            if parts:
+                lines.append(f"Templates: {len(tpl_defs)} defined ({', '.join(parts)} bindings)")
+            else:
+                lines.append(f"Templates: {len(tpl_defs)} defined")
 
         # Parameters -- split visible/hidden
         params = root.findall("s:parameter", NSMAP)
@@ -1626,7 +1665,14 @@ def main():
         lines.append("")
         lines.append("--- query ---")
         lines.append("")
-        show_query()
+        if root.findall(".//s:dataSet[@xsi:type='DataSetQuery']", NSMAP):
+            show_query()
+        else:
+            obj_names = [n.text for n in root.findall(".//s:dataSet[@xsi:type='DataSetObject']/s:objectName", NSMAP) if n.text]
+            if obj_names:
+                lines.append(f"(no query datasets; external datasets: {', '.join(obj_names)})")
+            else:
+                lines.append("(no query datasets)")
         lines.append("")
         lines.append("--- fields ---")
         lines.append("")

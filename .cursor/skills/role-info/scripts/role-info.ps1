@@ -1,7 +1,7 @@
 ﻿# role-info v1.0 — Analyze 1C role rights
 # Source: https://github.com/Nikolay-Shirokov/cc-1c-skills
 param(
-	[Parameter(Mandatory=$true)][string]$RightsPath,
+	[Parameter(Mandatory=$true)][Alias('Path')][string]$RightsPath,
 	[switch]$ShowDenied,
 	[int]$Limit = 150,
 	[int]$Offset = 0,

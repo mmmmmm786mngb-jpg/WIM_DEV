@@ -1,7 +1,7 @@
 ﻿# meta-info v1.1 — Compact summary of 1C metadata object
 # Source: https://github.com/Nikolay-Shirokov/cc-1c-skills
 param(
-	[Parameter(Mandatory=$true)][string]$ObjectPath,
+	[Parameter(Mandatory=$true)][Alias('Path')][string]$ObjectPath,
 	[ValidateSet("overview","brief","full")]
 	[string]$Mode = "overview",
 	[string]$Name,
