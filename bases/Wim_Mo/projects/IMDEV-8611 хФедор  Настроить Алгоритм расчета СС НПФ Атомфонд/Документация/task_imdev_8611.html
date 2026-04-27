@@ -1,0 +1,489 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>IMDEV-8611 - Настроить Алгоритм расчета СС НПФ Атомфонд</title>
+  <style>
+    :root {
+      --primary: #0052cc;
+      --primary-dark: #0747a6;
+      --accent: #17a2b8;
+      --bg: #f4f5f7;
+      --card-bg: #ffffff;
+      --border: #dfe1e6;
+      --text: #172b4d;
+      --text-muted: #5e6c84;
+      --status-open-bg: #deebff;
+      --status-open-fg: #0747a6;
+      --priority-high-bg: #ffe2dc;
+      --priority-high-fg: #bf2600;
+      --type-bg: #fff7d6;
+      --type-fg: #974f0c;
+      --success: #00875a;
+      --warning: #ff991f;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.55;
+      font-size: 14px;
+    }
+    .container {
+      max-width: 1180px;
+      margin: 0 auto;
+      padding: 24px;
+    }
+    .breadcrumb {
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-bottom: 8px;
+    }
+    .breadcrumb span {
+      color: var(--primary);
+      font-weight: 600;
+    }
+    .header {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 22px 24px;
+      margin-bottom: 16px;
+    }
+    .header h1 {
+      margin: 0 0 12px 0;
+      font-size: 26px;
+      font-weight: 600;
+      color: var(--text);
+    }
+    .header .issue-id {
+      color: var(--text-muted);
+      font-weight: 500;
+      font-size: 16px;
+      margin-right: 10px;
+    }
+    .badges {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 8px;
+    }
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 4px 12px;
+      border-radius: 3px;
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+    }
+    .badge-status { background: var(--status-open-bg); color: var(--status-open-fg); }
+    .badge-priority { background: var(--priority-high-bg); color: var(--priority-high-fg); }
+    .badge-type { background: var(--type-bg); color: var(--type-fg); }
+    .badge-base { background: #e3fcef; color: #006644; }
+
+    .grid {
+      display: grid;
+      grid-template-columns: 1fr 320px;
+      gap: 16px;
+    }
+    @media (max-width: 900px) {
+      .grid { grid-template-columns: 1fr; }
+    }
+
+    .card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 18px 22px;
+      margin-bottom: 16px;
+    }
+    .card h2 {
+      margin: 0 0 12px 0;
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      border-bottom: 2px solid #f0f1f3;
+      padding-bottom: 8px;
+    }
+    .card h3 {
+      margin: 14px 0 8px 0;
+      font-size: 14px;
+      font-weight: 600;
+    }
+
+    .desc {
+      font-size: 14.5px;
+      line-height: 1.65;
+    }
+    .desc p { margin: 8px 0; }
+    .desc ul { margin: 8px 0 8px 22px; padding: 0; }
+    .desc li { margin: 4px 0; }
+
+    .pill {
+      display: inline-block;
+      padding: 2px 10px;
+      background: #f0f1f3;
+      color: var(--text);
+      border-radius: 999px;
+      font-size: 12px;
+      margin-right: 4px;
+    }
+
+    .table-meta {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    .table-meta tr { border-bottom: 1px solid #f0f1f3; }
+    .table-meta tr:last-child { border-bottom: none; }
+    .table-meta td {
+      padding: 8px 0;
+      vertical-align: top;
+    }
+    .table-meta td:first-child {
+      width: 42%;
+      color: var(--text-muted);
+      font-weight: 500;
+    }
+    .table-meta td:last-child {
+      color: var(--text);
+      font-weight: 500;
+    }
+
+    .person {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin: 6px 0;
+    }
+    .avatar {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--primary), var(--accent));
+      color: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 12px;
+      flex-shrink: 0;
+    }
+    .person-info { display: flex; flex-direction: column; }
+    .person-name { font-weight: 600; color: var(--text); }
+    .person-login { font-size: 12px; color: var(--text-muted); }
+    .person-role {
+      font-size: 11px;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+      margin-top: 2px;
+    }
+
+    .comment {
+      border-left: 3px solid var(--accent);
+      background: #f7f9fc;
+      padding: 12px 14px;
+      border-radius: 0 6px 6px 0;
+      margin: 10px 0;
+    }
+    .comment-head {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 8px;
+    }
+    .comment-head .author { font-weight: 600; }
+    .comment-head .date { color: var(--text-muted); font-size: 12px; }
+    .comment-body { font-size: 14px; }
+    .comment-body ul { margin: 6px 0 6px 20px; }
+
+    .timeline-step {
+      padding: 10px 0;
+      border-bottom: 1px dashed #e3e6ea;
+    }
+    .timeline-step:last-child { border-bottom: none; }
+    .timeline-step .date {
+      font-weight: 700;
+      color: var(--primary-dark);
+      margin-right: 6px;
+    }
+    .timeline-step ul { margin: 4px 0 4px 22px; }
+
+    .materials {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+      gap: 10px;
+      margin-top: 8px;
+    }
+    .material {
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 10px 12px;
+      background: #fafbfc;
+    }
+    .material .mat-name {
+      font-weight: 600;
+      font-size: 13px;
+      word-break: break-all;
+    }
+    .material .mat-type {
+      font-size: 11px;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      margin-top: 4px;
+    }
+
+    .quote {
+      background: #f4f5f7;
+      border-left: 4px solid var(--primary);
+      padding: 12px 16px;
+      margin: 12px 0;
+      font-style: italic;
+      color: var(--text);
+    }
+
+    .link-issue {
+      display: inline-block;
+      padding: 4px 10px;
+      background: var(--status-open-bg);
+      color: var(--status-open-fg);
+      border-radius: 4px;
+      text-decoration: none;
+      font-weight: 600;
+      font-size: 13px;
+      margin-right: 6px;
+    }
+
+    .footer {
+      text-align: center;
+      color: var(--text-muted);
+      font-size: 12px;
+      padding: 18px 0;
+    }
+  </style>
+</head>
+<body>
+<div class="container">
+  <div class="breadcrumb">
+    <span>VTB Capital - JIRA</span> &nbsp;/&nbsp; IM Development &nbsp;/&nbsp; IMDEV-8611
+  </div>
+
+  <div class="header">
+    <h1><span class="issue-id">IMDEV-8611</span>Настроить Алгоритм расчета СС НПФ Атомфонд</h1>
+    <div class="badges">
+      <span class="badge badge-type">Change Request</span>
+      <span class="badge badge-priority">Priority: High</span>
+      <span class="badge badge-status">Status: Open</span>
+      <span class="badge badge-base">База: Wim_Mo</span>
+    </div>
+  </div>
+
+  <div class="grid">
+    <div class="grid-main">
+
+      <div class="card">
+        <h2>Описание</h2>
+        <div class="desc">
+          <div class="quote">
+            Необходимо настроить Алгоритм расчета СС для нового НПФ Атомфонд.<br>
+            Необходимые материалы в приложении (схемы, описания, пояснения) (стр. 14-28).
+          </div>
+          <p>Тематические разделы методики, по которым ведется настройка алгоритма:</p>
+          <ul>
+            <li><strong>Активный рынок</strong> - правила признания биржевой площадки активным рынком, критерии по объему и количеству сделок за последние 10 торговых дней.</li>
+            <li><strong>Алгоритм</strong> - порядок определения справедливой стоимости (Алгоритм 1 при наличии активного рынка, Алгоритм 2 при отсутствии активного рынка), приоритеты источников цен и формулы расчета СС в рублях.</li>
+          </ul>
+          <p>Реализация выполняется на стороне базы <strong>Wim_Mo</strong> (мидл-офис, конфигурация ООО Аванкор).</p>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Материалы и приложения</h2>
+        <div class="materials">
+          <div class="material">
+            <div class="mat-name">Исх.-20260303-2839 Атомфонд ПСЧА2026 (03.03.26) ИТОГ.pdf</div>
+            <div class="mat-type">Исходный документ от НПФ Атомфонд</div>
+          </div>
+          <div class="material">
+            <div class="mat-name">image-2026-03-25-11-46-48-631.png</div>
+            <div class="mat-type">Скан стр. - Активный рынок (общие подходы)</div>
+          </div>
+          <div class="material">
+            <div class="mat-name">image-2026-03-25-11-48-12-813.png</div>
+            <div class="mat-type">Скан стр. - Алгоритмы оценки (Алгоритм 1, Алгоритм 2)</div>
+          </div>
+          <div class="material">
+            <div class="mat-name">image-2026-03-25-11-48-38-285.png</div>
+            <div class="mat-type">Скан стр. - Уровни НРД, формулы СС</div>
+          </div>
+          <div class="material">
+            <div class="mat-name">Задача_8611.txt</div>
+            <div class="mat-type">Выгрузка карточки Jira</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Активность</h2>
+
+        <div class="comment">
+          <div class="comment-head">
+            <div class="avatar">OV</div>
+            <div>
+              <div class="author">Volkova, Olga (OVolkova)</div>
+              <div class="date">09/Apr/26 15:15 MSK</div>
+            </div>
+          </div>
+          <div class="comment-body">
+            <p>Коллеги, для информации сроки:</p>
+
+            <div class="timeline-step">
+              <span class="date">12 - 26 марта.</span> НПФ.
+              <ul>
+                <li>Согласование ДДУ до 10.04 между сторонами.</li>
+                <li>До 10.04 - фонд направляет перечень требуемых документов в рамках 115-ФЗ, подписываем соглашение о неразглашении.</li>
+                <li>10.04 - 24.04 - проведение процедуры ускоренной закупки и заседания СД по утверждению новой УК.</li>
+                <li>27.04 (после СД) - фонд направляет в УК портфель ценных бумаг.</li>
+              </ul>
+            </div>
+
+            <div class="timeline-step">
+              <span class="date">16 марта - 08 апреля.</span> Взаимный обмен документами.
+              <ul>
+                <li>До 28.04 - подписание 6 ДДУ: ДДУ ПН, ДДУ РОПС, ДДУ СПВ, ДДУ СВР, ДДУ ПР, ДДУ СР.</li>
+              </ul>
+            </div>
+
+            <div class="timeline-step">
+              <span class="date">17 - 24 апреля 2026.</span> Открытие счетов.
+              <ul>
+                <li>29.04 - 14.05 - подписание договора со СД Инфинитум, открытие р/сч, счета депо, брокерского счета.</li>
+                <li>До 14.05 - УК обеспечивает полную инфраструктуру для приема ценных бумаг и денежных средств.</li>
+                <li>До 22.05 - передача портфелей по 1 в день (6 рабочих дней).</li>
+              </ul>
+            </div>
+
+            <div class="timeline-step">
+              <span class="date">Параллельно с этапами 3 - 4.</span> Отчетность (приоритет до 22.05 и до 30.06 по 0420255).
+              <ul>
+                <li>Методика 4060-У (отчеты по сделкам), УК направит примеры.</li>
+                <li>XML/XSD выгрузка (Положение 505-П, НАПФ), УК направит тестовую выгрузку.</li>
+                <li>GAMA файлы (сделки, "Движение денег", МНО/депозиты), протестировать загрузку у НПФ.</li>
+                <li>Форма 0420255 (5.1/5.4, инвестирование НА), автоматизировать до 30.06.</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        <div class="comment">
+          <div class="comment-head">
+            <div class="avatar">OV</div>
+            <div>
+              <div class="author">Volkova, Olga (OVolkova)</div>
+              <div class="date">14/Apr/26 18:00 MSK</div>
+            </div>
+          </div>
+          <div class="comment-body">
+            <p>Связана задача:</p>
+            <a class="link-issue" href="https://jira/browse/IMDEV-8653">IMDEV-8653</a>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Связанные задачи</h2>
+        <p><a class="link-issue" href="https://jira/browse/IMDEV-8653">IMDEV-8653</a> <span style="color: var(--text-muted)">- сопутствующий тикет (упомянут в комментариях).</span></p>
+      </div>
+
+    </div>
+
+    <div class="grid-side">
+
+      <div class="card">
+        <h2>Детали</h2>
+        <table class="table-meta">
+          <tr><td>Type</td><td><span class="badge badge-type">Change Request</span></td></tr>
+          <tr><td>Status</td><td><span class="badge badge-status">Open</span></td></tr>
+          <tr><td>Priority</td><td><span class="badge badge-priority">High</span></td></tr>
+          <tr><td>Resolution</td><td>Unresolved</td></tr>
+          <tr><td>Affects Version/s</td><td>None</td></tr>
+          <tr><td>Fix Version/s</td><td>None</td></tr>
+          <tr><td>Component/s</td><td><span class="pill">AvancoreDU</span><span class="pill">AvancoreMO</span></td></tr>
+          <tr><td>Labels</td><td>None</td></tr>
+          <tr><td>IM Department</td><td>IM Back-Office DU</td></tr>
+          <tr><td>IM Department (list)</td><td>IM Back-Office DU</td></tr>
+        </table>
+      </div>
+
+      <div class="card">
+        <h2>Участники</h2>
+
+        <div class="person">
+          <div class="avatar">AC</div>
+          <div class="person-info">
+            <div class="person-name">Chmykhalov, Aleksey</div>
+            <div class="person-login">AChmykhalov</div>
+            <div class="person-role">Assignee (исполнитель)</div>
+          </div>
+        </div>
+
+        <div class="person">
+          <div class="avatar">ZK</div>
+          <div class="person-info">
+            <div class="person-name">Karplyukova, Zhanna</div>
+            <div class="person-login">ZKarplyukova</div>
+            <div class="person-role">Reporter (постановщик)</div>
+          </div>
+        </div>
+
+        <div class="person">
+          <div class="avatar">OV</div>
+          <div class="person-info">
+            <div class="person-name">Volkova, Olga</div>
+            <div class="person-login">OVolkova</div>
+            <div class="person-role">Участник комментариев</div>
+          </div>
+        </div>
+
+        <div style="margin-top: 12px; padding-top: 10px; border-top: 1px solid #f0f1f3;">
+          <div style="color: var(--text-muted); font-size: 12px; margin-bottom: 4px;">Watchers</div>
+          <div style="font-weight: 600;">2 наблюдателя</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Даты</h2>
+        <table class="table-meta">
+          <tr><td>Created</td><td>25/Mar/26 11:49 MSK</td></tr>
+          <tr><td>Updated</td><td>27/Apr/26 10:40 MSK</td></tr>
+        </table>
+      </div>
+
+      <div class="card">
+        <h2>Контекст и охват</h2>
+        <table class="table-meta">
+          <tr><td>Цель</td><td>Настройка алгоритма расчета справедливой стоимости (СС) для нового НПФ Атомфонд</td></tr>
+          <tr><td>Базы / контуры</td><td>Wim_Mo (мидл-офис), AvancoreDU/AvancoreMO</td></tr>
+          <tr><td>Источник методики</td><td>Приложение к задаче, стр. 14 - 28</td></tr>
+          <tr><td>Подписант методики</td><td>АО НПФ "АТОМФОНД" ОГРН 1157700011347 (Шаврина И.В.)</td></tr>
+          <tr><td>Контролер</td><td>АО СД "ИНФИНИТУМ" ОГРН 1027739039283 (Сундукова И.В.)</td></tr>
+          <tr><td>Документ</td><td>U001/260303-32584 от 03.03.2026</td></tr>
+        </table>
+      </div>
+
+    </div>
+  </div>
+
+  <div class="footer">
+    Карточка задачи IMDEV-8611. Источник: VTB Capital JIRA / IM Development. Сформировано на основе Задача_8611.txt.
+  </div>
+</div>
+</body>
+</html>

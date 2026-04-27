@@ -1,0 +1,989 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>IMDEV-8611 - Задание разработчику. Алгоритм СС НПФ Атомфонд (Wim_Mo)</title>
+  <style>
+    :root {
+      --primary: #0052cc;
+      --primary-dark: #0747a6;
+      --accent: #17a2b8;
+      --bg: #eef2f7;
+      --card-bg: #ffffff;
+      --border: #d8dee7;
+      --text: #1f2937;
+      --text-muted: #5e6c84;
+      --code-bg: #f3f4f6;
+      --success: #00875a;
+      --warning: #ff991f;
+      --danger: #de350b;
+      --info-bg: #ecfeff;
+      --info-border: #a5f3fc;
+      --warn-bg: #fff7cc;
+      --warn-border: #ffe58f;
+      --tag-blue-bg: #deebff;
+      --tag-blue-fg: #0747a6;
+      --tag-green-bg: #e3fcef;
+      --tag-green-fg: #006644;
+      --tag-purple-bg: #eae6ff;
+      --tag-purple-fg: #403294;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      font-size: 14px;
+    }
+    .container {
+      max-width: 1280px;
+      margin: 0 auto;
+      padding: 24px;
+    }
+    .header {
+      background: linear-gradient(135deg, #0052cc 0%, #17a2b8 100%);
+      color: #fff;
+      border-radius: 10px;
+      padding: 28px 30px;
+      margin-bottom: 18px;
+      box-shadow: 0 4px 14px rgba(0, 82, 204, 0.18);
+    }
+    .header h1 {
+      margin: 0 0 8px 0;
+      font-size: 26px;
+      font-weight: 700;
+    }
+    .header .subtitle {
+      font-size: 15px;
+      opacity: 0.93;
+      margin-bottom: 12px;
+    }
+    .header .pills { display: flex; flex-wrap: wrap; gap: 8px; }
+    .pill-h {
+      display: inline-block;
+      padding: 4px 12px;
+      background: rgba(255,255,255,0.18);
+      border: 1px solid rgba(255,255,255,0.3);
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 0.3px;
+    }
+
+    .toc {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 14px 18px;
+      margin-bottom: 18px;
+    }
+    .toc h3 {
+      margin: 0 0 8px 0;
+      font-size: 13px;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .toc ol {
+      margin: 0;
+      padding-left: 22px;
+      columns: 2;
+      font-size: 13.5px;
+    }
+    .toc a { color: var(--primary); text-decoration: none; }
+    .toc a:hover { text-decoration: underline; }
+
+    .section {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 20px 24px;
+      margin-bottom: 16px;
+    }
+    .section h2 {
+      margin: 0 0 14px 0;
+      padding: 0 0 10px 12px;
+      border-left: 5px solid var(--accent);
+      font-size: 20px;
+      font-weight: 700;
+      color: #0747a6;
+      border-bottom: 1px solid #f0f1f3;
+    }
+    .section h3 {
+      margin: 16px 0 8px 0;
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--text);
+    }
+    .section h4 {
+      margin: 12px 0 6px 0;
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--primary-dark);
+    }
+    .section p { margin: 8px 0; }
+    .section ul { margin: 8px 0 8px 22px; padding: 0; }
+    .section ol { margin: 8px 0 8px 22px; padding: 0; }
+    .section li { margin: 5px 0; }
+
+    code {
+      background: var(--code-bg);
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-family: Consolas, "Courier New", monospace;
+      font-size: 13px;
+      color: #0747a6;
+    }
+    pre {
+      background: #2c3e50;
+      color: #f8f9fa;
+      padding: 14px 16px;
+      border-radius: 8px;
+      overflow-x: auto;
+      font-family: Consolas, "Courier New", monospace;
+      font-size: 13px;
+      line-height: 1.5;
+    }
+    pre code { background: transparent; color: inherit; padding: 0; }
+
+    .formula {
+      background: #f3f4f6;
+      border: 1px solid #e5e7eb;
+      border-left: 4px solid var(--primary);
+      border-radius: 6px;
+      padding: 12px 14px;
+      font-family: Consolas, "Courier New", monospace;
+      font-size: 13.5px;
+      white-space: pre-wrap;
+      margin: 10px 0;
+    }
+
+    .info {
+      background: var(--info-bg);
+      border: 1px solid var(--info-border);
+      border-radius: 8px;
+      padding: 12px 14px;
+      margin: 10px 0;
+    }
+    .warn {
+      background: var(--warn-bg);
+      border: 1px solid var(--warn-border);
+      border-radius: 8px;
+      padding: 12px 14px;
+      margin: 10px 0;
+    }
+    .danger {
+      background: #ffe2dc;
+      border: 1px solid #ffb1a3;
+      border-radius: 8px;
+      padding: 12px 14px;
+      margin: 10px 0;
+    }
+    .success {
+      background: #e3fcef;
+      border: 1px solid #abf5d1;
+      border-radius: 8px;
+      padding: 12px 14px;
+      margin: 10px 0;
+    }
+    .info-title { font-weight: 700; margin-bottom: 4px; color: #0747a6; }
+    .warn-title { font-weight: 700; margin-bottom: 4px; color: #974f0c; }
+    .danger-title { font-weight: 700; margin-bottom: 4px; color: #bf2600; }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 10px;
+      font-size: 13.5px;
+    }
+    th, td {
+      border: 1px solid #d1d5db;
+      padding: 10px;
+      text-align: left;
+      vertical-align: top;
+    }
+    th {
+      background: #f3f6fb;
+      font-weight: 700;
+      color: var(--text);
+    }
+    tbody tr:nth-child(even) { background: #fafbfc; }
+
+    .tag {
+      display: inline-block;
+      padding: 2px 9px;
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: 600;
+      margin-right: 4px;
+      letter-spacing: 0.3px;
+    }
+    .tag-blue { background: var(--tag-blue-bg); color: var(--tag-blue-fg); }
+    .tag-green { background: var(--tag-green-bg); color: var(--tag-green-fg); }
+    .tag-purple { background: var(--tag-purple-bg); color: var(--tag-purple-fg); }
+    .tag-yellow { background: #fff7d6; color: #974f0c; }
+    .tag-red { background: #ffe2dc; color: #bf2600; }
+
+    .step {
+      display: flex;
+      gap: 14px;
+      margin: 10px 0;
+      padding: 12px;
+      background: #f7f9fc;
+      border-radius: 8px;
+      border-left: 4px solid var(--primary);
+    }
+    .step .num {
+      flex-shrink: 0;
+      width: 32px;
+      height: 32px;
+      background: var(--primary);
+      color: #fff;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+    }
+    .step .body { flex: 1; }
+    .step .body h4 { margin: 0 0 4px 0; }
+
+    .priority-list {
+      counter-reset: prio;
+      list-style: none;
+      padding-left: 0;
+    }
+    .priority-list li {
+      counter-increment: prio;
+      position: relative;
+      padding: 8px 8px 8px 38px;
+      margin: 6px 0;
+      background: #f7f9fc;
+      border-radius: 6px;
+      border-left: 3px solid var(--accent);
+    }
+    .priority-list li::before {
+      content: counter(prio);
+      position: absolute;
+      left: 8px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 22px;
+      height: 22px;
+      background: var(--accent);
+      color: #fff;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 12px;
+    }
+
+    .recommended {
+      background: linear-gradient(135deg, #e3fcef, #d4f1e0);
+      border: 2px solid var(--success);
+      padding: 14px 18px;
+      border-radius: 8px;
+      margin: 12px 0;
+    }
+    .recommended .label {
+      display: inline-block;
+      background: var(--success);
+      color: #fff;
+      padding: 3px 10px;
+      border-radius: 4px;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      margin-bottom: 8px;
+    }
+
+    .layout-2col {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+    }
+    @media (max-width: 800px) { .layout-2col { grid-template-columns: 1fr; } }
+
+    .legend {
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-top: 6px;
+    }
+
+    .footer {
+      text-align: center;
+      color: var(--text-muted);
+      font-size: 12px;
+      padding: 16px 0;
+    }
+  </style>
+</head>
+<body>
+<div class="container">
+
+  <div class="header">
+    <h1>Задание разработчику. Алгоритм расчета СС НПФ Атомфонд</h1>
+    <div class="subtitle">Проект: IMDEV-8611. Контур: Wim_Mo (мидл-офис, конфигурация ООО Аванкор). Тип реализации: внешняя обработка типа Дополнительная обработка (БСП).</div>
+    <div class="pills">
+      <span class="pill-h">Issue: IMDEV-8611</span>
+      <span class="pill-h">Priority: High</span>
+      <span class="pill-h">Wim_Mo</span>
+      <span class="pill-h">AvancoreMO / AvancoreDU</span>
+      <span class="pill-h">Assignee: AChmykhalov</span>
+    </div>
+  </div>
+
+  <div class="toc">
+    <h3>Содержание</h3>
+    <ol>
+      <li><a href="#sec1">Цель и контекст разработки</a></li>
+      <li><a href="#sec2">Изучение методики Атомфонда (полный разбор)</a></li>
+      <li><a href="#sec3">Поиск обработок-аналогов в базовой конфигурации</a></li>
+      <li><a href="#sec4">Сравнительный анализ аналогов</a></li>
+      <li><a href="#sec5">Рекомендуемый эталон и обоснование</a></li>
+      <li><a href="#sec6">Архитектура целевой обработки</a></li>
+      <li><a href="#sec7">Маппинг методики Атомфонда на функции обработки</a></li>
+      <li><a href="#sec8">Пошаговый план реализации</a></li>
+      <li><a href="#sec9">Что копировать / что адаптировать</a></li>
+      <li><a href="#sec10">Тестовые сценарии</a></li>
+      <li><a href="#sec11">Критерии приемки</a></li>
+      <li><a href="#sec12">Риски и ограничения</a></li>
+    </ol>
+  </div>
+
+  <div class="section" id="sec1">
+    <h2>1. Цель и контекст разработки</h2>
+    <p>
+      Реализовать новую внешнюю обработку определения справедливой стоимости (СС) ценных бумаг для портфелей НПФ Атомфонд в базе <strong>Wim_Mo</strong>.
+      Обработка подключается через подсистему БСП "Дополнительные отчеты и обработки" и используется механизмом установки котировок в МО.
+    </p>
+    <table>
+      <tr><th>Параметр</th><th>Значение</th></tr>
+      <tr><td>Источник методики</td><td>Приложение к задаче (стр. 14 - 28). Документ U001/260303-32584 от 03.03.2026, АО НПФ "АТОМФОНД"</td></tr>
+      <tr><td>База / каталог исходников</td><td><code>C:\1c\Cursor_1c\WORK\Wim_Mo</code> (см. <code>bases/Wim_Mo/source-path.txt</code>)</td></tr>
+      <tr><td>Тип объекта</td><td>Внешняя обработка (epf), регистрация через <code>СведенияОВнешнейОбработке()</code></td></tr>
+      <tr><td>Точка входа</td><td><code>ТекущиеКотировкиПоПравилу(Мандат, Дата, Правило, СписокБирж, СписокЦБ, ТекстОшибок)</code></td></tr>
+      <tr><td>Связанные тикеты</td><td>IMDEV-8653 (упомянут в комментариях)</td></tr>
+    </table>
+  </div>
+
+  <div class="section" id="sec2">
+    <h2>2. Изучение методики Атомфонда (полный разбор)</h2>
+
+    <p>Раздел методики <em>"I. Методика определения справедливой стоимости ценных бумаг"</em>. Ниже - полная систематизация требований по трем приложенным страницам (image-2026-03-25-11-46-48-631.md, ...11-48-12-813.md, ...11-48-38-285.md).</p>
+
+    <h3>2.1. Признание рынка активным (п. 1.1.1)</h3>
+    <p>Рынок ценной бумаги, допущенной к торгам на российской или иностранной бирже, признается <strong>активным</strong>, если для биржевой площадки из Приложения А <em>одновременно</em> выполняются три условия:</p>
+    <table>
+      <thead>
+        <tr><th>Критерий</th><th>Условие</th><th>Комментарий</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>А. Глубина / активность</td>
+          <td>За последние <strong>10 торговых дней</strong> (включая дату СС): количество сделок &gt;= 10 И совокупный объем &gt;= 500 тыс. руб.</td>
+          <td>Сделки на рынке РЕПО в расчет не идут. Объем в иностранной валюте приводится к рублю по официальному курсу ЦБ на дату расчета.</td>
+        </tr>
+        <tr>
+          <td>Б. Раскрытие данных</td>
+          <td>На момент окончания торговой сессии в дату определения СЧА раскрыты данные об объеме <strong>безадресных сделок в режиме основных торгов</strong>, и объем не равен нулю.</td>
+          <td>Применимо, если дата расчета является торговым днем для наблюдаемых биржевых площадок.</td>
+        </tr>
+        <tr>
+          <td>В. Цены доступны</td>
+          <td>На наиболее поздний торговый день (&lt;= даты СС) наблюдаются цены, позволяющие применить п. 1.2.1 (Алгоритм 1).</td>
+          <td>Если дата СС не является торговым днем - используется предшествующий торговый день.</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="info">
+      <div class="info-title">Особый случай (рубли + иностранная валюта)</div>
+      Если бумага торгуется на российской бирже одновременно с расчетами в рублях и в инвалюте - критерии активности проверяются по <em>суммарным итогам</em> торгов в обеих валютах. Объем в инвалюте конвертируется в рубли по официальному курсу ЦБ на дату расчета.
+    </div>
+
+    <h3>2.2. Определение основного рынка (п. 1.1.2)</h3>
+    <p>Для расчета СС используются данные <strong>основного активного рынка</strong> - биржевой площадки с наибольшим объемом торгов и уровнем активности (доступной для НПФ согласно Приложению А).</p>
+
+    <h4>Российский эмитент</h4>
+    <ul>
+      <li><strong>Московская биржа</strong>, если она признана активным рынком на дату расчета.</li>
+      <li>Если Московская биржа не активна - <strong>иная российская биржевая площадка</strong>: должна быть активной и иметь наибольший <em>общий объем сделок по количеству ЦБ</em> за последние 10 торговых дней по сравнению с другими активными российскими площадками.</li>
+    </ul>
+
+    <h4>Иностранный эмитент</h4>
+    <ul>
+      <li>Биржевая площадка (российская или иностранная), являющаяся активным рынком и имеющая наибольший общий объем сделок по количеству ЦБ за последние 10 торговых дней.</li>
+    </ul>
+
+    <div class="warn">
+      <div class="warn-title">Дополнительное правило тай-брейка</div>
+      В отсутствии информации об объеме по количеству ЦБ - используется совокупный объем в денежном выражении за тот же период. При равенстве денежного объема - выбирается площадка с наибольшим количеством совершенных сделок.
+    </div>
+
+    <h3>2.3. Алгоритм 1. Активный рынок (п. 1.2.1)</h3>
+    <p>Применяются <em>наблюдаемые данные</em> активных рынков на наиболее поздний торговый день (&lt;= даты СС).</p>
+
+    <h4>A. Российская биржевая площадка - основной рынок (приоритет по убыванию)</h4>
+    <ol class="priority-list">
+      <li><strong>Цена спроса на момент окончания торговой сессии</strong> - если она находится в интервале между минимальной и максимальной ценами сделок этой же даты этой же биржи.</li>
+      <li><strong>Средневзвешенная цена</strong> - при условии нахождения в пределах спреда цен спроса и предложения на указанную дату.</li>
+      <li><strong>Цена закрытия</strong>.</li>
+    </ol>
+
+    <div class="info">
+      <div class="info-title">Биржа с двумя валютами расчетов</div>
+      Если бумага торгуется в основном режиме торгов с расчетами в рублях и в инвалюте - используются цены режима <strong>в рублях</strong>. Если ни одна из них не применима - переходим к ценам режима <strong>в инвалюте</strong>.
+    </div>
+
+    <h4>B. Иностранная биржевая площадка - основной рынок (приоритет по убыванию)</h4>
+    <ol class="priority-list">
+      <li><strong>Цена спроса</strong> - если на момент окончания торговой сессии она находится в интервале между минимальной и максимальной ценами сделок этой же даты этой же биржи.</li>
+      <li><strong>Цена закрытия</strong>.</li>
+    </ol>
+
+    <h3>2.4. Алгоритм 2. Отсутствие активного рынка (п. 1.2.2)</h3>
+    <p>Применяется при невозможности определить основной рынок. Используются наблюдаемые и ненаблюдаемые данные в порядке убывания приоритета.</p>
+
+    <ol class="priority-list">
+      <li><strong>Расчетная стоимость инвестиционного пая ОПИФ / ИПИФ / ЗПИФ</strong>, рассчитанная на наиболее позднюю дату определения СЧА ПИФ (&lt;= даты СС, но не ранее последнего рабочего дня предыдущего месяца), раскрытая управляющей компанией ПИФ.</li>
+      <li><strong>Цена ценового центра НРД</strong>, определенная на дату, ближайшую к дате СС (включая), на основании одной из утвержденных методик НРД.</li>
+    </ol>
+
+    <h4>Допустимые методики НРД и классификация по уровням</h4>
+    <table>
+      <thead>
+        <tr><th>Методика НРД</th><th>Метод</th><th>Уровень иерархии</th></tr>
+      </thead>
+      <tbody>
+        <tr><td rowspan="2">Рублевые облигации (включая дополнения)</td><td>Метод рыночных цен</td><td><span class="tag tag-blue">Уровень 2</span></td></tr>
+        <tr><td>Метод дисконтированного денежного потока</td><td><span class="tag tag-blue">Уровень 2</span></td></tr>
+        <tr><td rowspan="3">Субординированные облигации</td><td>Метод рыночных цен</td><td><span class="tag tag-blue">Уровень 2</span></td></tr>
+        <tr><td>Метод дисконтированного денежного потока</td><td><span class="tag tag-blue">Уровень 2</span></td></tr>
+        <tr><td>Метод индексного дисконтированного денежного потока</td><td><span class="tag tag-purple">Уровень 3</span></td></tr>
+        <tr><td rowspan="2">Облигации без международных рейтингов</td><td>Метод рыночных цен</td><td><span class="tag tag-blue">Уровень 2</span></td></tr>
+        <tr><td>Метод дисконтированного денежного потока</td><td><span class="tag tag-blue">Уровень 2</span></td></tr>
+        <tr><td rowspan="3">Корпоративные еврооблигации</td><td>Метод рыночных цен</td><td><span class="tag tag-blue">Уровень 2</span></td></tr>
+        <tr><td>Метод дисконтированного денежного потока</td><td><span class="tag tag-blue">Уровень 2</span></td></tr>
+        <tr><td>Метод индексного дисконтированного денежного потока</td><td><span class="tag tag-purple">Уровень 3</span></td></tr>
+        <tr><td rowspan="3">Еврооблигации Правительства РФ</td><td>Метод рыночных цен</td><td><span class="tag tag-blue">Уровень 2</span></td></tr>
+        <tr><td>Метод дисконтированного денежного потока</td><td><span class="tag tag-blue">Уровень 2</span></td></tr>
+        <tr><td>Метод смещенного дисконтированного денежного потока</td><td><span class="tag tag-purple">Уровень 3</span></td></tr>
+      </tbody>
+    </table>
+
+    <div class="warn">
+      <div class="warn-title">Профессиональное суждение</div>
+      НПФ может признать расчетную стоимость пая и цену НРД <em>неприменимой</em> и определить цену на основании профессионального суждения, согласованного с аудитором. В реализации - предусмотреть точку расширения и ручной ввод цены с фиксацией основания.
+    </div>
+
+    <h3>2.5. Специальные правила (п. 1.2.3 - 1.2.5)</h3>
+    <ul>
+      <li>При применении Алгоритмов 1 и 2 используются <strong>совокупные результаты основной и дополнительных сессий Московской биржи</strong>.</li>
+      <li>Алгоритмы 1 и 2 применяются для бумаг с признаками обесценения с учетом особенностей п. 6 методики.</li>
+      <li>До даты <strong>полного погашения</strong> долговой ценной бумаги (по условиям выпуска) в расчет СС <em>не включаются</em>:
+        <ul>
+          <li>суммы частичного погашения основного долга - с даты частичного погашения, предусмотренной условиями выпуска;</li>
+          <li>суммы купонного дохода - с даты окончания соответствующего купонного периода.</li>
+        </ul>
+      </li>
+    </ul>
+
+    <h3>2.6. Формулы определения СС в рублях (п. 1.2.6)</h3>
+    <p>Определение справедливой стоимости в рублях исходя из количества ценной бумаги на дату СС.</p>
+
+    <h4>а) Методы, отличные от метода дисконтирования</h4>
+    <div class="formula">СС = ОКРУГЛ(Цена * Количество * Курс; 2) +
+     ОКРУГЛ( ОКРУГЛ(Купон * Количество; 2) * Курс; 2 )</div>
+
+    <h4>b) Метод дисконтирования</h4>
+    <div class="formula">СС = ОКРУГЛ((DCF - Купон) * Количество * Курс; 2) +
+     ОКРУГЛ( ОКРУГЛ(Купон * Количество; 2) * Курс; 2 )</div>
+
+    <div class="info">
+      <div class="info-title">Обозначения</div>
+      <ul>
+        <li><strong>Цена</strong> - цена, выбранная по Алгоритму 1 или Алгоритму 2 (наблюдаемая/ненаблюдаемая).</li>
+        <li><strong>Количество</strong> - количество ценных бумаг в портфеле на дату СС.</li>
+        <li><strong>Курс</strong> - официальный курс валюты номинала к рублю на дату СС.</li>
+        <li><strong>Купон</strong> - НКД (накопленный купонный доход) на дату СС.</li>
+        <li><strong>DCF</strong> - дисконтированный денежный поток (для метода дисконтирования).</li>
+        <li><strong>ОКРУГЛ(x; 2)</strong> - округление до 2 знаков после запятой.</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="section" id="sec3">
+    <h2>3. Поиск обработок-аналогов в базовой конфигурации</h2>
+    <p>В базе <code>Wim_Mo</code> (<code>C:\1c\Cursor_1c\WORK\Wim_Mo\SRC\epf</code>) обнаружено 8 действующих внешних обработок определения СС для разных НПФ. Все используют единый интерфейс БСП и общую точку входа <code>ТекущиеКотировкиПоПравилу(...)</code>.</p>
+
+    <table>
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Имя обработки</th>
+          <th>Каталог исходников (относительно SRC/epf/)</th>
+          <th>Размер модуля</th>
+          <th>Описатель DescAPP</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>1</td>
+          <td><code>внОпределениеСправедливойСтоимостиНПФСбербанк</code></td>
+          <td><code>внОпределениеСправедливойСтоимостиНПФСбербанк_epf/.../Ext/ObjectModule.bsl</code></td>
+          <td>~133 КБ, ~2 113 строк, ~33 функции/процедуры</td>
+          <td><code>внОпределениеСправедливойСтоимостиНПФСбербанк_epf.json</code></td>
+        </tr>
+        <tr>
+          <td>2</td>
+          <td><code>внОпределениеСправедливойСтоимостиНПФАльфа</code></td>
+          <td><code>внОпределениеСправедливойСтоимостиНПФАльфа_epf/.../Ext/ObjectModule.bsl</code></td>
+          <td>~26 функций/процедур, ~970 строк</td>
+          <td><code>внОпределениеСправедливойСтоимостиНПФАльфа_epf.json</code></td>
+        </tr>
+        <tr>
+          <td>3</td>
+          <td><code>внОпределениеСправедливойСтоимостиНПФРенессансНакопления</code></td>
+          <td><code>внОпределениеСправедливойСтоимостиНПФРенессансНакопления_epf/.../Ext/ObjectModule.bsl</code></td>
+          <td>~17 функций/процедур, ~660 строк</td>
+          <td><code>внОпределениеСправедливойСтоимостиНПФРенессансНакопления_epf.json</code></td>
+        </tr>
+        <tr>
+          <td>4</td>
+          <td><code>внОпределениеСправедливойСтоимостиНПФАвиаполис</code></td>
+          <td><code>внОпределениеСправедливойСтоимостиНПФАвиаполис_epf/.../Ext/ObjectModule.bsl</code></td>
+          <td>~16 функций/процедур, ~720 строк</td>
+          <td><code>внОпределениеСправедливойСтоимостиНПФАвиаполис_epf.json</code></td>
+        </tr>
+        <tr>
+          <td>5</td>
+          <td><code>внОпределениеССнпфРостех</code></td>
+          <td><code>внОпределениеССнпфРостех_epf/.../Ext/ObjectModule.bsl</code></td>
+          <td>Базовая (предшественник Ростех2023)</td>
+          <td><code>внОпределениеССнпфРостех_epf.json</code></td>
+        </tr>
+        <tr>
+          <td>6</td>
+          <td><code>внОпределениеССнпфРостех2023</code></td>
+          <td><code>внОпределениеССнпфРостех2023_epf/.../Ext/ObjectModule.bsl</code></td>
+          <td>~38 функций/процедур, ~1 900 строк</td>
+          <td><code>внОпределениеССнпфРостех2023_epf.json</code></td>
+        </tr>
+        <tr>
+          <td>7</td>
+          <td><code>внОпределениеССнпфРоствертол</code></td>
+          <td><code>внОпределениеССнпфРоствертол_epf/.../Ext/ObjectModule.bsl</code></td>
+          <td>~35 функций/процедур, ~1 940 строк</td>
+          <td><code>внОпределениеССнпфРоствертол_epf.json</code></td>
+        </tr>
+        <tr style="background: #e3fcef;">
+          <td>8</td>
+          <td><code>внОпределениеССнпфАльянс</code></td>
+          <td><code>внОпределениеССнпфАльянс_epf/.../Ext/ObjectModule.bsl</code></td>
+          <td>~50 функций/процедур, ~2 900 строк</td>
+          <td><code>внОпределениеССнпфАльянс_epf.json</code></td>
+        </tr>
+      </tbody>
+    </table>
+    <p class="legend">Подсчет функций - по началу строк <code>Функция</code>/<code>Процедура</code>. Пути полны относительно <code>C:\1c\Cursor_1c\WORK\Wim_Mo\SRC\epf\</code>.</p>
+  </div>
+
+  <div class="section" id="sec4">
+    <h2>4. Сравнительный анализ аналогов</h2>
+    <p>Соответствие функционала аналогов методике Атомфонда (Алгоритм 1, Алгоритм 2 + 3 уровня иерархии источников цен).</p>
+    <table>
+      <thead>
+        <tr>
+          <th>Обработка</th>
+          <th>Уровень 1 (активный рынок)</th>
+          <th>Уровень 2 (НРД)</th>
+          <th>Уровень 3 (DCF / индексный DCF)</th>
+          <th>Поддержка нескольких бирж</th>
+          <th>НКД</th>
+          <th>Кредитный спред / рейтинг</th>
+          <th>Версионирование расчета (даты cutoff)</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>НПФ Сбербанк</td>
+          <td>Спец. блок <code>ОпределитьСправедливуюСтоимостьПоАктиву_2020</code></td>
+          <td>Есть, через <code>ПроверкаЦеныНаАдекватностьУспешна</code></td>
+          <td>Через <code>ЦенаОблигацииПоКредитномуСпредуРейтинговойГруппы</code></td>
+          <td>Один основной рынок</td>
+          <td>Есть</td>
+          <td>Развитая система спредов и рейтинговых групп</td>
+          <td>Без явных cutoff-веток</td>
+        </tr>
+        <tr>
+          <td>НПФ Альфа</td>
+          <td><code>ЦенаАктиваУровень1</code></td>
+          <td><code>ЦенаАктиваУровень2</code></td>
+          <td><code>ЦенаАктиваУровень3</code></td>
+          <td>Только ММВБ + НРД</td>
+          <td>Есть</td>
+          <td>Есть (DCF, рейтинговые группы)</td>
+          <td>Без cutoff</td>
+        </tr>
+        <tr>
+          <td>НПФ Ренессанс Накопления</td>
+          <td><code>ЦенаАктиваУровень1</code></td>
+          <td><code>ЦенаАктиваУровень2</code></td>
+          <td>Нет явного уровня 3</td>
+          <td>Только ММВБ + НРД</td>
+          <td>Есть</td>
+          <td>Простая</td>
+          <td>Без cutoff</td>
+        </tr>
+        <tr>
+          <td>НПФ Авиаполис</td>
+          <td><code>ЦенаАктиваУровень1</code></td>
+          <td><code>ЦенаАктиваУровень2</code></td>
+          <td>Нет явного уровня 3</td>
+          <td>Только ММВБ + НРД</td>
+          <td>Есть</td>
+          <td>Простая</td>
+          <td>Без cutoff</td>
+        </tr>
+        <tr>
+          <td>НПФ Ростех 2023</td>
+          <td><code>ЦенаАктиваУровень1</code> + <code>КотировкаПоВыбПолю_2022/2023</code></td>
+          <td><code>ЦенаАктиваУровень2</code> с <code>ПолучитьЦенуНРД</code> по 5 методикам</td>
+          <td>Через <code>ЦенаОблигацииПоКредитномуСпредуРейтинговойГруппы</code></td>
+          <td>ММВБ + НРД + другие биржи (<code>ПодготовитьДанныеДляРасчетаДругихБирж</code>)</td>
+          <td>Есть</td>
+          <td>Развитая (рейтинговые группы по дюрации, котировальный лист)</td>
+          <td>Версии 2022, 2023 (через <code>КотировкаПоВыбПолю_*</code>)</td>
+        </tr>
+        <tr>
+          <td>НПФ Роствертол</td>
+          <td><code>ЦенаАктиваУровень1</code> + <code>_2021</code></td>
+          <td><code>ЦенаАктиваУровень2</code> + <code>_2021</code></td>
+          <td>Через кредитные спреды</td>
+          <td>ММВБ + НРД</td>
+          <td>Есть</td>
+          <td>Развитая (с дюрацией)</td>
+          <td>Cutoff: до 2021, после 2021</td>
+        </tr>
+        <tr style="background: #e3fcef;">
+          <td><strong>НПФ Альянс</strong></td>
+          <td><code>ЦенаАктиваУровень1</code> + <code>_2021</code> + <strong><code>_2025</code></strong></td>
+          <td><code>ЦенаАктиваУровень2</code> + <code>_2020</code> + <code>_2021</code></td>
+          <td><strong><code>ЦенаАктиваУровень3</code></strong> явно (с поддержкой <code>ТаблицаКотировокОценщик</code>)</td>
+          <td>ММВБ + НРД + Оценщик</td>
+          <td>Есть, отдельный <code>ПодготовитьДанныеДляРасчетаНКД</code></td>
+          <td>Развитая (рейтинги, медианы по группам)</td>
+          <td>Cutoff: до 2020, до 2021, до 2025, с 2025</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="section" id="sec5">
+    <h2>5. Рекомендуемый эталон и обоснование</h2>
+
+    <div class="recommended">
+      <span class="label">РЕКОМЕНДУЕМЫЙ ЭТАЛОН</span>
+      <h3 style="margin: 0;">внОпределениеССнпфАльянс (внОпределениеССнпфАльянс_epf)</h3>
+      <p>Это самая современная реализация СС в Wim_Mo. Содержит явные блоки <strong>Уровень 1 / Уровень 2 / Уровень 3</strong>, что точно соответствует трехуровневой иерархии методики Атомфонда (наблюдаемые цены - НРД методики уровня 2 - НРД методики уровня 3 / DCF). Имеет современную ветку <code>ЦенаАктиваУровень1_2025</code>, что упростит реализацию правил Атомфонда без переноса исторической логики.</p>
+    </div>
+
+    <h3>Обоснование выбора</h3>
+    <table>
+      <thead>
+        <tr><th>Критерий методики Атомфонда</th><th>Альянс</th><th>Сбербанк</th><th>Ростех 2023</th><th>Роствертол</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Явные блоки 1/2/3 уровней</td><td><span class="tag tag-green">Полностью</span></td><td><span class="tag tag-yellow">Частично</span></td><td><span class="tag tag-yellow">Частично</span></td><td><span class="tag tag-yellow">Частично</span></td></tr>
+        <tr><td>5 методик НРД с уровнями 2/3</td><td><span class="tag tag-green">Готовый каркас</span></td><td><span class="tag tag-yellow">Через спреды</span></td><td><span class="tag tag-green">5 методик</span></td><td><span class="tag tag-yellow">Через спреды</span></td></tr>
+        <tr><td>Источник "оценщик" / расчетная стоимость пая</td><td><span class="tag tag-green">Есть таблица Оценщик</span></td><td><span class="tag tag-red">Нет</span></td><td><span class="tag tag-red">Нет</span></td><td><span class="tag tag-red">Нет</span></td></tr>
+        <tr><td>Современный cutoff (с 2025)</td><td><span class="tag tag-green">Есть</span></td><td><span class="tag tag-red">Нет</span></td><td><span class="tag tag-red">Нет</span></td><td><span class="tag tag-red">Нет</span></td></tr>
+        <tr><td>Совокупные сессии Мосбиржи</td><td><span class="tag tag-green">Учитывается</span></td><td><span class="tag tag-yellow">Через настройки</span></td><td><span class="tag tag-green">Учитывается</span></td><td><span class="tag tag-green">Учитывается</span></td></tr>
+        <tr><td>DCF / переменный купон</td><td><span class="tag tag-green">Есть полный блок</span></td><td><span class="tag tag-green">Есть полный блок</span></td><td><span class="tag tag-green">Есть</span></td><td><span class="tag tag-green">Есть</span></td></tr>
+      </tbody>
+    </table>
+
+    <div class="info">
+      <div class="info-title">Альтернативный эталон</div>
+      Для реализаций, где требуется множественная биржа (несколько российских/иностранных площадок одновременно), лучше использовать <strong>внОпределениеССнпфРостех2023</strong> как референс по подсистеме <code>ПодготовитьДанныеДляРасчетаДругихБирж</code> и <code>ПолучитьЦенуБиржи</code>. Эти блоки можно <em>перенести в проект на базе Альянса</em> для поддержки иностранных бирж.
+    </div>
+  </div>
+
+  <div class="section" id="sec6">
+    <h2>6. Архитектура целевой обработки</h2>
+
+    <h3>6.1. Имя и регистрация</h3>
+    <ul>
+      <li>Внутреннее имя: <code>внОпределениеСправедливойСтоимостиНПФАтомфонд</code> (или <code>внОпределениеССнпфАтомфонд</code> в стиле новых обработок).</li>
+      <li>Каталог исходников: <code>SRC/epf/внОпределениеСправедливойСтоимостиНПФАтомфонд_epf/...</code>.</li>
+      <li>Описатель: <code>SRC/settings/DescAPP/внОпределениеСправедливойСтоимостиНПФАтомфонд_epf.json</code> (по образцу аналогов).</li>
+      <li>Регистрация в БСП через <code>СведенияОВнешнейОбработке()</code> с видом <code>ВидОбработкиДополнительнаяОбработка</code>, указанием версии.</li>
+    </ul>
+
+    <h3>6.2. Точка входа</h3>
+    <pre><code>Функция ТекущиеКотировкиПоПравилу(Мандат, Дата, Правило, СписокБирж, СписокЦБ, ТекстОшибок) Экспорт
+    
+    СтруктураНастроек = НастройкиАлгоритма(Правило.НастройкиАлгоритма);
+    
+    Календарь = СтруктураНастроек.БиржевойКалендарь;
+    Если Календарь.Пустая() Тогда
+        Календарь = Справочники.ПроизводственныеКалендари.РегламентированныйКалендарь;
+    КонецЕсли;
+    
+    НачалоПериода = КалендарныеГрафики.ПолучитьСледующуюРабочуюДату(Календарь, Дата, -9);
+    КонецПериода  = КалендарныеГрафики.ПолучитьПоследнийРабочийДеньПериода(Календарь, НачалоПериода, Дата);
+    
+    ТаблицаКотировокММВБ    = ПодготовитьДанныеДляРасчетаММБВ(НачалоПериода, КонецПериода, СписокЦБ, СтруктураНастроек);
+    ТаблицаКотировокНРД     = ПодготовитьДанныеДляРасчетаНРД(КонецПериода, КонецПериода, СписокЦБ, СтруктураНастроек);
+    ТаблицаКотировокОценщик = ПодготовитьДанныеДляРасчетаОценщик(КонецПериода, КонецПериода, СписокЦБ, СтруктураНастроек);
+    КотировкиНКД            = ПодготовитьДанныеДляРасчетаНКД(Дата, СписокЦБ, СтруктураНастроек);
+    
+    Для Каждого СтрокаСпискаЦБ Из СписокЦБ Цикл
+        // Уровень 1 - Алгоритм 1 (активный рынок)
+        ЗаполненнаяСтрокаКотировок = ЦенаАктиваУровень1_Атомфонд(...);
+        
+        Если ЗаполненнаяСтрокаКотировок.ОпределяемаяКотировка = 0 Тогда
+            // Уровень 2 - Алгоритм 2: цены НРД (методики уровня 2)
+            ЦенаАктиваУровень2_Атомфонд(...);
+        КонецЕсли;
+        
+        Если ЗаполненнаяСтрокаКотировок.ОпределяемаяКотировка = 0 Тогда
+            // Уровень 3 - Алгоритм 2: DCF / индексный DCF / расчетная стоимость пая
+            ЦенаАктиваУровень3_Атомфонд(...);
+        КонецЕсли;
+    КонецЦикла;
+    
+    Возврат ТаблицаКотировок;
+    
+КонецФункции</code></pre>
+
+    <h3>6.3. Структура модуля по областям</h3>
+    <table>
+      <thead>
+        <tr><th>Область</th><th>Назначение</th><th>Откуда брать прототип</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>МЕТОДЫ_БИБЛИОТЕКИ_СТАНДАРТНЫХ_ПОДСИСТЕМ</td><td><code>ЗагрузитьНастройки</code>, <code>СведенияОВнешнейОбработке</code></td><td>Альянс / Сбербанк, без существенных изменений</td></tr>
+        <tr><td>ПрограммныйИнтерфейс</td><td><code>ТекущиеКотировкиПоПравилу</code>, <code>НастройкиАлгоритма</code></td><td>Альянс - каркас, под Атомфонд переименовать ветки уровней</td></tr>
+        <tr><td>ПодготовкаДанных</td><td><code>ПодготовитьДанныеДляРасчетаММБВ</code>, <code>...НРД</code>, <code>...Оценщик</code>, <code>...НКД</code></td><td>Альянс - 1:1, с уточнением фильтров по 10 торговым дням</td></tr>
+        <tr><td>ТекстыЗапросов</td><td><code>ПолучитьТекстЗапросаТаблицаКотировокММВБ</code> и др.</td><td>Альянс - адаптация выборки по основным/дополнительным сессиям Мосбиржи</td></tr>
+        <tr><td>ОпределениеЦены</td><td><code>ЦенаАктиваУровень1_Атомфонд</code>, <code>ЦенаАктиваУровень2_Атомфонд</code>, <code>ЦенаАктиваУровень3_Атомфонд</code></td><td>Альянс - адаптация приоритетов цен, НРД-методик и таблиц</td></tr>
+        <tr><td>СлужебныеФункции</td><td><code>ОсновнойРынокАктивен</code>, <code>СвойствоСтруктуры</code>, <code>КотировкаПоВыбПолю</code></td><td>Альянс / Ростех2023</td></tr>
+        <tr><td>СправкаРасчет / Лог</td><td>Формирование табличного документа со справкой расчета и журналом</td><td>Альянс - макеты <code>СправкаРасчет</code> и <code>Лог</code></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="section" id="sec7">
+    <h2>7. Маппинг методики Атомфонда на функции обработки</h2>
+    <table>
+      <thead>
+        <tr><th>Пункт методики</th><th>Что делает функция</th><th>Имя функции (план)</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>1.1.1 Признание рынка активным</td><td>Проверка по 3 критериям (10 дней, 10 сделок, 500 тыс. руб.; раскрытие данных; наблюдаемая цена)</td><td><code>ОсновнойРынокАктивен_Атомфонд</code></td></tr>
+        <tr><td>1.1.1 Конвертация валютных объемов</td><td>Приведение объемов в инвалюте к рублям по курсу ЦБ на дату СС</td><td>В запросе <code>ПолучитьТекстЗапросаТаблицаКотировокММВБ</code> (с параметром курса)</td></tr>
+        <tr><td>1.1.2 Основной рынок</td><td>Выбор биржевой площадки с наибольшим объемом по количеству ЦБ за 10 дней; тай-брейк по денежному объему / числу сделок</td><td><code>ОпределитьОсновнойРынок_Атомфонд</code></td></tr>
+        <tr><td>1.2.1.A.1 Цена спроса в спреде min/max</td><td>Проверка нахождения цены спроса в коридоре сделок дня</td><td><code>КотировкаПоВыбПолю_Атомфонд</code> (поле <code>ЦенаСпроса</code>)</td></tr>
+        <tr><td>1.2.1.A.2 Средневзвешенная в спреде Bid/Ask</td><td>Проверка средневзвешенной в спреде</td><td><code>КотировкаПоВыбПолю_Атомфонд</code> (поле <code>Средневзвешенная</code>)</td></tr>
+        <tr><td>1.2.1.A.3 Цена закрытия</td><td>Использование цены закрытия как fallback</td><td><code>КотировкаПоВыбПолю_Атомфонд</code> (поле <code>ЦенаЗакрытия</code>)</td></tr>
+        <tr><td>1.2.1 Рубль/инвалюта на одной бирже</td><td>Приоритет режима в рублях, fallback на инвалюту</td><td>В цикле <code>ЦенаАктиваУровень1_Атомфонд</code></td></tr>
+        <tr><td>1.2.1.B.1, B.2 Иностранная биржа</td><td>Цена спроса (в коридоре) - цена закрытия</td><td><code>ЦенаАктиваУровень1_ИнБиржа_Атомфонд</code> (или ветка по флагу <code>ЭтоИностраннаяБиржа</code>)</td></tr>
+        <tr><td>1.2.2 Расчетная стоимость пая ОПИФ/ИПИФ/ЗПИФ</td><td>Получение РСП на наиболее позднюю дату СЧА ПИФ</td><td><code>ПолучитьРасчетнуюСтоимостьПая</code> (или таблица Оценщик, как в Альянсе)</td></tr>
+        <tr><td>1.2.2 Цена НРД (5 методик x уровни 2/3)</td><td>Подбор цены ЦЦ НРД с указанием версии методики и уровня</td><td><code>ПолучитьЦенуНРД_Атомфонд</code> (по образцу <code>ПолучитьЦенуНРД</code> Ростех2023, расширенный набором методик)</td></tr>
+        <tr><td>1.2.3 Совокупные сессии Мосбиржи</td><td>В запросе - объединение основной и дополнительных сессий</td><td>В <code>ПолучитьТекстЗапросаТаблицаКотировокММВБ</code></td></tr>
+        <tr><td>1.2.4 Признаки обесценения</td><td>Применение алгоритмов 1/2 с учетом п. 6 методики</td><td><code>ПрименитьПризнакиОбесценения</code> (точка расширения)</td></tr>
+        <tr><td>1.2.5 Исключения купона / частичного погашения</td><td>До полного погашения исключать суммы частичного погашения и купона</td><td><code>ИсключитьЧастичноеПогашениеИКупон</code> (вызов перед формулой)</td></tr>
+        <tr><td>1.2.6.a Формула без дисконтирования</td><td>СС = ОКРУГЛ(Цена * Кол-во * Курс; 2) + ОКРУГЛ(ОКРУГЛ(Купон * Кол-во; 2) * Курс; 2)</td><td><code>РассчитатьССРубли_БезДисконтирования</code></td></tr>
+        <tr><td>1.2.6.b Формула с дисконтированием</td><td>СС = ОКРУГЛ((DCF - Купон) * Кол-во * Курс; 2) + ОКРУГЛ(ОКРУГЛ(Купон * Кол-во; 2) * Курс; 2)</td><td><code>РассчитатьССРубли_Дисконтирование</code></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="section" id="sec8">
+    <h2>8. Пошаговый план реализации</h2>
+
+    <div class="step">
+      <div class="num">1</div>
+      <div class="body">
+        <h4>Подготовка проекта</h4>
+        <p>Скопировать каталог <code>SRC/epf/внОпределениеССнпфАльянс_epf/</code> с переименованием в <code>SRC/epf/внОпределениеСправедливойСтоимостиНПФАтомфонд_epf/</code>. Создать новый описатель в <code>SRC/settings/DescAPP/</code>. Сгенерировать новый GUID для <code>guid</code> в JSON и для XML обработки.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="num">2</div>
+      <div class="body">
+        <h4>Регистрация в БСП</h4>
+        <p>В <code>СведенияОВнешнейОбработке()</code> установить версию <code>1.00</code>, синоним "Определение справедливой стоимости НПФ Атомфонд". Проверить совместимость с правилом определения котировок в МО.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="num">3</div>
+      <div class="body">
+        <h4>Активный рынок (Алгоритм 1)</h4>
+        <p>Реализовать <code>ОсновнойРынокАктивен_Атомфонд</code> по трем критериям п. 1.1.1. Реализовать <code>ОпределитьОсновнойРынок_Атомфонд</code> по правилам п. 1.1.2 (российский / иностранный эмитент, тай-брейк по денежному объему / числу сделок).</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="num">4</div>
+      <div class="body">
+        <h4>Уровень 1 (наблюдаемые цены)</h4>
+        <p>Адаптировать <code>ЦенаАктиваУровень1_Атомфонд</code>: приоритет цен для российского рынка (спрос в коридоре - средневзвешенная в спреде - закрытие); приоритет для иностранного (спрос в коридоре - закрытие). Двойной режим расчетов (рубль / инвалюта) на одной бирже.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="num">5</div>
+      <div class="body">
+        <h4>Уровень 2 / 3 (Алгоритм 2)</h4>
+        <p>Реализовать <code>ЦенаАктиваУровень2_Атомфонд</code> с поддержкой 5 методик НРД и уровней 2/3. Реализовать <code>ЦенаАктиваУровень3_Атомфонд</code> с расчетной стоимостью пая, индексным DCF и DCF.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="num">6</div>
+      <div class="body">
+        <h4>Спец. правила и формулы</h4>
+        <p>Реализовать <code>ИсключитьЧастичноеПогашениеИКупон</code> (п. 1.2.5). Реализовать <code>РассчитатьССРубли_БезДисконтирования</code> и <code>РассчитатьССРубли_Дисконтирование</code> по формулам п. 1.2.6.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="num">7</div>
+      <div class="body">
+        <h4>Сессии Мосбиржи</h4>
+        <p>В тексте запроса <code>ПолучитьТекстЗапросаТаблицаКотировокММВБ</code> добавить объединение результатов основной и дополнительных сессий по п. 1.2.3.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="num">8</div>
+      <div class="body">
+        <h4>Справка расчета и лог</h4>
+        <p>Адаптировать макет <code>СправкаРасчет</code> и <code>Лог</code>: на каждую бумагу - указание уровня цены (1/2/3), источника, использованной формулы, курса валюты, флагов исключений.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="num">9</div>
+      <div class="body">
+        <h4>Тестирование</h4>
+        <p>Прогон тестовых сценариев (см. раздел 10). Сверка контрольных значений с примерами от Атомфонда / СД Инфинитум.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="num">10</div>
+      <div class="body">
+        <h4>Подключение и приемка</h4>
+        <p>Регистрация в справочнике <code>ДополнительныеОтчетыИОбработки</code>, привязка к правилу определения котировок для портфеля Атомфонда. Запуск приемочного прогона в МО.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="section" id="sec9">
+    <h2>9. Что копировать / что адаптировать</h2>
+
+    <div class="layout-2col">
+      <div class="success">
+        <div class="info-title" style="color: var(--success);">Копировать без изменений (каркас)</div>
+        <ul>
+          <li>Объявления модуля и переменных модуля.</li>
+          <li>Область <code>МЕТОДЫ_БИБЛИОТЕКИ_СТАНДАРТНЫХ_ПОДСИСТЕМ</code>.</li>
+          <li><code>СвойствоСтруктуры</code>, <code>СформироватьСправкуРасчет</code> (служебные).</li>
+          <li><code>ПодготовитьДанныеДляРасчетаНКД</code> и текст запроса НКД.</li>
+          <li>Структура макетов <code>СправкаРасчет</code>, <code>Лог</code>.</li>
+          <li>Цикл по <code>СписокЦБ</code> в <code>ТекущиеКотировкиПоПравилу</code>.</li>
+        </ul>
+      </div>
+      <div class="warn">
+        <div class="warn-title">Адаптировать под Атомфонд</div>
+        <ul>
+          <li>Текст запроса ММВБ - добавить совокупные сессии и валидацию по 3 критериям 10 дней.</li>
+          <li><code>ОсновнойРынокАктивен</code> - точные пороги (10 сделок, 500 тыс. руб., безадресные сделки, наблюдаемая цена).</li>
+          <li><code>ЦенаАктиваУровень1</code> - приоритеты цен по методике (спрос - средневзвешенная - закрытие).</li>
+          <li><code>ЦенаАктиваУровень2</code> - 5 методик НРД с разделением по уровням 2 и 3.</li>
+          <li><code>ЦенаАктиваУровень3</code> - расчетная стоимость пая ПИФ + DCF + индексный DCF.</li>
+          <li>Формулы расчета СС в рублях - точно по п. 1.2.6.</li>
+          <li>Правила исключения купона и частичного погашения по п. 1.2.5.</li>
+          <li>GUID, имя, синоним, версия в <code>СведенияОВнешнейОбработке</code> и описателе DescAPP.</li>
+        </ul>
+      </div>
+    </div>
+
+    <h3>Что в эталоне Альянса можно убрать</h3>
+    <ul>
+      <li>Ветки <code>ЦенаАктиваУровень1</code>, <code>ЦенаАктиваУровень1_2021</code> (исторические cutoff-ветки до 2025) - в Атомфонде расчет начинается на актуальную методику без переноса исторических версий.</li>
+      <li>Любые проектные комментарии IMAPPS-* и MPazhukov - заменить на собственный комментарий с номером IMDEV-8611.</li>
+      <li>Кастомные источники Альянса, не релевантные Атомфонду (если такие будут найдены при детальном чтении модуля).</li>
+    </ul>
+  </div>
+
+  <div class="section" id="sec10">
+    <h2>10. Тестовые сценарии</h2>
+    <table>
+      <thead>
+        <tr><th>#</th><th>Сценарий</th><th>Ожидаемый источник</th><th>Уровень</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>A</td><td>Активный российский рынок, цена спроса попадает в коридор min/max сделок</td><td>Цена спроса (Мосбиржа основные торги в рублях)</td><td><span class="tag tag-blue">1</span></td></tr>
+        <tr><td>B</td><td>Активный рынок, цена спроса вне коридора, средневзвешенная в спреде</td><td>Средневзвешенная цена</td><td><span class="tag tag-blue">1</span></td></tr>
+        <tr><td>C</td><td>Активный рынок, спрос и средневзвешенная не подходят</td><td>Цена закрытия</td><td><span class="tag tag-blue">1</span></td></tr>
+        <tr><td>D</td><td>Бумага торгуется в рублях и инвалюте на Мосбирже, в рублях нет применимой цены</td><td>Цена основного режима в инвалюте, конвертация в рубли по курсу ЦБ</td><td><span class="tag tag-blue">1</span></td></tr>
+        <tr><td>E</td><td>Иностранный эмитент, иностранная биржа активна</td><td>Цена спроса в коридоре или цена закрытия</td><td><span class="tag tag-blue">1</span></td></tr>
+        <tr><td>F</td><td>Нет активного рынка, есть актуальная цена НРД (рублевые облигации, метод рыночных цен)</td><td>Цена ЦЦ НРД</td><td><span class="tag tag-blue">2</span></td></tr>
+        <tr><td>G</td><td>Нет активного рынка, есть цена НРД по DCF (рублевые облигации)</td><td>Цена ЦЦ НРД (DCF)</td><td><span class="tag tag-blue">2</span></td></tr>
+        <tr><td>H</td><td>Нет активного рынка, нет цены НРД уровня 2 - есть индексный DCF (субординированные / еврооблигации)</td><td>Цена ЦЦ НРД (индексный DCF)</td><td><span class="tag tag-purple">3</span></td></tr>
+        <tr><td>I</td><td>Инвестиционный пай ПИФ - расчетная стоимость пая</td><td>РСП ПИФ на дату &lt;= даты СС, не ранее последнего рабочего дня предыдущего месяца</td><td><span class="tag tag-blue">2</span></td></tr>
+        <tr><td>J</td><td>Облигация с частичным погашением - дата частичного погашения наступила</td><td>СС без суммы частичного погашения</td><td>любой</td></tr>
+        <tr><td>K</td><td>Облигация с купоном - дата окончания купонного периода наступила</td><td>СС без суммы купонного дохода</td><td>любой</td></tr>
+        <tr><td>L</td><td>Расчет на нерабочий день</td><td>Использование предшествующего торгового дня</td><td>любой</td></tr>
+        <tr><td>M</td><td>Бумага с признаком обесценения</td><td>Применение Алгоритма 1 / 2 с учетом особенностей п. 6 методики</td><td>любой</td></tr>
+        <tr><td>N</td><td>Расчет в рублях по формуле метода без дисконтирования</td><td>СС = ОКРУГЛ(Цена * Кол-во * Курс; 2) + ОКРУГЛ(ОКРУГЛ(Купон * Кол-во; 2) * Курс; 2)</td><td>любой</td></tr>
+        <tr><td>O</td><td>Расчет в рублях по формуле метода дисконтирования</td><td>СС = ОКРУГЛ((DCF - Купон) * Кол-во * Курс; 2) + ОКРУГЛ(ОКРУГЛ(Купон * Кол-во; 2) * Курс; 2)</td><td>любой</td></tr>
+      </tbody>
+    </table>
+    <p class="legend">Каждый сценарий должен сопровождаться записью в макете <code>СправкаРасчет</code> с явным указанием уровня, источника и параметров расчета.</p>
+  </div>
+
+  <div class="section" id="sec11">
+    <h2>11. Критерии приемки</h2>
+    <ul>
+      <li>Обработка зарегистрирована в <code>ДополнительныеОтчетыИОбработки</code> в базе <strong>Wim_Mo</strong> и подключается через правило определения котировок для портфеля Атомфонда без ошибок.</li>
+      <li>Возвращаемая <code>ТаблицаКотировок</code> совместима со структурой <code>УстановкаКотировокЦБ</code> (минимально - <code>Актив</code>, <code>ОпределяемаяКотировка</code>, <code>НКД</code>, <code>Биржа</code>, <code>Валюта</code>, <code>УровеньЦены</code>, <code>ДатаОпределения</code>).</li>
+      <li>Все 15 тестовых сценариев (A - O) проходят с фиксацией уровня и источника цены.</li>
+      <li>На каждую бумагу формируется строка справки расчета с указанием: рынок, уровень, источник, цена в исходной валюте, курс, итоговая СС в рублях, флаги исключений.</li>
+      <li>При невозможности определения цены в таблицу записывается строка с <code>ОпределяемаяКотировка = 0</code> и <strong>в журнал ошибок добавляется диагностика</strong> (без молчаливого нуля).</li>
+      <li>Используются совокупные результаты основной и дополнительных сессий Мосбиржи (визуально проверяется в тексте запроса и в справке расчета).</li>
+      <li>Сверка итоговых СС с контрольным набором, предоставленным НПФ / СД Инфинитум - расхождение в пределах допуска округления.</li>
+    </ul>
+  </div>
+
+  <div class="section" id="sec12">
+    <h2>12. Риски и ограничения</h2>
+    <div class="warn">
+      <div class="warn-title">Риски разработки</div>
+      <ul>
+        <li>Список доступных биржевых площадок в Приложении А методики Атомфонда не приложен к выгруженным материалам (стр. 14 - 28). До начала разработки уточнить у постановщика (ZKarplyukova) актуальный перечень.</li>
+        <li>Условия признака обесценения (п. 6 методики) выходят за пределы выгруженных страниц. Уточнить отдельно.</li>
+        <li>Связанная задача IMDEV-8653 (упомянута в комментариях) может содержать смежные требования - проверить пересечение перед фиксацией состава работ.</li>
+      </ul>
+    </div>
+    <div class="danger">
+      <div class="danger-title">Жесткие ограничения</div>
+      <ul>
+        <li>Реализация выполняется <strong>только в Wim_Mo</strong>. Не смешивать с контурами Wim_Du, WIM_FIn.</li>
+        <li>Не использовать конкатенацию строк в SQL-запросах - только параметры.</li>
+        <li>Не использовать HTML-сущности в коде 1С (<code>&amp;Параметр</code>, не <code>&amp;amp;Параметр</code>).</li>
+        <li>Не вносить изменения в базовую конфигурацию - только новая внешняя обработка (epf).</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="footer">
+    Задание разработчику. IMDEV-8611. Подготовлено на основе материалов задачи (стр. 14 - 28), карточки Jira и анализа базовой конфигурации Wim_Mo.
+  </div>
+
+</div>
+</body>
+</html>
