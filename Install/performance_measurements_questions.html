@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="ru">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Замеры производительности - вопросы и проработка</title>
+    <style>
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background: #f5f7fb;
+            color: #1f2937;
+            line-height: 1.5;
+        }
+        .wrap {
+            max-width: 1100px;
+            margin: 0 auto;
+            padding: 24px;
+        }
+        .card {
+            background: #ffffff;
+            border-radius: 10px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+            padding: 20px;
+            margin-bottom: 18px;
+        }
+        h1, h2, h3 {
+            margin-top: 0;
+            color: #0f172a;
+        }
+        .badge {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 999px;
+            font-size: 12px;
+            color: #ffffff;
+            background: #17a2b8;
+            margin-right: 8px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+        th, td {
+            border: 1px solid #dbe2ea;
+            padding: 10px;
+            text-align: left;
+            vertical-align: top;
+        }
+        th {
+            background: #eef6ff;
+        }
+        .ok { color: #28a745; font-weight: bold; }
+        .risk { color: #dc3545; font-weight: bold; }
+        .info {
+            border-left: 5px solid #17a2b8;
+            background: #eaf8fc;
+            padding: 12px;
+            border-radius: 6px;
+        }
+        ul {
+            margin: 8px 0 0 20px;
+        }
+        code {
+            background: #f2f4f8;
+            padding: 2px 6px;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+    <div class="wrap">
+        <div class="card">
+            <h1>Замеры производительности: вопросы и проработка</h1>
+            <p>
+                Документ фиксирует вопросы для внедрения подсистемы БСП "Оценка производительности",
+                согласования ключевых операций и перехода к измеримому управлению производительностью ДУ.
+            </p>
+            <div>
+                <span class="badge">Инфо #17a2b8</span>
+                <span class="badge" style="background:#28a745;">Успех #28a745</span>
+                <span class="badge" style="background:#dc3545;">Риск #dc3545</span>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2>1. Цель и ожидаемый результат</h2>
+            <div class="info">
+                Основная цель: понять, где именно система "тормозит", как именно "тормозит" и в каком количественном выражении.
+                Результат: единый отчет с временем выполнения, весом замера и временем на единицу.
+            </div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Ключевая операция</th>
+                        <th>Вес замера</th>
+                        <th>Время, сек</th>
+                        <th>Время на единицу</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr><td>Утренние операции</td><td>10000</td><td>300</td><td>0.03</td></tr>
+                    <tr><td>Обработка сделок</td><td>30000</td><td>650</td><td>0.021</td></tr>
+                    <tr><td>Вечерние операции</td><td>15000</td><td>7200</td><td>0.48</td></tr>
+                    <tr><td>Установка котировок ЦБ</td><td>5</td><td>15</td><td>3</td></tr>
+                    <tr><td>Переоценка ЦБ (БУ)</td><td>15000</td><td>6000</td><td>0.4</td></tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="card">
+            <h2>2. Контрольные вопросы к внедрению</h2>
+            <h3>2.1 Перенос подсистемы БСП</h3>
+            <ul>
+                <li>Какая версия подсистемы "Оценка производительности" выбрана как базовая (ДУ 20 / ПИФ / МО)?</li>
+                <li>Есть ли план унификации версий для последующей выгрузки в ЦУП КИП?</li>
+                <li>Подготовлен ли перечень зависимостей при переносе (общие модули, роли, регламентные задания)?</li>
+            </ul>
+
+            <h3>2.2 Список ключевых операций</h3>
+            <ul>
+                <li>Согласован ли полный список операций с бизнесом и сопровождением?</li>
+                <li>Включены ли внешние отчеты и редкие ночные регламенты?</li>
+                <li>Есть ли ответственный по каждой операции (владелец SLA)?</li>
+            </ul>
+
+            <h3>2.3 Качество метрик</h3>
+            <ul>
+                <li>Во всех замерах передается <code>ВесЗамера</code> (число обработанных сущностей)?</li>
+                <li>Заполняется ли комментарий JSON с техническими параметрами (например, число потоков)?</li>
+                <li>Разделяются ли измерения по контурам: интерактив, регламент, интеграции?</li>
+            </ul>
+        </div>
+
+        <div class="card">
+            <h2>3. Риски и точки отказа</h2>
+            <ul>
+                <li><span class="risk">Риск:</span> неполный список операций приведет к ложной картине производительности.</li>
+                <li><span class="risk">Риск:</span> отсутствие веса замера не даст сравнивать результаты между днями.</li>
+                <li><span class="risk">Риск:</span> разные версии подсистемы между базами нарушат экспорт и сопоставимость данных.</li>
+                <li><span class="ok">Контрмера:</span> утвердить матрицу "операция - ответственный - SLA - метрика веса".</li>
+            </ul>
+        </div>
+
+        <div class="card">
+            <h2>4. Практический план запуска</h2>
+            <ol>
+                <li>Перенести и включить подсистему в ДУ 15.</li>
+                <li>Инструментировать ключевые процедуры: "НачатьЗамер" и "ЗавершитьЗамер".</li>
+                <li>Зафиксировать JSON-формат комментария замера.</li>
+                <li>Согласовать каталог ключевых операций с бизнесом.</li>
+                <li>Подготовить регулярный HTML-отчет по замерам.</li>
+            </ol>
+        </div>
+    </div>
+</body>
+</html>
