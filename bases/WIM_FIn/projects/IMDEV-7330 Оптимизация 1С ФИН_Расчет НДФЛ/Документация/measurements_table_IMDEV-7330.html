@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>IMDEV-7330 - таблица замеров</title>
+  <style>
+    :root {
+      --text: #212529;
+      --muted: #6c757d;
+      --border: #dee2e6;
+      --head-bg: #e7f5f8;
+      --row-alt: #f8f9fa;
+      --info: #17a2b8;
+      --ok: #28a745;
+    }
+    body {
+      font-family: "Segoe UI", system-ui, sans-serif;
+      color: var(--text);
+      line-height: 1.5;
+      max-width: 1080px;
+      margin: 1.5rem auto;
+      padding: 0 1rem;
+    }
+    h1 {
+      font-size: 1.35rem;
+      font-weight: 600;
+      margin-bottom: 0.35rem;
+      color: #0c5460;
+    }
+    .lead {
+      font-size: 0.96rem;
+      margin: 0 0 1rem 0;
+    }
+    .meta {
+      color: var(--muted);
+      font-size: 0.88rem;
+      margin-bottom: 1.25rem;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.9rem;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+    }
+    th, td {
+      border: 1px solid var(--border);
+      padding: 0.58rem 0.62rem;
+      vertical-align: top;
+    }
+    th {
+      background: var(--head-bg);
+      color: #0c5460;
+      font-weight: 600;
+      text-align: left;
+    }
+    tbody tr:nth-child(even) {
+      background: var(--row-alt);
+    }
+    .num {
+      width: 2.4rem;
+      text-align: center;
+      white-space: nowrap;
+    }
+    .code {
+      font-family: Consolas, "Courier New", monospace;
+      font-size: 0.82rem;
+      word-break: break-word;
+    }
+    .metrics {
+      font-family: Consolas, "Courier New", monospace;
+      font-size: 0.8rem;
+      color: #0d5e6e;
+      white-space: nowrap;
+    }
+    .note {
+      margin-top: 1.4rem;
+      padding: 0.9rem 1rem;
+      border-left: 4px solid var(--info);
+      background: #f0f9fb;
+    }
+    .note h2 {
+      font-size: 1rem;
+      margin: 0 0 0.45rem 0;
+      color: #0c5460;
+    }
+    .note p {
+      margin: 0.3rem 0;
+    }
+    .note strong {
+      color: var(--ok);
+    }
+    footer {
+      margin-top: 1.6rem;
+      font-size: 0.8rem;
+      color: var(--muted);
+    }
+    .solution-link {
+      display: inline-block;
+      margin-top: 0.3rem;
+      font-family: "Segoe UI", system-ui, sans-serif;
+      font-size: 0.78rem;
+      color: #0d6efd;
+      text-decoration: none;
+      border-bottom: 1px dashed #0d6efd;
+    }
+    .solution-link:hover { border-bottom-style: solid; }
+    .plan {
+      margin-top: 1.5rem;
+      padding: 1rem 1.1rem;
+      border-left: 4px solid #0d6efd;
+      background: #f4f8ff;
+      border-radius: 4px;
+    }
+    .plan h2 {
+      font-size: 1rem;
+      margin: 0 0 0.55rem 0;
+      color: #0a58ca;
+    }
+    .plan ol { margin: 0; padding-left: 1.25rem; }
+    .plan li { margin: 0.4rem 0; }
+    .plan a { color: #0a58ca; }
+  </style>
+</head>
+<body>
+  <h1>IMDEV-7330: таблица замеров проблемных участков</h1>
+  <p class="lead">Сводные замеры по наиболее затратным операциям расчета НДФЛ. Таблица показывает точки вызова, количество обращений, суммарное время выполнения и долю в общем времени.</p>
+  <p class="meta">Контекст: оптимизация расчета НДФЛ в документах по портфелю и управляющей компании, включая операции из расширения <code>VTB_NDFL_Exchange</code>.</p>
+
+  <table>
+    <thead>
+      <tr>
+        <th class="num">N</th>
+        <th>Модуль</th>
+        <th>Строка</th>
+        <th>Операция в точке замера</th>
+        <th>Кол-во</th>
+        <th>Время (сек)</th>
+        <th>%</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td class="num">1</td>
+        <td class="code">Документ.НачислениеНДФЛПоПортфелю.МодульОбъекта</td>
+        <td class="metrics">7 544</td>
+        <td class="code">ОбщиеОбороты = Запрос.Выполнить().Выгрузить();
+          <br><a class="solution-link" href="imdev7330_ndfl_mass_precalc_oborots.html">&rarr; План оптимизации: массовый предрасчёт <code>ОбщиеОбороты</code> по портфелям</a>
+        </td>
+        <td class="metrics">204</td>
+        <td class="metrics">138,479385</td>
+        <td class="metrics">22,13</td>
+      </tr>
+      <tr>
+        <td class="num">2</td>
+        <td class="code">Документ.НачислениеНДФЛПоУправляющейКомпании.МодульМенеджера</td>
+        <td class="metrics">3 069</td>
+        <td class="code">Пакет = Запрос.ВыполнитьПакет();
+          <br><a class="solution-link" href="imdev7330_ndfl_uk_nkd_mass_precalc_byclient.html">&rarr; План оптимизации: массовый предрасчёт <code>РасходыПоНКД</code> по клиентам</a>
+        </td>
+        <td class="metrics">194</td>
+        <td class="metrics">100,749815</td>
+        <td class="metrics">16,10</td>
+      </tr>
+      <tr>
+        <td class="num">3</td>
+        <td class="code">Документ.НачислениеНДФЛПоПортфелю.МодульОбъекта</td>
+        <td class="metrics">6 457</td>
+        <td class="code">Пакет = Запрос.ВыполнитьПакет();</td>
+        <td class="metrics">102</td>
+        <td class="metrics">50,427467</td>
+        <td class="metrics">8,06</td>
+      </tr>
+      <tr>
+        <td class="num">4</td>
+        <td class="code">VTB_NDFL_Exchange Документ.НачислениеНДФЛПоПортфелю.МодульОбъекта</td>
+        <td class="metrics">348</td>
+        <td class="code">Пакет = Запрос.ВыполнитьПакет();</td>
+        <td class="metrics">204</td>
+        <td class="metrics">42,821299</td>
+        <td class="metrics">6,84</td>
+      </tr>
+      <tr>
+        <td class="num">5</td>
+        <td class="code">РегистрНакопления.ИнвестиционныйВычет.МодульМенеджера</td>
+        <td class="metrics">89</td>
+        <td class="code">РезультатЗапроса = Запрос.Выполнить();</td>
+        <td class="metrics">97</td>
+        <td class="metrics">24,582869</td>
+        <td class="metrics">3,93</td>
+      </tr>
+      <tr>
+        <td class="num">6</td>
+        <td class="code">Документ.НачислениеНДФЛПоПортфелю.МодульОбъекта</td>
+        <td class="metrics">8 150</td>
+        <td class="code">МассивПакетов = Запрос.ВыполнитьПакет();</td>
+        <td class="metrics">102</td>
+        <td class="metrics">15,744373</td>
+        <td class="metrics">2,52</td>
+      </tr>
+      <tr>
+        <td class="num">7</td>
+        <td class="code">Документ.НачислениеНДФЛПоУправляющейКомпании.МодульМенеджера</td>
+        <td class="metrics">2 552</td>
+        <td class="code">РезультатЗапроса = Запрос.Выполнить();</td>
+        <td class="metrics">300</td>
+        <td class="metrics">12,121493</td>
+        <td class="metrics">1,94</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="note">
+    <h2>Краткий вывод</h2>
+    <p><strong>Основные точки нагрузки &mdash; две, суммарно ~38,2% общего времени:</strong></p>
+    <ul>
+      <li><strong>Строка 1 (22,13%)</strong> &mdash; <code>ОбщиеОбороты = Запрос.Выполнить().Выгрузить();</code> в модуле объекта документа <code>НачислениеНДФЛПоПортфелю</code> (строка 7 544): запрос вызывается отдельно на каждый портфель текущего клиента.</li>
+      <li><strong>Строка 2 (16,10%)</strong> &mdash; <code>Пакет = Запрос.ВыполнитьПакет();</code> в модуле менеджера документа <code>НачислениеНДФЛПоУправляющейКомпании</code> (строка 3 069): запрос вызывается отдельно на каждую пару <em>(Клиент, Дата)</em>, фактически дублируется по разным документам начислений одного клиента.</li>
+    </ul>
+    <p><strong>В первую очередь рассматриваем подход &laquo;один запрос на всех клиентов сразу&raquo;:</strong> каждую из этих двух тяжёлых точек переводим с режима &laquo;запрос на портфель / пару (Клиент, Дата)&raquo; на массовый запрос, который один раз отрабатывает по массиву портфелей или клиентов выборки, возвращает данные с разрезом по портфелю/клиенту, и далее идёт раздача из кэша через короткое замыкание в перехватах расширения <code>NDFL_RDU</code>. Это убирает повторные обращения к СУБД и позволяет использовать единые временные таблицы.</p>
+    <p><strong>Во вторую очередь &mdash; параллельные расчёты:</strong> когда массовые предрасчёты готовы, основной цикл обработки <code>ФормированиеНачисленийНДФЛ</code> разбивается на N пачек клиентов и запускается параллельно через <code>ДлительныеОперации.ВыполнитьПроцедуруВНесколькоПотоков</code>. Кэши предрасчёта передаются в каждое фоновое задание срезом по клиентам пачки, чтобы внутри потока продолжало работать короткое замыкание и не было повторных тяжёлых запросов.</p>
+    <p>Прочие точки в таблице (строки 3&ndash;7) после этих двух шагов либо снимаются автоматически (потому что используют те же предрасчитанные данные), либо имеют существенно меньший вес и оптимизируются по остаточному принципу.</p>
+  </div>
+
+  <div class="plan">
+    <h2>План оптимизации</h2>
+    <ol>
+      <li><strong>Строка 1 (22,13%) &mdash; <code>ОбщиеОбороты</code> в модуле объекта документа Портфеля.</strong>
+        Массовый предрасчёт по массиву портфелей: один пакетный запрос на всю выборку, кэш в разрезе портфеля, короткое замыкание в перехвате <code>NDFL_RDU_ОбщиеОбороты</code>.
+        План: <a href="imdev7330_ndfl_mass_precalc_oborots.html">imdev7330_ndfl_mass_precalc_oborots.html</a>.</li>
+      <li><strong>Строка 2 (16,10%) &mdash; <code>РасходыПоНКДПоВидуОбращаемости</code> в модуле менеджера документа УК.</strong>
+        Массовый предрасчёт по массиву клиентов на единую дату: один пакет вместо повторных вызовов на пары <em>(Клиент, Документ начисления)</em>, кэш в разрезе <code>(Клиент, Дата)</code>, короткое замыкание в перехвате модуля менеджера УК.
+        План: <a href="imdev7330_ndfl_uk_nkd_mass_precalc_byclient.html">imdev7330_ndfl_uk_nkd_mass_precalc_byclient.html</a>.</li>
+      <li><strong>Распараллеливание расчётов по пачкам клиентов.</strong>
+        После того как массовые предрасчёты готовы, обработка <code>ФормированиеНачисленийНДФЛ.СоздатьДокументы</code> разбивает выборку на N пачек клиентов (константа <code>НДФЛ_МаксимумПотоковПараллельногоРасчёта</code>) и запускает их параллельно через <code>ДлительныеОперации.ВыполнитьПроцедуруВНесколькоПотоков</code>. Кэши предрасчёта передаются срезом по клиентам пачки в каждое фоновое задание.
+        План: <a href="imdev7330_ndfl_parallel_calculation.html">imdev7330_ndfl_parallel_calculation.html</a>.</li>
+    </ol>
+  </div>
+
+  <footer>IMDEV-7330. Таблица замеров для анализа и приоритизации оптимизации.</footer>
+</body>
+</html>
