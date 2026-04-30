@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
-# Load extension NDFL_RDU from project XML into server IB, then dump to CFE.
+# Load extension NDFL_RDU from project XML into server IB, update extension DB cfg, dump CFE.
 # Usage (optional user): .\load_ndfl_rdu_to_wim_fin_and_dump_cfe.ps1 -UserName Admin -Password ""
+# If IB uses trusted/OS auth, omit -UserName / -Password.
 
 [CmdletBinding()]
 param(
@@ -38,11 +39,12 @@ $loadArgs = @{
     ConfigDir      = $ExtDir
     Extension      = $ExtensionName
     Mode           = "Full"
+    UpdateDB       = $true
 }
 if ($UserName) { $loadArgs.UserName = $UserName }
 if ($Password) { $loadArgs.Password = $Password }
 
-Write-Host "Step 1: LoadConfigFromFiles -> $InfoBaseServer\$InfoBaseRef extension $ExtensionName"
+Write-Host "Step 1: LoadConfigFromFiles + UpdateDBCfg -> $InfoBaseServer\$InfoBaseRef extension $ExtensionName"
 & $LoadScript @loadArgs
 if ($LASTEXITCODE -ne 0) {
     Write-Error "db-load-xml failed with exit $LASTEXITCODE"
