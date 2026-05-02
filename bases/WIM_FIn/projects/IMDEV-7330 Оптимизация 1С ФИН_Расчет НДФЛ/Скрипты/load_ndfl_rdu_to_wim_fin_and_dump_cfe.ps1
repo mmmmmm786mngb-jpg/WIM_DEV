@@ -1,12 +1,13 @@
 # -*- coding: utf-8 -*-
 # Load extension NDFL_RDU from project XML into server IB, update extension DB cfg, dump CFE.
-# Usage (optional user): .\load_ndfl_rdu_to_wim_fin_and_dump_cfe.ps1 -UserName Admin -Password ""
-# If IB uses trusted/OS auth, omit -UserName / -Password.
+# Usage: .\load_ndfl_rdu_to_wim_fin_and_dump_cfe.ps1
+# With 1C user: add -UserName Admin -Password "..."
+# OS (trusted) auth on server: omit -UserName / -Password (default for localhost/WIM_FIn).
 
 [CmdletBinding()]
 param(
     [string]$InfoBaseServer = "localhost",
-    [string]$InfoBaseRef = "WIM_FIN",
+    [string]$InfoBaseRef = "WIM_FIn",
     [string]$UserName,
     [string]$Password
 )
