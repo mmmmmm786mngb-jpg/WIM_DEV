@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>IMDEV-7330: промпт - параллельное формирование НДФЛ (NDFL_RDU)</title>
+    <style>
+        body { font-family: "Segoe UI", Tahoma, sans-serif; line-height: 1.5; max-width: 900px; margin: 24px auto; padding: 0 16px 40px; color: #212529; }
+        h1 { font-size: 1.35rem; border-bottom: 2px solid #17a2b8; padding-bottom: 8px; }
+        h2 { font-size: 1.1rem; margin-top: 22px; color: #0a58ca; }
+        .meta { background: #f8f9fa; border-left: 4px solid #17a2b8; padding: 12px 16px; margin: 14px 0; }
+        .pattern { background: #e7f1ff; border: 1px solid #b6d4fe; padding: 10px 14px; margin: 12px 0; border-radius: 4px; }
+        .warn { background: #fff3cd; border: 1px solid #ffc107; padding: 10px 14px; margin: 12px 0; border-radius: 4px; }
+        ul li { margin: 6px 0; }
+        pre { background: #263238; color: #eceff1; padding: 12px 14px; overflow-x: auto; border-radius: 4px; font-size: 0.88rem; }
+        code { font-family: Consolas, monospace; background: #f1f3f5; padding: 1px 5px; border-radius: 3px; }
+        footer { margin-top: 28px; font-size: 0.85rem; color: #6c757d; border-top: 1px solid #dee2e6; padding-top: 10px; }
+        a { color: #0d6efd; }
+    </style>
+</head>
+<body>
+
+<h1>IMDEV-7330: промпт на доработку (параллельность уже реализованного контура NDFL_RDU)</h1>
+
+<div class="meta">
+    <strong>Контекст:</strong> в расширении NDFL_RDU уже есть параллельное формирование начислений НДФЛ через БСП
+    <code>ДлительныеОперации</code>: оркестратор в <strong>менеджере</strong> обработки, воркер пачки в <strong>модуле объекта</strong>,
+    вход с формы по команде «Создать документы».<br>
+    <strong>Постановка (PRD):</strong>
+    <a href="imdev7330_постановка_параллельное_формирование_НДФЛ_БСП.html">imdev7330_постановка_параллельное_формирование_НДФЛ_БСП.html</a>.<br>
+    <strong>Техническая спецификация:</strong>
+    <a href="imdev7330_ndfl_longops_n_batches_spec.html">imdev7330_ndfl_longops_n_batches_spec.html</a>,
+    <a href="imdev7330_ndfl_parallel_calculation.html">imdev7330_ndfl_parallel_calculation.html</a>.
+</div>
+
+<h2>1. Уже заложенная архитектура (не ломать)</h2>
+<div class="pattern">
+    <ul>
+        <li><strong>Форма</strong> <code>ФормированиеНачисленийНДФЛ</code>, модуль формы: перехват <code>&amp;Вместо("СоздатьДокументы")</code> —
+            при <code>K &gt; 0</code> и пустом отборе <code>Объект.Клиент</code> запускается ДО оркестратора; иначе синхронный
+            <code>СоздатьДокументыНаСервере</code> как в типовой форме.</li>
+        <li><strong>K:</strong> константа расширения <code>NDFL_RDU_ЧислоПараллельныхПачекФормированияНДФЛ</code> (<code>0</code> = параллельный режим выключен).</li>
+        <li><strong>Менеджер обработки:</strong> снимок <code>NDFL_RDU_СнимокОбъектаОбработки</code>, разбиение строк ТЧ
+            <code>NDFL_RDU_ИмяТЧПарДляПараллельногоНДФЛ()</code> (сейчас <code>ДатыДокументов</code>),
+            <code>NDFL_RDU_РазбитьСтрокиНаПачки</code>, слияние соседних пачек по общему клиенту, запуск пачек
+            <code>ДлительныеОперации.ВыполнитьВФоне("ДлительныеОперации.ВыполнитьПроцедуруМодуляОбъектаОбработки", ...)</code>
+            с методом <code>NDFL_RDU_ВыполнитьПачкуФормированияНДФЛ</code>, опрос по <code>ИдентификаторЗадания</code>,
+            сшивка лога и табличного документа.</li>
+        <li><strong>Модуль объекта:</strong> <code>NDFL_RDU_ВыполнитьПачкуФормированияНДФЛ</code> — десериализация параметров пачки из XML,
+            заполнение объекта из снимка, вызов типового контура создания документов по строкам пачки; результат пачки во ВХ по
+            <code>АдресРезультатаПачки</code>.</li>
+    </ul>
+</div>
+
+<h2>2. Правила для новых доработок в этом же контуре</h2>
+<ul>
+    <li>Любой тяжелый <strong>предрасчет до цикла по строкам</strong> (кэш оборотов, НКД по клиентам и т.п.) выполнять в
+        <strong>оркестраторе</strong> на полном снимке <strong>один раз</strong>, затем передавать в параметры каждой пачки сериализуемую структуру
+        (расширить <code>NDFL_RDU_ПодготовитьПараметрыПачки</code> / снимок по контракту XML), а не дублировать запросы внутри каждого воркера.</li>
+    <li>В воркере объект обработки содержит <strong>только подмножество строк</strong> ТЧ и обнуленные отборы по номерам строк пачки — не рассчитывать на полный набор строк как в интерактивном объекте.</li>
+    <li><strong>Сеансовые кэши</strong> (например <code>ПараметрыСеанса.ОбщиеЗначения</code>): не пересекать пачки; либо не использовать глобальную защелку в воркере, либо ключ с уникальным идентификатором пачки и гарантированная очистка.</li>
+    <li>Опрос ФЗ пачек: каждый раз получать задание через
+        <code>ФоновыеЗадания.НайтиПоУникальномуИдентификатору</code> — <strong>не кэшировать</strong> объект
+        <code>ФоновоеЗадание</code> между итерациями (состояние не обновится).</li>
+    <li>При отмене родительской ДО — отменять активные дочерние ФЗ пачек (паттерн уже в менеджере).</li>
+    <li>Прогресс БСП: обновлять через существующие процедуры оркестратора, не блокировать сеанс формы дольше типового ожидания ДО.</li>
+</ul>
+
+<h2>3. Критерии проверки после изменений</h2>
+<ul>
+    <li><code>K = 0</code> и отбор по клиенту: поведение как у типовой обработки (без регрессий).</li>
+    <li><code>K &gt; 1</code>: корректная сшивка лога, отсутствие гонок по общим ресурсам, корректная отмена.</li>
+    <li>Сравнение результата массового прогона с эталоном при <code>K = 1</code> (одна пачка) на тестовой выборке.</li>
+</ul>
+
+<div class="warn">
+    <strong>Не смешивать</strong> с оптимизацией справки-расчета по портфелю (<code>ОбщаяСправкаРасчет2021</code>): параллельный контур касается только обработки
+    <code>ФормированиеНачисленийНДФЛ</code> и перехватываемых ею процедур.
+</div>
+
+<h2>4. Файлы-якоря</h2>
+<pre>NDFL_RDU/DataProcessors/ФормированиеНачисленийНДФЛ/Forms/Форма/Ext/Form/Module.bsl
+NDFL_RDU/DataProcessors/ФормированиеНачисленийНДФЛ/Ext/ManagerModule.bsl
+NDFL_RDU/DataProcessors/ФормированиеНачисленийНДФЛ/Ext/ObjectModule.bsl</pre>
+
+<footer>
+    Файл: <code>imdev7330_parallel_ndfl_dev_prompt.html</code> — краткий промпт для доработок с учетом уже сделанной параллельности NDFL_RDU.
+</footer>
+
+</body>
+</html>
