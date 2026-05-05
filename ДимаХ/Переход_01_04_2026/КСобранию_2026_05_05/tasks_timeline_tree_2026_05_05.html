@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Дерево сроков и зависимостей - 05.05.2026</title>
+  <style>
+    :root {
+      --bg: #f2f5fb;
+      --panel: #ffffff;
+      --text: #13243d;
+      --muted: #617086;
+      --line: #cbd5e1;
+      --arrow: #7b8ca5;
+      --du: #1d4fa0;
+      --fin: #0e6b52;
+      --mo: #b84d0e;
+      --vendor: #6b3fa0;
+      --test: #7c2d12;
+      --ok-bg: #e0f2fe;
+      --ok-bd: #7dd3fc;
+      --plan-bg: #ffedd5;
+      --plan-bd: #fdba74;
+      --due-bg: #fee2e2;
+      --due-bd: #fca5a5;
+      --vendor-bg: #ede9fe;
+      --vendor-bd: #b4a3e8;
+      --test-bg: #fff7ed;
+      --test-bd: #fdba74;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font: 14px/1.45 "Segoe UI", Arial, sans-serif;
+    }
+    .page {
+      max-width: 1560px;
+      margin: 0 auto;
+      padding: 18px 16px 26px;
+    }
+    .hero {
+      background: linear-gradient(120deg, #102a56, #1b4d99);
+      color: #fff;
+      border-radius: 12px;
+      padding: 16px 18px;
+      margin-bottom: 14px;
+    }
+    .hero h1 {
+      margin: 0 0 6px;
+      font-size: 1.3rem;
+    }
+    .hero p {
+      margin: 0;
+      font-size: 12.5px;
+      opacity: 0.92;
+    }
+    .legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 9px 18px;
+      margin-bottom: 14px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+    .dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      display: inline-block;
+      margin-right: 6px;
+      vertical-align: -1px;
+    }
+    .dot-du { background: var(--du); }
+    .dot-fin { background: var(--fin); }
+    .dot-mo { background: var(--mo); }
+    .dot-vendor { background: var(--vendor); }
+    .dot-test { background: var(--test); }
+
+    .wrap {
+      border: 1px solid var(--line);
+      background: var(--panel);
+      border-radius: 12px;
+      overflow-x: auto;
+      padding: 12px;
+    }
+    .grid {
+      min-width: 1460px;
+      display: grid;
+      grid-template-columns: 220px repeat(6, 200px);
+      grid-template-rows: 58px repeat(5, minmax(98px, auto));
+      gap: 10px;
+      position: relative;
+    }
+    .grid > * { z-index: 1; }
+    .svg-layer {
+      position: absolute;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: 0;
+    }
+    .corner, .date-col, .lane {
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: #f8fafc;
+    }
+    .corner {
+      grid-column: 1;
+      grid-row: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--muted);
+    }
+    .date-col {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+      padding: 5px;
+    }
+    .date-main {
+      font-size: 13px;
+      font-weight: 800;
+    }
+    .date-note {
+      margin-top: 1px;
+      font-size: 11px;
+      color: var(--muted);
+    }
+    .lane {
+      padding: 10px;
+      border-left-width: 4px;
+      border-left-style: solid;
+      display: flex;
+      align-items: center;
+    }
+    .lane h2 {
+      margin: 0;
+      font-size: 12px;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+    .lane-du { border-left-color: var(--du); }
+    .lane-fin { border-left-color: var(--fin); }
+    .lane-mo { border-left-color: var(--mo); }
+    .lane-vendor { border-left-color: var(--vendor); }
+    .lane-test { border-left-color: var(--test); }
+
+    .card {
+      border: 1px solid var(--line);
+      border-left: 4px solid;
+      border-radius: 10px;
+      background: #fff;
+      padding: 8px 9px;
+      box-shadow: 0 1px 2px rgba(12, 34, 64, 0.06);
+      font-size: 12px;
+      line-height: 1.35;
+    }
+    .card h3 {
+      margin: 0 0 4px;
+      font-size: 12px;
+      line-height: 1.28;
+    }
+    .card p { margin: 0; color: #4b5c73; }
+    .card-du { border-left-color: var(--du); }
+    .card-fin { border-left-color: var(--fin); }
+    .card-mo { border-left-color: var(--mo); }
+    .card-vendor {
+      border-left-color: var(--vendor);
+      background: var(--vendor-bg);
+      border-color: var(--vendor-bd);
+    }
+    .card-test {
+      border-left-color: var(--test);
+      background: var(--test-bg);
+      border-color: var(--test-bd);
+    }
+    .stack {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .badge {
+      margin-top: 6px;
+      display: inline-block;
+      padding: 2px 7px;
+      border: 1px solid;
+      border-radius: 999px;
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+    .b-plan { background: var(--plan-bg); border-color: var(--plan-bd); color: #7c2d12; }
+    .b-due { background: var(--due-bg); border-color: var(--due-bd); color: #7f1d1d; }
+    .b-prod { background: var(--ok-bg); border-color: var(--ok-bd); color: #0c4a6e; }
+    .b-vendor { background: var(--vendor-bg); border-color: var(--vendor-bd); color: #4c1d95; }
+    .b-test { background: var(--test-bg); border-color: var(--test-bd); color: #7c2d12; }
+
+    .foot {
+      margin-top: 12px;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: var(--panel);
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.45;
+      padding: 10px 12px;
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <div class="hero">
+      <h1>Дерево задач по срокам</h1>
+      <p>Принцип: зависимости только в рамках одной системы. Вендорный поток идет последовательно, после передачи работ отдельной стрелкой идет приемка (тестирование) 1-2 дня.</p>
+    </div>
+
+    <div class="legend">
+      <span><span class="dot dot-du"></span> ДУ 1.5</span>
+      <span><span class="dot dot-fin"></span> ФИН 2.0</span>
+      <span><span class="dot dot-mo"></span> МО</span>
+      <span><span class="dot dot-vendor"></span> Вендор (последовательный поток)</span>
+      <span><span class="dot dot-test"></span> Приемка/тест 1-2 дня</span>
+    </div>
+
+    <div class="wrap">
+      <div class="grid">
+        <svg class="svg-layer" viewBox="0 0 1460 570" preserveAspectRatio="none" aria-hidden="true">
+          <defs>
+            <marker id="arr" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+              <path d="M0,0 L8,4 L0,8 z" fill="#7b8ca5"></path>
+            </marker>
+          </defs>
+
+          <path d="M280,125 C430,125 450,125 700,125" stroke="#7b8ca5" stroke-width="2" fill="none" marker-end="url(#arr)"></path>
+          <path d="M700,125 C810,125 850,125 1080,125" stroke="#7b8ca5" stroke-width="2" fill="none" marker-end="url(#arr)"></path>
+
+          <path d="M500,235 C620,235 640,345 700,345" stroke="#7b8ca5" stroke-width="2" fill="none" marker-end="url(#arr)"></path>
+          <path d="M700,345 C820,345 850,235 1080,235" stroke="#7b8ca5" stroke-width="2" fill="none" marker-end="url(#arr)"></path>
+
+          <path d="M700,455 C840,455 880,455 1080,455" stroke="#7b8ca5" stroke-width="2" fill="none" marker-end="url(#arr)"></path>
+
+          <path d="M1080,345 C1220,345 1220,455 1080,455" stroke="#6b3fa0" stroke-width="2.4" fill="none" marker-end="url(#arr)"></path>
+
+          <path d="M1080,455 C1225,455 1225,565 1080,565" stroke="#7c2d12" stroke-width="2.6" fill="none" marker-end="url(#arr)"></path>
+        </svg>
+
+        <div class="corner">Системы / сроки</div>
+        <div class="date-col" style="grid-column:2;grid-row:1;">
+          <div class="date-main">06.05.2026</div>
+          <div class="date-note">ранний старт</div>
+        </div>
+        <div class="date-col" style="grid-column:3;grid-row:1;">
+          <div class="date-main">12.05.2026</div>
+          <div class="date-note">контроль</div>
+        </div>
+        <div class="date-col" style="grid-column:4;grid-row:1;">
+          <div class="date-main">13.05.2026</div>
+          <div class="date-note">старт МО</div>
+        </div>
+        <div class="date-col" style="grid-column:5;grid-row:1;">
+          <div class="date-main">14.05.2026</div>
+          <div class="date-note">выход в прод</div>
+        </div>
+        <div class="date-col" style="grid-column:6;grid-row:1;">
+          <div class="date-main">01.06.2026</div>
+          <div class="date-note">поздний старт</div>
+        </div>
+        <div class="date-col" style="grid-column:7;grid-row:1;">
+          <div class="date-main">Текущий поток</div>
+          <div class="date-note">без фикс. даты</div>
+        </div>
+
+        <div class="lane lane-du" style="grid-column:1;grid-row:2;"><h2>ДУ 1.5</h2></div>
+        <div class="card card-du" style="grid-column:2;grid-row:2;">
+          <h3>Отчеты ДУ, выгрузка в КК, HNWI</h3>
+          <p>Плановый старт 06.05.2026, сейчас идет согласование даты старта.</p>
+          <span class="badge b-plan">Старт</span>
+        </div>
+        <div class="stack" style="grid-column:5;grid-row:2;">
+          <div class="card card-du">
+            <h3>Исполнение сделок Т</h3>
+            <p>Релиз 1.5.27.11, ориентир выхода в прод 14.05.2026.</p>
+            <span class="badge b-prod">Прод</span>
+          </div>
+          <div class="card card-du">
+            <h3>Исполнение сделок Т-1 и вечерние регламенты</h3>
+            <p>Та же дата прод 14.05.2026, общий релизный пакет.</p>
+            <span class="badge b-prod">Прод</span>
+          </div>
+        </div>
+
+        <div class="lane lane-fin" style="grid-column:1;grid-row:3;"><h2>ФИН 2.0</h2></div>
+        <div class="card card-fin" style="grid-column:3;grid-row:3;">
+          <h3>IMDEV-7330 (НДФЛ)</h3>
+          <p>Срок 12.05.2026: передача постановки Avancore на внесение изменений.</p>
+          <span class="badge b-due">Дедлайн</span>
+        </div>
+        <div class="card card-fin" style="grid-column:5;grid-row:3;">
+          <h3>IMDEV-8665 (регламенты МО под РДУ)</h3>
+          <p>Плановый старт работ 13.05.2026.</p>
+          <span class="badge b-plan">Старт</span>
+        </div>
+        <div class="card card-fin" style="grid-column:7;grid-row:3;">
+          <h3>Регламенты ФИН под РДУ</h3>
+          <p>Оплата согласована, начаты работы.</p>
+          <span class="badge b-vendor">Вендор</span>
+        </div>
+
+        <div class="lane lane-mo" style="grid-column:1;grid-row:4;"><h2>МО</h2></div>
+        <div class="card card-mo" style="grid-column:6;grid-row:4;">
+          <h3>IMDEV-8829 (утро ФО к торгам)</h3>
+          <p>Плановый старт работ 01.06.2026.</p>
+          <span class="badge b-plan">Старт</span>
+        </div>
+
+        <div class="lane lane-vendor" style="grid-column:1;grid-row:5;"><h2>Вендор</h2></div>
+        <div class="card card-vendor" style="grid-column:5;grid-row:5;">
+          <h3>IMAPPS-36274 / 36275</h3>
+          <p>Независимая вендорная задача: оплата согласована, начаты работы.</p>
+          <span class="badge b-vendor">Независимо</span>
+        </div>
+        <div class="card card-vendor" style="grid-column:7;grid-row:5;">
+          <h3>Последовательная передача в общий поток</h3>
+          <p>После завершения вендор передает выполненные работы в общий контур.</p>
+          <span class="badge b-vendor">Передача</span>
+        </div>
+
+        <div class="lane lane-test" style="grid-column:1;grid-row:6;"><h2>ТЕСТ</h2></div>
+        <div class="card card-test" style="grid-column:7;grid-row:6;">
+          <h3>Приемка работ (тестирование)</h3>
+          <p>Отдельная задача после передачи от вендора: отвлекает общий поток на 1-2 дня.</p>
+          <span class="badge b-test">1-2 дня</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="foot">
+      Важный принцип схемы: зависимости показаны только по логике потока внутри системы и вендорного контура.<br>
+      От вендора к тесту ведет отдельная стрелка возврата в общий поток на приемку.
+    </div>
+  </div>
+</body>
+</html>
