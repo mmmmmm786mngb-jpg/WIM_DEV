@@ -1,0 +1,780 @@
+<!doctype html>
+<html lang="ru">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Отчет о ходе оптимизации — фрагмент 1.2, 1.3, 1.3.5, 1.4 (05.05.2026)</title>
+    <style>
+        :root {
+            --bg: #f2f5fb;
+            --paper: #fff;
+            --border: #d4dded;
+            --text: #1a2333;
+            --muted: #5a6780;
+            --du: #1d4fa0;
+            --fin: #0e7a5f;
+            --pif: #7b3aa8;
+            --du-light: #e8f0ff;
+            --fin-light: #e2f5f0;
+            --pif-light: #f3ecff;
+            --yellow-bg: #fffbe6;
+            --yellow-br: #efc94c;
+            --research-bg: #f0f6ff;
+            --research-br: #a0c0f0;
+            --sub-bg: #f5f5f5;
+            --sub-br: #b0bac8;
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            margin: 0;
+            background: var(--bg);
+            color: var(--text);
+            font: 13.5px/1.55 "Segoe UI", Arial, sans-serif;
+        }
+
+        .wrap { max-width: 1280px; margin: 0 auto; padding: 20px; }
+
+        /* ── Шапка ── */
+        .header {
+            background: linear-gradient(130deg, #112952, #1b4799);
+            color: #fff;
+            border-radius: 10px;
+            padding: 18px 22px;
+            margin-bottom: 18px;
+        }
+        .header h1 { margin: 0 0 6px; font-size: 22px; }
+        .header .meta { font-size: 12px; opacity: 0.82; line-height: 1.7; }
+
+        /* ── Разделы по статусам (1.1-1.5) ── */
+        .block {
+            background: var(--paper);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            margin-bottom: 14px;
+            overflow: hidden;
+        }
+        .block-title {
+            margin: 0;
+            padding: 10px 14px;
+            font-size: 14px;
+            font-weight: 700;
+            background: #f6f8ff;
+            border-bottom: 1px solid var(--border);
+        }
+        .block-body { padding: 14px 14px 6px; }
+
+        /* ── База ── */
+        .base { margin-bottom: 16px; }
+        .base-label {
+            display: inline-block;
+            font-size: 13px;
+            font-weight: 700;
+            border-radius: 5px;
+            padding: 3px 11px;
+            margin-bottom: 8px;
+            background: transparent;
+        }
+        .base-label.du    { color: var(--fin); border: 2px solid var(--fin); }
+        .base-label.fin   { color: var(--fin); border: 2px solid var(--fin); }
+        .base-label.pif   { color: var(--fin); border: 2px solid var(--fin); }
+        .base-label.cross { color: var(--fin); border: 2px solid var(--fin); }
+        .base-label.mo    { color: #b84d0e; border: 2px solid #c96d33; }
+
+        /* ── Задача — таблица ── */
+        .task { margin-bottom: 10px; }
+        .task-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-weight: 600;
+            font-size: 13px;
+            padding: 7px 10px;
+            border-radius: 6px 6px 0 0;
+            border: 1px solid var(--border);
+            border-bottom: none;
+            background: var(--du-light);
+            color: var(--du);
+        }
+
+        .task-badge {
+            display: inline-block;
+            font-size: 10px;
+            font-weight: 700;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+            border-radius: 4px;
+            padding: 2px 6px;
+            flex-shrink: 0;
+            color: #fff;
+            background: var(--du);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 12.5px;
+            border: 1px solid var(--border);
+            border-radius: 0 0 6px 6px;
+            overflow: hidden;
+        }
+        th {
+            background: #f0f4fc;
+            font-weight: 700;
+            padding: 6px 8px;
+            border: 1px solid var(--border);
+            text-align: left;
+            white-space: nowrap;
+        }
+        td {
+            padding: 5px 8px;
+            border: 1px solid var(--border);
+            vertical-align: top;
+        }
+        .ok   { color: #1a7d35; font-weight: 700; }
+        .warn { color: #b56c00; font-weight: 700; }
+        .bad  { color: #b52020; font-weight: 700; }
+        .muted { color: var(--muted); }
+
+        /* ── Дерево: исследования и подзадачи ── */
+        .tree { margin: 6px 0 10px 10px; }
+
+        .research {
+            display: flex;
+            gap: 6px;
+            margin-bottom: 5px;
+        }
+        .research-icon {
+            flex-shrink: 0;
+            color: #b07800;
+            font-weight: 700;
+            font-size: 11px;
+            padding-top: 2px;
+            white-space: nowrap;
+        }
+        .research-body {
+            background: #fffbe6;
+            border: 1px solid #f0c940;
+            border-left: 3px solid #e0a800;
+            border-radius: 6px;
+            padding: 5px 8px;
+            font-size: 12px;
+            flex: 1;
+        }
+        .research-body b { color: #7a5500; }
+
+        /* Вложенная таблица замеров (вечерний регламент) — мелкий шрифт */
+        .profiler-mini-wrap {
+            margin-top: 8px;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+            border: 1px solid #e2d8b8;
+            border-radius: 5px;
+            background: #fffef7;
+        }
+        table.profiler-mini {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 9.5px;
+            line-height: 1.35;
+            border: none;
+            border-radius: 0;
+            overflow: visible;
+        }
+        table.profiler-mini th,
+        table.profiler-mini td {
+            padding: 3px 5px;
+            border: 1px solid var(--border);
+            vertical-align: top;
+        }
+        table.profiler-mini th {
+            background: #eef2ff;
+            font-size: 9px;
+            font-weight: 700;
+            white-space: nowrap;
+        }
+        table.profiler-mini td.pm-rank {
+            text-align: center;
+            font-weight: 700;
+            background: #f4f6ff;
+            width: 2em;
+        }
+        table.profiler-mini td.pm-num {
+            text-align: right;
+            font-variant-numeric: tabular-nums;
+            white-space: nowrap;
+        }
+        table.profiler-mini td.pm-code {
+            font-family: Consolas, "Courier New", monospace;
+            font-size: 9px;
+            word-break: break-word;
+        }
+        table.profiler-mini td.pm-mod {
+            word-break: break-word;
+        }
+        .profiler-mini-caption {
+            font-size: 9.5px;
+            color: var(--muted);
+            margin-top: 5px;
+            line-height: 1.45;
+        }
+
+        .subtask {
+            display: flex;
+            gap: 6px;
+            margin-top: 4px;
+            margin-left: 18px;
+        }
+        .subtask-icon {
+            flex-shrink: 0;
+            color: #555;
+            font-size: 10px;
+            font-weight: 700;
+            padding-top: 2px;
+            white-space: nowrap;
+        }
+        .subtask-body {
+            background: var(--sub-bg);
+            border: 1px solid var(--sub-br);
+            border-radius: 5px;
+            padding: 4px 8px;
+            font-size: 12px;
+        }
+
+        .note {
+            background: #fff5f5;
+            border: 1px solid #f5c0c0;
+            border-left: 3px solid #dc3545;
+            border-radius: 5px;
+            padding: 4px 8px;
+            font-size: 12px;
+            color: #7a1a1a;
+            margin-top: 5px;
+        }
+
+        /* ── Статус цели ── */
+        .status {
+            display: inline-block;
+            border-radius: 4px;
+            padding: 3px 8px;
+            font-size: 11px;
+            font-weight: 700;
+            white-space: nowrap;
+        }
+        .status.done    { background: #d4f0dc; color: #1a6b35; border: 1px solid #90d4a8; }
+        .status.close   { background: #fff3cd; color: #856404; border: 1px solid #ffc107; }
+        .status.not-done { background: #fde8e8; color: #9b2020; border: 1px solid #f5a0a0; }
+        .status.no-data { background: #f0f2f5; color: #6b7280; border: 1px solid #d1d5db; }
+        .status.pending { background: #e8f0ff; color: #1d4fa0; border: 1px solid #9ec0ff; }
+
+        /* ── Топ медленных операций ── */
+        .timing-list {
+            margin: 4px 0 0 0;
+            padding: 0;
+            list-style: none;
+        }
+        .timing-list li {
+            display: flex;
+            justify-content: space-between;
+            border-bottom: 1px dashed #d4dded;
+            padding: 2px 0;
+            font-size: 11.5px;
+        }
+        .timing-list li:last-child { border-bottom: none; }
+        .timing-time { font-family: monospace; color: #b04000; }
+
+        /* Вендор: максимально заметные статусы (совещание). РДУ + оплата — голубой; 8662 без оплаты — оранжевый */
+        .vendor-spotlight-rdu {
+            margin: 12px 0 14px;
+            padding: 16px 18px;
+            font-size: 16px;
+            font-weight: 800;
+            line-height: 1.4;
+            text-align: center;
+            letter-spacing: 0.02em;
+            color: #021a30;
+            background: linear-gradient(165deg, #f5fcff 0%, #b8e8ff 30%, #4db8ff 65%, #1a8cff 100%);
+            border: 4px solid #0055aa;
+            border-radius: 10px;
+            box-shadow:
+                0 0 0 3px #fff,
+                0 0 0 6px #0066cc,
+                0 8px 28px rgba(0, 85, 170, 0.5);
+        }
+        .vendor-spotlight-rdu b {
+            color: #003366;
+            font-size: 1.12em;
+            text-transform: uppercase;
+        }
+        .vendor-spotlight-8662 {
+            margin: 12px 0 14px;
+            padding: 14px 16px;
+            font-size: 15px;
+            font-weight: 800;
+            line-height: 1.45;
+            text-align: center;
+            color: #2a1000;
+            background: linear-gradient(165deg, #fff8e8 0%, #ffd080 35%, #ff9a33 72%, #ff7700 100%);
+            border: 4px solid #cc4400;
+            border-radius: 10px;
+            box-shadow: 0 0 0 2px #fff, 0 6px 22px rgba(204, 68, 0, 0.45);
+        }
+        .vendor-spotlight-8662 b { color: #8b2500; }
+    </style>
+</head>
+<body>
+<div class="wrap">
+
+    <div class="header">
+        <h1>Отчет о ходе оптимизации производительности — фрагмент для совещания (1.2, 1.3, 1.3.5, 1.4)</h1>
+        <div class="meta">
+            Шаблон по файлу Задачи_01042026.txt &nbsp;|&nbsp; Базы: ДУ (ДУ 1.5), ФИН (ДУ 2.0), МО &nbsp;|&nbsp; 05.05.2026 &nbsp;|&nbsp; Источник: tasks_tree_table_grouped_2026_04_28.html (обрезка разделов)
+        </div>
+    </div>
+
+    <!-- ==================== 1.2 К РЕЛИЗУ ==================== -->
+    <div class="block">
+        <h2 class="block-title">1.2 - К РЕЛИЗУ</h2>
+        <div class="block-body">
+            <div class="base">
+                <div class="base-label du">ДУ (ДУ 1.5)</div>
+                <!-- Исполнение Т -->
+                <div class="task">
+                    <div class="task-header"><span class="task-badge">Задача</span> Исполнение сделок Т (открытие, запись)</div>
+                    <table>
+                        <tr>
+                            <th>БЫЛО</th>
+                            <th>СТАЛО (осн.)</th>
+                            <th>СТАЛО (доп. опт.)</th>
+                            <th>Потоки (тест)</th>
+                            <th>Целевое время</th>
+                            <th>Статус цели</th>
+                        </tr>
+                        <tr>
+                            <td>36 мин на 30 000 сделок<br><span class="muted" style="font-size:11px">= 1.20 мин / 1 000 сд.</span></td>
+                            <td class="ok">15 мин на 30 000 сделок<br><span class="muted" style="font-size:11px">= 0.50 мин / 1 000 сд.</span></td>
+                            <td class="ok">32 мин на 100 000 сделок<br><span class="muted" style="font-size:11px">= 0.32 мин / 1 000 сд.</span></td>
+                            <td>12</td>
+                            <td>30 мин на 30 000 сделок<br><span class="muted" style="font-size:11px">= 1.00 мин / 1 000 сд.</span></td>
+                            <td><span class="status done">Достигнута</span><br><span class="muted" style="font-size:11px">0.50 минут/1000 объектов &lt; цели 1.00 минут/1000 объектов</span></td>
+                        </tr>
+                    </table>
+                    <div class="note">Примечание: Выйдет в релизе 1.5.27.11 , дата выхода не определена</div>
+                </div>
+
+                <!-- Исполнение Т-1 -->
+                <div class="task">
+                    <div class="task-header"><span class="task-badge">Задача</span> Исполнение сделок Т-1 (проведение)</div>
+                    <table>
+                        <tr>
+                            <th>БЫЛО</th>
+                            <th>СТАЛО (осн.)</th>
+                            <th>СТАЛО (доп. опт.)</th>
+                            <th>Потоки (тест)</th>
+                            <th>Целевое время</th>
+                            <th>Статус цели</th>
+                        </tr>
+                        <tr>
+                            <td>3 ч 36 мин на 30 000 сделок<br><span class="muted" style="font-size:11px">= 7.20 мин / 1 000 сд.</span></td>
+                            <td class="ok">45 мин на 30 000 сделок<br><span class="muted" style="font-size:11px">= 1.50 мин / 1 000 сд.</span></td>
+                            <td class="ok">1 ч 47 мин на 100 000 сделок<br><span class="muted" style="font-size:11px">= 1.07 мин / 1 000 сд.</span></td>
+                            <td>12</td>
+                            <td>2 ч на 100 000 сделок<br><span class="muted" style="font-size:11px">= 1.20 мин / 1 000 сд.</span></td>
+                            <td><span class="status done">Достигнута</span><br><span class="muted" style="font-size:11px">1.07 минут/1000 объектов &lt; цели 1.20 минут/1000 объектов</span></td>
+                        </tr>
+                    </table>
+                    <div class="note">Примечание: Выйдет в релизе 1.5.27.11 , дата выхода не определена</div>
+                </div>
+
+                <!-- Вечерние регламенты -->
+                <div class="task">
+                    <div class="task-header"><span class="task-badge">Задача</span> Вечерние регламентные операции</div>
+                    <table>
+                        <tr>
+                            <th>БЫЛО</th>
+                            <th>СТАЛО (опт. 1)</th>
+                            <th>СТАЛО (доп. опт.)</th>
+                            <th>Потоки (тест)</th>
+                            <th>Целевое время</th>
+                            <th>Статус цели</th>
+                        </tr>
+                        <tr>
+                            <td rowspan="3">13 ч 52 мин на 15 000 договоров, 1 поток<br><span class="muted" style="font-size:11px">= 55.5 мин / 1 000 дог.</span></td>
+                            <td rowspan="3">1 ч 50 мин на 3 000 договоров<br><span class="muted" style="font-size:11px">= 36.7 мин / 1 000 дог.</span></td>
+                            <td class="ok">2 ч 48 мин на 13 578 договоров<br><span class="muted" style="font-size:11px">= 12.4 мин / 1 000 дог.</span></td>
+                            <td>5</td>
+                            <td rowspan="3">2 ч 30 мин на 25 000 договоров<br><span class="muted" style="font-size:11px">= 6.0 мин / 1 000 дог.</span></td>
+                            <td rowspan="3"><span class="status done">Достигнута</span><br><span class="muted" style="font-size:11px">5.3 минут/1000 объектов &lt; цели 6.0 минут/1000 объектов<br>(замер 12 пот., 30 000 дог.)</span></td>
+                        </tr>
+                        <tr>
+                            <td class="ok">2 ч 23 мин на 15 000 договоров<br><span class="muted" style="font-size:11px">= 9.5 мин / 1 000 дог.</span></td>
+                            <td>7</td>
+                        </tr>
+                        <tr>
+                            <td class="ok">2 ч 38 мин на 30 000 договоров<br><span class="muted" style="font-size:11px">= 5.3 мин / 1 000 дог.</span></td>
+                            <td>12</td>
+                        </tr>
+                    </table>
+                    <div class="note">Примечание: Выйдет в релизе 1.5.27.11 , дата выхода не определена</div>
+                    <p class="muted" style="font-size:11px;margin:6px 2px 0;">Исследования по задаче вынесены в раздел 1.5.</p>
+                </div>
+            </div>
+        </div><!-- block-body -->
+    </div><!-- 1.2 К РЕЛИЗУ -->
+
+    <!-- ==================== 1.3 В РАБОТЕ ==================== -->
+    <div class="block">
+        <h2 class="block-title">1.3 - В РАБОТЕ</h2>
+        <div class="block-body">
+            <div class="base">
+                <div class="base-label fin">ФИН (ДУ 2.0)</div>
+                <div class="task">
+                    <div class="task-header"><span class="task-badge">Задача</span> Расчет НДФЛ в ФИН <span class="muted" style="font-weight:400">(IMDEV-7330)</span></div>
+                    <p class="muted" style="font-size:11.5px;margin:6px 2px 10px;line-height:1.45">
+                        <b>Два слоя отчётности:</b> (1) замеры по длительности расчёта (28.04.2026; в таблице ниже — выборка 100 док.) — базовая линия «до» по стенду;
+                        (2) таблица топа узких мест по сводному профилю из <code>measurements_table_IMDEV-7330.html</code> (другой объём/контур замера, чем мартовский профиль на ~1 400 операциях; доли по времени в процентах сопоставимы с документом-источником).
+                    </p>
+                    <table>
+                        <tr>
+                            <th>БЫЛО (исходная фиксация)</th>
+                            <th>«Как сейчас», 100 док. (28.04.2026)</th>
+                            <th>СТАЛО (после оптимизации)</th>
+                            <th>Целевое время</th>
+                            <th>Статус цели</th>
+                        </tr>
+                        <tr>
+                            <td>2 ч 33 мин на 1 000 операций<br><span class="muted" style="font-size:11px">= 153.0 мин / 1 000 оп.</span></td>
+                            <td>624 сек на 100 документов<br><span class="muted" style="font-size:11px">06:19:39—06:30:11; 6,24 сек/док.; ~104 мин / 1 000 оп. (линейно); 0 ошибок; ДО выката расширения</span></td>
+                            <td class="ok" style="background:#f0fdf4">В расширении <code>NDFL_RDU</code> закрыты пункты плана <b>1-4</b>: <code>ТаблицаПродаж</code>, запрет пустых документов УК, массовые предрасчёты <code>ОбщиеОбороты</code> и <code>РасходыПоНКД</code>, перехват <code>ИнвестиционныйВычетУКД</code>. Пункт <b>5</b> (распараллеливание расчёта по пачкам в обработке <code>ФормированиеНачисленийНДФЛ</code>, в том числе общий кэш оборотов по портфелям до запуска пачек) <b>ещё выполняется разработчиком</b>. Повторный профиль на тех же объёмах рекомендован после завершения п.5 и выката для подтверждения снижения долей строк 1-2 топа.</td>
+                            <td>1 ч на 1 000 операций<br><span class="muted" style="font-size:11px">= 60.0 мин / 1 000 оп.</span></td>
+                            <td><span class="status pending">В работе</span><br><span class="muted" style="font-size:11px">п.1-4 в расширении закрыты; п.5 (пачки) дорабатывается разработчиком; затем замер «после» и сравнение с целью 60 мин/1000; базовая линия «до»: ~104 мин/1000 (экстраполяция с 100 док.) и 153 мин/1000 (исходная фиксация)</span></td>
+                        </tr>
+                    </table>
+                    <p class="muted" style="font-size:11.5px;font-weight:700;margin:10px 2px 6px">Топ узких мест (сводная таблица замеров, как в документации IMDEV-7330)</p>
+                    <div class="profiler-mini-wrap">
+                        <table class="profiler-mini">
+                            <thead>
+                                <tr>
+                                    <th>№</th>
+                                    <th>Модуль / объект</th>
+                                    <th>Стр.</th>
+                                    <th>Операция в точке замера</th>
+                                    <th>Кол-во</th>
+                                    <th>Время, с</th>
+                                    <th>%</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr><td class="pm-rank">1</td><td class="pm-mod">Документ.НачислениеНДФЛПоПортфелю.МодульОбъекта</td><td class="pm-num">7&nbsp;544</td><td class="pm-code">ОбщиеОбороты = Запрос.Выполнить().Выгрузить();</td><td class="pm-num">204</td><td class="pm-num">138,479385</td><td class="pm-num">22,13</td></tr>
+                                <tr><td class="pm-rank">2</td><td class="pm-mod">Документ.НачислениеНДФЛПоУправляющейКомпании.МодульМенеджера</td><td class="pm-num">3&nbsp;069</td><td class="pm-code">Пакет = Запрос.ВыполнитьПакет();</td><td class="pm-num">194</td><td class="pm-num">100,749815</td><td class="pm-num">16,10</td></tr>
+                                <tr><td class="pm-rank">3</td><td class="pm-mod">Документ.НачислениеНДФЛПоПортфелю.МодульОбъекта</td><td class="pm-num">6&nbsp;457</td><td class="pm-code">Пакет = Запрос.ВыполнитьПакет();</td><td class="pm-num">102</td><td class="pm-num">50,427467</td><td class="pm-num">8,06</td></tr>
+                                <tr><td class="pm-rank">4</td><td class="pm-mod">VTB_NDFL_Exchange Документ.НачислениеНДФЛПоПортфелю.МодульОбъекта</td><td class="pm-num">348</td><td class="pm-code">Пакет = Запрос.ВыполнитьПакет();</td><td class="pm-num">204</td><td class="pm-num">42,821299</td><td class="pm-num">6,84</td></tr>
+                                <tr><td class="pm-rank">5</td><td class="pm-mod">РегистрНакопления.ИнвестиционныйВычет.МодульМенеджера</td><td class="pm-num">89</td><td class="pm-code">РезультатЗапроса = Запрос.Выполнить();</td><td class="pm-num">97</td><td class="pm-num">24,582869</td><td class="pm-num">3,93</td></tr>
+                                <tr><td class="pm-rank">6</td><td class="pm-mod">Документ.НачислениеНДФЛПоПортфелю.МодульОбъекта</td><td class="pm-num">8&nbsp;150</td><td class="pm-code">МассивПакетов = Запрос.ВыполнитьПакет();</td><td class="pm-num">102</td><td class="pm-num">15,744373</td><td class="pm-num">2,52</td></tr>
+                                <tr><td class="pm-rank">7</td><td class="pm-mod">Документ.НачислениеНДФЛПоУправляющейКомпании.МодульМенеджера</td><td class="pm-num">2&nbsp;552</td><td class="pm-code">РезультатЗапроса = Запрос.Выполнить();</td><td class="pm-num">300</td><td class="pm-num">12,121493</td><td class="pm-num">1,94</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="profiler-mini-caption">Источник чисел и выводов: <code>bases/WIM_FIn/projects/IMDEV-7330 Оптимизация 1С ФИН_Расчет НДФЛ/Документация/measurements_table_IMDEV-7330.html</code>.
+                    Контекст: оптимизация в расширении <code>NDFL_RDU</code>, в замере учтён <code>VTB_NDFL_Exchange</code>. По исходу профиля «до» две верхние строки дают около <b>38&nbsp;%</b> времени (около <b>22&nbsp;%</b> — обороты по портфелям в строке 7544, около <b>16&nbsp;%</b> — пакет по УК в строке 3069). Детализация плана (п.1-4 закрыты, п.5 пачек в работе у разработчика) и ссылки на спецификации — в том же HTML-файле.</div>
+
+                    <div class="tree">
+                        <div class="research">
+                            <div class="research-icon">[Research]</div>
+                            <div class="research-body">
+                                <b>Замеры по длительности на документах (28.04.2026).</b> В таблице выше приведён замер на 100 док.: 624 с (0 ошибок, интервал 06:19:39-06:30:11); линейная оценка к 1 000 операциям — около 104 мин/1000. Исходная фиксация по задаче — 153 мин/1000. Это не результат оптимизации, а отправная точка для сравнения с целью 60 мин/1000.
+                            </div>
+                        </div>
+                        <div class="subtask">
+                            <div class="subtask-icon">[SubTask]</div>
+                            <div class="subtask-body">
+                                <b>IMDEV-7330</b> — Оптимизация 1С ФИН: расчёт НДФЛ. Документация замеров и топа: <code>bases/WIM_FIn/projects/IMDEV-7330 Оптимизация 1С ФИН_Расчет НДФЛ/Документация/measurements_table_IMDEV-7330.html</code>; доп. материалы: <code>bases/WIM_FIn/projects/IMDEV-7330 Тест/Замеры.docx</code>. Jira: <code>https://jira/browse/IMDEV-7330</code>.
+                            </div>
+                        </div>
+                        <div class="research">
+                            <div class="research-icon">[Research]</div>
+                            <div class="research-body">
+                                <b>План оптимизации</b> (расширение <code>NDFL_RDU</code>; полный текст и ссылки на спецификации в разделе «План оптимизации» файла <code>measurements_table_IMDEV-7330.html</code>). По факту разработки закрыты пункты <b>1-4</b>; пункт <b>5</b> ещё выполняется разработчиком:
+                                <ol style="margin:8px 0 0 0;padding-left:20px;font-size:12px;line-height:1.5">
+                                    <li><code>ТаблицаПродаж</code> (много мелких обращений): табличный параметр регистраторов, временная таблица, индекс, соединение с регистром вместо длинного условия по массиву регистраторов в тексте запроса (УК и портфель).</li>
+                                    <li>Запрет записи пустых документов УК, если не заполнены <code>Начисления</code>, <code>Удержания</code> и <code>ИнвестиционныйВычетПоПортфелям</code>.</li>
+                                    <li>Строка 1 топа (22,13%): <code>ОбщиеОбороты</code> в объекте <code>НачислениеНДФЛПоПортфелю</code> — массовый предрасчёт по портфелям выборки и кэш, ранний возврат без повторного запроса.</li>
+                                    <li>Строка 2 топа (16,10%): <code>РасходыПоНКДПоВидуОбращаемости</code> (менеджер УК) — предрасчёт по парам клиент/дата, кэш в <code>ПараметрыСеанса.ОбщиеЗначения</code>; перехват <code>ИнвестиционныйВычетУКД</code> — один вызов вместо двух.</li>
+                                    <li><b>В работе у разработчика:</b> распараллеливание расчёта по пачкам в обработке <code>ФормированиеНачисленийНДФЛ</code>, общий кэш оборотов по портфелям до запуска пачек; число пачек — константа <code>NDFL_RDU_ЧислоПараллельныхПачекФормированияНДФЛ</code>.</li>
+                                </ol>
+                                <span class="muted" style="font-size:11.5px;display:block;margin-top:8px;line-height:1.45">Повторный замер после выката на тех же объёмах имеет смысл после завершения п.5; он нужен для подтверждения снижения долей строк 1-2 таблицы топа и достижения цели 1 ч на 1000 операций.</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div><!-- block-body -->
+    </div><!-- 1.3 В РАБОТЕ -->
+
+    <!-- ==================== 1.3.5 ПЕРЕДАНО ВЕНДОРУ АВАНКОР ==================== -->
+    <div class="block">
+        <h2 class="block-title">1.3.5 - ПЕРЕДАНО ВЕНДОРУ АВАНКОР</h2>
+        <div class="block-body">
+            <div class="base">
+                <div class="base-label fin">ФИН (ДУ 2.0)</div>
+                <!-- Регламенты РДУ -->
+                <div class="task">
+                    <div class="task-header"><span class="task-badge">Задача</span> Оптимизация выполнения регламентных операций в ФИН под РДУ</div>
+                    <table>
+                        <tr>
+                            <th>БЫЛО</th>
+                            <th>СТАЛО (по DR-тесту)</th>
+                            <th>Потоки (тест)</th>
+                            <th>Целевое время</th>
+                            <th>Статус цели</th>
+                        </tr>
+                        <tr>
+                            <td>1.5 ч на 10 500 договоров за 1 день<br><span class="muted" style="font-size:11px">= 8.57 мин / 1 000 дог.</span></td>
+                            <td class="ok">19 мин на 10 500 договоров<br><span class="muted" style="font-size:11px">= 1.81 мин / 1 000 дог. (повторный замер 14.04.2026); линейно на 30 000 ~54.3 мин</span></td>
+                            <td>DR-тест на 10 500: 95 мин (типовой), 20 мин и 19 мин (новый алгоритм)</td>
+                            <td>1.5 ч на 30 000 договоров за 1 день<br><span class="muted" style="font-size:11px">= 3.00 мин / 1 000 дог.</span></td>
+                            <td><span class="status done">Достигнута</span><br><span class="muted" style="font-size:11px">1.81 минут/1000 объектов &lt; цели 3.00 минут/1000 объектов</span></td>
+                        </tr>
+                    </table>
+                    <div class="vendor-spotlight-rdu" role="status">
+                        С вендором <b>Avancore</b>: <b>согласована оплата</b>. Доработки по теме задачи <b>взяты вендором в разработку</b>.
+                    </div>
+                    <p class="muted" style="font-size:11.5px;font-weight:700;margin:10px 2px 6px">На 30 000 договоров (линейная экстраполяция от 10 500)</p>
+                    <table>
+                        <tr>
+                            <th>Сравнение</th>
+                            <th>БЫЛО (оценка на 30 000)</th>
+                            <th>СТАЛО (оценка на 30 000)</th>
+                            <th>мин / 1 000 (стало)</th>
+                        </tr>
+                        <tr>
+                            <td>Отчет 14.04 vs DR 14.04 (лучший)</td>
+                            <td>~257 мин (~4 ч 17 мин), 8.57 мин / 1 000</td>
+                            <td class="ok">~54.3 мин (~54 мин), 1.81 мин / 1 000</td>
+                            <td class="ok">1.81</td>
+                        </tr>
+                        <tr>
+                            <td>DR типовой vs DR 14.04 (лучший)</td>
+                            <td>~271.4 мин (~4 ч 31 мин), 9.05 мин / 1 000</td>
+                            <td class="ok">~54.3 мин (~54 мин), 1.81 мин / 1 000</td>
+                            <td class="ok">1.81</td>
+                        </tr>
+                        <tr>
+                            <td>DR 10.04 (20 мин) на 30 000</td>
+                            <td class="muted" colspan="2">промежуточный замер нового алгоритма</td>
+                            <td class="ok">~57.1 мин, 1.90 мин / 1 000</td>
+                        </tr>
+                    </table>
+                    <div class="tree">
+                        <div class="research">
+                            <div class="research-icon">[Research]</div>
+                            <div class="research-body">
+                                <b>Разделение регламентов РДУ и прочих</b> с целью не замедлять основной расчет договорами РДУ.
+                            </div>
+                        </div>
+                        <div class="subtask">
+                            <div class="subtask-icon">[SubTask]</div>
+                            <div class="subtask-body">
+                                <b>IMAPPS-36274</b> — возможность настройки запуска регламентных операций по фильтру без РДУ. Передана вендору Avancore (Аванкор).
+                            </div>
+                        </div>
+                        <div class="research">
+                            <div class="research-icon">[Research]</div>
+                            <div class="research-body">
+                                <b>Статистика исполнения регламентов, отличия РДУ от прочих:</b> автоматическое исключение расчетов по операциям, где РДУ не нужен.
+                            </div>
+                        </div>
+                        <div class="subtask">
+                            <div class="subtask-icon">[SubTask]</div>
+                            <div class="subtask-body"><b>IMAPPS-36275</b> — по Jira: Open (High), связана с IMAPPS-36274. По сводке report_cards (апр. 2026): в активной работе (анализ статистики РДУ), предварительный топ медленных операций собран.</div>
+                        </div>
+                        <div class="research">
+                            <div class="research-icon">[Research]</div>
+                            <div class="research-body">
+                                <b>Замеры времени расчетов РДУ в 1 поток</b> — топ самых медленных операций.<br>
+                                Предварительные данные (10 620 договоров):
+                                <ul class="timing-list">
+                                    <li><span>%% по банковским счетам по графику выплат</span><span class="timing-time">00:44:50</span></li>
+                                    <li><span>Погашение НКД (БУ)</span><span class="timing-time">00:40:05</span></li>
+                                    <li><span>Определение сделок с отклонением цен (БУ)</span><span class="timing-time">00:26:13</span></li>
+                                    <li><span>Погашение облигаций до переоценки (БУ)</span><span class="timing-time">00:21:42</span></li>
+                                    <li><span>Частичное погашение облигаций (БУ)</span><span class="timing-time">00:18:07</span></li>
+                                    <li><span>Погашение %% по займам (БУ)</span><span class="timing-time">00:10:16</span></li>
+                                    <li><span>Операция по дефолтным облигациям (БУ)</span><span class="timing-time">00:05:52</span></li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <!-- Перерегистрации в ФИН (IMDEV-8662) -->
+                <div class="task">
+                    <div class="task-header"><span class="task-badge">Задача</span> Исполнение после загрузки (ФИН): оптимизация запросов проведения Перерегистрации <span class="muted" style="font-weight:400">(IMDEV-8662)</span></div>
+                    <table>
+                        <tr>
+                            <th>БЫЛО (до оптимизации)</th>
+                            <th>СТАЛО (сквозной тест 24.04.2026)</th>
+                            <th>Потоки (тест)</th>
+                            <th>Целевое время</th>
+                            <th>Статус цели</th>
+                        </tr>
+                        <tr>
+                            <td>1.288 док/сек на 1 поток<br><span class="muted" style="font-size:11px">~32 мин на 30 000 сделок при 12 потоках (расчётно от 1.288 × 12 = 15.456 док/сек) = 1.08 мин / 1 000 сделок</span></td>
+                            <td class="ok">24 мин на 30 000 сделок<br><span class="muted" style="font-size:11px">12 параллельных потоков, общая скорость 20.83 док/сек = ~1.736 док/сек на 1 поток; 0.80 мин / 1 000 сделок; интервал 10:17—10:41 (п. 7 сквозного теста ФИН)</span></td>
+                            <td><b>12 параллельных потоков</b><br><span class="muted" style="font-size:11px">сквозной тест 30 000 сделок (ФИН, ДУ 2.0)</span></td>
+                            <td>30 мин на 30 000 сделок<br><span class="muted" style="font-size:11px">12 потоков; = 1.00 мин / 1 000 сделок (из ПланИТТестирования_8662_Замеры.docx: «оптимизируемое в задаче время проведения Сделок – 30 минут»)</span></td>
+                            <td><span class="status done">Достигнута</span><br><span class="muted" style="font-size:11px">0.80 минут/1000 &lt; цели 1.00 минут/1000; ускорение от исходного ~32 мин — в ~1.35 раза (-25.8%)</span></td>
+                        </tr>
+                    </table>
+                    <div class="vendor-spotlight-8662" role="status">
+                        <b>Рассмотрение со стороны вендора Avancore пока не начато.</b>
+                    </div>
+
+                    <p class="muted" style="font-size:11.5px;font-weight:700;margin:10px 2px 6px">Замеры на 30 000 сделок при 12 потоках (фактический режим запуска)</p>
+                    <table>
+                        <tr>
+                            <th>Замер</th>
+                            <th>Время на 30 000 (12 потоков)</th>
+                            <th>мин / 1 000</th>
+                            <th>Скорость (док/сек)</th>
+                        </tr>
+                        <tr>
+                            <td>БЫЛО (до оптимизации, расчётно)</td>
+                            <td>~32 мин (~32.35 мин)</td>
+                            <td>1.08</td>
+                            <td>1.288 на 1 поток (~15.46 общая)</td>
+                        </tr>
+                        <tr>
+                            <td class="ok">СТАЛО (сквозной тест 24.04, факт)</td>
+                            <td class="ok">24 мин (10:17—10:41)</td>
+                            <td class="ok">0.80</td>
+                            <td class="ok">~1.736 на 1 поток (~20.83 общая)</td>
+                        </tr>
+                        <tr>
+                            <td>ЦЕЛЬ (план из DOCX)</td>
+                            <td>30 мин</td>
+                            <td>1.00</td>
+                            <td>~1.389 на 1 поток (~16.67 общая)</td>
+                        </tr>
+                    </table>
+
+                    <p class="muted" style="font-size:11.5px;font-weight:700;margin:10px 2px 6px">Состав п. 7 ФИН (исполнение Т) — сквозной тест 24.04.2026, 12 потоков, 30 000 сделок</p>
+                    <table>
+                        <tr>
+                            <th>Этап п. 7</th>
+                            <th>Интервал</th>
+                            <th>Длительность</th>
+                            <th>Зона ответственности</th>
+                        </tr>
+                        <tr>
+                            <td>Проведение перерегистраций (сделок)</td>
+                            <td>10:17—10:41</td>
+                            <td><b>24 минуты</b></td>
+                            <td>IMDEV-8662 (текущая задача)</td>
+                        </tr>
+                        <tr>
+                            <td>Исполнение БП Сделки TN</td>
+                            <td>10:41—11:35</td>
+                            <td><b>54 минуты</b></td>
+                            <td>смежные процессы (не относятся к IMDEV-8662)</td>
+                        </tr>
+                        <tr style="background:#f0fdf4">
+                            <td><b>Общее время исполнения Т на 30 тыс.</b></td>
+                            <td><b>10:15—11:35</b></td>
+                            <td class="ok"><b>1 ч 20 мин (80 мин)</b></td>
+                            <td>п. 7 ФИН (целиком)</td>
+                        </tr>
+                    </table>
+                    <p style="font-size:11.5px;color:#334155;margin:6px 2px 6px;line-height:1.45">
+                        <b>Вывод (зафиксирован в документе сквозного теста):</b> для отчётности по скорости важны замеры п. 7 (исполнение Т в ФИН) — <b>1 ч 20 мин на 30 тыс. сделок</b>. Из них 24 мин — собственно зона IMDEV-8662; 54 мин — смежные процессы (БП Сделки TN).
+                    </p>
+
+                    <div class="tree">
+                        <div class="research">
+                            <div class="research-icon">[Research]</div>
+                            <div class="research-body">
+                                <b>Оптимизация 4 запросов в модуле объекта документа «Сделка»:</b>
+                                строки 1160 (ТаблицыПоПродажам_БУ), 1769 (ПолучитьСуммуОНВ), 2551 (ПолучитьАвансы), 2485 (ТаблицыАванса);
+                                а также строка 137 общего модуля «УправлениеПараметрамиПортфеляПовтИспНаВремяСеанса» — кеширование цикла приведения типов
+                                (после оптимизации: ~0.06% времени вместо 3—4%).
+                            </div>
+                        </div>
+                        <div class="subtask">
+                            <div class="subtask-icon">[SubTask]</div>
+                            <div class="subtask-body">
+                                <b>IMDEV-8662</b> — оптимизация запросов проведения Перерегистрации (сделки). Передана вендору Avancore (Аванкор).
+                                Источники замеров: <code>ПланИТТестирования_8662_Замеры.docx</code> (исходная скорость 1.288 док/сек на 1 поток; цель 30 мин на 30 000)
+                                и <code>СквозноеТестирование_Исполнение30000фин.docx</code> (финальный сквозной тест на 30 000 сделок при 12 параллельных потоках, 23—24.04.2026, п. 7 ФИН: 10:15—11:35 = 80 мин).
+                            </div>
+                        </div>
+                        <div class="research">
+                            <div class="research-icon">[Research]</div>
+                            <div class="research-body">
+                                <b>Контекст:</b> зона IMDEV-8662 — блок «Проведение перерегистраций (сделок)» в п. 7 сквозного теста ФИН (10:17—10:41, 24 мин);
+                                остальное время п. 7 — «Исполнение БП Сделки TN» (10:41—11:35, 54 мин), не относится к IMDEV-8662.
+                                Общее время п. 7 на 30 000: 80 мин (2.67 мин / 1 000).
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div><!-- block-body -->
+    </div><!-- 1.3.5 ПЕРЕДАНО ВЕНДОРУ АВАНКОР -->
+
+    <!-- ==================== 1.4 БЛИЖАЙШИЕ ПЛАНЫ ==================== -->
+    <div class="block">
+        <h2 class="block-title">1.4 - БЛИЖАЙШИЕ ПЛАНЫ</h2>
+        <div class="block-body">
+            <p class="muted" style="margin:6px 2px;font-size:12.5px;line-height:1.5">
+                Задача <b>«Расчет НДФЛ в ФИН» (IMDEV-7330)</b> в разделе <b>1.3 — В РАБОТЕ</b> (см. выше): топ узких мест и выводы по долям времени приведены к файлу <code>measurements_table_IMDEV-7330.html</code>; в <code>NDFL_RDU</code> закрыты п.1-4 плана, п.5 (пачки) ещё делает разработчик; затем замер «после».
+            </p>
+            <div class="base">
+                <div class="base-label mo">МО</div>
+                <div class="task">
+                    <div class="task-header"><span class="task-badge">Задача</span> Оптимизация выполнения регламентных операций в МО под РДУ <span class="muted" style="font-weight:400">(IMDEV-8665)</span></div>
+                    <table>
+                        <tr>
+                            <th>БЫЛО</th>
+                            <th>СТАЛО</th>
+                            <th>Потоки (тест)</th>
+                            <th>Целевое время</th>
+                            <th>Статус цели</th>
+                        </tr>
+                        <tr>
+                            <td class="muted">нет данных</td>
+                            <td class="muted">нет данных</td>
+                            <td class="muted">—</td>
+                            <td class="muted">уточняется</td>
+                            <td><span class="status close">Ближайшие планы</span></td>
+                        </tr>
+                    </table>
+                    <p class="muted" style="font-size:11px;margin:6px 2px 0;">Jira: <code>https://jira/browse/IMDEV-8665</code>.</p>
+                </div>
+                <div class="task">
+                    <div class="task-header"><span class="task-badge">Задача</span> Утренняя подготовка фронт-офисных систем к торгам (выгрузка позиций, котировок, расчет рыночных стоимостей в Аванкор ФО РДУ) <span class="muted" style="font-weight:400">(IMDEV-8829)</span></div>
+                    <table>
+                        <tr>
+                            <th>БЫЛО</th>
+                            <th>СТАЛО</th>
+                            <th>Потоки (тест)</th>
+                            <th>Целевое время</th>
+                            <th>Статус цели</th>
+                        </tr>
+                        <tr>
+                            <td class="muted">регламент порядка 5 ч 30 мин; время растет с числом договоров (риск не успеть до начала торгов)</td>
+                            <td class="muted">нет данных</td>
+                            <td class="muted">—</td>
+                            <td class="muted">успеть до начала торгов (метрика уточняется)</td>
+                            <td><span class="status close">Ближайшие планы</span></td>
+                        </tr>
+                    </table>
+                    <p class="muted" style="font-size:11px;margin:6px 2px 0;">Jira: <code>https://jira/browse/IMDEV-8829</code>.</p>
+                </div>
+            </div>
+        </div><!-- block-body -->
+    </div><!-- 1.4 БЛИЖАЙШИЕ ПЛАНЫ -->
+
+
+</div><!-- wrap -->
+</body>
+</html>
