@@ -1,0 +1,549 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Презентация: задачи по статусам и системам — 05.05.2026</title>
+  <style>
+    :root {
+      --good-bg: #dcfce7;
+      --good-bd: #16a34a;
+      --good-fg: #14532d;
+      --bad-bg: #fee2e2;
+      --bad-bd: #dc2626;
+      --bad-fg: #7f1d1d;
+      --wait-bg: #ffedd5;
+      --wait-bd: #ea580c;
+      --wait-fg: #7c2d12;
+      --work-bg: #dbeafe;
+      --work-bd: #2563eb;
+      --work-fg: #1e3a8a;
+      --du: #1d4fa0;
+      --fin: #0f766e;
+      --mo: #c2410c;
+      --slide-bg: #f8fafc;
+      --text: #0f172a;
+      --muted: #64748b;
+    }
+    * { box-sizing: border-box; }
+    html, body { height: 100%; margin: 0; }
+    body {
+      font-family: "Segoe UI", Arial, sans-serif;
+      color: var(--text);
+      background: #0b1220;
+      overflow: hidden;
+    }
+
+    .deck {
+      height: 100vh;
+      position: relative;
+      overflow: hidden;
+    }
+    .slides {
+      display: flex;
+      height: 100%;
+      transition: transform 0.45s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .slide {
+      flex: 0 0 100%;
+      width: 100%;
+      height: 100%;
+      padding: 48px 8vw 100px;
+      background: var(--slide-bg);
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-start;
+      overflow-y: auto;
+    }
+    .slide--dark {
+      background: linear-gradient(145deg, #0f172a 0%, #1e3a5f 100%);
+      color: #e2e8f0;
+    }
+    .slide--dark .slide-lead { color: #94a3b8; }
+    .slide--dark h1 { color: #f8fafc; }
+
+    h1 {
+      font-size: clamp(1.35rem, 3.5vw, 2rem);
+      font-weight: 800;
+      margin: 0 0 12px;
+      line-height: 1.2;
+    }
+    .slide-lead {
+      font-size: clamp(0.95rem, 2vw, 1.1rem);
+      color: var(--muted);
+      max-width: 52rem;
+      margin: 0 0 22px;
+      line-height: 1.5;
+    }
+
+    .illus {
+      width: min(280px, 40vw);
+      height: auto;
+      margin: 0 0 20px;
+      flex-shrink: 0;
+    }
+    .slide-top {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: flex-start;
+      gap: 20px 32px;
+    }
+    .slide-top-text { flex: 1; min-width: 220px; }
+
+    .summary-board {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
+      margin-top: 10px;
+      flex: 1;
+      min-height: 0;
+      align-content: start;
+    }
+    @media (max-width: 900px) {
+      .summary-board { grid-template-columns: repeat(2, 1fr); }
+    }
+    .summary-lane {
+      border: 1px solid #cbd5e1;
+      border-radius: 10px;
+      overflow: hidden;
+      background: #fff;
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+    }
+    .summary-lane-head {
+      padding: 8px 10px;
+      font-size: 10px;
+      font-weight: 800;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      color: #fff;
+    }
+    .summary-lane--r .summary-lane-head { background: #0d7a5a; }
+    .summary-lane--w .summary-lane-head { background: #1a5fb4; }
+    .summary-lane--v .summary-lane-head { background: #6b3fa0; }
+    .summary-lane--p .summary-lane-head { background: #b35900; }
+    .summary-lane-body {
+      padding: 8px;
+      display: flex;
+      flex-direction: column;
+      gap: 7px;
+      font-size: 11px;
+      line-height: 1.35;
+      color: var(--text);
+    }
+    .summary-grp {
+      font-size: 9px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--muted);
+      margin-top: 4px;
+      padding-top: 6px;
+      border-top: 1px dashed #cbd5e1;
+    }
+    .summary-grp:first-child { margin-top: 0; padding-top: 0; border-top: 0; }
+    .summary-card {
+      border-radius: 8px;
+      border: 1px solid #e2e8f0;
+      padding: 7px 8px;
+      background: #fafbfd;
+    }
+    .summary-card--du { border-left: 3px solid var(--du); background: #e8f0ff; }
+    .summary-card--fin { border-left: 3px solid var(--fin); background: #e4f5ef; }
+    .summary-card--mo { border-left: 3px solid var(--mo); background: #fff2e8; }
+    .summary-chip {
+      display: inline-block;
+      font-size: 8px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      padding: 2px 6px;
+      border-radius: 999px;
+      color: #fff;
+      margin-bottom: 4px;
+    }
+    .summary-chip--du { background: var(--du); }
+    .summary-chip--fin { background: var(--fin); }
+    .summary-chip--mo { background: var(--mo); }
+    .summary-card h4 { margin: 0 0 3px; font-size: 11px; line-height: 1.25; }
+    .summary-card p { margin: 0; font-size: 10px; color: var(--muted); }
+    .summary-pill {
+      display: inline-block;
+      margin-top: 5px;
+      font-size: 9px;
+      font-weight: 700;
+      padding: 2px 6px;
+      border-radius: 4px;
+    }
+    .summary-pill-ok { background: #d4f0dc; color: #145a28; border: 1px solid #8fd4a2; }
+    .summary-pill-wip { background: #dbeafe; color: #153e75; border: 1px solid #7eb6f0; }
+    .summary-pill-vendor { background: #ede9fe; color: #4c1d95; border: 1px solid #b4a3e8; }
+    .summary-pill-plan { background: #ffedd5; color: #8a3b00; border: 1px solid #fdba74; }
+    .summary-pill-warn { background: #fef3c7; color: #854d0e; border: 1px solid #fcd34d; }
+    .slide--summary { padding-bottom: 88px; }
+
+    .task-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-top: 14px;
+    }
+    .task-card {
+      flex: 1 1 240px;
+      max-width: 340px;
+      border-radius: 12px;
+      padding: 14px 16px;
+      border: 1px solid #cbd5e1;
+      background: #fff;
+      box-shadow: 0 2px 8px rgba(15, 23, 42, 0.06);
+    }
+    .task-card h4 { margin: 0 0 6px; font-size: 15px; }
+    .task-card p { margin: 0; font-size: 13px; color: var(--muted); line-height: 1.45; }
+    .task-card--good { border-left: 5px solid var(--good-bd); }
+    .task-card--bad { border-left: 5px solid var(--bad-bd); }
+    .task-card--wait { border-left: 5px solid var(--wait-bd); }
+    .task-card--work { border-left: 5px solid var(--work-bd); }
+
+    .sys {
+      display: inline-block;
+      font-size: 10px;
+      font-weight: 800;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      padding: 3px 8px;
+      border-radius: 6px;
+      color: #fff;
+      margin-bottom: 8px;
+    }
+    .sys-du { background: var(--du); }
+    .sys-fin { background: var(--fin); }
+    .sys-mo { background: var(--mo); }
+
+    .tag {
+      display: inline-block;
+      margin-top: 10px;
+      font-size: 11px;
+      font-weight: 800;
+      padding: 4px 10px;
+      border-radius: 999px;
+    }
+    .tag-good { background: var(--good-bg); color: var(--good-fg); border: 1px solid var(--good-bd); }
+    .tag-bad { background: var(--bad-bg); color: var(--bad-fg); border: 1px solid var(--bad-bd); }
+    .tag-wait { background: var(--wait-bg); color: var(--wait-fg); border: 1px solid var(--wait-bd); }
+    .tag-work { background: var(--work-bg); color: var(--work-fg); border: 1px solid var(--work-bd); }
+
+    .nav {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      padding: 14px 20px 18px;
+      background: linear-gradient(transparent, rgba(15, 23, 42, 0.92));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 16px;
+      z-index: 20;
+    }
+    .nav button {
+      width: 52px;
+      height: 52px;
+      border-radius: 50%;
+      border: none;
+      background: #fff;
+      color: #0f172a;
+      cursor: pointer;
+      box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 22px;
+      line-height: 1;
+    }
+    .nav button:hover { background: #e2e8f0; }
+    .nav button:focus { outline: 3px solid #3b82f6; outline-offset: 2px; }
+    .nav button:disabled { opacity: 0.35; cursor: not-allowed; }
+    .nav-counter {
+      min-width: 5.5rem;
+      text-align: center;
+      font-size: 14px;
+      font-weight: 700;
+      color: #e2e8f0;
+    }
+    .hint {
+      position: fixed;
+      top: 10px;
+      right: 14px;
+      font-size: 11px;
+      color: #94a3b8;
+      z-index: 15;
+    }
+
+  </style>
+</head>
+<body>
+  <div class="hint" aria-hidden="true">Стрелки на клавиатуре</div>
+
+  <div class="deck" id="deck">
+    <div class="slides" id="slides">
+
+      <section class="slide slide--dark" aria-labelledby="s0h">
+        <div class="slide-top">
+          <svg class="illus" viewBox="0 0 200 120" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+            <defs><linearGradient id="g0" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#38bdf8"/><stop offset="1" stop-color="#6366f1"/></linearGradient></defs>
+            <rect x="8" y="16" width="184" height="88" rx="12" fill="url(#g0)" opacity="0.35"/>
+            <rect x="20" y="28" width="72" height="52" rx="6" fill="#f8fafc" opacity="0.9"/>
+            <rect x="108" y="28" width="72" height="52" rx="6" fill="#f8fafc" opacity="0.75"/>
+            <path d="M100 92 L100 108 M88 108 L112 108" stroke="#94a3b8" stroke-width="3" stroke-linecap="round"/>
+          </svg>
+          <div class="slide-top-text">
+            <h1 id="s0h">Оптимизация производительности</h1>
+            <p class="slide-lead">Краткая презентация для бизнеса: системы ДУ 1.5, ФИН 2.0, МО и статусы работ. Цвета сразу показывают, где хороший прогресс, где риск или ожидание.</p>
+            <p class="slide-lead" style="margin-top:4px">Совещание: 05.05.2026. Детальный отчет: tasks_tree_table_grouped_2026_05_05.html. Сводная доска: tasks_cards_board_2026_05_05.html (дублируется на последнем слайде).</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="slide" aria-labelledby="s3h">
+        <div class="slide-top">
+          <svg class="illus" viewBox="0 0 200 140" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+            <rect x="20" y="20" width="160" height="100" rx="10" fill="#dcfce7" stroke="#16a34a" stroke-width="2"/>
+            <path d="M70 75 L90 95 L130 55" stroke="#16a34a" stroke-width="5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+            <text x="100" y="48" text-anchor="middle" fill="#14532d" font-size="13" font-weight="700">ДУ 1.5</text>
+          </svg>
+          <div class="slide-top-text">
+            <h1 id="s3h">1.2 К релизу — ДУ (ДУ 1.5)</h1>
+            <p class="slide-lead">Три направления: исполнение Т, исполнение Т-1, вечерние регламенты. Цели по времени достигнуты. Выход в релизе 1.5.27.11.</p>
+            <div class="task-row">
+              <div class="task-card task-card--good">
+                <span class="sys sys-du">ДУ 1.5</span>
+                <h4>Исполнение сделок Т</h4>
+                <p>Открытие и запись: производительность лучше целевой величины.</p>
+                <span class="tag tag-good">Хорошо: цель достигнута</span>
+              </div>
+              <div class="task-card task-card--good">
+                <span class="sys sys-du">ДУ 1.5</span>
+                <h4>Исполнение сделок Т-1</h4>
+                <p>Проведение: укладываемся в целевое время на больших объемах.</p>
+                <span class="tag tag-good">Хорошо: цель достигнута</span>
+              </div>
+              <div class="task-card task-card--good">
+                <span class="sys sys-du">ДУ 1.5</span>
+                <h4>Вечерние регламенты</h4>
+                <p>Вечерний контур по договорам: цель достигнута по замерам.</p>
+                <span class="tag tag-good">Хорошо: цель достигнута</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="slide" aria-labelledby="s4h">
+        <div class="slide-top">
+          <svg class="illus" viewBox="0 0 200 140" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+            <circle cx="100" cy="70" r="50" fill="#dbeafe" stroke="#2563eb" stroke-width="3"/>
+            <circle cx="100" cy="70" r="28" fill="none" stroke="#2563eb" stroke-width="4" stroke-dasharray="18 12"/>
+            <text x="100" y="76" text-anchor="middle" fill="#1e40af" font-size="12" font-weight="800">NDFL</text>
+          </svg>
+          <div class="slide-top-text">
+            <h1 id="s4h">1.3 В работе — ФИН (ДУ 2.0)</h1>
+            <p class="slide-lead">Расчет НДФЛ (IMDEV-7330). В расширении NDFL_RDU закрыты пункты 1-4 плана оптимизации; пункт 5 (параллельные пачки) еще делает разработчик. После выката нужен замер «после» и сравнение с целью 1 час на 1000 операций.</p>
+            <div class="task-row">
+              <div class="task-card task-card--work">
+                <span class="sys sys-fin">ФИН 2.0</span>
+                <h4>НДФЛ: оптимизация и замеры</h4>
+                <p>База «до» по стенду: порядка 104 мин на 1000 операций (оценка с 100 док.) при цели 60 мин.</p>
+                <span class="tag tag-work">В работе: ждем п.5 и замер после выката</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="slide" aria-labelledby="s5h">
+        <h1 id="s5h">1.3.5 Вендор Avancore — ФИН (ДУ 2.0)</h1>
+        <p class="slide-lead">Две линии: регламенты под РДУ (хороший DR-результат, оплата согласована, вендор ведет разработку) и перерегистрации IMDEV-8662 (цель по тесту достигнута, но рассмотрение у вендора еще не началось).</p>
+        <div class="task-row">
+          <div class="task-card task-card--good">
+            <span class="sys sys-fin">ФИН 2.0</span>
+            <h4>Регламенты под РДУ</h4>
+            <p>DR-тест: цель по времени достигнута. С вендором согласована оплата, задача в разработке у Avancore.</p>
+            <span class="tag tag-good">Хорошо: метрика + движение у вендора</span>
+          </div>
+          <div class="task-card task-card--wait">
+            <span class="sys sys-fin">ФИН 2.0</span>
+            <h4>Перерегистрации (IMDEV-8662)</h4>
+            <p>Сквозной тест: цель достигнута. Рассмотрение материалов у вендора Avancore пока не начато.</p>
+            <span class="tag tag-wait">Ожидает: старт рассмотрения вендором</span>
+          </div>
+        </div>
+        <p class="slide-lead" style="margin-top:18px;font-size:13px">IMAPPS-36274 / 36275: фильтр регламентов без РДУ и статистика по РДУ — у вендора оплата согласована, объем и условия на согласовании.</p>
+      </section>
+
+      <section class="slide" aria-labelledby="s6h">
+        <h1 id="s6h">1.4 Ближайшие планы — МО и ДУ</h1>
+        <p class="slide-lead">МО: две задачи без готовых метрик «после», нужны замеры и уточнение целей. ДУ: массовые отчеты и выгрузка в КК для HNWI — сейчас около 12 часов, это плохо для регламента.</p>
+        <div class="task-row">
+          <div class="task-card task-card--wait">
+            <span class="sys sys-mo">МО</span>
+            <h4>Регламенты МО под РДУ (8665)</h4>
+            <p>Нет данных «стало», целевые ориентиры уточняются.</p>
+            <span class="tag tag-wait">Ожидает: план и замеры</span>
+          </div>
+          <div class="task-card task-card--wait">
+            <span class="sys sys-mo">МО</span>
+            <h4>Утро ФО к торгам (8829)</h4>
+            <p>Долгий регламент, риск не успеть до торгов; метрика уточняется.</p>
+            <span class="tag tag-wait">Ожидает: цель и оптимизация</span>
+          </div>
+          <div class="task-card task-card--bad">
+            <span class="sys sys-du">ДУ 1.5</span>
+            <h4>Отчеты ДУ, КК, HNWI (ежеквартально)</h4>
+            <p>Кабинет клиента, автоматическая обработка: полный цикл сейчас порядка 12 часов.</p>
+            <span class="tag tag-bad">Плохо: 12 ч — не приемлемо</span>
+          </div>
+        </div>
+        <svg class="illus" style="margin-top:16px;max-width:320px" viewBox="0 0 240 70" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+          <path d="M20 50 L220 50" stroke="#cbd5e1" stroke-width="3"/>
+          <polygon points="220,50 205,42 205,58" fill="#64748b"/>
+          <rect x="20" y="18" width="70" height="24" rx="4" fill="#fdba74"/>
+          <rect x="105" y="18" width="70" height="24" rx="4" fill="#fdba74"/>
+          <rect x="190" y="18" width="45" height="24" rx="4" fill="#fca5a5"/>
+        </svg>
+      </section>
+
+      <section class="slide slide--summary" aria-labelledby="sSumh">
+        <h1 id="sSumh">Сводная доска карточек</h1>
+        <p class="slide-lead">То же содержание, что на доске tasks_cards_board_2026_05_05.html: четыре колонки 1.2, 1.3, 1.3.5, 1.4. Откройте HTML-файл доски для полноразмерной версии и печати.</p>
+        <div class="summary-board" role="region" aria-label="Свод по колонкам доски">
+          <div class="summary-lane summary-lane--r">
+            <div class="summary-lane-head">1.2 К релизу</div>
+            <div class="summary-lane-body">
+              <div class="summary-grp">ДУ 1.5</div>
+              <div class="summary-card summary-card--du">
+                <span class="summary-chip summary-chip--du">ДУ 1.5</span>
+                <h4>Исполнение сделок Т</h4>
+                <p>Цель по времени. Релиз 1.5.27.11.</p>
+                <span class="summary-pill summary-pill-ok">Достигнута</span>
+              </div>
+              <div class="summary-card summary-card--du">
+                <span class="summary-chip summary-chip--du">ДУ 1.5</span>
+                <h4>Исполнение сделок Т-1</h4>
+                <p>Цель по времени. Релиз 1.5.27.11.</p>
+                <span class="summary-pill summary-pill-ok">Достигнута</span>
+              </div>
+              <div class="summary-card summary-card--du">
+                <span class="summary-chip summary-chip--du">ДУ 1.5</span>
+                <h4>Вечерние регламенты</h4>
+                <p>Цель по замерам (12 потоков, 30 000 дог.).</p>
+                <span class="summary-pill summary-pill-ok">Достигнута</span>
+              </div>
+            </div>
+          </div>
+          <div class="summary-lane summary-lane--w">
+            <div class="summary-lane-head">1.3 В работе</div>
+            <div class="summary-lane-body">
+              <div class="summary-grp">ФИН 2.0</div>
+              <div class="summary-card summary-card--fin">
+                <span class="summary-chip summary-chip--fin">ФИН 2.0</span>
+                <h4>НДФЛ (IMDEV-7330)</h4>
+                <p>NDFL_RDU: п.1-4 закрыты; п.5 у разработчика; замер после выката.</p>
+                <span class="summary-pill summary-pill-wip">В работе</span>
+              </div>
+            </div>
+          </div>
+          <div class="summary-lane summary-lane--v">
+            <div class="summary-lane-head">1.3.5 Вендор Avancore</div>
+            <div class="summary-lane-body">
+              <div class="summary-grp">ФИН 2.0</div>
+              <div class="summary-card summary-card--fin">
+                <span class="summary-chip summary-chip--fin">ФИН 2.0</span>
+                <h4>Регламенты ФИН под РДУ</h4>
+                <p>DR-тест: цель достигнута. Оплата согласована, разработка у Avancore.</p>
+                <span class="summary-pill summary-pill-vendor">Вендор: оплата + разработка</span>
+              </div>
+              <div class="summary-card summary-card--fin">
+                <span class="summary-chip summary-chip--fin">ФИН 2.0</span>
+                <h4>Перерегистрации (IMDEV-8662)</h4>
+                <p>Тест: цель достигнута. Рассмотрение у вендора не начато.</p>
+                <span class="summary-pill summary-pill-vendor">Вендор: рассмотрение не начато</span>
+              </div>
+              <div class="summary-card summary-card--fin">
+                <span class="summary-chip summary-chip--fin">ФИН 2.0</span>
+                <h4>IMAPPS-36274 / 36275</h4>
+                <p>Фильтр без РДУ, статистика РДУ. Оплата согласована; объем на согласовании.</p>
+                <span class="summary-pill summary-pill-vendor">Вендор: оплата + на согласовании</span>
+              </div>
+            </div>
+          </div>
+          <div class="summary-lane summary-lane--p">
+            <div class="summary-lane-head">1.4 Ближайшие планы</div>
+            <div class="summary-lane-body">
+              <div class="summary-grp">МО</div>
+              <div class="summary-card summary-card--mo">
+                <span class="summary-chip summary-chip--mo">МО</span>
+                <h4>Регламенты МО под РДУ (8665)</h4>
+                <p>Замеры и метрики уточняются.</p>
+                <span class="summary-pill summary-pill-plan">Планы</span>
+              </div>
+              <div class="summary-card summary-card--mo">
+                <span class="summary-chip summary-chip--mo">МО</span>
+                <h4>Утро ФО, 8829</h4>
+                <p>Длительность, риск по договорам.</p>
+                <span class="summary-pill summary-pill-plan">Планы</span>
+              </div>
+              <div class="summary-grp">ДУ 1.5</div>
+              <div class="summary-card summary-card--du">
+                <span class="summary-chip summary-chip--du">ДУ 1.5</span>
+                <h4>Отчеты ДУ, КК, HNWI</h4>
+                <p>Полный цикл около 12 ч — неприемлемо.</p>
+                <span class="summary-pill summary-pill-warn">12 ч — плохо</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+    </div>
+  </div>
+
+  <nav class="nav" aria-label="Навигация по слайдам">
+    <button type="button" id="btnPrev" aria-label="Предыдущий слайд">&lsaquo;</button>
+    <span class="nav-counter" id="counter" aria-live="polite">1 / 6</span>
+    <button type="button" id="btnNext" aria-label="Следующий слайд">&rsaquo;</button>
+  </nav>
+
+  <script>
+    (function () {
+      var slides = document.getElementById("slides");
+      var total = slides.children.length;
+      var i = 0;
+      var counter = document.getElementById("counter");
+      var btnPrev = document.getElementById("btnPrev");
+      var btnNext = document.getElementById("btnNext");
+
+      function render() {
+        slides.style.transform = "translateX(" + (-i * 100) + "%)";
+        counter.textContent = (i + 1) + " / " + total;
+        btnPrev.disabled = i <= 0;
+        btnNext.disabled = i >= total - 1;
+      }
+
+      btnPrev.addEventListener("click", function () {
+        if (i > 0) { i--; render(); }
+      });
+      btnNext.addEventListener("click", function () {
+        if (i < total - 1) { i++; render(); }
+      });
+
+      document.addEventListener("keydown", function (e) {
+        if (e.key === "ArrowLeft" && i > 0) { i--; render(); }
+        if (e.key === "ArrowRight" && i < total - 1) { i++; render(); }
+      });
+
+      render();
+    })();
+  </script>
+</body>
+</html>
