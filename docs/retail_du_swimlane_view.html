@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Retail DU - Swimlane представление</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 24px; background: #f8fafc; color: #111827; }
+        h1, h2 { margin-bottom: 10px; }
+        .box { background: #fff; border: 1px solid #dbeafe; border-radius: 10px; padding: 14px; margin: 12px 0; }
+        .lane { border: 1px solid #e5e7eb; border-radius: 8px; margin: 12px 0; overflow: hidden; }
+        .lane-title { background: #eff6ff; color: #1e3a8a; font-weight: 700; padding: 10px; border-bottom: 1px solid #e5e7eb; }
+        .lane-steps { padding: 10px; }
+        .step { margin: 8px 0; padding: 8px; border-left: 4px solid #60a5fa; background: #f9fafb; border-radius: 6px; }
+        .decision { border-left-color: #f59e0b; background: #fffbeb; }
+        .error { border-left-color: #dc2626; background: #fef2f2; }
+        .good { border-left-color: #16a34a; background: #f0fdf4; }
+        pre { background: #0f172a; color: #e2e8f0; border-radius: 8px; padding: 12px; white-space: pre-wrap; }
+        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+        @media (max-width: 900px) { .grid { grid-template-columns: 1fr; } }
+        a { color: #1d4ed8; }
+    </style>
+    <script type="module">
+        import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs";
+        mermaid.initialize({ startOnLoad: true, theme: "default" });
+    </script>
+</head>
+<body>
+    <h1>Розничное ДУ: кросс-функциональное (Swimlane) представление</h1>
+    <div class="box">
+        Формат для совместной работы бизнеса и разработки: видно <b>кто</b>, <b>что</b> и <b>когда</b> делает.
+    </div>
+
+    <div class="grid">
+        <div class="lane">
+            <div class="lane-title">Lane 1 - Система (автоматический расчет)</div>
+            <div class="lane-steps">
+                <div class="step">Инициализировать Т-0 (сегодня) и Т-1 (предыдущий рабочий день).</div>
+                <div class="step decision">Решение: разница дат > 3?</div>
+                <div class="step">При <= 3 рассчитать "Последний день квартала/месяца".</div>
+                <div class="step">Назначить циклы для Т-0, Т-1 и доп. даты.</div>
+            </div>
+        </div>
+        <div class="lane">
+            <div class="lane-title">Lane 2 - Пользователь</div>
+            <div class="lane-steps">
+                <div class="step">Запустить обработку и проверить значения дат.</div>
+                <div class="step decision">Если > 3 дней, перейти на Пользовательский лист.</div>
+                <div class="step">В пользовательском режиме подтвердить/скорректировать параметры.</div>
+                <div class="step">Запустить выполнение операций.</div>
+            </div>
+        </div>
+        <div class="lane">
+            <div class="lane-title">Lane 3 - Регламентные операции</div>
+            <div class="lane-steps">
+                <div class="step">Выполнить запуск, флаги, фильтры, заполнение, создание.</div>
+                <div class="step">Дождаться завершения фоновых операций.</div>
+                <div class="step">Закрыть этап регламентных операций.</div>
+            </div>
+        </div>
+        <div class="lane">
+            <div class="lane-title">Lane 4 - Специализированные обработки</div>
+            <div class="lane-steps">
+                <div class="step">Фоновое исполнение сделок T+n.</div>
+                <div class="step">Расторжение договоров розничного ДУ.</div>
+                <div class="step">Установка даты расчетов = Т и запуск "Начитать".</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="box">
+        <h2>Swimlane flowchart</h2>
+        <div class="mermaid">
+flowchart LR
+    subgraph L1["Система"]
+        A[Старт] --> B[Т-0 и Т-1]
+        B --> C{Разница > 3?}
+        C -- Нет --> D[Расчет доп. даты]
+        D --> E[Назначение циклов]
+    end
+    subgraph L2["Пользователь"]
+        C -- Да --> F[Пользовательский лист]
+        F --> G[Проверка параметров]
+    end
+    subgraph L3["Регламент"]
+        E --> H[Регламентные операции]
+        G --> H
+    end
+    subgraph L4["Обработки"]
+        H --> I[Сделки T+n]
+        I --> J[Расторжение DU]
+        J --> K[Дата Т и Начитать]
+        K --> Z([Финиш])
+    end
+        </div>
+    </div>
+
+    <div class="box">
+        <h2>Замечания и исправления</h2>
+        <div class="step error">Не определено: разница дат в рабочих или календарных днях.</div>
+        <div class="step good">Исправление: считать разницу строго по рабочим дням регламентного календаря.</div>
+        <div class="step error">Нет явного правила для пустой доп. даты при назначении цикла.</div>
+        <div class="step good">Исправление: если доп. дата пустая, цикл для нее не создается.</div>
+    </div>
+
+    <div class="box">
+        <h2>Практики оформления</h2>
+        <ul>
+            <li><a href="https://www.si-labs.com/en/articles/swimlane-diagram">Swimlane best practices</a></li>
+            <li><a href="https://www.canva.com/online-whiteboard/swimlane-diagrams/">Swimlane examples and tips</a></li>
+            <li><a href="https://docs.camunda.io/docs/components/best-practices/modeling/creating-readable-process-models/">Readable process models</a></li>
+        </ul>
+    </div>
+</body>
+</html>

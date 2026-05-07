@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Retail DU - Бизнес-представление процесса</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 24px; background: #f6f8fb; color: #1f2937; }
+        h1, h2, h3 { margin: 0 0 10px; color: #0f172a; }
+        .section { background: #fff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 16px; margin: 14px 0; }
+        .goal { background: #ecfeff; border-left: 5px solid #0891b2; padding: 10px; border-radius: 6px; }
+        .risk { background: #fef2f2; border-left: 5px solid #dc2626; padding: 10px; border-radius: 6px; margin-top: 8px; }
+        .fix { background: #f0fdf4; border-left: 5px solid #16a34a; padding: 10px; border-radius: 6px; margin-top: 8px; }
+        .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; }
+        .card { border: 1px solid #e5e7eb; border-radius: 10px; padding: 12px; background: #fcfcfd; }
+        .num { font-size: 24px; font-weight: 700; color: #2563eb; }
+        .small { color: #475569; font-size: 14px; }
+        .pill { display: inline-block; padding: 4px 8px; border-radius: 999px; font-size: 12px; margin-right: 6px; }
+        .ok { background: #dcfce7; color: #166534; }
+        .warn { background: #fef3c7; color: #92400e; }
+        .bad { background: #fee2e2; color: #991b1b; }
+        .mono { background: #0b1020; color: #e5e7eb; border-radius: 8px; padding: 12px; white-space: pre-wrap; }
+        a { color: #1d4ed8; }
+    </style>
+</head>
+<body>
+    <h1>Розничное ДУ: бизнес-карта процесса</h1>
+    <div class="small">Формат: для руководителя, владельца процесса и аналитика.</div>
+
+    <div class="section">
+        <h2>Цель процесса</h2>
+        <div class="goal">
+            Обеспечить стабильный ежедневный запуск операций Розничного ДУ с автоматическим выбором режима
+            (Основной или Пользовательский), корректной датой расчета и корректным набором циклов.
+        </div>
+        <div class="risk">
+            Бизнес-риск при неформализованной логике: неверный выбор режима и запуск неправильного набора операций.
+        </div>
+        <div class="fix">
+            Решение: формально зафиксировать правила разницы дат, правила заполнения дополнительной даты и правила назначения циклов.
+        </div>
+    </div>
+
+    <div class="section">
+        <h2>Постановка пользователя в одном экране</h2>
+        <div class="cards">
+            <div class="card">
+                <div class="num">1</div>
+                <h3>Старт</h3>
+                <div>Открывается лист <b>Основной</b>. Т-0 = сегодня, Т-1 = прошлый рабочий день.</div>
+            </div>
+            <div class="card">
+                <div class="num">2</div>
+                <h3>Ключевая развилка</h3>
+                <div>Если разница Т-0 и Т-1 больше 3 дней, переход в <b>Пользовательский</b> режим.</div>
+            </div>
+            <div class="card">
+                <div class="num">3</div>
+                <h3>Расчет доп. даты</h3>
+                <div>На границе месяцев рассчитывается дата "Последний день квартала/месяца".</div>
+            </div>
+            <div class="card">
+                <div class="num">4</div>
+                <h3>Назначение циклов</h3>
+                <div>Для Т-0, Т-1 и дополнительной даты выбираются рабочие циклы.</div>
+            </div>
+            <div class="card">
+                <div class="num">5</div>
+                <h3>Исполнение</h3>
+                <div>Запуск регламентных операций и обработок по выбранному сценарию.</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="section">
+        <h2>Бизнес-диаграмма пути решения</h2>
+        <div class="mono">START
+ -> Автозаполнение Т-0/Т-1
+ -> Проверка разницы дат
+    -> (>3) Пользовательский режим
+    -> (<=3) Основной режим + расчет дополнительной даты
+ -> Назначение циклов по правилам квартала/месяца
+ -> Запуск операций и обработок
+ -> END</div>
+    </div>
+
+    <div class="section">
+        <h2>Критерии качества для бизнеса</h2>
+        <p><span class="pill ok">Понятно</span> У каждого шага есть цель и ожидаемый результат.</p>
+        <p><span class="pill warn">Управляемо</span> Есть явные правила выбора режима и правила исключений.</p>
+        <p><span class="pill bad">Риск</span> Любая неоднозначность по датам приводит к операционным ошибкам.</p>
+    </div>
+
+    <div class="section">
+        <h2>Предложенные исправления</h2>
+        <ul>
+            <li>Явно определить: разница считается по рабочим дням календаря.</li>
+            <li>Если дополнительная дата пустая, цикл для нее не назначать.</li>
+            <li>Описать полный сценарий Пользовательского режима: ввод, проверки, выход.</li>
+            <li>Добавить таблицу решений для согласования бизнеса и разработки.</li>
+        </ul>
+    </div>
+
+    <div class="section">
+        <h2>На чем основан формат</h2>
+        <ul>
+            <li><a href="https://docs.camunda.io/docs/components/best-practices/modeling/creating-readable-process-models/">Camunda - readable process models</a></li>
+            <li><a href="https://docs.camunda.io/docs/components/best-practices/modeling/naming-bpmn-elements/">Camunda - naming BPMN elements</a></li>
+            <li><a href="https://www.omg.org/bpmn/Documents/FAQ.htm">OMG BPMN FAQ</a></li>
+        </ul>
+    </div>
+</body>
+</html>

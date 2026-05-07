@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Retail DU - Техническая спецификация процесса</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 24px; background: #f8fafc; color: #0f172a; }
+        h1, h2, h3 { margin-bottom: 10px; }
+        .panel { background: #fff; border: 1px solid #e2e8f0; border-radius: 10px; padding: 14px; margin: 12px 0; }
+        .ok { background: #ecfdf5; border-left: 5px solid #16a34a; padding: 10px; margin: 8px 0; border-radius: 6px; }
+        .bad { background: #fef2f2; border-left: 5px solid #dc2626; padding: 10px; margin: 8px 0; border-radius: 6px; }
+        .info { background: #eff6ff; border-left: 5px solid #2563eb; padding: 10px; margin: 8px 0; border-radius: 6px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        th, td { border: 1px solid #cbd5e1; padding: 8px; text-align: left; font-size: 14px; vertical-align: top; }
+        th { background: #e2e8f0; }
+        pre { background: #0b1020; color: #e5e7eb; border-radius: 8px; padding: 12px; white-space: pre-wrap; }
+        a { color: #1d4ed8; }
+    </style>
+    <script type="module">
+        import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs";
+        mermaid.initialize({ startOnLoad: true, theme: "default" });
+    </script>
+</head>
+<body>
+    <h1>Розничное ДУ: техническая спецификация логики процесса</h1>
+    <div class="panel info">
+        Формат для разработчика, тестировщика, аналитика. Акцент на формальные правила, состояния и проверяемость.
+    </div>
+
+    <div class="panel">
+        <h2>1. Цель и границы</h2>
+        <p><b>Цель:</b> однозначно определить выбор режима, расчет дат и назначение циклов для запуска операций.</p>
+        <p><b>Триггер:</b> запуск обработки пользователем.</p>
+        <p><b>Результат:</b> выполнены регламентные и специализированные операции с корректными параметрами дат.</p>
+    </div>
+
+    <div class="panel">
+        <h2>2. Decision table (ядро логики)</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>Rule</th>
+                    <th>Условие</th>
+                    <th>Ожидаемое поведение</th>
+                    <th>Тест</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>R1</td>
+                    <td>РабочиеДниМежду(Т-1, Т-0) &gt; 3</td>
+                    <td>Переход на Пользовательский лист</td>
+                    <td>Проверить переключение и блокировку автосценария</td>
+                </tr>
+                <tr>
+                    <td>R2</td>
+                    <td>РабочиеДниМежду(Т-1, Т-0) &lt;= 3</td>
+                    <td>Остаться на Основном листе</td>
+                    <td>Проверить запуск стандартного сценария</td>
+                </tr>
+                <tr>
+                    <td>R3</td>
+                    <td>месяц(Т-0) = месяц(Т-1)</td>
+                    <td>Доп. дата = Пусто</td>
+                    <td>Проверить отсутствие значения и цикла доп. даты</td>
+                </tr>
+                <tr>
+                    <td>R4</td>
+                    <td>месяц(Т-0) != месяц(Т-1) и Т-1 последний день месяца</td>
+                    <td>Доп. дата = Пусто</td>
+                    <td>Проверить отсутствие значения и цикла доп. даты</td>
+                </tr>
+                <tr>
+                    <td>R5</td>
+                    <td>месяц(Т-0) != месяц(Т-1) и Т-1 не последний день месяца</td>
+                    <td>Доп. дата = ПоследнийДеньМесяца(Т-1)</td>
+                    <td>Проверить корректную дату и назначение цикла</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <div class="panel">
+        <h2>3. State machine процесса</h2>
+        <div class="mermaid">
+stateDiagram-v2
+    [*] --> Init
+    Init --> DatesAutofill
+    DatesAutofill --> CheckDelta
+    CheckDelta --> UserMode: Delta > 3
+    CheckDelta --> MainMode: Delta <= 3
+    MainMode --> CalcExtraDate
+    CalcExtraDate --> AssignCycles
+    UserMode --> ManualInput
+    ManualInput --> AssignCycles
+    AssignCycles --> ExecuteRegOps
+    ExecuteRegOps --> ExecuteProcessors
+    ExecuteProcessors --> [*]
+        </div>
+    </div>
+
+    <div class="panel">
+        <h2>4. Псевдокод (однозначная реализация)</h2>
+        <pre>
+T0 = Сегодня()
+T1 = ПредыдущийРабочийДеньПоКалендарю(T0)
+Delta = РабочиеДниМежду(T1, T0)
+
+Если Delta > 3 Тогда
+    Режим = "Пользовательский"
+Иначе
+    Режим = "Основной"
+    Если Месяц(T0) = Месяц(T1) Тогда
+        ДопДата = Пусто
+    ИначеЕсли T1 = ПоследнийДеньМесяца(T1) Тогда
+        ДопДата = Пусто
+    Иначе
+        ДопДата = ПоследнийДеньМесяца(T1)
+    КонецЕсли
+КонецЕсли
+
+ЦиклT0 = (T0 первый рабочий день квартала) ? ЦиклНачалоКвартала : ЦиклTRab
+ЦиклT1 = (T1 последний день квартала) ? ЦиклКварталT1 : ЦиклT1Rab
+
+Если ЗначениеЗаполнено(ДопДата) Тогда
+    ЦиклДопДаты = (ДопДата последний день квартала) ? ЦиклКварталT1 : ЦиклT1Rab
+КонецЕсли
+        </pre>
+    </div>
+
+    <div class="panel">
+        <h2>5. Замечания и исправления</h2>
+        <div class="bad">Проблема: не определена единица измерения разницы дат.</div>
+        <div class="ok">Исправление: считать строго по рабочим дням регламентного календаря.</div>
+        <div class="bad">Проблема: цикл доп. даты назначается даже при пустом значении.</div>
+        <div class="ok">Исправление: назначать цикл доп. даты только при заполненной дате.</div>
+        <div class="bad">Проблема: Пользовательский режим не формализован.</div>
+        <div class="ok">Исправление: добавить обязательные поля, проверки, критерий завершения и возврат.</div>
+    </div>
+
+    <div class="panel">
+        <h2>6. Практики оформления</h2>
+        <ul>
+            <li><a href="https://www.omg.org/bpmn/Documents/FAQ.htm">OMG BPMN principles</a></li>
+            <li><a href="https://docs.camunda.io/docs/components/best-practices/modeling/creating-readable-process-models/">Readable BPMN modeling</a></li>
+            <li><a href="https://docs.camunda.io/docs/components/best-practices/modeling/naming-bpmn-elements/">Naming BPMN elements</a></li>
+        </ul>
+    </div>
+</body>
+</html>
