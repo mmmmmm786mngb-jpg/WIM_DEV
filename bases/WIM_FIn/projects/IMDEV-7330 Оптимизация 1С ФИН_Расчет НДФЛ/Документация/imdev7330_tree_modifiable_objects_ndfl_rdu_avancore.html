@@ -11,6 +11,9 @@
       --m4: #6b46c1;
       --m5: #9b2c2c;
       --common: #4a5568;
+      --bug-fg: #9d174d;
+      --bug-bg: #ffe4e6;
+      --bug-border: #fb7185;
     }
 
     body {
@@ -141,6 +144,13 @@
     .tag.m4 { background: #e9d8fd; color: var(--m4); }
     .tag.m5 { background: #fed7d7; color: var(--m5); }
     .tag.common { background: #e2e8f0; color: var(--common); }
+    .tag.bug {
+      background: var(--bug-bg);
+      color: var(--bug-fg);
+      border: 1px solid var(--bug-border);
+      font-weight: 700;
+      box-shadow: 0 0 0 1px rgba(251, 113, 133, 0.35);
+    }
 
     .legend {
       margin-top: 1.2rem;
@@ -161,6 +171,13 @@
       margin-right: 0.7rem;
       margin-bottom: 0.2rem;
     }
+
+    .legend-bug-note {
+      display: block;
+      margin-top: 0.35rem;
+      font-size: 0.82rem;
+      color: #718096;
+    }
   </style>
 </head>
 <body>
@@ -173,7 +190,7 @@
   <h1>Дерево изменяемых объектов и процедур расширения NDFL_RDU</h1>
   <p class="subtitle">
     Дерево собрано по материалам IMDEV-7330: таблица замеров и реализованные оптимизации расчета НДФЛ
-    (массовый предрасчет, параллельные пачки, контроль пустых документов УК).
+    (массовый предрасчет, параллельные пачки, контроль пустых документов УК, исправление справки-расчета НДФЛ к удержанию при пустых строках удержаний).
   </p>
 
   <div class="ref-grid">
@@ -188,7 +205,9 @@
       <span><span class="tag m2">строка 2</span> кэш расходов НКД по связке клиент-дата для УК</span><br>
       <span><span class="tag m3">параллельные пачки</span> оркестратор и фоновое выполнение по пачкам</span><br>
       <span><span class="tag m4">оптимизация запросов</span> замена тяжелых запросов на массовые/табличные параметры</span><br>
-      <span><span class="tag m5">контроль записи</span> запрет записи пустых документов начисления по УК</span>
+      <span><span class="tag m5">контроль записи</span> запрет записи пустых документов начисления по УК</span><br>
+      <span><span class="tag bug">баг: справка НДФЛ</span> исправление падения в справке-расчёте к удержанию при пустых строках удержаний</span><br>
+      <span class="legend-bug-note"><span class="tag bug">баг</span> яркая метка: исправление ошибки выполнения, не зона производительности.</span>
     </div>
 
     <div class="ref-card vendor-note">
@@ -281,6 +300,7 @@
           <span class="cap"><span class="toggle">[+]</span><span class="name">Документ НачислениеНДФЛПоУправляющейКомпании: ObjectModule</span><span class="tag common">объектный уровень</span></span>
           <ul>
             <li class="leaf"><span class="name">Documents/НачислениеНДФЛПоУправляющейКомпании/Ext/ObjectModule.bsl::NDFL_RDU_РассчитатьНДФЛ</span><span class="tag common">интеграция с менеджером</span><span class="tag common">&amp;Вместо</span></li>
+            <li class="leaf"><span class="name">...::NDFL_RDU_ЗаполнитьСправкуРасчетНДФЛКУдержанию</span><span class="tag bug">баг: справка НДФЛ</span><span class="tag common">&amp;ИзменениеИКонтроль</span></li>
           </ul>
         </li>
 
