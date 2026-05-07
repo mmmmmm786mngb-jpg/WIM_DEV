@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Отчет по затратам на Аванкор - Розница ДУ</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --bg: #f4f7fb;
+            --card: #ffffff;
+            --text: #1f2d3d;
+            --muted: #6b7b8c;
+            --ok: #28a745;
+            --error: #dc3545;
+            --info: #17a2b8;
+            --violet: #6f42c1;
+            --border: #dbe4ef;
+            --shadow: 0 4px 14px rgba(15, 42, 71, 0.08);
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 24px;
+        }
+
+        .header {
+            background: linear-gradient(120deg, #1d4e89, #0f7ca5);
+            color: #ffffff;
+            border-radius: 14px;
+            padding: 28px;
+            box-shadow: var(--shadow);
+        }
+
+        .header h1 {
+            margin: 0 0 10px 0;
+            font-size: 30px;
+        }
+
+        .header p {
+            margin: 6px 0;
+            color: #e7f4ff;
+        }
+
+        .section {
+            margin-top: 22px;
+            background: var(--card);
+            border-radius: 14px;
+            padding: 20px;
+            border: 1px solid var(--border);
+            box-shadow: var(--shadow);
+        }
+
+        .section h2 {
+            margin: 0 0 14px 0;
+            font-size: 22px;
+        }
+
+        .intro-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 14px;
+        }
+
+        .note {
+            background: #f8fbff;
+            border-left: 5px solid var(--info);
+            border-radius: 10px;
+            padding: 12px 14px;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 14px;
+        }
+
+        .stat-card {
+            background: #f9fcff;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 14px;
+        }
+
+        .stat-title {
+            color: var(--muted);
+            font-size: 14px;
+            margin-bottom: 8px;
+        }
+
+        .stat-value {
+            font-size: 30px;
+            font-weight: 700;
+        }
+
+        .ok {
+            color: var(--ok);
+        }
+
+        .error {
+            color: var(--error);
+        }
+
+        .violet {
+            color: var(--violet);
+        }
+
+        .charts-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+            gap: 16px;
+        }
+
+        .chart-box {
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 12px;
+            background: #fcfeff;
+        }
+
+        .chart-box h3 {
+            margin: 0 0 10px 0;
+            font-size: 17px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 14px;
+        }
+
+        th, td {
+            border: 1px solid var(--border);
+            padding: 8px 9px;
+            vertical-align: top;
+            text-align: left;
+        }
+
+        th {
+            background: #eef5fb;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-weight: 700;
+            font-size: 12px;
+            color: #ffffff;
+        }
+
+        .badge-paid {
+            background: var(--error);
+        }
+
+        .badge-free {
+            background: var(--ok);
+        }
+
+        .summary-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+        }
+
+        @media (max-width: 900px) {
+            .summary-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .result-box {
+            background: #f6fbff;
+            border-left: 6px solid var(--violet);
+            padding: 14px;
+            border-radius: 10px;
+            margin-top: 12px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Отчет по задачам Аванкора в проекте "Розница ДУ"</h1>
+            <p><b>Подготовлено по запросу:</b> Анастасии Ксенофонтовой</p>
+            <p><b>Период задач:</b> сентябрь 2025 - апрель 2026</p>
+        </div>
+
+        <div class="section">
+            <h2>Ключевая статистика</h2>
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-title">Всего задач</div>
+                    <div class="stat-value">17</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-title">Платных задач</div>
+                    <div class="stat-value error">10</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-title">Бесплатных задач</div>
+                    <div class="stat-value ok">7</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-title">Всего нормо-часов</div>
+                    <div class="stat-value violet">36</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-title">Итоговая стоимость</div>
+                    <div class="stat-value error">140 400 руб.</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-title">Средняя цена часа</div>
+                    <div class="stat-value">3 900 руб.</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>Своды с группировкой</h2>
+            <div class="summary-grid">
+                <div>
+                    <h3>Свод по системам</h3>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Система</th>
+                                <th>Всего задач</th>
+                                <th>Платных</th>
+                                <th>Бесплатных</th>
+                                <th>Нормо-часы</th>
+                                <th>Стоимость</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>ДУ 1.5</td>
+                                <td>8</td>
+                                <td>8</td>
+                                <td>0</td>
+                                <td>25</td>
+                                <td>97 500 руб.</td>
+                            </tr>
+                            <tr>
+                                <td>ДУ 2.0</td>
+                                <td>9</td>
+                                <td>2</td>
+                                <td>7</td>
+                                <td>11</td>
+                                <td>42 900 руб.</td>
+                            </tr>
+                            <tr>
+                                <th>Итого</th>
+                                <th>17</th>
+                                <th>10</th>
+                                <th>7</th>
+                                <th>36</th>
+                                <th>140 400 руб.</th>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div>
+                    <h3>Свод по месяцам (стоимость)</h3>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Месяц</th>
+                                <th>Платных задач</th>
+                                <th>Нормо-часы</th>
+                                <th>Стоимость</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr><td>2025-09</td><td>0</td><td>0</td><td>0 руб.</td></tr>
+                            <tr><td>2025-10</td><td>0</td><td>0</td><td>0 руб.</td></tr>
+                            <tr><td>2025-11</td><td>0</td><td>0</td><td>0 руб.</td></tr>
+                            <tr><td>2025-12</td><td>1</td><td>4</td><td>15 600 руб.</td></tr>
+                            <tr><td>2026-01</td><td>2</td><td>8</td><td>31 200 руб.</td></tr>
+                            <tr><td>2026-02</td><td>3</td><td>14</td><td>54 600 руб.</td></tr>
+                            <tr><td>2026-03</td><td>1</td><td>1</td><td>3 900 руб.</td></tr>
+                            <tr><td>2026-04</td><td>3</td><td>14</td><td>54 600 руб.</td></tr>
+                            <tr><td>Без даты</td><td>1</td><td>1</td><td>3 900 руб.</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>Детальная таблица задач</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Система</th>
+                        <th>ASP</th>
+                        <th>Название задачи</th>
+                        <th>Создана</th>
+                        <th>Jira</th>
+                        <th>Тип</th>
+                        <th>Нормо-часы</th>
+                        <th>Стоимость</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr><td>ДУ 2.0</td><td>ASP-186885</td><td>ДУ->FIN 1. [ФИН] Долго рассчитывается аванс в документе ПеререгистрацияЦБ при проведении</td><td>2025-09-25 09:35:39</td><td><a href="https://jira/browse/IMAPPS-32901">IMAPPS-32901</a></td><td><span class="badge badge-free">Бесплатно</span></td><td>0</td><td>0</td></tr>
+                    <tr><td>ДУ 2.0</td><td>ASP-189366</td><td>Добавлена индексация для ряда таблиц документов</td><td>2025-10-23 08:57:03</td><td><a href="https://jira/browse/IMAPPS-33287">IMAPPS-33287</a></td><td><span class="badge badge-free">Бесплатно</span></td><td>0</td><td>0</td></tr>
+                    <tr><td>ДУ 2.0</td><td>ASP-190216</td><td>Оптимизация запросов регламента закрытия (для ТОП-5 по времени операций) ГрупповоеВыполнениеЗакрытияПериодаПортфелей</td><td>2025-11-01 16:01:02</td><td><a href="https://jira/browse/IMDEV-8637">IMDEV-8637</a></td><td><span class="badge badge-free">Бесплатно</span></td><td>0</td><td>0</td></tr>
+                    <tr><td>ДУ 2.0</td><td>ASP-190889</td><td>Проведена оптимизация времени регламента закрытия портфелей по ряду операций</td><td>2025-11-12 08:58:46</td><td><a href="https://jira/browse/IMDEV-8638">IMDEV-8638</a></td><td><span class="badge badge-free">Бесплатно</span></td><td>0</td><td>0</td></tr>
+                    <tr><td>ДУ 1.5</td><td>ASP-193871</td><td>Оптимизация кода для повышения производительности Исполнений СделокTn</td><td>2025-12-17 09:36:26</td><td><a href="https://jira/browse/IMAPPS-34560">IMAPPS-34560</a></td><td><span class="badge badge-paid">Платно</span></td><td>4</td><td>15 600</td></tr>
+                    <tr><td>ДУ 2.0</td><td>ASP-195362</td><td>Оптимизация исполнения сделок (без дублей перепроведения)</td><td>2026-01-14 08:57:11</td><td><a href="https://jira/browse/IMAPPS-34812">IMAPPS-34812</a></td><td><span class="badge badge-free">Бесплатно</span></td><td>0</td><td>0</td></tr>
+                    <tr><td>ДУ 1.5</td><td>ASP-196358</td><td>Оптимизация функции ДоговорКонтрагентаСРольюДоговорДУПоПортфелю путем переноса в модуль повторного использования</td><td>Не указано</td><td><a href="https://jira/browse/IMAPPS-35010">IMAPPS-35010</a></td><td><span class="badge badge-paid">Платно</span></td><td>1</td><td>3 900</td></tr>
+                    <tr><td>ДУ 1.5</td><td>ASP-196537</td><td>Оптимизация регламентов. Справочник РегламентныеПериоды - Выполнение цикла регламентов перенести на сервер</td><td>2026-01-26 16:02:32</td><td><a href="https://jira/browse/IMAPPS-35035">IMAPPS-35035</a></td><td><span class="badge badge-paid">Платно</span></td><td>2</td><td>7 800</td></tr>
+                    <tr><td>ДУ 1.5</td><td>ASP-197912</td><td>Оптимизация регламентов. Вознаграждение за управление</td><td>2026-02-09 09:51:34</td><td><a href="https://jira/browse/IMAPPS-35316">IMAPPS-35316</a></td><td><span class="badge badge-paid">Платно</span></td><td>2</td><td>7 800</td></tr>
+                    <tr><td>ДУ 1.5</td><td>ASP-197909</td><td>Оптимизация регламентов. Утренние операции</td><td>2026-02-09 09:37:59</td><td><a href="https://jira/browse/IMAPPS-35037">IMAPPS-35037</a></td><td><span class="badge badge-paid">Платно</span></td><td>4</td><td>15 600</td></tr>
+                    <tr><td>ДУ 1.5</td><td>ASP-199250</td><td>Оптимизация регламентов. Вечерние операции</td><td>2026-02-20 06:59:35</td><td><a href="https://jira/browse/IMAPPS-35039">IMAPPS-35039</a></td><td><span class="badge badge-paid">Платно</span></td><td>8</td><td>31 200</td></tr>
+                    <tr><td>ДУ 1.5</td><td>ASP-201177</td><td>Оптимизация запроса остатков в Сделке</td><td>2026-03-17 09:20:30</td><td><a href="https://jira/browse/IMDEV-8635">IMDEV-8635</a></td><td><span class="badge badge-paid">Платно</span></td><td>1</td><td>3 900</td></tr>
+                    <tr><td>ДУ 2.0</td><td>ASP-203060</td><td>Возможность настройки запуска регламентных операций с использованием универсального отбора Портфелей по любым реквизитам (фильтр как в СКД)</td><td>2026-04-07 07:22:09</td><td><a href="https://jira/browse/IMDEV-8632">IMDEV-8632</a></td><td><span class="badge badge-paid">Платно</span></td><td>6</td><td>23 400</td></tr>
+                    <tr><td>ДУ 2.0</td><td>ASP-203894</td><td>Оптимизация регламентного закрытия периода для пула "розница ДУ"</td><td>2026-04-16 06:10:29</td><td><a href="https://jira/browse/IMDEV-8641">IMDEV-8641</a></td><td><span class="badge badge-paid">Платно</span></td><td>5</td><td>19 500</td></tr>
+                    <tr><td>ДУ 2.0</td><td>ASP-204168</td><td>Улучшена производительность получения подчиненных документов по бизнес процессам</td><td>2026-04-20 07:29:06</td><td><a href="https://jira/browse/IMDEV-8770">IMDEV-8770</a></td><td><span class="badge badge-free">Бесплатно</span></td><td>0</td><td>0</td></tr>
+                    <tr><td>ДУ 1.5</td><td>ASP-204854</td><td>Повышение режима совместимости конфигурации</td><td>2026-04-27 06:01:52</td><td><a href="https://jira/browse/IMAPPS-36255">IMAPPS-36255</a></td><td><span class="badge badge-paid">Платно</span></td><td>3</td><td>11 700</td></tr>
+                    <tr><td>ДУ 2.0</td><td>ASP-204855</td><td>Задача по оптимизации проведения перерегистрации (сделки)</td><td>2026-04-27 06:38:35</td><td><a href="https://jira/browse/IMDEV-8662">IMDEV-8662</a></td><td><span class="badge badge-free">Бесплатно</span></td><td>0</td><td>0</td></tr>
+                    <tr>
+                        <th colspan="2">Итого</th>
+                        <th>17 задач</th>
+                        <th>-</th>
+                        <th>-</th>
+                        <th>10 платно / 7 бесплатно</th>
+                        <th>36</th>
+                        <th>140 400</th>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="section">
+            <h2>Выводы и возможности</h2>
+            <div class="result-box">
+                <p><b>1.</b> Основная платная нагрузка пришлась на <b>ДУ 1.5</b>: 25 из 36 нормо-часов (69.4%) и 97 500 руб. из 140 400 руб. (69.4%).</p>
+                <p><b>2.</b> Для <b>ДУ 2.0</b> значительная часть работ выполнена бесплатно (7 из 9 задач).</p>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>Диаграммы и графики</h2>
+            <div class="charts-grid">
+                <div class="chart-box">
+                    <h3>Платные vs Бесплатные</h3>
+                    <canvas id="paidFreeChart"></canvas>
+                </div>
+                <div class="chart-box">
+                    <h3>Стоимость по системам</h3>
+                    <canvas id="systemCostChart"></canvas>
+                </div>
+                <div class="chart-box">
+                    <h3>Нормо-часы по системам</h3>
+                    <canvas id="systemHoursChart"></canvas>
+                </div>
+                <div class="chart-box">
+                    <h3>Количество задач по месяцам</h3>
+                    <canvas id="monthlyTasksChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const commonLegend = {
+            labels: {
+                usePointStyle: true,
+                boxWidth: 10
+            }
+        };
+
+        new Chart(document.getElementById("paidFreeChart"), {
+            type: "doughnut",
+            data: {
+                labels: ["Платные", "Бесплатные"],
+                datasets: [{
+                    data: [10, 7],
+                    backgroundColor: ["#dc3545", "#28a745"]
+                }]
+            },
+            options: {
+                plugins: { legend: commonLegend }
+            }
+        });
+
+        new Chart(document.getElementById("systemCostChart"), {
+            type: "bar",
+            data: {
+                labels: ["ДУ 1.5", "ДУ 2.0"],
+                datasets: [{
+                    label: "Стоимость, руб.",
+                    data: [97500, 42900],
+                    backgroundColor: ["#6f42c1", "#17a2b8"]
+                }]
+            },
+            options: {
+                plugins: { legend: { display: false } },
+                scales: {
+                    y: { beginAtZero: true }
+                }
+            }
+        });
+
+        new Chart(document.getElementById("systemHoursChart"), {
+            type: "bar",
+            data: {
+                labels: ["ДУ 1.5", "ДУ 2.0"],
+                datasets: [{
+                    label: "Нормо-часы",
+                    data: [25, 11],
+                    backgroundColor: ["#0d6efd", "#20c997"]
+                }]
+            },
+            options: {
+                plugins: { legend: { display: false } },
+                scales: {
+                    y: { beginAtZero: true }
+                }
+            }
+        });
+
+        new Chart(document.getElementById("monthlyTasksChart"), {
+            type: "line",
+            data: {
+                labels: ["2025-09", "2025-10", "2025-11", "2025-12", "2026-01", "2026-02", "2026-03", "2026-04", "Без даты"],
+                datasets: [{
+                    label: "Количество задач",
+                    data: [1, 1, 2, 1, 2, 3, 1, 5, 1],
+                    borderColor: "#17a2b8",
+                    backgroundColor: "rgba(23, 162, 184, 0.2)",
+                    fill: true,
+                    tension: 0.25
+                }]
+            },
+            options: {
+                plugins: { legend: commonLegend },
+                scales: {
+                    y: { beginAtZero: true }
+                }
+            }
+        });
+    </script>
+</body>
+</html>
