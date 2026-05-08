@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>IMDEV-8665 - таблица замеров</title>
+  <style>
+    :root {
+      --text: #212529;
+      --muted: #6c757d;
+      --border: #dee2e6;
+      --head-bg: #e7f5f8;
+      --row-alt: #f8f9fa;
+      --info: #17a2b8;
+    }
+    body {
+      font-family: "Segoe UI", system-ui, sans-serif;
+      color: var(--text);
+      line-height: 1.5;
+      max-width: 1160px;
+      margin: 1.5rem auto;
+      padding: 0 1rem;
+    }
+    h1 {
+      font-size: 1.35rem;
+      font-weight: 600;
+      margin-bottom: 0.35rem;
+      color: #0c5460;
+    }
+    .lead {
+      font-size: 0.96rem;
+      margin: 0 0 0.9rem 0;
+    }
+    .meta {
+      color: var(--muted);
+      font-size: 0.88rem;
+      margin-bottom: 1.25rem;
+    }
+    .kpi {
+      margin: 0 0 1.25rem 0;
+      padding: 0.9rem 1rem;
+      border-left: 4px solid #17a2b8;
+      background: #eef9fc;
+      border-radius: 4px;
+    }
+    .kpi h2 {
+      margin: 0 0 0.45rem 0;
+      font-size: 1rem;
+      color: #0c5460;
+    }
+    .kpi ul {
+      margin: 0;
+      padding-left: 1.25rem;
+    }
+    .kpi li {
+      margin: 0.3rem 0;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.9rem;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+    }
+    th, td {
+      border: 1px solid var(--border);
+      padding: 0.58rem 0.62rem;
+      vertical-align: top;
+    }
+    th {
+      background: var(--head-bg);
+      color: #0c5460;
+      font-weight: 600;
+      text-align: left;
+    }
+    tbody tr:nth-child(even) {
+      background: var(--row-alt);
+    }
+    .num {
+      width: 2.4rem;
+      text-align: center;
+      white-space: nowrap;
+    }
+    .code {
+      font-family: Consolas, "Courier New", monospace;
+      font-size: 0.82rem;
+      word-break: break-word;
+    }
+    .metrics {
+      font-family: Consolas, "Courier New", monospace;
+      font-size: 0.8rem;
+      color: #0d5e6e;
+      white-space: nowrap;
+    }
+    .note {
+      margin-top: 1.4rem;
+      padding: 0.9rem 1rem;
+      border-left: 4px solid var(--info);
+      background: #f0f9fb;
+    }
+    .note h2 {
+      font-size: 1rem;
+      margin: 0 0 0.45rem 0;
+      color: #0c5460;
+    }
+    .note p {
+      margin: 0.3rem 0;
+    }
+    .plan {
+      margin-top: 1.5rem;
+      padding: 1rem 1.1rem;
+      border-left: 4px solid #0d6efd;
+      background: #f4f8ff;
+      border-radius: 4px;
+    }
+    .plan h2 {
+      font-size: 1rem;
+      margin: 0 0 0.55rem 0;
+      color: #0a58ca;
+    }
+    .plan ul {
+      margin: 0.2rem 0 0 0;
+      padding-left: 1.25rem;
+    }
+    .plan li {
+      margin: 0.35rem 0;
+    }
+    footer {
+      margin-top: 1.6rem;
+      font-size: 0.8rem;
+      color: var(--muted);
+    }
+  </style>
+</head>
+<body>
+  <h1>IMDEV-8665: таблица замеров проблемных участков</h1>
+  <p class="lead">Сводка замеров по пересчету MV и WAP в Retail MO. Отобраны наиболее затратные точки выполнения, которые формируют основную долю общего времени расчета.</p>
+  <p class="meta">Источник: документ <code>ЗамерыОтладчика_8665.docx</code>, блок "Детальное". Для строк из tempstorage модуль интерпретирован как <code>Обработка.внРасчетMVиWAP.МодульОбъекта</code>. Объем прогона: 29 240 расчетов.</p>
+  <div class="kpi">
+    <h2>Итоги замера за 2 рабочих дня</h2>
+    <ul>
+      <li>Период замера: 2 рабочих дня (суммарный расчет за 05.06-06.06).</li>
+      <li>Точное время вызовов: СформироватьMV (стр 521) - 10 729 сек (02:58:49, 67,40%), СформироватьWAP (стр 529) - 5 182 сек (01:26:22, 32,55%).</li>
+      <li>Суммарное время за 2 рабочих дня: 15 911 сек (04:25:11). Общий объем: 29 240 расчетов, в среднем 14 620 мандатов в день.</li>
+      <li>Оценка производительности в день (по точному времени): 14 620 мандатов за 7 956 сек (02:12:36), то есть 1,84 мандата в секунду.</li>
+    </ul>
+  </div>
+
+  <table>
+    <thead>
+      <tr>
+        <th class="num">N</th>
+        <th>Модуль</th>
+        <th>Строка</th>
+        <th>Операция в точке замера</th>
+        <th>Кол-во</th>
+        <th>Время (сек)</th>
+        <th>%</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td class="num">1</td>
+        <td class="code">Документ.РасчетРыночнойСтоимости.МодульОбъекта</td>
+        <td class="metrics">304</td>
+        <td class="code">Выборка = Запрос.Выполнить().Выбрать();</td>
+        <td class="metrics">29 240</td>
+        <td class="metrics">3 198,117482</td>
+        <td class="metrics">20,09</td>
+      </tr>
+      <tr>
+        <td class="num">2</td>
+        <td class="code">Документ.РасчетРыночнойСтоимости.МодульОбъекта</td>
+        <td class="metrics">1 469</td>
+        <td class="code">Результат = Запрос.ВыполнитьПакет();</td>
+        <td class="metrics">29 240</td>
+        <td class="metrics">3 160,664149</td>
+        <td class="metrics">19,86</td>
+      </tr>
+      <tr>
+        <td class="num">3</td>
+        <td class="code">Документ.РасчетСредневзвешеннойСтоимости.МодульМенеджера</td>
+        <td class="metrics">74</td>
+        <td class="code">РезультатВыполнения = Запрос.ВыполнитьПакет();</td>
+        <td class="metrics">29 240</td>
+        <td class="metrics">1 716,739033</td>
+        <td class="metrics">10,78</td>
+      </tr>
+      <tr>
+        <td class="num">4</td>
+        <td class="code">Обработка.внРасчетMVиWAP.МодульОбъекта</td>
+        <td class="metrics">1 206</td>
+        <td class="code">ПРОВЕДЕНИЕ РЫНОЧНОЙ<br>Код: Док.Записать(РежимЗаписиДокумента.Проведение);</td>
+        <td class="metrics">29 240</td>
+        <td class="metrics">1 453,625139</td>
+        <td class="metrics">9,13</td>
+      </tr>
+      <tr>
+        <td class="num">5</td>
+        <td class="code">Обработка.внРасчетMVиWAP.МодульОбъекта</td>
+        <td class="metrics">1 047</td>
+        <td class="code">УДАЛЕНИЕ СТАРОЙ СРЕДНЕЙ<br>Код: ДокОбъект.Удалить();</td>
+        <td class="metrics">29 240</td>
+        <td class="metrics">1 327,097428</td>
+        <td class="metrics">8,34</td>
+      </tr>
+      <tr>
+        <td class="num">6</td>
+        <td class="code">Обработка.внРасчетMVиWAP.МодульОбъекта</td>
+        <td class="metrics">1 085</td>
+        <td class="code">УДАЛЕНИЕ СТАРОЙ РЫНОЧНОЙ<br>Код: ДокОбъект.Удалить();</td>
+        <td class="metrics">14 620</td>
+        <td class="metrics">1 104,682270</td>
+        <td class="metrics">6,94</td>
+      </tr>
+      <tr>
+        <td class="num">7</td>
+        <td class="code">Обработка.внРасчетMVиWAP.МодульОбъекта</td>
+        <td class="metrics">1 353</td>
+        <td class="code">ПРОВЕДЕНИЕ СРЕДНЕЙ<br>Код: Док.Записать(РежимЗаписиДокумента.Проведение);</td>
+        <td class="metrics">29 240</td>
+        <td class="metrics">889,594961</td>
+        <td class="metrics">5,59</td>
+      </tr>
+      <tr>
+        <td class="num">8</td>
+        <td class="code">Документ.РасчетРыночнойСтоимости.МодульОбъекта</td>
+        <td class="metrics">881</td>
+        <td class="code">Результат = Запрос.Выполнить();</td>
+        <td class="metrics">29 240</td>
+        <td class="metrics">778,316966</td>
+        <td class="metrics">4,89</td>
+      </tr>
+      <tr>
+        <td class="num">9</td>
+        <td class="code">Документ.РасчетСредневзвешеннойСтоимости.МодульОбъекта</td>
+        <td class="metrics">812</td>
+        <td class="code">РезультатЗапроса = Запрос.Выполнить();</td>
+        <td class="metrics">29 240</td>
+        <td class="metrics">442,541506</td>
+        <td class="metrics">2,78</td>
+      </tr>
+      <tr>
+        <td class="num">10</td>
+        <td class="code">Обработка.внРасчетMVиWAP.МодульОбъекта</td>
+        <td class="metrics">1 082</td>
+        <td class="code">УДАЛЕНИЕ СТАРОЙ РЫНОЧНОЙ (Выборка.Ссылка.ПолучитьОбъект())<br>Код: ДокОбъект = Выборка.Ссылка.ПолучитьОбъект();</td>
+        <td class="metrics">14 620</td>
+        <td class="metrics">247,692392</td>
+        <td class="metrics">1,56</td>
+      </tr>
+      <tr>
+        <td class="num">11</td>
+        <td class="code">ОбщийМодуль.ВТБ_АлгоритмыРасчета.Модуль</td>
+        <td class="metrics">2 564</td>
+        <td class="code">Если Мандат.ТипМандата = Перечисления.ТипыМандата.B Тогда</td>
+        <td class="metrics">116 960</td>
+        <td class="metrics">241,852431</td>
+        <td class="metrics">1,52</td>
+      </tr>
+      <tr>
+        <td class="num">12</td>
+        <td class="code">ОбщийМодуль.РаботаСКурсамиВалют.Модуль</td>
+        <td class="metrics">73</td>
+        <td class="code">Результат = РегистрыСведений.КурсыВалют.ПолучитьПоследнее(ДатаКурса, Новый Структура("Валюта", Валюта));</td>
+        <td class="metrics">204 002</td>
+        <td class="metrics">236,989688</td>
+        <td class="metrics">1,49</td>
+      </tr>
+      <tr>
+        <td class="num">13</td>
+        <td class="code">Документ.РасчетСредневзвешеннойСтоимости.МодульМенеджера</td>
+        <td class="metrics">128</td>
+        <td class="code">Возврат Запрос.Выполнить().Выгрузить().ВыгрузитьКолонку("Валюта");</td>
+        <td class="metrics">29 240</td>
+        <td class="metrics">135,366603</td>
+        <td class="metrics">0,85</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="note">
+    <h2>Краткий вывод</h2>
+    <p>Основная нагрузка сосредоточена в запросах по MV (строки 1, 2, 8) и WAP (строки 3, 9), а также в блоках удаления и проведения старых документов в регламентном сценарии.</p>
+    <p>Приоритет оптимизации: массовые запросы по мандатам, распараллеливание удаления/формирования и кэширование в общих модулях.</p>
+  </div>
+
+  <div class="plan">
+    <h2>ЧТО ДЕЛАЕМ:</h2>
+    <ul>
+      <li><strong>Переделать запросы чтобы они могли работать с массивом мандатов:</strong>
+        <ul>
+          <li>MV: стр 304 - ЗаполнитьТЧЦенныеБумаги.</li>
+          <li>MV: стр 1469 - ЗаполнитьТабличнуюЧасть_Служебная.</li>
+          <li>MV: стр 881 - ЗаполнитьТЧПлановыеЦБ.</li>
+          <li>WAP: стр 74 - ПолучитьДанныеРасчета.</li>
+          <li>WAP: стр 812 - ТаблицаАмортизационныхОблигацийОстаточнаяСтоимость(МассивАктивов).</li>
+        </ul>
+      </li>
+      <li><strong>КЕШ:</strong>
+        <ul>
+          <li>стр 2564, ОбщийМодуль.ВТБ_АлгоритмыРасчета.Модуль - оптимизировать проверку типа мандата (замер: "Если Мандат.ТипМандата = Перечисления.ТипыМандата.B Тогда").</li>
+          <li>стр 73, ОбщийМодуль.РаботаСКурсамиВалют.Модуль - оптимизировать/кешировать получение курса валют (замер: "РегистрыСведений.КурсыВалют.ПолучитьПоследнее(...)").</li>
+          <li>стр 128, Документ.РасчетСредневзвешеннойСтоимости.МодульМенеджера - исключить повторный вызов запроса по валютам (замер: "Возврат Запрос.Выполнить().Выгрузить().ВыгрузитьКолонку(\"Валюта\");").</li>
+        </ul>
+      </li>
+      <li><strong>Параллельность:</strong>
+        <ul>
+          <li>Параллель УДАЛЕНИЕ СТАРОЙ (стр 1047, 1085, 1082 в замерах; ориентир на реализацию в НДФЛ: новая обработка "ОтменаПроведенияНачисленийНДФЛ" в расширении NDFL_RDU, включая оркестратор и выполнение пачек).</li>
+          <li>Параллель запуск СформироватьMV (стр 521 в замерах Word).</li>
+          <li>Параллель запуск СформироватьWAP (стр 529 в замерах Word).</li>
+        </ul>
+      </li>
+    </ul>
+  </div>
+
+  <footer>IMDEV-8665. Таблица замеров для анализа и приоритизации оптимизации расчета MV и WAP.</footer>
+</body>
+</html>
