@@ -45,9 +45,10 @@
 
     .ref-grid {
       display: grid;
-      grid-template-columns: 1fr 1fr;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
       gap: 0.8rem;
       margin-bottom: 1rem;
+      align-items: stretch;
     }
 
     .ref-card.full-row {
@@ -60,16 +61,46 @@
       border-radius: 6px;
       padding: 0.75rem 0.9rem;
       font-size: 0.9rem;
+      box-sizing: border-box;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      height: 100%;
     }
 
     .ref-card h2 {
       margin: 0 0 0.45rem 0;
       font-size: 0.98rem;
+      flex-shrink: 0;
+    }
+
+    .ref-card > p {
+      margin: 0 0 0.5rem 0;
+    }
+
+    .ref-card > p:last-child {
+      margin-bottom: 0;
     }
 
     .ref-card ul {
-      margin: 0.2rem 0 0 1rem;
-      padding: 0;
+      margin: 0 0 0.5rem 0;
+      padding-left: 1.15rem;
+    }
+
+    .ref-card ul:last-child {
+      margin-bottom: 0;
+    }
+
+    .ref-card ul li {
+      margin-bottom: 0.22rem;
+    }
+
+    .ref-card ul li:last-child {
+      margin-bottom: 0;
+    }
+
+    .ref-card .ref-lead {
+      margin-top: 0;
     }
 
     .vendor-note {
@@ -196,28 +227,32 @@
   <div class="ref-grid">
     <div class="ref-card">
       <h2>Основные зоны оптимизации IMDEV-7330</h2>
-      <p>
+      <p class="ref-lead">
         Карта ниже показывает фактические точки изменения в расширении <code>NDFL_RDU</code> по объектам
         и перехватам, без сводного списка сценариев в этом блоке.
       </p>
-      <h2>Легенда групп доработок</h2>
-      <span><span class="tag m1">строка 1</span> массовый предрасчет и кэш <code>ОбщиеОбороты</code> по портфелям</span><br>
-      <span><span class="tag m2">строка 2</span> кэш расходов НКД по связке клиент-дата для УК</span><br>
-      <span><span class="tag m3">параллельные пачки</span> оркестратор и фоновое выполнение по пачкам</span><br>
-      <span><span class="tag m4">оптимизация запросов</span> замена тяжелых запросов на массовые/табличные параметры</span><br>
-      <span><span class="tag m5">контроль записи</span> запрет записи пустых документов начисления по УК</span><br>
-      <span><span class="tag bug">баг: справка НДФЛ</span> исправление падения в справке-расчёте к удержанию при пустых строках удержаний</span><br>
-      <span class="legend-bug-note"><span class="tag bug">баг</span> яркая метка: исправление ошибки выполнения, не зона производительности.</span>
+      <p>
+        <strong>Легенда групп доработок:</strong>
+      </p>
+      <ul>
+        <li><span class="tag m1">строка 1</span> массовый предрасчет и кэш <code>ОбщиеОбороты</code> по портфелям</li>
+        <li><span class="tag m2">строка 2</span> кэш расходов НКД по связке клиент-дата для УК</li>
+        <li><span class="tag m3">параллельные пачки</span> оркестратор и фоновое выполнение по пачкам</li>
+        <li><span class="tag m4">оптимизация запросов</span> замена тяжелых запросов на массовые/табличные параметры</li>
+        <li><span class="tag m5">контроль записи</span> запрет записи документа УК без строк в расчётных ТЧ (Начисления, Удержания, ИнвестиционныйВычетПоПортфелям, Выводы, ОбщиеРасходы)</li>
+        <li><span class="tag bug">баг: справка НДФЛ</span> исправление падения в справке-расчёте к удержанию при пустых строках удержаний</li>
+      </ul>
+      <p class="legend-bug-note"><span class="tag bug">баг</span> яркая метка: исправление ошибки выполнения, не зона производительности.</p>
     </div>
 
     <div class="ref-card vendor-note">
       <h2>Источник структуры</h2>
-      <p>
+      <p class="ref-lead">
         Дерево построено по фактическим объектам расширения <code>NDFL_RDU</code>, отраженным в документации
         <code>measurements_table_IMDEV-7330.html</code> и связанных спецификациях по пунктам плана.
       </p>
       <p>
-        Отдельно: в базовой CF WIM_FIn есть изменения сигнатур, требуемые для совместимости текущей реализации:
+        <strong>Изменения сигнатур в базовой CF WIM_FIn</strong> (для совместимости текущей реализации):
       </p>
       <ul>
         <li><code>Documents/НачислениеНДФЛПоПортфелю/Ext/ObjectModule.bsl::РассчитатьНДФЛ(ПараметрыРасчетаВнешн = Неопределено)</code></li>
@@ -254,7 +289,7 @@
             <li class="leaf"><span class="name">DataProcessors/ФормированиеНачисленийНДФЛ/Ext/ObjectModule.bsl::NDFL_RDU_СоздатьДокументы</span><span class="tag m3">переопределение основной команды</span><span class="tag common">&amp;Вместо</span></li>
             <li class="leaf"><span class="name">...::NDFL_RDU_ВыполнитьПачкуФормированияНДФЛ</span><span class="tag m3">воркер пачки</span><span class="tag common">Экспорт</span></li>
             <li class="leaf"><span class="name">...::NDFL_RDU_СоздатьНачислениеНДФЛПоПортфелю</span><span class="tag m1">инициализация кэша оборотов</span><span class="tag common">&amp;Вместо</span></li>
-            <li class="leaf"><span class="name">...::NDFL_RDU_СоздатьНачислениеНДФЛПоУК</span><span class="tag m5">контроль пустой записи</span><span class="tag common">&amp;Вместо</span></li>
+            <li class="leaf"><span class="name">...::NDFL_RDU_СоздатьНачислениеНДФЛПоУК</span><span class="tag m5">все расчётные ТЧ пусты - без записи</span><span class="tag common">&amp;Вместо</span></li>
             <li class="leaf"><span class="name">...::NDFL_RDU_СобратьПарыКлиентДатаДляПредрасчетаНКД</span><span class="tag m2">подготовка пар клиент-дата</span></li>
             <li class="leaf"><span class="name">...::NDFL_RDU_ИнициализироватьКэшНКДПоМассивуПар</span><span class="tag m2">прогрев кэша НКД</span></li>
             <li class="leaf"><span class="name">...::NDFL_RDU_ИнициализироватьКэшОборотовПоМассивуПар</span><span class="tag m1">прогрев кэша оборотов</span></li>
@@ -276,10 +311,10 @@
         <li class="branch">
           <span class="cap"><span class="toggle">[+]</span><span class="name">Документ НачислениеНДФЛПоПортфелю: ObjectModule</span><span class="tag m1">строка 1 и смежные запросы</span></span>
           <ul>
-            <li class="leaf"><span class="name">Documents/НачислениеНДФЛПоПортфелю/Ext/ObjectModule.bsl::NDFL_RDU_ОбщиеОбороты</span><span class="tag m1">кэш оборотов</span><span class="tag common">&amp;Вместо</span></li>
+            <li class="leaf"><span class="name">Documents/НачислениеНДФЛПоПортфелю/Ext/ObjectModule.bsl::NDFL_RDU_ОбщиеОбороты</span><span class="tag m1">кэш оборотов</span><span class="tag m4">сбор параметров без NDFL_RDU_НормализоватьПараметрыДляОбщихОборотов</span><span class="tag common">&amp;Вместо</span></li>
             <li class="leaf"><span class="name">...::NDFL_RDU_ОбщиеОборотыТекстЗапроса</span><span class="tag m1">массовый текст запроса</span><span class="tag common">&amp;Вместо</span></li>
             <li class="leaf"><span class="name">...::NDFL_RDU_ТаблицаПродажДляРасчетаЛьготПоКлиентамПодСанкциями</span><span class="tag m4">оптимизация продаж</span><span class="tag common">&amp;Вместо</span></li>
-            <li class="leaf"><span class="name">...::NDFL_RDU_СписокДокументовДляРасчетаДоходовРасходов</span><span class="tag m4">оптимизация выборки документов</span><span class="tag common">&amp;Вместо</span></li>
+            <li class="leaf"><span class="name">...::NDFL_RDU_СписокДокументовДляРасчетаДоходовРасходов(ПараметрыРасчетаНДФЛ, NDFL_RDU_ПреобразоватьВТаблицу = Ложь)</span><span class="tag m4">Массив или ТЗ портфель+документ</span><span class="tag common">&amp;Вместо</span></li>
             <li class="leaf"><span class="name">...::NDFL_RDU_РассчитатьНДФЛ</span><span class="tag m1">учет параметров внешнего кэша</span><span class="tag common">&amp;Вместо</span></li>
             <li class="leaf"><span class="name">...::NDFL_RDU_ПолучитьОбщиеОборотыПоПортфелям</span><span class="tag m1">массовое получение оборотов</span><span class="tag common">Экспорт</span></li>
             <li class="leaf"><span class="name">...::NDFL_RDU_РазложитьТаблицуОборотовПоПортфелю</span><span class="tag m1">разложение кэша по портфелям</span></li>
