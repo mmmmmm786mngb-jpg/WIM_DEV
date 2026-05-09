@@ -1,0 +1,1035 @@
+﻿<Structure xmlns="http://v8.1c.ru/8.1/data/core" xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="Structure">
+	<Property name="Формат">
+		<Value xsi:type="xs:string">УИ_КонсольЗапросов</Value>
+	</Property>
+	<Property name="Версия">
+		<Value xsi:type="xs:decimal">13</Value>
+	</Property>
+	<Property name="КоличествоЗапросов">
+		<Value xsi:type="xs:decimal">3</Value>
+	</Property>
+	<Property name="ИмяФайла">
+		<Value xsi:type="xs:string">C:\1c\Служебки\IMDEV-7330 Тест\Консоль_7330.q9</Value>
+	</Property>
+	<Property name="СохраняемыеСостояния">
+		<Value xsi:type="Structure">
+			<Property name="ВидРезультата">
+				<Value xsi:type="xs:string">таблица</Value>
+			</Property>
+			<Property name="ОграничениеВыводимыхСтрок">
+				<Value xsi:type="xs:decimal">1000</Value>
+			</Property>
+			<Property name="ОграничениеВыводимыхСтрокВкл">
+				<Value xsi:type="xs:boolean">true</Value>
+			</Property>
+			<Property name="ОграничениеВыводимыхСтрокПервые">
+				<Value xsi:type="xs:decimal">1000</Value>
+			</Property>
+			<Property name="ОграничениеВыводимыхСтрокПервыеВкл">
+				<Value xsi:type="xs:boolean">false</Value>
+			</Property>
+		</Value>
+	</Property>
+	<Property name="ТекущийЗапрос">
+		<Value xsi:type="xs:string">НДФЛ Портфели</Value>
+	</Property>
+	<Property name="Опции">
+		<Value xsi:type="Structure">
+			<Property name="ОпцияСохранятьКомментарии">
+				<Value xsi:type="xs:boolean">true</Value>
+			</Property>
+			<Property name="ОпцияАвтосохранениеПередВыполнениемЗапроса">
+				<Value xsi:type="xs:boolean">true</Value>
+			</Property>
+			<Property name="ОпцияПериодОпросаВключенияВыключенияТехнологическогоЖурнала">
+				<Value xsi:type="xs:decimal">3</Value>
+			</Property>
+			<Property name="ОпцияОбрабатывать__">
+				<Value xsi:type="xs:boolean">true</Value>
+			</Property>
+			<Property name="ОпцияИнтервалОбновленияВыполненияАлгоритма">
+				<Value xsi:type="xs:decimal">1000</Value>
+			</Property>
+			<Property name="ОпцияИнтервалАвтосохранения">
+				<Value xsi:type="xs:decimal">60</Value>
+			</Property>
+		</Value>
+	</Property>
+	<Property name="ПакетЗапросов">
+		<Value xsi:type="Array">
+			<Value xsi:type="Structure">
+				<Property name="Имя">
+					<Value xsi:type="xs:string">Запрос1</Value>
+				</Property>
+				<Property name="ТекстЗапроса">
+					<Value xsi:type="xs:string"/>
+				</Property>
+				<Property name="ТекстКод">
+					<Value xsi:type="xs:string"/>
+				</Property>
+				<Property name="МетодИсполненияКода">
+					<Value xsi:type="xs:decimal">0</Value>
+				</Property>
+				<Property name="ПараметрыЗапроса">
+					<Value xsi:type="ValueListType">
+						<valueType/>
+						<lastId xsi:type="xs:decimal">-1</lastId>
+					</Value>
+				</Property>
+				<Property name="ВременныеТаблицы">
+					<Value xsi:type="ValueListType">
+						<valueType/>
+						<lastId xsi:type="xs:decimal">-1</lastId>
+					</Value>
+				</Property>
+				<Property name="Строки">
+					<Value xsi:type="Array">
+						<Value xsi:type="Structure">
+							<Property name="Имя">
+								<Value xsi:type="xs:string">НДФЛ Портфели</Value>
+							</Property>
+							<Property name="ТекстЗапроса">
+								<Value xsi:type="xs:string">// Описание: Единая таблица по табличным частям документа НачислениеНДФЛПоПортфелю за день.
+// Параметры:
+// &amp;НачалоДня - Дата
+// &amp;КонецДня - Дата
+// &amp;ПОВсемКлиентам - Булево
+// &amp;Клиенты - Массив/СписокЗначений (СправочникСсылка.Контрагенты)
+//
+// Как задать период за 1 день:
+// 1) Через дату:
+//    &amp;НачалоДня = НачалоДня(&amp;ДатаСреза)
+//    &amp;КонецДня = КонецДня(&amp;ДатаСреза)
+//
+// 2) Пример на фиксированную дату:
+//    &amp;НачалоДня = НачалоДня('2026-04-30')
+//    &amp;КонецДня = КонецДня('2026-04-30')
+//
+// Примеры:
+// 1) По всем клиентам:
+//    &amp;ПОВсемКлиентам = Истина
+//    &amp;Клиенты = Неопределено
+//
+// 2) По списку клиентов:
+//    &amp;ПОВсемКлиентам = Ложь
+//    &amp;Клиенты = &lt;Массив или СписокЗначений ссылок на Контрагенты&gt;
+ВЫБРАТЬ
+	"НачислениеНДФЛПоПортфелю" КАК ВидДокумента,
+	"Начисления" КАК ТабличнаяЧасть,
+	ТЧ.Ссылка КАК Ссылка,
+	ТЧ.Ссылка.Дата КАК ДатаДокумента,
+	ТЧ.Ссылка.Номер КАК НомерДокумента,
+	NULL КАК ВидРасхода,
+	ТЧ.КодДохода КАК КодДохода,
+	ТЧ.КодВычета КАК КодВычета,
+	ТЧ.НалогооблагаемаяCумма КАК НалогооблагаемаяCумма,
+	ТЧ.Ставка КАК Ставка,
+	ТЧ.ТипДохода КАК ТипДохода,
+	ТЧ.СуммаВычета КАК СуммаВычета,
+	ТЧ.СуммаДохода КАК СуммаДохода,
+	NULL КАК СуммаРанееУдержанногоНДФЛ,
+	NULL КАК СуммаКУдержанию,
+	NULL КАК СуммаИсчисленногоНалога,
+	NULL КАК УплаченныйНДФЛ,
+	NULL КАК Сумма
+ИЗ
+	Документ.НачислениеНДФЛПоПортфелю.Начисления КАК ТЧ
+ГДЕ
+	ТЧ.Ссылка.Дата МЕЖДУ &amp;НачалоДня И &amp;КонецДня
+	И ТЧ.Ссылка.Проведен
+	И (&amp;ПОВсемКлиентам
+			ИЛИ ТЧ.Ссылка.Портфель.Клиент В (&amp;Клиенты))
+
+ОБЪЕДИНИТЬ ВСЕ
+
+ВЫБРАТЬ
+	"НачислениеНДФЛПоПортфелю",
+	"Удержания",
+	ТЧ.Ссылка,
+	ТЧ.Ссылка.Дата,
+	ТЧ.Ссылка.Номер,
+	NULL,
+	NULL,
+	NULL,
+	NULL,
+	ТЧ.Ставка,
+	ТЧ.ТипДохода,
+	NULL,
+	ТЧ.СуммаДохода,
+	ТЧ.СуммаРанееУдержанногоНДФЛ,
+	ТЧ.СуммаКУдержанию,
+	ТЧ.СуммаИсчисленногоНалога,
+	ТЧ.УплаченныйНДФЛ,
+	NULL
+ИЗ
+	Документ.НачислениеНДФЛПоПортфелю.Удержания КАК ТЧ
+ГДЕ
+	ТЧ.Ссылка.Дата МЕЖДУ &amp;НачалоДня И &amp;КонецДня
+	И ТЧ.Ссылка.Проведен
+	И (&amp;ПОВсемКлиентам
+			ИЛИ ТЧ.Ссылка.Портфель.Клиент В (&amp;Клиенты))
+
+ОБЪЕДИНИТЬ ВСЕ
+
+ВЫБРАТЬ
+	"НачислениеНДФЛПоПортфелю",
+	"ОбщиеРасходы",
+	ТЧ.Ссылка,
+	ТЧ.Ссылка.Дата,
+	ТЧ.Ссылка.Номер,
+	ТЧ.ВидРасхода,
+	NULL,
+	NULL,
+	NULL,
+	NULL,
+	NULL,
+	NULL,
+	NULL,
+	NULL,
+	NULL,
+	NULL,
+	NULL,
+	ТЧ.Сумма
+ИЗ
+	Документ.НачислениеНДФЛПоПортфелю.ОбщиеРасходы КАК ТЧ
+ГДЕ
+	ТЧ.Ссылка.Дата МЕЖДУ &amp;НачалоДня И &amp;КонецДня
+	И ТЧ.Ссылка.Проведен
+	И (&amp;ПОВсемКлиентам
+			ИЛИ ТЧ.Ссылка.Портфель.Клиент В (&amp;Клиенты))
+
+УПОРЯДОЧИТЬ ПО
+	ВидДокумента,
+	ТабличнаяЧасть,
+	Ссылка,
+	ДатаДокумента,
+	НомерДокумента,
+	ВидРасхода,
+	КодДохода,
+	КодВычета,
+	НалогооблагаемаяCумма,
+	Ставка,
+	ТипДохода,
+	СуммаВычета,
+	СуммаДохода,
+	СуммаРанееУдержанногоНДФЛ,
+	СуммаКУдержанию,
+	СуммаИсчисленногоНалога,
+	УплаченныйНДФЛ,
+	Сумма</Value>
+							</Property>
+							<Property name="ТекстКод">
+								<Value xsi:type="xs:string"/>
+							</Property>
+							<Property name="МетодИсполненияКода">
+								<Value xsi:type="xs:decimal">0</Value>
+							</Property>
+							<Property name="ПараметрыЗапроса">
+								<Value xsi:type="ValueListType">
+									<valueType/>
+									<lastId xsi:type="xs:decimal">3</lastId>
+									<item>
+										<value xsi:type="Structure">
+											<Property name="Имя">
+												<Value xsi:type="xs:string">НачалоДня</Value>
+											</Property>
+											<Property name="ТипЗначения">
+												<Value xsi:type="TypeDescription">
+													<Type>xs:dateTime</Type>
+													<DateQualifiers>
+														<DateFractions>DateTime</DateFractions>
+													</DateQualifiers>
+												</Value>
+											</Property>
+											<Property name="Значение">
+												<Value xsi:type="xs:dateTime">2026-12-31T00:00:00</Value>
+											</Property>
+											<Property name="ТипКонтейнера">
+												<Value xsi:type="xs:decimal">0</Value>
+											</Property>
+											<Property name="Контейнер">
+												<Value xsi:type="xs:dateTime">2026-12-31T00:00:00</Value>
+											</Property>
+											<Property name="Использовать">
+												<Value xsi:type="xs:boolean">true</Value>
+											</Property>
+										</value>
+										<id xsi:type="xs:decimal">0</id>
+									</item>
+									<item>
+										<value xsi:type="Structure">
+											<Property name="Имя">
+												<Value xsi:type="xs:string">КонецДня</Value>
+											</Property>
+											<Property name="ТипЗначения">
+												<Value xsi:type="TypeDescription">
+													<Type>xs:dateTime</Type>
+													<DateQualifiers>
+														<DateFractions>DateTime</DateFractions>
+													</DateQualifiers>
+												</Value>
+											</Property>
+											<Property name="Значение">
+												<Value xsi:type="xs:dateTime">2026-12-31T23:59:59</Value>
+											</Property>
+											<Property name="ТипКонтейнера">
+												<Value xsi:type="xs:decimal">0</Value>
+											</Property>
+											<Property name="Контейнер">
+												<Value xsi:type="xs:dateTime">2026-12-31T23:59:59</Value>
+											</Property>
+											<Property name="Использовать">
+												<Value xsi:type="xs:boolean">true</Value>
+											</Property>
+										</value>
+										<id xsi:type="xs:decimal">1</id>
+									</item>
+									<item>
+										<value xsi:type="Structure">
+											<Property name="Имя">
+												<Value xsi:type="xs:string">ПОВсемКлиентам</Value>
+											</Property>
+											<Property name="ТипЗначения">
+												<Value xsi:type="TypeDescription">
+													<Type>xs:boolean</Type>
+												</Value>
+											</Property>
+											<Property name="Значение">
+												<Value xsi:type="xs:boolean">true</Value>
+											</Property>
+											<Property name="ТипКонтейнера">
+												<Value xsi:type="xs:decimal">0</Value>
+											</Property>
+											<Property name="Контейнер">
+												<Value xsi:type="xs:boolean">true</Value>
+											</Property>
+											<Property name="Использовать">
+												<Value xsi:type="xs:boolean">true</Value>
+											</Property>
+										</value>
+										<id xsi:type="xs:decimal">2</id>
+									</item>
+									<item>
+										<value xsi:type="Structure">
+											<Property name="Имя">
+												<Value xsi:type="xs:string">Клиенты</Value>
+											</Property>
+											<Property name="ТипЗначения">
+												<Value xsi:type="TypeDescription">
+													<Type xmlns:d14p1="http://v8.1c.ru/8.1/data/enterprise/current-config">d14p1:CatalogRef.Контрагенты</Type>
+												</Value>
+											</Property>
+											<Property name="Значение">
+												<Value xmlns:d13p1="http://v8.1c.ru/8.1/data/enterprise/current-config" xsi:type="d13p1:CatalogRef.Контрагенты">1b9cbef0-fceb-11f0-b2d1-0050569f27c0</Value>
+											</Property>
+											<Property name="ТипКонтейнера">
+												<Value xsi:type="xs:decimal">0</Value>
+											</Property>
+											<Property name="Контейнер">
+												<Value xmlns:d13p1="http://v8.1c.ru/8.1/data/enterprise/current-config" xsi:type="d13p1:CatalogRef.Контрагенты">1b9cbef0-fceb-11f0-b2d1-0050569f27c0</Value>
+											</Property>
+											<Property name="Использовать">
+												<Value xsi:type="xs:boolean">true</Value>
+											</Property>
+										</value>
+										<id xsi:type="xs:decimal">3</id>
+									</item>
+								</Value>
+							</Property>
+							<Property name="ВременныеТаблицы">
+								<Value xsi:type="ValueListType">
+									<valueType/>
+									<lastId xsi:type="xs:decimal">-1</lastId>
+								</Value>
+							</Property>
+							<Property name="Строки">
+								<Value xsi:type="Array">
+									<Value xsi:type="Structure">
+										<Property name="Имя">
+											<Value xsi:type="xs:string">НДФЛ Портфели</Value>
+										</Property>
+										<Property name="ТекстЗапроса">
+											<Value xsi:type="xs:string">// Описание: Единая таблица по табличным частям документа НачислениеНДФЛПоПортфелю за день.
+// Параметры:
+// &amp;НачалоДня - Дата
+// &amp;КонецДня - Дата
+// &amp;ПОВсемКлиентам - Булево
+// &amp;Клиенты - Массив/СписокЗначений (СправочникСсылка.Контрагенты)
+//
+// Как задать период за 1 день:
+// 1) Через дату:
+//    &amp;НачалоДня = НачалоДня(&amp;ДатаСреза)
+//    &amp;КонецДня = КонецДня(&amp;ДатаСреза)
+//
+// 2) Пример на фиксированную дату:
+//    &amp;НачалоДня = НачалоДня('2026-04-30')
+//    &amp;КонецДня = КонецДня('2026-04-30')
+//
+// Примеры:
+// 1) По всем клиентам:
+//    &amp;ПОВсемКлиентам = Истина
+//    &amp;Клиенты = Неопределено
+//
+// 2) По списку клиентов:
+//    &amp;ПОВсемКлиентам = Ложь
+//    &amp;Клиенты = &lt;Массив или СписокЗначений ссылок на Контрагенты&gt;
+ВЫБРАТЬ
+	"НачислениеНДФЛПоПортфелю" КАК ВидДокумента,
+	"Начисления" КАК ТабличнаяЧасть,
+	ТЧ.Ссылка КАК Ссылка,
+	ТЧ.Ссылка.Дата КАК ДатаДокумента,
+	ТЧ.Ссылка.Номер КАК НомерДокумента,  ТЧ.Ссылка.ПОртфель,
+	NULL КАК ВидРасхода,
+	ТЧ.КодДохода КАК КодДохода,
+	ТЧ.КодВычета КАК КодВычета,
+	ТЧ.НалогооблагаемаяCумма КАК НалогооблагаемаяCумма,
+	ТЧ.Ставка КАК Ставка,
+	ТЧ.ТипДохода КАК ТипДохода,
+	ТЧ.СуммаВычета КАК СуммаВычета,
+	ТЧ.СуммаДохода КАК СуммаДохода,
+	NULL КАК СуммаРанееУдержанногоНДФЛ,
+	NULL КАК СуммаКУдержанию,
+	NULL КАК СуммаИсчисленногоНалога,
+	NULL КАК УплаченныйНДФЛ,
+	NULL КАК Сумма
+ИЗ
+	Документ.НачислениеНДФЛПоПортфелю.Начисления КАК ТЧ
+ГДЕ
+	ТЧ.Ссылка.Дата МЕЖДУ &amp;НачалоДня И &amp;КонецДня
+	И ТЧ.Ссылка.Проведен
+	И (&amp;ПОВсемКлиентам
+			ИЛИ ТЧ.Ссылка.Портфель.Клиент В (&amp;Клиенты))  И ТЧ.КодДохода.Код  = "1531" И ТЧ.НалогооблагаемаяCумма &lt;&gt; 0
+
+УПОРЯДОЧИТЬ ПО
+	ВидДокумента,
+	ТабличнаяЧасть,
+	Ссылка,
+	ДатаДокумента,
+	НомерДокумента,
+	ВидРасхода,
+	КодДохода,
+	КодВычета,
+	НалогооблагаемаяCумма,
+	Ставка,
+	ТипДохода,
+	СуммаВычета,
+	СуммаДохода,
+	СуммаРанееУдержанногоНДФЛ,
+	СуммаКУдержанию,
+	СуммаИсчисленногоНалога,
+	УплаченныйНДФЛ,
+	Сумма</Value>
+										</Property>
+										<Property name="ТекстКод">
+											<Value xsi:type="xs:string"/>
+										</Property>
+										<Property name="МетодИсполненияКода">
+											<Value xsi:type="xs:decimal">0</Value>
+										</Property>
+										<Property name="ПараметрыЗапроса">
+											<Value xsi:type="ValueListType">
+												<valueType/>
+												<lastId xsi:type="xs:decimal">3</lastId>
+												<item>
+													<value xsi:type="Structure">
+														<Property name="Имя">
+															<Value xsi:type="xs:string">НачалоДня</Value>
+														</Property>
+														<Property name="ТипЗначения">
+															<Value xsi:type="TypeDescription">
+																<Type>xs:dateTime</Type>
+																<DateQualifiers>
+																	<DateFractions>DateTime</DateFractions>
+																</DateQualifiers>
+															</Value>
+														</Property>
+														<Property name="Значение">
+															<Value xsi:type="xs:dateTime">2026-12-31T00:00:00</Value>
+														</Property>
+														<Property name="ТипКонтейнера">
+															<Value xsi:type="xs:decimal">0</Value>
+														</Property>
+														<Property name="Контейнер">
+															<Value xsi:type="xs:dateTime">2026-12-31T00:00:00</Value>
+														</Property>
+														<Property name="Использовать">
+															<Value xsi:type="xs:boolean">true</Value>
+														</Property>
+													</value>
+													<id xsi:type="xs:decimal">0</id>
+												</item>
+												<item>
+													<value xsi:type="Structure">
+														<Property name="Имя">
+															<Value xsi:type="xs:string">КонецДня</Value>
+														</Property>
+														<Property name="ТипЗначения">
+															<Value xsi:type="TypeDescription">
+																<Type>xs:dateTime</Type>
+																<DateQualifiers>
+																	<DateFractions>DateTime</DateFractions>
+																</DateQualifiers>
+															</Value>
+														</Property>
+														<Property name="Значение">
+															<Value xsi:type="xs:dateTime">2026-12-31T23:59:59</Value>
+														</Property>
+														<Property name="ТипКонтейнера">
+															<Value xsi:type="xs:decimal">0</Value>
+														</Property>
+														<Property name="Контейнер">
+															<Value xsi:type="xs:dateTime">2026-12-31T23:59:59</Value>
+														</Property>
+														<Property name="Использовать">
+															<Value xsi:type="xs:boolean">true</Value>
+														</Property>
+													</value>
+													<id xsi:type="xs:decimal">1</id>
+												</item>
+												<item>
+													<value xsi:type="Structure">
+														<Property name="Имя">
+															<Value xsi:type="xs:string">ПОВсемКлиентам</Value>
+														</Property>
+														<Property name="ТипЗначения">
+															<Value xsi:type="TypeDescription">
+																<Type>xs:boolean</Type>
+															</Value>
+														</Property>
+														<Property name="Значение">
+															<Value xsi:type="xs:boolean">true</Value>
+														</Property>
+														<Property name="ТипКонтейнера">
+															<Value xsi:type="xs:decimal">0</Value>
+														</Property>
+														<Property name="Контейнер">
+															<Value xsi:type="xs:boolean">true</Value>
+														</Property>
+														<Property name="Использовать">
+															<Value xsi:type="xs:boolean">true</Value>
+														</Property>
+													</value>
+													<id xsi:type="xs:decimal">2</id>
+												</item>
+												<item>
+													<value xsi:type="Structure">
+														<Property name="Имя">
+															<Value xsi:type="xs:string">Клиенты</Value>
+														</Property>
+														<Property name="ТипЗначения">
+															<Value xsi:type="TypeDescription">
+																<Type xmlns:d17p1="http://v8.1c.ru/8.1/data/enterprise/current-config">d17p1:CatalogRef.Контрагенты</Type>
+															</Value>
+														</Property>
+														<Property name="Значение">
+															<Value xmlns:d16p1="http://v8.1c.ru/8.1/data/enterprise/current-config" xsi:type="d16p1:CatalogRef.Контрагенты">1b9cbef0-fceb-11f0-b2d1-0050569f27c0</Value>
+														</Property>
+														<Property name="ТипКонтейнера">
+															<Value xsi:type="xs:decimal">0</Value>
+														</Property>
+														<Property name="Контейнер">
+															<Value xmlns:d16p1="http://v8.1c.ru/8.1/data/enterprise/current-config" xsi:type="d16p1:CatalogRef.Контрагенты">1b9cbef0-fceb-11f0-b2d1-0050569f27c0</Value>
+														</Property>
+														<Property name="Использовать">
+															<Value xsi:type="xs:boolean">true</Value>
+														</Property>
+													</value>
+													<id xsi:type="xs:decimal">3</id>
+												</item>
+											</Value>
+										</Property>
+										<Property name="ВременныеТаблицы">
+											<Value xsi:type="ValueListType">
+												<valueType/>
+												<lastId xsi:type="xs:decimal">-1</lastId>
+											</Value>
+										</Property>
+										<Property name="Строки">
+											<Value xsi:type="Array"/>
+										</Property>
+										<Property name="Инфо">
+											<Value xsi:type="xs:string">281 / 0:00:00.151</Value>
+										</Property>
+										<Property name="КурсорНачалоСтроки">
+											<Value xsi:type="xs:decimal">49</Value>
+										</Property>
+										<Property name="КурсорНачалоКолонки">
+											<Value xsi:type="xs:decimal">108</Value>
+										</Property>
+										<Property name="КурсорКонецСтроки">
+											<Value xsi:type="xs:decimal">49</Value>
+										</Property>
+										<Property name="КурсорКонецКолонки">
+											<Value xsi:type="xs:decimal">108</Value>
+										</Property>
+										<Property name="КодКурсорНачалоСтроки">
+											<Value xsi:type="xs:decimal">0</Value>
+										</Property>
+										<Property name="КодКурсорНачалоКолонки">
+											<Value xsi:type="xs:decimal">0</Value>
+										</Property>
+										<Property name="КодКурсорКонецСтроки">
+											<Value xsi:type="xs:decimal">0</Value>
+										</Property>
+										<Property name="КодКурсорКонецКолонки">
+											<Value xsi:type="xs:decimal">0</Value>
+										</Property>
+										<Property name="АлгоритмПередВыполнением">
+											<Value xsi:type="xs:string"/>
+										</Property>
+									</Value>
+								</Value>
+							</Property>
+							<Property name="Инфо">
+								<Value xsi:type="xs:string">241 709 / 00:00:01.875</Value>
+							</Property>
+							<Property name="КурсорНачалоСтроки">
+								<Value xsi:type="xs:decimal">0</Value>
+							</Property>
+							<Property name="КурсорНачалоКолонки">
+								<Value xsi:type="xs:decimal">0</Value>
+							</Property>
+							<Property name="КурсорКонецСтроки">
+								<Value xsi:type="xs:decimal">0</Value>
+							</Property>
+							<Property name="КурсорКонецКолонки">
+								<Value xsi:type="xs:decimal">0</Value>
+							</Property>
+							<Property name="КодКурсорНачалоСтроки">
+								<Value xsi:type="xs:decimal">0</Value>
+							</Property>
+							<Property name="КодКурсорНачалоКолонки">
+								<Value xsi:type="xs:decimal">0</Value>
+							</Property>
+							<Property name="КодКурсорКонецСтроки">
+								<Value xsi:type="xs:decimal">0</Value>
+							</Property>
+							<Property name="КодКурсорКонецКолонки">
+								<Value xsi:type="xs:decimal">0</Value>
+							</Property>
+							<Property name="АлгоритмПередВыполнением">
+								<Value xsi:type="xs:string"/>
+							</Property>
+						</Value>
+						<Value xsi:type="Structure">
+							<Property name="Имя">
+								<Value xsi:type="xs:string">НДФЛ Управление</Value>
+							</Property>
+							<Property name="ТекстЗапроса">
+								<Value xsi:type="xs:string">// Описание: Единая таблица по табличным частям документа НачислениеНДФЛПоУправляющейКомпании за день.
+// Параметры:
+// &amp;НачалоДня - Дата
+// &amp;КонецДня - Дата
+// &amp;ПОВсемКлиентам - Булево
+// &amp;Клиенты - Массив/СписокЗначений (СправочникСсылка.Контрагенты)
+//
+// Как задать период за 1 день:
+// 1) Через дату:
+//    &amp;НачалоДня = НачалоДня(&amp;ДатаСреза)
+//    &amp;КонецДня = КонецДня(&amp;ДатаСреза)
+//
+// 2) Пример на фиксированную дату:
+//    &amp;НачалоДня = НачалоДня('2026-04-30')
+//    &amp;КонецДня = КонецДня('2026-04-30')
+//
+// Примеры:
+// 1) По всем клиентам:
+//    &amp;ПОВсемКлиентам = Истина
+//    &amp;Клиенты = Неопределено
+//
+// 2) По списку клиентов:
+//    &amp;ПОВсемКлиентам = Ложь
+//    &amp;Клиенты = &lt;Массив или СписокЗначений ссылок на Контрагенты&gt;
+ВЫБРАТЬ
+	"НачислениеНДФЛПоУправляющейКомпании" КАК ВидДокумента,
+	"Выводы" КАК ТабличнаяЧасть,
+	ТЧ.Ссылка КАК Ссылка,
+	ТЧ.Ссылка.Дата КАК ДатаДокумента,
+	ТЧ.Ссылка.Номер КАК НомерДокумента,
+	ТЧ.Портфель КАК Портфель,
+	ТЧ.СуммаВывода КАК СуммаВывода,
+	NULL КАК РаспределятьОбщиеРасходы,
+	NULL КАК Закрытие,
+	NULL КАК КодВычета,
+	NULL КАК КодДохода,
+	NULL КАК НалогооблагаемаяCумма,
+	NULL КАК Ставка,
+	NULL КАК ТипДохода,
+	NULL КАК СуммаВычета,
+	NULL КАК СуммаДохода,
+	NULL КАК СуммаКЗачету,
+	NULL КАК СуммаКУдержанию,
+	NULL КАК СуммаРанееУдержанногоНДФЛ,
+	NULL КАК ФинансовыйРезультат,
+	NULL КАК ИзменениеФинРезультата,
+	NULL КАК Пропорция,
+	NULL КАК Система,
+	NULL КАК Сумма
+ИЗ
+	Документ.НачислениеНДФЛПоУправляющейКомпании.Выводы КАК ТЧ
+ГДЕ
+	ТЧ.Ссылка.Дата МЕЖДУ &amp;НачалоДня И &amp;КонецДня
+	И ТЧ.Ссылка.Проведен
+	И (&amp;ПОВсемКлиентам
+			ИЛИ ТЧ.Ссылка.Клиент В (&amp;Клиенты))
+
+ОБЪЕДИНИТЬ ВСЕ
+
+ВЫБРАТЬ
+	"НачислениеНДФЛПоУправляющейКомпании",
+	"ОбщиеРасходы",
+	ТЧ.Ссылка,
+	ТЧ.Ссылка.Дата,
+	ТЧ.Ссылка.Номер,
+	ТЧ.Портфель,
+	NULL,
+	ТЧ.РаспределятьОбщиеРасходы,
+	ТЧ.Закрытие,
+	NULL,
+	NULL,
+	NULL,
+	NULL,
+	NULL,
+	NULL,
+	NULL,
+	NULL,
+	NULL,
+	NULL,
+	NULL,
+	NULL,
+	NULL,
+	NULL,
+	NULL
+ИЗ
+	Документ.НачислениеНДФЛПоУправляющейКомпании.ОбщиеРасходы КАК ТЧ
+ГДЕ
+	ТЧ.Ссылка.Дата МЕЖДУ &amp;НачалоДня И &amp;КонецДня
+	И ТЧ.Ссылка.Проведен
+	И (&amp;ПОВсемКлиентам
+			ИЛИ ТЧ.Ссылка.Клиент В (&amp;Клиенты))
+
+ОБЪЕДИНИТЬ ВСЕ
+
+ВЫБРАТЬ
+	"НачислениеНДФЛПоУправляющейКомпании",
+	"Начисления",
+	ТЧ.Ссылка,
+	ТЧ.Ссылка.Дата,
+	ТЧ.Ссылка.Номер,
+	NULL,
+	NULL,
+	NULL,
+	NULL,
+	ТЧ.КодВычета,
+	ТЧ.КодДохода,
+	ТЧ.НалогооблагаемаяCумма,
+	ТЧ.Ставка,
+	ТЧ.ТипДохода,
+	ТЧ.СуммаВычета,
+	ТЧ.СуммаДохода,
+	ТЧ.СуммаКЗачету,
+	NULL,
+	NULL,
+	NULL,
+	NULL,
+	NULL,
+	NULL,
+	NULL
+ИЗ
+	Документ.НачислениеНДФЛПоУправляющейКомпании.Начисления КАК ТЧ
+ГДЕ
+	ТЧ.Ссылка.Дата МЕЖДУ &amp;НачалоДня И &amp;КонецДня
+	И ТЧ.Ссылка.Проведен
+	И (&amp;ПОВсемКлиентам
+			ИЛИ ТЧ.Ссылка.Клиент В (&amp;Клиенты))
+
+ОБЪЕДИНИТЬ ВСЕ
+
+ВЫБРАТЬ
+	"НачислениеНДФЛПоУправляющейКомпании",
+	"ИнвестиционныйВычетПоПортфелям",
+	ТЧ.Ссылка,
+	ТЧ.Ссылка.Дата,
+	ТЧ.Ссылка.Номер,
+	ТЧ.Портфель,
+	NULL,
+	NULL,
+	NULL,
+	ТЧ.КодВычета,
+	NULL,
+	NULL,
+	NULL,
+	NULL,
+	NULL,
+	NULL,
+	NULL,
+	NULL,
+	NULL,
+	NULL,
+	NULL,
+	NULL,
+	NULL,
+	ТЧ.Сумма
+ИЗ
+	Документ.НачислениеНДФЛПоУправляющейКомпании.ИнвестиционныйВычетПоПортфелям КАК ТЧ
+ГДЕ
+	ТЧ.Ссылка.Дата МЕЖДУ &amp;НачалоДня И &amp;КонецДня
+	И ТЧ.Ссылка.Проведен
+	И (&amp;ПОВсемКлиентам
+			ИЛИ ТЧ.Ссылка.Клиент В (&amp;Клиенты))
+
+ОБЪЕДИНИТЬ ВСЕ
+
+ВЫБРАТЬ
+	"НачислениеНДФЛПоУправляющейКомпании",
+	"Удержания",
+	ТЧ.Ссылка,
+	ТЧ.Ссылка.Дата,
+	ТЧ.Ссылка.Номер,
+	ТЧ.Портфель,
+	NULL,
+	NULL,
+	NULL,
+	NULL,
+	NULL,
+	ТЧ.НалогооблагаемаяCумма,
+	ТЧ.Ставка,
+	ТЧ.ТипДохода,
+	NULL,
+	ТЧ.СуммаДохода,
+	NULL,
+	ТЧ.СуммаКУдержанию,
+	ТЧ.СуммаРанееУдержанногоНДФЛ,
+	ТЧ.ФинансовыйРезультат,
+	ТЧ.ИзменениеФинРезультата,
+	ТЧ.Пропорция,
+	ТЧ.Система,
+	NULL
+ИЗ
+	Документ.НачислениеНДФЛПоУправляющейКомпании.Удержания КАК ТЧ
+ГДЕ
+	ТЧ.Ссылка.Дата МЕЖДУ &amp;НачалоДня И &amp;КонецДня
+	И ТЧ.Ссылка.Проведен
+	И (&amp;ПОВсемКлиентам
+			ИЛИ ТЧ.Ссылка.Клиент В (&amp;Клиенты))
+
+УПОРЯДОЧИТЬ ПО
+	ВидДокумента,
+	ТабличнаяЧасть,
+	Ссылка,
+	ДатаДокумента,
+	НомерДокумента,
+	Портфель,
+	СуммаВывода,
+	РаспределятьОбщиеРасходы,
+	Закрытие,
+	КодВычета,
+	КодДохода,
+	НалогооблагаемаяCумма,
+	Ставка,
+	ТипДохода,
+	СуммаВычета,
+	СуммаДохода,
+	СуммаКЗачету,
+	СуммаКУдержанию,
+	СуммаРанееУдержанногоНДФЛ,
+	ФинансовыйРезультат,
+	ИзменениеФинРезультата,
+	Пропорция,
+	Система,
+	Сумма</Value>
+							</Property>
+							<Property name="ТекстКод">
+								<Value xsi:type="xs:string"/>
+							</Property>
+							<Property name="МетодИсполненияКода">
+								<Value xsi:type="xs:decimal">0</Value>
+							</Property>
+							<Property name="ПараметрыЗапроса">
+								<Value xsi:type="ValueListType">
+									<valueType/>
+									<lastId xsi:type="xs:decimal">3</lastId>
+									<item>
+										<value xsi:type="Structure">
+											<Property name="Имя">
+												<Value xsi:type="xs:string">НачалоДня</Value>
+											</Property>
+											<Property name="ТипЗначения">
+												<Value xsi:type="TypeDescription">
+													<Type>xs:dateTime</Type>
+													<DateQualifiers>
+														<DateFractions>DateTime</DateFractions>
+													</DateQualifiers>
+												</Value>
+											</Property>
+											<Property name="Значение">
+												<Value xsi:type="xs:dateTime">2026-12-31T00:00:00</Value>
+											</Property>
+											<Property name="ТипКонтейнера">
+												<Value xsi:type="xs:decimal">0</Value>
+											</Property>
+											<Property name="Контейнер">
+												<Value xsi:type="xs:dateTime">2026-12-31T00:00:00</Value>
+											</Property>
+											<Property name="Использовать">
+												<Value xsi:type="xs:boolean">true</Value>
+											</Property>
+										</value>
+										<id xsi:type="xs:decimal">0</id>
+									</item>
+									<item>
+										<value xsi:type="Structure">
+											<Property name="Имя">
+												<Value xsi:type="xs:string">КонецДня</Value>
+											</Property>
+											<Property name="ТипЗначения">
+												<Value xsi:type="TypeDescription">
+													<Type>xs:dateTime</Type>
+													<DateQualifiers>
+														<DateFractions>DateTime</DateFractions>
+													</DateQualifiers>
+												</Value>
+											</Property>
+											<Property name="Значение">
+												<Value xsi:type="xs:dateTime">2026-12-31T23:59:59</Value>
+											</Property>
+											<Property name="ТипКонтейнера">
+												<Value xsi:type="xs:decimal">0</Value>
+											</Property>
+											<Property name="Контейнер">
+												<Value xsi:type="xs:dateTime">2026-12-31T23:59:59</Value>
+											</Property>
+											<Property name="Использовать">
+												<Value xsi:type="xs:boolean">true</Value>
+											</Property>
+										</value>
+										<id xsi:type="xs:decimal">1</id>
+									</item>
+									<item>
+										<value xsi:type="Structure">
+											<Property name="Имя">
+												<Value xsi:type="xs:string">ПОВсемКлиентам</Value>
+											</Property>
+											<Property name="ТипЗначения">
+												<Value xsi:type="TypeDescription">
+													<Type>xs:boolean</Type>
+												</Value>
+											</Property>
+											<Property name="Значение">
+												<Value xsi:type="xs:boolean">true</Value>
+											</Property>
+											<Property name="ТипКонтейнера">
+												<Value xsi:type="xs:decimal">0</Value>
+											</Property>
+											<Property name="Контейнер">
+												<Value xsi:type="xs:boolean">true</Value>
+											</Property>
+											<Property name="Использовать">
+												<Value xsi:type="xs:boolean">true</Value>
+											</Property>
+										</value>
+										<id xsi:type="xs:decimal">2</id>
+									</item>
+									<item>
+										<value xsi:type="Structure">
+											<Property name="Имя">
+												<Value xsi:type="xs:string">Клиенты</Value>
+											</Property>
+											<Property name="ТипЗначения">
+												<Value xsi:type="TypeDescription">
+													<Type xmlns:d14p1="http://v8.1c.ru/8.1/data/enterprise/current-config">d14p1:CatalogRef.Контрагенты</Type>
+												</Value>
+											</Property>
+											<Property name="Значение">
+												<Value xmlns:d13p1="http://v8.1c.ru/8.1/data/enterprise/current-config" xsi:type="d13p1:CatalogRef.Контрагенты">1b9cbef0-fceb-11f0-b2d1-0050569f27c0</Value>
+											</Property>
+											<Property name="ТипКонтейнера">
+												<Value xsi:type="xs:decimal">0</Value>
+											</Property>
+											<Property name="Контейнер">
+												<Value xmlns:d13p1="http://v8.1c.ru/8.1/data/enterprise/current-config" xsi:type="d13p1:CatalogRef.Контрагенты">1b9cbef0-fceb-11f0-b2d1-0050569f27c0</Value>
+											</Property>
+											<Property name="Использовать">
+												<Value xsi:type="xs:boolean">true</Value>
+											</Property>
+										</value>
+										<id xsi:type="xs:decimal">3</id>
+									</item>
+								</Value>
+							</Property>
+							<Property name="ВременныеТаблицы">
+								<Value xsi:type="ValueListType">
+									<valueType/>
+									<lastId xsi:type="xs:decimal">-1</lastId>
+								</Value>
+							</Property>
+							<Property name="Строки">
+								<Value xsi:type="Array"/>
+							</Property>
+							<Property name="Инфо">
+								<Value xsi:type="xs:string">61 653 / 0:00:00.675</Value>
+							</Property>
+							<Property name="КурсорНачалоСтроки">
+								<Value xsi:type="xs:decimal">0</Value>
+							</Property>
+							<Property name="КурсорНачалоКолонки">
+								<Value xsi:type="xs:decimal">0</Value>
+							</Property>
+							<Property name="КурсорКонецСтроки">
+								<Value xsi:type="xs:decimal">0</Value>
+							</Property>
+							<Property name="КурсорКонецКолонки">
+								<Value xsi:type="xs:decimal">0</Value>
+							</Property>
+							<Property name="КодКурсорНачалоСтроки">
+								<Value xsi:type="xs:decimal">0</Value>
+							</Property>
+							<Property name="КодКурсорНачалоКолонки">
+								<Value xsi:type="xs:decimal">0</Value>
+							</Property>
+							<Property name="КодКурсорКонецСтроки">
+								<Value xsi:type="xs:decimal">0</Value>
+							</Property>
+							<Property name="КодКурсорКонецКолонки">
+								<Value xsi:type="xs:decimal">0</Value>
+							</Property>
+							<Property name="АлгоритмПередВыполнением">
+								<Value xsi:type="xs:string"/>
+							</Property>
+						</Value>
+					</Value>
+				</Property>
+				<Property name="Инфо">
+					<Value xsi:type="xs:string"/>
+				</Property>
+				<Property name="КурсорНачалоСтроки">
+					<Value xsi:type="xs:decimal">0</Value>
+				</Property>
+				<Property name="КурсорНачалоКолонки">
+					<Value xsi:type="xs:decimal">0</Value>
+				</Property>
+				<Property name="КурсорКонецСтроки">
+					<Value xsi:type="xs:decimal">0</Value>
+				</Property>
+				<Property name="КурсорКонецКолонки">
+					<Value xsi:type="xs:decimal">0</Value>
+				</Property>
+				<Property name="КодКурсорНачалоСтроки">
+					<Value xsi:type="xs:decimal">0</Value>
+				</Property>
+				<Property name="КодКурсорНачалоКолонки">
+					<Value xsi:type="xs:decimal">0</Value>
+				</Property>
+				<Property name="КодКурсорКонецСтроки">
+					<Value xsi:type="xs:decimal">0</Value>
+				</Property>
+				<Property name="КодКурсорКонецКолонки">
+					<Value xsi:type="xs:decimal">0</Value>
+				</Property>
+				<Property name="АлгоритмПередВыполнением">
+					<Value xsi:type="xs:string"/>
+				</Property>
+			</Value>
+		</Value>
+	</Property>
+</Structure>
