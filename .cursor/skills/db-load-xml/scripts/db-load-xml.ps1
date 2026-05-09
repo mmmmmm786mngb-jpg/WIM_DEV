@@ -101,7 +101,11 @@ param(
     [switch]$UpdateDB,
 
     [Parameter(Mandatory=$false)]
-    [switch]$StrictLog
+    [switch]$StrictLog,
+
+    # Вход под пользователем ОС (/WA+) без логина и пароля ИБ (настройка «Аутентификация операционной системы»)
+    [Parameter(Mandatory=$false)]
+    [switch]$WindowsAuth
 )
 
 $OutputEncoding = [System.Text.Encoding]::UTF8
@@ -155,6 +159,10 @@ try {
         $arguments += "/S", "`"$InfoBaseServer/$InfoBaseRef`""
     } else {
         $arguments += "/F", "`"$InfoBasePath`""
+    }
+
+    if ($WindowsAuth) {
+        $arguments += "/WA+"
     }
 
     if ($UserName) { $arguments += "/N`"$UserName`"" }

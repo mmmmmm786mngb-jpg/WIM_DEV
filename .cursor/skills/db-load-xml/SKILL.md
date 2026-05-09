@@ -59,6 +59,7 @@ powershell.exe -NoProfile -File .cursor/skills/db-load-xml/scripts/db-load-xml.p
 | `-AllExtensions` | нет | Загрузить все расширения |
 | `-Format <формат>` | нет | `Hierarchical` (по умолч.) / `Plain` |
 | `-UpdateDB` | нет | После загрузки сразу обновить конфигурацию БД (`/UpdateDBCfg`) |
+| `-WindowsAuth` | нет | Вход без логина/пароля ИБ: `/WA+` (аутентификация ОС). Не указывайте `-UserName` / `-Password` |
 
 > `*` — нужен либо `-InfoBasePath`, либо пара `-InfoBaseServer` + `-InfoBaseRef`
 
