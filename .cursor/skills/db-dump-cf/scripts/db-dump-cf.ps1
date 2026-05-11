@@ -69,7 +69,11 @@ param(
     [string]$Extension,
 
     [Parameter(Mandatory=$false)]
-    [switch]$AllExtensions
+    [switch]$AllExtensions,
+
+    # Вход под пользователем ОС (/WA+) без логина и пароля ИБ
+    [Parameter(Mandatory=$false)]
+    [switch]$WindowsAuth
 )
 
 $OutputEncoding = [System.Text.Encoding]::UTF8
@@ -117,6 +121,10 @@ try {
         $arguments += "/S", "`"$InfoBaseServer/$InfoBaseRef`""
     } else {
         $arguments += "/F", "`"$InfoBasePath`""
+    }
+
+    if ($WindowsAuth) {
+        $arguments += "/WA+"
     }
 
     if ($UserName) { $arguments += "/N`"$UserName`"" }
