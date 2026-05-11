@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>IMDEV-8665 - дерево изменений</title>
+  <style>
+    :root {
+      --text: #212529;
+      --muted: #6c757d;
+      --border: #dee2e6;
+      --head-bg: #e7f5f8;
+      --info: #17a2b8;
+      --bg-note: #f0f9fb;
+      --branch: #0d6efd;
+    }
+    body {
+      font-family: "Segoe UI", system-ui, sans-serif;
+      color: var(--text);
+      line-height: 1.5;
+      max-width: 1160px;
+      margin: 1.5rem auto;
+      padding: 0 1rem;
+    }
+    h1 {
+      font-size: 1.35rem;
+      font-weight: 600;
+      margin-bottom: 0.35rem;
+      color: #0c5460;
+    }
+    .lead {
+      font-size: 0.96rem;
+      margin: 0 0 0.9rem 0;
+    }
+    .meta {
+      color: var(--muted);
+      font-size: 0.88rem;
+      margin-bottom: 1.25rem;
+    }
+    a {
+      color: #0d6efd;
+    }
+    .legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.75rem 1.25rem;
+      margin: 1rem 0 1.25rem 0;
+      padding: 0.75rem 1rem;
+      background: var(--bg-note);
+      border-left: 4px solid var(--info);
+      border-radius: 4px;
+      font-size: 0.9rem;
+    }
+    .tag {
+      display: inline-block;
+      padding: 0.12rem 0.45rem;
+      border-radius: 4px;
+      font-size: 0.78rem;
+      font-weight: 600;
+      margin-right: 0.35rem;
+      vertical-align: middle;
+    }
+    .tag-added { background: #d4edda; color: #155724; }
+    .tag-removed { background: #f8d7da; color: #721c24; }
+    .tag-changed { background: #fff3cd; color: #856404; }
+    .tag-intercept { background: #e7deff; color: #3d0a91; }
+    .tag-planned { background: #e2e3e5; color: #383d41; }
+    .plan-branch {
+      margin: 1.35rem 0;
+      padding: 1rem 1rem 1rem 1.05rem;
+      border-left: 5px solid var(--branch);
+      background: #fafcfe;
+      border-radius: 0 6px 6px 0;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+    }
+    .plan-branch > h2 {
+      font-size: 1.12rem;
+      margin: 0 0 0.65rem 0;
+      color: #0a58ca;
+    }
+    .plan-item {
+      margin: 0.85rem 0 0 0;
+      padding: 0.65rem 0.75rem;
+      background: #fff;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+    }
+    .plan-item-title {
+      font-weight: 600;
+      font-size: 0.93rem;
+      color: #0c5460;
+      margin-bottom: 0.35rem;
+    }
+    .plan-item-title code {
+      font-weight: 500;
+      font-size: 0.88rem;
+    }
+    .delta-list {
+      margin: 0.35rem 0 0 0;
+      padding-left: 1.15rem;
+      font-size: 0.88rem;
+    }
+    .delta-list li {
+      margin: 0.35rem 0;
+    }
+    .path {
+      font-family: Consolas, "Courier New", monospace;
+      font-size: 0.8rem;
+      color: #0d5e6e;
+      word-break: break-all;
+      margin: 0.25rem 0;
+    }
+    .meas {
+      font-family: Consolas, "Courier New", monospace;
+      font-size: 0.8rem;
+      color: #0d5e6e;
+    }
+    .mini-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.82rem;
+      margin-top: 0.45rem;
+    }
+    .mini-table th,
+    .mini-table td {
+      border: 1px solid var(--border);
+      padding: 0.38rem 0.45rem;
+      vertical-align: top;
+    }
+    .mini-table th {
+      background: var(--head-bg);
+      text-align: left;
+      font-weight: 600;
+      color: #0c5460;
+    }
+    footer {
+      margin-top: 1.75rem;
+      font-size: 0.8rem;
+      color: var(--muted);
+    }
+    .appendix {
+      margin-top: 1.75rem;
+      padding-top: 1rem;
+      border-top: 1px dashed var(--border);
+      font-size: 0.88rem;
+      color: var(--muted);
+    }
+    .appendix h2 {
+      font-size: 1rem;
+      color: #495057;
+      margin-bottom: 0.5rem;
+    }
+  </style>
+</head>
+<body>
+  <h1>IMDEV-8665: дерево изменений по задаче</h1>
+  <p class="lead">
+    Основа структуры документа совпадает с блоком &quot;ЧТО ДЕЛАЕМ&quot; в
+    <a href="./measurements_table_IMDEV-8665.html"><code>measurements_table_IMDEV-8665.html</code></a>.
+    Под каждым пунктом плана приведено поддерево: что уже изменено, добавлено или удалено в коде (внешняя обработка относительно
+    <code>epf_Оригинал</code>, расширение <code>MV_WAP</code>), либо отмечено как запланировано без реализации.
+  </p>
+  <p class="meta">
+    Эталон для diff обработки:
+    <span class="path">bases/Wim_Mo/projects/IMDEV-8665_Retail_MV/epf_Оригинал/внРасчетMVиWAP_epf/внРасчетMVиWAP/Ext/ObjectModule.bsl</span>
+    доработанный файл:
+    <span class="path">bases/Wim_Mo/projects/IMDEV-8665_Retail_MV/epf/внРасчетMVиWAP_epf/внРасчетMVиWAP/Ext/ObjectModule.bsl</span>
+    (порядка <span class="meas">+244 / -76</span> строк по <code>git diff --no-index</code>).
+  </p>
+
+  <div class="legend">
+    <span><span class="tag tag-added">добавлено</span></span>
+    <span><span class="tag tag-removed">удалено</span></span>
+    <span><span class="tag tag-changed">изменено</span></span>
+    <span><span class="tag tag-intercept">перехват</span> расширение</span>
+    <span><span class="tag tag-planned">не делали</span> в текущей итерации</span>
+  </div>
+
+  <!-- ========== 1. Запросы и массив мандатов ========== -->
+  <div class="plan-branch">
+    <h2>1. Переделать запросы, чтобы они могли работать с массивом мандатов</h2>
+    <p style="margin:0 0 0.5rem 0;font-size:0.88rem;color:var(--muted);">
+      Целевые точки в конфигурации (номера строк из плана / замеров Word). Ниже для каждой указано фактическое поддерево изменений.
+    </p>
+
+    <div class="plan-item">
+      <div class="plan-item-title">MV: стр. 304 -- <code>ЗаполнитьТЧЦенныеБумаги</code> (<code>Документ.РасчетРыночнойСтоимости</code>, модуль объекта)</div>
+      <ul class="delta-list">
+        <li><span class="tag tag-planned">не делали</span> Логика документа в конфигурации по этому методу в расширении <code>MV_WAP</code> не перехватывалась (объект только заимствован).</li>
+        <li>Связь с замерами HTML: строки <span class="meas">N=1, 2</span> (точки выполнения запросов в модуле объекта MV).</li>
+      </ul>
+    </div>
+
+    <div class="plan-item">
+      <div class="plan-item-title">MV: стр. 1469 -- <code>ЗаполнитьТабличнуюЧасть_Служебная</code></div>
+      <ul class="delta-list">
+        <li><span class="tag tag-planned">не делали</span> Аналогично: правок BSL в расширении по этому методу нет.</li>
+        <li>Связь: <span class="meas">N=2</span> (пакет запросов в области этого метода по замеру).</li>
+      </ul>
+    </div>
+
+    <div class="plan-item">
+      <div class="plan-item-title">MV: стр. 881 -- <code>ЗаполнитьТЧПлановыеЦБ</code></div>
+      <ul class="delta-list">
+        <li><span class="tag tag-planned">не делали</span> Правок в расширении нет.</li>
+        <li>Связь: <span class="meas">N=8</span>.</li>
+      </ul>
+    </div>
+
+    <div class="plan-item">
+      <div class="plan-item-title">WAP: стр. 74 -- <code>ПолучитьДанныеРасчета</code> (<code>Документ.РасчетСредневзвешеннойСтоимости</code>, модуль менеджера)</div>
+      <ul class="delta-list">
+        <li><span class="tag tag-planned">не делали</span> Пакетный запрос <code>ВыполнитьПакет</code> в этой процедуре не изменялся (расширение добавляет другие перехваты менеджера).</li>
+        <li>Связь: <span class="meas">N=3</span>. Отдельно реализован &quot;КЕШ&quot; для <code>ПолучитьВалютыРасчета</code> (стр. 128, <span class="meas">N=13</span>) см. раздел 2.</li>
+      </ul>
+    </div>
+
+    <div class="plan-item">
+      <div class="plan-item-title">WAP: стр. 812 -- <code>ТаблицаАмортизационныхОблигацийОстаточнаяСтоимость(МассивАктивов)</code></div>
+      <ul class="delta-list">
+        <li><span class="tag tag-planned">не делали</span> В расширении и во внешней обработке изменений по этому методу нет.</li>
+        <li>Связь: <span class="meas">N=9</span>.</li>
+      </ul>
+    </div>
+
+    <div class="plan-item">
+      <div class="plan-item-title">Смежно: подготовка таблицы мандатов во внешней обработке (не те же модули, что в списке выше)</div>
+      <ul class="delta-list">
+        <li>
+          <span class="tag tag-added">добавлено</span> <code>Функция ТипыМандатаДляОтбораФизическихЛиц()</code> --
+          массив типов <code>I</code> и <code>B</code> для параметра запроса ТЗМандатов.
+        </li>
+        <li>
+          <span class="tag tag-changed">изменено</span> <code>Процедура СформироватьMV(...)</code> --
+          параметр <code>ТипМандата</code>: было одно значение <code>Перечисления.ТипыМандата.I</code>, стало массив из функции выше;
+          условия для физ./юр. лиц: <code>В (&amp;ТипМандата)</code> / <code>НЕ В (&amp;ТипМандата)</code>; в текст запроса добавлены
+          <code>ПЕРВЫЕ 20</code> (отладка) и <code>НЕ ...Мандат.Предопределенный</code>.
+        </li>
+        <li>
+          <span class="tag tag-changed">изменено</span> <code>Процедура СформироватьWAP(...)</code> -- те же изменения по типам и запросу ТЗМандатов, что и для MV.
+        </li>
+        <li class="path">Файл: epf/внРасчетMVиWAP_epf/внРасчетMVиWAP/Ext/ObjectModule.bsl</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- ========== 2. КЕШ ========== -->
+  <div class="plan-branch">
+    <h2>2. КЕШ</h2>
+
+    <div class="plan-item">
+      <div class="plan-item-title">Стр. 2564 (Word) -- <code>ОбщийМодуль.ВТБ_АлгоритмыРасчета</code>, проверка <code>ТипМандата = B</code></div>
+      <ul class="delta-list">
+        <li><span class="tag tag-planned">не делали</span> Модуль конфигурации по решению из &quot;Идея1&quot; не вызывается по документу столько раз после массового сценария; отдельного перехвата в <code>MV_WAP</code> нет.</li>
+        <li>Смежно во внешней обработке (другой объект): см. раздел 1, смежный блок по <code>СформироватьMV</code> / <code>СформироватьWAP</code> и типам <code>I</code>, <code>B</code>.</li>
+        <li>Связь с таблицей замеров HTML: <span class="meas">N=11</span>.</li>
+      </ul>
+    </div>
+
+    <div class="plan-item">
+      <div class="plan-item-title">Стр. 73 -- <code>ОбщийМодуль.РаботаСКурсамиВалют</code>, <code>РегистрыСведений.КурсыВалют.ПолучитьПоследнее(...)</code></div>
+      <p class="path">Расширение MV_WAP: CommonModules/РаботаСКурсамиВалют/Ext/Module.bsl</p>
+      <table class="mini-table">
+        <thead>
+          <tr><th>Действие</th><th>Суть</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><span class="tag tag-intercept">перехват</span></td>
+            <td><code>&amp;Вместо(&quot;ПолучитьКурсВалюты&quot;)</code> -- функция <code>MV_WAP_ПолучитьКурсВалюты</code>: делегирование в <code>ОбщегоНазначенияПовтИсп.ПолучитьКурсВалюты</code>.</td>
+          </tr>
+        </tbody>
+      </table>
+      <ul class="delta-list">
+        <li>Связь: <span class="meas">N=12</span>.</li>
+      </ul>
+    </div>
+
+    <div class="plan-item">
+      <div class="plan-item-title">Стр. 128 -- <code>Документ.РасчетСредневзвешеннойСтоимости.МодульМенеджера</code>, <code>ПолучитьВалютыРасчета</code></div>
+      <p class="path">Расширение MV_WAP: Documents/РасчетСредневзвешеннойСтоимости/Ext/ManagerModule.bsl</p>
+      <table class="mini-table">
+        <thead>
+          <tr><th>Действие</th><th>Суть</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><span class="tag tag-intercept">перехват</span></td>
+            <td><code>&amp;Вместо(&quot;ПолучитьВалютыРасчета&quot;)</code> -- <code>MV_WAP_ПолучитьВалютыРасчета</code>: лог через <code>ОбщегоНазначенияМО.ДобавитьВЛогОтладки</code>, результат из <code>ОбщегоНазначенияПовтИсп.ПолучитьВалютыРасчета</code>.</td>
+          </tr>
+        </tbody>
+      </table>
+      <p class="path">Расширение MV_WAP: CommonModules/ОбщегоНазначенияПовтИсп/Ext/Module.bsl</p>
+      <table class="mini-table">
+        <thead>
+          <tr><th>Действие</th><th>Имя</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><span class="tag tag-added">добавлено</span></td><td><code>ПолучитьКурсВалюты(...)</code> Экспорт -- логика из модуля курсов, кеш сеанса модуля повторного использования.</td></tr>
+          <tr><td><span class="tag tag-added">добавлено</span></td><td><code>MV_WAP_ЗаполнитьЗапросВалютРасчета(...)</code> -- общий текст запроса валют WAP.</td></tr>
+          <tr><td><span class="tag tag-added">добавлено</span></td><td><code>ЗапросПолучитьВалютыРасчета(...)</code> Экспорт -- для отладочного лога.</td></tr>
+          <tr><td><span class="tag tag-added">добавлено</span></td><td><code>ПолучитьВалютыРасчета(...)</code> Экспорт -- выполнение запроса с кешированием результата сеанса.</td></tr>
+        </tbody>
+      </table>
+      <ul class="delta-list">
+        <li>Связь: <span class="meas">N=13</span>.</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- ========== 3. Параллельность ========== -->
+  <div class="plan-branch">
+    <h2>3. Параллельность</h2>
+
+    <div class="plan-item">
+      <div class="plan-item-title">Параллельное удаление старых документов (стр. замера 1047, 1085, 1082; ориентир NDFL/NDFL_RDU)</div>
+      <p class="path">epf/внРасчетMVиWAP_epf/внРасчетMVиWAP/Ext/ObjectModule.bsl (сравнение с epf_Оригинал)</p>
+      <table class="mini-table">
+        <thead>
+          <tr><th>Действие</th><th>Имя / суть</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><span class="tag tag-added">добавлено</span></td><td><code>Перем СсылкаНаСебя Экспорт</code></td></tr>
+          <tr><td><span class="tag tag-added">добавлено</span></td><td><code>Функция ПолучитьСсылкуНаСебя()</code></td></tr>
+          <tr><td><span class="tag tag-added">добавлено</span></td><td><code>Процедура УдалитьДокументыФоновоУниверсально(...)</code> -- оркестратор пачек и <code>ДлительныеОперации</code>.</td></tr>
+          <tr><td><span class="tag tag-added">добавлено</span></td><td><code>Процедура УдалитьПачкуДокументовВФоне(...)</code> Экспорт</td></tr>
+          <tr><td><span class="tag tag-added">добавлено</span></td><td><code>Функция РазбитьМассивНаПачки(...)</code> Экспорт</td></tr>
+          <tr><td><span class="tag tag-removed">удалено</span></td><td>Из тел двух процедур удаления: синхронный запрос, цикл выборки, <code>ПолучитьОбъект().Удалить()</code> (см. оригинал).</td></tr>
+          <tr><td><span class="tag tag-changed">изменено</span></td><td><code>УдалитьДокументыРасчетСредневзвешеннойСтоимости</code> -- вызов универсального фонового удаления для вида &quot;РасчетСредневзвешеннойСтоимости&quot;.</td></tr>
+          <tr><td><span class="tag tag-changed">изменено</span></td><td><code>УдалитьДокументыРасчетРыночнойСтоимости</code> -- то же для &quot;РасчетРыночнойСтоимости&quot;.</td></tr>
+        </tbody>
+      </table>
+      <ul class="delta-list">
+        <li>Связь с таблицей замеров HTML: <span class="meas">N=5, 6, 10</span>.</li>
+      </ul>
+    </div>
+
+    <div class="plan-item">
+      <div class="plan-item-title">Параллельный запуск <code>СформироватьMV</code> (стр. 521 в замерах Word)</div>
+      <ul class="delta-list">
+        <li><span class="tag tag-planned">не делали</span> Отдельный оркестратор параллельного запуска расчета MV по мандатам/дням в коде не добавлялся.</li>
+      </ul>
+    </div>
+
+    <div class="plan-item">
+      <div class="plan-item-title">Параллельный запуск <code>СформироватьWAP</code> (стр. 529 в замерах Word)</div>
+      <ul class="delta-list">
+        <li><span class="tag tag-planned">не делали</span> Аналогично MV.</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="appendix">
+    <h2>Приложение: заимствования расширения без правок BSL</h2>
+    <p>В <code>MV_WAP</code> заимствованы без изменений модулей: <code>Документ.РасчетРыночнойСтоимости</code>, <code>ОбщийМодуль.РасчетСтоимостиАктивов</code> -- под будущие работы по разделу &quot;Переделать запросы&quot;.</p>
+  </div>
+
+  <footer>
+    IMDEV-8665. Структура привязана к плану &quot;ЧТО ДЕЛАЕМ&quot; в
+    <a href="./measurements_table_IMDEV-8665.html">measurements_table_IMDEV-8665.html</a>.
+    При новых коммитах обновляйте поддеревья соответствующих ветвей.
+  </footer>
+</body>
+</html>
