@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Дерево замеров: 15 регламентных операций</title>
+<style>
+  body { font-family: Segoe UI, Arial, sans-serif; margin: 20px 24px 40px; line-height: 1.45; color: #212529; background: #f5f6f8; }
+  h1 { color: #0c5460; font-size: 1.35rem; margin-bottom: 8px; }
+  .lead { color: #495057; max-width: 900px; margin-bottom: 20px; }
+  .tree { max-width: 960px; }
+  .root-item { margin-bottom: 10px; border: 1px solid #ced4da; border-radius: 6px; background: #fff; overflow: hidden; }
+  .root-item > summary { list-style: none; cursor: pointer; padding: 12px 14px; font-weight: 600; background: linear-gradient(180deg, #e9ecef 0%, #dee2e6 100%); border-bottom: 1px solid #ced4da; }
+  .root-item > summary::-webkit-details-marker { display: none; }
+  .root-item > summary::before { content: "+ "; color: #17a2b8; font-weight: 700; }
+  .root-item[open] > summary::before { content: "- "; }
+  .root-body { padding: 10px 12px 14px 18px; }
+  details.branch { margin: 6px 0 6px 12px; border-left: 3px solid #17a2b8; padding-left: 10px; }
+  details.branch > summary { cursor: pointer; color: #0d47a1; font-weight: 500; }
+  details.branch > summary::-webkit-details-marker { display: none; }
+  details.branch > summary::before { content: "> "; color: #6c757d; font-size: 0.85em; }
+  details.branch[open] > summary::before { content: "v "; }
+  .twig { margin: 6px 0 6px 8px; padding: 8px 10px; background: #f8f9fa; border-radius: 4px; font-size: 0.92rem; border: 1px solid #e9ecef; }
+  code { font-family: Consolas, "Courier New", monospace; font-size: 0.88em; background: #e9ecef; padding: 1px 5px; border-radius: 3px; }
+  .meta { font-size: 0.88rem; color: #6c757d; margin-top: 16px; padding-top: 12px; border-top: 1px solid #dee2e6; }
+  .badge { display: inline-block; background: #17a2b8; color: #fff; font-size: 0.72rem; padding: 2px 8px; border-radius: 4px; font-weight: 600; vertical-align: middle; margin-right: 6px; }
+  ul { margin: 6px 0; padding-left: 1.2em; }
+  li { margin: 4px 0; }
+</style>
+</head>
+<body>
+
+<h1>Дерево замеров: куда смотреть по 15 операциям</h1>
+<p class="lead">
+  Основные ветки &mdash; операции из сетки (ежедневно, время и среднее время для замера).
+  Под каждой веткой &mdash; раскрываемые &laquo;петельки&raquo;: где взять границы замера (регламентное задание, узел обмена, документ, обработка, смежная ИБ).
+  Разворот: клик по строке с &laquo;+&raquo; или &laquo;&gt;&raquo;.
+</p>
+
+<div class="tree">
+
+<details class="root-item">
+<summary><span class="badge">1</span> Загрузка статики по клиентам, договорам, транзакциям из Аванкор ДУ &mdash; 0:00, ~2 ч</summary>
+<div class="root-body">
+  <details class="branch"><summary>Регламент и границы замера в ИБ МО</summary>
+    <div class="twig">Конфигуратор: регламентные задания, связанные с <code>ПланыОбмена.ИсточникиОбмена</code> и обменом с ДУ (время старта в свойствах задания / сценарии).</div>
+    <div class="twig">Журнал регистрации: события обменов, ошибки транспорта, завершение бизнес-процесса <code>ЗагрузкаДанных</code>.</div>
+  </details>
+  <details class="branch"><summary>Код и правила (выгрузка CF Wim_Mo)</summary>
+    <div class="twig"><code>CommonModules/ВТБ_ОбновлениеИнформационнойБазыМО</code> &mdash; макеты <code>ВТБ_поЗагрузкаСтатикиКотирИзДУ</code> (20), <code>ВТБ_поЗагрузкаТранзакцийДУ</code> (40).</div>
+    <div class="twig"><code>CommonModules/ОписаниеОбменов</code> &mdash; узел GUID <code>ee386a7d-5071-11e5-ac17-005056b100b2</code> (в коде: ЗагрузкаТранзакцийДУ), <code>ВыполнитьОбработкуПоРегламентномуЗаданию</code>.</div>
+    <div class="twig"><code>BusinessProcesses/ЗагрузкаДанных</code>, задачи <code>Tasks/ЗадачаОбмена</code>.</div>
+  </details>
+  <details class="branch"><summary>Смежная система</summary>
+    <div class="twig">ИБ ДУ (Wim_Du / WIM_FIn): источник регистрации изменений по плану обмена; замер &laquo;до/после&raquo; по количеству сообщений или номеру сообщения обмена.</div>
+  </details>
+</div>
+</details>
+
+<details class="root-item">
+<summary><span class="badge">2</span> Обновление статики бумаг из НРД &mdash; 23:00, ~0,1 ч</summary>
+<div class="root-body">
+  <details class="branch"><summary>Регламент в ИБ</summary>
+    <div class="twig">Внешняя обработка по БСП: команда <code>ФинПоказателиНРД</code> (см. проект IMDEV-8665, <code>внРасчетMVиWAP</code>) &mdash; расписание в подключенной обработке.</div>
+    <div class="twig">ЖР по событию загрузки/обработки НРД (имена событий смотреть в вашей базе).</div>
+  </details>
+  <details class="branch"><summary>Метаданные МО</summary>
+    <div class="twig">Справочники ЦБ: реквизиты <code>КодНРД</code>, <code>Признак_ЦБ_есть_в_НРД</code>; документы и РС <code>ВТБ_НРД_*</code>.</div>
+    <div class="twig"><code>DataProcessors/ОпределениеСправедливойСтоимости</code> &mdash; настройка <code>РасчетныйЦентрНРД</code>.</div>
+  </details>
+</div>
+</details>
+
+<details class="root-item">
+<summary><span class="badge">3</span> Загрузка котировок в МО &mdash; 8:50, ~0,1 ч</summary>
+<div class="root-body">
+  <details class="branch"><summary>Регламент в ИБ</summary>
+    <div class="twig">Узлы обмена или обработка загрузки рыночных данных (имя узла смотреть в справочнике источников обмена / сценарии).</div>
+    <div class="twig">Замер: время записи в <code>РегистрСведений.КотировкиЦБНаБирже</code> по периоду или лог загрузки.</div>
+  </details>
+  <details class="branch"><summary>Код МО</summary>
+    <div class="twig"><code>InformationRegisters/КотировкиЦБНаБирже</code> (менеджер модуля).</div>
+    <div class="twig">Потребители: <code>Documents/РасчетРыночнойСтоимости</code>, <code>Documents/РасчетСредневзвешеннойСтоимости</code>, обработки <code>ОпределениеСправедливойСтоимости*</code>.</div>
+  </details>
+</div>
+</details>
+
+<details class="root-item">
+<summary><span class="badge">4</span> Загрузка индексов, кривой бескупонной доходности &mdash; 9:10, ~0,1 ч</summary>
+<div class="root-body">
+  <details class="branch"><summary>Где искать границы замера</summary>
+    <div class="twig">В типовой выгрузке Wim_Mo по именам &laquo;бескупон&raquo;, &laquo;кривая&raquo; явной привязки не найдено &mdash; смотреть узлы обмена и внешние источники (<code>ExternalDataSource.*</code> в конфигурации).</div>
+    <div class="twig">Возможно: загрузка из ДУ или отдельного SQL/фида; замер по появлению записей в целевом регистре/таблице (уточнить у аналитика имя объекта).</div>
+  </details>
+  <details class="branch"><summary>Смежные контуры</summary>
+    <div class="twig">Wim_Du / внешняя аналитическая база; технический журнал шлюза, если данные не через 1С.</div>
+  </details>
+</div>
+</details>
+
+<details class="root-item">
+<summary><span class="badge">5</span> Проверка загрузки котировок &mdash; 9:15, ~0,2 ч</summary>
+<div class="root-body">
+  <details class="branch"><summary>Регламент в ИБ</summary>
+    <div class="twig">Отчет или регламентная проверка (имя в списке регламентных заданий / доп. обработок на вашей базе).</div>
+    <div class="twig">Замер: длительность отчета или контрольного запроса к <code>КотировкиЦБНаБирже</code> на полноту по списку бумаг.</div>
+  </details>
+  <details class="branch"><summary>Косвенно в МО</summary>
+    <div class="twig"><code>ОписаниеОбменов</code> &mdash; рассылка состояний обменов; регистр <code>СостояниеОбменов</code> (косвенный контроль цепочки загрузки).</div>
+  </details>
+</div>
+</details>
+
+<details class="root-item">
+<summary><span class="badge">6</span> Сверка ДС и ЦБ (шт) БО и ФО (FOBO) &mdash; 9:00, ~0,2 ч</summary>
+<div class="root-body">
+  <details class="branch"><summary>В МО по коду</summary>
+    <div class="twig">Строк <code>FOBO</code> / <code>ФОБО</code> в CF Wim_Mo не найдено &mdash; границы замера не из литералов в МО.</div>
+  </details>
+  <details class="branch"><summary>Куда смотреть дальше</summary>
+    <div class="twig">SBB_Broker (бэк-офис), отдельная обработка сверки, SQL-job, или сервис вне 1С &mdash; регламентное задание / планировщик ОС.</div>
+    <div class="twig">Замер: время выполнения отчета/обработки или два снимка остатков (БО vs ФО) с меткой времени.</div>
+  </details>
+</div>
+</details>
+
+<details class="root-item">
+<summary><span class="badge">7</span> Сверка ДС и ЦБ (шт) БО и МО (BOMO) &mdash; 14:00, ~0,5 ч</summary>
+<div class="root-body">
+  <details class="branch"><summary>В МО по коду</summary>
+    <div class="twig">Строк <code>BOMO</code> / <code>БОМО</code> в CF не найдено.</div>
+  </details>
+  <details class="branch"><summary>Куда смотреть</summary>
+    <div class="twig">Та же логика, что п.6: брокерская ИБ, внешняя сверка, или переименованная обработка в вашей базе (поиск по словам &laquo;сверк&raquo;, &laquo;остаток&raquo;, &laquo;БО&raquo; в списке внешних отчетов).</div>
+    <div class="twig">В МО косвенно: сравнение движений после обмена (тесты <code>ВТБ_ТестXUnit_ЗагрузкаТранзакцийДУ</code> как образец подхода).</div>
+  </details>
+</div>
+</details>
+
+<details class="root-item">
+<summary><span class="badge">8</span> Утренняя подготовка ФО к торгам (позиции, котировки, РС в Аванкор ФО РДУ) &mdash; 5:30, ~5 ч</summary>
+<div class="root-body">
+  <details class="branch"><summary>Регламент и замер</summary>
+    <div class="twig">Регламентное задание на выгрузку в ФО (узел / внешняя обработка &mdash; в вашей ИБ). Начало: старт задания; конец: последняя успешная запись ЖР или ответ XDTO.</div>
+    <div class="twig">Проект в репо: <code>bases/Wim_Mo/projects/IMDEV-8829_Retail_DU_Avancore_FO/</code> (контекст 5:30 и длительности).</div>
+  </details>
+  <details class="branch"><summary>Код МО</summary>
+    <div class="twig"><code>DataProcessors/внПроцедурыИФункцииОбменаСФронтОфис</code> (XDTO, пространство имен <code>http://avancore.ru/xsd</code>).</div>
+    <div class="twig"><code>Documents/РасчетРыночнойСтоимости</code> &mdash; подготовка рыночной оценки перед/в составе цепочки.</div>
+  </details>
+</div>
+</details>
+
+<details class="root-item">
+<summary><span class="badge">9</span> Дневной расчет СЧА в Аванкоре МО &mdash; 13:00, ~3 ч</summary>
+<div class="root-body">
+  <details class="branch"><summary>Регламент в ИБ</summary>
+    <div class="twig">Вид операции закрытия периода / документ <code>ПланРегламентныхОпераций</code> &mdash; время из настроек группы операций или регламентного задания исполнения плана.</div>
+  </details>
+  <details class="branch"><summary>Код МО</summary>
+    <div class="twig"><code>Documents/ПланРегламентныхОпераций</code> (в т.ч. операции без отдельного документа, в комментариях упоминаются СЧА).</div>
+    <div class="twig"><code>Справочник.ВидыОперацийЗакрытияПериода</code> + регистр <code>НастройкиЗакрытияПериода</code> (как источник списка операций).</div>
+  </details>
+</div>
+</details>
+
+<details class="root-item">
+<summary><span class="badge">10</span> Ночной пересчет СЧА в Аванкоре МО &mdash; 0:30, ~9 ч</summary>
+<div class="root-body">
+  <details class="branch"><summary>Регламент в ИБ</summary>
+    <div class="twig">То же, что п.9, плюс отдельное ночное задание на пересчет (если вынесено из плана).</div>
+    <div class="twig">Внешняя обработка: команды <code>Пересчет_MV_и_WAP_*</code> в <code>внРасчетMVиWAP</code> (пример расписания с 0:30 в настройках проекта IMDEV-8665).</div>
+  </details>
+  <details class="branch"><summary>Код МО</summary>
+    <div class="twig">Связка плана регламентных операций и фоновых заданий БСП по доп. обработкам.</div>
+  </details>
+</div>
+</details>
+
+<details class="root-item">
+<summary><span class="badge">11</span> Обновление остатков в Аванкоре ФО (РДУ) &mdash; 12:30, ~0,5 ч</summary>
+<div class="root-body">
+  <details class="branch"><summary>Регламент</summary>
+    <div class="twig">Узел выгрузки остатков/позиции в ФО (имя в <code>ИсточникиОбмена</code> на вашей базе).</div>
+  </details>
+  <details class="branch"><summary>Код МО</summary>
+    <div class="twig"><code>внПроцедурыИФункцииОбменаСФронтОфис</code> &mdash; формирование пакетов для сервиса ФО.</div>
+  </details>
+</div>
+</details>
+
+<details class="root-item">
+<summary><span class="badge">12</span> Сетап во всех системах и покупка на новых клиентов Розничного ДУ &mdash; 10:00</summary>
+<div class="root-body">
+  <details class="branch"><summary>Цепочка замера</summary>
+    <div class="twig">Несколько систем: МО (<code>ВТБ_АлгоритмыРасчета.МандатРозничноеДУ</code>, <code>WebServices/Avancore</code>), ФО, брокер &mdash; фиксировать время по каждому шагу в своей ИБ (ЖР, очереди).</div>
+  </details>
+  <details class="branch"><summary>В МО</summary>
+    <div class="twig">Обмен XDTO и справочники, завязанные на тип мандата &laquo;Розничное ДУ&raquo;.</div>
+  </details>
+</div>
+</details>
+
+<details class="root-item">
+<summary><span class="badge">13</span> Выводы ДС с биржи по расторжениям (Розничное ДУ) &mdash; 14:30, ~1 ч</summary>
+<div class="root-body">
+  <details class="branch"><summary>Где замерять</summary>
+    <div class="twig">Скорее брокерский контур + ФО; в МО &mdash; только если есть узел или документ поручения (искать по &laquo;расторж&raquo;, &laquo;вывод&raquo; в метаданных вашей версии ИБ).</div>
+  </details>
+  <details class="branch"><summary>Заметка по CF</summary>
+    <div class="twig">В <code>внПроцедурыИФункцииОбменаСФронтОфис</code> встречаются комментарии про досрочное расторжение &mdash; не полный регламент вывода с биржи.</div>
+  </details>
+</div>
+</details>
+
+<details class="root-item">
+<summary><span class="badge">14</span> Контроль алгоритма сетапа Розничного ДУ &mdash; 10:00, ~1 ч</summary>
+<div class="root-body">
+  <details class="branch"><summary>Где взять границы</summary>
+    <div class="twig">Мониторинг фоновых заданий, ЖР по обменам с ФО, отчет по ошибкам сетапа (если заведен в вашей ИБ).</div>
+  </details>
+  <details class="branch"><summary>В репозитории</summary>
+    <div class="twig">Нет выделенного объекта &laquo;контроль сетапа&raquo;; смотреть логи вокруг <code>ОписаниеОбменов</code> и веб-сервиса Avancore.</div>
+  </details>
+</div>
+</details>
+
+<details class="root-item">
+<summary><span class="badge">15</span> Выгрузка данных в кабинет клиента ДУ &mdash; 0:00, ~1 ч</summary>
+<div class="root-body">
+  <details class="branch"><summary>Регламент в ИБ</summary>
+    <div class="twig">Регламентное задание на команду БСП внешней обработки <code>ФормированиеОтчетовПоЗапросуДляКабинетаДУ</code> (фоновое выполнение).</div>
+    <div class="twig">Замер: SQL trace на стороне БД кабинета или записи в ЖР обработки (подключение к MS SQL описано в модуле обработки).</div>
+  </details>
+  <details class="branch"><summary>Код МО</summary>
+    <div class="twig"><code>DataProcessors/ФормированиеОтчетовПоЗапросуДляКабинетаДУ</code>.</div>
+  </details>
+</div>
+</details>
+
+</div>
+
+<p class="meta">
+  Исходники МО (типовая выгрузка): <code>C:\1c\Cursor_1c\WORK\Wim_Mo\SRC\CF\</code> (путь из <code>bases/Wim_Mo/source-path.txt</code>).
+  Файл создан для навигации при замерах; точные имена регламентных заданий зависят от экземпляра ИБ.
+</p>
+
+</body>
+</html>
