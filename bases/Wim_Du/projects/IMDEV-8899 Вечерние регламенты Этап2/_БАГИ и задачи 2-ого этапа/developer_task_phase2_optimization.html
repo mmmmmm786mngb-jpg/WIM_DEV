@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Постановка: оптимизация вечерних регламентов ДУ 1.5 (этап 2)</title>
+</head>
+<body style="margin:0; padding:0; font-family:'Segoe UI', Calibri, Arial, sans-serif; font-size:14px; line-height:1.5; color:#333333;">
+
+<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="max-width:820px; margin:0 auto;">
+<tr><td style="padding:24px 20px;">
+
+    <p style="margin:0 0 4px 0; font-size:11px; text-transform:uppercase; letter-spacing:0.5px; color:#6b7280;">
+        IMDEV-8899 / этап 2 / постановка для разработчика
+    </p>
+    <h1 style="margin:0 0 8px 0; font-size:22px; font-weight:600; color:#1a365d; border-bottom:3px solid #c05621; padding-bottom:10px;">
+        Оптимизация вечерних регламентов ДУ 1.5
+    </h1>
+    <p style="margin:0 0 20px 0; color:#718096; font-size:13px;">
+        Основание: замеры отладчика 15-16.05.2026, ~17 154 договоров ДУ, 5-10 потоков.
+        Материалы: «Тест по замеру отладчиком новой конфигурации.docx»,
+        «Анализ причин замедления после внедрения 14_05_26.docx».
+    </p>
+
+    <!-- Контекст -->
+    <h2 style="margin:0 0 12px 0; font-size:16px; color:#2d3748;">1. Контекст и цель</h2>
+    <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="margin-bottom:20px; background:#f7fafc; border-left:4px solid #2b6cb0;">
+    <tr><td style="padding:14px 16px;">
+        <p style="margin:0 0 10px 0; color:#4a5568;">
+            Отдельная задача на <strong>исследование и оптимизацию</strong> участков, выявленных после устранения
+            основного узкого места по <a href="https://jira/browse/IMAPPS-35992" style="color:#2b6cb0;">IMAPPS-35992</a>
+            (индексация + потоки — вынесены в отдельное согласование с бизнесом).
+        </p>
+        <p style="margin:0; color:#4a5568;">
+            <strong>Цель:</strong> сократить время полного вечернего расчета (~17 тыс. договоров ДУ)
+            за счет оптимизации запросов, отсечения «пустых» договоров и устранения коллизий номеров документов.
+        </p>
+    </td></tr>
+    </table>
+
+    <!-- Разбивка времени -->
+    <h2 style="margin:0 0 12px 0; font-size:16px; color:#2d3748;">2. Оценка времени полного расчета (базовая линия)</h2>
+    <p style="margin:0 0 10px 0; color:#4a5568;">При длительности ~2 часа на 17 тыс. договоров ДУ (5 потоков, после индексации IMAPPS-35992):</p>
+    <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="margin-bottom:20px; border-collapse:collapse; font-size:13px;">
+    <tr style="background:#4a5568; color:#fff;">
+        <th style="padding:8px 12px; text-align:left;">Блок</th>
+        <th style="padding:8px 12px; text-align:right;">Оценка</th>
+    </tr>
+    <tr style="background:#f7fafc;"><td style="padding:8px 12px; border-bottom:1px solid #e2e8f0;">ПланРегламентныхОперацийДУ + внутренние алгоритмы (параметры договоров и т.п.)</td><td style="padding:8px 12px; text-align:right; border-bottom:1px solid #e2e8f0;">~30 мин</td></tr>
+    <tr><td style="padding:8px 12px; border-bottom:1px solid #e2e8f0;">РСА + СЧА</td><td style="padding:8px 12px; text-align:right; border-bottom:1px solid #e2e8f0;">~30 мин</td></tr>
+    <tr style="background:#f7fafc;"><td style="padding:8px 12px; border-bottom:1px solid #e2e8f0;">Переоценка активов + НКД</td><td style="padding:8px 12px; text-align:right; border-bottom:1px solid #e2e8f0;">~40 мин</td></tr>
+    <tr><td style="padding:8px 12px;">Прочие расчеты (без движений: Переоценка ДС, дефолтные, контроль уменьшения стоимости и т.п.)</td><td style="padding:8px 12px; text-align:right;">~20 мин</td></tr>
+    </table>
+
+    <!-- Таблица замеров -->
+    <h2 style="margin:0 0 12px 0; font-size:16px; color:#2d3748;">3. Узкие места по детальному замеру (приоритет исследования)</h2>
+    <p style="margin:0 0 10px 0; color:#4a5568; font-size:13px;">
+        Источник: «Отладка детальная», фоновое задание, ~17 154 итераций. Сортировка по % чистого времени.
+    </p>
+    <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="margin-bottom:20px; border-collapse:collapse; font-size:12px;">
+    <tr style="background:#c05621; color:#fff;">
+        <th style="padding:8px 10px; text-align:left;">#</th>
+        <th style="padding:8px 10px; text-align:left;">Модуль</th>
+        <th style="padding:8px 10px; text-align:center;">Строка</th>
+        <th style="padding:8px 10px; text-align:left;">Код</th>
+        <th style="padding:8px 10px; text-align:right;">Кол.</th>
+        <th style="padding:8px 10px; text-align:right;">Врем., с</th>
+        <th style="padding:8px 10px; text-align:right;">%</th>
+    </tr>
+    <tr style="background:#fff5f5;">
+        <td style="padding:8px 10px; border-bottom:1px solid #e2e8f0; font-weight:600;">3.1</td>
+        <td style="padding:8px 10px; border-bottom:1px solid #e2e8f0;">Документ.ПереоценкаАктивов.МодульОбъекта</td>
+        <td style="padding:8px 10px; text-align:center; border-bottom:1px solid #e2e8f0;">880</td>
+        <td style="padding:8px 10px; border-bottom:1px solid #e2e8f0;"><code>РезультатЗапроса = Запрос.Выполнить();</code></td>
+        <td style="padding:8px 10px; text-align:right; border-bottom:1px solid #e2e8f0;">17 154</td>
+        <td style="padding:8px 10px; text-align:right; border-bottom:1px solid #e2e8f0;">1 222,37</td>
+        <td style="padding:8px 10px; text-align:right; border-bottom:1px solid #e2e8f0; font-weight:600;">7,80</td>
+    </tr>
+    <tr style="background:#fff5f5;">
+        <td style="padding:8px 10px; border-bottom:1px solid #e2e8f0; font-weight:600;">3.2</td>
+        <td style="padding:8px 10px; border-bottom:1px solid #e2e8f0;">РегистрСведений.ЗначенияПараметровДоговораДУ.МодульМенеджера</td>
+        <td style="padding:8px 10px; text-align:center; border-bottom:1px solid #e2e8f0;">73</td>
+        <td style="padding:8px 10px; border-bottom:1px solid #e2e8f0;"><code>Результат = Запрос.Выполнить();</code></td>
+        <td style="padding:8px 10px; text-align:right; border-bottom:1px solid #e2e8f0;">136 443</td>
+        <td style="padding:8px 10px; text-align:right; border-bottom:1px solid #e2e8f0;">1 174,37</td>
+        <td style="padding:8px 10px; text-align:right; border-bottom:1px solid #e2e8f0; font-weight:600;">7,49</td>
+    </tr>
+    <tr style="background:#fff5f5;">
+        <td style="padding:8px 10px; border-bottom:1px solid #e2e8f0; font-weight:600;">3.3</td>
+        <td style="padding:8px 10px; border-bottom:1px solid #e2e8f0;">Документ.РасчетСЧА_РСА.МодульОбъекта</td>
+        <td style="padding:8px 10px; text-align:center; border-bottom:1px solid #e2e8f0;">154</td>
+        <td style="padding:8px 10px; border-bottom:1px solid #e2e8f0;"><code>Результат = Запрос.Выполнить();</code></td>
+        <td style="padding:8px 10px; text-align:right; border-bottom:1px solid #e2e8f0;">17 154</td>
+        <td style="padding:8px 10px; text-align:right; border-bottom:1px solid #e2e8f0;">975,18</td>
+        <td style="padding:8px 10px; text-align:right; border-bottom:1px solid #e2e8f0; font-weight:600;">6,22</td>
+    </tr>
+    <tr>
+        <td style="padding:8px 10px; border-bottom:1px solid #e2e8f0; font-weight:600;">3.4</td>
+        <td style="padding:8px 10px; border-bottom:1px solid #e2e8f0;">Справочник.РегламентныеПериоды.МодульМенеджера</td>
+        <td style="padding:8px 10px; text-align:center; border-bottom:1px solid #e2e8f0;">686</td>
+        <td style="padding:8px 10px; border-bottom:1px solid #e2e8f0;"><code>НайденныеСтроки = СписокОпераций.НайтиСтроки(...)</code></td>
+        <td style="padding:8px 10px; text-align:right; border-bottom:1px solid #e2e8f0;">17 154</td>
+        <td style="padding:8px 10px; text-align:right; border-bottom:1px solid #e2e8f0;">669,33</td>
+        <td style="padding:8px 10px; text-align:right; border-bottom:1px solid #e2e8f0; font-weight:600;">4,27</td>
+    </tr>
+    <tr>
+        <td style="padding:8px 10px; border-bottom:1px solid #e2e8f0; font-weight:600;">3.5</td>
+        <td style="padding:8px 10px; border-bottom:1px solid #e2e8f0;">Документ.ПланРегламентныхОперацийДУ.МодульМенеджера</td>
+        <td style="padding:8px 10px; text-align:center; border-bottom:1px solid #e2e8f0;">21</td>
+        <td style="padding:8px 10px; border-bottom:1px solid #e2e8f0;"><code>РезультатЗапроса = Запрос.Выполнить();</code></td>
+        <td style="padding:8px 10px; text-align:right; border-bottom:1px solid #e2e8f0;">17 154</td>
+        <td style="padding:8px 10px; text-align:right; border-bottom:1px solid #e2e8f0;">328,99</td>
+        <td style="padding:8px 10px; text-align:right; border-bottom:1px solid #e2e8f0; font-weight:600;">2,10</td>
+    </tr>
+    </table>
+    <p style="margin:0 0 20px 0; font-size:12px; color:#718096;">
+        Дополнительно в замере (ниже порога отдельной подзадачи, учесть при комплексной оптимизации):
+        НКД ~5%, НачислениеКупонногоДохода ~5%, запись Переоценки ~4,3%.
+    </p>
+
+    <!-- Подзадачи -->
+    <h2 style="margin:0 0 16px 0; font-size:16px; color:#2d3748;">4. Состав работ</h2>
+
+    <!-- 3.1 -->
+    <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="margin-bottom:14px; border:1px solid #e2e8f0;">
+    <tr>
+    <td style="padding:14px 16px; width:48px; background:#fffaf0; vertical-align:top;">
+        <span style="display:inline-block; width:32px; height:32px; line-height:32px; background:#c05621; color:#fff; font-weight:700; text-align:center; border-radius:4px;">3.1</span>
+    </td>
+    <td style="padding:14px 16px 14px 0; vertical-align:top;">
+        <p style="margin:0 0 6px 0; font-weight:600; color:#1a365d;">ПереоценкаАктивов — запрос, строка 880</p>
+        <ul style="margin:0; padding-left:18px; color:#4a5568;">
+            <li>Выгрузить и проанализировать текст запроса на строке 880.</li>
+            <li>Проверить план выполнения, индексы, избыточность соединений и повторные вызовы на каждый договор ДУ.</li>
+            <li>Предложить оптимизацию: пакетный запрос, кэш, срез по договорам, временные таблицы.</li>
+            <li>Замер «до/после» в том же сценарии (детальная отладка).</li>
+        </ul>
+    </td>
+    </tr>
+    </table>
+
+    <!-- 3.2 -->
+    <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="margin-bottom:14px; border:1px solid #e2e8f0;">
+    <tr>
+    <td style="padding:14px 16px; width:48px; background:#fffaf0; vertical-align:top;">
+        <span style="display:inline-block; width:32px; height:32px; line-height:32px; background:#c05621; color:#fff; font-weight:700; text-align:center; border-radius:4px;">3.2</span>
+    </td>
+    <td style="padding:14px 16px 14px 0; vertical-align:top;">
+        <p style="margin:0 0 6px 0; font-weight:600; color:#1a365d;">ЗначенияПараметровДоговораДУ — запрос, строка 73</p>
+        <ul style="margin:0; padding-left:18px; color:#4a5568;">
+            <li>136 443 вызовов — кандидат на кэширование или пакетное чтение параметров.</li>
+            <li>Исследовать возможность однократной выборки параметров по пачке договоров ДУ вместо вызова на каждую операцию.</li>
+            <li>Проверить индексы регистра сведений по ключам отбора в запросе.</li>
+        </ul>
+    </td>
+    </tr>
+    </table>
+
+    <!-- 3.3 -->
+    <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="margin-bottom:14px; border:1px solid #e2e8f0;">
+    <tr>
+    <td style="padding:14px 16px; width:48px; background:#fffaf0; vertical-align:top;">
+        <span style="display:inline-block; width:32px; height:32px; line-height:32px; background:#c05621; color:#fff; font-weight:700; text-align:center; border-radius:4px;">3.3</span>
+    </td>
+    <td style="padding:14px 16px 14px 0; vertical-align:top;">
+        <p style="margin:0 0 6px 0; font-weight:600; color:#1a365d;">РасчетСЧА_РСА — запрос, строка 154</p>
+        <ul style="margin:0; padding-left:18px; color:#4a5568;">
+            <li>В общем замере (1 поток, только РСА+СЧА): этот запрос давал до <strong>20,38%</strong> времени.</li>
+            <li>Отдельно: ~20% времени — поиск существующего расчета по <strong>неиндексированному</strong> полю (критерий отбора при удалении/поиске).</li>
+            <li>Оптимизировать запрос и/или проиндексировать поля отбора; проверить отбор при удалении.</li>
+            <li>Распределение внутри РСА+СЧА: ~12% — запись документа План, ~82% — расчеты (учесть при приоритизации).</li>
+        </ul>
+    </td>
+    </tr>
+    </table>
+
+    <!-- 3.4 -->
+    <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="margin-bottom:14px; border:1px solid #e2e8f0;">
+    <tr>
+    <td style="padding:14px 16px; width:48px; background:#fffaf0; vertical-align:top;">
+        <span style="display:inline-block; width:32px; height:32px; line-height:32px; background:#c05621; color:#fff; font-weight:700; text-align:center; border-radius:4px;">3.4</span>
+    </td>
+    <td style="padding:14px 16px 14px 0; vertical-align:top;">
+        <p style="margin:0 0 6px 0; font-weight:600; color:#1a365d;">РегламентныеПериоды — НайтиСтроки, строка 686</p>
+        <ul style="margin:0; padding-left:18px; color:#4a5568;">
+            <li>17 154 линейных поисков в таблице значений/списке операций на каждый договор.</li>
+            <li>Заменить на индексированную структуру (Соответие, предварительная группировка) или кэш списка операций на период.</li>
+        </ul>
+    </td>
+    </tr>
+    </table>
+
+    <!-- 3.5 -->
+    <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="margin-bottom:20px; border:1px solid #e2e8f0;">
+    <tr>
+    <td style="padding:14px 16px; width:48px; background:#fffaf0; vertical-align:top;">
+        <span style="display:inline-block; width:32px; height:32px; line-height:32px; background:#c05621; color:#fff; font-weight:700; text-align:center; border-radius:4px;">3.5</span>
+    </td>
+    <td style="padding:14px 16px 14px 0; vertical-align:top;">
+        <p style="margin:0 0 6px 0; font-weight:600; color:#1a365d;">ПланРегламентныхОперацийДУ.МодульМенеджера — запрос, строка 21</p>
+        <ul style="margin:0; padding-left:18px; color:#4a5568;">
+            <li>Запрос менеджера документа при массовом формировании — проверить возможность пакетной обработки.</li>
+            <li>Связать с блоком «работа с планами» (~30 мин в общей разбивке).</li>
+        </ul>
+    </td>
+    </tr>
+    </table>
+
+    <!-- Доп. задачи -->
+    <h2 style="margin:0 0 12px 0; font-size:16px; color:#2d3748;">5. Дополнительные доработки</h2>
+
+    <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="margin-bottom:14px; border:1px solid #c05621;">
+    <tr>
+    <td style="padding:14px 16px; width:48px; background:#fff5f5; vertical-align:top;">
+        <span style="display:inline-block; width:32px; height:32px; line-height:32px; background:#9b2c2c; color:#fff; font-weight:700; text-align:center; border-radius:4px;">+1</span>
+    </td>
+    <td style="padding:14px 16px 14px 0; vertical-align:top;">
+        <p style="margin:0 0 6px 0; font-weight:600; color:#9b2c2c;">Документ РасчетСЧА_РСА — коллизия номера при записи</p>
+        <p style="margin:0 0 8px 0; color:#4a5568;">
+            При параллельной записи возможен дубль номера документа. Реализовать по аналогии с МО (IMDEV-8665):
+        </p>
+        <ul style="margin:0 0 8px 0; padding-left:18px; color:#4a5568;">
+            <li>Перед записью: <code>УстановитьНовыйНомер()</code></li>
+            <li>До <strong>30 попыток</strong> записи/проведения</li>
+            <li>При ошибке с текстом «<strong>не уникально</strong>» (регистронезависимо) — повторить</li>
+            <li>Иначе — пробросить исключение с информативным сообщением</li>
+        </ul>
+        <p style="margin:0; font-size:12px; color:#718096;">
+            Эталон: Wim_Mo, обработка внРасчетMVиWAP, процедура <code>СоздатьИПровестиОдинДокументРасчета</code> (строки ~1644-1662).
+        </p>
+    </td>
+    </tr>
+    </table>
+
+    <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="margin-bottom:20px; border:1px solid #c05621;">
+    <tr>
+    <td style="padding:14px 16px; width:48px; background:#fff5f5; vertical-align:top;">
+        <span style="display:inline-block; width:32px; height:32px; line-height:32px; background:#9b2c2c; color:#fff; font-weight:700; text-align:center; border-radius:4px;">+2</span>
+    </td>
+    <td style="padding:14px 16px 14px 0; vertical-align:top;">
+        <p style="margin:0 0 6px 0; font-weight:600; color:#9b2c2c;">Предварительный отсев договоров ДУ без расчета</p>
+        <p style="margin:0 0 8px 0; color:#4a5568;">
+            Для видов расчетов, которые <strong>как правило не формируют документов</strong> (прочие расчеты без движений:
+            переоценка ДС, дефолтные, контроль уменьшения стоимости портфеля и т.п. — ~20 мин в общей оценке):
+        </p>
+        <ul style="margin:0; padding-left:18px; color:#4a5568;">
+            <li>Разработать предварительные запросы, отсекающие договоры ДУ, по которым расчет заведомо не нужен.</li>
+            <li>Не запускать полный цикл регламентных процедур для отсеченных договоров.</li>
+            <li>Зафиксировать критерии отсечения по каждому виду операции (таблица в описании задачи).</li>
+            <li>Замер: сокращение времени блока «прочие расчеты» и общего времени расчета.</li>
+        </ul>
+    </td>
+    </tr>
+    </table>
+
+</td></tr>
+</table>
+
+</body>
+</html>
