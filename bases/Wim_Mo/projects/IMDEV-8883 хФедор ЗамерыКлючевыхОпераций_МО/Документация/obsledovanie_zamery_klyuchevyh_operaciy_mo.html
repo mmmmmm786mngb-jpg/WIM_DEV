@@ -1,0 +1,1362 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<title>IMDEV-8883. Обследование базы Аванкор МО для замеров ключевых операций</title>
+<style>
+* { box-sizing: border-box; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  background: #f5f7fa; color: #212529; margin: 0; padding: 0; line-height: 1.55;
+}
+.container { max-width: 1240px; margin: 0 auto; padding: 24px 28px 80px; }
+header {
+  background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+  color: #fff; padding: 32px 36px; border-radius: 12px; margin-bottom: 28px;
+  box-shadow: 0 6px 20px rgba(30, 60, 114, 0.25);
+}
+header h1 { margin: 0 0 8px; font-size: 28px; letter-spacing: -0.3px; }
+header .subtitle { font-size: 14px; opacity: 0.92; margin-bottom: 14px; }
+header .meta { display: flex; flex-wrap: wrap; gap: 18px; font-size: 13px; opacity: 0.95; }
+header .meta span { background: rgba(255,255,255,0.12); padding: 5px 12px; border-radius: 16px; }
+
+h2 { color: #1e3c72; border-bottom: 3px solid #1e3c72; padding-bottom: 6px; margin-top: 38px; font-size: 22px; }
+h3 { color: #2a5298; margin-top: 26px; font-size: 18px; }
+h4 { color: #495057; margin: 14px 0 8px; font-size: 15px; }
+
+.card {
+  background: #fff; border-radius: 10px; padding: 22px 26px; margin: 18px 0;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.06); border: 1px solid #e9ecef;
+}
+
+table { border-collapse: collapse; width: 100%; margin: 12px 0; font-size: 14px; }
+th, td { padding: 9px 12px; text-align: left; border: 1px solid #dee2e6; vertical-align: top; }
+th { background: #1e3c72; color: #fff; font-weight: 600; font-size: 13px; }
+tr:nth-child(even) { background: #f8f9fa; }
+tr:hover { background: #e7f1ff; }
+
+code { background: #eef2f6; padding: 2px 6px; border-radius: 4px;
+       font-family: "Cascadia Code", Consolas, "Courier New", monospace; font-size: 13px; color: #c7254e; }
+pre { background: #2d2d2d; color: #f8f8f2; padding: 14px 18px; border-radius: 8px;
+      overflow-x: auto; font-family: "Cascadia Code", Consolas, monospace; font-size: 13px; line-height: 1.5; }
+pre.bsl { background: #f4f4f4; color: #333; border-left: 4px solid #2a5298; }
+
+.badge { display: inline-block; padding: 3px 10px; border-radius: 12px; font-size: 12px;
+         font-weight: 600; margin-right: 6px; vertical-align: middle; }
+.badge-high    { background: #d4edda; color: #155724; border: 1px solid #28a745; }
+.badge-partial { background: #fff3cd; color: #856404; border: 1px solid #ffc107; }
+.badge-low     { background: #f8d7da; color: #721c24; border: 1px solid #dc3545; }
+.badge-info    { background: #d1ecf1; color: #0c5460; border: 1px solid #17a2b8; }
+.badge-time    { background: #e2e3e5; color: #383d41; border: 1px solid #6c757d; font-family: monospace; }
+
+.note {
+  border-radius: 8px; padding: 14px 18px; margin: 12px 0;
+  border-left: 5px solid; font-size: 14px;
+}
+.note-question  { background: #fff8e1; border-color: #ffa726; }
+.note-question::before { content: "ВОПРОС ЗАКАЗЧИКУ "; font-weight: 700; color: #c66900;
+                         display: block; margin-bottom: 4px; font-size: 13px; letter-spacing: 0.5px;}
+.note-warning   { background: #fdecea; border-color: #dc3545; }
+.note-warning::before { content: "ВНИМАНИЕ "; font-weight: 700; color: #b21f2d;
+                        display: block; margin-bottom: 4px; font-size: 13px; letter-spacing: 0.5px;}
+.note-info      { background: #e7f3fe; border-color: #2196f3; }
+.note-info::before { content: "СПРАВКА "; font-weight: 700; color: #0b5394;
+                     display: block; margin-bottom: 4px; font-size: 13px; letter-spacing: 0.5px;}
+.note-success   { background: #e8f5e9; border-color: #28a745; }
+.note-success::before { content: "ПОДТВЕРЖДЕНО "; font-weight: 700; color: #155724;
+                        display: block; margin-bottom: 4px; font-size: 13px; letter-spacing: 0.5px;}
+
+.toc { background: #fff; border: 1px solid #e9ecef; border-radius: 10px;
+       padding: 18px 24px; margin-bottom: 24px; }
+.toc ol { margin: 6px 0 0 22px; padding: 0; }
+.toc ol li { margin-bottom: 4px; font-size: 14px; }
+.toc a { color: #2a5298; text-decoration: none; }
+.toc a:hover { text-decoration: underline; }
+
+.kv { display: grid; grid-template-columns: 220px 1fr; gap: 6px 16px; margin: 8px 0; font-size: 14px; }
+.kv .k { font-weight: 600; color: #495057; }
+.kv .v { color: #212529; word-break: break-word; }
+
+.tag-time { display: inline-block; min-width: 64px; text-align: center; }
+
+footer { text-align: center; color: #6c757d; font-size: 12px; padding: 24px;
+         border-top: 1px solid #e9ecef; margin-top: 40px; }
+</style>
+</head>
+<body>
+<div class="container">
+
+<header>
+  <h1>IMDEV-8883. Обследование базы Аванкор МО для замеров ключевых операций</h1>
+  <div class="subtitle">Подсистема &laquo;Оценка производительности&raquo; (APDEX) &mdash; статус по 15 ключевым операциям из письма С.Хромова от 12.05.2026</div>
+  <div class="meta">
+    <span>Проект: IMDEV-8883</span>
+    <span>База: Wim_Mo (Аванкор МО)</span>
+    <span>Источник: XML-выгрузка конфигурации + внешние обработки (epf)</span>
+    <span>Дата отчёта: 17.05.2026</span>
+  </div>
+</header>
+
+<div class="toc">
+  <h3 style="margin-top:0">Содержание</h3>
+  <ol>
+    <li><a href="#intro">Введение и цель обследования</a></li>
+    <li><a href="#technology">Технология обследования</a></li>
+    <li><a href="#apdex-status">Состояние подсистемы APDEX в базе МО</a></li>
+    <li><a href="#summary">Сводная таблица по 15 операциям</a></li>
+    <li><a href="#details">Детальный разбор каждой операции</a>
+      <ol>
+        <li><a href="#op-1">Загрузка статики и транзакций из Аванкора ДУ (00:00)</a></li>
+        <li><a href="#op-2">Обновление статики бумаг из НРД (23:00)</a></li>
+        <li><a href="#op-3">Загрузка котировок в МО (08:50)</a></li>
+        <li><a href="#op-4">Загрузка индексов и кривой бескупонной доходности (09:10)</a></li>
+        <li><a href="#op-5">Проверка загрузки котировок (09:15)</a></li>
+        <li><a href="#op-6">Сверка БО-ФО (FOBO) (09:00)</a></li>
+        <li><a href="#op-7">Сверка БО-МО (BOMO) (14:00)</a></li>
+        <li><a href="#op-8">Утренняя подготовка фронт-офисных систем (05:30)</a></li>
+        <li><a href="#op-9">Дневной расчёт СЧА (13:00)</a></li>
+        <li><a href="#op-10">Ночной пересчёт СЧА (00:30)</a></li>
+        <li><a href="#op-11">Обновление остатков в Аванкоре ФО РДУ (12:30)</a></li>
+        <li><a href="#op-12">Сетап и покупка на новых клиентов РДУ (10:00)</a></li>
+        <li><a href="#op-13">Выводы ДС с биржи по расторжениям РДУ (14:30)</a></li>
+        <li><a href="#op-14">Контроль алгоритма сетапа РДУ (10:00)</a></li>
+        <li><a href="#op-15">Выгрузка данных в кабинет клиента ДУ (00:00)</a></li>
+      </ol>
+    </li>
+    <li><a href="#open-questions">Сводный список вопросов заказчику</a></li>
+    <li><a href="#conclusions">Выводы и рекомендации</a></li>
+  </ol>
+</div>
+
+<h2 id="intro">1. Введение и цель обследования</h2>
+<div class="card">
+  <p>На основании письма от Сергея Хромова (12 мая 2026, тема &laquo;Проект РДУ&raquo;) и дополнительной поправки Фёдора Васильева в задачу <strong>Васильева Ф.</strong> входит:</p>
+  <blockquote style="border-left:4px solid #2a5298;padding:6px 14px;color:#495057;background:#f8f9fa;margin:10px 0">
+    &laquo;В МО добавить замеры для всех ключевых операций&raquo; (15 операций по перечню) и
+    &laquo;для каждой ключевой операции надо понять из какого отчёта/обработки/элемента интерфейса/регламентного задания
+    оно запускается&raquo;.
+  </blockquote>
+  <p>Также Васильев Ф. указал: <em>&laquo;Если речь идёт о замере с использованием APDEX, то в конфигурациях МО и ДУ нет полноценной подсистемы Оценка производительности из БСП&raquo;</em>. Это требует отдельной проверки степени готовности подсистемы APDEX в МО.</p>
+  <p><strong>Цель отчёта</strong>: для каждого из 15 пунктов плана найти в составе конфигурации МО (или среди подключаемых внешних обработок) объекты, реализующие операцию, чтобы в дальнейшем добавить вокруг них вызовы <code>НачатьЗамерВремени / ЗакончитьЗамерВремени</code>. Там, где однозначной идентификации сделать не удалось, выделен блок <strong>&laquo;Вопрос заказчику&raquo;</strong>.</p>
+</div>
+
+<h2 id="technology">2. Технология обследования</h2>
+<div class="card">
+  <h4>2.1. Источники данных</h4>
+  <ul>
+    <li><strong>XML-выгрузка конфигурации МО</strong> &mdash; полная выгрузка метаданных (DumpConfigToFiles) на дату 25.04.2026.</li>
+    <li><strong>Внешние обработки (epf)</strong> &mdash; ~190 разобранных в XML внешних обработок (привязываются через справочник <code>ДополнительныеОтчётыИОбработки</code> БСП).</li>
+    <li>Письмо проекта: <code>email_proekt_rdu_zamery_klyuchevyh_operaciy_mo.txt</code>.</li>
+  </ul>
+
+  <h4>2.2. Методика поиска</h4>
+  <ol>
+    <li>Анализ имён обработок (epf) на совпадение с предметной областью операции.</li>
+    <li>Чтение модулей объектов (<code>ObjectModule</code>) выбранных обработок &mdash; в первую очередь функция <code>СведенияОВнешнейОбработке()</code>, в которой регистрируются Наименование, Информация, Назначение, Команды.</li>
+    <li>Поиск по тексту BSL/XML по ключевым предметным словам (НРД, котировки, СЧА, FOBO, BOMO, РДУ, кабинет, расторжение, сетап и т.д.).</li>
+    <li>Анализ регламентных заданий (<code>ScheduledJobs</code>) на наличие <em>имени</em>, расписания и обработчика.</li>
+    <li>Анализ встроенных обработок (<code>DataProcessors</code>), отчётов (<code>Reports</code>), общих модулей (<code>CommonModules</code>) и документов (<code>Documents</code>).</li>
+    <li>Анализ справочника <code>Catalog.КлючевыеОперации</code> на наличие предопределённых элементов (соответствующих 15 пунктам).</li>
+  </ol>
+
+  <h4>2.3. Ограничения</h4>
+  <div class="note note-warning">
+    Расписание регламентных заданий БСП &laquo;Запуск дополнительных обработок&raquo; (с какой обработкой и в какое время связан запуск) хранится не в XML-выгрузке конфигурации, а в данных рабочей информационной базы. Поэтому для большинства операций конкретное окно (00:00, 08:50, 09:10 и т.д.) <strong>в исходниках не подтверждается напрямую</strong> &mdash; требуется выгрузка данных регламентных заданий из живой базы Аванкор МО.
+  </div>
+
+  <h4>2.4. Обозначения уверенности</h4>
+  <p>
+    <span class="badge badge-high">100% &mdash; найдено</span>
+    <span class="badge badge-partial">Частично</span>
+    <span class="badge badge-low">Не найдено / уточнение</span>
+  </p>
+</div>
+
+<h2 id="apdex-status">3. Состояние подсистемы APDEX в базе МО</h2>
+<div class="card">
+  <p>Васильев Ф. отметил, что <em>&laquo;в конфигурациях МО и ДУ нет полноценной подсистемы Оценка производительности из БСП&raquo;</em>. Проведённый анализ показывает: <strong>подсистема в МО присутствует частично</strong> &mdash; основные метаданные есть, но ряд критичных компонентов отсутствует и подсистема фактически выключена.</p>
+
+  <h4>3.1. Что есть в конфигурации</h4>
+  <table>
+    <tr><th>Компонент</th><th>Статус</th><th>Путь / комментарий</th></tr>
+    <tr>
+      <td>Справочник <code>КлючевыеОперации</code></td>
+      <td><span class="badge badge-high">Есть</span></td>
+      <td><code>Catalog.КлючевыеОперации</code> &mdash; объект, формы, модуль объекта. <strong>Предопределённых элементов в выгрузке НЕТ</strong>.</td>
+    </tr>
+    <tr>
+      <td>Регистр сведений <code>ЗамерыВремени</code></td>
+      <td><span class="badge badge-high">Есть</span></td>
+      <td><code>InformationRegister.ЗамерыВремени</code></td>
+    </tr>
+    <tr>
+      <td>Регистр <code>ЗамерыВремениТехнологические</code></td>
+      <td><span class="badge badge-low">Отсутствует</span></td>
+      <td>Не найден в выгрузке. По типовой БСП должен быть для технологических замеров.</td>
+    </tr>
+    <tr>
+      <td>Регистр <code>ОценкаПроизводительностиВерсияФормата</code></td>
+      <td><span class="badge badge-low">Отсутствует</span></td>
+      <td>Не найден в выгрузке.</td>
+    </tr>
+    <tr>
+      <td>Общий модуль <code>ОценкаПроизводительностиКлиентСервер</code></td>
+      <td><span class="badge badge-high">Есть</span></td>
+      <td>Содержит API <code>НачатьЗамерВремени</code> / <code>ЗакончитьЗамерВремени</code>; фиксация идёт в <code>ОценкаПроизводительностиВызовСервераПолныеПрава.ЗафиксироватьДлительностьКлючевойОперации</code>.</td>
+    </tr>
+    <tr>
+      <td>Модули <code>ОценкаПроизводительностиКлиент</code>, <code>...КлиентГлобальный</code>, <code>...Служебный</code>, <code>...ВызовСервераПолныеПрава</code>, <code>...ВызовСервераПовтИсп</code></td>
+      <td><span class="badge badge-high">Есть</span></td>
+      <td>Все в составе общих модулей конфигурации.</td>
+    </tr>
+    <tr>
+      <td>Общий модуль <code>ОценкаПроизводительностиВызовСервера</code></td>
+      <td><span class="badge badge-low">Отсутствует</span></td>
+      <td>В <code>ОценкаПроизводительностиСлужебный</code> зарегистрирован обработчик параметра сеанса <code>ТекущийЗамерВремени</code> = <code>ОценкаПроизводительностиВызовСервера.УстановкаПараметровСеанса</code>, но самого модуля в дереве метаданных нет. <strong>Целостный разрыв</strong>.</td>
+    </tr>
+    <tr>
+      <td>Подсистема <code>ОценкаПроизводительности</code></td>
+      <td><span class="badge badge-partial">Есть, но скрыта</span></td>
+      <td>Подсистема <code>СтандартныеПодсистемы.ОценкаПроизводительности</code>; <code>IncludeInCommandInterface=false</code> &mdash; в командный интерфейс раздела не выводится.</td>
+    </tr>
+    <tr>
+      <td>Обработка <code>DataProcessor.ОценкаПроизводительности</code></td>
+      <td><span class="badge badge-high">Есть</span></td>
+      <td>Реквизиты ДатаНачала, ДатаОкончания, Диаграмма, Шаг, ОбщаяПроизводительностьСистемы; ТЧ Производительность (КлючеваяОперация, ЦелевоеВремя, Приоритет); формы Форма, ФормаОтбора, ИсторияВыполнения, АвтоматическийЭкспортЗамеровПроизводительности.</td>
+    </tr>
+    <tr>
+      <td>Регламентное задание <code>ЭкспортОценкиПроизводительности</code></td>
+      <td><span class="badge badge-partial">Есть, выключено</span></td>
+      <td><code>ScheduledJob.ЭкспортОценкиПроизводительности</code>: <code>Use=false</code>, расписание не задано. Обработчик: <code>CommonModule.ОценкаПроизводительностиВызовСервераПолныеПрава.ЭкспортОценкиПроизводительности</code>.</td>
+    </tr>
+    <tr>
+      <td>XDTO-пакет <code>ApdexExport</code></td>
+      <td><span class="badge badge-high">Есть</span></td>
+      <td>Для экспорта замеров во внешнее хранилище.</td>
+    </tr>
+    <tr>
+      <td>Роль <code>НастройкаИОценкаПроизводительности</code></td>
+      <td><span class="badge badge-high">Есть</span></td>
+      <td>Стандартная роль БСП.</td>
+    </tr>
+    <tr>
+      <td>Реальные замеры в коде</td>
+      <td><span class="badge badge-low">Отсутствуют</span></td>
+      <td>Поиск <code>НачатьЗамерВремени(</code> по всем <code>*.bsl</code> конфигурации: 3 вхождения в 2 файлах, из них реальный вызов &mdash; 0. Только <strong>закомментированный</strong> пример в форме списка документа <code>Document.Операция</code>.</td>
+    </tr>
+    <tr>
+      <td>Предопределённый элемент &laquo;ОбщаяПроизводительностьСистемы&raquo;</td>
+      <td><span class="badge badge-low">Не описан</span></td>
+      <td>Код <code>ОценкаПроизводительностиСлужебный</code> ищет элемент по имени &laquo;ОбщаяПроизводительностьСистемы&raquo;, но в выгрузке его нет.</td>
+    </tr>
+  </table>
+
+  <div class="note note-warning">
+    <strong>Подтверждается мнение Васильева Ф.</strong>: подсистема не работоспособна в текущем виде. Метаданные на 70-80% есть, но без модуля <code>ОценкаПроизводительностиВызовСервера</code>, без двух регистров (технологические замеры, версия формата) и без предопределённого элемента справочника &mdash; запуск замеров вызовет ошибки. Регламент экспорта выключен, в коде не расставлены вызовы.
+  </div>
+
+  <div class="note note-info">
+    <strong>Что нужно сделать для реализации замеров</strong>:
+    <ol style="margin: 4px 0 0 22px">
+      <li>Допоставить из БСП недостающие компоненты (модуль <code>ОценкаПроизводительностиВызовСервера</code>, регистры <code>ЗамерыВремениТехнологические</code> и <code>ОценкаПроизводительностиВерсияФормата</code>) или синхронизировать версию подсистемы.</li>
+      <li>Создать в справочнике <code>КлючевыеОперации</code> предопределённый элемент &laquo;ОбщаяПроизводительностьСистемы&raquo; и 15 элементов под бизнес-операции (с целевым временем из таблицы письма).</li>
+      <li>Включить функциональную опцию &laquo;Выполнять замеры производительности&raquo; (константа БСП).</li>
+      <li>Включить регламент <code>ЭкспортОценкиПроизводительности</code> или настроить просмотр через обработку.</li>
+      <li>Добавить вокруг точек запуска 15 операций пары <code>НачатьЗамерВремени(КлючеваяОперация) / ЗакончитьЗамерВремени(Замер)</code> (для серверных длительных операций &mdash; <code>ЗафиксироватьДлительностьКлючевойОперации</code> на сервере).</li>
+    </ol>
+  </div>
+</div>
+
+<h2 id="summary">4. Сводная таблица по 15 операциям</h2>
+<div class="card">
+<table>
+  <tr>
+    <th style="width:30px">№</th>
+    <th>Операция</th>
+    <th style="width:70px">Время</th>
+    <th>Основной объект (где замерять)</th>
+    <th style="width:110px">Уверенность</th>
+  </tr>
+  <tr>
+    <td>1</td>
+    <td><a href="#op-1">Загрузка статики и транзакций из Аванкора ДУ</a></td>
+    <td><span class="badge badge-time tag-time">00:00</span></td>
+    <td>План обмена <code>ИсточникиОбмена</code>, узел &laquo;ЗагрузкаТранзакцийДУ&raquo;, РЗ <code>СинхронизацияДанных</code></td>
+    <td><span class="badge badge-partial">Частично</span></td>
+  </tr>
+  <tr>
+    <td>2</td>
+    <td><a href="#op-2">Обновление статики бумаг из НРД</a></td>
+    <td><span class="badge badge-time tag-time">23:00</span></td>
+    <td>EPF <code>внЗагрузкаАктивовЧерезWebService</code> (плюс возможные <code>внЗагрузкаДанныхНРД</code>, <code>внBloombergDLWS</code>)</td>
+    <td><span class="badge badge-partial">Частично</span></td>
+  </tr>
+  <tr>
+    <td>3</td>
+    <td><a href="#op-3">Загрузка котировок в МО</a></td>
+    <td><span class="badge badge-time tag-time">08:50</span></td>
+    <td>EPF <code>внЗагрузкаКотировок</code> (web-service ВТБ)</td>
+    <td><span class="badge badge-high">100%</span></td>
+  </tr>
+  <tr>
+    <td>4</td>
+    <td><a href="#op-4">Загрузка индексов и кривой бескупонной доходности</a></td>
+    <td><span class="badge badge-time tag-time">09:10</span></td>
+    <td>EPF <code>внЗагрузкаИндексов</code> + EPF <code>ЗагрузкаПараметровMOEX_КривойДоходности</code></td>
+    <td><span class="badge badge-high">100%</span></td>
+  </tr>
+  <tr>
+    <td>5</td>
+    <td><a href="#op-5">Проверка загрузки котировок</a></td>
+    <td><span class="badge badge-time tag-time">09:15</span></td>
+    <td>Кандидат: EPF <code>внОтчетИзменениеКотировокРейтингов</code>; точная обработка не идентифицирована</td>
+    <td><span class="badge badge-low">Уточнение</span></td>
+  </tr>
+  <tr>
+    <td>6</td>
+    <td><a href="#op-6">Сверка БО-ФО (FOBO)</a></td>
+    <td><span class="badge badge-time tag-time">09:00</span></td>
+    <td>FOBO в чистом виде не найдено. Возможно подразумевается ФОМО: <code>внСверкаФОМО</code> / <code>внСверкаФОМО_ФО</code></td>
+    <td><span class="badge badge-low">Уточнение</span></td>
+  </tr>
+  <tr>
+    <td>7</td>
+    <td><a href="#op-7">Сверка БО-МО (BOMO)</a></td>
+    <td><span class="badge badge-time tag-time">14:00</span></td>
+    <td>EPF <code>внСверкаБОМО</code> (синоним &laquo;Сверка БОМО&raquo;, регистрация &laquo;Сверка плановой позиции&raquo;)</td>
+    <td><span class="badge badge-high">100%</span></td>
+  </tr>
+  <tr>
+    <td>8</td>
+    <td><a href="#op-8">Утренняя подготовка ФО РДУ</a></td>
+    <td><span class="badge badge-time tag-time">05:30</span></td>
+    <td>Комплекс из 8+ EPF выгрузок МО→ФО + расчёты MV/WAP + операции закрытия периода</td>
+    <td><span class="badge badge-partial">Частично</span></td>
+  </tr>
+  <tr>
+    <td>9</td>
+    <td><a href="#op-9">Дневной расчёт СЧА</a></td>
+    <td><span class="badge badge-time tag-time">13:00</span></td>
+    <td>Документ <code>ПланРегламентныхОпераций</code> + общий модуль <code>ИсполняемыеПроцедурыЗакрытияПериода</code>; точное место запуска не подтверждено</td>
+    <td><span class="badge badge-partial">Частично</span></td>
+  </tr>
+  <tr>
+    <td>10</td>
+    <td><a href="#op-10">Ночной пересчёт СЧА</a></td>
+    <td><span class="badge badge-time tag-time">00:30</span></td>
+    <td>Кандидаты: EPF <code>внРасчетMVиWAP</code>, <code>внСверкаФОМО_ФО</code> (этап &laquo;ПерерасчетСЧА&raquo;)</td>
+    <td><span class="badge badge-partial">Частично</span></td>
+  </tr>
+  <tr>
+    <td>11</td>
+    <td><a href="#op-11">Обновление остатков в Аванкоре ФО РДУ</a></td>
+    <td><span class="badge badge-time tag-time">12:30</span></td>
+    <td>EPF <code>внВыгрузкаОстатковМО_ФО</code> (web-service <code>avancore_ws</code>)</td>
+    <td><span class="badge badge-high">100%</span></td>
+  </tr>
+  <tr>
+    <td>12</td>
+    <td><a href="#op-12">Сетап и покупка на новых клиентов РДУ</a></td>
+    <td><span class="badge badge-time tag-time">10:00</span></td>
+    <td>Комплекс: <code>внВыгрузкаСчетовМандатов_МО_ФО</code> (флаг &laquo;Розничное ДУ&raquo;), <code>внСозданиеСчетов*</code>, <code>внВыгрузкаПорученийПоОфертам_МО_ФО</code></td>
+    <td><span class="badge badge-partial">Частично</span></td>
+  </tr>
+  <tr>
+    <td>13</td>
+    <td><a href="#op-13">Выводы ДС с биржи по расторжениям РДУ</a></td>
+    <td><span class="badge badge-time tag-time">14:30</span></td>
+    <td>Кандидаты: <code>внСписокУходящихИзДУКлиентов</code>, <code>внРаботаСПереводамиВнутриДня</code>; основная часть может быть в ФО/брокере</td>
+    <td><span class="badge badge-low">Уточнение</span></td>
+  </tr>
+  <tr>
+    <td>14</td>
+    <td><a href="#op-14">Контроль алгоритма сетапа РДУ</a></td>
+    <td><span class="badge badge-time tag-time">10:00</span></td>
+    <td>Кандидаты: <code>внСверкаФОМО_ФО</code>, <code>внКонтрольОтчетаСтатусПортфеляДУ</code>, <code>внКонтрольУровняФактическогоРиска</code></td>
+    <td><span class="badge badge-low">Уточнение</span></td>
+  </tr>
+  <tr>
+    <td>15</td>
+    <td><a href="#op-15">Выгрузка данных в кабинет клиента ДУ</a></td>
+    <td><span class="badge badge-time tag-time">00:00</span></td>
+    <td>DataProcessor + EPF <code>ФормированиеОтчетовПоЗапросуДляКабинетаДУ</code> (база <code>PROD_AVC_MO_REP</code>, портал <code>ClientPortal</code>)</td>
+    <td><span class="badge badge-partial">Частично</span></td>
+  </tr>
+</table>
+
+<p style="margin-top:14px"><strong>Итого по уверенности:</strong>
+  <span class="badge badge-high">100% &mdash; 4 операции (3, 4, 7, 11)</span>
+  <span class="badge badge-partial">Частично &mdash; 6 операций (1, 2, 8, 9, 10, 12, 15)</span>
+  <span class="badge badge-low">Требуют уточнения &mdash; 4 операции (5, 6, 13, 14)</span>
+</p>
+</div>
+
+<h2 id="details">5. Детальный разбор каждой операции</h2>
+
+<!-- =================== ОПЕРАЦИЯ 1 =================== -->
+<div class="card" id="op-1">
+  <h3>5.1. Загрузка статики по клиентам и договорам и транзакций из Аванкора ДУ
+    <span class="badge badge-time tag-time">00:00</span>
+    <span class="badge badge-partial">Частично</span>
+  </h3>
+  <div class="kv">
+    <div class="k">Периодичность по плану</div><div class="v">Ежедневно, начало в 00:00, длительность ~2 часа</div>
+    <div class="k">Что должно происходить</div><div class="v">Загрузка справочных данных (клиенты и договоры) и транзакций ДУ, поступивших в Аванкор ДУ за прошедший день, в МО для последующих сверок и расчётов СЧА.</div>
+  </div>
+
+  <h4>Найденные объекты</h4>
+  <table>
+    <tr><th>Слой</th><th>Объект</th><th>Назначение</th></tr>
+    <tr>
+      <td>План обмена</td>
+      <td><code>ExchangePlan.ИсточникиОбмена</code></td>
+      <td>Контур обмена с источниками. В общем модуле <code>CommonModule.ОписаниеОбменов</code> упомянут узел <code>ee386a7d-5071-11e5-ac17-005056b100b2</code> с именем &laquo;ЗагрузкаТранзакцийДУ&raquo; (ReportID=122).</td>
+    </tr>
+    <tr>
+      <td>Регламентное задание</td>
+      <td><code>ScheduledJob.СинхронизацияДанных</code></td>
+      <td>Обработчик: <code>CommonModule.ОбменДаннымиСервер.ВыполнитьОбменДаннымиПоРегламентномуЗаданию</code>. <code>Use=false</code> в выгрузке (фактическое включение задаётся в ИБ).</td>
+    </tr>
+    <tr>
+      <td>Общий модуль</td>
+      <td><code>CommonModules\ОбменДаннымиСервер</code></td>
+      <td>Процедура <code>ВыполнитьОбменДаннымиПоРегламентномуЗаданию(КодСценарияОбмена)</code> &mdash; вызывает сценарий из справочника <code>СценарииОбменовДанными</code>.</td>
+    </tr>
+    <tr>
+      <td>Обработка конфигурации</td>
+      <td><code>DataProcessors\внПроцедурыИФункцииОбменаСФронтОфис</code></td>
+      <td>Разбор/формирование XDTO-пакетов с клиентами, портфелями, активами и т.д. при обмене с фронт-офисом ДУ.</td>
+    </tr>
+    <tr>
+      <td>Загрузка правил обмена</td>
+      <td><code>CommonModules\ВТБ_ОбновлениеИнформационнойБазыМО</code></td>
+      <td>Многократный вызов <code>ВТБ_DevOps.ЗагрузитьПравилаОбменаИзМакета(..., ВТБ_поЗагрузкаТранзакцийДУ, ...)</code> &mdash; явная привязка макета правил к узлу &laquo;ЗагрузкаТранзакцийДУ&raquo;.</td>
+    </tr>
+    <tr>
+      <td>Внешняя обработка</td>
+      <td>Прямого совпадения не найдено</td>
+      <td>В <code>SRC\epf</code> отдельной обработки с именем &laquo;ЗагрузкаСтатикиИТранзакцийДУ&raquo; нет. Используется встроенный механизм плана обмена.</td>
+    </tr>
+  </table>
+
+  <h4>Где разместить замер</h4>
+  <p>Логически &mdash; на входе в <code>ВыполнитьОбменДаннымиПоРегламентномуЗаданию</code> с параметром нужного сценария (или внутри <code>ВыполнитьОбменДаннымиПоСценариюОбменаДанными</code>) для конкретного узла &laquo;ЗагрузкаТранзакцийДУ&raquo;. Альтернатива &mdash; обернуть замером всю последовательность в форме сценария.</p>
+
+  <div class="note note-question">
+    Уточнить у Чухачёва А. (владелец системы):
+    <ol style="margin:4px 0 0 22px">
+      <li>Какой именно <strong>код сценария обмена</strong> (значение <code>КодСценарияОбмена</code>) используется в продуктиве для ночной загрузки из ДУ &mdash; их может быть несколько (статика клиентов отдельно, транзакции отдельно)?</li>
+      <li>Используется ли отдельное регламентное задание помимо <code>СинхронизацияДанных</code>, или один сценарий тянет и статику, и транзакции?</li>
+      <li>Есть ли альтернативный механизм через web-service из ДУ (вместо плана обмена)?</li>
+      <li>Подтвердить активность узла <code>ee386a7d-5071-11e5-ac17-005056b100b2</code> (ЗагрузкаТранзакцийДУ) в продуктиве.</li>
+    </ol>
+  </div>
+</div>
+
+<!-- =================== ОПЕРАЦИЯ 2 =================== -->
+<div class="card" id="op-2">
+  <h3>5.2. Обновление статики бумаг из НРД
+    <span class="badge badge-time tag-time">23:00</span>
+    <span class="badge badge-partial">Частично</span>
+  </h3>
+  <div class="kv">
+    <div class="k">Периодичность</div><div class="v">Ежедневно, начало в 23:00, длительность ~6 минут</div>
+    <div class="k">Что должно происходить</div><div class="v">Обновление справочника <code>Активы</code> данными из базы НРД (ISIN, наименование, признак &laquo;ЦБ есть в НРД&raquo;, КодНРД и пр.).</div>
+  </div>
+
+  <h4>Найденные объекты</h4>
+  <table>
+    <tr><th>Слой</th><th>Объект</th><th>Назначение</th></tr>
+    <tr>
+      <td>Внешняя обработка <em>(основной кандидат)</em></td>
+      <td><code>EPF: внЗагрузкаАктивовЧерезWebService</code></td>
+      <td>В БСП регистрируется как <strong>&laquo;Заполнение актива&raquo;</strong> для <code>Справочник.Активы</code>. В коде явно: <code>ДополнитьISINизНРД(...)</code>, заполнение <code>ТекОбъект.НаименованиеДЕПО = ТекАктив_XDTO.НаименованиеНРД</code>, <code>ТекОбъект.Признак_ЦБ_есть_в_НРД = Истина</code>, <code>ТекОбъект.КодНРД = ...</code>, <code>ТекОбъект.Источник = Справочники.ИнформационныеАгентства.NSD</code>.</td>
+    </tr>
+    <tr>
+      <td>Внешняя обработка <em>(альтернатива/дополнение)</em></td>
+      <td><code>EPF: внBloombergDLWS</code></td>
+      <td>Обновление статики ЦБ через Bloomberg DLWS. В коде есть связка с НРД (<code>соотЭмитентНРД</code>), но это <strong>не прямой НРД</strong>.</td>
+    </tr>
+    <tr>
+      <td>Внешние обработки <em>(не подходят, но похожи по имени)</em></td>
+      <td><code>EPF: внЗагрузкаДанныхНРД</code>, <code>EPF: внЗагрузкаКД_НРД_API</code></td>
+      <td>По коду ориентированы на <strong>корпоративные действия</strong> (corpactions API), а не на полную статику бумаг. <strong>Не путать!</strong></td>
+    </tr>
+    <tr>
+      <td>Регламентное задание</td>
+      <td><code>ScheduledJob.ЗапускДополнительныхОбработок</code></td>
+      <td>Обработчик: <code>CommonModule.ДополнительныеОтчетыИОбработки.ВыполнитьОбработкуПоРегламентномуЗаданию</code>. Расписание (23:00) и привязка к конкретной обработке &mdash; в данных рабочей ИБ.</td>
+    </tr>
+  </table>
+
+  <h4>Подтверждение из кода</h4>
+  <pre class="bsl">// Модуль объекта обработки "внЗагрузкаАктивовЧерезWebService", ~стр.71-80
+МассивСтрокИмен.Добавить("Справочник.Активы");
+...
+ПараметрыРегистрации.Вставить("Наименование", "Заполнение актива");
+
+// тот же файл, ~стр.454-466
+МассивISIN_НРД = Новый Массив();
+ДополнитьISINизНРД(ТекущаяДата(), МассивISIN_НРД);
+...
+| Кол-во активов получено из базы НРД: " + Формат(КолНРД, "ЧН=; ЧГ=") + "</pre>
+
+  <div class="note note-question">
+    Уточнить у заказчика:
+    <ol style="margin:4px 0 0 22px">
+      <li>Подтвердить, что в продуктиве на регламент 23:00 поставлена именно <code>внЗагрузкаАктивовЧерезWebService</code>, а не <code>внBloombergDLWS</code>, и не их последовательность.</li>
+      <li>Если запускаются несколько обработок &mdash; какая последовательность и как их группировать в одну ключевую операцию для APDEX (одна точка замера или несколько)?</li>
+      <li>Учитываются ли обработки <code>внЗагрузкаДанныхНРД</code> и <code>внЗагрузкаКД_НРД_API</code> в этом окне (они корпоративные действия, не статика).</li>
+    </ol>
+  </div>
+</div>
+
+<!-- =================== ОПЕРАЦИЯ 3 =================== -->
+<div class="card" id="op-3">
+  <h3>5.3. Загрузка котировок в МО
+    <span class="badge badge-time tag-time">08:50</span>
+    <span class="badge badge-high">100% уверенность</span>
+  </h3>
+  <div class="kv">
+    <div class="k">Периодичность</div><div class="v">Ежедневно, начало в 08:50, длительность ~6 минут</div>
+    <div class="k">Что должно происходить</div><div class="v">Загрузка биржевых котировок ценных бумаг через web-service ВТБ для дальнейших расчётов в МО.</div>
+  </div>
+
+  <h4>Найденные объекты</h4>
+  <table>
+    <tr><th>Слой</th><th>Объект</th><th>Назначение</th></tr>
+    <tr>
+      <td>Внешняя обработка <em>(основной механизм)</em></td>
+      <td><code>EPF: внЗагрузкаКотировок</code></td>
+      <td>Регистрация в БСП: <strong>&laquo;Загрузка котировок ц/б&raquo;</strong>, информация: <em>&laquo;Загрузка котировок через web-service ВТБ&raquo;</em>. Команды <code>ЗаполнитьWEB_VTB</code>, <code>ФоновоеВыполнение</code>.</td>
+    </tr>
+    <tr>
+      <td>Встроенная обработка <em>(вторичная, для интерактивной загрузки)</em></td>
+      <td><code>DataProcessor.ЗагрузкаКотировок</code></td>
+      <td>Интерактивная загрузка из файлов/XML. Включена в подсистему &laquo;Котировки&raquo;. Для регламента <strong>не используется</strong>.</td>
+    </tr>
+    <tr>
+      <td>Регистр-приёмник</td>
+      <td><code>InformationRegister.КотировкиЦБНаБирже</code></td>
+      <td>Куда пишутся котировки.</td>
+    </tr>
+    <tr>
+      <td>Регламентное задание</td>
+      <td><code>ScheduledJob.ЗапускДополнительныхОбработок</code></td>
+      <td>Стандартный механизм запуска подключаемой обработки.</td>
+    </tr>
+  </table>
+
+  <h4>Подтверждение из кода</h4>
+  <pre class="bsl">// Модуль объекта обработки "внЗагрузкаКотировок", стр.11-44
+Функция СведенияОВнешнейОбработке() Экспорт
+    ...
+    ПараметрыРегистрации.Вставить("Наименование", "Загрузка котировок ц/б");
+    ...
+    ПараметрыРегистрации.Вставить("Информация", "Загрузка котировок через web-service ВТБ");
+    ...
+    ДобавитьКоманду(..., "Загрузить котировки (в фоне)", "ФоновоеВыполнение", "ВызовСерверногоМетода");
+КонецФункции</pre>
+
+  <h4>Где разместить замер</h4>
+  <p>В команде &laquo;Загрузить котировки (в фоне)&raquo; / методе <code>ФоновоеВыполнение</code> внешней обработки <code>внЗагрузкаКотировок</code>. Замер на сервере: <code>НачатьЗамерВремени("Котировки.ЗагрузкаМО")</code> в начале и <code>ЗакончитьЗамерВремени(Замер)</code> в конце метода.</p>
+
+  <div class="note note-success">
+    Объект надёжно идентифицирован. Уточнения у заказчика не требуется.
+  </div>
+</div>
+
+<!-- =================== ОПЕРАЦИЯ 4 =================== -->
+<div class="card" id="op-4">
+  <h3>5.4. Загрузка индексов и кривой бескупонной доходности
+    <span class="badge badge-time tag-time">09:10</span>
+    <span class="badge badge-high">100% уверенность</span>
+  </h3>
+  <div class="kv">
+    <div class="k">Периодичность</div><div class="v">Ежедневно, начало в 09:10, длительность ~6 минут</div>
+    <div class="k">Что должно происходить</div><div class="v">Загрузка значений биржевых индексов и параметров кривой бескупонной доходности (G-curve MOEX) для расчётов СЧА и справедливой стоимости.</div>
+  </div>
+
+  <h4>Особенность пункта</h4>
+  <p>Под одним пунктом плана скрываются <strong>две разные внешние обработки</strong> (загрузка из разных источников в разные регистры). При организации замеров нужно решить: одна ключевая операция или две.</p>
+
+  <h4>Найденные объекты</h4>
+  <table>
+    <tr><th>Слой</th><th>Объект</th><th>Назначение</th></tr>
+    <tr>
+      <td>EPF — Индексы</td>
+      <td><code>EPF: внЗагрузкаИндексов</code></td>
+      <td>Регистрация: <strong>&laquo;Загрузка индексов&raquo;</strong>, через middleware (MICROAPI/TIBCO). Запись в <code>InformationRegister.ДанныеИндекса</code>.</td>
+    </tr>
+    <tr>
+      <td>EPF — Кривая</td>
+      <td><code>EPF: ЗагрузкаПараметровMOEX_КривойДоходности</code></td>
+      <td>Регистрация: <strong>&laquo;Загрузка параметров MOEX G-curve&raquo;</strong>. Запись в <code>InformationRegister.ПараметрыКривойБезрисковойДоходности</code>.</td>
+    </tr>
+    <tr>
+      <td>Регистр сведений</td>
+      <td><code>InformationRegister.ДанныеИндекса</code></td>
+      <td>Хранение значений индексов.</td>
+    </tr>
+    <tr>
+      <td>Регистр сведений</td>
+      <td><code>InformationRegister.ПараметрыКривойБезрисковойДоходности</code></td>
+      <td>Параметры G-curve. ManagerModule содержит расчёт ставки по кривой.</td>
+    </tr>
+    <tr>
+      <td>Потребители</td>
+      <td><code>CommonModules\РасчетФинансовыхПоказателей</code>, <code>CommonModules\ОпределениеСправедливойСтоимостиВТБ</code></td>
+      <td>Используют параметры кривой при расчётах.</td>
+    </tr>
+  </table>
+
+  <h4>Подтверждение из кода</h4>
+  <pre class="bsl">// Модуль объекта обработки "внЗагрузкаИндексов", стр.41-66
+ПараметрыРегистрации.Вставить("Наименование", "Загрузка индексов");
+ПараметрыРегистрации.Вставить("Информация", "Загрузка индексов через middleware");
+...
+// стр.645-651
+НоваяЗапись = РегистрыСведений.ДанныеИндекса.СоздатьМенеджерЗаписи();
+...
+НоваяЗапись.Записать();
+
+// Модуль объекта обработки "ЗагрузкаПараметровMOEX_КривойДоходности", стр.3-22
+ПараметрыРегистрации.Вставить("Наименование", "Загрузка параметров MOEX G-curve");
+...
+// стр.176
+мЗапись = РегистрыСведений.ПараметрыКривойБезрисковойДоходности.СоздатьМенеджерЗаписи();</pre>
+
+  <div class="note note-question">
+    Один технический вопрос:
+    <ol style="margin:4px 0 0 22px">
+      <li>Замер делать <strong>одной</strong> ключевой операцией &laquo;Индексы+Кривая&raquo; (с агрегированной длительностью), или <strong>двумя</strong> отдельными (&laquo;ЗагрузкаИндексов&raquo; + &laquo;ЗагрузкаКривойДоходности&raquo;)? Второй вариант информативнее для диагностики, первый соответствует таблице письма (один SLA 6 минут).</li>
+    </ol>
+  </div>
+</div>
+
+<!-- =================== ОПЕРАЦИЯ 5 =================== -->
+<div class="card" id="op-5">
+  <h3>5.5. Проверка загрузки котировок
+    <span class="badge badge-time tag-time">09:15</span>
+    <span class="badge badge-low">Уточнение</span>
+  </h3>
+  <div class="kv">
+    <div class="k">Периодичность</div><div class="v">Ежедневно, начало в 09:15, длительность ~12 минут</div>
+    <div class="k">Что должно происходить</div><div class="v">Контроль того, что котировки на дату Т-1 загружены полно и корректно (по всем активам и инструментам).</div>
+  </div>
+
+  <h4>Что найдено</h4>
+  <table>
+    <tr><th>Слой</th><th>Объект</th><th>Комментарий</th></tr>
+    <tr>
+      <td>EPF</td>
+      <td>Прямого совпадения по имени &laquo;Проверка загрузки котировок&raquo; <strong>НЕ НАЙДЕНО</strong></td>
+      <td>В каталоге epf нет ни одной обработки с таким названием.</td>
+    </tr>
+    <tr>
+      <td>EPF (кандидат)</td>
+      <td><code>EPF: внОтчетИзменениеКотировокРейтингов</code></td>
+      <td>Отчёт/рассылка по изменениям котировок и рейтингов с порогами (<code>ПорогКотировки</code>). Может быть аналогом &laquo;проверки&raquo;, но это <strong>отчёт</strong>, а не контроль полноты.</td>
+    </tr>
+    <tr>
+      <td>Встроенный отчёт</td>
+      <td>В <code>Reports</code> по маске <code>*Котиров*</code> ничего подходящего не обнаружено</td>
+      <td></td>
+    </tr>
+    <tr>
+      <td>Внешняя система</td>
+      <td>Возможно проверка в системе RATES (упомянута в проекте письма)</td>
+      <td>Может выполняться SQL-job-ом на стороне RATES, не в МО.</td>
+    </tr>
+  </table>
+
+  <div class="note note-warning">
+    В исходниках МО однозначной обработки &laquo;Проверка загрузки котировок&raquo; <strong>не идентифицировано</strong>. Это критичный пробел: без подтверждения от заказчика невозможно расставить замер.
+  </div>
+
+  <div class="note note-question">
+    Срочно уточнить у заказчика (Чухачёв А. / Васильев Ф.):
+    <ol style="margin:4px 0 0 22px">
+      <li><strong>Что физически делает &laquo;Проверка загрузки котировок&raquo; в 09:15?</strong> Это сравнение количества загруженных котировок с эталонным списком инструментов? Контроль наличия котировки по каждому активу из &laquo;вселенной&raquo;? Сверка с RATES?</li>
+      <li>Где именно она выполняется &mdash; в Аванкоре МО (если да, то какая обработка/отчёт) или в внешней системе RATES?</li>
+      <li>Если это отдельная обработка/отчёт &mdash; уточнить точное наименование (возможно операция выполняется вручную и не привязана к 1С).</li>
+      <li>Возможно, имеется в виду <code>внОтчетИзменениеКотировокРейтингов</code> &mdash; подтвердить или опровергнуть.</li>
+    </ol>
+  </div>
+</div>
+
+<!-- =================== ОПЕРАЦИЯ 6 =================== -->
+<div class="card" id="op-6">
+  <h3>5.6. Сверка денежных средств и ЦБ между БО и ФО (FOBO сверка)
+    <span class="badge badge-time tag-time">09:00</span>
+    <span class="badge badge-low">Уточнение</span>
+  </h3>
+  <div class="kv">
+    <div class="k">Периодичность</div><div class="v">Ежедневно, начало в 09:00, длительность ~12 минут</div>
+    <div class="k">Что должно происходить</div><div class="v">Сверка остатков ДС и ЦБ (в шт.) между бэк-офисом (БО) и фронт-офисом (ФО) розничного ДУ.</div>
+  </div>
+
+  <div class="note note-warning">
+    <strong>FOBO в чистом виде (БО↔ФО, без МО) в исходниках МО НЕ НАЙДЕНО.</strong> Это логично: МО &mdash; средний слой; полностью &laquo;БО↔ФО без МО&raquo; обычно лежит в БО или в межсистемных скриптах вне 1С.
+  </div>
+
+  <h4>Что есть похожего в МО</h4>
+  <table>
+    <tr><th>Слой</th><th>Объект</th><th>Назначение</th></tr>
+    <tr>
+      <td>EPF (вариант 1)</td>
+      <td><code>EPF: внСверкаФОМО</code></td>
+      <td>Регистрация в БСП: <strong>&laquo;CRIMS v94: ФОМО Сверка&raquo;</strong>. Сличение данных МО с данными ФО (остатки МО, валюты, активы, логи &laquo;ФОМО-сверка&raquo;).</td>
+    </tr>
+    <tr>
+      <td>EPF (вариант 2)</td>
+      <td><code>EPF: внСверкаФОМО_ФО</code></td>
+      <td>Регистрация: <strong>&laquo;Avancore FO: ФОМО Сверка&raquo;</strong>. Аналогичная сверка под стек Avancore FO. В коде есть оповещение этапов <code>ПерерасчетСЧА</code> &mdash; см. также пункт 10.</td>
+    </tr>
+    <tr>
+      <td>Упоминание ФОБО</td>
+      <td>Только <strong>комментарий</strong> в <code>EPF: внРаботаСПереводамиВнутриДня</code></td>
+      <td>Логика даты &laquo;как в сверке ФОБО&raquo; &mdash; отсылка, не сама обработка.</td>
+    </tr>
+    <tr>
+      <td>Вспомогательная обработка</td>
+      <td><code>DataProcessor.внПроцедурыИФункцииОбменаСФронтОфис</code></td>
+      <td>Вспомогательный модуль обмена с ФО (XDTO, пакеты).</td>
+    </tr>
+  </table>
+
+  <div class="note note-question">
+    <strong>Критически важно уточнить у заказчика (Чухачёв А.):</strong>
+    <ol style="margin:4px 0 0 22px">
+      <li><strong>Что в вашем регламенте называется &laquo;FOBO сверка&raquo;</strong>?
+        <ul>
+          <li>Вариант А: <em>Прямое сличение БО и ФО без участия МО</em> (тогда в этой выгрузке обработка не идентифицирована, возможно работает в другой ИБ/системе).</li>
+          <li>Вариант Б: <em>Под &laquo;FOBO&raquo; фактически понимается ФОМО</em> &mdash; МО забирает данные ФО и сравнивает (в обычной терминологии это &laquo;Сверка ФО↔МО&raquo;, не &laquo;БО↔ФО&raquo;).</li>
+          <li>Вариант В: <em>Цепочка БО→МО→ФО</em>, где МО выступает посредником.</li>
+        </ul>
+      </li>
+      <li>Если это <code>внСверкаФОМО</code> или <code>внСверкаФОМО_ФО</code> &mdash; какая из двух стоит на регламенте 09:00?</li>
+      <li>Если в МО этой сверки нет &mdash; в каком другом приложении/системе это запускается, и нужно ли включать её в проект IMDEV-8883?</li>
+    </ol>
+  </div>
+</div>
+
+<!-- =================== ОПЕРАЦИЯ 7 =================== -->
+<div class="card" id="op-7">
+  <h3>5.7. Сверка денежных средств и ЦБ между БО и МО (BOMO сверка)
+    <span class="badge badge-time tag-time">14:00</span>
+    <span class="badge badge-high">100% уверенность</span>
+  </h3>
+  <div class="kv">
+    <div class="k">Периодичность</div><div class="v">Ежедневно, начало в 14:00, длительность ~30 минут</div>
+    <div class="k">Что должно происходить</div><div class="v">Сверка остатков ДС и ЦБ (в шт.) между БО и МО, а также оборотов; формирование Excel и рассылка результатов.</div>
+  </div>
+
+  <h4>Найденные объекты</h4>
+  <table>
+    <tr><th>Слой</th><th>Объект</th><th>Назначение</th></tr>
+    <tr>
+      <td>EPF <em>(основной)</em></td>
+      <td><code>EPF: внСверкаБОМО</code></td>
+      <td>Синоним: <strong>&laquo;Сверка БОМО&raquo;</strong>. Регистрация в БСП: <strong>&laquo;Сверка плановой позиции&raquo;</strong>. В модуле объекта метод <code>Сформировать</code>: выборка остатков МО (плановая позиция по ЦБ и ДС, доходы к получению, проценты, блоки РЕПО) + <code>ПолучитьДанныеБО</code> (для ДУ и ПИФ); сравнение; режим <code>РежимСверкаРасхождений</code> для оборотов; рассылка Excel-файла <code>BOMO_verificationГГГГММДД.xlsx</code>; тема письма &laquo;Сверка БО-МО за &hellip;&raquo;.</td>
+    </tr>
+    <tr>
+      <td>EPF <em>(старый/упрощённый)</em></td>
+      <td><code>EPF: СверкаБОМО</code></td>
+      <td>Та же концепция, но без расширенного режима расхождений. Возможно устаревшая версия.</td>
+    </tr>
+    <tr>
+      <td>Регламентное задание</td>
+      <td><code>ScheduledJob.ЗапускДополнительныхОбработок</code></td>
+      <td>Стандартный механизм. Расписание 14:00 &mdash; в данных ИБ.</td>
+    </tr>
+    <tr>
+      <td>Встроенные объекты</td>
+      <td>Отдельной встроенной обработки/отчёта не найдено</td>
+      <td>Реализация полностью на внешних обработках epf.</td>
+    </tr>
+  </table>
+
+  <h4>Где разместить замер</h4>
+  <p>В обработке <code>внСверкаБОМО</code>, метод <code>Сформировать</code> или фоновая команда. Замер охватывает: получение данных МО + получение данных БО + сравнение + формирование Excel + рассылка.</p>
+
+  <div class="note note-question">
+    Уточнить:
+    <ol style="margin:4px 0 0 22px">
+      <li>Подтвердить, что в продуктиве используется <code>внСверкаБОМО</code> (с режимом расхождений), а не упрощённый <code>СверкаБОМО</code>.</li>
+      <li>Замерять только &laquo;Сформировать&raquo; или включать в замер также рассылку Excel?</li>
+    </ol>
+  </div>
+</div>
+
+<!-- =================== ОПЕРАЦИЯ 8 =================== -->
+<div class="card" id="op-8">
+  <h3>5.8. Утренняя подготовка фронт-офисных систем к торгам
+    <span class="badge badge-time tag-time">05:30</span>
+    <span class="badge badge-partial">Частично</span>
+  </h3>
+  <div class="kv">
+    <div class="k">Периодичность</div><div class="v">Ежедневно, начало в 05:30, длительность <strong>~5 часов</strong> (самая длительная операция)</div>
+    <div class="k">Что должно происходить</div><div class="v">Выгрузка позиций, котировок, расчёт рыночных стоимостей в Аванкор ФО РДУ &mdash; подготовка фронт-офиса к открытию торгов.</div>
+  </div>
+
+  <div class="note note-info">
+    Это <strong>комплексный процесс</strong> из нескольких выгрузок и расчётов. Для замеров нужно решить: одна суммарная ключевая операция или серия (рекомендуется серия &mdash; для диагностики &laquo;где тормозит&raquo;).
+  </div>
+
+  <h4>Состав комплекса (по исходникам)</h4>
+  <table>
+    <tr><th>Этап</th><th>Объект</th><th>Назначение</th></tr>
+    <tr>
+      <td>Расчёт MV/WAP</td>
+      <td><code>EPF: внРасчетMVиWAP</code></td>
+      <td>Команды <code>Пересчет_MV_и_WAP_*</code> (фон). Расчёт рыночной (MV) и средневзвешенной (WAP) стоимости по дням.</td>
+    </tr>
+    <tr>
+      <td>Расчёт MV/WAP (устар.)</td>
+      <td><code>EPF: РасчетMVиWAPпоРасписанию2(не использовать)</code></td>
+      <td>В имени явно &laquo;не использовать&raquo;. Игнорируется.</td>
+    </tr>
+    <tr>
+      <td>Котировки МО→ФО</td>
+      <td><code>EPF: внВыгрузкаКотировокМО_ФО</code></td>
+      <td>&laquo;Выгрузка котировок MO → ФО&raquo;. Web-service <code>avancore_ws</code>. Команда <code>ФоновоеВыполнение</code>.</td>
+    </tr>
+    <tr>
+      <td>Остатки (позиции) МО→ФО</td>
+      <td><code>EPF: внВыгрузкаОстатковМО_ФО</code></td>
+      <td>&laquo;Выгрузка остатков МО ФО&raquo;. Вид &laquo;Обмены&raquo;. Команда <code>ФоноваяВыгрузка</code>. Вызов <code>ОписаниеОбменов.ВыполнитьКомандуПоОбменам</code>.</td>
+    </tr>
+    <tr>
+      <td>ЦБ в Аванкор ФО</td>
+      <td><code>EPF: внВыгрузкаЦБ_МО_ФО</code></td>
+      <td>&laquo;Выгрузка ценных бумаг в 1С Аванкор фронт-офис&raquo;. Команда <code>ФоноваяВыгрузка</code>.</td>
+    </tr>
+    <tr>
+      <td>Курсы валют МО→ФО</td>
+      <td><code>EPF: внВыгрузкаКурсыВалютMO_ФО</code></td>
+      <td>&laquo;Выгрузка курсы валют MO → ФО&raquo;. Команда <code>ФоновоеВыполнение</code>.</td>
+    </tr>
+    <tr>
+      <td>Капитализация → ФО</td>
+      <td><code>EPF: внВыгрузкаКапитализацииФО</code></td>
+      <td>Выгрузка капитализации в ФО.</td>
+    </tr>
+    <tr>
+      <td>Оферты МО→ФО</td>
+      <td><code>EPF: внВыгрузкаОферт_МО_ФО</code></td>
+      <td>Команда <code>ВыгрузкаОфертИзМОвФОФон</code>.</td>
+    </tr>
+    <tr>
+      <td>Рейтинги МО→ФО</td>
+      <td><code>EPF: внВыгрузкаРейтингов_МО_ФО</code></td>
+      <td>Команда <code>ФоновоеВыполнение</code>.</td>
+    </tr>
+    <tr>
+      <td>Бенчмарки</td>
+      <td><code>EPF: внРасчетБенчмарка</code></td>
+      <td>Расчёт бенчмарков (справочно для &laquo;рыночных&raquo; расчётов).</td>
+    </tr>
+  </table>
+
+  <h4>Встроенные опоры обмена</h4>
+  <table>
+    <tr><th>Слой</th><th>Объект</th><th>Назначение</th></tr>
+    <tr>
+      <td>Обработка</td>
+      <td><code>DataProcessor.внПроцедурыИФункцииОбменаСФронтОфис</code></td>
+      <td>Вспомогательный модуль обмена с ФО.</td>
+    </tr>
+    <tr>
+      <td>Общий модуль</td>
+      <td><code>CommonModules\ИсполняемыеПроцедурыЗакрытияПериода</code></td>
+      <td>Содержит <code>Операция_0005_УстановкаКотировок</code>, <code>Операция_0010_РасчетРыночнойСтоимости</code>, <code>Операция_0020_РасчетСредневзвешеннойСтоимости</code>.</td>
+    </tr>
+    <tr>
+      <td>Документ</td>
+      <td><code>Document.РасчетРыночнойСтоимости</code></td>
+      <td>Движения: <code>InformationRegister.РыночнаяСтоимостьПозиции</code>, <code>РыночнаяСтоимостьПлановойПозиции</code>.</td>
+    </tr>
+    <tr>
+      <td>Документ</td>
+      <td><code>Document.РасчетСредневзвешеннойСтоимости</code></td>
+      <td>Движения: <code>InformationRegister.СредевзвешеннаяСтоимость</code>.</td>
+    </tr>
+    <tr>
+      <td>Подсистемы</td>
+      <td><code>Subsystems\РегламентныеОперации\Subsystems\Операции</code>, <code>Subsystems\Mandatories\Subsystems\РегламентныеОперации</code></td>
+      <td>Включают <code>Document.РасчетРыночнойСтоимости</code>.</td>
+    </tr>
+  </table>
+
+  <div class="note note-question">
+    Уточнить у заказчика:
+    <ol style="margin:4px 0 0 22px">
+      <li><strong>Полный состав &laquo;утренней подготовки&raquo;</strong>: входят ли в неё все 9 перечисленных EPF, или часть выполняется в другие окна (например оферты/рейтинги/капитализация)?</li>
+      <li><strong>Порядок запуска</strong>: эти выгрузки выполняются последовательно из одного скрипта/сценария или независимо параллельно? Это критично для замеров (последовательная = одна метрика, параллельная = несколько метрик).</li>
+      <li><strong>Расчёт рыночных стоимостей</strong> &mdash; через документ <code>РасчетРыночнойСтоимости</code> или через обработку <code>внРасчетMVиWAP</code>? Что именно идёт в 05:30?</li>
+      <li>Замер делать <strong>15 ключевых операций по плану</strong> или разбить пункт 8 на несколько подопераций (например, &laquo;Утр.подг.: котировки→ФО&raquo;, &laquo;Утр.подг.: остатки→ФО&raquo; и т.д.) для лучшей диагностики?</li>
+    </ol>
+  </div>
+</div>
+
+<!-- =================== ОПЕРАЦИЯ 9 =================== -->
+<div class="card" id="op-9">
+  <h3>5.9. Дневной расчёт СЧА в Аванкоре МО
+    <span class="badge badge-time tag-time">13:00</span>
+    <span class="badge badge-partial">Частично</span>
+  </h3>
+  <div class="kv">
+    <div class="k">Периодичность</div><div class="v">Ежедневно, начало в 13:00, длительность ~3 часа</div>
+    <div class="k">Что должно происходить</div><div class="v">Дневной расчёт стоимости чистых активов (СЧА) фондов и портфелей.</div>
+  </div>
+
+  <h4>Что найдено</h4>
+  <table>
+    <tr><th>Слой</th><th>Объект</th><th>Комментарий</th></tr>
+    <tr>
+      <td>Документ</td>
+      <td><code>Document.ПланРегламентныхОпераций</code></td>
+      <td>В модуле объекта вызов: <code>Справочники.ВидыОперацийЗакрытияПериода.ВыполнитьИсполняемуюПроцедуруЗакрытияПериода</code>. В комментарии явно: для СЧА может не быть отдельного документа (есть <code>СписокОперацийБезДокументов</code>; закомментирована строка <code>РасчетСЧА_РСА</code>).</td>
+    </tr>
+    <tr>
+      <td>Справочник</td>
+      <td><code>Catalog.ВидыОперацийЗакрытияПериода</code></td>
+      <td>Предопределённые коды: <code>РасчетРыночнойСтоимости</code>, <code>РасчетСредневзвешеннойСтоимости</code>, <code>УстановкаКотировокЦБ</code>. Коды <code>РасчетСЧА</code> в выгрузке нет.</td>
+    </tr>
+    <tr>
+      <td>Общий модуль</td>
+      <td><code>CommonModules\ИсполняемыеПроцедурыЗакрытияПериода</code></td>
+      <td>Реальные процедуры закрытия периода. <strong>Главный кандидат для замеров</strong>.</td>
+    </tr>
+    <tr>
+      <td>Регистр</td>
+      <td><code>InformationRegister.СтоимостьЧистыхАктивов</code></td>
+      <td>В коде упоминается (<code>ВТБ_КонтрольЛиквидности</code>), но <strong>отдельной папки метаданных в выгрузке не обнаружено</strong>. Возможно неполная выгрузка или регистр в расширении.</td>
+    </tr>
+    <tr>
+      <td>Регистр</td>
+      <td><code>InformationRegister.РыночнаяСтоимостьПозиции</code></td>
+      <td>Используется в обработке <code>внСверкаФОМО_ФО</code>: функция <code>СЧА_РСА_НаДату</code> агрегирует данные из этого регистра, упаковывает в XDTO и добавляет в пакет <code>РегистрыСведений.СтоимостьЧистыхАктивов</code> на стороне ФО.</td>
+    </tr>
+    <tr>
+      <td>EPF</td>
+      <td>Прямой обработки &laquo;Дневной расчёт СЧА&raquo; не найдено</td>
+      <td>Расчёт идёт через регламентные документы / общие модули закрытия периода.</td>
+    </tr>
+  </table>
+
+  <div class="note note-question">
+    Уточнить у заказчика:
+    <ol style="margin:4px 0 0 22px">
+      <li><strong>Что физически означает &laquo;Дневной расчёт СЧА&raquo;</strong>? Варианты:
+        <ul>
+          <li>(а) Проведение документа <code>РасчетРыночнойСтоимости</code> + последующий расчёт СЧА.</li>
+          <li>(б) Запуск всего <code>ПланРегламентныхОпераций</code> (с фильтром на &laquo;дневные&raquo; операции).</li>
+          <li>(в) Этап <code>ПерерасчетСЧА</code> внутри ФОМО-сверки (<code>внСверкаФОМО_ФО</code>).</li>
+          <li>(г) Отдельная не идентифицированная обработка.</li>
+        </ul>
+      </li>
+      <li>В каком регистре (<code>СтоимостьЧистыхАктивов</code>?) сохраняются результаты? Этот регистр в выгрузке метаданных не нашёлся &mdash; нужно проверить в конфигураторе живой ИБ.</li>
+      <li>Где в коде расположена точка входа &laquo;дневной расчёт&raquo; (форма, отчёт, обработка)? Без этого невозможно поставить замер.</li>
+    </ol>
+  </div>
+</div>
+
+<!-- =================== ОПЕРАЦИЯ 10 =================== -->
+<div class="card" id="op-10">
+  <h3>5.10. Ночной пересчёт СЧА в Аванкоре МО
+    <span class="badge badge-time tag-time">00:30</span>
+    <span class="badge badge-partial">Частично</span>
+  </h3>
+  <div class="kv">
+    <div class="k">Периодичность</div><div class="v">Ежедневно, начало в 00:30, длительность ~9 часов (самая длительная)</div>
+    <div class="k">Что должно происходить</div><div class="v">Полный ночной пересчёт СЧА с учётом всех операций предыдущего дня.</div>
+  </div>
+
+  <h4>Кандидаты</h4>
+  <table>
+    <tr><th>Слой</th><th>Объект</th><th>Комментарий</th></tr>
+    <tr>
+      <td>EPF</td>
+      <td><code>EPF: внРасчетMVиWAP</code></td>
+      <td>Массовый ночной пересчёт MV/WAP за несколько дней (по юр./физ. лицам, Retail). Типичный кандидат для длинного ночного окна.</td>
+    </tr>
+    <tr>
+      <td>EPF</td>
+      <td><code>EPF: внСверкаФОМО_ФО</code></td>
+      <td>В модуле объекта явное оповещение: <code>ОтправитьИнформациюОбЗавершенномЭтапе("ПерерасчетСЧА", ...)</code>. Тема письма: <strong>&laquo;Пересчет РСА/СЧА&raquo;</strong>. То есть в обмене с ФО есть явный этап пересчёта СЧА.</td>
+    </tr>
+    <tr>
+      <td>Документ</td>
+      <td><code>Document.ПланРегламентныхОпераций</code></td>
+      <td>Полный цикл регламентных операций (см. п.9). Возможно ночное окно &mdash; полный <code>ПланРегламентныхОпераций</code>.</td>
+    </tr>
+    <tr>
+      <td>EPF</td>
+      <td>Прямой обработки &laquo;Ночной пересчёт СЧА&raquo; не найдено</td>
+      <td></td>
+    </tr>
+  </table>
+
+  <div class="note note-question">
+    Уточнить у заказчика:
+    <ol style="margin:4px 0 0 22px">
+      <li><strong>Чем ночной пересчёт отличается от дневного (п.9)</strong> и какая обработка/документ это запускает в 00:30?
+        <ul>
+          <li>Полный <code>ПланРегламентныхОпераций</code> в ночном режиме?</li>
+          <li>Глубокий <code>внРасчетMVиWAP</code> за всю историю?</li>
+          <li>Цепочка ФОМО-сверки с этапом <code>ПерерасчетСЧА</code>?</li>
+          <li>Комбинация всех вариантов?</li>
+        </ul>
+      </li>
+      <li>Длительность 9 часов &mdash; это ОДНА операция или последовательность из 3-5 шагов? Возможно стоит ставить замеры по этапам.</li>
+      <li>Какие пересчёты входят в ночное окно (СЧА, СПД, доходность, налоги)?</li>
+    </ol>
+  </div>
+</div>
+
+<!-- =================== ОПЕРАЦИЯ 11 =================== -->
+<div class="card" id="op-11">
+  <h3>5.11. Обновление остатков в Аванкоре ФО (РДУ)
+    <span class="badge badge-time tag-time">12:30</span>
+    <span class="badge badge-high">100% уверенность</span>
+  </h3>
+  <div class="kv">
+    <div class="k">Периодичность</div><div class="v">Ежедневно, начало в 12:30, длительность ~30 минут</div>
+    <div class="k">Что должно происходить</div><div class="v">Дневная синхронизация остатков из МО в Аванкор ФО (контур розничного ДУ).</div>
+  </div>
+
+  <h4>Найденные объекты</h4>
+  <table>
+    <tr><th>Слой</th><th>Объект</th><th>Назначение</th></tr>
+    <tr>
+      <td>EPF <em>(основной)</em></td>
+      <td><code>EPF: внВыгрузкаОстатковМО_ФО</code></td>
+      <td>Регистрация в БСП: <strong>&laquo;Выгрузка остатков МО ФО&raquo;</strong>, тип &laquo;Обмены&raquo;. Команды <code>ЗагрузкаFront_MID</code>, <code>ФоноваяВыгрузка</code>. Обмен через WS <code>PROD_AVC_FO-DL</code>, <code>avancore_ws</code>. По смыслу однозначно совпадает.</td>
+    </tr>
+    <tr>
+      <td>Регламентное задание</td>
+      <td><code>ScheduledJob.ЗапускДополнительныхОбработок</code></td>
+      <td>Стандартный механизм запуска. Расписание 12:30 &mdash; в данных рабочей ИБ.</td>
+    </tr>
+    <tr>
+      <td>Общий модуль</td>
+      <td><code>CommonModules\ОписаниеОбменов</code></td>
+      <td>Оркестрация: письма &laquo;Аванкор МО: Информация по обменам&raquo;, метод <code>ВыполнитьКомандуПоОбменам</code>.</td>
+    </tr>
+  </table>
+
+  <h4>Где разместить замер</h4>
+  <p>В обработке <code>внВыгрузкаОстатковМО_ФО</code>, методе <code>ФоноваяВыгрузка</code>. Замер охватывает: выборку остатков из МО → формирование XDTO-пакета → отправку через web-service → приём ответа.</p>
+
+  <div class="note note-question">
+    Минимальное уточнение:
+    <ol style="margin:4px 0 0 22px">
+      <li>Подтвердить, что &laquo;ФО (РДУ)&raquo; в письме = web-service <code>PROD_AVC_FO-DL</code> / <code>amapfront</code> в настройках обработки.</li>
+      <li>Включать ли в замер ожидание ответа от ФО или только отправку с нашей стороны?</li>
+    </ol>
+  </div>
+</div>
+
+<!-- =================== ОПЕРАЦИЯ 12 =================== -->
+<div class="card" id="op-12">
+  <h3>5.12. Сетап во всех системах и покупка на новых клиентов Розничного ДУ
+    <span class="badge badge-time tag-time">10:00</span>
+    <span class="badge badge-partial">Частично</span>
+  </h3>
+  <div class="kv">
+    <div class="k">Периодичность</div><div class="v">Ежедневно, начало в 10:00, длительность не указана</div>
+    <div class="k">Что должно происходить</div><div class="v">Заведение новых клиентов Розничного ДУ во всех системах (включая ФО, БО, брокера) и первичная покупка инструментов на их счета.</div>
+  </div>
+
+  <div class="note note-warning">
+    <strong>В коде МО слово &laquo;Сетап&raquo; не встречается ни разу.</strong> Однозначной обработки с таким именем нет. &laquo;Все системы&raquo; почти наверняка означает несколько ИБ, и значительная часть процесса &mdash; вне Аванкора МО (ФО, Сибел, брокер).
+  </div>
+
+  <h4>Кандидаты со стороны МО</h4>
+  <table>
+    <tr><th>Слой</th><th>Объект</th><th>Назначение</th></tr>
+    <tr>
+      <td>EPF (наиболее вероятный)</td>
+      <td><code>EPF: внВыгрузкаСчетовМандатов_МО_ФО</code></td>
+      <td>В модуле объекта явно: выгрузка счетов мандатов в &laquo;1С Аванкор фронт-офис&raquo; <strong>по расписанию &hellip; только по стратегиям с флагом &laquo;Розничное ДУ = Истина&raquo;</strong>. Сильный кандидат на этап &laquo;сетапа счетов&raquo; в ФО для РДУ.</td>
+    </tr>
+    <tr>
+      <td>EPF (создание счетов в МО)</td>
+      <td><code>EPF: внСозданиеСчетов</code></td>
+      <td>Инструмент создания счетов на стороне МО. <code>ObjectModule</code> короткий (только регистрация), основная логика в формах.</td>
+    </tr>
+    <tr>
+      <td>EPF (создание счетов мандатов)</td>
+      <td><code>EPF: внСозданиеСчетовМандатов</code></td>
+      <td>Создание счетов с привязкой к мандатам.</td>
+    </tr>
+    <tr>
+      <td>EPF (создание счетов по стратегиям)</td>
+      <td><code>EPF: внСозданиеСчетовМандатовПоСтратегиям</code></td>
+      <td>Массовое создание счетов мандатов по стратегиям.</td>
+    </tr>
+    <tr>
+      <td>EPF (поручения / покупки)</td>
+      <td><code>EPF: внВыгрузкаПорученийПоОфертам_МО_ФО</code></td>
+      <td>Выгрузка поручений по офертам из МО в ФО. Возможная часть &laquo;покупки&raquo; (выставление поручений).</td>
+    </tr>
+    <tr>
+      <td>Общий модуль</td>
+      <td><code>CommonModules\ВТБ_АлгоритмыРасчета</code></td>
+      <td>Содержит область <code>РозничноеДУ</code>, функцию <code>МандатРозничноеДУ</code>. Маркер логики РДУ, но не сам сетап.</td>
+    </tr>
+  </table>
+
+  <div class="note note-question">
+    <strong>Это сложный комплексный процесс. Уточнить:</strong>
+    <ol style="margin:4px 0 0 22px">
+      <li>Какие именно <strong>шаги сетапа выполняются в МО</strong>, а какие &mdash; вне (ФО, Сибел, брокер)?</li>
+      <li>Из чего точно состоит &laquo;покупка на новых клиентов&raquo; в МО? Это <code>внВыгрузкаПорученийПоОфертам_МО_ФО</code> или другой механизм?</li>
+      <li>Запускается ли это из единой точки (форма / обработка / регламент) или цепочкой нескольких независимых обработок?</li>
+      <li>Замер на МО ставить только на &laquo;часть в МО&raquo; (выгрузка счетов мандатов + поручения), или есть единая точка интеграции, через которую идёт весь процесс?</li>
+    </ol>
+  </div>
+</div>
+
+<!-- =================== ОПЕРАЦИЯ 13 =================== -->
+<div class="card" id="op-13">
+  <h3>5.13. Выводы ДС с биржи по расторжениям клиентов Розничного ДУ
+    <span class="badge badge-time tag-time">14:30</span>
+    <span class="badge badge-low">Уточнение</span>
+  </h3>
+  <div class="kv">
+    <div class="k">Периодичность</div><div class="v">Ежедневно, начало в 14:30, длительность ~1 час</div>
+    <div class="k">Что должно происходить</div><div class="v">Вывод денежных средств с биржевых счетов по расторгнутым договорам РДУ.</div>
+  </div>
+
+  <div class="note note-warning">
+    Прямой обработки &laquo;Вывод ДС с биржи по расторжениям РДУ&raquo; в исходниках МО <strong>не найдено</strong>. Сценарий с высокой вероятностью выполняется на стороне ФО или брокерских систем.
+  </div>
+
+  <h4>Кандидаты в МО</h4>
+  <table>
+    <tr><th>Слой</th><th>Объект</th><th>Комментарий</th></tr>
+    <tr>
+      <td>EPF</td>
+      <td><code>EPF: внСписокУходящихИзДУКлиентов</code></td>
+      <td>В модуле объекта упоминания: учёт <strong>вида вывода активов</strong>, в т.ч. <strong>&laquo;ДС&raquo;</strong>, тексты про <strong>расторжение/вывод</strong> (доп. соглашения, свойства объектов). Близко к данным по расторгам, но это <strong>не явная команда вывода</strong>, а скорее формирование списка.</td>
+    </tr>
+    <tr>
+      <td>EPF</td>
+      <td><code>EPF: внРаботаСПереводамиВнутриДня</code></td>
+      <td>Крупная обработка МО↔ФО по переводам внутри дня (таблицы &laquo;ФО&raquo;, сверки). Может быть частью операционного контура, но не специфична для расторгов.</td>
+    </tr>
+    <tr>
+      <td>Общие данные</td>
+      <td>В запросах других обработок упоминается <code>ВыводыДССБрокерскогоСчета</code></td>
+      <td>Контекст предметной области, но без однозначной точки входа в МО.</td>
+    </tr>
+  </table>
+
+  <div class="note note-question">
+    <strong>Срочно уточнить (Чухачёв А.):</strong>
+    <ol style="margin:4px 0 0 22px">
+      <li><strong>В какой системе физически выполняется вывод ДС с биржи?</strong> ФО Аванкор? Брокерская система? Или часть процесса (например, формирование списка) делается в МО?</li>
+      <li>Если в МО есть отдельная обработка/документ &laquo;Вывод ДС по расторжениям&raquo; &mdash; уточнить точное наименование.</li>
+      <li>Если процесс в МО только &laquo;готовит данные&raquo; (формирование списка уходящих клиентов) &mdash; ставить ли вообще замер в МО, или замер должен быть в ФО?</li>
+      <li>Подходит ли <code>внСписокУходящихИзДУКлиентов</code> как точка замера части процесса?</li>
+    </ol>
+  </div>
+</div>
+
+<!-- =================== ОПЕРАЦИЯ 14 =================== -->
+<div class="card" id="op-14">
+  <h3>5.14. Контроль за работой алгоритма по сетапу клиентов Розничного ДУ
+    <span class="badge badge-time tag-time">10:00</span>
+    <span class="badge badge-low">Уточнение</span>
+  </h3>
+  <div class="kv">
+    <div class="k">Периодичность</div><div class="v">Ежедневно, начало в 10:00, длительность ~1 час (в одно время с п.12)</div>
+    <div class="k">Что должно происходить</div><div class="v">Контроль того, что &laquo;Сетап клиентов РДУ&raquo; (п.12) выполнился корректно во всех системах.</div>
+  </div>
+
+  <div class="note note-warning">
+    Формулировка &laquo;алгоритм по сетапу&raquo; в коде МО <strong>не встречается</strong>. Скорее всего речь об общем контроле через сверку или специальный отчёт.
+  </div>
+
+  <h4>Кандидаты</h4>
+  <table>
+    <tr><th>Слой</th><th>Объект</th><th>Комментарий</th></tr>
+    <tr>
+      <td>EPF (сверка МО↔ФО)</td>
+      <td><code>EPF: внСверкаФОМО_ФО</code></td>
+      <td>Тяжёлая сверка остатков/ЦБ/ДС между МО и ФО. <strong>Логичный кандидат на &laquo;контроль&raquo; после выгрузок/сетапа.</strong></td>
+    </tr>
+    <tr>
+      <td>EPF (другая ФОМО)</td>
+      <td><code>EPF: внСверкаФОМО</code></td>
+      <td>Альтернативный/более старый вариант сверки.</td>
+    </tr>
+    <tr>
+      <td>EPF (контроль отчётов)</td>
+      <td><code>EPF: внКонтрольОтчетаСтатусПортфеляДУ</code></td>
+      <td>Контроль отчёта &laquo;Статус портфеля ДУ&raquo;. Возможная часть контроля.</td>
+    </tr>
+    <tr>
+      <td>EPF (контроль рисков)</td>
+      <td><code>EPF: внКонтрольУровняФактическогоРиска</code></td>
+      <td>В коде есть фильтры по &laquo;Розничное ДУ&raquo; в запросах. Контроль риска, не сетапа в чистом виде.</td>
+    </tr>
+    <tr>
+      <td>Встроенные объекты</td>
+      <td>Не выделено единого встроенного объекта</td>
+      <td></td>
+    </tr>
+  </table>
+
+  <div class="note note-question">
+    <strong>Уточнить:</strong>
+    <ol style="margin:4px 0 0 22px">
+      <li><strong>Что конкретно делается для &laquo;контроля сетапа&raquo;</strong>: сверка МО↔ФО (<code>внСверкаФОМО_ФО</code>), отдельный отчёт, чек-лист, ручная проверка?</li>
+      <li>Сетап (п.12) и контроль (п.14) оба в 10:00 &mdash; это последовательность (сначала сетап, потом контроль) или параллельные процессы?</li>
+      <li>Если используется существующая сверка ФОМО для контроля сетапа &mdash; нужно ли разделять замеры (один ФОМО-замер служит и п.6/п.14)?</li>
+    </ol>
+  </div>
+</div>
+
+<!-- =================== ОПЕРАЦИЯ 15 =================== -->
+<div class="card" id="op-15">
+  <h3>5.15. Выгрузка данных в кабинет клиента ДУ
+    <span class="badge badge-time tag-time">00:00</span>
+    <span class="badge badge-partial">Частично</span>
+  </h3>
+  <div class="kv">
+    <div class="k">Периодичность</div><div class="v">Ежедневно, начало в 00:00, длительность ~1 час</div>
+    <div class="k">Что должно происходить</div><div class="v">Выгрузка данных портфелей и операций клиентов ДУ в личный кабинет (внешний веб-портал).</div>
+  </div>
+
+  <h4>Найденные объекты</h4>
+  <table>
+    <tr><th>Слой</th><th>Объект</th><th>Назначение</th></tr>
+    <tr>
+      <td>Встроенная обработка <em>(основной канал)</em></td>
+      <td><code>DataProcessor.ФормированиеОтчетовПоЗапросуДляКабинетаДУ</code></td>
+      <td>Реквизит <code>ИмяКлиентскогоОтчета</code>, макет <code>КомандыSQL</code>. В модуле объекта &mdash; COM ADODB к MS SQL, каталог <strong><code>ClientPortal</code></strong>. Обрабатывает очередь запросов из кабинета.</td>
+    </tr>
+    <tr>
+      <td>EPF (зеркало)</td>
+      <td><code>EPF: ФормированиеОтчетовПоЗапросуДляКабинетаДУ</code></td>
+      <td>Внешний вариант той же обработки.</td>
+    </tr>
+    <tr>
+      <td>EPF (HNWI &mdash; <strong>не РДУ</strong>!)</td>
+      <td><code>EPF: внЭкспортДанныхКабинетHNWI</code></td>
+      <td>Регистрация &laquo;Экспорт данных HNWI&raquo;. По названию &mdash; <strong>HNWI</strong>, а не РДУ. В тексте писем встречается &laquo;кабинет ДУ&raquo;, что создаёт путаницу. <strong>Требует разделения продуктов</strong>.</td>
+    </tr>
+    <tr>
+      <td>Отчёт ERF</td>
+      <td>Внешний отчёт <code>внСверкаДанныхСКабинетомДУ</code> (ERF)</td>
+      <td>Сверка с кабинетом 2.0 &mdash; не массовая выгрузка, а контроль.</td>
+    </tr>
+    <tr>
+      <td>Намёк на регламент</td>
+      <td><code>EPF: внПодготовкаБазыMoRep</code></td>
+      <td>В коде явно упомянуто <strong>включение регламентного задания &laquo;Формирование отчетов по запросу для кабинета ДУ&raquo;</strong> в базе <strong><code>PROD_AVC_MO_REP</code></strong>. То есть в продуктиве должно быть именованное РЗ.</td>
+    </tr>
+  </table>
+
+  <h4>Особенность реализации</h4>
+  <div class="note note-info">
+    Обработка <code>ФормированиеОтчетовПоЗапросуДляКабинетаДУ</code> работает <strong>по очереди запросов</strong>: пользователь в кабинете запрашивает отчёт &mdash; обработка получает запрос &mdash; формирует ответ &mdash; кладёт в SQL-каталог <code>ClientPortal</code>. Это <strong>не классическая ночная массовая выгрузка</strong> по расписанию.
+  </div>
+
+  <div class="note note-question">
+    <strong>Уточнить у заказчика:</strong>
+    <ol style="margin:4px 0 0 22px">
+      <li><strong>Что точно происходит в 00:00</strong>?
+        <ul>
+          <li>Полная массовая выгрузка справочников портфелей в <code>ClientPortal</code>?</li>
+          <li>Только запуск регламента очереди запросов <code>ФормированиеОтчетовПоЗапросуДляКабинетаДУ</code>?</li>
+          <li>Отдельная неявная ETL-задача (вне 1С)?</li>
+        </ul>
+      </li>
+      <li>Замер ставить в <strong>основной базе МО</strong> или в <strong>реплике <code>PROD_AVC_MO_REP</code></strong>?</li>
+      <li>Является ли <code>внЭкспортДанныхКабинетHNWI</code> частью этого пункта (для HNWI-клиентов) или это отдельный продукт?</li>
+      <li>Длительность 1 час &mdash; это общее время на всех клиентов? На какие активы/операции?</li>
+    </ol>
+  </div>
+</div>
+
+<h2 id="open-questions">6. Сводный список вопросов заказчику</h2>
+<div class="card">
+  <p>Для движения вперёд по проекту IMDEV-8883 нужны ответы по следующим пунктам.</p>
+
+  <h4>6.1. Технические (для разработчика)</h4>
+  <ol>
+    <li><strong>Состав подсистемы APDEX</strong>: согласовать допоставку из БСП недостающих компонентов (модуль <code>ОценкаПроизводительностиВызовСервера</code>, регистры <code>ЗамерыВремениТехнологические</code> и <code>ОценкаПроизводительностиВерсияФормата</code>) или зафиксировать целевую версию БСП.</li>
+    <li>Создание/синхронизация <strong>предопределённых элементов справочника <code>КлючевыеОперации</code></strong> &mdash; нужны 16 штук (общая + 15 операций) с целевым временем.</li>
+    <li>Активация регламентного задания <code>ЭкспортОценкиПроизводительности</code> и определение приёмника (XDTO ApdexExport &mdash; куда отправлять).</li>
+    <li>Выгрузка из живой ИБ <strong>таблицы регламентных заданий и справочника <code>ДополнительныеОтчётыИОбработки</code></strong> с расписанием &mdash; для подтверждения соответствия временам из плана.</li>
+  </ol>
+
+  <h4>6.2. Бизнес-уточнения по 15 операциям</h4>
+  <table>
+    <tr><th>№</th><th>Операция</th><th>Главный вопрос</th><th>Кому</th></tr>
+    <tr><td>1</td><td>Загрузка статики/транзакций ДУ</td><td>Код сценария обмена в продуктиве; есть ли отдельные сценарии для статики и для транзакций.</td><td>Чухачёв А.</td></tr>
+    <tr><td>2</td><td>Статика бумаг из НРД</td><td>Подтвердить, что в 23:00 запускается <code>внЗагрузкаАктивовЧерезWebService</code> (а не Bloomberg или КД).</td><td>Чухачёв А.</td></tr>
+    <tr><td>4</td><td>Индексы и кривая</td><td>Один общий замер или два раздельных (Индексы + Кривая)?</td><td>Васильев Ф.</td></tr>
+    <tr><td><strong>5</strong></td><td><strong>Проверка загрузки котировок</strong></td><td><strong>Нет идентифицированной обработки. Что физически делает эта проверка и где (МО / RATES / вручную)?</strong></td><td>Чухачёв А.</td></tr>
+    <tr><td><strong>6</strong></td><td><strong>FOBO сверка</strong></td><td><strong>FOBO &laquo;БО↔ФО без МО&raquo; не найден. Что в вашей терминологии означает FOBO &mdash; ФОМО или другая система?</strong></td><td>Чухачёв А.</td></tr>
+    <tr><td>7</td><td>BOMO сверка</td><td>Используется <code>внСверкаБОМО</code> (расширенный) или старый <code>СверкаБОМО</code>?</td><td>Чухачёв А.</td></tr>
+    <tr><td>8</td><td>Утренняя подготовка ФО РДУ</td><td>Полный состав комплекса (9+ EPF), порядок (последовательно/параллельно), разбиение на подоперации.</td><td>Чухачёв А.</td></tr>
+    <tr><td>9</td><td>Дневной расчёт СЧА</td><td>Точка входа в коде &mdash; документ <code>РасчетРыночнойСтоимости</code>, общий модуль закрытия периода или другая обработка? Регистр СЧА.</td><td>Чухачёв А.</td></tr>
+    <tr><td>10</td><td>Ночной пересчёт СЧА</td><td>Чем отличается от дневного; что именно в 00:30 (план/MV-WAP/ФОМО)?</td><td>Чухачёв А.</td></tr>
+    <tr><td>11</td><td>Остатки в ФО РДУ</td><td>&laquo;ФО (РДУ)&raquo; = web-service <code>PROD_AVC_FO-DL</code>?</td><td>Чухачёв А.</td></tr>
+    <tr><td>12</td><td>Сетап клиентов РДУ</td><td>Какие шаги в МО, какие вне; единая ли точка входа?</td><td>Чухачёв А.</td></tr>
+    <tr><td><strong>13</strong></td><td><strong>Выводы ДС по расторжениям РДУ</strong></td><td><strong>В какой системе физически выполняется (МО/ФО/брокер)?</strong></td><td>Чухачёв А.</td></tr>
+    <tr><td><strong>14</strong></td><td><strong>Контроль алгоритма сетапа</strong></td><td><strong>Что физически делается для контроля &mdash; сверка ФОМО, отчёт, ручной чек?</strong></td><td>Чухачёв А.</td></tr>
+    <tr><td>15</td><td>Кабинет клиента ДУ</td><td>Что точно в 00:00 &mdash; массовая выгрузка или очередь запросов? Включает ли HNWI?</td><td>Чухачёв А. + Васильев Ф.</td></tr>
+  </table>
+
+  <div class="note note-warning">
+    Жирным выделены 4 пункта (5, 6, 13, 14) с <strong>самым низким уровнем уверенности</strong> &mdash; их нужно согласовать в первую очередь.
+  </div>
+</div>
+
+<h2 id="conclusions">7. Выводы и рекомендации</h2>
+<div class="card">
+  <h4>7.1. Общая картина</h4>
+  <ul>
+    <li>Из 15 операций <strong>4 (3, 4, 7, 11)</strong> однозначно идентифицированы &mdash; для них можно сразу планировать установку замеров.</li>
+    <li>По <strong>7 операциям (1, 2, 8, 9, 10, 12, 15)</strong> найдены кандидаты, но требуется подтверждение от Чухачёва А.</li>
+    <li>По <strong>4 операциям (5, 6, 13, 14)</strong> требуется существенное уточнение бизнес-логики &mdash; объекты в МО либо отсутствуют, либо реализуют только часть процесса.</li>
+    <li>Подсистема APDEX <strong>не работоспособна</strong> в текущем виде &mdash; есть критичные пробелы (нет модуля <code>ОценкаПроизводительностиВызовСервера</code>, нет двух регистров, нет предопределённых элементов справочника, в коде нет ни одного активного замера).</li>
+  </ul>
+
+  <h4>7.2. Рекомендации по проекту</h4>
+  <ol>
+    <li><strong>Шаг 1 (приоритет):</strong> провести встречу с Чухачёвым А. по списку 15 уточнений (раздел 6). Зафиксировать ответы в этом же документе.</li>
+    <li><strong>Шаг 2:</strong> допоставить из БСП компоненты подсистемы APDEX, сделать тестовый замер в одной из идентифицированных операций (например, п.3 &laquo;Загрузка котировок&raquo; &mdash; самый простой случай).</li>
+    <li><strong>Шаг 3:</strong> создать предопределённые элементы справочника <code>КлючевыеОперации</code> с целевым временем из таблицы письма (это <em>идеальное время</em> &mdash; APDEX будет считать удовлетворённость относительно него).</li>
+    <li><strong>Шаг 4:</strong> расставить замеры в идентифицированных точках (4 операции с уверенностью 100% &mdash; первая итерация).</li>
+    <li><strong>Шаг 5:</strong> по итогам уточнений достроить замеры в оставшихся точках.</li>
+    <li><strong>Шаг 6:</strong> настроить экспорт замеров (XDTO <code>ApdexExport</code>) и/или обработку <code>ОценкаПроизводительности</code> для просмотра.</li>
+  </ol>
+
+  <h4>7.3. Риски и ограничения</h4>
+  <ul>
+    <li><strong>Расписание регламентов в XML отсутствует.</strong> Конкретное время запуска (00:00, 08:50 и т.д.) хранится в данных рабочей ИБ. Требуется доступ или выгрузка.</li>
+    <li>Часть операций (особенно п.6, п.13, п.14) <strong>может выполняться вне МО</strong> &mdash; в ФО Аванкор, Сибел, у брокера. Для них замер в МО невозможен в принципе или будет покрывать только часть процесса.</li>
+    <li>Длинные операции (5, 9 часов) фактически &mdash; цепочки. Замер всей цепочки одной парой <code>Начать/Закончить</code> малоинформативен. <strong>Рекомендуется разбиение на этапы</strong>.</li>
+  </ul>
+
+  <h4>7.4. Что требует уточнения у Аванкор (вендор)</h4>
+  <div class="note note-info">
+    Чмыхалов А. ведёт &laquo;Оптимизацию МО&raquo;. По письму С. Хромова: &laquo;аванкор еще только добавляет эту подсистему в ду FIN&raquo;. Возможно, в очередном релизе Аванкор поставит готовую подсистему APDEX. Перед допоставкой компонентов вручную имеет смысл проверить роадмап вендора.
+  </div>
+</div>
+
+<footer>
+  IMDEV-8883 &middot; Обследование подготовлено автоматизированным анализом XML-выгрузки конфигурации Аванкор МО и внешних обработок &middot; 17.05.2026
+</footer>
+
+</div>
+</body>
+</html>
