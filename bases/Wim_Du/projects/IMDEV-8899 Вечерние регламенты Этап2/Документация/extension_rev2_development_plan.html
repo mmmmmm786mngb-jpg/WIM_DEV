@@ -215,7 +215,7 @@
         <tr style="background:#edf2f7;"><th style="padding:5px 8px; text-align:left;">Вид операции</th><th style="padding:5px 8px; text-align:left;">Оставить выполнение, если</th></tr>
         <tr><td style="padding:5px 8px; border-bottom:1px solid #e2e8f0;">ПереоценкаДенежныхСредств_БУ/НУ/УУ</td><td style="padding:5px 8px; border-bottom:1px solid #e2e8f0;">Пакетный запрос: валютные остатки на Транзитные/Текущие/ДепозитныеСчетаВВалюте, субконто БанковскиеСчета (упрощение по смыслу <code>ПереоценкаДенежныхСредств</code>; брокерские счета — этап 4)</td></tr>
         <tr style="background:#f7fafc;"><td style="padding:5px 8px; border-bottom:1px solid #e2e8f0;">СписаниеДефолтныхОблигаций_БУ/НУ/УУ</td><td style="padding:5px 8px; border-bottom:1px solid #e2e8f0;">Есть данные <code>ДефолтноеСобытиеЭмитента.СтатусыЭмитентовДоговораДУ</code></td></tr>
-        <tr><td style="padding:5px 8px;">КонтрольУменьшенияСтоимостиПортфеля_УУ</td><td style="padding:5px 8px;">Заполнен параметр <code>ПорогУведомления</code> договора ДУ</td></tr>
+        <tr><td style="padding:5px 8px;">КонтрольУменьшенияСтоимостиПортфеля_УУ</td><td style="padding:5px 8px;">Оставить, если <code>СЧАПредыдущийПериод &lt;&gt; 0</code> и не (<code>ВводВыводАктивовВИзДУ = 0</code> и <code>СЧА &gt;= СЧАПредыдущийПериод</code>) — по логике <code>РасчитатьУменьшенииеСтоимостиПортфеля</code> / <code>Операция_1020</code></td></tr>
         </table>
         <p style="margin:8px 0 0 0; font-size:12px; color:#718096;">
             Развертывание: <code>LoadConfigFromFiles</code> из <code>Расширения/rev2</code>,
@@ -300,7 +300,7 @@
         <tr style="background:#edf2f7;"><th style="padding:5px 8px; text-align:left;">v1 (базовая)</th><th style="padding:5px 8px; text-align:left;">Оптимизированная</th></tr>
         <tr><td style="padding:5px 8px; border-bottom:1px solid #e2e8f0;"><code>ДоговорыСОснованиемДляПереоценкиДС</code> — только банк. счета</td><td style="padding:5px 8px; border-bottom:1px solid #e2e8f0;"><code>...ДСОптимизированно</code> — банк + брокер + ВУ + УУ (как <code>ПереоценкаДенежныхСредств</code>)</td></tr>
         <tr style="background:#f7fafc;"><td style="padding:5px 8px; border-bottom:1px solid #e2e8f0;"><code>ДоговорыСДефолтнымиСобытиями</code> — цикл <code>СтатусыЭмитентовДоговораДУ</code></td><td style="padding:5px 8px; border-bottom:1px solid #e2e8f0;"><code>...СобытиямиОптимизированно</code> — один запрос</td></tr>
-        <tr><td style="padding:5px 8px;"><code>ДоговорыСПорогомУведомления</code></td><td style="padding:5px 8px;">то же (уже пакетный)</td></tr>
+        <tr><td style="padding:5px 8px;"><code>ДоговорыДляКонтроляУменьшенияПортфеля</code> — цикл</td><td style="padding:5px 8px;"><code>...ПортфеляОптимизированно</code> — СЧА/ввод-вывод пакетом</td></tr>
         </table>
         <p style="margin:8px 0 0 0; font-size:12px; color:#718096;">Сравнение результатов: переключите флаг, прогоните один отбор, сравните множества договоров с <code>Выполнять = Истина</code>.</p>
     </td>
