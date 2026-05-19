@@ -1,0 +1,3035 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Техническое задание. Конфигурация 1С «Налоговый движок НДФЛ»</title>
+<style>
+  :root {
+    --c-bg: #f6f8fb;
+    --c-surface: #ffffff;
+    --c-text: #1f2933;
+    --c-muted: #5b6b7c;
+    --c-border: #e1e7ee;
+    --c-primary: #1f4f8b;
+    --c-primary-light: #3d6dad;
+    --c-accent: #17a2b8;
+    --c-success: #28a745;
+    --c-warning: #f0ad4e;
+    --c-danger: #dc3545;
+    --c-info: #4e8cd6;
+    --c-purple: #6f42c1;
+    --c-yellow-bg: #fff8e1;
+    --c-yellow-bd: #ffd96a;
+    --c-blue-bg: #e8f1fb;
+    --c-blue-bd: #b9d4f0;
+    --c-cyan-bg: #e3f6f9;
+    --c-cyan-bd: #9fd9e3;
+    --c-purple-bg: #f1ebfb;
+    --c-purple-bd: #cbb7ed;
+    --c-green-bg: #e6f5ea;
+    --c-green-bd: #a9d9b6;
+    --c-red-bg: #fbeaec;
+    --c-red-bd: #ecb6bd;
+    --shadow: 0 1px 3px rgba(20, 30, 50, 0.06), 0 4px 12px rgba(20, 30, 50, 0.04);
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0;
+    font-family: "Segoe UI", "Inter", "Roboto", "Helvetica Neue", Arial, sans-serif;
+    color: var(--c-text);
+    background: var(--c-bg);
+    line-height: 1.55;
+    font-size: 15px;
+  }
+  .layout {
+    display: grid;
+    grid-template-columns: 280px minmax(0, 1fr);
+    min-height: 100vh;
+  }
+  aside.toc {
+    position: sticky;
+    top: 0;
+    align-self: start;
+    height: 100vh;
+    overflow-y: auto;
+    background: linear-gradient(180deg, #1f4f8b 0%, #14365e 100%);
+    color: #e8eef7;
+    padding: 24px 18px;
+    font-size: 13.5px;
+  }
+  aside.toc .brand {
+    font-weight: 600;
+    font-size: 15px;
+    color: #fff;
+    margin-bottom: 6px;
+    letter-spacing: 0.2px;
+  }
+  aside.toc .brand-sub {
+    font-size: 12px;
+    color: #a8c3e6;
+    margin-bottom: 18px;
+  }
+  aside.toc h4 {
+    margin: 16px 0 6px;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    color: #a8c3e6;
+    font-weight: 600;
+  }
+  aside.toc ol { padding-left: 20px; margin: 0 0 10px; }
+  aside.toc li { margin: 3px 0; }
+  aside.toc a {
+    color: #e8eef7;
+    text-decoration: none;
+    transition: color 0.15s;
+  }
+  aside.toc a:hover { color: #ffd96a; }
+  main {
+    padding: 32px 44px 80px;
+    max-width: 1180px;
+    width: 100%;
+  }
+  header.doc-header {
+    background: var(--c-surface);
+    border: 1px solid var(--c-border);
+    border-radius: 10px;
+    padding: 28px 32px;
+    box-shadow: var(--shadow);
+    margin-bottom: 28px;
+  }
+  header.doc-header .tag {
+    display: inline-block;
+    background: var(--c-primary);
+    color: #fff;
+    padding: 3px 10px;
+    border-radius: 12px;
+    font-size: 11.5px;
+    font-weight: 600;
+    letter-spacing: 0.4px;
+    text-transform: uppercase;
+  }
+  header.doc-header h1 {
+    margin: 12px 0 8px;
+    font-size: 28px;
+    color: var(--c-primary);
+    line-height: 1.25;
+  }
+  header.doc-header .subtitle {
+    color: var(--c-muted);
+    font-size: 15px;
+    margin-bottom: 18px;
+  }
+  .meta-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 12px 24px;
+    border-top: 1px solid var(--c-border);
+    padding-top: 18px;
+    font-size: 13.5px;
+  }
+  .meta-grid .item .label {
+    color: var(--c-muted);
+    font-size: 11.5px;
+    letter-spacing: 0.4px;
+    text-transform: uppercase;
+    margin-bottom: 2px;
+  }
+  .meta-grid .item .value { font-weight: 500; }
+  section.block {
+    background: var(--c-surface);
+    border: 1px solid var(--c-border);
+    border-radius: 10px;
+    padding: 22px 28px 26px;
+    margin-bottom: 22px;
+    box-shadow: var(--shadow);
+  }
+  section.block h2 {
+    margin: 0 0 14px;
+    font-size: 22px;
+    color: var(--c-primary);
+    border-bottom: 2px solid var(--c-blue-bd);
+    padding-bottom: 8px;
+  }
+  section.block h3 {
+    color: var(--c-primary-light);
+    font-size: 17px;
+    margin: 22px 0 10px;
+  }
+  section.block h4 {
+    font-size: 15px;
+    margin: 16px 0 8px;
+    color: var(--c-text);
+  }
+  p { margin: 0 0 12px; }
+  ul, ol { margin: 0 0 12px; padding-left: 22px; }
+  li { margin: 4px 0; }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 10px 0 18px;
+    font-size: 13.5px;
+    background: var(--c-surface);
+  }
+  table th, table td {
+    border: 1px solid var(--c-border);
+    padding: 8px 10px;
+    text-align: left;
+    vertical-align: top;
+  }
+  table th {
+    background: var(--c-blue-bg);
+    color: var(--c-primary);
+    font-weight: 600;
+    font-size: 13px;
+  }
+  table tbody tr:nth-child(even) { background: #fafbfd; }
+  table.compact th, table.compact td { padding: 5px 8px; font-size: 12.5px; }
+  table.fixed { table-layout: fixed; }
+  .callout {
+    border-left: 4px solid;
+    padding: 12px 16px;
+    border-radius: 6px;
+    margin: 10px 0 16px;
+    font-size: 14px;
+  }
+  .callout.info { background: var(--c-blue-bg); border-color: var(--c-info); }
+  .callout.warn { background: var(--c-yellow-bg); border-color: var(--c-warning); }
+  .callout.success { background: var(--c-green-bg); border-color: var(--c-success); }
+  .callout.danger { background: var(--c-red-bg); border-color: var(--c-danger); }
+  .callout.purple { background: var(--c-purple-bg); border-color: var(--c-purple); }
+  .callout.cyan { background: var(--c-cyan-bg); border-color: var(--c-accent); }
+  .callout .title {
+    font-weight: 600;
+    margin-bottom: 4px;
+    color: var(--c-text);
+  }
+  .badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 11.5px;
+    font-weight: 600;
+    letter-spacing: 0.3px;
+    margin-right: 4px;
+    border: 1px solid transparent;
+  }
+  .badge.fr   { background: #e3edfa; color: #1f4f8b; border-color: #b9d4f0; }
+  .badge.alg  { background: #f1ebfb; color: #5e34a3; border-color: #cbb7ed; }
+  .badge.nfr  { background: #e3f6f9; color: #146a78; border-color: #9fd9e3; }
+  .badge.must { background: #fbeaec; color: #b03a47; border-color: #ecb6bd; }
+  .badge.high { background: #fff1d6; color: #8a5a14; border-color: #ffd96a; }
+  .badge.med  { background: #e6f5ea; color: #1f6c33; border-color: #a9d9b6; }
+  .grid-2 {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 14px;
+  }
+  .grid-3 {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 14px;
+  }
+  .card {
+    background: #fafbfd;
+    border: 1px solid var(--c-border);
+    border-radius: 8px;
+    padding: 14px 16px;
+  }
+  .card .title { font-weight: 600; color: var(--c-primary); margin-bottom: 6px; }
+  .card .sub { font-size: 12.5px; color: var(--c-muted); }
+  pre {
+    background: #0f172a;
+    color: #d4e3f5;
+    padding: 14px 16px;
+    border-radius: 6px;
+    overflow-x: auto;
+    font-size: 13px;
+    line-height: 1.5;
+    font-family: "Cascadia Code", "JetBrains Mono", "Consolas", "Menlo", monospace;
+  }
+  code {
+    background: #eef3f9;
+    color: #1f4f8b;
+    padding: 1px 5px;
+    border-radius: 3px;
+    font-size: 13px;
+    font-family: "Cascadia Code", "Consolas", monospace;
+  }
+  .formula {
+    background: #f5f7fb;
+    border-left: 3px solid var(--c-primary);
+    padding: 10px 14px;
+    margin: 8px 0;
+    font-family: "Cascadia Code", "Consolas", monospace;
+    font-size: 13.5px;
+    border-radius: 0 4px 4px 0;
+    white-space: pre-wrap;
+  }
+  .pipeline {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 10px 0 14px;
+  }
+  .pipeline .step {
+    flex: 1;
+    min-width: 130px;
+    background: var(--c-blue-bg);
+    border: 1px solid var(--c-blue-bd);
+    border-radius: 6px;
+    padding: 10px 12px;
+    font-size: 13px;
+    position: relative;
+  }
+  .pipeline .step .num {
+    display: inline-block;
+    width: 22px;
+    height: 22px;
+    background: var(--c-primary);
+    color: #fff;
+    border-radius: 50%;
+    text-align: center;
+    line-height: 22px;
+    font-size: 12px;
+    font-weight: 600;
+    margin-right: 6px;
+  }
+  .arch-diagram {
+    background: linear-gradient(180deg, #fafbfd 0%, #f1f5fa 100%);
+    border: 1px solid var(--c-border);
+    border-radius: 8px;
+    padding: 18px;
+    margin: 14px 0;
+    overflow-x: auto;
+  }
+  hr.sep { border: 0; border-top: 1px dashed var(--c-border); margin: 18px 0; }
+  .kpi {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+    gap: 12px;
+    margin: 12px 0 18px;
+  }
+  .kpi .item {
+    background: var(--c-blue-bg);
+    border: 1px solid var(--c-blue-bd);
+    border-radius: 8px;
+    padding: 12px 14px;
+  }
+  .kpi .item .num {
+    font-size: 22px;
+    color: var(--c-primary);
+    font-weight: 700;
+    line-height: 1.1;
+  }
+  .kpi .item .lbl {
+    font-size: 12.5px;
+    color: var(--c-muted);
+    margin-top: 2px;
+  }
+  .legend { font-size: 12.5px; color: var(--c-muted); margin-top: 4px; }
+  details {
+    border: 1px solid var(--c-border);
+    border-radius: 6px;
+    padding: 0 14px;
+    margin: 8px 0;
+    background: #fafbfd;
+  }
+  details > summary {
+    cursor: pointer;
+    padding: 10px 0;
+    font-weight: 600;
+    color: var(--c-primary);
+  }
+  details[open] > summary { border-bottom: 1px solid var(--c-border); margin-bottom: 8px; }
+  .footer-note {
+    margin-top: 28px;
+    padding: 16px 20px;
+    background: var(--c-surface);
+    border: 1px solid var(--c-border);
+    border-radius: 8px;
+    color: var(--c-muted);
+    font-size: 13px;
+    text-align: center;
+  }
+  @media print {
+    .layout { grid-template-columns: 1fr; }
+    aside.toc { display: none; }
+    main { padding: 0; }
+    section.block { page-break-inside: avoid; box-shadow: none; }
+  }
+  @media (max-width: 1024px) {
+    .layout { grid-template-columns: 1fr; }
+    aside.toc { position: static; height: auto; }
+    main { padding: 22px; }
+  }
+
+  /* ===== Разметка пользовательских правок (раунды 1 и 2) ===== */
+  .edit-mark {
+    background: #fff3cd;
+    text-decoration: none;
+    padding: 0 3px;
+    border-radius: 3px;
+    box-shadow: inset 0 -1px 0 #f0ad4e;
+  }
+  .edit-mark-del {
+    background: #f8d7da;
+    text-decoration: line-through;
+    padding: 0 3px;
+    border-radius: 3px;
+    color: #7a1d23;
+  }
+  .edit-block {
+    background: #fff8e1;
+    border-left: 4px solid #f0ad4e;
+    padding: 10px 14px;
+    margin: 10px 0;
+    border-radius: 4px;
+  }
+  .badge.edit { background: #f0ad4e; color: #fff; border-color: #d9931e; }
+  .edit-banner {
+    background: linear-gradient(90deg, #fff3cd 0%, #ffe4a3 100%);
+    border: 1px solid #f0ad4e;
+    border-radius: 8px;
+    padding: 14px 18px;
+    margin: 14px 0 0;
+    color: #6b4a14;
+    font-size: 14px;
+    line-height: 1.55;
+  }
+  .edit-banner .banner-title {
+    font-weight: 700;
+    font-size: 15px;
+    color: #5a3d0d;
+    margin-bottom: 6px;
+  }
+  .edit-banner code {
+    background: #fff;
+    color: #6b4a14;
+    border: 1px solid #f0ad4e;
+  }
+  /* Плашка для раунда 2 — слегка иной оттенок, чтобы отличить от раунда 1 */
+  .edit-banner.r2 {
+    background: linear-gradient(90deg, #ffe4a3 0%, #ffd084 100%);
+    border-color: #d9931e;
+    color: #5a3d0d;
+  }
+  .edit-banner.r2 .banner-title { color: #4a2f08; }
+</style>
+</head>
+<body>
+<div class="layout">
+
+<aside class="toc">
+  <div class="brand">ТЗ. Налоговый движок НДФЛ</div>
+  <div class="brand-sub">Конфигурация 1С (shared)</div>
+
+  <h4>Навигация</h4>
+  <ol>
+    <li><a href="#s-basis">Основания и контекст</a></li>
+    <li><a href="#s-goals">Цели и результаты</a></li>
+    <li><a href="#s-stakeholders">Заинтересованные стороны</a></li>
+    <li><a href="#s-scope">Границы проекта</a></li>
+    <li><a href="#s-arch">Архитектура и способы реализации</a></li>
+    <li><a href="#s-fr">Функциональные требования</a></li>
+    <li><a href="#s-alg">Алгоритмическая часть</a></li>
+    <li><a href="#s-norm">Нормативные таблицы</a></li>
+    <li><a href="#s-data">Модель данных 1С</a></li>
+    <li><a href="#s-int">Интеграции</a></li>
+    <li><a href="#s-rep">Отчётность</a></li>
+    <li><a href="#s-nfr">Нефункциональные требования</a></li>
+    <li><a href="#s-test">Тестирование и приёмка</a></li>
+    <li><a href="#s-ks" style="color:#ffd96a;font-weight:600;">Контрольные сверки (КС) <span style="font-size:10px;background:#f0ad4e;color:#fff;padding:1px 5px;border-radius:3px;">новый</span></a></li>
+    <li><a href="#s-plan">Этапы и сроки</a></li>
+    <li><a href="#s-risk">Риски</a></li>
+    <li><a href="#s-open">Открытые вопросы</a></li>
+  </ol>
+
+  <h4>Связанные документы</h4>
+  <ul style="list-style: none; padding-left: 0; font-size: 12.5px;">
+    <li>Источник: <code style="color:#ffd96a;background:transparent;">Требования от налогов.xlsx</code></li>
+    <li>Черновик: <code style="color:#ffd96a;background:transparent;">ndfl_tax_engine_tz.md</code></li>
+  </ul>
+</aside>
+
+<main>
+
+<header class="doc-header">
+  <span class="tag">Техническое задание</span>
+  <h1>Конфигурация 1С: «Налоговый движок НДФЛ» (NDFL Engine)</h1>
+  <div class="subtitle">
+    Расчёт НДФЛ по операциям клиентов на финансовых рынках, сальдирование убытков,
+    распределение по КБК и ставкам, формирование 6-НДФЛ, Приложений 1
+    и справки о доходах для клиента.
+  </div>
+  <div class="meta-grid">
+    <div class="item"><div class="label">Проект</div><div class="value">tax-ndfl-config (shared)</div></div>
+    <div class="item"><div class="label">Источник требований</div><div class="value">Требования от налогов.xlsx (8 листов)</div></div>
+    <div class="item"><div class="label">Связанные базы</div><div class="value"><del class="edit-mark-del">SBB_Broker, Wim_Du</del> <ins class="edit-mark">1С ИЦ, Аванкор FIN, Аванкор PIF (УК ВИМИ и ВИМС; PIF в перспективе ЗПИФ + ОПИФ)</ins></div></div>
+    <div class="item"><div class="label">Платформа</div><div class="value">1С:Предприятие 8.3.21+</div></div>
+    <div class="item"><div class="label">Тип артефакта</div><div class="value">Новая конфигурация + интеграционные расширения</div></div>
+    <div class="item"><div class="label">Налоговый период</div><div class="value">2026 и далее (с возможностью пересчёта прошлых периодов)</div></div>
+    <div class="item"><div class="label">Версия документа</div><div class="value"><del class="edit-mark-del">1.1 (раунд правок от пользователя)</del> <ins class="edit-mark">1.2 (раунд 2 — применение технического ревью 1С 8.3)</ins> <span class="badge edit">правка R2-0</span></div></div>
+    <div class="item"><div class="label">Статус</div><div class="value"><del class="edit-mark-del">На повторном согласовании после раунда 1</del> <ins class="edit-mark">На повторном согласовании после раунда 2</ins></div></div>
+  </div>
+
+  <div class="edit-banner">
+    <div class="banner-title">Версия с правками от пользователя (раунд 1)</div>
+    Документ содержит правки заказчика, перечисленные в файле
+    <code>Правки к ТЗ НДФЛ.docx</code>, и новый раздел «Контрольные сверки (КС)» на основе
+    <code>КС.xlsx</code>. Легенда разметки:
+    <ul style="margin:6px 0 0 0;">
+      <li><ins class="edit-mark">жёлтая подсветка</ins> — вставленный или изменённый текст;</li>
+      <li><del class="edit-mark-del">розовая зачёркнутая</del> — старая формулировка, заменена;</li>
+      <li>жёлто-кремовый блок слева с оранжевой полосой — крупный изменённый или новый блок;</li>
+      <li><span class="badge edit">правка №N</span> — ссылка на пункт из списка правок раунда 1
+          (N = порядковый номер).</li>
+    </ul>
+  </div>
+
+  <div class="edit-banner r2">
+    <div class="banner-title">Версия с правками от пользователя (раунд 2)</div>
+    Применены результаты технического ревью под 1С 8.3 (см. <code>review_1c83.md</code>) и
+    критичное уточнение пользователя по линейке Аванкор. Правки раунда 2 помечены бейджами
+    <span class="badge edit">правка R2-N</span> и сохраняют ту же разметку <code>ins</code>/<code>del</code>/<code>edit-block</code>.
+    Аудит-след правок: <code>review_round2_plan.md</code>. Ключевые направления раунда 2:
+    <ul style="margin:6px 0 0 0;">
+      <li><strong>R2-1</strong> — Аванкор FIN и Аванкор PIF переформулированы как 1С-конфигурации
+          (продукт линейки «1С Аванкор», ООО «Аванкор»); CFE-расширения применимы ко всем
+          источникам, обмен — по HTTP-сервисам 1С / планам обмена / EnterpriseData.</li>
+      <li><strong>R2-2 … R2-7</strong> — приведение модели данных к стандартам 1С 8.3:
+          регистр «Обороты» вместо «Остатки и обороты», периодичность «Год» для НСИ,
+          предопределённые элементы справочника КС, индексация, новая КС-68.</li>
+      <li><strong>R2-8 … R2-13</strong> — реализуемость и эксплуатация: пакетная загрузка,
+          фоновые задания, серверный пайплайн, XSD-валидация выгрузки, регламентные задания.</li>
+      <li><strong>R2-14</strong> — новый раздел 17.2 «Открытые вопросы — раунд 2» (Q1-R2 … Q11-R2).</li>
+    </ul>
+  </div>
+</header>
+
+<!-- =============================================================== -->
+<section class="block" id="s-basis">
+  <h2>1. Основания и контекст</h2>
+
+  <h3>1.1 Основание для разработки</h3>
+  <p>
+    Настоящее ТЗ подготовлено по результатам профессионального анализа бизнес-требований
+    налогового блока, изложенных в файле
+    <code>bases/shared/projects/tax-ndfl-config/Требования от налогов.xlsx</code>
+    (8 листов: Коды доходов и расходов; КБК и ставки для резидентов / нерезидентов / резидентов ИИС;
+    Сальдирование убытков для обычного контура и для ИИС; Заполнение 6-НДФЛ и Приложения 1;
+    Заполнение справки для клиента).
+  </p>
+
+  <h3>1.2 Контекст: почему отдельная конфигурация</h3>
+  <p>
+    <del class="edit-mark-del">Источник операций (брокерский бэк-офис <code>SBB_Broker</code>, доверительное управление <code>Wim_Du</code>)
+    содержит первичный учёт, но НЕ содержит налогового движка нужной полноты:
+    отсутствуют единые версионируемые матрицы кодов, КБК и сальдирования, необходимые
+    для актуальной редакции 6-НДФЛ (включая прогрессивную шкалу 13/15/18/20/22 и спецслучаи по 1010+ЗНП).
+    Доработка действующих конфигураций расширениями неразумна — нужен независимый налоговый домен.</del>
+    <ins class="edit-mark">Источниковые конфигурации (<code>1С ИЦ</code>, <code>Аванкор FIN</code>,
+    <code>Аванкор PIF</code>) содержат первичный учёт, но не содержат налогового движка
+    нужной полноты: отсутствуют единые версионируемые матрицы кодов, КБК и сальдирования,
+    необходимые для актуальной редакции 6-НДФЛ (включая прогрессивную шкалу 13/15/18/20/22
+    и спецслучаи по 1010+ЗНП). Доработка действующих конфигураций расширениями неразумна —
+    нужен независимый налоговый домен.</ins>
+  </p>
+
+  <div class="edit-block">
+    <span class="badge edit">правка R2-1</span>
+    <strong>Уточнение по платформе источников.</strong>
+    <ins class="edit-mark">Все три источника операций — <strong>конфигурации на платформе
+    1С:Предприятие 8.3</strong>:
+    <ul style="margin:6px 0 0 0;">
+      <li><code>1С ИЦ</code> — конфигурация «ИнвестиционныйЦентр» (бэк-офис), вендор ООО «СБ-Брокер».</li>
+      <li><code>Аванкор FIN</code> и <code>Аванкор PIF</code> — конфигурации линейки
+          <strong>«1С Аванкор»</strong> (ДУ / ПИФ), вендор ООО «Аванкор», построены на платформе
+          1С:Предприятие. В перспективе база PIF разделяется на ЗПИФ и ОПИФ (отдельные базы 1С).</li>
+    </ul>
+    Платформенная общность всех трёх источников означает, что для них применимы стандартные
+    механизмы интеграции 1С: тонкие <strong>CFE-расширения</strong> на стороне источника,
+    обмен через <strong>HTTP-сервисы 1С</strong> (REST), <strong>планы обмена</strong> и
+    <strong>EnterpriseData</strong> (для синхронизации НСИ — например, справочника «Физлица»).
+    «1С НП» (новая конфигурация «Налоговый движок НДФЛ») является четвёртой конфигурацией
+    1С в этой связке и общается с источниками типовыми средствами платформы.</ins>
+  </div>
+
+  <h3>1.3 Глоссарий</h3>
+  <table class="compact">
+    <thead><tr><th style="width:160px;">Термин</th><th>Расшифровка</th></tr></thead>
+    <tbody>
+      <tr><td>НДФЛ</td><td>Налог на доходы физических лиц.</td></tr>
+      <tr><td>НБ (Налоговая база)</td><td>Доход за вычетом расходов / вычетов с учётом сальдирования; не может быть отрицательной.</td></tr>
+      <tr><td>КБК</td><td>Код бюджетной классификации, определяет, на какой бюджет зачисляется налог.</td></tr>
+      <tr><td>ОРЦБ / не ОРЦБ</td><td>Ценные бумаги, обращающиеся / не обращающиеся на организованном рынке.</td></tr>
+      <tr><td>ПФИ</td><td>Производный финансовый инструмент.</td></tr>
+      <tr><td>РЕПО</td><td>Сделка обратного выкупа ценных бумаг (1537 / 1551).</td></tr>
+      <tr><td>ИИС</td><td>Индивидуальный инвестиционный счёт. Отдельный налоговый контур.</td></tr>
+      <tr><td>ЗНП</td><td>Зачёт налога на прибыль (по дивидендам, код дохода 1010).</td></tr>
+      <tr><td>Сальдирование</td><td>Зачёт убытка по одному коду дохода против положительного финреза по другому коду.</td></tr>
+      <tr><td>Приложение 1</td><td>Справка о доходах и суммах налога физлица — приложение к 6-НДФЛ для ИФНС.</td></tr>
+      <tr><td>Справка для клиента</td><td>Аналог Приложения 1, но без КБК, выдаётся клиенту по требованию.</td></tr>
+      <tr><td>Налоговый агент</td><td>Брокер / управляющий, удерживающий и перечисляющий НДФЛ за клиента.</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- =============================================================== -->
+<section class="block" id="s-goals">
+  <h2>2. Цели проекта и ожидаемые результаты</h2>
+
+  <h3>2.1 Бизнес-проблема (AS-IS)</h3>
+  <ul>
+    <li>Расчёт НДФЛ по операциям клиентов фактически распределён между несколькими конфигурациями
+        и таблицами Excel, что приводит к расхождениям между справкой клиента, Приложением 1 и 6-НДФЛ.</li>
+    <li>Нет единого версионируемого нормативного слоя: при изменении НК РФ
+        (например, появление прогрессивной шкалы 13/15/18/20/22 для кода 4800 или
+        спецсценария 1010 + ЗНП) правки делаются точечно и трудно сверяются между периодами.</li>
+    <li>Сальдирование убытков, особенно по очередности (1532 → сначала 1535, потом 1530)
+        и по РЕПО (пропорционально стоимости 2-й части), реализовано не везде корректно.</li>
+    <li>Контур ИИС обрабатывается обособленно от обычного контура, без единого вычислительного ядра.</li>
+    <li>Отсутствует трассируемость: невозможно от строки 6-НДФЛ дойти до исходной операции и формулы.</li>
+  </ul>
+
+  <h3>2.2 Цели проекта</h3>
+  <div class="grid-2">
+    <div class="card">
+      <div class="title">Ц1. Единый расчётный движок</div>
+      <div class="sub">Один налоговый движок на все каналы (брокер, ДУ, ИИС, обычный контур, резиденты, нерезиденты).</div>
+    </div>
+    <div class="card">
+      <div class="title">Ц2. Соответствие нормативке</div>
+      <div class="sub">Полная реализация требований Excel: коды, ставки, КБК, прогрессивная шкала, сальдирование, спецсценарий 1010 + ЗНП.</div>
+    </div>
+    <div class="card">
+      <div class="title">Ц3. Версионирование правил</div>
+      <div class="sub">История изменений нормативных таблиц с привязкой к датам действия — пересчёт за любой закрытый период по правилам той даты.</div>
+    </div>
+    <div class="card">
+      <div class="title">Ц4. Регламентированная отчётность</div>
+      <div class="sub">Заполнение 6-НДФЛ (Раздел 1, Раздел 2), Приложения 1 и справки для клиента строго по матрицам и контрольным примерам.</div>
+    </div>
+    <div class="card">
+      <div class="title">Ц5. Аудит и трассируемость</div>
+      <div class="sub">От любой строки отчёта — к операции, шагу сальдирования, формуле, версии правил и пользователю.</div>
+    </div>
+    <div class="card">
+      <div class="title">Ц6. Эталонные тесты</div>
+      <div class="sub">Контрольные примеры из Excel закреплены как автотесты — гарантируют отсутствие регрессий при изменениях.</div>
+    </div>
+  </div>
+
+  <h3>2.3 Что мы получим (Deliverables)</h3>
+  <table>
+    <thead>
+      <tr><th style="width:80px;">№</th><th>Артефакт</th><th>Описание</th><th>Этап</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>D1</td><td>Конфигурация 1С «НалоговыйДвижокНДФЛ»</td><td>Самостоятельная конфигурация с метаданными, движком, отчётами и интерфейсом.</td><td>1–4</td></tr>
+      <tr><td>D2</td><td>Нормативный модуль</td><td>Справочники + регистры сведений с версионируемыми таблицами кодов, КБК, ставок, сальдирования.</td><td>1</td></tr>
+      <tr><td>D3</td><td>Загрузчики нормативов</td><td>Обработки импорта матриц из Excel/XML (с проверкой целостности и непрерывности диапазонов).</td><td>1</td></tr>
+      <tr><td>D4</td><td>Расчётное ядро (Common Modules)</td><td>Серверные общие модули с алгоритмами сальдирования, лимитов, распределения по КБК, расчёта налогов.</td><td>2</td></tr>
+      <tr><td>D5</td><td>Документ «РасчётНДФЛЗаПериод»</td><td>Регистрационный документ, движущий все регистры накопления и формирующий журнал расчёта.</td><td>2</td></tr>
+      <tr><td>D6</td><td>Контур ИИС</td><td>Параллельная ветвь расчёта по кодам 1544–1551 и вычету 619 при закрытии договора ИИС.</td><td>2</td></tr>
+      <tr><td>D7</td><td>Отчёты регламентированные</td><td>6-НДФЛ Разделы 1 и 2, Приложение 1 (по физлицам), Справка для клиента — единое расчётное ядро.</td><td>3</td></tr>
+      <tr><td>D8</td><td>HTTP-сервисы</td><td>REST API для загрузки операций из источников и выдачи справок.</td><td>3</td></tr>
+      <tr><td>D9</td><td><del class="edit-mark-del">Расширения для SBB_Broker и Wim_Du</del> <ins class="edit-mark">Расширения для 1С ИЦ, Аванкор FIN, Аванкор PIF</ins></td><td>Тонкие CFE-расширения исходных баз для выгрузки первичных операций в движок.</td><td>3</td></tr>
+      <tr><td>D10</td><td>Подсистема «Аудит расчёта»</td><td>Журнал шагов: до/после сальдирования, применение лимитов, распределение по КБК, причины незаполнения.</td><td>2–4</td></tr>
+      <tr><td>D11</td><td>Автотесты</td><td>10+ эталонных кейсов из Excel, выполняемых через тестовый драйвер на Python COM.</td><td>4</td></tr>
+      <tr><td>D12</td><td>Документация</td><td>Руководство пользователя, руководство администратора, описание формул, методика сверки с Excel.</td><td>1–4</td></tr>
+      <tr class="edit-block" style="border-left:0;padding:0;margin:0;background:#fff8e1;">
+        <td><ins class="edit-mark">D13</ins></td>
+        <td><ins class="edit-mark">Подсистема «Контрольные сверки (КС)»</ins> <span class="badge edit">правка</span></td>
+        <td><ins class="edit-mark">Модуль <code>МодульКонтрольныхСверок</code>, регистр сведений «ЖурналКонтрольныхСверок»,
+        справочник «КодыКонтрольныхСверок» с заполнением <del class="edit-mark-del">67 кодами КС-01 … КС-67</del>
+        <ins class="edit-mark">68 кодами КС-01 … КС-68 (67 из <code>КС.xlsx</code> + КС-68 из R2-6)</ins> из <code>КС.xlsx</code>,
+        отчёт «Журнал КС» (см. раздел 14).</ins></td>
+        <td><ins class="edit-mark">3–4</ins></td>
+      </tr>
+      <tr class="edit-block" style="border-left:0;padding:0;margin:0;background:#fff8e1;">
+        <td><ins class="edit-mark">D14</ins></td>
+        <td><ins class="edit-mark">Реестры Приложений №1 и Справок</ins> <span class="badge edit">правка №8</span></td>
+        <td><ins class="edit-mark">Отчёты на СКД для табличного представления данных по клиентам;
+        быстрая выгрузка в Excel; массовая и точечная выгрузка Справок в PDF/Excel
+        с именованием «КодКлиентаДляЛК - Справка2НДФЛ-Год-ФИО».</ins></td>
+        <td><ins class="edit-mark">3</ins></td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3>2.4 Целевые KPI</h3>
+  <div class="kpi">
+    <div class="item"><div class="num">100 %</div><div class="lbl">контрольных примеров Excel сходятся «копейка в копейку»</div></div>
+    <div class="item"><div class="num">0</div><div class="lbl">расхождений между 6-НДФЛ, Приложением 1 и справкой клиента</div></div>
+    <div class="item"><div class="num">≤ 30 мин</div><div class="lbl">расчёт по портфелю <del class="edit-mark-del">до 50 000</del> <ins class="edit-mark">≈ 100 000</ins> клиентов за период <span class="badge edit">правка №10</span></div></div>
+    <div class="item"><div class="num">100 %</div><div class="lbl">трассируемость от строки отчёта до операции</div></div>
+    <div class="item"><div class="num">≤ 1 день</div><div class="lbl">внедрение новой версии нормативной таблицы</div></div>
+    <div class="item"><div class="num">10+</div><div class="lbl">автотестов в CI</div></div>
+  </div>
+
+  <div class="callout success">
+    <div class="title">Главный результат</div>
+    Заказчик получает отдельную, поддерживаемую и тестируемую систему расчёта НДФЛ,
+    в которой нормативные правила отделены от программного кода, формы регламентированной отчётности
+    заполняются единым ядром, а каждый показатель в отчёте можно объяснить и довести до исходной операции.
+  </div>
+</section>
+
+<!-- =============================================================== -->
+<section class="block" id="s-stakeholders">
+  <h2>3. Заинтересованные стороны и пользователи</h2>
+
+  <table>
+    <thead><tr><th style="width:160px;">Роль</th><th>Интересы и действия в системе</th></tr></thead>
+    <tbody>
+      <tr><td>Налоговый бухгалтер</td>
+          <td>Запуск расчёта за период, разбор расхождений, корректировка исходных данных, печать справок клиентам, формирование пакета отчётности для ИФНС.</td></tr>
+      <tr><td>Главный бухгалтер</td>
+          <td>Утверждение расчёта, согласование пересчётов, контроль закрытия периода.</td></tr>
+      <tr><td>Методолог по налогам</td>
+          <td>Ведение нормативных таблиц (коды, КБК, ставки, сальдирование), регистрация изменений с датой действия.</td></tr>
+      <tr><td>Администратор системы</td>
+          <td>Настройка интеграций, прав доступа, регламентных заданий, мониторинг производительности.</td></tr>
+      <tr><td>Аудитор / контролёр</td>
+          <td>Просмотр журнала расчёта, сверка строк отчёта с операциями, выгрузка обоснований.</td></tr>
+      <tr><td>Разработчик 1С</td>
+          <td>Поддержка движка, исправление дефектов, добавление новых кодов и форм отчётности.</td></tr>
+      <tr><td>Клиент (косвенно)</td>
+          <td>Получает справку о доходах, верифицирует свои налоговые обязательства.</td></tr>
+      <tr><td>ИФНС (косвенно)</td>
+          <td>Принимает 6-НДФЛ и Приложения 1 в установленных форматах.</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- =============================================================== -->
+<section class="block" id="s-scope">
+  <h2>4. Границы проекта</h2>
+
+  <h3>4.1 В скоупе</h3>
+  <ul>
+    <li>Кодов доходов: <strong>1010, 1530, 1531, 1532, 1533, 1535, 1536, 1537,
+        1544, 1545, 1546, 1547, 1548, 1549, 1551, 2640, 2792, 2793, 4800</strong>
+        (полный набор из листа «Коды доходов и расходов»).</li>
+    <li>Кодов вычетов: <strong>201, 202, 203, 205, 206, 207, 208, 209, 210, 211,
+        220, 222, 223, 224, 225, 226, 227, 228, 229, 230, 235, 236, 239, 240, 241,
+        250, 251, 252, 513, 514, 618, 619</strong>.</li>
+    <li>Контуры: обычный (резидент/нерезидент) и ИИС (резидент).</li>
+    <li>Ставки: 13 %, 15 %, 18 %, 20 %, 22 %, 30 %.</li>
+    <li>КБК: вся матрица из 7 КБК (резиденты) + базовые для нерезидентов и ИИС.</li>
+    <li>Сальдирование: прямое, по очередности, РЕПО (пропорционально), запрещённое.</li>
+    <li>Спецсценарии: лимит 2,4 млн по 1010 + ЗНП; прогрессивная шкала по 4800; перенос превышения вычета на доходы того же кода.</li>
+    <li>Отчётность: 6-НДФЛ Раздел 1, Раздел 2; Приложение 1; Справка для клиента.</li>
+    <li>Шесть сроков перечисления налога в каждом квартале (по календарю из Excel).</li>
+    <li>Излишне удержанный / неудержанный налог.</li>
+    <li>
+      <del class="edit-mark-del">Возврат налога с разбивкой по датам.</del>
+      <span class="badge edit">правка №1</span>
+      <ins class="edit-mark">Возврат налога с разбивкой по датам.
+      Возвращённые суммы НДФЛ загружаются из <code>1С ИЦ</code>, <code>Аванкор FIN</code>,
+      <code>Аванкор PIF</code> в новую конфигурацию «1С НП» (далее — 1С НП). Указанные суммы
+      уменьшают только строки «Сумма налога удержанного» и «Сумма налога, излишне удержанная
+      налоговым агентом» в расчёте 6-НДФЛ + Приложениях №1, а также в Справках для клиентов.
+      Заполнение строк «Сумма налога, возвращённая налоговым агентом» в разделах 1 и 2 расчёта
+      6-НДФЛ <strong>не реализуется</strong>.</ins>
+    </li>
+    <li>Перерасчёт за прошлые периоды на актуальной версии правил.</li>
+  </ul>
+
+  <h3>4.2 Вне скоупа</h3>
+  <ul>
+    <li>Расчёт первичных финансовых результатов по сделкам (это делает источник:
+        <del class="edit-mark-del"><code>SBB_Broker</code>, <code>Wim_Du</code></del>
+        <ins class="edit-mark"><code>1С ИЦ</code>, <code>Аванкор FIN</code>, <code>Аванкор PIF</code></ins>).
+        Движок принимает уже разнесённые по кодам доход/вычет/сальдо.</li>
+    <li>Учёт операций материальной выгоды (2640) — приходит готовой суммой из источника.</li>
+    <li>Проводки в бухгалтерском учёте налогового агента (это другой контур).</li>
+    <li>Генерация платёжных поручений на перечисление НДФЛ.</li>
+    <li>Налоговое декларирование 3-НДФЛ за клиента.</li>
+  </ul>
+
+  <h3>4.3 Допущения и ограничения</h3>
+  <ul>
+    <li>Источниковые конфигурации поставляют первичные операции в формате,
+        приведённом к кодам доходов/вычетов на стороне источника или адаптера.</li>
+    <li>Один клиент может иметь и обычный контур, и контур ИИС одновременно
+        — они считаются раздельно.</li>
+    <li>Проводки и блокировки регистров делает <em>документ-регистратор</em>;
+        прямые записи в регистры запрещены.</li>
+    <li>Все денежные суммы — в рублях, округление на финальном этапе расчёта.</li>
+  </ul>
+</section>
+
+<!-- =============================================================== -->
+<section class="block" id="s-arch">
+  <h2>5. Архитектура и способы реализации</h2>
+
+  <h3>5.1 Сравнение вариантов реализации</h3>
+  <table>
+    <thead>
+      <tr><th style="width:160px;">Вариант</th><th>Содержание</th><th>Плюсы</th><th>Минусы</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>A. Отдельная конфигурация (рекомендуется)</td>
+        <td>Самостоятельная конфигурация «НалоговыйДвижокНДФЛ». Источниковые базы отдают операции через HTTP-сервисы / Plan обмена.</td>
+        <td>Чистая архитектура; легко версионировать нормативы; минимум конфликтов с обновлениями вендоров; можно ставить отдельно по контурам.</td>
+        <td>Нужна интеграционная инфраструктура (HTTP, маппинг, расписание).</td>
+      </tr>
+      <tr>
+        <td>B. Расширение (CFE) на одной из источниковых баз</td>
+        <td>Налоговый движок встраивается как расширение, например, в <code>1С ИЦ</code>.</td>
+        <td>Прямой доступ к данным; нет интеграционного слоя.</td>
+        <td>Конфликт с обновлениями вендоров (<del class="edit-mark-del">ООО «СБ-Брокер»</del>
+            <ins class="edit-mark">ООО «СБ-Брокер» / ООО «Аванкор»</ins>); нет переиспользования
+            для других источников
+            (<del class="edit-mark-del"><code>Wim_Du</code></del>
+            <ins class="edit-mark"><code>Аванкор FIN</code>, <code>Аванкор PIF</code></ins>);
+            рост сложности базы.</td>
+      </tr>
+      <tr>
+        <td>C. Гибрид</td>
+        <td>Самостоятельная конфигурация + тонкие CFE-расширения источниковых баз только для выгрузки операций.</td>
+        <td>Чистый налоговый домен + удобный экспорт.</td>
+        <td>Чуть больше точек развёртывания; зато расширения тривиальные.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="callout info">
+    <div class="title">Выбранный вариант: C (вариант A с тонкими адаптерами).</div>
+    Самостоятельная конфигурация «НалоговыйДвижокНДФЛ» + минимальные расширения
+    источниковых баз для выгрузки операций по сделанным маппингам кодов доходов/вычетов.
+    Это лучшее соотношение чистоты архитектуры и удобства интеграции.
+  </div>
+
+  <h3>5.2 Высокоуровневая архитектура</h3>
+  <div class="arch-diagram">
+    <svg viewBox="0 0 980 360" width="100%" height="380" xmlns="http://www.w3.org/2000/svg" font-family="Segoe UI, Inter, Arial" font-size="13">
+      <defs>
+        <marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+          <path d="M 0 0 L 10 5 L 0 10 z" fill="#3d6dad"/>
+        </marker>
+      </defs>
+
+      <!-- Sources (обновлено в правке R2-1: все три источника — 1С) -->
+      <g>
+        <rect x="20" y="30" width="180" height="60" rx="8" fill="#e3edfa" stroke="#b9d4f0"/>
+        <text x="110" y="52" text-anchor="middle" fill="#1f4f8b" font-weight="600">1С ИЦ</text>
+        <text x="110" y="68" text-anchor="middle" fill="#5b6b7c" font-size="11">первичные операции брокера</text>
+        <text x="110" y="82" text-anchor="middle" fill="#5b6b7c" font-size="10">(1С, ИнвестиционныйЦентр)</text>
+      </g>
+      <g>
+        <rect x="20" y="105" width="180" height="60" rx="8" fill="#e3edfa" stroke="#b9d4f0"/>
+        <text x="110" y="127" text-anchor="middle" fill="#1f4f8b" font-weight="600">Аванкор FIN</text>
+        <text x="110" y="143" text-anchor="middle" fill="#5b6b7c" font-size="11">первичные операции ДУ</text>
+        <text x="110" y="157" text-anchor="middle" fill="#5b6b7c" font-size="10">(1С, линейка Аванкор)</text>
+      </g>
+      <g>
+        <rect x="20" y="180" width="180" height="60" rx="8" fill="#e3edfa" stroke="#b9d4f0"/>
+        <text x="110" y="202" text-anchor="middle" fill="#1f4f8b" font-weight="600">Аванкор PIF</text>
+        <text x="110" y="218" text-anchor="middle" fill="#5b6b7c" font-size="11">первичные операции ПИФ</text>
+        <text x="110" y="232" text-anchor="middle" fill="#5b6b7c" font-size="10">(1С, линейка Аванкор)</text>
+      </g>
+      <g>
+        <rect x="20" y="255" width="180" height="60" rx="8" fill="#fff8e1" stroke="#ffd96a"/>
+        <text x="110" y="280" text-anchor="middle" fill="#8a5a14" font-weight="600">CFE-адаптеры</text>
+        <text x="110" y="300" text-anchor="middle" fill="#5b6b7c" font-size="11">тонкие 1С-расширения, экспорт</text>
+      </g>
+
+      <!-- Engine -->
+      <g>
+        <rect x="320" y="30" width="380" height="290" rx="10" fill="#f1ebfb" stroke="#cbb7ed" stroke-width="2"/>
+        <text x="510" y="55" text-anchor="middle" fill="#5e34a3" font-weight="700" font-size="15">Конфигурация НалоговыйДвижокНДФЛ</text>
+
+        <rect x="340" y="75" width="160" height="50" rx="6" fill="#fff" stroke="#cbb7ed"/>
+        <text x="420" y="95" text-anchor="middle" font-weight="600" fill="#5e34a3">Норматив</text>
+        <text x="420" y="112" text-anchor="middle" font-size="11" fill="#5b6b7c">коды, КБК, ставки, сальдо</text>
+
+        <rect x="520" y="75" width="160" height="50" rx="6" fill="#fff" stroke="#cbb7ed"/>
+        <text x="600" y="95" text-anchor="middle" font-weight="600" fill="#5e34a3">Операции</text>
+        <text x="600" y="112" text-anchor="middle" font-size="11" fill="#5b6b7c">регистр накопления</text>
+
+        <rect x="340" y="140" width="340" height="60" rx="6" fill="#fff" stroke="#cbb7ed"/>
+        <text x="510" y="160" text-anchor="middle" font-weight="600" fill="#5e34a3">Расчётное ядро</text>
+        <text x="510" y="180" text-anchor="middle" font-size="11" fill="#5b6b7c">сальдирование • лимиты • КБК • налоги</text>
+
+        <rect x="340" y="215" width="160" height="50" rx="6" fill="#fff" stroke="#cbb7ed"/>
+        <text x="420" y="235" text-anchor="middle" font-weight="600" fill="#5e34a3">Аудит</text>
+        <text x="420" y="252" text-anchor="middle" font-size="11" fill="#5b6b7c">журнал шагов</text>
+
+        <rect x="520" y="215" width="160" height="50" rx="6" fill="#fff" stroke="#cbb7ed"/>
+        <text x="600" y="235" text-anchor="middle" font-weight="600" fill="#5e34a3">Отчёты</text>
+        <text x="600" y="252" text-anchor="middle" font-size="11" fill="#5b6b7c">6-НДФЛ • Прил. 1 • Справка</text>
+
+        <rect x="340" y="280" width="340" height="30" rx="6" fill="#e3f6f9" stroke="#9fd9e3"/>
+        <text x="510" y="300" text-anchor="middle" font-weight="600" fill="#146a78" font-size="12">HTTP-сервисы (REST)</text>
+      </g>
+
+      <!-- Consumers -->
+      <g>
+        <rect x="780" y="30" width="180" height="60" rx="8" fill="#e6f5ea" stroke="#a9d9b6"/>
+        <text x="870" y="55" text-anchor="middle" fill="#1f6c33" font-weight="600">ИФНС</text>
+        <text x="870" y="75" text-anchor="middle" fill="#5b6b7c" font-size="11">6-НДФЛ + Прил. 1</text>
+      </g>
+      <g>
+        <rect x="780" y="120" width="180" height="60" rx="8" fill="#e6f5ea" stroke="#a9d9b6"/>
+        <text x="870" y="145" text-anchor="middle" fill="#1f6c33" font-weight="600">Клиент</text>
+        <text x="870" y="165" text-anchor="middle" fill="#5b6b7c" font-size="11">Справка о доходах</text>
+      </g>
+      <g>
+        <rect x="780" y="210" width="180" height="60" rx="8" fill="#e6f5ea" stroke="#a9d9b6"/>
+        <text x="870" y="235" text-anchor="middle" fill="#1f6c33" font-weight="600">Аудит/контроль</text>
+        <text x="870" y="255" text-anchor="middle" fill="#5b6b7c" font-size="11">обоснования строк</text>
+      </g>
+
+      <!-- Arrows (обновлено в R2-1: 3 источника + слой CFE) -->
+      <line x1="200" y1="60"  x2="320" y2="100" stroke="#3d6dad" stroke-width="1.6" marker-end="url(#arr)"/>
+      <line x1="200" y1="135" x2="320" y2="150" stroke="#3d6dad" stroke-width="1.6" marker-end="url(#arr)"/>
+      <line x1="200" y1="210" x2="320" y2="200" stroke="#3d6dad" stroke-width="1.6" marker-end="url(#arr)"/>
+      <line x1="200" y1="285" x2="320" y2="290" stroke="#3d6dad" stroke-width="1.6" marker-end="url(#arr)"/>
+      <line x1="700" y1="60"  x2="780" y2="60"  stroke="#3d6dad" stroke-width="1.6" marker-end="url(#arr)"/>
+      <line x1="700" y1="150" x2="780" y2="150" stroke="#3d6dad" stroke-width="1.6" marker-end="url(#arr)"/>
+      <line x1="700" y1="240" x2="780" y2="240" stroke="#3d6dad" stroke-width="1.6" marker-end="url(#arr)"/>
+    </svg>
+  </div>
+
+  <h3>5.3 Слои конфигурации</h3>
+  <table>
+    <thead><tr><th style="width:200px;">Слой</th><th>Содержимое</th><th>Принадлежность</th></tr></thead>
+    <tbody>
+      <tr><td>1. Нормативный</td><td>Справочники кодов, КБК, ставок; регистры сведений с матрицами и историей.</td><td>Метаданные новой конфигурации.</td></tr>
+      <tr><td>2. Операционный</td><td>Регистр накопления «ОперацииКлиентовДляНДФЛ» (источник правды для расчёта).</td><td>Метаданные новой конфигурации.</td></tr>
+      <tr><td>3. Расчётное ядро</td><td>Серверные общие модули с алгоритмами; вызывается документом-регистратором.</td><td>Серверные общие модули.</td></tr>
+      <tr><td>4. Документы</td><td>«РасчётНДФЛЗаПериод», «ВозвратНДФЛ», «КорректировкаОпераций».</td><td>Метаданные новой конфигурации.</td></tr>
+      <tr><td>5. Отчётный</td><td>Отчёты на СКД и/или табличных макетах (6-НДФЛ, Приложение 1, Справка).</td><td>Метаданные новой конфигурации.</td></tr>
+      <tr><td>6. Интеграционный</td><td>HTTP-сервисы; форматы JSON/XDTO; обработки импорта/экспорта.</td><td>Метаданные новой конфигурации + расширения источников.</td></tr>
+      <tr><td>7. Аудит и тесты</td><td>Регистр сведений «ЖурналРасчёта»; драйвер тестов; эталонные кейсы.</td><td>Метаданные новой конфигурации.</td></tr>
+    </tbody>
+  </table>
+
+  <h3>5.4 Карта расчётного пайплайна</h3>
+  <div class="pipeline">
+    <div class="step"><span class="num">1</span>Загрузка операций периода</div>
+    <div class="step"><span class="num">2</span>Привязка к кодам и нормативам</div>
+    <div class="step"><span class="num">3</span>Сальдирование убытков (по матрице)</div>
+    <div class="step"><span class="num">4</span>Нормализация вычетов (вычет ≤ доход по коду)</div>
+    <div class="step"><span class="num">5</span>Совокупная база по группе</div>
+    <div class="step"><span class="num">6</span>Применение лимитов и ставок</div>
+    <div class="step"><span class="num">7</span>Привязка КБК</div>
+    <div class="step"><span class="num">8</span>Расчёт сумм налога</div>
+    <div class="step"><span class="num">9</span>Заполнение 6-НДФЛ / Приложения 1 / Справки</div>
+    <div class="step"><span class="num">10</span>Аудит и контроль</div>
+  </div>
+</section>
+
+<!-- =============================================================== -->
+<section class="block" id="s-fr">
+  <h2>6. Функциональные требования</h2>
+
+  <h3>FR-01. Ведение нормативных таблиц <span class="badge fr">FR-01</span> <span class="badge must">MUST</span></h3>
+  <ul>
+    <li>Хранить версионируемые матрицы:
+      <ul>
+        <li>«Код дохода → Код вычета» (один-ко-многим);</li>
+        <li>«Код дохода → Ставка → КБК → Диапазон НБ»;</li>
+        <li>Матрица сальдирования (направления, очередность, формулы для РЕПО);</li>
+        <li>Коды убытков для отчётности (Приложение 1: коды 222, 223, 205, 208, 209, 210, 224, 236, 239, 240, 241, 250, 251, 252).</li>
+      </ul>
+    </li>
+    <li>Каждая запись имеет «Дату начала действия» и «Дату окончания» (открытый интервал — действует).</li>
+    <li>Импорт из Excel и XML; валидация: непрерывность диапазонов, отсутствие дублей, корректность ссылок.</li>
+    <li>Экспорт активной редакции для архива.</li>
+  </ul>
+
+  <h3>FR-02. Загрузка операций <span class="badge fr">FR-02</span> <span class="badge must">MUST</span> <span class="badge edit">правка №2</span></h3>
+  <ul>
+    <li>Источники:
+      <del class="edit-mark-del"><code>SBB_Broker</code>, <code>Wim_Du</code></del>
+      <ins class="edit-mark"><code>1С ИЦ</code>, <code>Аванкор FIN</code>, <code>Аванкор PIF</code>
+      (по двум УК: ВИМИ и ВИМС; в дальнейшем две базы PIF — ЗПИФ и ОПИФ; см. ответ на открытый вопрос №2)</ins>,
+      ручной ввод (для корректировок).
+    </li>
+    <li>Формат записи в регистре «ОперацииКлиентовДляНДФЛ»:
+      <ul>
+        <li>Период (дата получения дохода), Клиент, ДоговорИИС (если применимо), Резидент (булево),
+        КодДохода, СуммаДохода, КодВычета, СуммаВычета,
+        СуммаНДФЛ13, СуммаНДФЛ15, СуммаНДФЛ18, СуммаНДФЛ20, СуммаНДФЛ22, СуммаНДФЛ30,
+        ЗНП13, ЗНП15, НалогВИностранномГосударстве, СуммаВозвратаНДФЛ, ДатаВозврата,
+        Источник (источниковая база), ИдОперацииИсточника, СтоимостьЦБ_2_часть_РЕПО_ОРЦБ, СтоимостьЦБ_2_часть_РЕПО_неОРЦБ<ins class="edit-mark">,
+        КодКлиентаДляЛК (для последующего формирования имени файла Справки, см. п. 10.4)</ins>.</li>
+      </ul>
+    </li>
+    <li>Идемпотентность: повторная загрузка одной и той же операции не должна задваивать данные.
+      <ins class="edit-mark"> Ключ идемпотентности — составной кортеж
+      <code>(Источник, ИдОперацииИсточника)</code>, индексируется в регистре
+      <code>ОперацииКлиентовДляНДФЛ</code>; при повторной загрузке запись находится через
+      <code>СрезПоследних</code> по этому ключу и обновляется/пропускается согласно
+      политике пакета (<code>batchPolicy = "upsert" | "skipExisting"</code>).</ins>
+      <span class="badge edit">правка R2-8</span>
+    </li>
+    <li>HTTP API: <code>POST /api/v1/operations/upload</code>, <code>POST /api/v1/operations/cancel</code>.</li>
+    <li>
+      <ins class="edit-mark"><strong>Пользовательская загрузка и обслуживание данных (требование заказчика):</strong>
+      <ul>
+        <li>Интерактивная форма для ручной загрузки операций налоговым бухгалтером (импорт из Excel/CSV
+        с предпросмотром, валидацией и подтверждением).</li>
+        <li>Массовое удаление загруженных данных с фильтрацией (например, «по клиентам ДУ + ПИФ»):
+        отбор по типу источника, периоду, контуру, клиенту, договору. Удаление выполняется отдельным
+        документом-регистратором с возможностью отката.</li>
+        <li>Частичная загрузка данных (например, «только уплаченных сумм НДФЛ по клиентам ДУ + ПИФ»):
+        отдельные сценарии для разных категорий полей (доход / вычет / удержания / возвраты / ЗНП).</li>
+        <li>Все массовые операции протоколируются в журнале регистрации и в специальном
+        регистре аудита «ЖурналДействийПользователя».</li>
+      </ul></ins>
+    </li>
+  </ul>
+
+  <div class="edit-block">
+    <span class="badge edit">правка R2-8</span>
+    <strong>Реализация серверной части загрузки (HTTP-сервис и пользовательская форма).</strong>
+    <ins class="edit-mark">
+    <ol>
+      <li>HTTP-сервис <code>/api/v1/operations/upload</code> принимает весь пакет операций
+          одним вызовом (массив <code>operations</code>, см. 10.2).</li>
+      <li>Серверный обработчик открывает <strong>одну транзакцию</strong> на весь пакет
+          (<code>НачатьТранзакцию()</code> … <code>ЗафиксироватьТранзакцию()</code>).</li>
+      <li>В цикле по операциям пакета — только <code>НаборЗаписей.Добавить()</code>, <strong>без
+          вызова <code>Записать()</code></strong> на каждой итерации.</li>
+      <li>В конце цикла — единственный <code>НаборЗаписей.Записать(Истина)</code>
+          (с замещением, если <code>batchPolicy = "upsert"</code>).</li>
+      <li>При исключении — <code>ОтменитьТранзакцию()</code> и возврат ошибки целиком, без
+          частичной фиксации (пакет всегда атомарен).</li>
+    </ol>
+    <strong>Запрещено</strong>: открывать транзакцию на каждую операцию и/или вызывать
+    <code>НаборЗаписей.Записать()</code> в цикле. Иначе при пакете 10 000 операций будет
+    10 000 транзакций — нагрузочный сценарий NFR-01 не пройдёт.
+    </ins>
+  </div>
+
+  <div class="edit-block">
+    <span class="badge edit">правка R2-9</span>
+    <strong>Массовая пользовательская загрузка из Excel — через фоновое задание.</strong>
+    <ins class="edit-mark">
+    <p>Если пользователь загружает Excel-файл с десятками тысяч строк (например, 50 000),
+       реализация модального «прогресса на клиенте» с серверным вызовом на каждую строку
+       <strong>недопустима</strong> (см. также 14.8). Правильная схема:</p>
+    <ol>
+      <li>Файл целиком передаётся на сервер одним вызовом
+          (<code>ПереданныйФайл</code> / <code>ЗначениеИзСтрокиВнутреннегоПредставления</code>).</li>
+      <li>На сервере запускается <strong>фоновое задание</strong>
+          (<code>ФоновыеЗадания.Запустить(...)</code>) с параметром «адрес временного хранилища
+          файла».</li>
+      <li>Прогресс пишется в регистр сведений <code>ФоновыеЗадачиЗагрузки</code>
+          (Поля: ИдентификаторЗадания, ВсегоСтрок, ОбработаноСтрок, СтатусЗадания, СписокОшибок).</li>
+      <li>Форма опрашивает прогресс через <code>ОбработкаОжидания</code> (клиентская функция,
+          интервал ≈ 5 секунд) — <strong>без серверного вызова на каждую строку</strong>.</li>
+      <li>По завершении — обновляется панель «Результат загрузки» с сводкой
+          (загружено / пропущено / ошибок).</li>
+    </ol>
+    Внутри фонового задания применяются те же правила пакетной транзакции, что и в R2-8
+    (одна транзакция на блок ≤ 10 000 строк; крупные файлы — батчами).
+    </ins>
+  </div>
+
+  <h3>FR-03. Расчёт налоговой базы <span class="badge fr">FR-03</span> <span class="badge must">MUST</span></h3>
+  <ul>
+    <li>За налоговый период (год, нарастающим итогом по кварталам) для физлица:
+      <ol>
+        <li>Сгруппировать операции по контурам (обычный / ИИС) и по контурам резидентства.</li>
+        <li>Внутри контура — сгруппировать по кодам дохода и вычета.</li>
+        <li>Применить матрицу сальдирования (см. FR-04).</li>
+        <li>Для каждого кода ограничить вычеты: после сальдирования сумма Вычетов по коду ≤ сумма Доходов по тому же коду.</li>
+        <li>Расчитать совокупную НБ группы как Σ(Доходы) − Σ(Вычеты); если &lt; 0, то НБ = 0.</li>
+        <li>Распределить НБ по диапазонам и ставкам (см. FR-05).</li>
+        <li>Привязать КБК (см. FR-06).</li>
+      </ol>
+    </li>
+  </ul>
+
+  <h3>FR-04. Сальдирование убытков <span class="badge fr">FR-04</span> <span class="badge must">MUST</span></h3>
+  <ul>
+    <li>Поддержать четыре класса правил:
+      <ol>
+        <li><strong>Прямое:</strong> убыток по коду A списывается в полном объёме на доход по коду B.
+            Пример: 1530 → 1536 (Прил. 1: код 224); 1530 → 1532 (код 205).</li>
+        <li><strong>По очередности:</strong> 1532 → сначала 1535 (код 210), потом 1530 (код 208).</li>
+        <li><strong>Запрещённое:</strong> 1531, 1533, 1545, 1547 ни с чем не сальдируются — попадают в «убыток года» без зачёта.</li>
+        <li><strong>РЕПО:</strong> 1537 (или 1551 для ИИС) распределяется пропорционально стоимости 2-й части РЕПО:
+          <div class="formula">УбытокНа1530 = УбытокРЕПО × Стоим_ОРЦБ_2_часть / (Стоим_ОРЦБ_2_часть + Стоим_неОРЦБ_2_часть)
+УбытокНа1531 = УбытокРЕПО × Стоим_неОРЦБ_2_часть / (Стоим_ОРЦБ_2_часть + Стоим_неОРЦБ_2_часть)</div>
+        </li>
+      </ol>
+    </li>
+    <li>Алгоритм должен записывать в журнал расчёта: исходное сальдо до, после, отнесённую сумму, использованный приоритет, применённую формулу.</li>
+  </ul>
+
+  <h3>FR-05. Применение лимитов и ставок <span class="badge fr">FR-05</span> <span class="badge must">MUST</span></h3>
+  <ul>
+    <li>Для резидентов:
+      <ul>
+        <li>Группа «ЦБ + ПФИ + РЕПО + материальная выгода» (1530, 1531, 1532, 1533, 1535, 1536, 1537, 2640, 2792, 2793):
+            13 % при 0 &lt; НБ ≤ 2 400 000; 15 % при НБ &gt; 2 400 000.</li>
+        <li>Дивиденды (1010): 13 % при 0 &lt; НБ ≤ 2 400 000; 15 % при НБ &gt; 2 400 000 (отдельные КБК).</li>
+        <li>Иные доходы (4800): прогрессивная шкала 13/15/18/20/22 с границами 2,4 / 5 / 20 / 50 млн (отдельные КБК на каждый диапазон).</li>
+      </ul>
+    </li>
+    <li>Для нерезидентов: 30 % на всю группу (один КБК); 15 % на дивиденды.</li>
+    <li>Для резидентов ИИС: 13 % с применением вычета 619 при положительном финрезе (по итогам договора).</li>
+  </ul>
+
+  <h3>FR-06. Распределение по КБК <span class="badge fr">FR-06</span> <span class="badge must">MUST</span></h3>
+  <ul>
+    <li>Каждой строке итоговой раскладки соответствует пара (Ставка, КБК).</li>
+    <li>Если по какому-либо коду суммарно Доходы ≤ Вычеты, такие данные отражаются по ставке 13 % с КБК <code>18210102010011000110</code>
+        (правило «остатков» из листа Excel).</li>
+    <li>Прогрессивная шкала по 4800 раскладывается по соответствующим КБК
+        (<code>18210102080…</code>, <code>15010</code>, <code>16010</code>, <code>17010</code>).</li>
+  </ul>
+
+  <h3>FR-07. Расчёт сумм налога <span class="badge fr">FR-07</span> <span class="badge must">MUST</span></h3>
+  <p>В разрезе (Ставка, КБК):</p>
+  <div class="formula">СуммаНалогаИсчисленная = НалоговаяБаза × Ставка
+СуммаНалогаУдержанная   = СуммаПеречисленного − СуммаВозвращённого
+ИзлишнеУдержанный       = max(0, Удержанный − (Исчисленный − НалогВИностранномГосударстве − ЗНП))
+Неудержанный            = max(0, (Исчисленный − НалогВИностранномГосударстве − ЗНП) − Удержанный)
+ДоходБезУдержания       = Неудержанный × 100 / Ставка</div>
+
+  <h3>FR-08. Спецсценарий 1010 + ЗНП <span class="badge fr">FR-08</span> <span class="badge must">MUST</span> <span class="badge edit">правка №3</span></h3>
+
+  <div class="edit-block">
+    <p><strong>Принципиальное уточнение по дивидендам (пользовательская правка раунда 1):</strong>
+       расчётный метод дивидендных доходов в 1С НП может приводить к расхождениям с первоисточниками.
+       Поэтому <ins class="edit-mark">все данные по дивидендам (код дохода 1010) загружаются из
+       <code>Аванкор FIN</code> и <code>1С ИЦ</code> уже разложенными по ставкам — <strong>без
+       применения лимитов и распределения по ставкам на стороне 1С НП</strong></ins>.</p>
+    <ul>
+      <li>В 1С НП по 1010 операция приходит <strong>с привязкой к ставке</strong> (13 % или 15 %).</li>
+      <li>Сумма доходов по коду 1010 равна сумме налоговой базы по этой ставке:
+        <span class="formula">Доход (1010, 13 %) = НБ (1010, 13 %); Доход (1010, 15 %) = НБ (1010, 15 %)</span>
+      </li>
+      <li>Пример из правок заказчика: в Аванкор FIN клиенту выплачены дивиденды; в 1С НП загружаются
+        строки с привязкой к ставке:
+        <ul>
+          <li>Доход по ставке 13 % = НБ по ставке 13 % = 2 400 595 = (283 356 + 1 705 312 + 411 927)</li>
+          <li>Доход по ставке 15 % = НБ по ставке 15 % = 1 223 252 = (813 612 + 409 640)</li>
+        </ul>
+      </li>
+      <li>Гросс-ап в 1С НП по 1010 <strong>не выполняется автоматически</strong> — суммы дохода/НБ
+        формируются на стороне источника. В 1С НП хранится только итоговая распределённая разбивка
+        и сумма ЗНП в разрезе ставки (ЗНП13, ЗНП15) — для последующего расчёта удержанного и
+        отражения в строке 155 Раздела 2 6-НДФЛ.</li>
+      <li><strong>Алгоритмы по нерезидентам, по расчёту исчисленного и уплаченного НДФЛ, по ЗНП и
+        формированию 6-НДФЛ / Справок остаются без изменений.</strong></li>
+    </ul>
+  </div>
+
+  <p><del class="edit-mark-del">Если по 1010 превышен лимит 2,4 млн и есть зачтённый налог на прибыль (ЗНП13, ЗНП15):
+  По ставке 13 % к Доходу, НБ и Исчисленному прибавляется ЗНП × 100/13; по ставке 15 % из Дохода и НБ соответствующая
+  сумма по 13 % вычитается. (Алгоритм гросс-апа в 1С НП).</del></p>
+
+  <p><ins class="edit-mark">Прежний алгоритм гросс-апа 1010 + ЗНП сохраняется как теоретическая
+     базовая модель (см. ALG-04) для документирования и для сценариев, когда первоисточник передаёт
+     дивиденды единой суммой без разбивки. В штатном режиме источники <code>1С ИЦ</code> и
+     <code>Аванкор FIN</code> отдают уже разнесённые по ставкам суммы, и 1С НП их только
+     валидирует и складывает.</ins></p>
+
+  <ul>
+    <li>Контрольный пример из исходного Excel остаётся в составе автотестов как проверка
+      «теоретического» гросс-апа: ЗНП13 = 12 007, гросс-ап = 12 007 × 100/13 ≈ 92 362 руб.;
+      цифры распределяются по 4 строкам отчёта.</li>
+    <li><ins class="edit-mark">Контрольная сверка КС-32 (см. раздел 14) проверяет
+      равенство Доход(1010, ставка) ≡ НБ(1010, ставка) после загрузки операций.</ins></li>
+  </ul>
+
+  <h3>FR-09. Перенос превышения вычета <span class="badge fr">FR-09</span> <span class="badge must">MUST</span> <span class="badge edit">правка №4</span></h3>
+  <ul>
+    <li>Если в дату N по коду A вычет превысил доход той же даты, превышение распределяется на доходы того же кода по другим датам.</li>
+    <li>Если после распределения по всем датам по коду A <ins class="edit-mark">и после сальдирования убытков</ins>
+        суммарно вычет всё ещё больше дохода — вычет ограничивается доходом (см. FR-03 шаг 4).</li>
+  </ul>
+
+  <h3>FR-10. Контур ИИС <span class="badge fr">FR-10</span> <span class="badge must">MUST</span> <span class="badge edit">правка №5</span></h3>
+  <ul>
+    <li>Параллельная ветка расчёта по кодам 1544–1551, вычетам 225–252 и ИИС-специфичным правилам сальдирования.</li>
+    <li>Применение вычета 619 (положительный финрез на ИИС) — по факту закрытия договора ИИС, на сумму, не превышающую совокупный положительный финрез.</li>
+    <li>Доходы и вычеты по ИИС учитываются отдельно от обычного контура и в Приложении 1 отражаются отдельным разделом.
+        <ins class="edit-mark"><strong>По каждой паре (Ставка, КБК) в Приложениях №1 должен формироваться
+        ровно один Раздел 2 — задвоение разделов с одинаковой парой запрещено.</strong>
+        Если по одному физлицу по одной ставке/КБК пришли данные из разных источников или разных
+        контуров, они должны быть свёрнуты в одну запись на этапе сборки печатной формы
+        (см. также КС-41 из раздела 14).</ins></li>
+  </ul>
+
+  <h3>FR-11. 6-НДФЛ Раздел 1 <span class="badge fr">FR-11</span> <span class="badge must">MUST</span></h3>
+  <ul>
+    <li>Заполнение по КБК и по 6 срокам перечисления в каждом месяце последнего квартала отчётного периода:
+      <table class="compact">
+        <thead><tr><th>Срок</th><th>1 кв.</th><th>Полугодие</th><th>9 мес.</th><th>12 мес.</th></tr></thead>
+        <tbody>
+          <tr><td>1-й</td><td>01.01–22.01</td><td>01.04–22.04</td><td>01.07–22.07</td><td>01.10–22.10</td></tr>
+          <tr><td>2-й</td><td>23.01–31.01</td><td>23.04–30.04</td><td>23.07–31.07</td><td>23.10–31.10</td></tr>
+          <tr><td>3-й</td><td>01.02–22.02</td><td>01.05–22.05</td><td>01.08–22.08</td><td>01.11–22.11</td></tr>
+          <tr><td>4-й</td><td>23.02–28(29).02</td><td>23.05–31.05</td><td>23.08–31.08</td><td>23.11–30.11</td></tr>
+          <tr><td>5-й</td><td>01.03–22.03</td><td>01.06–22.06</td><td>01.09–22.09</td><td>01.12–22.12</td></tr>
+          <tr><td>6-й</td><td>23.03–31.03</td><td>23.06–30.06</td><td>23.09–30.09</td><td>23.12–31.12</td></tr>
+        </tbody>
+      </table>
+    </li>
+    <li>Раздел 1 заполняется и для перечисленного, и для возвращённого налога.</li>
+    <li>Если в каком-либо квартале нет перечислений и возвратов — соответствующие строки не заполняются (но контрольные суммы должны сойтись).</li>
+  </ul>
+
+  <h3>FR-12. 6-НДФЛ Раздел 2 и Приложение 1 <span class="badge fr">FR-12</span> <span class="badge must">MUST</span> <span class="badge edit">правка №6</span></h3>
+  <div class="edit-block">
+    <ins class="edit-mark">Эталонная разметка формы 6-НДФЛ и Приложения №1 закреплена во вложении
+    <code>КС.xlsx → лист «6-НДФЛ+Приложение №1 (фрагмент)»</code>. <strong>Жёлтым</strong> в этом
+    файле отмечены строки, которые подлежат заполнению в 1С НП. Все остальные строки берутся из
+    шаблона ФНС «как есть».</ins>
+  </div>
+  <ul>
+    <li>Раздел 2 — нарастающим итогом, в совокупности по всем кодам, в разрезе (ставка, КБК).</li>
+    <li>Приложение 1 — по физлицу, в разрезе (ставка, КБК), с разбивкой по кодам дохода/вычета и по месяцам.</li>
+    <li>Структура показателей:
+      <table class="compact">
+        <thead><tr><th>Код строки</th><th>Показатель</th></tr></thead>
+        <tbody>
+          <tr><td>100</td><td>Ставка налога</td></tr>
+          <tr><td>105</td><td>КБК</td></tr>
+          <tr><td>120</td><td>Сумма дохода, полученная физлицами</td></tr>
+          <tr><td>130</td><td>Сумма вычетов и расходов</td></tr>
+          <tr><td>131</td><td>Налоговая база</td></tr>
+          <tr><td>140</td><td>Сумма налога исчисленная</td></tr>
+          <tr><td>155</td><td>Сумма налога на прибыль организаций, подлежащая зачёту</td></tr>
+          <tr><td>160</td><td>Сумма налога удержанная</td></tr>
+          <tr><td>161/163/164</td><td>Удержано в разрезе сроков перечисления</td></tr>
+          <tr><td>170</td><td>Сумма налога, не удержанная налоговым агентом</td></tr>
+          <tr><td>180</td><td>Сумма налога, излишне удержанная</td></tr>
+          <tr><td>190 / 191</td><td>Сумма налога, возвращённая (в т.ч. по срокам)</td></tr>
+        </tbody>
+      </table>
+    </li>
+  </ul>
+
+  <h3>FR-13. Справка для клиента <span class="badge fr">FR-13</span> <span class="badge must">MUST</span> <span class="badge edit">правка №6</span></h3>
+  <ul>
+    <li>Структура повторяет Приложение 1, но без разбивки по КБК (только по ставкам).</li>
+    <li>Все правила сальдирования и лимитов соблюдаются — итоговые цифры должны быть согласованы с Приложением 1.</li>
+    <li>В поле «Статус налогоплательщика» — 1 (резидент) или 2 (нерезидент).</li>
+    <li>Раздел 4: «Сумма дохода, с которого не удержан налог», «Сумма неудержанного налога».</li>
+    <li><ins class="edit-mark">Эталонная разметка Справки закреплена во вложении
+        <code>КС.xlsx → лист «Справка для клиентов»</code>. Жёлтым отмечены строки, заполняемые в
+        1С НП; остальные строки — из шаблона ФНС КНД 1175018 (в ред. Приказа ФНС от 09.01.2024
+        № ЕД-7-11/1@) без изменений.</ins></li>
+  </ul>
+
+  <h3>FR-14. Корректировка и пересчёт <span class="badge fr">FR-14</span> <span class="badge high">SHOULD</span></h3>
+  <ul>
+    <li>Документ «КорректировкаОпераций» — добавляет/удаляет/изменяет операции с фиксацией причины и автора.</li>
+    <li>Пересчёт за прошлый период автоматически перезаполняет 6-НДФЛ; формирование «корректировочной» сдачи с указанием номера корректировки.</li>
+  </ul>
+
+  <h3>FR-15. Аудит и трассировка <span class="badge fr">FR-15</span> <span class="badge must">MUST</span></h3>
+  <ul>
+    <li>Регистр сведений «ЖурналРасчётаНДФЛ»: запись каждого шага пайплайна (входной снимок, шаг сальдирования, применение лимита, привязка КБК).</li>
+    <li>В отчёте «Обоснование строки» — путь от строки 6-НДФЛ или Приложения 1 до операций и применённой версии правил.</li>
+  </ul>
+
+  <h3>FR-16. Безопасность и роли <span class="badge fr">FR-16</span> <span class="badge must">MUST</span></h3>
+  <ul>
+    <li>Роли: <em>Методолог нормативов</em>, <em>Налоговый бухгалтер</em>, <em>Главный бухгалтер</em>,
+        <em>Аудитор</em> (только чтение), <em>Администратор</em>.</li>
+    <li>Журнал регистрации фиксирует: запуск расчёта, изменение нормативов, утверждение, корректировки.</li>
+  </ul>
+</section>
+
+<!-- =============================================================== -->
+<section class="block" id="s-alg">
+  <h2>7. Алгоритмическая часть</h2>
+
+  <h3>ALG-01. Общий пайплайн расчёта <span class="badge alg">ALG-01</span></h3>
+  <pre>ВХОД:  Период, СписокФизлиц, ВерсияНормативов
+ВЫХОД: Снимок расчёта (Раздел 1, Раздел 2, Приложение 1, Справка) + журнал шагов
+
+1. Для каждого Физлица:
+   2. Загрузить операции периода → СписокОпераций
+   3. Разделить на контуры: {Обычный, ИИС}
+   4. Для каждого контура:
+      5. Сгруппировать по КодДохода → ТаблицаГрупп
+      6. Применить матрицу сальдирования → ТаблицаГруппПослеСальдо
+      7. Нормализовать вычеты (Σ Вычетов_по_коду ≤ Σ Доходов_по_коду)
+      8. Σ Доходов − Σ Вычетов по группе → НБ
+      9. Если НБ &lt; 0, НБ = 0
+      10. Применить лимиты и ставки → СписокСтрок (Ставка, КБК, НБ)
+      11. Применить спецсценарий 1010 + ЗНП (если применимо)
+      12. Расчёт налогов: Исчисленный, Удержанный, Излишне, Неудержанный
+      13. Записать в Журнал расчёта
+14. Свернуть СписокСтрок по всем физлицам → Раздел 2 6-НДФЛ
+15. Сохранить детальные строки физлиц → Приложение 1 + Справка
+16. Распределить перечисленный/возвращённый налог по 6 срокам → Раздел 1 6-НДФЛ</pre>
+
+  <div class="edit-block">
+    <span class="badge edit">правка R2-10</span>
+    <strong>Реализация цикла «по физлицам» — только на сервере.</strong>
+    <ins class="edit-mark">
+    <p>Цикл из шага 1 (<em>Для каждого Физлица</em>) выполняется <strong>исключительно на сервере</strong>,
+       внутри одного серверного вызова в общем модуле
+       <code>СерверныйВызов.МодульРасчётаНДФЛ</code>. Антипаттерн «<em>1 клиент = 1 серверный
+       вызов</em>» при объёме ≈ 100 000 физлиц гарантированно проваливает NFR-01.</p>
+    <p>Параллелизация (NFR-02) реализуется через разбиение портфеля на N батчей и запуск
+       N <strong>фоновых заданий</strong>
+       (<code>ФоновыеЗадания.Запустить(ИмяМетода, СтруктураПараметров)</code>),
+       каждое со своим отбором «Список физлиц». Контроль сериализации — управляемой
+       <strong>блокировкой регистра</strong>
+       (<code>БлокировкаДанных</code>) по диапазону физлиц, чтобы избежать deadlock на пересечении.
+       Управляющий процесс ожидает завершения всех заданий и агрегирует ошибки.</p>
+    <p><strong>Форма документа «РасчётНДФЛЗаПериод»</strong> не выгружает в реквизит
+       таблицы значений с результатом по 100 000 физлиц. Реквизиты формы хранят только:
+       идентификатор расчёта, статус, сводку (количество физлиц, число ошибок КС, время).
+       Детализация подгружается по требованию через подсистему «Аудит расчёта»
+       (отчёт «Обоснование строки»).</p>
+    </ins>
+  </div>
+
+  <h3>ALG-02. Сальдирование (псевдокод) <span class="badge alg">ALG-02</span></h3>
+  <pre>Функция СальдироватьУбытки(ТаблицаГрупп, МатрицаСальдирования)
+  Для каждой Группы с Убытком (ФинРез &lt; 0):
+    Если Группа.Код в Списке_Запрещённых_к_Сальдированию: Продолжить
+    Если Группа.Код = 1537 (или 1551 для ИИС):
+      // РЕПО: пропорциональное распределение
+      Для каждой ЦелевойГруппы в (1530/1531) или (1544/1545 для ИИС):
+        ДоляУбытка = Убыток × Стоимость_2_части_ЦелевойГруппы / Сумма_Стоимостей
+        ЦелеваяГруппа.ФинРез += ДоляУбытка
+        ЗаписатьШаг(ЦелеваяГруппа, "РЕПО", ДоляУбытка)
+      Группа.ФинРез = 0
+      Продолжить
+    // Прямое или по очередности
+    Получить НаправленияСальдирования(Группа.Код) [по приоритету 1, 2, ...]
+    Для каждого Направления:
+      Если Группа.ФинРез == 0: Прервать
+      ДоступныйДоход = ЦелеваяГруппа.ФинРез
+      Если ДоступныйДоход &lt;= 0: Продолжить
+      Зачёт = МИНИМУМ( -Группа.ФинРез, ДоступныйДоход )
+      Группа.ФинРез += Зачёт
+      ЦелеваяГруппа.ФинРез -= Зачёт
+      ЗаписатьШаг(Группа, ЦелеваяГруппа, Направление.Приоритет, Зачёт)
+  Возврат ТаблицаГрупп</pre>
+
+  <h3>ALG-03. Распределение по диапазонам ставок <span class="badge alg">ALG-03</span></h3>
+  <pre>Функция РазложитьПоДиапазонам(КодДохода, НБ, КонтекстРезидентства)
+  Диапазоны = ПолучитьДиапазоныИзНорматива(КодДохода, КонтекстРезидентства)
+  Остаток = НБ
+  Результат = []
+  Для каждого Диапазона (по возрастанию границы):
+    Если Остаток &lt;= 0: Прервать
+    ВеличинаДиапазона = Диапазон.ВерхняяГраница − Диапазон.НижняяГраница
+    Если ВеличинаДиапазона = БЕСКОНЕЧНОСТЬ:
+      ЧастьВДиапазоне = Остаток
+    Иначе:
+      ЧастьВДиапазоне = МИНИМУМ(Остаток, ВеличинаДиапазона)
+    Результат.Добавить({Ставка: Диапазон.Ставка, КБК: Диапазон.КБК, НБ: ЧастьВДиапазоне})
+    Остаток -= ЧастьВДиапазоне
+  Возврат Результат</pre>
+
+  <h3>ALG-04. Спецсценарий 1010 + ЗНП <span class="badge alg">ALG-04</span></h3>
+  <pre>Если КодДохода = 1010 И НБ_по_1010 &gt; 2 400 000 И (ЗНП13 + ЗНП15) &gt; 0:
+  // Гросс-ап на ставку 13%
+  ГроссАп13 = ЗНП13 × 100 / 13
+  ГроссАп15 = ЗНП15 × 100 / 15  // (если применимо)
+
+  Строка13.СуммаДохода   += ГроссАп13
+  Строка13.НалоговаяБаза += ГроссАп13
+  Строка13.СуммаНалогаИсчисленная += ЗНП13   // (= ГроссАп13 × 13/100)
+
+  Строка15.СуммаДохода   -= ГроссАп13
+  Строка15.НалоговаяБаза -= ГроссАп13</pre>
+  <div class="callout warn">
+    <div class="title">Замечание из Excel</div>
+    Контрольный пример: ЗНП13 = 12 007. По 13 % к Доходу/НБ/Исчисленному добавляется
+    12 007 × 100/13 ≈ 92 362 руб., по 15 % из Дохода/НБ та же сумма вычитается.
+    После операции суммы по ставкам корректно распределены между КБК
+    <code>18210102130011000110</code> (13 %) и <code>18210102140011000110</code> (15 %).
+  </div>
+
+  <h3>ALG-05. Излишне удержанный и неудержанный <span class="badge alg">ALG-05</span></h3>
+  <div class="formula">Дельта = СуммаНалогаУдержанная − (СуммаНалогаИсчисленная − НалогВИногосударстве − ЗНП)
+Если Дельта &gt; 0:  ИзлишнеУдержанный = Дельта,  Неудержанный = 0
+Если Дельта &lt; 0:  ИзлишнеУдержанный = 0,       Неудержанный = −Дельта
+                  СуммаДоходаБезУдержания = Неудержанный × 100 / Ставка
+Если Дельта = 0:  оба = 0</div>
+
+  <h3>ALG-06. Перенос превышения вычета на даты того же кода <span class="badge alg">ALG-06</span></h3>
+  <pre>Для каждого Кода с операциями:
+  Если в дату D Вычет(D) &gt; Доход(D):
+    Превышение = Вычет(D) − Доход(D)
+    Распределить Превышение по другим датам того же кода (по возрастанию даты)
+      пока есть остаток дохода
+  По итогам:
+  Если Σ Вычетов(Код) &gt; Σ Доходов(Код): Σ Вычетов(Код) := Σ Доходов(Код)</pre>
+</section>
+
+<!-- =============================================================== -->
+<section class="block" id="s-norm">
+  <h2>8. Нормативные таблицы (приложения)</h2>
+
+  <h3>8.1 Коды доходов и соответствующих вычетов</h3>
+  <details>
+    <summary>Развернуть таблицу из листа «Коды доходов и расходов» (фрагмент)</summary>
+    <table class="compact">
+      <thead><tr><th>Код дохода</th><th>Наименование</th><th>Коды соответствующих вычетов</th></tr></thead>
+      <tbody>
+        <tr><td>1010</td><td>Дивиденды</td><td>—</td></tr>
+        <tr><td>1530</td><td>ЦБ ОРЦБ</td><td>201, 208 (от 1532), 222 (РЕПО), 618 (3+ года)</td></tr>
+        <tr><td>1531</td><td>ЦБ не ОРЦБ</td><td>202, 223 (РЕПО)</td></tr>
+        <tr><td>1532</td><td>ПФИ ОРЦБ (БА = ЦБ/индексы)</td><td>206, 205 (от 1530), 209 (от 1535)</td></tr>
+        <tr><td>1533</td><td>ПФИ не ОРЦБ</td><td>220</td></tr>
+        <tr><td>1535</td><td>ПФИ ОРЦБ (БА ≠ ЦБ)</td><td>207, 210 (от 1532)</td></tr>
+        <tr><td>1536</td><td>ЦБ не ОРЦБ, на момент покупки = ОРЦБ</td><td>203, 224 (от 1530)</td></tr>
+        <tr><td>1537</td><td>Проценты по РЕПО</td><td>211</td></tr>
+        <tr><td>1544–1551</td><td>Зеркальные коды для ИИС</td><td>225–252, 619 (положит. финрез ИИС)</td></tr>
+        <tr><td>2640</td><td>Материальная выгода</td><td>—</td></tr>
+        <tr><td>2792, 2793</td><td>Долгое владение (5/1 год)</td><td>513, 514</td></tr>
+        <tr><td>4800</td><td>Иные доходы</td><td>—</td></tr>
+      </tbody>
+    </table>
+  </details>
+
+  <h3>8.2 КБК и ставки — резиденты</h3>
+  <table class="compact">
+    <thead><tr><th>КБК</th><th>Ставка</th><th>Группа доходов</th><th>Лимит НБ</th></tr></thead>
+    <tbody>
+      <tr><td>18210102010011000110</td><td>13 %</td><td>1530, 1531, 1532, 1533, 1535, 1536, 1537, 2640, 2792, 2793</td><td>0 &lt; НБ ≤ 2 400 000</td></tr>
+      <tr><td>18210102180011000110</td><td>15 %</td><td>те же</td><td>НБ &gt; 2 400 000</td></tr>
+      <tr><td>18210102130011000110</td><td>13 %</td><td>1010 (дивиденды)</td><td>0 &lt; НБ ≤ 2 400 000</td></tr>
+      <tr><td>18210102140011000110</td><td>15 %</td><td>1010</td><td>НБ &gt; 2 400 000</td></tr>
+      <tr><td>18210102010011000110</td><td>13 %</td><td>4800</td><td>0 &lt; НБ ≤ 2 400 000</td></tr>
+      <tr><td>18210102080011000110</td><td>15 %</td><td>4800</td><td>2 400 000 &lt; НБ ≤ 5 000 000</td></tr>
+      <tr><td>18210102150011000110</td><td>18 %</td><td>4800</td><td>5 000 000 &lt; НБ ≤ 20 000 000</td></tr>
+      <tr><td>18210102160011000110</td><td>20 %</td><td>4800</td><td>20 000 000 &lt; НБ ≤ 50 000 000</td></tr>
+      <tr><td>18210102170011000110</td><td>22 %</td><td>4800</td><td>НБ &gt; 50 000 000</td></tr>
+    </tbody>
+  </table>
+
+  <h3>8.3 КБК и ставки — нерезиденты <span class="badge edit">правка №7</span></h3>
+  <table class="compact">
+    <thead><tr><th>КБК</th><th>Ставка</th><th>Группа доходов</th></tr></thead>
+    <tbody>
+      <tr><td>18210102010011000110</td><td>30 %</td><td>1530, 1531, 1532, 1533, 1535, 1536, 1537, 2640, 4800</td></tr>
+      <tr>
+        <td><del class="edit-mark-del">—</del> <ins class="edit-mark">18210102010011000110</ins></td>
+        <td>15 %</td>
+        <td>1010 (дивиденды нерезидентов)</td>
+      </tr>
+    </tbody>
+  </table>
+  <div class="edit-block">
+    <ins class="edit-mark">Уточнение заказчика (правка №7): КБК по дивидендам для нерезидентов —
+    <code>18210102010011000110</code>. Ранее в этой строке КБК был не определён («—»),
+    что блокировало автоматическое формирование Раздела 1 6-НДФЛ для дивидендов нерезидентов.</ins>
+  </div>
+
+  <h3>8.4 Матрица сальдирования (обычный контур, фрагмент)</h3>
+  <table class="compact">
+    <thead><tr><th>Убыток по коду</th><th>Сальдируется с</th><th>Когда</th><th>Условие</th><th>Код в отчёте</th></tr></thead>
+    <tbody>
+      <tr><td>1530 (ОРЦБ)</td><td>1536 (не ОРЦБ, бывшие ОРЦБ)</td><td>По итогам периода</td><td>—</td><td>224</td></tr>
+      <tr><td>1530 (ОРЦБ)</td><td>1532 (ПФИ ОРЦБ)</td><td>По итогам периода</td><td>—</td><td>205</td></tr>
+      <tr><td>1531 (не ОРЦБ)</td><td>—</td><td>—</td><td>Запрещено</td><td>—</td></tr>
+      <tr><td>1532 (ПФИ ОРЦБ)</td><td>1) 1535</td><td>По итогам</td><td>В 1-ю очередь</td><td>210</td></tr>
+      <tr><td>1532 (ПФИ ОРЦБ)</td><td>2) 1530</td><td>По итогам</td><td>Во 2-ю очередь</td><td>208</td></tr>
+      <tr><td>1533 (ПФИ не ОРЦБ)</td><td>—</td><td>—</td><td>Запрещено</td><td>—</td></tr>
+      <tr><td>1535 (ПФИ ОРЦБ)</td><td>1532</td><td>По итогам</td><td>—</td><td>209</td></tr>
+      <tr><td>1536 (не ОРЦБ-бывшие)</td><td>—</td><td>—</td><td>Запрещено</td><td>—</td></tr>
+      <tr><td>1537 (РЕПО)</td><td>1530</td><td>Всегда</td><td>= Убыток × Стоим_ОРЦБ_2 / Σ_2</td><td>222</td></tr>
+      <tr><td>1537 (РЕПО)</td><td>1531</td><td>Всегда</td><td>= Убыток × Стоим_неОРЦБ_2 / Σ_2</td><td>223</td></tr>
+    </tbody>
+  </table>
+
+  <h3>8.5 Матрица сальдирования (контур ИИС)</h3>
+  <p>Зеркально к 8.4 с заменой кодов:
+     1530 → 1544, 1531 → 1545, 1532 → 1546, 1533 → 1547, 1535 → 1548, 1536 → 1549, 1537 → 1551.
+     Коды убытков для отчёта: 236, 250, 241, 251, 252, 239, 240.</p>
+</section>
+
+<!-- =============================================================== -->
+<section class="block" id="s-data">
+  <h2>9. Модель данных 1С</h2>
+
+  <h3>9.1 Перечисления</h3>
+  <ul>
+    <li><code>Перечисление.КонтурНДФЛ</code>: Обычный, ИИС.</li>
+    <li><code>Перечисление.СтатусНалогоплательщика</code>: Резидент (1), Нерезидент (2).</li>
+    <li><code>Перечисление.ПриоритетСальдирования</code>: Первый, Второй, Третий.</li>
+    <li><code>Перечисление.ВидСальдирования</code>: Прямое, ПоОчерёдности, РЕПО, Запрещено.</li>
+  </ul>
+
+  <h3>9.2 Справочники</h3>
+  <table class="compact">
+    <thead><tr><th>Справочник</th><th>Назначение</th></tr></thead>
+    <tbody>
+      <tr><td>КодыДоходовНДФЛ</td><td>1010, 1530, …, 4800. Реквизиты: Наименование, Контур, ГруппаНБ, ОтноситсяКПрогрессивнойШкале.</td></tr>
+      <tr><td>КодыВычетовНДФЛ</td><td>201, 202, …, 619. Реквизиты: Наименование, ОсновнойКодДохода, ВидВычета.</td></tr>
+      <tr><td>КодыКБК_НДФЛ</td><td>18210102010011000110 и др. Реквизиты: Наименование, ОписаниеНазначения.</td></tr>
+      <tr><td>КодыУбытковДляОтчётности</td><td>222, 223, 205, 208, 209, 210, 224, 236, 239, 240, 241, 250, 251, 252.</td></tr>
+      <tr><td>ВарианыОтчётныхФорм</td><td>«6-НДФЛ Раздел 1», «6-НДФЛ Раздел 2», «Приложение 1», «Справка для клиента» и их редакции.</td></tr>
+      <tr><td>ВерсииНормативов</td><td>Хранилище меток версий нормативных таблиц с датой ввода в действие.</td></tr>
+    </tbody>
+  </table>
+
+  <h3>9.3 Регистры сведений (нормативный слой) <span class="badge edit">правка R2-3</span></h3>
+  <table class="compact">
+    <thead><tr><th>Регистр</th><th>Периодичность</th><th>Измерения</th><th>Ресурсы</th><th>Реквизиты</th></tr></thead>
+    <tbody>
+      <tr>
+        <td>СоответствиеДоходВычет</td>
+        <td><ins class="edit-mark">Год (периодический)</ins></td>
+        <td>КодДохода, КодВычета <del class="edit-mark-del">, ВерсияНормативов</del></td>
+        <td>—</td>
+        <td>ВидВычета <del class="edit-mark-del">, ДатаНачалаДействия, ДатаОкончания</del></td>
+      </tr>
+      <tr>
+        <td>МатрицаСтавокИКБК</td>
+        <td><ins class="edit-mark">Год (периодический)</ins></td>
+        <td>КодДохода, СтатусНалогоплательщика, Контур, НижняяГраницаНБ <del class="edit-mark-del">, ВерсияНормативов</del></td>
+        <td>Ставка</td>
+        <td>КБК, ВерхняяГраницаНБ <del class="edit-mark-del">, ДатаНачалаДействия</del></td>
+      </tr>
+      <tr>
+        <td>МатрицаСальдирования</td>
+        <td><ins class="edit-mark">Год (периодический)</ins></td>
+        <td>КодУбытка, КодДоходаЦель, Приоритет, Контур <del class="edit-mark-del">, ВерсияНормативов</del></td>
+        <td>—</td>
+        <td>ВидСальдирования, КодУбыткаДляОтчётности, ФормулаРаспределения</td>
+      </tr>
+      <tr>
+        <td>СрокиПеречисленияНалога</td>
+        <td><ins class="edit-mark">Непериодический (независимый)</ins></td>
+        <td>Год, КварталОтчёта, СрокНомер</td><td>—</td>
+        <td>ДатаНачала, ДатаКонца</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="edit-block">
+    <span class="badge edit">правка R2-3</span>
+    <strong>Версионирование нормативов через стандартный механизм периодического регистра.</strong>
+    <ins class="edit-mark">С учётом ответа на открытый вопрос №1 (несколько редакций в одном
+    налоговом периоде не нужны) измерение <code>ВерсияНормативов</code> заменяется на
+    встроенную <strong>периодичность «Год»</strong> периодического регистра сведений:
+    <ul style="margin:6px 0 0 0;">
+      <li>работает стандартный метод <code>СрезПоследних(&Период, ...)</code> без явных фильтров
+          по версии;</li>
+      <li>платформа сама блокирует перекрытие периодов одной и той же записи;</li>
+      <li>история правок ведётся автоматически: запись «на дату» = запись на 1 января
+          соответствующего года;</li>
+      <li>журнал регистрации события <code>«Норматив.Изменение»</code> фиксирует, кто и когда
+          поменял запись (см. NFR-06).</li>
+    </ul>
+    Справочник <code>ВерсииНормативов</code> (см. 9.2) сохраняется как «метка года»
+    для аудита (для удобства поиска: «нормативы на 2026 год»), но из ключа всех регистров
+    9.3 удаляется. <strong>Поле <code>ДатаНачалаДействия</code> в FR-01 теперь означает
+    период периодического регистра</strong>; поле <code>ДатаОкончания</code> снимается как
+    избыточное (диапазон закрывается следующей записью того же ключа).</ins>
+  </div>
+
+  <h3>9.4 Регистры накопления (операционный слой)</h3>
+  <table class="compact">
+    <thead><tr><th>Регистр</th><th>Вид</th><th>Измерения</th><th>Ресурсы</th></tr></thead>
+    <tbody>
+      <tr><td>ОперацииКлиентовДляНДФЛ</td>
+          <td><del class="edit-mark-del">Остатки и обороты</del> <ins class="edit-mark">Обороты</ins> <span class="badge edit">правка R2-2</span></td>
+          <td>Клиент, Контур, ДоговорИИС, КодДохода, КодВычета, Ставка, КБК<del class="edit-mark-del">, Дата</del></td>
+          <td>СуммаДохода, СуммаВычета, СуммаНДФЛ, ЗНП, НалогВИногосударстве, ВозвратНДФЛ, СтоимостьЦБ_2_части_РЕПО_ОРЦБ, СтоимостьЦБ_2_части_РЕПО_неОРЦБ</td></tr>
+      <tr><td>ИсчисленныйНДФЛ</td><td>Обороты</td>
+          <td>Клиент, Контур, Ставка, КБК, Период</td>
+          <td>СуммаНалогаИсчисленная, НалоговаяБаза, СуммаДохода, СуммаВычета</td></tr>
+      <tr><td>УдержанныйИВозвращённыйНДФЛ</td><td>Обороты</td>
+          <td>Клиент, Контур, Ставка, КБК, ДатаУплатыИлиВозврата, СрокНомер</td>
+          <td>СуммаУдержанная, СуммаВозвращённая</td></tr>
+      <tr><td>ИзлишнеУдержанныйИНеудержанныйНДФЛ</td><td>Обороты</td>
+          <td>Клиент, Контур, Ставка, КБК, Период</td>
+          <td>СуммаИзлишнеУдержанная, СуммаНеудержанная, ДоходБезУдержания</td></tr>
+    </tbody>
+  </table>
+
+  <div class="edit-block">
+    <span class="badge edit">правка R2-2</span>
+    <strong>Обоснование смены типа регистра <code>ОперацииКлиентовДляНДФЛ</code>.</strong>
+    <ins class="edit-mark">В ТЗ нигде не используется концепция «остатков» (нет натурального
+    актива/обязательства, которое нужно сальдировать накопительно): операция — это факт
+    совершения, а не «остаток к моменту». Поэтому регистр объявляется как
+    <strong>«Обороты»</strong> (а не «Остатки и обороты»). Эффект:
+    <ul style="margin:6px 0 0 0;">
+      <li>исключается генерация и обслуживание таблицы итогов по остаткам (минус ≈ половина
+          размера служебных таблиц регистра в БД);</li>
+      <li>уменьшается время записи документа-регистратора (нет пересчёта остатков);</li>
+      <li>измерение «Дата» убирается из ключа — период оборота определяется регистратором
+          (документ «РасчётНДФЛЗаПериод» / «КорректировкаОпераций»). Дата получения дохода
+          сохраняется как реквизит при необходимости.</li>
+    </ul></ins>
+  </div>
+
+  <div class="edit-block">
+    <span class="badge edit">правка R2-7</span>
+    <strong>Индексация регистров (для нагрузочного сценария 100 000 физлиц).</strong>
+    <ins class="edit-mark">Для стабильного выполнения NFR-01 (≤ 30 минут) обязательно:
+    <ul style="margin:6px 0 0 0;">
+      <li>в регистрах оборотов (<code>ИсчисленныйНДФЛ</code>,
+          <code>УдержанныйИВозвращённыйНДФЛ</code>, <code>ИзлишнеУдержанныйИНеудержанныйНДФЛ</code>)
+          — все измерения помечаются «Индексировать»;</li>
+      <li>в <code>ОперацииКлиентовДляНДФЛ</code> — дополнительный индекс
+          <code>(Клиент, КодДохода, Период)</code> для быстрых выборок при сальдировании
+          и формировании Приложения №1;</li>
+      <li>в журнале КС (см. 14.5.1) — индексы по <code>(Расчёт)</code> и <code>(КодКС)</code>,
+          иначе фильтрация в отчёте «Журнал КС» будет полным сканом.</li>
+    </ul></ins>
+  </div>
+
+  <h3>9.5 Регистр сведений «ЖурналРасчётаНДФЛ» (аудит)</h3>
+  <p>Измерения: Расчёт (документ-регистратор), Клиент, Шаг, КодДохода, КодВычета, КодУбытка, Приоритет.
+     Ресурсы: СуммаДо, СуммаПосле, СуммаПриращения. Реквизиты: ОписаниеШага, ВерсияНормативов, ПрименённаяФормула.</p>
+
+  <h3>9.6 Документы</h3>
+  <ul>
+    <li><code>Документ.РасчётНДФЛЗаПериод</code> — главный регистратор; параметры: НалоговыйПериод, Контур,
+        ВерсияНормативов, ОтборФизлиц.</li>
+    <li><code>Документ.ВозвратНДФЛ</code> — фиксирует возвраты с разбивкой по датам и КБК (двигает регистр УдержанныйИВозвращённый).</li>
+    <li><code>Документ.КорректировкаОпераций</code> — внесение, изменение, удаление операций с указанием причины.</li>
+  </ul>
+
+  <h3>9.7 Отчёты</h3>
+  <ul>
+    <li><code>Отчёт.ФормированиеРаздела1_6НДФЛ</code> (СКД, печатная форма ФНС).</li>
+    <li><code>Отчёт.ФормированиеРаздела2_6НДФЛ</code> (СКД).</li>
+    <li><code>Отчёт.Приложение1_6НДФЛ</code> (СКД, по физлицам, печать в формате ФНС, выгрузка XML).</li>
+    <li><code>Отчёт.СправкаДляКлиента</code> (СКД, печать).</li>
+    <li><code>Отчёт.ОбоснованиеСтрокиОтчёта</code> — трассировка шагов.</li>
+    <li><code>Отчёт.СравнениеСЭталоном</code> — сверка с контрольными примерами Excel.</li>
+  </ul>
+
+  <h3>9.8 Обработки</h3>
+  <ul>
+    <li>«ИмпортНормативовИзExcel» — загрузка матриц.</li>
+    <li>«ЗагрузкаОперацийИзИсточников» — пакетная загрузка.</li>
+    <li>«ВыгрузкаПриложения1ВXML» — формат ФНС.</li>
+    <li>«ЗапускТестов» — прогон контрольных кейсов.</li>
+  </ul>
+
+  <div class="edit-block">
+    <span class="badge edit">правка R2-10</span>
+    <h4 style="margin-top:0;">9.10 Серверные общие модули (точки входа расчёта)</h4>
+    <ins class="edit-mark">
+    <p>Вся бизнес-логика расчёта и КС вынесена в общие модули с флагами
+       <strong>«Сервер»</strong> и <strong>«Вызов сервера»</strong> (флаг «Клиент» не выставляется):</p>
+    <ul>
+      <li><code>СерверныйВызов.МодульРасчётаНДФЛ</code> — главный движок (вызывается из
+          документа-регистратора «РасчётНДФЛЗаПериод»). Содержит цикл по физлицам
+          (см. R2-10 после ALG-01).</li>
+      <li><code>СерверныйВызов.МодульКонтрольныхСверок</code> — все 68 КС, три точки входа
+          (см. 14.8).</li>
+      <li><code>СерверныйВызов.МодульЗагрузкиОпераций</code> — обработчики HTTP-сервиса
+          (см. 10.2) + пользовательская массовая загрузка через фоновое задание (см. R2-9).</li>
+      <li><code>СерверныйВызов.МодульВыгрузки6НДФЛ</code> — формирование XML + XSD-валидация
+          (см. R2-12).</li>
+      <li><code>СерверныйВызов.МодульРеестров</code> — реестры Приложений №1 и Справок
+          (см. правку №8 и подраздел 10.4).</li>
+    </ul>
+    Все клиент-серверные обращения формы документа «РасчётНДФЛЗаПериод» — только через
+    эти модули; на стороне клиента — никакой бизнес-логики и никаких запросов к БД
+    (см. также R2-10 в ALG-01).
+    </ins>
+  </div>
+
+  <h3>9.9 Подсистемы</h3>
+  <ul>
+    <li>Нормативный слой</li>
+    <li>Расчёт НДФЛ</li>
+    <li>Регламентированная отчётность</li>
+    <li>Справки клиентам</li>
+    <li>Аудит и контроль</li>
+    <li>Администрирование</li>
+  </ul>
+</section>
+
+<!-- =============================================================== -->
+<section class="block" id="s-int">
+  <h2>10. Интеграции</h2>
+
+  <h3>10.1 Источники операций <span class="badge edit">правка №2 / ответ №2</span></h3>
+  <div class="edit-block">
+    <ins class="edit-mark"><strong>Уточнено в раунде 1:</strong> источники операций — только
+    <code>1С ИЦ</code>, <code>Аванкор FIN</code>, <code>Аванкор PIF</code> (по двум УК: ВИМИ и ВИМС;
+    в дальнейшем база PIF разделится на ЗПИФ и ОПИФ). Базы <code>SBB_Broker</code> и
+    <code>Wim_Du</code> в проекте 1С НП не задействованы.</ins>
+  </div>
+  <table class="compact">
+    <thead><tr><th>База</th><th>Что отдаёт</th><th>Способ</th></tr></thead>
+    <tbody>
+      <tr><td><del class="edit-mark-del">SBB_Broker</del> <ins class="edit-mark">1С ИЦ</ins></td>
+          <td><del class="edit-mark-del">Финрезы по сделкам брокера, дивиденды, материальная выгода, проценты по РЕПО, движения по ИИС, удержанные суммы НДФЛ.</del>
+              <ins class="edit-mark">Дивиденды (1010, уже разнесённые по ставкам 13 % / 15 %),
+              удержанный/возвращённый НДФЛ, операции по ИИС.</ins></td>
+          <td>HTTP-сервис «Push» от источника (преимущественный) или «Pull» из движка по REST.</td></tr>
+      <tr><td><del class="edit-mark-del">Wim_Du</del> <ins class="edit-mark">Аванкор FIN</ins></td>
+          <td><del class="edit-mark-del">Финрезы по операциям доверительного управления, начисленные купоны, удержанный НДФЛ.</del>
+              <ins class="edit-mark">Финрезы по сделкам ДУ FIN (1530–1551, ПФИ, РЕПО),
+              дивиденды (1010 по ставкам), удержанный/возвращённый НДФЛ, материальная выгода,
+              КодКлиентаДляЛК (для формирования имени файла Справки).</ins></td>
+          <td>То же.</td></tr>
+      <tr>
+        <td><ins class="edit-mark">Аванкор PIF</ins> <span class="badge edit">новый</span></td>
+        <td><ins class="edit-mark">Финрезы по операциям ПИФ (УК ВИМИ и ВИМС; перспектива —
+            раздельные базы ЗПИФ и ОПИФ), удержанный/возвращённый НДФЛ, КодКлиентаДляЛК.</ins></td>
+        <td><ins class="edit-mark">То же (HTTP-сервис Push/Pull).</ins></td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3>10.2 Контракт обмена (фрагмент) <span class="badge edit">правка R2-8</span></h3>
+  <pre>POST /api/v1/operations/upload
+Content-Type: application/json
+
+{
+  "source": "1С ИЦ",                  // 1С ИЦ | Аванкор FIN | Аванкор PIF
+  "batchId": "8c1f...",                // GUID пакета (генерируется источником)
+  "batchPolicy": "upsert",             // upsert | skipExisting — поведение при повторе
+  "operations": [
+    {
+      "externalId": "ICZ-2026-Q1-12345", // ИдОперацииИсточника, ключ идемпотентности
+      "client": { "inn": "...", "fio": "...", "isResident": true, "lkClientCode": "AM1000048" },
+      "iisContract": null,
+      "date": "2026-03-09",
+      "incomeCode": "1530",
+      "incomeAmount": 940000,
+      "deductionCode": "201",
+      "deductionAmount": 960000,
+      "ndflWithheld13": 0,
+      "ndflWithheld15": 0,
+      "znp13": 0,
+      "znp15": 0,
+      "repoSecondPart": null
+    }
+  ]
+}
+
+// Ответ (всегда HTTP 200, ошибки — в теле):
+{
+  "status": "OK",                     // OK | PARTIAL | ERROR
+  "batchId": "8c1f...",
+  "loaded": 9998,
+  "skipped": 1,                       // отброшено как дубль
+  "errors": [
+    { "externalId": "ICZ-...-99", "code": "VALIDATION", "message": "..." }
+  ]
+}</pre>
+
+  <div class="edit-block">
+    <span class="badge edit">правка R2-8</span>
+    <ins class="edit-mark">Серверный обработчик HTTP-сервиса принимает пакет одной транзакцией
+    (см. подробности в FR-02 / R2-8). Поле <code>batchId</code> используется как ключ
+    группировки в журнале отправок CFE-адаптера источника (см. 10.5) и в журнале расчёта
+    1С НП (см. 9.5).</ins>
+  </div>
+
+  <h3>10.3 Импорт нормативных таблиц</h3>
+  <ul>
+    <li>Из Excel: обработка читает <code>Требования от налогов.xlsx</code> и формирует записи во всех нормативных регистрах с привязкой к новой ВерсииНормативов.</li>
+    <li>Из XML/JSON: для CI и автотестов.</li>
+    <li>Контроль целостности: непрерывность диапазонов, отсутствие дублей, согласованность кодов сальдирования с кодами вычетов.</li>
+  </ul>
+
+  <h3>10.4 Выгрузка отчётности <span class="badge edit">правка №8</span></h3>
+  <ul>
+    <li>6-НДФЛ и Приложение 1: XML по утверждённой ФНС схеме.
+      <ins class="edit-mark">Дополнительно: возможность выгрузки <strong>в PDF и Excel</strong> того
+      же набора данных в нерегламентированных целях (внутренний контроль, согласование с
+      методологом, передача в смежные подразделения).</ins>
+      <span class="badge edit">правка R2-11</span>
+      <ins class="edit-mark"><strong>Канал передачи XML в ФНС.</strong> По ответу на ОВ №9
+      используется <strong>Контур Экстерн</strong>: 1С НП формирует XML-файл по формату ФНС
+      и сохраняет его в каталог обмена; бухгалтер загружает файл в ЛК Контур Экстерн вручную.
+      <strong>Интеграция «1С-Отчётность» не реализуется</strong> и не требуется (см. также NFR-09).</ins>
+      <span class="badge edit">правка R2-12</span>
+      <ins class="edit-mark"><strong>XSD-валидация до отправки.</strong> Сформированный XML
+      обязательно проходит проверку по официальной XSD-схеме ФНС
+      (формат КНД 1151100, актуальная редакция Приказа ФНС — см. Q11-R2 в разделе 17.2)
+      через
+      <code>ФабрикаXDTO.ПрочитатьXML(...)</code> до того, как файл попадёт в каталог обмена.
+      XSD-схема хранится как макет в подсистеме «Регламентированная отчётность» и обновляется
+      вместе с релизом 1С НП. Это ловит 100 % формальных ошибок до Контур Экстерн.</ins>
+    </li>
+    <li><ins class="edit-mark"><strong>Реестр Приложений №1</strong> — отдельный отчёт/обработка с
+      табличным видом по клиентам, с возможностью выгрузки в Excel (см. перечень показателей ниже).</ins>
+    </li>
+    <li>Справка клиенту: PDF из табличного документа 1С<del class="edit-mark-del"> + версия для портала клиента</del> <span class="badge edit">правка R2-11</span> <ins class="edit-mark">(версия для портала клиента снята как невостребованная — см. ответ на ОВ №8: «Для Tax не нужен»; раздача Справок — массово/точечно из 1С НП в PDF/Excel)</ins>.
+      <ins class="edit-mark"><strong>Массовая и точечная выгрузка Справок в форматах PDF и Excel.</strong>
+      Имя файла строго в формате
+      <code>«&lt;КодКлиентаДляЛК&gt; - Справка2НДФЛ-&lt;Год&gt;-&lt;ФИО&gt;»</code>. Примеры:
+      <ul>
+        <li>Для клиента Аванкор PIF: <code>AMPIF507728 - Справка2НДФЛ-2025-Иванов Иван Иванович</code></li>
+        <li>Для клиента Аванкор FIN: <code>AM1000048 - Справка2НДФЛ-2025-Иванов Иван Иванович</code></li>
+      </ul>
+      <code>КодКлиентаДляЛК</code> загружается в 1С НП из <code>Аванкор PIF</code> и
+      <code>Аванкор FIN</code> вместе с операциями (см. FR-02, правка №2).</ins>
+    </li>
+    <li><ins class="edit-mark"><strong>Реестр Справок</strong> — отдельный отчёт/обработка по выданным
+      Справкам с возможностью выгрузки в Excel.</ins></li>
+  </ul>
+
+  <div class="edit-block">
+    <ins class="edit-mark"><strong>Обязательные показатели реестров «Приложение №1» и «Справки»</strong>
+    (одинаковая структура для обоих реестров):
+    <table class="compact">
+      <thead><tr>
+        <th>№ Справки</th>
+        <th>ФИО</th>
+        <th>Дата рождения</th>
+        <th>Серия и номер паспорта</th>
+        <th>Общая сумма дохода</th>
+        <th>Общая сумма расхода</th>
+        <th>Налоговая база</th>
+        <th>Налоговая ставка</th>
+        <th>Общая сумма налога исчисленная</th>
+        <th>Общая сумма налога удержанная (уплаченная)</th>
+        <th>Сумма ЗНП</th>
+        <th>Сумма налога, уплаченная в иностранном государстве</th>
+        <th>Код клиента для ЛК (только в реестре Справок)</th>
+      </tr></thead>
+      <tbody>
+        <tr>
+          <td colspan="13" style="text-align:center;color:#5b6b7c;">
+            Заполняется по каждому клиенту/документу; реестры строятся через СКД с быстрой выгрузкой
+            в Excel и фильтрами по периоду, источнику, контуру, статусу налогоплательщика, ставке/КБК.
+          </td>
+        </tr>
+      </tbody>
+    </table></ins>
+  </div>
+
+  <h3>10.5 Расширения источниковых баз (CFE) <span class="badge edit">правка №2 / ответ №2</span> <span class="badge edit">правка R2-1</span></h3>
+  <p>Для
+     <del class="edit-mark-del"><code>SBB_Broker</code> и <code>Wim_Du</code></del>
+     <ins class="edit-mark"><code>1С ИЦ</code>, <code>Аванкор FIN</code> и <code>Аванкор PIF</code></ins>
+     создаются тонкие расширения (CFE), реализующие:</p>
+  <ul>
+    <li>Регламентное задание формирования пакета операций для движка;</li>
+    <li><del class="edit-mark-del">HTTP-клиент для отправки;</del>
+        <ins class="edit-mark">HTTP-клиент 1С (<code>HTTPСоединение</code> / встроенный
+        <code>ВызватьHTTPСервис</code>) для отправки пакета в HTTP-сервис «1С НП», или —
+        альтернатива — выгрузка через план обмена / EnterpriseData, если для конкретного
+        источника так удобнее;</ins></li>
+    <li>Журнал отправок и идемпотентность (ключ <code>(Источник, ИдОперацииИсточника)</code>,
+        см. R2-8).</li>
+  </ul>
+  <p>Расширения создаются по правилам репозитория: через подкаталог <code>Расширения/</code>
+     проекта <code>tax-ndfl-config</code>, без модификации основной поставки вендоров.</p>
+
+  <div class="edit-block">
+    <span class="badge edit">правка R2-1</span>
+    <strong>Уточнение об одноплатформенной интеграции.</strong>
+    <ins class="edit-mark">Все три источника (<code>1С ИЦ</code>, <code>Аванкор FIN</code>,
+    <code>Аванкор PIF</code>) — это <strong>конфигурации на платформе 1С:Предприятие 8.3</strong>
+    (см. также раздел 1.2). Поэтому:
+    <ul style="margin:6px 0 0 0;">
+      <li><strong>CFE-расширения применимы ко всем трём источникам</strong> единообразно
+          (а не только к <code>1С ИЦ</code>, как ошибочно предполагалось в первоначальном
+          техническом ревью);</li>
+      <li>основной обмен — через <strong>HTTP-сервисы 1С</strong> (REST, JSON, контракт 10.2);</li>
+      <li>для синхронизации общих НСИ (физлица, паспортные данные, КодКлиентаДляЛК) допустим
+          механизм <strong>планов обмена</strong> между конфигурациями 1С — это снимает
+          необходимость передавать ФИО/паспорт в каждой операции и обеспечивает мастер-данные
+          в одном месте (рассматривается как future request, см. также раздел 16, R-08);</li>
+      <li>для пакетной выгрузки больших массивов можно использовать сериализацию через
+          <strong>EnterpriseData</strong> (XDTO-обмен между 1С-конфигурациями).</li>
+    </ul>
+    На стороне 1С НП протокол приёма (HTTP-сервис) одинаков для всех трёх источников —
+    разница только в маппинге кодов доходов/вычетов внутри CFE-адаптера каждой базы.</ins>
+  </div>
+</section>
+
+<!-- =============================================================== -->
+<section class="block" id="s-rep">
+  <h2>11. Отчётность: контрольный пример из Excel</h2>
+
+  <p>Эталонный пример из листа «Заполнение 6-НДФЛ и Приложения 1»:</p>
+
+  <div class="callout cyan">
+    <div class="title">Исходные данные</div>
+    <table class="compact">
+      <thead><tr><th>Дата</th><th>Код дохода</th><th>Сумма дохода</th><th>Код вычета</th><th>Сумма вычета</th><th>НДФЛ 13%</th><th>НДФЛ 15%</th><th>ЗНП 13%</th><th>ЗНП 15%</th></tr></thead>
+      <tbody>
+        <tr><td>15.01.2026</td><td>1530</td><td>50 000</td><td>—</td><td>—</td><td>6 500</td><td>—</td><td>—</td><td>—</td></tr>
+        <tr><td>09.03.2026</td><td>1530</td><td>940 000</td><td>201</td><td>960 000</td><td>0</td><td>—</td><td>—</td><td>—</td></tr>
+        <tr><td>28.03.2026</td><td>1010</td><td>130 000</td><td>—</td><td>—</td><td>16 900</td><td>—</td><td>407</td><td>—</td></tr>
+        <tr><td>09.04.2026</td><td>1010</td><td>2 800 000</td><td>—</td><td>—</td><td>295 100</td><td>64 646</td><td>11 600</td><td>1 000</td></tr>
+      </tbody>
+    </table>
+    01.04.2026 клиенту вернули излишне удержанный НДФЛ — 1 200 руб.
+  </div>
+
+  <div class="grid-2">
+    <div class="card">
+      <div class="title">Ожидаемое 6-НДФЛ Раздел 2 (фрагмент по ставке 13%, КБК 18210102010011000110)</div>
+      <ul>
+        <li>120 (Доход): 990 000</li>
+        <li>130 (Вычет): 960 000</li>
+        <li>131 (НБ): 30 000</li>
+        <li>140 (Исчисленный): 3 900</li>
+        <li>160 (Удержанный): 5 300</li>
+        <li>180 (Излишне удержанный): 1 400</li>
+      </ul>
+    </div>
+    <div class="card">
+      <div class="title">Ожидаемое 6-НДФЛ Раздел 2 (по дивидендам 13%, КБК 18210102130011000110)</div>
+      <ul>
+        <li>120 (Доход): 2 492 362  <span class="legend">= 2 400 000 + 12 007×100/13</span></li>
+        <li>131 (НБ): 2 492 362</li>
+        <li>140 (Исчисленный): 324 007</li>
+        <li>155 (ЗНП): 12 007</li>
+        <li>160 (Удержанный): 312 000</li>
+      </ul>
+    </div>
+    <div class="card">
+      <div class="title">По дивидендам 15% (КБК 18210102140011000110)</div>
+      <ul>
+        <li>120 (Доход): 437 638</li>
+        <li>131 (НБ): 437 638</li>
+        <li>140 (Исчисленный): 65 646</li>
+        <li>155 (ЗНП): 1 000</li>
+        <li>160 (Удержанный): 64 646</li>
+      </ul>
+    </div>
+    <div class="card">
+      <div class="title">Раздел 1 (фрагмент)
+        <span class="badge edit">правка №9</span>
+      </div>
+      <div class="edit-block" style="margin:6px 0;">
+        <ins class="edit-mark">Раздел 1 заполняется в разрезе КБК (стр. 010), каждая КБК — отдельным
+        блоком. По эталону:</ins>
+        <table class="compact" style="margin-top:6px;">
+          <thead><tr><th>Поле</th><th>Стр.</th><th>Значение</th></tr></thead>
+          <tbody>
+            <tr><td>КБК</td><td>010</td><td>18210102010011000110</td></tr>
+            <tr><td>Сумма к перечислению с начала налогового периода</td><td>020</td><td>6 500</td></tr>
+            <tr><td>КБК</td><td>010</td><td>18210102130011000110</td></tr>
+            <tr><td>Сумма к перечислению с начала налогового периода</td><td>020</td><td>312 000 (16 900 + 295 100)</td></tr>
+            <tr><td>КБК</td><td>010</td><td>18210102140011000110</td></tr>
+            <tr><td>Сумма к перечислению с начала налогового периода</td><td>020</td><td>64 646</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>
+        <del class="edit-mark-del">020 (К перечислению): 312 000 (16 900 + 295 100); 030 (Возвращённый): 1 200.</del>
+        <ins class="edit-mark">Строка 030 (Возвращённый налог) в Разделе 1 не заполняется
+        автоматически — см. правку №1 (раздел 4): возвращённые суммы уменьшают только
+        «Удержанный»/«Излишне удержанный», но не строку «Сумма налога, возвращённая налоговым агентом».</ins>
+      </p>
+    </div>
+  </div>
+
+  <div class="callout success">
+    <div class="title">Контрольная сверка</div>
+    Все числа в эталонном примере должны воспроизводиться движком до рубля. Отклонение даже на 1 рубль —
+    блокирующий дефект приёмки.
+  </div>
+</section>
+
+<!-- =============================================================== -->
+<section class="block" id="s-nfr">
+  <h2>12. Нефункциональные требования</h2>
+
+  <table>
+    <thead><tr><th style="width:140px;">ID</th><th>Категория</th><th>Требование</th><th>Метрика</th></tr></thead>
+    <tbody>
+      <tr>
+        <td><span class="badge nfr">NFR-01</span> <span class="badge edit">правка №10</span></td>
+        <td>Производительность</td>
+        <td>Расчёт по портфелю
+          <del class="edit-mark-del">до 50 000</del>
+          <ins class="edit-mark">≈ 100 000</ins>
+          физлиц.
+        </td>
+        <td>≤ 30 минут <ins class="edit-mark">(подтверждено бизнесом — см. ответ на открытый вопрос №5;
+          целевой объём ≈ 100 тыс. клиентов)</ins> на сервере 16 vCPU / 64 GB.</td>
+      </tr>
+      <tr><td><span class="badge nfr">NFR-02</span></td><td>Параллелизация</td><td>Расчёт по физлицам — параллельный, через фоновые задания.</td><td>≥ 8 потоков без расхождений.</td></tr>
+      <tr><td><span class="badge nfr">NFR-03</span></td><td>Воспроизводимость</td><td>Расчёт за закрытый период — детерминированный.</td><td>Тот же входной снимок и версия правил → тот же результат.</td></tr>
+      <tr><td><span class="badge nfr">NFR-04</span></td><td>Версионирование</td><td>История нормативов с датой действия.</td><td>Любой период считается на правилах своей даты.</td></tr>
+      <tr><td><span class="badge nfr">NFR-05</span></td><td>Аудит</td><td>Полная трассировка от строки отчёта до операции.</td><td>100 % строк имеют связку с операциями.</td></tr>
+      <tr><td><span class="badge nfr">NFR-06</span></td><td>Журнал регистрации</td><td>Записываются: запуск расчёта, изменение нормативов, корректировки, утверждение.</td><td>Хранение ≥ 5 лет.</td></tr>
+      <tr><td><span class="badge nfr">NFR-07</span></td><td>Безопасность</td><td>Ролевой доступ; разделение «методолог» / «бухгалтер» / «аудитор».</td><td>RLS на уровне физлиц при необходимости.</td></tr>
+      <tr><td><span class="badge nfr">NFR-08</span></td><td>Локализация</td><td>Только русский язык, кодировка UTF-8 (или CP1251 в выгрузках, как требует ФНС).</td><td>—</td></tr>
+      <tr><td><span class="badge nfr">NFR-09</span> <span class="badge edit">правка R2-13</span></td><td>Эксплуатация</td>
+          <td>Регламентные задания: ежедневная подгрузка операций, ежемесячная проверка нормативов.
+              <ins class="edit-mark">Дополнительно (R2-13):
+              <ul style="margin:4px 0 0 0;">
+                <li>ежедневный <strong>heartbeat-контроль</strong> запущенных фоновых заданий
+                    расчёта (длительные задания, не отвечающие &gt; 1 ч, — алерт);</li>
+                <li><strong>ежесуточная архивация</strong> регистра «ЖурналКонтрольныхСверок»
+                    с партиционированием по году (старые годы переводятся в архивную
+                    подпапку БД либо холодное хранилище — см. Q10-R2);</li>
+                <li><strong>каталог обмена XML</strong> для выгрузки 6-НДФЛ в Контур Экстерн
+                    (см. R2-11) — отдельный регламент очистки старых файлов
+                    (старше 90 дней).</li>
+              </ul></ins>
+          </td>
+          <td>Алертинг в админскую почту.</td></tr>
+      <tr><td><span class="badge nfr">NFR-10</span></td><td>Совместимость</td><td>Платформа 1С 8.3.21+ управляемое приложение.</td><td>Тонкий клиент, веб-клиент.</td></tr>
+      <tr><td><span class="badge nfr">NFR-11</span></td><td>Расширяемость</td><td>Добавление нового кода дохода / КБК — без изменения кода ядра, только нормативных таблиц.</td><td>—</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- =============================================================== -->
+<section class="block" id="s-test">
+  <h2>13. Тестирование и приёмка</h2>
+
+  <h3>13.1 Уровни тестирования</h3>
+  <ol>
+    <li>Юнит-тесты алгоритмов (сальдирование, лимиты, гросс-ап) — на тестовой среде.</li>
+    <li>Интеграционные — загрузка операций → расчёт → сверка с эталонами.</li>
+    <li>End-to-end — печать форм 6-НДФЛ, Приложения 1, Справки и сверка PDF/XML с примерами Excel.</li>
+    <li>Тесты регрессий — все 10+ контрольных кейсов в CI после каждой правки.</li>
+    <li>Нагрузочные — портфель из <del class="edit-mark-del">50 000</del> <ins class="edit-mark">≈ 100 000</ins> физлиц <span class="badge edit">правка №10</span>.</li>
+  </ol>
+
+  <h3>13.2 Контрольные сценарии (минимум)</h3>
+  <ol>
+    <li>Резидент, обычный контур, прогрессивная шкала по 4800, несколько КБК.</li>
+    <li>Резидент, дивиденды 1010, превышение 2,4 млн, ЗНП — гросс-ап.</li>
+    <li>Резидент, простое сальдирование пары кодов (1530 → 1536, код 224).</li>
+    <li>Резидент, сальдирование с очерёдностью (1532 → 1535, потом 1530).</li>
+    <li>Резидент, запрещённое сальдирование (убыток 1531/1533 без зачёта).</li>
+    <li>Резидент, РЕПО — пропорциональное распределение (1537 на 1530 и 1531).</li>
+    <li>Резидент, превышение вычета над доходом по дате — перенос на другие даты того же кода.</li>
+    <li>Резидент, излишне удержанный налог + возврат — Раздел 1 6-НДФЛ.</li>
+    <li>Резидент, неудержанный налог — заполнение Раздела 4 справки клиента.</li>
+    <li>Резидент ИИС — закрытие договора, применение вычета 619.</li>
+    <li>Нерезидент — 30 % на основной контур, 15 % на 1010.</li>
+    <li>Период без перечислений и возвратов — Раздел 1 пуст, контрольные суммы сходятся.</li>
+  </ol>
+
+  <h3>13.3 Критерии приёмки</h3>
+  <ul>
+    <li>Все контрольные сценарии воспроизводятся «копейка в копейку» с примерами Excel.</li>
+    <li>Сверка между 6-НДФЛ Разделом 2, Приложением 1 и Справкой клиента — без расхождений.</li>
+    <li>Регламентная выгрузка XML принимается контрольной утилитой ФНС.</li>
+    <li>Журнал расчёта формируется и читается; любая строка отчёта объясняется через журнал.</li>
+    <li>Все NFR выполнены.</li>
+  </ul>
+
+  <h3>13.4 Тестовый драйвер</h3>
+  <p>Через Python COM (см. user-rule «Работа с 1С через Python»):
+     загрузка операций кейса, запуск документа-регистратора, чтение регистров,
+     сравнение с эталоном (json-снэпшоты).</p>
+</section>
+
+<!-- =============================================================== -->
+<section class="block" id="s-ks">
+  <div class="edit-block">
+    <h2 style="margin-top:0;">14. Контрольные сверки (КС) — проверка на наличие ошибок
+        <span class="badge edit">новый раздел</span></h2>
+    <p style="margin:6px 0 0;">
+      Раздел добавлен в раунде правок 1 на основе вложения <code>КС.xlsx</code> (лист «КС»,
+      87 строк). Включает <strong>контрольные соотношения ФНС</strong> для расчёта 6-НДФЛ и
+      Приложений №1, <strong>аналогичные соотношения для Справки клиенту</strong>, а также
+      <strong>проверки полноты и формата ключевых реквизитов</strong> физлица.
+    </p>
+  </div>
+
+  <h3>14.1 Назначение и общие принципы</h3>
+  <ul>
+    <li>Цель — до выгрузки 6-НДФЛ / Приложения №1 / Справки клиенту убедиться, что между
+        Разделом 1, Разделом 2, Приложениями №1 и Справками сходятся ключевые суммы
+        и заполнены обязательные реквизиты.</li>
+    <li>Триггеры выполнения КС:
+      <ul>
+        <li>после загрузки операций (КС над первичными данными по физлицу — поля и форматы);</li>
+        <li>после расчёта (КС между Разделами 1 / 2 6-НДФЛ и Приложениями №1);</li>
+        <li>перед формированием выгрузки 6-НДФЛ / Приложений №1 / Справок (полный набор КС);</li>
+        <li>по требованию пользователя (кнопка «Проверить КС» на форме документа расчёта).</li>
+      </ul>
+    </li>
+    <li><strong>Бизнес-эффект.</strong>
+      <ul>
+        <li><span class="badge must">Ошибка</span> — фиксируется в журнале, отображается в форме,
+            <strong>не блокирует выгрузку</strong> (явное требование заказчика из лист «КС»:
+            «Наличие ошибок не должно препятствовать самой выгрузке расчёта 6-НДФЛ, Приложений №1,
+            Справок в xml, Excel, PDF и т. д.»), но блокирует «утверждение» документа.</li>
+        <li><span class="badge high">Предупреждение</span> — фиксируется, требует комментария от
+            бухгалтера, не блокирует утверждение.</li>
+        <li><span class="badge med">Информация</span> — только запись в журнал.</li>
+      </ul>
+    </li>
+    <li><strong>Допуск погрешности.</strong> Для арифметических КС (формула × ставка / 100)
+        допускается отклонение <strong>≤ 1 руб.</strong> на округление (как требует Excel-источник).</li>
+    <li><strong>Журналирование.</strong> Каждое срабатывание КС пишется в регистр сведений
+        «ЖурналКонтрольныхСверок» (см. 14.5).</li>
+    <li><strong>UI.</strong> Отчёт «Журнал контрольных сверок» с фильтрацией по периоду, документу
+        расчёта, коду КС, уровню критичности, физлицу; с расшифровкой до строк первичных операций.</li>
+  </ul>
+
+  <h3>14.2 Реестр КС</h3>
+  <p>Полный реестр (<del class="edit-mark-del">КС-01 … КС-67</del>
+     <ins class="edit-mark">КС-01 … КС-68, включая новую КС-68 из правки R2-6</ins>)
+     приведён ниже в виде раскрывающихся групп — это полный
+     перенос содержимого листа «КС» из вложения, без потерь.</p>
+
+  <details open>
+    <summary>14.2.1 КС между Разделами 1 и 2 расчёта 6-НДФЛ (по периодам отчётности)</summary>
+    <table class="compact">
+      <thead><tr>
+        <th style="width:80px;">Код</th>
+        <th style="width:120px;">Период</th>
+        <th>Контрольное соотношение</th>
+        <th style="width:90px;">Уровень</th>
+        <th style="width:180px;">Объект / Регистр</th>
+      </tr></thead>
+      <tbody>
+        <tr><td>КС-01</td><td>I квартал</td><td>строка 020 раздела 1 (за 1 кв.) = строки 021 + 022 + 023 + 024 + 025 + 026</td>
+            <td><span class="badge must">Ошибка</span></td>
+            <td>Регистр накопления «УдержанныйИВозвращённыйНДФЛ», отчёт 6-НДФЛ Раздел 1</td></tr>
+        <tr><td>КС-02</td><td>I квартал</td><td>строка 030 раздела 1 (за 1 кв.) = 031 + 032 + 033 + 034 + 035 + 036</td>
+            <td><span class="badge must">Ошибка</span></td><td>То же</td></tr>
+        <tr><td>КС-03</td><td>I квартал</td><td>строка 160 раздела 2 по соответствующей ставке (стр. 100) (за 1 кв.) = строки 161 + 162 + 163 + 164 + 165 + 166</td>
+            <td><span class="badge must">Ошибка</span></td>
+            <td>Регистр «ИсчисленныйНДФЛ» + «УдержанныйИВозвращённыйНДФЛ»</td></tr>
+
+        <tr><td>КС-04</td><td>Полугодие</td><td>строка 020 раздела 1 (за полугодие) = строка 020 за 1 кв. + (за полугодие: строки 021 + 022 + 023 + 024 + 025 + 026)</td>
+            <td><span class="badge must">Ошибка</span></td><td>То же</td></tr>
+        <tr><td>КС-05</td><td>Полугодие</td><td>строка 030 раздела 1 (за полугодие) = строка 030 за 1 кв. + (за полугодие: строки 031 + 032 + 033 + 034 + 035 + 036)</td>
+            <td><span class="badge must">Ошибка</span></td><td>То же</td></tr>
+        <tr><td>КС-06</td><td>Полугодие</td><td>строка 160 раздела 2 (за полугодие) = строка 160 за 1 кв. + (за полугодие: строки 161 + 162 + 163 + 164 + 165 + 166)</td>
+            <td><span class="badge must">Ошибка</span></td><td>То же</td></tr>
+
+        <tr><td>КС-07</td><td>9 месяцев</td><td>строка 020 раздела 1 (за 9 мес.) = строка 020 за полугодие + (за 9 мес.: строки 021 + 022 + 023 + 024 + 025 + 026)</td>
+            <td><span class="badge must">Ошибка</span></td><td>То же</td></tr>
+        <tr><td>КС-08</td><td>9 месяцев</td><td>строка 030 раздела 1 (за 9 мес.) = строка 030 за полугодие + (за 9 мес.: строки 031 + 032 + 033 + 034 + 035 + 036)</td>
+            <td><span class="badge must">Ошибка</span></td><td>То же</td></tr>
+        <tr><td>КС-09</td><td>9 месяцев</td><td>строка 160 раздела 2 (за 9 мес.) = строка 160 за полугодие + (за 9 мес.: строки 161 + 162 + 163 + 164 + 165 + 166)</td>
+            <td><span class="badge must">Ошибка</span></td><td>То же</td></tr>
+
+        <tr><td>КС-10</td><td>12 месяцев</td><td>строка 020 раздела 1 (за год) = строка 020 за 9 мес. + (за год: строки 021 + 022 + 023 + 024 + 025 + 026)</td>
+            <td><span class="badge must">Ошибка</span></td><td>То же</td></tr>
+        <tr><td>КС-11</td><td>12 месяцев</td><td>строка 030 раздела 1 (за год) = строка 030 за 9 мес. + (за год: строки 031 + 032 + 033 + 034 + 035 + 036)</td>
+            <td><span class="badge must">Ошибка</span></td><td>То же</td></tr>
+        <tr><td>КС-12</td><td>12 месяцев</td><td>строка 160 раздела 2 (за год) = строка 160 за 9 мес. + (за год: строки 161 + 162 + 163 + 164 + 165 + 166)</td>
+            <td><span class="badge must">Ошибка</span></td><td>То же</td></tr>
+
+        <tr><td>КС-13</td><td>Все периоды</td><td>строка 120 раздела 2 ≥ строка 130 раздела 2 (доход не меньше вычета)</td>
+            <td><span class="badge must">Ошибка</span></td>
+            <td>Отчёт «6-НДФЛ Раздел 2», группировка по (ставка, КБК)</td></tr>
+        <tr><td>КС-14</td><td>Все периоды</td><td>строка 131 раздела 2 = строка 120 раздела 2 − строка 130 раздела 2</td>
+            <td><span class="badge must">Ошибка</span></td><td>То же</td></tr>
+        <tr><td>КС-15</td><td>Все периоды</td><td>(строка 120 − строка 130) / 100 × строка 100 раздела 2 = строка 140 раздела 2 (допуск ≤ 1 руб.)</td>
+            <td><span class="badge must">Ошибка</span></td><td>То же</td></tr>
+        <tr><td>КС-16</td><td>Все периоды</td><td>строка 140 = строка 160 + строка 170 − строка 180 + строка 150 + строка 155 + строка 156 (раздела 2)</td>
+            <td><span class="badge must">Ошибка</span></td><td>То же</td></tr>
+        <tr><td>КС-17</td><td>Все периоды</td><td>строка 140 − строка 150 − строка 155 − строка 156 ≥ строка 160 + строка 170 − строка 180 (раздела 2)</td>
+            <td><span class="badge must">Ошибка</span></td><td>То же</td></tr>
+        <tr><td>КС-18</td><td>Все периоды</td><td>строка 140 раздела 2 ≥ строка 150 раздела 2</td>
+            <td><span class="badge must">Ошибка</span></td><td>То же</td></tr>
+        <tr><td>КС-19</td><td>Все периоды</td><td>строка 021 раздела 1 − строка 031 раздела 1 = строка 161 раздела 2 − строка 191 раздела 2</td>
+            <td><span class="badge must">Ошибка</span></td><td>То же</td></tr>
+        <tr><td>КС-20</td><td>Все периоды</td><td>строка 022 раздела 1 − строка 032 раздела 1 = строка 162 раздела 2 − строка 192 раздела 2</td>
+            <td><span class="badge must">Ошибка</span></td><td>То же</td></tr>
+        <tr><td>КС-21</td><td>Все периоды</td><td>строка 023 раздела 1 − строка 033 раздела 1 = строка 163 раздела 2 − строка 193 раздела 2</td>
+            <td><span class="badge must">Ошибка</span></td><td>То же</td></tr>
+        <tr><td>КС-22</td><td>Все периоды</td><td>строка 024 раздела 1 − строка 034 раздела 1 = строка 164 раздела 2 − строка 194 раздела 2</td>
+            <td><span class="badge must">Ошибка</span></td><td>То же</td></tr>
+        <tr><td>КС-23</td><td>Все периоды</td><td>строка 025 раздела 1 − строка 035 раздела 1 = строка 165 раздела 2 − строка 195 раздела 2</td>
+            <td><span class="badge must">Ошибка</span></td><td>То же</td></tr>
+        <tr><td>КС-24</td><td>Все периоды</td><td>строка 026 раздела 1 − строка 036 раздела 1 = строка 166 раздела 2 − строка 196 раздела 2</td>
+            <td><span class="badge must">Ошибка</span></td><td>То же</td></tr>
+      </tbody>
+    </table>
+  </details>
+
+  <details>
+    <summary>14.2.2 КС между Разделами Приложения №1 (по физлицу, 12 месяцев)</summary>
+    <table class="compact">
+      <thead><tr>
+        <th style="width:80px;">Код</th>
+        <th>Контрольное соотношение</th>
+        <th style="width:90px;">Уровень</th>
+        <th style="width:180px;">Объект / Регистр</th>
+      </tr></thead>
+      <tbody>
+        <tr><td>КС-25</td>
+            <td>«Налоговая база» раздела 2 Приложения №1 к 6-НДФЛ (при ставке 13 % или 15 %) =
+                «Общая сумма дохода» раздела 2 − сумма строк «Сумма вычета» Приложения
+                «Сведения о доходах и вычетах по месяцам» − сумма строк «Сумма вычета» раздела 3</td>
+            <td><span class="badge must">Ошибка</span></td>
+            <td>Отчёт «Приложение №1»</td></tr>
+        <tr><td>КС-26</td>
+            <td>«Налоговая база» раздела 2 (при ставке, отличной от 13 % и 15 %) =
+                «Общая сумма дохода» раздела 2 − сумма строк «Сумма вычета» Приложения
+                «Сведения о доходах и вычетах по месяцам»</td>
+            <td><span class="badge must">Ошибка</span></td>
+            <td>То же</td></tr>
+        <tr><td>КС-27</td>
+            <td>«Сумма налога исчисленная» раздела 2 − «Налоговая база» × «Ставка» / 100 ≤ 1 руб. (допуск округления)</td>
+            <td><span class="badge must">Ошибка</span></td>
+            <td>То же</td></tr>
+        <tr><td>КС-28</td>
+            <td>(Σ «Сумма дохода» Приложения «Сведения...» − Σ «Сумма вычета» − Σ строк раздела 3) × Ставка / 100 −
+                «Сумма налога исчисленная» раздела 2 ≤ 1 руб. И сумма исчисленная > 0.</td>
+            <td><span class="badge must">Ошибка</span></td>
+            <td>То же</td></tr>
+        <tr><td>КС-29</td>
+            <td>«Сумма неудержанного налога» раздела 4 = |«Сумма дохода, с которого не удержан налог» × Ставка / 100 −
+                «Сумма неудержанного налога» раздела 4| ≤ 1 руб. И сумма неудержанного налога > 0.</td>
+            <td><span class="badge must">Ошибка</span></td>
+            <td>То же</td></tr>
+        <tr><td>КС-30</td>
+            <td>Σ «Общая сумма дохода» раздела 2 = Σ «Сумма дохода» Приложения «Сведения о доходах и вычетах по месяцам».
+                «Общая сумма дохода» раздела 2 > 0.</td>
+            <td><span class="badge must">Ошибка</span></td>
+            <td>То же</td></tr>
+        <tr><td>КС-31</td>
+            <td>«Сумма дохода, с которого не удержан налог» раздела 4 ≤ «Общая сумма дохода» раздела 2.
+                Сумма неудержанного налога > 0.</td>
+            <td><span class="badge must">Ошибка</span></td>
+            <td>То же</td></tr>
+        <tr><td>КС-32</td>
+            <td>«Сумма налога исчисленная» раздела 2 = «Сумма налога удержанная» раздела 2 + «Сумма неудержанного» раздела 4 −
+                «Сумма налога, излишне удержанная» раздела 2 + «Сумма налога на прибыль организаций, подлежащая зачёту» раздела 2 +
+                «Сумма фиксированных авансовых платежей» раздела 2 + «Сумма налога, исчисленная и уплаченная в иностранном государстве» раздела 2</td>
+            <td><span class="badge must">Ошибка</span></td>
+            <td>То же</td></tr>
+        <tr><td>КС-33</td>
+            <td>«Сумма налога исчисленная» раздела 2 − стр. 155 − стр. 150 − стр. 156 ≥ «Сумма налога удержанная» раздела 2 +
+                «Сумма неудержанного налога» раздела 4 − «Сумма налога, излишне удержанная» раздела 2</td>
+            <td><span class="badge must">Ошибка</span></td>
+            <td>То же</td></tr>
+      </tbody>
+    </table>
+  </details>
+
+  <details>
+    <summary>14.2.3 КС между разделом 2 6-НДФЛ и Приложениями №1 (агрегатные итоги, 12 месяцев, сопоставление по ставкам и КБК)</summary>
+    <table class="compact">
+      <thead><tr>
+        <th style="width:80px;">Код</th>
+        <th>Контрольное соотношение</th>
+        <th style="width:90px;">Уровень</th>
+        <th style="width:180px;">Объект / Регистр</th>
+      </tr></thead>
+      <tbody>
+        <tr><td>КС-34</td>
+            <td>Количество физлиц, получивших доход (строка 110 раздела 2) = количество Разделов 2 Приложений №1,
+                представленных по всем налогоплательщикам этим налоговым агентом</td>
+            <td><span class="badge must">Ошибка</span></td>
+            <td>Отчёт «6-НДФЛ Раздел 2» vs набор Приложений №1</td></tr>
+        <tr><td>КС-35</td>
+            <td>строка 120 раздела 2 = Σ «Общая сумма дохода» раздела 2 Приложений №1</td>
+            <td><span class="badge must">Ошибка</span></td><td>То же</td></tr>
+        <tr><td>КС-36</td>
+            <td>строка 130 раздела 2 = Σ «Сумма вычета» раздела 3 Приложений №1 +
+                Σ «Сумма вычета» Приложения «Сведения о доходах и вычетах по месяцам» Приложений №1</td>
+            <td><span class="badge must">Ошибка</span></td><td>То же</td></tr>
+        <tr><td>КС-37</td>
+            <td>строка 131 раздела 2 = Σ «Налоговая база» раздела 2 Приложений №1</td>
+            <td><span class="badge must">Ошибка</span></td><td>То же</td></tr>
+        <tr><td>КС-38</td>
+            <td>строка 140 раздела 2 = Σ «Сумма налога исчисленная» раздела 2 Приложений №1</td>
+            <td><span class="badge must">Ошибка</span></td><td>То же</td></tr>
+        <tr><td>КС-39</td>
+            <td>строка 150 раздела 2 = Σ «Сумма фиксированных авансовых платежей» раздела 2 Приложений №1</td>
+            <td><span class="badge must">Ошибка</span></td><td>То же</td></tr>
+        <tr><td>КС-40</td>
+            <td>строка 155 раздела 2 = Σ «Сумма налога на прибыль организаций, подлежащая зачёту» раздела 2 Приложений №1</td>
+            <td><span class="badge must">Ошибка</span></td><td>То же</td></tr>
+        <tr><td>КС-41</td>
+            <td>строка 156 раздела 2 = Σ «Сумма налога, исчисленная и уплаченная в иностранном государстве» раздела 2 Приложений №1</td>
+            <td><span class="badge must">Ошибка</span></td><td>То же</td></tr>
+        <tr><td>КС-42</td>
+            <td>строка 160 раздела 2 = Σ «Сумма налога удержанная» раздела 2 Приложений №1</td>
+            <td><span class="badge must">Ошибка</span></td><td>То же</td></tr>
+        <tr><td>КС-43</td>
+            <td>строка 170 раздела 2 = Σ «Сумма неудержанного налога» раздела 4 Приложений №1</td>
+            <td><span class="badge must">Ошибка</span></td><td>То же</td></tr>
+        <tr><td>КС-44</td>
+            <td>строка 180 раздела 2 = Σ «Сумма налога, излишне удержанная налоговым агентом» раздела 2 Приложений №1</td>
+            <td><span class="badge must">Ошибка</span></td><td>То же</td></tr>
+      </tbody>
+    </table>
+  </details>
+
+  <details>
+    <summary>14.2.4 КС между Разделами Справки о доходах и суммах налога физического лица (для клиентов, 12 месяцев)</summary>
+    <table class="compact">
+      <thead><tr>
+        <th style="width:80px;">Код</th>
+        <th>Контрольное соотношение</th>
+        <th style="width:90px;">Уровень</th>
+        <th style="width:180px;">Объект / Регистр</th>
+      </tr></thead>
+      <tbody>
+        <tr><td>КС-45</td>
+            <td>«Налоговая база» раздела 5 Справки (при ставке 13 % или 15 %) = «Общая сумма дохода» раздела 5 −
+                Σ «Сумма вычета» раздела 3 − Σ «Сумма вычета» раздела 4</td>
+            <td><span class="badge must">Ошибка</span></td>
+            <td>Отчёт «Справка для клиента»</td></tr>
+        <tr><td>КС-46</td>
+            <td>«Налоговая база» раздела 5 (при ставке, отличной от 13 % и 15 %) = «Общая сумма дохода» раздела 5 −
+                Σ «Сумма вычета» раздела 3</td>
+            <td><span class="badge must">Ошибка</span></td><td>То же</td></tr>
+        <tr><td>КС-47</td>
+            <td>«Сумма налога исчисленная» раздела 5 − «Налоговая база» × «Ставка» / 100 (раздел 3) ≤ 1 руб.</td>
+            <td><span class="badge must">Ошибка</span></td><td>То же</td></tr>
+        <tr><td>КС-48</td>
+            <td>(Σ «Сумма дохода» раздела 3 − Σ «Сумма вычета» раздела 3 − Σ раздела 4) × Ставка / 100 −
+                «Сумма налога исчисленная» раздела 5 ≤ 1 руб. Сумма исчисленная > 0.</td>
+            <td><span class="badge must">Ошибка</span></td><td>То же</td></tr>
+        <tr><td>КС-49</td>
+            <td>«Сумма неудержанного налога» раздела 6 Справки = |«Сумма дохода, с которого не удержан налог» раздела 6 ×
+                Ставка / 100 − «Сумма неудержанного налога» раздела 6| ≤ 1 руб. Неудержанный > 0.</td>
+            <td><span class="badge must">Ошибка</span></td><td>То же</td></tr>
+        <tr><td>КС-50</td>
+            <td>Σ «Общая сумма дохода» раздела 5 = Σ «Сумма дохода» раздела 3. «Общая сумма дохода» раздела 5 > 0.</td>
+            <td><span class="badge must">Ошибка</span></td><td>То же</td></tr>
+        <tr><td>КС-51</td>
+            <td>«Сумма дохода, с которого не удержан налог» раздела 6 ≤ «Общая сумма дохода» раздела 5. Неудержанный > 0.</td>
+            <td><span class="badge must">Ошибка</span></td><td>То же</td></tr>
+        <tr><td>КС-52</td>
+            <td>«Сумма налога исчисленная» раздела 5 = «Сумма налога удержанная» раздела 5 + «Сумма неудержанного» раздела 6 −
+                «Сумма излишне удержанная» раздела 5 + «ЗНП» раздела 5 + «Фиксированные авансовые платежи» раздела 5 +
+                «Сумма налога в ин. государстве» раздела 5</td>
+            <td><span class="badge must">Ошибка</span></td><td>То же</td></tr>
+        <tr><td>КС-53</td>
+            <td>«Сумма налога исчисленная» раздела 5 − «ЗНП» раздела 5 − «Фиксированные авансовые платежи» раздела 5 −
+                «Сумма налога в ин. государстве» раздела 5 ≥ «Сумма удержанная» раздела 5 +
+                «Сумма неудержанного» раздела 6 − «Сумма излишне удержанная» раздела 5</td>
+            <td><span class="badge must">Ошибка</span></td><td>То же</td></tr>
+      </tbody>
+    </table>
+  </details>
+
+  <details>
+    <summary>14.2.5 Прочие условия — формальная проверка полей физлица и значений</summary>
+    <table class="compact">
+      <thead><tr>
+        <th style="width:80px;">Код</th>
+        <th style="width:200px;">Область применения</th>
+        <th>Условие</th>
+        <th style="width:90px;">Уровень</th>
+      </tr></thead>
+      <tbody>
+        <tr><td>КС-54</td><td>Все числовые показатели (6-НДФЛ, Приложения №1, Справка)</td>
+            <td>Все числовые показатели не должны быть отрицательными.</td>
+            <td><span class="badge must">Ошибка</span></td></tr>
+        <tr><td>КС-55</td><td>Приложение №1 и Справка клиенту</td>
+            <td>Не должны быть пустыми поля: «Фамилия», «Имя», «Статус налогоплательщика», «Дата рождения»,
+                «Гражданство (код страны)», «Код вида документа, удостоверяющего личность», «Серия и номер документа».</td>
+            <td><span class="badge must">Ошибка</span></td></tr>
+        <tr><td>КС-56</td><td>Приложение №1 и Справка клиенту</td>
+            <td>ИНН (при наличии) — только цифровые значения; длина = 12 знаков.</td>
+            <td><span class="badge must">Ошибка</span></td></tr>
+        <tr><td>КС-57</td><td>Приложение №1 и Справка клиенту</td>
+            <td>«Фамилия», «Имя», «Отчество» — только буквенные значения, допустимы только русские буквы.</td>
+            <td><span class="badge must">Ошибка</span></td></tr>
+        <tr><td>КС-58</td><td>Приложение №1 и Справка клиенту</td>
+            <td>«Дата рождения» — только цифры в формате «ДД.ММ.ГГГГ».</td>
+            <td><span class="badge must">Ошибка</span></td></tr>
+        <tr><td>КС-59</td><td>Приложение №1 и Справка клиенту</td>
+            <td>«Гражданство (код страны)» — только цифровые значения.</td>
+            <td><span class="badge must">Ошибка</span></td></tr>
+        <tr><td>КС-60</td><td>Приложение №1 и Справка клиенту</td>
+            <td>«Статус налогоплательщика» — только «1» или «2».</td>
+            <td><span class="badge must">Ошибка</span></td></tr>
+        <tr><td>КС-61</td><td>Приложение №1 и Справка клиенту</td>
+            <td>Если «Код документа» = «21», «Серия и номер документа» = только цифры, формат «12 34 567899», длина 10 знаков.</td>
+            <td><span class="badge must">Ошибка</span></td></tr>
+        <tr><td>КС-62</td><td>Приложение №1 и Справка клиенту</td>
+            <td>Если «Код документа» = «03», «Серия и номер документа» = формат «R-ББ ЦЦЦЦЦЦ»
+                (R — римская цифра, Б — буквы, Ц — цифры).</td>
+            <td><span class="badge must">Ошибка</span></td></tr>
+        <tr><td>КС-63</td><td>Приложение №1 и Справка клиенту</td>
+            <td>Если «Код документа» ≠ «21» и ≠ «03» — «Серия и номер документа» не должен содержать букв.</td>
+            <td><span class="badge must">Ошибка</span></td></tr>
+        <tr><td>КС-64</td><td>Приложение №1 к 6-НДФЛ</td>
+            <td>При значении номера корректировки, отличного от «99»: «Общая сумма дохода» раздела 2 > 0 и
+                «Сумма дохода» Приложения «Сведения о доходах и вычетах по месяцам» > 0.</td>
+            <td><span class="badge must">Ошибка</span></td></tr>
+        <tr><td>КС-65</td><td>Приложение №1 к 6-НДФЛ</td>
+            <td>При наличии данных в строке «Сумма дохода / Сумма вычета» Приложения «Сведения...» должны быть
+                заполнены «Код дохода / Код вычета» и «Месяц».</td>
+            <td><span class="badge must">Ошибка</span></td></tr>
+        <tr><td>КС-66</td><td>Справка о доходах (для клиентов)</td>
+            <td>«Сумма дохода» раздела 3 > 0 и «Общая сумма дохода» раздела 5 > 0.</td>
+            <td><span class="badge must">Ошибка</span></td></tr>
+        <tr><td>КС-67</td><td>Справка о доходах (для клиентов)</td>
+            <td>При наличии данных в строке «Сумма дохода» раздела 3 должны быть заполнены «Месяц» и «Код дохода».</td>
+            <td><span class="badge must">Ошибка</span></td></tr>
+        <tr class="edit-block" style="border-left:0;padding:0;margin:0;background:#fff8e1;">
+            <td><ins class="edit-mark">КС-68</ins> <span class="badge edit">правка R2-6</span></td>
+            <td><ins class="edit-mark">Дивиденды (код 1010) — согласованность по ставкам с прогрессивной шкалой</ins></td>
+            <td><ins class="edit-mark">По каждому физлицу для кода дохода 1010 проверяется
+                согласованность разнесения сумм по двум ставкам (13 % и 15 %) с прогрессивной
+                шкалой:
+                <ol style="margin:4px 0 0 18px;">
+                  <li><code>НБ(1010, 13 %)</code> ≤ 2 400 000 (порог прогрессивной шкалы);</li>
+                  <li>если присутствует <code>НБ(1010, 15 %) &gt; 0</code>, то
+                      <code>НБ(1010, 13 %)</code> = 2 400 000 (порог полностью использован);</li>
+                  <li><code>Доход(1010, ставка) ≡ НБ(1010, ставка)</code> по каждой ставке
+                      (см. также КС-32 и пояснение к FR-08: дивиденды приходят уже разнесёнными
+                      на стороне источника, без локального гросс-апа).</li>
+                </ol>
+                Допускается отклонение ≤ 1 руб. на округление. Цель проверки — выявить ошибку
+                разнесения на стороне источника (Аванкор FIN / 1С ИЦ) до сдачи отчётности.</ins>
+            </td>
+            <td><ins class="edit-mark"><span class="badge must">Ошибка</span></ins></td></tr>
+      </tbody>
+    </table>
+  </details>
+
+  <h3>14.3 Примеры реализации в 1С (псевдокод и SQL)</h3>
+
+  <h4>Пример 1. КС-13 / КС-14 — арифметика по 6-НДФЛ Раздел 2</h4>
+  <p>Проверка «строка 131 = строка 120 − строка 130» и «строка 120 ≥ строка 130»
+     по группировке (Период расчёта, Ставка, КБК). Запрос в общий модуль
+     <code>МодульКонтрольныхСверок.ПроверитьКС_120_130_131(ДокументРасчёта)</code>:</p>
+  <pre>ВЫБРАТЬ
+    ИсчисленныйНДФЛ.Ставка КАК Ставка,
+    ИсчисленныйНДФЛ.КБК КАК КБК,
+    СУММА(ИсчисленныйНДФЛ.СуммаДохода)    КАК Стр120,
+    СУММА(ИсчисленныйНДФЛ.СуммаВычета)    КАК Стр130,
+    СУММА(ИсчисленныйНДФЛ.НалоговаяБаза)  КАК Стр131
+ПОМЕСТИТЬ ВТ_РазделI
+ИЗ
+    РегистрНакопления.ИсчисленныйНДФЛ.Обороты(
+        &amp;НачалоПериода, &amp;КонецПериода, , ) КАК ИсчисленныйНДФЛ
+ГДЕ
+    ИсчисленныйНДФЛ.Контур = &amp;Контур
+СГРУППИРОВАТЬ ПО
+    ИсчисленныйНДФЛ.Ставка, ИсчисленныйНДФЛ.КБК
+;
+
+ВЫБРАТЬ
+    Ставка, КБК, Стр120, Стр130, Стр131,
+    Стр120 - Стр130 КАК Стр131_Ожидание,
+    Стр120 - Стр130 - Стр131 КАК Отклонение,
+    ВЫБОР КОГДА Стр120 &gt;= Стр130 ТОГДА ЛОЖЬ ИНАЧЕ ИСТИНА КОНЕЦ КАК Ошибка_КС_13,
+    ВЫБОР КОГДА АБС(Стр120 - Стр130 - Стр131) &lt;= 1 ТОГДА ЛОЖЬ ИНАЧЕ ИСТИНА КОНЕЦ КАК Ошибка_КС_14
+ИЗ
+    ВТ_РазделI</pre>
+
+  <h4>Пример 2. КС-30 — сходимость доходов между Разделом 2 и Приложением «Сведения по месяцам»</h4>
+  <p>На стороне 1С данные одинаковые (формируются из одного источника), поэтому КС-30
+     проверяется арифметически:</p>
+  <pre>// Серверный общий модуль
+Функция ПроверитьКС_30(ДокументРасчёта, ФизлицоСсылка) Экспорт
+    Запрос = Новый Запрос(
+        "ВЫБРАТЬ
+        |   СУММА(Сведения.СуммаДохода) КАК СуммаПоМесяцам,
+        |   СУММА(Раздел2.ОбщаяСуммаДохода) КАК ОбщаяСуммаДохода
+        |ИЗ
+        |   РегистрСведений.Приложение1_Сведения КАК Сведения
+        |     ПОЛНОЕ СОЕДИНЕНИЕ
+        |   РегистрСведений.Приложение1_Раздел2 КАК Раздел2
+        |     ПО Раздел2.Расчёт = Сведения.Расчёт
+        |        И Раздел2.Физлицо = Сведения.Физлицо
+        |        И Раздел2.Ставка = Сведения.Ставка
+        |        И Раздел2.КБК = Сведения.КБК
+        |ГДЕ
+        |   Сведения.Расчёт = &amp;Расчёт
+        |   И Сведения.Физлицо = &amp;Физлицо");
+
+    Запрос.УстановитьПараметр("Расчёт", ДокументРасчёта);
+    Запрос.УстановитьПараметр("Физлицо", ФизлицоСсылка);
+
+    Результат = Запрос.Выполнить().Выгрузить();
+
+    Для Каждого Строка Из Результат Цикл
+        Отклонение = Строка.ОбщаяСуммаДохода - Строка.СуммаПоМесяцам;
+        Если Не (Строка.ОбщаяСуммаДохода &gt; 0
+                 И АБС(Отклонение) &lt;= 1) Тогда
+            ЗаписьЖурналаКС("КС-30",
+                ФизлицоСсылка,
+                ОжидаемоеЗначение = Строка.СуммаПоМесяцам,
+                ФактическоеЗначение = Строка.ОбщаяСуммаДохода,
+                Уровень = "Ошибка");
+        КонецЕсли;
+    КонецЦикла;
+КонецФункции</pre>
+
+  <h3>14.4 Когда выполняются (привязка к пайплайну)</h3>
+  <table class="compact">
+    <thead><tr><th>Этап пайплайна (см. 5.4)</th><th>Группы КС</th><th>Эффект</th></tr></thead>
+    <tbody>
+      <tr><td>1. Загрузка операций</td>
+          <td>КС-55…КС-63 (поля физлица, формат паспорта/ИНН)</td>
+          <td>Запись в журнал, отметка статуса физлица «есть ошибки данных».</td></tr>
+      <tr><td>2–8. Расчёт по физлицу</td>
+          <td>КС-25…КС-33, КС-45…КС-53, КС-64…<del class="edit-mark-del">КС-67</del> <ins class="edit-mark">КС-68</ins></td>
+          <td>По завершении расчёта физлица; ошибка фиксируется и не блокирует расчёт следующего.
+              <ins class="edit-mark">Все КС внутри физлица — одним пакетным запросом (см. 14.8).</ins></td></tr>
+      <tr><td>9. Заполнение 6-НДФЛ</td>
+          <td>КС-01…КС-24 (Раздел 1 vs Раздел 2), КС-34…КС-44 (Раздел 2 vs Приложения №1)</td>
+          <td>Свёрнутая проверка на уровне отчёта; журнал + блокировка утверждения, выгрузка остаётся доступной.</td></tr>
+      <tr><td>Перед выгрузкой XML/PDF/Excel</td>
+          <td>Полный набор КС</td>
+          <td>Сообщение об ошибках с детализацией; выгрузка <strong>не блокируется</strong> (требование заказчика).</td></tr>
+    </tbody>
+  </table>
+
+  <h3>14.5 Модель данных для журналирования КС</h3>
+
+  <h4>14.5.1 Регистр сведений «ЖурналКонтрольныхСверок»</h4>
+  <p>Периодический по позиции регистратора, независимый. Регистратор — документ «РасчётНДФЛЗаПериод».</p>
+  <table class="compact">
+    <thead><tr><th>Поле</th><th>Тип</th><th>Назначение</th></tr></thead>
+    <tbody>
+      <tr><td colspan="3" style="background:#eef3f9;"><strong>Измерения</strong></td></tr>
+      <tr><td>Расчёт</td><td>ДокументСсылка.РасчётНДФЛЗаПериод</td><td>Регистратор расчёта.</td></tr>
+      <tr><td>КодКС</td><td>СправочникСсылка.КодыКонтрольныхСверок</td><td>Код <del class="edit-mark-del">КС-01 … КС-67</del> <ins class="edit-mark">КС-01 … КС-68</ins>.</td></tr>
+      <tr><td>ОбъектПроверки</td><td>ХранилищеЗначения / Строка(200)</td><td>Ключ объекта (физлицо, документ, агрегат).</td></tr>
+      <tr><td>ПериодРасчёта</td><td>Дата</td><td>Период (квартал / год).</td></tr>
+      <tr><td>Контур</td><td>ПеречислениеСсылка.КонтурНДФЛ</td><td>Обычный / ИИС.</td></tr>
+      <tr><td colspan="3" style="background:#eef3f9;"><strong>Ресурсы</strong></td></tr>
+      <tr><td>ОжидаемоеЗначение</td><td>Число(15,2)</td><td>Значение левой части соотношения.</td></tr>
+      <tr><td>ФактическоеЗначение</td><td>Число(15,2)</td><td>Значение правой части / итог.</td></tr>
+      <tr><td>Отклонение</td><td>Число(15,2)</td><td>Ожидаемое − Фактическое.</td></tr>
+      <tr><td>СтатусЧисло</td><td>Число(1,0)</td><td>0=OK, 1=Информация, 2=Предупреждение, 3=Ошибка.</td></tr>
+      <tr><td colspan="3" style="background:#eef3f9;"><strong>Реквизиты</strong></td></tr>
+      <tr><td>Сообщение</td><td>Строка(500)</td><td>Текст для пользователя.</td></tr>
+      <tr><td>Уровень</td><td>ПеречислениеСсылка.УровеньКС</td><td>Информация / Предупреждение / Ошибка.</td></tr>
+      <tr><td>ФизлицоСсылка</td><td>СправочникСсылка.Физлица</td><td>Для детализации (если КС физлично).</td></tr>
+      <tr><td>СсылкаНаОперации</td><td>Строка(1000)</td><td>Сериализованный список GUID операций для расшифровки.</td></tr>
+    </tbody>
+  </table>
+
+  <h4>14.5.2 Справочник «КодыКонтрольныхСверок» <span class="badge edit">правка R2-4</span></h4>
+  <p>Каждый код КС хранится как элемент справочника со следующими реквизитами:</p>
+  <ul>
+    <li><code>Код</code> — «КС-01» … <del class="edit-mark-del">«КС-67»</del>
+        <ins class="edit-mark">«КС-68» (включая новую КС-68 из R2-6)</ins> (уникальный, индексированный);</li>
+    <li><code>Наименование</code> — короткий заголовок;</li>
+    <li><code>ОписаниеФормулы</code> (Текст) — формальное условие;</li>
+    <li><code>Группа</code> (СправочникСсылка.ГруппыКС) — «Раздел 1 vs 2», «Внутри Приложения 1»,
+        «Раздел 2 vs Приложения 1», «Справка клиента», «Поля физлица», «Прочие»;</li>
+    <li><code>УровеньПоУмолчанию</code> (Перечисление) — рекомендуемый уровень критичности;</li>
+    <li><code>ДопустимоеОтклонение</code> (Число) — для арифметических КС, по умолчанию 1 руб.;</li>
+    <li><code>БлокируетУтверждение</code> (Булево) — да/нет;</li>
+    <li><code>ИмяПроцедурыПроверки</code> (Строка) — точка входа в общий модуль
+        <code>СерверныйВызов.МодульКонтрольныхСверок</code>.</li>
+  </ul>
+
+  <div class="edit-block">
+    <span class="badge edit">правка R2-4</span>
+    <strong>Предопределённые элементы.</strong>
+    <ins class="edit-mark">Все 68 кодов КС (КС-01 … КС-68) описываются в конфигураторе как
+    <strong>предопределённые элементы</strong> справочника
+    (<code>ПредопределённыеЭлементы</code>). Это даёт:
+    <ul style="margin:6px 0 0 0;">
+      <li>надёжную ссылку из кода: <code>Справочники.КодыКонтрольныхСверок.КС_30</code>
+          вместо поиска по реквизиту;</li>
+      <li>защиту от случайного удаления (предопределённые элементы нельзя удалить через
+          интерфейс);</li>
+      <li>сохранность ссылок при обновлении конфигурации;</li>
+      <li>возможность централизованно обновлять метаданные КС (формулу, уровень) через
+          поставку без миграций данных.</li>
+    </ul>
+    Добавление новой КС в будущем — через изменение конфигурации (новый предопределённый
+    элемент) и регламент применения нормативов (см. ответ на ОВ №6 — тикет в Jira).</ins>
+  </div>
+
+  <div class="edit-block">
+    <span class="badge edit">правка R2-7</span>
+    <strong>Индексация журнала КС.</strong>
+    <ins class="edit-mark">В регистре «ЖурналКонтрольныхСверок» (см. 14.5.1) измерения
+    <code>Расчёт</code> и <code>КодКС</code> помечаются «Индексировать», иначе фильтрация
+    в отчёте «Журнал КС» по коду или по документу расчёта будет приводить к полному сканированию
+    регистра. См. также R2-7 в разделе 9.4.</ins>
+  </div>
+
+  <h3>14.6 UI и отчётность по КС</h3>
+  <ul>
+    <li>Отчёт «Журнал контрольных сверок» (СКД) — фильтры по: документу расчёта, периоду, коду КС,
+        уровню, физлицу, ставке/КБК, контуру; группировки по группе КС / уровню; расшифровка
+        по двойному клику до первичных операций («ОбоснованиеСтрокиОтчёта»).</li>
+    <li>На форме документа «РасчётНДФЛЗаПериод» — панель «КС: ошибки / предупреждения»
+        с быстрым переходом в журнал.</li>
+    <li>На форме отчёта 6-НДФЛ — индикатор «Все КС пройдены» / «Есть ошибки», с возможностью
+        переключения вида: «только проблемные строки».</li>
+  </ul>
+
+  <h3>14.7 Связь с FR / NFR</h3>
+  <ul>
+    <li>FR-15 «Аудит и трассировка» — Журнал КС встраивается в общий аудит расчёта.</li>
+    <li>NFR-05 «Аудит» — КС обеспечивают объективную метрику качества данных и расчёта.</li>
+    <li>NFR-06 «Журнал регистрации» — итоговые статусы КС дублируются в журнал регистрации
+        событием «КС: расчёт завершён с ошибками».</li>
+    <li><ins class="edit-mark">NFR-01 «Производительность» — реализация КС обязана соответствовать
+        требованиям раздела 14.8 (один пакетный запрос на физлицо / на пакет, без N+1
+        серверных вызовов).</ins></li>
+  </ul>
+
+  <div class="edit-block">
+    <h3 style="margin-top:0;">14.8 Архитектурное требование к производительности КС <span class="badge edit">правка R2-5</span></h3>
+    <ins class="edit-mark">
+    <p><strong>Запрещённый антипаттерн.</strong> Запрещено выполнять отдельный SQL-запрос
+       на каждую проверку для каждого физлица. Наивная реализация
+       «<em>цикл по 100 000 физлиц × 67 КС</em>» даст ≈ <strong>6,7 млн запросов</strong> к
+       БД и заведомо провалит NFR-01 (≤ 30 минут на расчёт по портфелю ≈ 100 000 физлиц,
+       см. правку №10 и ответ на ОВ №5).</p>
+
+    <p><strong>Обязательная схема реализации.</strong> КС реализуются <strong>пакетными
+       запросами</strong> с конструкцией <code>ВЫБОР КОГДА … ТОГДА Ошибка КОНЕЦ</code>,
+       возвращающими сразу все интересующие проверки одним вызовом. Конкретные правила:</p>
+    <ol>
+      <li><strong>КС-25 … КС-33, КС-45 … КС-53, КС-64 … КС-67 (внутри Приложения №1 / Справки
+          по физлицу).</strong> Реализуются <strong>одним общим запросом на физлицо или на пакет
+          физлиц</strong>: запрос группирует данные по физлицу/(ставка, КБК), возвращает
+          колонки «Ожидаемое / Фактическое / Отклонение / Признак ошибки» для каждой КС.
+          Ожидаемая стоимость: ≤ 1 запрос на физлицо (или 1 запрос на батч из N физлиц).</li>
+      <li><strong>КС-34 … КС-44 (Раздел 2 vs Приложения №1).</strong> Это <strong>глобальные</strong>
+          проверки на агрегатах: 1 запрос на весь налоговый период, выполняется один раз
+          после сборки 6-НДФЛ.</li>
+      <li><strong>КС-01 … КС-24 (Раздел 1 vs Раздел 2).</strong> <strong>Глобальные</strong>,
+          выполняются на готовых итогах отчётов: 1 запрос на пару (Период, КБК).</li>
+      <li><strong>КС-54 (отсутствие отрицательных значений) и КС-68 (согласованность 1010 по
+          ставкам, см. R2-6).</strong> Реализуются как составные ветви общих запросов выше —
+          не порождают отдельных вызовов.</li>
+      <li><strong>КС-55 … КС-63 (поля физлица / формат паспорта / ИНН).</strong> Выполняются
+          <strong>при загрузке операций</strong> (FR-02), а не на этапе формирования отчёта.
+          Это разовая проверка при импорте, а не часть пайплайна расчёта.</li>
+    </ol>
+
+    <p><strong>Точки входа.</strong> Все КС вынесены в общий серверный модуль
+       <code>СерверныйВызов.МодульКонтрольныхСверок</code> с тремя группами экспортных
+       процедур:</p>
+    <ul>
+      <li><code>ВыполнитьКСПриЗагрузке(ПакетОпераций)</code> — КС-55 … КС-63.</li>
+      <li><code>ВыполнитьКСПоФизлицу(ДокументРасчёта, СписокФизлиц)</code> — КС-25 … КС-33,
+          КС-45 … КС-53, КС-64 … КС-67, КС-68 (пакетно по списку физлиц).</li>
+      <li><code>ВыполнитьГлобальныеКС(ДокументРасчёта)</code> — КС-01 … КС-24, КС-34 … КС-44.</li>
+    </ul>
+
+    <p><strong>Связь с параллелизацией (NFR-02).</strong> Группа «<em>ВыполнитьКСПоФизлицу</em>»
+       вызывается изнутри каждого фонового задания после завершения расчёта своего
+       батча физлиц — без отдельного потока на КС. Глобальные КС вызываются один раз в
+       управляющем процессе после агрегации всех батчей.</p>
+
+    <p><strong>Замер.</strong> На приёмке (Этап 4) фиксируется метрика
+       «количество SQL-запросов на 100 000 физлиц». Превышение порога <strong>≤ 200 000
+       запросов</strong> на полный прогон КС — блокирующий дефект.</p>
+    </ins>
+  </div>
+</section>
+
+<!-- =============================================================== -->
+<section class="block" id="s-plan">
+  <h2><del class="edit-mark-del">14.</del> <ins class="edit-mark">15.</ins> Этапы и сроки</h2>
+
+  <table>
+    <thead>
+      <tr><th>Этап</th><th>Состав работ</th><th>Длительность*</th><th>Артефакты</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>1. Нормативный слой</td>
+        <td>Создание конфигурации, метаданные нормативов, импорт из Excel, валидация целостности, ручное сопровождение методологом.</td>
+        <td>4 недели</td>
+        <td>D1 (skeleton), D2, D3, D12 (черновик документации).</td>
+      </tr>
+      <tr>
+        <td>2. Расчётное ядро</td>
+        <td>Алгоритмы сальдирования, лимитов, КБК, налогов, ИИС, гросс-апа 1010+ЗНП. Журнал расчёта.</td>
+        <td>6 недель</td>
+        <td>D4, D5, D6, D10.</td>
+      </tr>
+      <tr>
+        <td>3. Отчётность и интеграции</td>
+        <td>СКД-отчёты 6-НДФЛ, Приложение 1, Справка. HTTP-сервисы. Расширения источниковых баз.</td>
+        <td>5 недель</td>
+        <td>D7, D8, D9.</td>
+      </tr>
+      <tr>
+        <td>4. Контроль качества</td>
+        <td>Автотесты, нагрузочное тестирование, доводка форм, документация, обучение.</td>
+        <td>3 недели</td>
+        <td>D11, D12 (финал).</td>
+      </tr>
+    </tbody>
+  </table>
+  <p class="legend">* Длительности ориентировочные, требуют утверждения с командой реализации.</p>
+
+  <h3>Контрольные точки</h3>
+  <ol>
+    <li><strong>М1</strong> (конец Этапа 1): нормативные таблицы загружены и видны в системе; редакции версий работают.</li>
+    <li><strong>М2</strong> (середина Этапа 2): расчёт первого контрольного кейса проходит «зелёным».</li>
+    <li><strong>М3</strong> (конец Этапа 2): все 12 контрольных сценариев проходят.</li>
+    <li><strong>М4</strong> (середина Этапа 3): печатная форма 6-НДФЛ совпадает с эталоном.</li>
+    <li><strong>М5</strong> (конец Этапа 3): успешная выгрузка XML, принимается утилитой ФНС.</li>
+    <li><strong>М6</strong> (конец Этапа 4): сдача в опытно-промышленную эксплуатацию.</li>
+  </ol>
+</section>
+
+<!-- =============================================================== -->
+<section class="block" id="s-risk">
+  <h2><del class="edit-mark-del">15.</del> <ins class="edit-mark">16.</ins> Риски и митигация</h2>
+
+  <table>
+    <thead>
+      <tr><th style="width:60px;">ID</th><th>Риск</th><th>Уровень</th><th>Митигация</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>R-01</td>
+          <td>Изменение нормативки в середине проекта (новые ставки/КБК).</td>
+          <td><span class="badge high">HIGH</span></td>
+          <td>Версионирование изначально заложено; нормативы — данные, не код.</td></tr>
+      <tr><td>R-02</td>
+          <td>Расхождение источниковых данных с моделью движка (форматы, кодировки).</td>
+          <td><span class="badge high">HIGH</span></td>
+          <td>Тонкие CFE-адаптеры с маппингом; расширенный лог отбраковок; контракт обмена + sample/dry-run.</td></tr>
+      <tr><td>R-03</td>
+          <td>Производительность на больших портфелях.</td>
+          <td><span class="badge med">MED</span></td>
+          <td>Параллельные фоновые задания, индексация регистров, профилирование на нагрузочном стенде в Этапе 4.</td></tr>
+      <tr><td>R-04</td>
+          <td>Сложность спецсценария 1010 + ЗНП и расхождение в копейках.</td>
+          <td><span class="badge high">HIGH</span></td>
+          <td>Автотест на эталонном примере Excel; явная функция гросс-апа; единые правила округления.</td></tr>
+      <tr><td>R-05</td>
+          <td>Несогласованность данных Приложения 1 и Справки клиента.</td>
+          <td><span class="badge high">HIGH</span></td>
+          <td>Единое расчётное ядро; сверочный отчёт «Приложение 1 vs Справка»; критерий приёмки.</td></tr>
+      <tr><td>R-06</td>
+          <td>Изменения форматов выгрузки ФНС.</td>
+          <td><span class="badge med">MED</span></td>
+          <td>Шаблоны выгрузки — отдельный артефакт; контролируемая дата ввода в действие.</td></tr>
+      <tr><td>R-07</td>
+          <td>Человеческие ошибки в нормативных таблицах при ручном вводе.</td>
+          <td><span class="badge med">MED</span></td>
+          <td>Двойной контроль методологом; валидация целостности при импорте; режим «черновика» нормативов.</td></tr>
+      <tr><td>R-08</td>
+          <td>Конфликты обновлений вендоров баз-источников
+              <ins class="edit-mark">(ООО «СБ-Брокер» — <code>1С ИЦ</code>; ООО «Аванкор» —
+              <code>Аванкор FIN</code>, <code>Аванкор PIF</code>; все источники на платформе 1С 8.3,
+              см. R2-1)</ins>.</td>
+          <td><span class="badge med">MED</span></td>
+          <td>Расширения тонкие, без бизнес-логики; прохождение апгрейда вендора отдельным регламентом.
+              <ins class="edit-mark">Возможен переход части обменов на план обмена / EnterpriseData,
+              если CFE начнут конфликтовать с поставкой вендора.</ins></td></tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- =============================================================== -->
+<section class="block" id="s-open">
+  <h2><del class="edit-mark-del">16.</del> <ins class="edit-mark">17.</ins> Открытые вопросы к бизнесу <span class="badge edit">правка №11 (ответы)</span></h2>
+
+  <div class="edit-block">
+    <strong>Раунд 1: ответы получены по всем 10 вопросам.</strong> Закрытые вопросы помечены
+    бейджем <span class="badge edit">закрыт</span>. Если ответ требует доработки других разделов
+    ТЗ, ссылка указывается в блоке «Ответ бизнеса (раунд 1)».
+  </div>
+
+  <ol style="list-style:none;padding-left:0;">
+    <li style="margin:14px 0;">
+      <div><strong>1.</strong> Поддержка нескольких редакций нормативных правил в одном налоговом
+         периоде (например, при изменениях НК РФ с середины года) — нужна ли?
+         <span class="badge edit">закрыт</span></div>
+      <div class="edit-block">
+        <strong>Ответ бизнеса (раунд 1):</strong>
+        <ins class="edit-mark">Нет. Достаточно версионирования между налоговыми периодами; смена правил
+        внутри одного периода не предполагается.</ins>
+        <div style="font-size:12.5px;color:#5b6b7c;margin-top:4px;">Следствие: матрицы нормативов
+          можно сделать «годовыми» по умолчанию, без необходимости учитывать дату действия внутри
+          периода. См. также NFR-04 и FR-01.</div>
+      </div>
+    </li>
+
+    <li style="margin:14px 0;">
+      <div><strong>2.</strong> Какие источники операций считать первичными помимо
+         <code>SBB_Broker</code> и <code>Wim_Du</code>? Будут ли подключаться
+         <code>WIM_FIn</code> (ДУ ред.2), <code>Wim_Mo</code>, <code>Wim_Pif</code>?
+         <span class="badge edit">закрыт</span></div>
+      <div class="edit-block">
+        <strong>Ответ бизнеса (раунд 1):</strong>
+        <ins class="edit-mark">Только следующие источники: <code>1С ИЦ</code>,
+        <code>Аванкор FIN</code>, <code>Аванкор PIF</code> (в дальнейшем две базы PIF: ЗПИФ и ОПИФ)
+        по двум УК: ВИМИ и ВИМС. Базы <code>SBB_Broker</code>, <code>Wim_Du</code>,
+        <code>WIM_FIn</code>, <code>Wim_Mo</code>, <code>Wim_Pif</code> — не задействованы.</ins>
+        <div style="font-size:12.5px;color:#5b6b7c;margin-top:4px;">Доработано: FR-02 (правка №2),
+          раздел 4 (правка №1). Раздел 10.1 «Источники операций» требует переработки в следующем
+          раунде ревью — см. также блок «Открытые трактовки правок» в <code>review_1c83.md</code>.</div>
+      </div>
+    </li>
+
+    <li style="margin:14px 0;">
+      <div><strong>3.</strong> Требуется ли ручной режим корректировки результата сальдирования
+         (override методолога) и в каком виде это должно быть оформлено?
+         <span class="badge edit">закрыт</span></div>
+      <div class="edit-block">
+        <strong>Ответ бизнеса (раунд 1):</strong>
+        <ins class="edit-mark">Да. Необходимо предусмотреть ручные корректировки <strong>в любом
+        поле загруженных данных</strong>, в 6-НДФЛ с Приложениями №1 и в Справках для клиентов.
+        Дополнительно: возможность <strong>удаления разделов</strong> 6-НДФЛ, Приложений №1
+        и Справок.</ins>
+        <div style="font-size:12.5px;color:#5b6b7c;margin-top:4px;">Следствие: расширить FR-14
+          «Корректировка и пересчёт» в следующем раунде — описать форму ручных правок, журнал
+          ручных операций, права (роль «Главный бухгалтер») и блокировки утверждённых периодов.</div>
+      </div>
+    </li>
+
+    <li style="margin:14px 0;">
+      <div><strong>4.</strong> Нужен ли контур перерасчёта уже сданной отчётности с автоформированием
+         «корректировочной» версии 6-НДФЛ?
+         <span class="badge edit">закрыт</span></div>
+      <div class="edit-block">
+        <strong>Ответ бизнеса (раунд 1):</strong>
+        <ins class="edit-mark">Да, но каждая новая корректировка записывается <strong>отдельным
+        документом</strong>, без изменения первичного 6-НДФЛ / Справок. То есть «реестр версий»
+        с историей корректировок, а не in-place правка исходного документа.</ins>
+        <div style="font-size:12.5px;color:#5b6b7c;margin-top:4px;">Следствие: модель данных в
+          9.6 уже позволяет это реализовать (документ «РасчётНДФЛЗаПериод» + отдельный документ
+          «КорректировкаОпераций»). Уточнить в FR-14 правила формирования номера корректировки
+          и связки документов в дерево.</div>
+      </div>
+    </li>
+
+    <li style="margin:14px 0;">
+      <div><strong>5.</strong> SLA по времени расчёта на портфель: реально ли удержать ≤ 30 минут,
+         или приемлемо ≤ 1 час, ≤ 2 часов?
+         <span class="badge edit">закрыт</span></div>
+      <div class="edit-block">
+        <strong>Ответ бизнеса (раунд 1):</strong>
+        <ins class="edit-mark">С учётом планируемого количества клиентов ≈ 100 тыс. тайминг
+        <strong>не должен превышать 30 мин.</strong></ins>
+        <div style="font-size:12.5px;color:#5b6b7c;margin-top:4px;">Доработано: NFR-01 (правка №10),
+          KPI в разделе 2.4, нагрузочный сценарий в 13.1. Подробнее о реализуемости — см.
+          <code>review_1c83.md</code>, раздел «Производительность».</div>
+      </div>
+    </li>
+
+    <li style="margin:14px 0;">
+      <div><strong>6.</strong> Кто администрирует версии нормативов — методолог в системе или процесс
+         через ИТ?
+         <span class="badge edit">закрыт</span></div>
+      <div class="edit-block">
+        <strong>Ответ бизнеса (раунд 1):</strong>
+        <ins class="edit-mark">На внесение изменений Tax (налоговый отдел) выставляет в Jira задачу.</ins>
+        <div style="font-size:12.5px;color:#5b6b7c;margin-top:4px;">Следствие: процесс ведения
+          нормативов — через ИТ по тикету; роль «Методолог нормативов» в FR-16 оставляем
+          (для просмотра и подготовки данных), но «промышленная» правка нормативов выполняется
+          разработчиком/администратором. Уточнить в следующем раунде: формат вложения в Jira
+          (Excel-шаблон) и регламент применения.</div>
+      </div>
+    </li>
+
+    <li style="margin:14px 0;">
+      <div><strong>7.</strong> Где хранится «золотая» копия нормативов — внутри 1С или внешний
+         справочник, синхронизируемый по расписанию?
+         <span class="badge edit">закрыт</span></div>
+      <div class="edit-block">
+        <strong>Ответ бизнеса (раунд 1):</strong>
+        <ins class="edit-mark">Нормативы должны храниться в 1С НП.</ins>
+        <div style="font-size:12.5px;color:#5b6b7c;margin-top:4px;">Соответствует архитектурному
+          выбору варианта C (см. раздел 5). Регистры сведений 9.3 — единственный источник правды
+          по нормативам.</div>
+      </div>
+    </li>
+
+    <li style="margin:14px 0;">
+      <div><strong>8.</strong> Нужен ли веб-кабинет клиента для самостоятельной выгрузки справки и
+         просмотра расчёта?
+         <span class="badge edit">закрыт</span></div>
+      <div class="edit-block">
+        <strong>Ответ бизнеса (раунд 1):</strong>
+        <ins class="edit-mark">Для Tax не нужен.</ins>
+        <div style="font-size:12.5px;color:#5b6b7c;margin-top:4px;">Следствие: п. 10.4 «версия для
+          портала клиента» — снять как не востребованную. Раздача Справок — массово/точечно
+          из 1С НП в PDF/Excel (см. правку №8). Скорректировать в следующем раунде.</div>
+      </div>
+    </li>
+
+    <li style="margin:14px 0;">
+      <div><strong>9.</strong> Передача XML 6-НДФЛ в ФНС — через 1С-Отчётность или по альтернативному
+         каналу?
+         <span class="badge edit">закрыт</span></div>
+      <div class="edit-block">
+        <strong>Ответ бизнеса (раунд 1):</strong>
+        <ins class="edit-mark">Через «Контур Экстерн».</ins>
+        <div style="font-size:12.5px;color:#5b6b7c;margin-top:4px;">Следствие: интеграция
+          «1С-Отчётность» НЕ требуется. Достаточно <strong>файловой выгрузки XML</strong>
+          по формату ФНС (ручная отправка через личный кабинет Контур Экстерн).
+          Уточнить в 10.4 в следующем раунде и убрать упоминания «1С-Отчётность» из NFR.</div>
+      </div>
+    </li>
+
+    <li style="margin:14px 0;">
+      <div><strong>10.</strong> Политика хранения архивных расчётов — глубина (5 лет, 10 лет?) и
+         форма архивации.
+         <span class="badge edit">закрыт</span></div>
+      <div class="edit-block">
+        <strong>Ответ бизнеса (раунд 1):</strong>
+        <ins class="edit-mark">Постоянно.</ins>
+        <div style="font-size:12.5px;color:#5b6b7c;margin-top:4px;">Следствие: NFR-06 «Хранение
+          ≥ 5 лет» — недостаточно. Скорректировать в следующем раунде: «бессрочное хранение
+          архивных расчётов и журналов в БД». Запланировать архивную стратегию (партиционирование,
+          холодное хранилище) на нагрузочном тестировании.</div>
+      </div>
+    </li>
+  </ol>
+
+  <div class="edit-block">
+    <strong>Итог раунда 1:</strong>
+    <ul style="margin-top:6px;">
+      <li>Закрыто вопросов: <strong>10 из 10</strong>.</li>
+      <li>Все ответы интегрированы в соответствующие разделы (FR-02, FR-08, FR-10, FR-14,
+        NFR-01, NFR-06, 10.4, раздел 4, раздел 14).</li>
+      <li>Для следующего раунда сформирован список «Открытые трактовки правок» в файле
+        <code>review_1c83.md</code> — точки, требующие дополнительной формулировки от заказчика.</li>
+    </ul>
+  </div>
+
+  <div class="edit-block">
+    <h3 style="margin-top:0;">17.2 Открытые вопросы — раунд 2 <span class="badge edit">правка R2-14</span></h3>
+    <ins class="edit-mark">
+    <p>Вопросы возникли по результатам технического ревью под 1С 8.3
+       (см. <code>review_1c83.md</code>, раздел 10 «Открытые трактовки правок»). Часть из них
+       уже разрешена технически (см. <code>review_round2_plan.md</code>), а нижеперечисленные
+       требуют <strong>решения бизнеса / методолога</strong> и блокируют переход к Этапам 2–3
+       (но не Этапу 1).</p>
+    </ins>
+    <ol style="list-style:none;padding-left:0;">
+
+      <li style="margin:14px 0;">
+        <div><strong>Q1-R2.</strong> <ins class="edit-mark">Правка №1 / раздел 4 / раздел 11.
+          «Сумма налога, возвращённая налоговым агентом» в строках 030 Раздела 1 и 190 Раздела 2 —
+          строка <strong>не заполняется автоматически</strong>, но остаётся в шаблоне ФНС.
+          Разрешена ли <strong>ручная правка</strong> бухгалтером этих строк (например, для
+          корректировок прошлых периодов)?</ins>
+          <span style="font-size:12.5px;color:#5b6b7c;"> Принятая в R2 трактовка: «не заполняется
+          автоматически, остаётся пустой». Ждём подтверждения / уточнения политики.</span></div>
+      </li>
+
+      <li style="margin:14px 0;">
+        <div><strong>Q2-R2.</strong> <ins class="edit-mark">Правка №2 / FR-02.
+          «Массовое удаление загруженных данных» — выполняется как
+          <strong>сторнирующий документ</strong> (без физического удаления записей регистров)
+          с возможностью отката, или предполагается <strong>физическое удаление</strong> строк?</ins>
+          <span style="font-size:12.5px;color:#5b6b7c;"> Принятая в R2 трактовка: документ
+          «КорректировкаОпераций» в режиме «массовое сторно» (физическое удаление нарушает
+          целостность регистров и трассируемость). Требуется подтверждение бизнеса; от ответа
+          зависит, нужен ли резервный регистр «УдалённыеОперации».</span></div>
+      </li>
+
+      <li style="margin:14px 0;">
+        <div><strong>Q3-R2.</strong> <ins class="edit-mark">Правка №3 / FR-08.
+          Алгоритм гросс-апа дивидендов <strong>ALG-04</strong> в штатном режиме не вызывается
+          (источники отдают данные уже разнесёнными по ставкам). Удалять ли его из ТЗ полностью,
+          или оставить как <strong>fallback</strong> для нестандартных источников / исторических
+          пересчётов?</ins>
+          <span style="font-size:12.5px;color:#5b6b7c;"> Принятая в R2 трактовка: оставлен как
+          теоретическая модель / fallback. Ждём решения, фиксируется ли как «отключаемый
+          параметром» или вычеркивается.</span></div>
+      </li>
+
+      <li style="margin:14px 0;">
+        <div><strong>Q4-R2.</strong> <ins class="edit-mark">Правка №5 / FR-10.
+          Свёртка по паре (Ставка, КБК) в Приложениях №1: на <strong>этапе формирования
+          печатной формы</strong> или <strong>на этапе расчёта</strong>?</ins>
+          <span style="font-size:12.5px;color:#5b6b7c;"> Принятая в R2 трактовка: на этапе
+          печати (расчёт ведётся в разрезе контуров, свёртка — последний шаг). Требуется
+          подтверждение, нужна ли отдельная свёртка ещё в регистре ИсчисленныйНДФЛ.</span></div>
+      </li>
+
+      <li style="margin:14px 0;">
+        <div><strong>Q5-R2.</strong> <ins class="edit-mark">Правка №8 / раздел 10.4.
+          Реестры Приложений №1 и Справок в Excel: <strong>одна вкладка с одной плоской
+          таблицей</strong> или <strong>отдельная вкладка на каждого клиента</strong>?</ins>
+          <span style="font-size:12.5px;color:#5b6b7c;"> Принятая в R2 трактовка: одна вкладка
+          с плоской таблицей (удобно для сортировки и фильтрации в Excel).</span></div>
+      </li>
+
+      <li style="margin:14px 0;">
+        <div><strong>Q6-R2.</strong> <ins class="edit-mark">Правка №8 / раздел 10.4.
+          Шаблон имени файла Справки —
+          <code>«&lt;КодКлиентаДляЛК&gt; - Справка2НДФЛ-&lt;Год&gt;-&lt;ФИО&gt;»</code>:
+          поле <code>&lt;ФИО&gt;</code> — это <strong>полное ФИО</strong> или формат
+          <strong>«Фамилия И. О.»</strong>?</ins>
+          <span style="font-size:12.5px;color:#5b6b7c;"> Принятая в R2 трактовка: полное ФИО
+          (как в примерах раздела 10.4). Подтвердить с бухгалтерией.</span></div>
+      </li>
+
+      <li style="margin:14px 0;">
+        <div><strong>Q7-R2.</strong> <ins class="edit-mark">Раздел 14 / уровни критичности КС.
+          Все 68 КС сейчас на уровне <strong>«Ошибка»</strong> (по требованию заказчика
+          «все нарушения — ошибки»). Сохранить ли это правило или для отдельных групп КС
+          (например, КС-55 … КС-63 — поля физлица, формат паспорта) разумно понизить до
+          уровня <strong>«Предупреждение»</strong>?</ins>
+          <span style="font-size:12.5px;color:#5b6b7c;"> Влияет на сценарий приёмки: «ошибка»
+          блокирует утверждение документа, «предупреждение» — нет.</span></div>
+      </li>
+
+      <li style="margin:14px 0;">
+        <div><strong>Q8-R2.</strong> <ins class="edit-mark">Правка №7 / раздел 8.3.
+          КБК по дивидендам нерезидентов = <code>18210102010011000110</code> — это
+          <strong>тот же КБК</strong>, что и для основной группы доходов нерезидентов,
+          или <strong>отдельный</strong> (например, иной 10-й и 11-й знаки)?</ins>
+          <span style="font-size:12.5px;color:#5b6b7c;"> Требует подтверждения методологом
+          (Tax) перед формированием матрицы нормативов на Этапе 1.</span></div>
+      </li>
+
+      <li style="margin:14px 0;">
+        <div><strong>Q9-R2.</strong> <ins class="edit-mark">Ответ ОВ №3 / FR-14.
+          «Ручные корректировки в любом поле загруженных данных» — включает ли это
+          <strong>идентификаторы клиента</strong> (ИНН, КодКлиентаДляЛК)? Это критичные
+          мастер-данные; рекомендуется запретить ручную правку и допускать только
+          перезагрузку из источника.</ins>
+          <span style="font-size:12.5px;color:#5b6b7c;"> Если бизнес согласен — добавить
+          явное ограничение в FR-14 и RLS-правила.</span></div>
+      </li>
+
+      <li style="margin:14px 0;">
+        <div><strong>Q10-R2.</strong> <ins class="edit-mark">Ответ ОВ №10 / NFR-06.
+          «Постоянное хранение» расчётов и журналов — это <strong>только в оперативной БД
+          1С</strong>, или с автоматическим переводом данных старше 5 лет в
+          <strong>холодное хранилище</strong> (например, выгрузка партиций журнала КС
+          в файловое хранилище / отдельную архивную БД)?</ins>
+          <span style="font-size:12.5px;color:#5b6b7c;"> Влияет на размер БД на горизонте
+          10+ лет. Принятый в R2 технический минимум — партиционирование журнала КС по году
+          (R2-13); политика холодного хранилища ждёт решения.</span></div>
+      </li>
+
+      <li style="margin:14px 0;">
+        <div><strong>Q11-R2.</strong> <ins class="edit-mark">Раздел 10.4 / FR-12.
+          Версия макета 6-НДФЛ (КНД 1151100) — какая редакция Приказа ФНС считается
+          актуальной для проекта? Для Справки клиенту (КНД 1175018) редакция уже
+          зафиксирована в FR-13 (Приказ ФНС от 19.09.2023 № ЕД-7-11/649@ в ред. от
+          09.01.2024 № ЕД-7-11/1@).</ins>
+          <span style="font-size:12.5px;color:#5b6b7c;"> Требует подтверждения методологом
+          до Этапа 3 (отчётность).</span></div>
+      </li>
+    </ol>
+
+    <div class="callout cyan" style="margin-top:8px;">
+      <div class="title">Готовность к Этапу 1 (нормативный слой)</div>
+      <ins class="edit-mark">Ни один из вопросов Q1-R2 … Q11-R2 не блокирует старт Этапа 1
+      (создание метаданных нормативов и загрузчика из Excel). Этап 1 стартует сразу после
+      утверждения раунда 2.
+      К старту <strong>Этапа 2</strong> (расчётное ядро) требуется закрыть как минимум
+      Q3-R2, Q7-R2, Q8-R2.
+      К старту <strong>Этапа 3</strong> (отчётность) — Q1-R2, Q2-R2, Q4-R2, Q5-R2, Q6-R2,
+      Q9-R2, Q11-R2.</ins>
+    </div>
+  </div>
+</section>
+
+<div class="footer-note">
+  Документ подготовлен на основе профессионального анализа файла
+  <code>Требования от налогов.xlsx</code> (8 листов) и черновика
+  <code>ndfl_tax_engine_tz.md</code>. Версия 1.0. К согласованию с заказчиком.
+</div>
+
+</main>
+</div>
+</body>
+</html>
