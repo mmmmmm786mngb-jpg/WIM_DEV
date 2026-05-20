@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Инструкция: запуск пересчета MV и WAP на базе T-1</title>
+  <style>
+    :root {
+      --success: #28a745;
+      --error: #dc3545;
+      --info: #17a2b8;
+      --warn-bg: #fff3cd;
+      --warn-border: #ffc107;
+      --info-bg: #e8f7fb;
+      --text: #212529;
+      --muted: #6c757d;
+      --border: #dee2e6;
+      --paper: #fff;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Segoe UI", system-ui, Arial, sans-serif;
+      color: var(--text);
+      background: #eef2f7;
+      line-height: 1.6;
+    }
+    .head {
+      background: linear-gradient(135deg, #0052cc 0%, var(--info) 100%);
+      color: #fff;
+      padding: 28px 24px 32px;
+    }
+    .head-inner { max-width: 900px; margin: 0 auto; }
+    .head h1 { margin: 0 0 10px; font-size: 1.45rem; }
+    .head p { margin: 0; opacity: 0.95; font-size: 15px; max-width: 720px; }
+    .wrap { max-width: 900px; margin: 0 auto; padding: 24px 16px 48px; }
+    section {
+      background: var(--paper);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 20px 22px;
+      margin-bottom: 16px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+    }
+    h2 {
+      margin: 0 0 14px;
+      font-size: 1.1rem;
+      color: #0c5460;
+      border-bottom: 2px solid var(--info-bg);
+      padding-bottom: 6px;
+    }
+    h3 { margin: 18px 0 8px; font-size: 1rem; color: #0747a6; }
+    p { margin: 0 0 10px; }
+    ul { margin: 8px 0; padding-left: 22px; }
+    li { margin: 6px 0; }
+    .step {
+      display: flex;
+      gap: 14px;
+      margin: 14px 0;
+      padding: 14px 16px;
+      background: #f8f9fa;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+    }
+    .step-num {
+      flex-shrink: 0;
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background: var(--info);
+      color: #fff;
+      font-weight: 700;
+      font-size: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .step-body { flex: 1; }
+    .step-body strong { color: #0747a6; }
+    .ui {
+      display: inline-block;
+      padding: 2px 8px;
+      background: #e9ecef;
+      border: 1px solid #ced4da;
+      border-radius: 4px;
+      font-weight: 600;
+      font-size: 14px;
+    }
+    .block-info {
+      background: var(--info-bg);
+      border-left: 4px solid var(--info);
+      padding: 12px 14px;
+      margin: 12px 0;
+      border-radius: 0 6px 6px 0;
+    }
+    .block-warn {
+      background: var(--warn-bg);
+      border-left: 4px solid var(--warn-border);
+      padding: 12px 14px;
+      margin: 12px 0;
+      border-radius: 0 6px 6px 0;
+    }
+    .block-ok {
+      background: #e8f5e9;
+      border-left: 4px solid var(--success);
+      padding: 12px 14px;
+      margin: 12px 0;
+      border-radius: 0 6px 6px 0;
+    }
+    .fig {
+      margin: 16px 0;
+      padding: 12px;
+      background: #fafbfc;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      text-align: center;
+    }
+    .fig img {
+      max-width: 100%;
+      height: auto;
+      border: 1px solid #ced4da;
+      border-radius: 4px;
+    }
+    .fig figcaption {
+      margin-top: 8px;
+      font-size: 13px;
+      color: var(--muted);
+      text-align: left;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 14px;
+      margin: 10px 0;
+    }
+    th, td {
+      border: 1px solid var(--border);
+      padding: 8px 10px;
+      vertical-align: top;
+      text-align: left;
+    }
+    th { background: var(--info-bg); }
+    code {
+      font-family: Consolas, monospace;
+      font-size: 13px;
+      background: #f0f2f5;
+      padding: 1px 5px;
+      border-radius: 3px;
+    }
+    footer {
+      font-size: 12px;
+      color: var(--muted);
+      text-align: center;
+      padding: 8px;
+    }
+    a { color: #0d6efd; }
+  </style>
+</head>
+<body>
+
+<header class="head">
+  <div class="head-inner">
+    <h1>Как запустить пересчет MV и WAP на базе T-1</h1>
+    <p>Краткая инструкция для бизнес-пользователя. Полный тест повторять не нужно — только ручной запуск регламентного задания после установки обновлений IT.</p>
+  </div>
+</header>
+
+<main class="wrap">
+
+  <section id="about">
+    <h2>О чем эта инструкция</h2>
+    <p>После установки доработок по задаче <strong>IMDEV-8665</strong> пересчет рыночной стоимости (MV) и средневзвешенной цены (WAP) для Retail запускается <strong>штатным регламентным заданием</strong> 1С — так же, как в ночном расписании, но вручную, когда вам нужно проверить работу на тестовой базе <strong>T-1</strong>.</p>
+    <div class="block-info">
+      <strong>Важно:</strong> вы не открываете файлы обработки (.epf) и не настраиваете технические параметры. Достаточно открыть список регламентных заданий и нажать «Выполнить в фоновом задании».
+    </div>
+  </section>
+
+  <section id="before">
+    <h2>Перед запуском</h2>
+    <table>
+      <thead>
+        <tr><th>Что должно быть сделано</th><th>Кто делает</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>На базу <strong>T-1</strong> установлены обновления (конфигурация, расширение, подключена доп. обработка «Расчет MV и WAP»)</td>
+          <td>IT / разработка (до вашего запуска)</td>
+        </tr>
+        <tr>
+          <td>Вы вошли в 1С под учетной записью <strong>администратора</strong> или пользователя с правом на раздел «Администрирование»</td>
+          <td>Вы</td>
+        </tr>
+        <tr>
+          <td>Выбрана именно информационная база <strong>T-1</strong> (проверьте название в заголовке окна 1С)</td>
+          <td>Вы</td>
+        </tr>
+        <tr>
+          <td>Время запуска: лучше в рабочее окно, когда на T-1 нет других тяжелых пересчетов</td>
+          <td>Вы</td>
+        </tr>
+      </tbody>
+    </table>
+    <div class="block-warn">
+      <strong>Ориентир по длительности:</strong> на объеме порядка 2 рабочих дней расчет может занять <strong>около 30–60 минут</strong> (раньше на старой версии — несколько часов). Не закрывайте 1С до окончания фонового задания, если хотите видеть статус в интерфейсе.
+    </div>
+  </section>
+
+  <section id="steps">
+    <h2>Пошаговый запуск</h2>
+
+    <div class="step">
+      <div class="step-num">1</div>
+      <div class="step-body">
+        <strong>Откройте раздел «Администрирование»</strong>
+        <p>В верхней панели 1С (лента разделов) нажмите <span class="ui">Администрирование</span>.</p>
+        <p>Если раздела нет — обратитесь в IT: нужны права администратора.</p>
+        <p><em>Альтернатива:</em> <span class="ui">Администрирование</span> → <span class="ui">Поддержка и обслуживание</span> → ссылка <span class="ui">Регламентные и фоновые задания</span> (доступна администратору системы).</p>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">2</div>
+      <div class="step-body">
+        <strong>Откройте «Регламентные и фоновые задания»</strong>
+        <p>В левой панели раздела «Администрирование» выберите пункт <span class="ui">Регламентные и фоновые задания</span>.</p>
+        <p>Откроется окно со списком регламентных заданий (вкладка «Регламентные задания»).</p>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">3</div>
+      <div class="step-body">
+        <strong>Найдите нужное задание в списке</strong>
+        <p>В колонке <strong>Наименование</strong> найдите строку, в которой есть текст (подстрока достаточно):</p>
+        <ul>
+          <li><code>Дополнительная обработка: Расчет MV и WAP</code></li>
+          <li>и далее — <code>Пересчет по расписанию MV и WAP RETAIL за 1 день (фон.)</code></li>
+        </ul>
+        <p>Если список длинный — воспользуйтесь поиском/фильтром в таблице (введите <strong>MV</strong> или <strong>WAP</strong> или <strong>RETAIL</strong>).</p>
+        <p>Щелкните по строке один раз, чтобы она выделилась.</p>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">4</div>
+      <div class="step-body">
+        <strong>Запустите задание вручную в фоне</strong>
+        <p>На панели команд нажмите <span class="ui">Выполнить</span> (или кнопку с такой же надписью).</p>
+        <p>В меню выберите <span class="ui">В фоновом задании</span> — <strong>не</strong> «На сервере» без фона, если есть выбор.</p>
+        <p>Должно появиться сообщение, что процедура регламентного задания запущена в фоновом задании.</p>
+      </div>
+    </div>
+
+    <figure class="fig">
+      <img src="../../IMDEV-8665 Тесты/Тестирование/reports/images/docx_image_7.png" alt="Пример: Выполнить - В фоновом задании">
+      <figcaption>Пример из теста: выделено регламентное задание Retail, команда «Выполнить» → «В фоновом задании».</figcaption>
+    </figure>
+
+    <div class="step">
+      <div class="step-num">5</div>
+      <div class="step-body">
+        <strong>Контролируйте выполнение</strong>
+        <p>В том же окне перейдите на вкладку <span class="ui">Фоновые задания</span>.</p>
+        <p>Найдите задание с недавним временем начала и именем, связанным с пересчетом MV/WAP.</p>
+        <ul>
+          <li>Пока идет работа — статус «Выполняется» (или аналог).</li>
+          <li>Успешное завершение — «Завершено» без критической ошибки.</li>
+        </ul>
+        <p>При необходимости обновите список кнопкой <span class="ui">Обновить</span>.</p>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">6</div>
+      <div class="step-body">
+        <strong>Дополнительная проверка (по желанию)</strong>
+        <p>Если у вас настроена рассылка по итогам пересчета, на почту может прийти письмо с темой вроде:</p>
+        <p><code>{OK} … Пересчет по расписанию MV и WAP …</code></p>
+        <p>Это подтверждение успешного завершения с точки зрения обработки. Если письма нет, ориентируйтесь на вкладку «Фоновые задания».</p>
+      </div>
+    </div>
+  </section>
+
+  <section id="check">
+    <h2>Как понять, что все прошло нормально</h2>
+    <div class="block-ok">
+      <ul style="margin:0;padding-left:20px;">
+        <li>На вкладке «Фоновые задания» последний запуск в статусе <strong>Завершено</strong>.</li>
+        <li>Нет всплывающего окна с текстом критической ошибки при старте.</li>
+        <li>Время выполнения сопоставимо с ожиданием (десятки минут, не «зависло» на несколько часов без движения).</li>
+      </ul>
+    </div>
+    <h3>Что НЕ считается проблемой данных</h3>
+    <p>В старых версиях в журнале иногда встречается предупреждение про мандат «Розничное ДУ» — на результат расчета по Retail это <strong>не влияет</strong>. Если пересчет завершился и документы созданы — для приемки на T-1 этого достаточно.</p>
+  </section>
+
+  <section id="problems">
+    <h2>Если что-то пошло не так</h2>
+    <table>
+      <thead>
+        <tr><th>Ситуация</th><th>Что сделать</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Нет раздела «Администрирование» или пункта «Регламентные и фоновые задания»</td>
+          <td>Запросить у IT права администратора на базу T-1</td>
+        </tr>
+        <tr>
+          <td>В списке нет задания с «Расчет MV и WAP» / «RETAIL»</td>
+          <td>Уточнить у IT: установлены ли обновления и подключена ли доп. обработка на T-1</td>
+        </tr>
+        <tr>
+          <td>При нажатии «Выполнить» — «уже выполняется»</td>
+          <td>Подождать окончания текущего фонового задания на вкладке «Фоновые задания»</td>
+        </tr>
+        <tr>
+          <td>Задание завершилось с ошибкой (красный статус / текст ошибки)</td>
+          <td>Сделать скриншот вкладки «Фоновые задания» и передать в IT с указанием времени запуска</td>
+        </tr>
+        <tr>
+          <td>Долго «Выполняется» (больше 2 часов без изменений)</td>
+          <td>Сообщить в IT: время старта, база T-1, наименование регламентного задания</td>
+        </tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section id="not">
+    <h2>Чего делать не нужно</h2>
+    <ul>
+      <li>Не нужно повторять полный протокол теста (сравнение MXL, два прогона «было/стало», смена версий .epf).</li>
+      <li>Не нужно открывать консоль запросов, конфигуратор или файлы на диске.</li>
+      <li>Не нужно менять число параллельных потоков на форме обработки — это настраивает IT при установке обновлений.</li>
+    </ul>
+  </section>
+
+  <section id="contacts">
+    <h2>Краткая памятка (одна строка)</h2>
+    <p style="font-size:15px;"><strong>Администрирование</strong> → <strong>Регламентные и фоновые задания</strong> → найти <strong>«Расчет MV и WAP … RETAIL за 1 день (фон.)»</strong> → <strong>Выполнить</strong> → <strong>В фоновом задании</strong> → контроль на вкладке <strong>Фоновые задания</strong>.</p>
+    <p style="color:var(--muted);font-size:13px;margin-top:12px;">Задача: IMDEV-8665. Технический отчет о тесте: <a href="../../IMDEV-8665 Тесты/Тестирование/reports/imdev_8665_final_test_report.html">imdev_8665_final_test_report.html</a></p>
+  </section>
+
+</main>
+
+<footer>
+  Инструкция для бизнес-заказчика, база T-1, запуск регламентного задания MV/WAP Retail.
+</footer>
+
+</body>
+</html>

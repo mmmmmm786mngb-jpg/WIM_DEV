@@ -1,0 +1,756 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>IMDEV-8665 - итоговый отчет по работам и финальному тесту</title>
+  <style>
+    :root {
+      --success: #28a745;
+      --error: #dc3545;
+      --info: #17a2b8;
+      --warn-bg: #fff3cd;
+      --warn-border: #ffc107;
+      --info-bg: #e8f7fb;
+      --purple-bg: #f3e8ff;
+      --blue-bg: #e7f3ff;
+      --text: #212529;
+      --muted: #6c757d;
+      --border: #dee2e6;
+      --paper: #fff;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Segoe UI", system-ui, Arial, sans-serif;
+      color: var(--text);
+      background: #eef2f7;
+      line-height: 1.55;
+    }
+    .head {
+      background: linear-gradient(135deg, #0052cc 0%, var(--info) 100%);
+      color: #fff;
+      padding: 28px 24px 32px;
+      box-shadow: 0 4px 16px rgba(0, 82, 204, 0.2);
+    }
+    .head-inner { max-width: 1100px; margin: 0 auto; }
+    .head h1 { margin: 0 0 8px; font-size: 1.55rem; font-weight: 700; }
+    .head .subtitle { opacity: 0.92; font-size: 14px; max-width: 820px; }
+    .pills { margin-top: 14px; display: flex; flex-wrap: wrap; gap: 8px; }
+    .pill {
+      display: inline-block;
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 600;
+      background: rgba(255,255,255,0.18);
+      border: 1px solid rgba(255,255,255,0.35);
+    }
+    .wrap { max-width: 1100px; margin: 0 auto; padding: 24px 16px 48px; }
+    section {
+      background: var(--paper);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 18px 20px;
+      margin-bottom: 16px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+    }
+    h2 {
+      margin: 0 0 12px;
+      font-size: 1.12rem;
+      color: #0c5460;
+      border-bottom: 2px solid var(--info-bg);
+      padding-bottom: 6px;
+    }
+    h3 { margin: 16px 0 8px; font-size: 1rem; color: #0747a6; }
+    p { margin: 0 0 10px; }
+    ul, ol { margin: 6px 0 10px; padding-left: 22px; }
+    li { margin: 5px 0; }
+    a { color: #0d6efd; }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+      margin: 10px 0;
+    }
+    th, td {
+      border: 1px solid var(--border);
+      padding: 8px 10px;
+      vertical-align: top;
+      text-align: left;
+    }
+    th { background: var(--info-bg); color: #0c5460; font-weight: 600; }
+    tr:nth-child(even) { background: #f8f9fa; }
+    .stat-ok { color: var(--success); font-weight: 700; }
+    .stat-err { color: var(--error); font-weight: 700; }
+    .stat-info { color: #0c5460; font-weight: 700; }
+    pre {
+      margin: 10px 0;
+      padding: 12px 14px;
+      background: #f4f6f8;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      overflow-x: auto;
+      font: 12px/1.45 Consolas, "Courier New", monospace;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+    .block-info {
+      background: var(--info-bg);
+      border-left: 4px solid var(--info);
+      padding: 12px 14px;
+      margin: 12px 0;
+      border-radius: 0 6px 6px 0;
+    }
+    .block-warn {
+      background: var(--warn-bg);
+      border-left: 4px solid var(--warn-border);
+      padding: 12px 14px;
+      margin: 12px 0;
+      border-radius: 0 6px 6px 0;
+    }
+    .block-bug {
+      background: #fff9e6;
+      border: 2px solid var(--warn-border);
+      padding: 14px 16px;
+      margin: 14px 0;
+      border-radius: 8px;
+    }
+    .block-bug h3 { margin-top: 0; color: #856404; }
+    .block-purple {
+      background: var(--purple-bg);
+      border-left: 4px solid #7c3aed;
+      padding: 12px 14px;
+      margin: 12px 0;
+      border-radius: 0 6px 6px 0;
+    }
+    .block-blue {
+      background: var(--blue-bg);
+      border-left: 4px solid #0d6efd;
+      padding: 12px 14px;
+      margin: 12px 0;
+      border-radius: 0 6px 6px 0;
+    }
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 12px;
+      margin: 12px 0;
+    }
+    .kpi {
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 14px;
+      text-align: center;
+      background: #fafbfc;
+    }
+    .kpi .val { font-size: 1.5rem; font-weight: 700; line-height: 1.2; }
+    .kpi .lbl { font-size: 12px; color: var(--muted); margin-top: 4px; }
+    .kpi.before .val { color: var(--error); }
+    .kpi.after .val { color: var(--success); }
+    .kpi.ratio .val { color: var(--info); }
+    code, .mono {
+      font-family: Consolas, "Courier New", monospace;
+      font-size: 12px;
+      background: #f0f2f5;
+      padding: 1px 5px;
+      border-radius: 3px;
+    }
+    .tag {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 11px;
+      font-weight: 600;
+    }
+    .tag-ok { background: #d4edda; color: #155724; }
+    .tag-fail { background: #f8d7da; color: #721c24; }
+    .tag-run { background: #cce5ff; color: #004085; }
+    .tag-warn { background: #fff3cd; color: #856404; }
+    .stat-warn { color: #856404; font-weight: 600; }
+    footer {
+      font-size: 12px;
+      color: var(--muted);
+      margin-top: 8px;
+      padding-top: 12px;
+      border-top: 1px solid var(--border);
+    }
+    .nav-links { display: grid; gap: 8px; }
+    .nav-links a {
+      display: block;
+      padding: 10px 12px;
+      background: #f8f9fa;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      text-decoration: none;
+      color: inherit;
+    }
+    .nav-links a:hover { border-color: var(--info); background: var(--info-bg); }
+    .fig {
+      margin: 14px 0;
+      padding: 10px 12px;
+      background: #fafbfc;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+    }
+    .fig img {
+      display: block;
+      max-width: 100%;
+      height: auto;
+      border: 1px solid #ced4da;
+      border-radius: 4px;
+      margin-bottom: 8px;
+    }
+    .fig figcaption {
+      font-size: 12.5px;
+      color: var(--muted);
+      line-height: 1.45;
+    }
+    .steps { counter-reset: step; list-style: none; padding-left: 0; }
+    .steps > li {
+      counter-increment: step;
+      margin: 10px 0;
+      padding-left: 2.2rem;
+      position: relative;
+    }
+    .steps > li::before {
+      content: counter(step);
+      position: absolute;
+      left: 0;
+      width: 1.6rem;
+      height: 1.6rem;
+      line-height: 1.6rem;
+      text-align: center;
+      background: var(--info);
+      color: #fff;
+      border-radius: 50%;
+      font-size: 12px;
+      font-weight: 700;
+    }
+  </style>
+</head>
+<body>
+
+<header class="head">
+  <div class="head-inner">
+    <h1>IMDEV-8665: итоговый отчет по работам и финальному тесту</h1>
+    <p class="subtitle">
+      Оптимизация пересчета MV и WAP в Retail MO (база Wim_Mo). Отчет сформирован по документу
+      <code>Финальный тест по задаче 8665.docx</code>, материалам проекта
+      <code>IMDEV-8665_Retail_MV</code> и папке регрессионных сравнений.
+    </p>
+    <div class="pills">
+      <span class="pill">Jira: IMDEV-8665</span>
+      <span class="pill">База: Wim_Mo</span>
+      <span class="pill">Дата теста: 20.05.2026</span>
+      <span class="pill">Горизонт: 2 раб. дня (18-19.05.2026)</span>
+      <span class="pill">Потоки: 5</span>
+    </div>
+  </div>
+</header>
+
+<main class="wrap">
+
+  <section id="intro">
+    <h2>1. Введение</h2>
+    <p>
+      Задача <strong>IMDEV-8665</strong> (Change Request, Retail_DU): сократить время массового пересчета
+      рыночной стоимости (MV) и средневзвешенной (WAP) для розничного ДУ. Контекст инцидента
+      <strong>IMAPPS-36383</strong> - срыв расчета MV при росте клиентской базы.
+    </p>
+    <p><strong>Цель доработки:</strong></p>
+    <ul>
+      <li>Параллельное удаление и создание документов <code>РасчетРыночнойСтоимости</code> и <code>РасчетСредневзвешеннойСтоимости</code> через фоновые задания БСП.</li>
+      <li>Кеширование курсов валют и валют расчета WAP в расширении <code>MV_WAP</code>.</li>
+      <li>Пакетные запросы и расчет по массиву мандатов в документах MV/WAP (расширение <code>MV_WAP</code> + служебный документ в EPF).</li>
+      <li>Настраиваемое число параллельных потоков на форме обработки <code>внРасчетMVиWAP</code>.</li>
+    </ul>
+    <p><strong>Артефакты в репозитории:</strong></p>
+    <ul>
+      <li>Разработка: <code>bases/Wim_Mo/projects/IMDEV-8665_Retail_MV/</code> (расширение, EPF, документация).</li>
+      <li>Тесты и регресс: <code>bases/Wim_Mo/projects/IMDEV-8665 Тесты/</code> (MXL, XLS, Word).</li>
+    </ul>
+    <div class="block-info">
+      <strong>Источник финального теста:</strong> штатное регламентное задание БСП
+      «Дополнительная обработка: Расчет MV и WAP» с командой
+      <em>Пересчет по расписанию MV и WAP RETAIL за 1 день (фон.)</em>, запуск
+      <strong>в фоновом задании</strong> (без COM и без Python). Сначала подключена оригинальная EPF, затем доработанная версия с 5 параллельными потоками.
+    </div>
+  </section>
+
+  <section id="stats">
+    <h2>2. Статистика финального теста (20.05.2026)</h2>
+    <div class="kpi-grid">
+      <div class="kpi before">
+        <div class="val">4 ч</div>
+        <div class="lbl">Оригинал (08:07 - 12:04), эталон по времени</div>
+      </div>
+      <div class="kpi after">
+        <div class="val">30 мин</div>
+        <div class="lbl">Оптимизация (14:18 - 14:49), удаление + расчет, без ошибок</div>
+      </div>
+      <div class="kpi ratio">
+        <div class="val">x8</div>
+        <div class="lbl">Ускорение при тех же 2 днях (18-19.05.2026)</div>
+      </div>
+    </div>
+    <table>
+      <thead>
+        <tr>
+          <th>Вариант</th>
+          <th>Интервал</th>
+          <th>Удаление старых документов</th>
+          <th>Замечания в логе</th>
+          <th>Итог</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Оригинальная обработка</td>
+          <td>08:07:53 - 12:04:40</td>
+          <td>Нет (только расчет в прогоне)</td>
+          <td class="stat-warn">Некритично: пропуск мандата «Розничное ДУ» без валюты; в логе флаг «завершена с ошибкой» — на данные не влияет</td>
+          <td><span class="tag tag-ok">Пройден</span></td>
+        </tr>
+        <tr>
+          <td>Оптимизированная (5 потоков)</td>
+          <td>14:18:17 - 14:49:55</td>
+          <td>Да + расчет (~15 мин удаление, ~15 мин расчет)</td>
+          <td class="stat-ok">Нет</td>
+          <td><span class="tag tag-ok">Пройден</span></td>
+        </tr>
+        <tr>
+          <td>Регресс MXL (было vs стало)</td>
+          <td>После обоих прогонов, 18-19.05.2026</td>
+          <td colspan="2"><code>МВ_Было/Стало_20052026.mxl</code>, <code>ВАП_Было/Стало_20052026.mxl</code> — сравнение в 1С: <strong>файлы идентичны</strong> (рис. 7)</td>
+          <td><span class="tag tag-ok">Пройден</span></td>
+        </tr>
+      </tbody>
+    </table>
+    <h3>Детализация этапов (оптимизированный прогон)</h3>
+    <table>
+      <thead>
+        <tr><th>Этап</th><th>Начало</th><th>Конец</th><th>Длительность</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>MV, день 18.05.2026</td><td>14:18:18</td><td>14:26:34</td><td class="stat-info">~8 мин 16 с</td></tr>
+        <tr><td>MV, день 19.05.2026</td><td>14:26:34</td><td>14:35:15</td><td class="stat-info">~8 мин 41 с</td></tr>
+        <tr><td>WAP, день 18.05.2026</td><td>14:35:15</td><td>14:42:00</td><td class="stat-info">~6 мин 45 с</td></tr>
+        <tr><td>WAP, день 19.05.2026</td><td>14:42:00</td><td>14:49:55</td><td class="stat-info">~7 мин 55 с</td></tr>
+        <tr><td><strong>Суммарно MV+WAP</strong></td><td>14:18:17</td><td>14:49:55</td><td class="stat-ok"><strong>~31 мин 38 с</strong></td></tr>
+      </tbody>
+    </table>
+    <div class="block-purple">
+      <strong>Сопоставление с замерами отладчика (до оптимизации):</strong> на горизонте 2 раб. дня зафиксировано
+      ~15 911 с (4:25:11) на 29 240 расчетов; целевой ориентир из Jira - порядка 60 минут на 2 дня.
+      Финальный тест 30 минут укладывается в этот ориентир.
+      <br>См. <a href="../../IMDEV-8665_Retail_MV/Документация/measurements_table_IMDEV-8665.html">таблицу замеров</a>.
+    </div>
+  </section>
+
+  <section id="tech">
+    <h2>3. Технология тестирования и воспроизведения</h2>
+
+    <div class="block-info">
+      <strong>Способ запуска:</strong> обычное регламентное задание подсистемы БСП «Дополнительные отчеты и обработки»
+      с выполнением <strong>в фоновом задании</strong> на сервере 1С. COM, Python и внешняя автоматизация
+      <strong>не использовались</strong>.
+    </div>
+
+    <h3>3.1. Среда</h3>
+    <table>
+      <thead>
+        <tr><th>Параметр</th><th>Значение</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Информационная база</td><td>копия Retail MO (в протоколе: <code>AVC_REGR_CLEAN_MO</code>, контур <code>PROD_AVC_Retail_MO</code>)</td></tr>
+        <tr><td>Конфигурация</td><td>Мидл-офис + расширение <code>MV_WAP</code> (для оптимизированного прогона)</td></tr>
+        <tr><td>Доп. обработка</td><td><code>внРасчетMVиWAP</code> (БСП, публикация «Используется»)</td></tr>
+        <tr><td>Команда регламента</td><td><code>Пересчет_MV_и_WAP_1d_Retail</code> — «Пересчет по расписанию MV и WAP RETAIL за 1 день (фон.)»</td></tr>
+        <tr><td>Горизонт в тесте</td><td>2 календарных дня расчета: 18.05.2026 и 19.05.2026 (по логу и письму рассылки)</td></tr>
+      </tbody>
+    </table>
+
+    <h3>3.2. Порядок воспроизведения (как в Word-документе)</h3>
+    <ol class="steps">
+      <li>
+        <strong>Прогон «было»:</strong> в справочнике доп. обработок подключить файл
+        <code>внРасчетMVиWAP_Оригинал.epf</code>, версия <strong>2.161</strong>.
+      </li>
+      <li>
+        <strong>Запуск:</strong> обработка «Регламентные и фоновые задания» — выбрать задание
+        «Дополнительная обработка: Расчет MV и WAP / … RETAIL за 1 день (фон.)» — кнопка
+        <strong>Выполнить → В фоновом задании</strong>.
+      </li>
+      <li>
+        <strong>Контроль:</strong> журнал «Фоновые задания» (время старта/окончания, число сообщений);
+        письмо рассылки с темой <code>{OK} Аванкор МО: Пересчет по расписанию MV и WAP …</code>.
+      </li>
+      <li>
+        <strong>Сохранение «было»:</strong> выгрузка MV/WAP запросами консоли (период 18-19.05.2026) в MXL
+        <code>МВ_Было_20052026.mxl</code>, <code>ВАП_Было_20052026.mxl</code> (папка <code>Регресс/</code>).
+      </li>
+      <li>
+        <strong>Прогон «стало»:</strong> загрузить доработанную <code>внРасчетMVиWAP.epf</code> версии <strong>2.200</strong>,
+        в настройках обработки указать <strong>5</strong> параллельных потоков (создание и удаление), повторить п. 2-3.
+      </li>
+      <li>
+        <strong>Регресс:</strong> выгрузить «стало», сравнить MXL через «Сравнить файлы» (табличный документ) — ожидание «Файлы идентичны».
+      </li>
+    </ol>
+
+    <figure class="fig">
+      <img src="images/docx_image_7.png" alt="Запуск регламентного задания в фоновом задании">
+      <figcaption>Рис. 1. Регламентное задание: команда Retail, выполнение «В фоновом задании».</figcaption>
+    </figure>
+
+    <h3>3.3. Подключение дополнительной обработки</h3>
+    <div class="fig" style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+      <figure>
+        <img src="images/docx_image_1.png" alt="Оригинальная EPF 2.161">
+        <figcaption>Рис. 2а. «Было»: <code>внРасчетMVиWAP_Оригинал.epf</code>, v. 2.161.</figcaption>
+      </figure>
+      <figure>
+        <img src="images/docx_image_12.png" alt="Доработанная EPF 2.200">
+        <figcaption>Рис. 2б. «Стало»: <code>внРасчетMVиWAP.epf</code>, v. 2.200.</figcaption>
+      </figure>
+    </div>
+
+    <h3>3.4. Настройки оптимизированного прогона</h3>
+    <figure class="fig">
+      <img src="images/docx_image_13.png" alt="Пять параллельных потоков в настройках обработки">
+      <figcaption>Рис. 3. Форма настроек: <code>ЧислоПараллельныхФоновыхЗаданий = 5</code> (параллельные потоки для создания и удаления документов).</figcaption>
+    </figure>
+
+    <h3>3.5. Мониторинг выполнения</h3>
+    <p>Внутри одного запуска «Запуск дополнительных обработок» порождаются дочерние фоновые задания на удаление и формирование пачек документов MV/WAP (по ~2 924 мандата в пачке).</p>
+
+    <figure class="fig">
+      <img src="images/docx_image_8.png" alt="Старт фонового задания оригинала 08:07">
+      <figcaption>Рис. 4а. Оригинал: старт 20.05.2026 08:07:53, задание выполняется.</figcaption>
+    </figure>
+    <figure class="fig">
+      <img src="images/docx_image_9.png" alt="Завершение фонового задания оригинала 12:04">
+      <figcaption>Рис. 4б. Оригинал: завершение 12:04:41 (~4 ч), 30 сообщений в логе.</figcaption>
+    </figure>
+    <figure class="fig">
+      <img src="images/docx_image_2.png" alt="Старт оптимизированного прогона 14:18">
+      <figcaption>Рис. 4в. Оптимизация: старт 14:18:16, параллельные удаления MV.</figcaption>
+    </figure>
+    <figure class="fig">
+      <img src="images/docx_image_4.png" alt="Список завершенных фоновых заданий оптимизированного прогона">
+      <figcaption>Рис. 4г. Оптимизация: все дочерние задания «Задание выполнено», ошибок 0; корневое задание 14:18:16 - 14:49:55.</figcaption>
+    </figure>
+    <figure class="fig">
+      <img src="images/docx_image_3.png" alt="Письмо OK о завершении пересчета">
+      <figcaption>Рис. 5. Рассылка: статус {OK}, лог этапов MV/WAP за 18-19.05.2026, завершение в 14:49:55.</figcaption>
+    </figure>
+
+    <h3>3.6. Выгрузка данных и сравнение (регресс)</h3>
+    <p><strong>Запрос выгрузки MV</strong> (консоль запросов, пакет «КонсольЗапросов_8665»):</p>
+    <pre>ВЫБРАТЬ
+    СчетаМандата.Ссылка.Мандат КАК Мандат,
+    СчетаМандата.Ссылка.Валюта КАК Валюта,
+    СчетаМандата.Курс КАК Курс,
+    СчетаМандата.СчетМандата КАК СчетМандата,
+    СчетаМандата.РыночнаяСтоимость КАК РыночнаяСтоимость,
+    СчетаМандата.РыночнаяСтоимостьПлан КАК РыночнаяСтоимостьПлан
+ИЗ
+    Документ.РасчетРыночнойСтоимости.СчетаМандата КАК СчетаМандата
+ГДЕ
+    СчетаМандата.Ссылка.Проведен
+    И СчетаМандата.Ссылка.Дата МЕЖДУ &amp;НачалоПериода И &amp;КонецПериода
+УПОРЯДОЧИТЬ ПО
+    Мандат</pre>
+    <p>Параметры: <code>НачалоПериода</code> = 18.05.2026 0:00:00, <code>КонецПериода</code> = 19.05.2026 23:59:59 (~29 096 строк MV). Аналогично запрос <code>ВыгрWAP</code> для WAP.</p>
+
+    <figure class="fig">
+      <img src="images/docx_image_10.png" alt="Консоль запросов выгрузка MV">
+      <figcaption>Рис. 6. Консоль запросов: выгрузка MV за период теста.</figcaption>
+    </figure>
+
+    <figure class="fig">
+      <img src="images/docx_image_5.png" alt="Сравнение MV файлы идентичны">
+      <figcaption>Рис. 7а. Сравнение <code>МВ_Было_20052026.mxl</code> и <code>МВ_Стало_20052026.mxl</code> — «Файлы идентичны».</figcaption>
+    </figure>
+    <figure class="fig">
+      <img src="images/docx_image_6.png" alt="Сравнение WAP файлы идентичны">
+      <figcaption>Рис. 7б. Сравнение <code>ВАП_Было_20052026.mxl</code> и <code>ВАП_Стало_20052026.mxl</code> — «Файлы идентичны».</figcaption>
+    </figure>
+
+    <div class="block-warn">
+      <strong>Расширение MV_WAP:</strong> на стенде теста должно быть загружено для оптимизированного прогона
+      (перехваты курсов, валют WAP, <code>ДлительныеОперации</code>). Скриншот правок в конфигураторе — в Word (рис. по модулю WAP); исходники: проект <code>IMDEV-8665_Retail_MV/Расширения/MV_WAP</code>.
+    </div>
+  </section>
+
+  <section id="details">
+    <h2>4. Детали тестов (логи из финального документа)</h2>
+
+    <h3>4.1. Прогон 1 - оригинальная обработка</h3>
+    <p><span class="tag tag-ok">Пройден</span> <span class="tag tag-warn">есть некритичные записи в логе</span> Интервал: 08:07:53 - 12:04:40 (около 4 часов).</p>
+
+    <div class="block-warn">
+      <h3>Записи в логе (не влияют на результат теста)</h3>
+      <p>
+        Обработка помечает этапы MV/WAP как «завершена с ошибкой» из-за пропуска одного мандата без заполненной валюты.
+        Расчет по остальным клиентам выполнен; для сравнения данных и оценки времени прогон считается успешным.
+      </p>
+      <p>Повторяющиеся строки в логе:</p>
+      <pre>Не заполнена валюта мандата! Клиент пропущен:  - Розничное ДУ
+Обработка "Пересчет по расписанию MV и WAP" - завершена с ошибкой (MV-этап)!
+Были ошибки в MV-этапе
+Обработка "Пересчет по расписанию MV и WAP" - завершена с ошибкой (WAP-этап)!
+Были ошибки в WAP-этапе</pre>
+    </div>
+
+    <p><strong>Полный лог (фрагмент ключевых строк):</strong></p>
+    <pre>20.05.2026 8:07:53 -> == Начали обработку MV
+20.05.2026 8:07:53 -> == MV == Обрабатывается 18.05.2026
+20.05.2026 9:22:55 -> Не заполнена валюта мандата! Клиент пропущен:  - Розничное ДУ
+20.05.2026 9:22:55 -> Обработка MV завершена!
+20.05.2026 9:22:55 -> == MV == Обрабатывается 19.05.2026
+20.05.2026 10:51:37 -> Не заполнена валюта мандата! Клиент пропущен:  - Розничное ДУ
+20.05.2026 10:51:37 -> Обработка MV завершена!
+20.05.2026 10:51:37 -> Обработка "Пересчет по расписанию MV и WAP" - завершена с ошибкой (MV-этап)!
+20.05.2026 10:51:37 -> == Начали обработку WAP
+20.05.2026 10:51:37 -> == WAP == Обрабатывается 18.05.2026
+20.05.2026 11:27:58 -> Не заполнена валюта мандата! Клиент пропущен:  - Розничное ДУ
+20.05.2026 11:27:58 -> Обработка WAP завершена!
+20.05.2026 11:27:58 -> == WAP == Обрабатывается 19.05.2026
+20.05.2026 12:04:40 -> Не заполнена валюта мандата! Клиент пропущен:  - Розничное ДУ
+20.05.2026 12:04:40 -> Обработка WAP завершена!
+20.05.2026 12:04:40 -> Обработка "Пересчет по расписанию MV и WAP" - завершена с ошибкой (WAP-этап)!
+20.05.2026 12:04:40 -> Обработка "Пересчет по расписанию MV и WAP" - завершена!</pre>
+
+    <p>После прогона данные выгружены в MXL (<code>Регресс/МВ_Было_20052026.mxl</code>, <code>ВАП_Было_20052026.mxl</code>).</p>
+
+    <h3>4.2. Прогон 2 - оптимизированная версия (5 потоков)</h3>
+    <p><span class="tag tag-ok">Успешно</span> Интервал основного расчета: 14:18:17 - 14:49:55.</p>
+    <pre>20.05.2026 14:18:17 -> == Начали обработку MV
+20.05.2026 14:18:17 -> == MV == Обрабатывается 18.05.2026
+20.05.2026 14:18:17 -> Обработка MV завершена!
+20.05.2026 14:18:17 -> == MV == Обрабатывается 19.05.2026
+20.05.2026 14:18:17 -> Обработка MV завершена!
+20.05.2026 14:18:17 -> == Начали обработку WAP
+20.05.2026 14:18:17 -> == WAP == Обрабатывается 18.05.2026
+20.05.2026 14:18:17 -> Обработка WAP завершена!
+20.05.2026 14:18:17 -> == WAP == Обрабатывается 19.05.2026
+20.05.2026 14:18:17 -> Обработка WAP завершена!
+20.05.2026 14:18:17 -> Обработка "Пересчет по расписанию MV и WAP" - завершена!
+20.05.2026 14:18:18 -> == Начали обработку MV
+20.05.2026 14:18:18 -> == MV == Обрабатывается 18.05.2026
+20.05.2026 14:26:34 -> Обработка MV завершена!
+20.05.2026 14:26:34 -> == MV == Обрабатывается 19.05.2026
+20.05.2026 14:35:15 -> Обработка MV завершена!
+20.05.2026 14:35:15 -> == Начали обработку WAP
+20.05.2026 14:35:15 -> == WAP == Обрабатывается 18.05.2026
+20.05.2026 14:42:00 -> Обработка WAP завершена!
+20.05.2026 14:42:00 -> == WAP == Обрабатывается 19.05.2026
+20.05.2026 14:49:55 -> Обработка WAP завершена!
+20.05.2026 14:49:55 -> Обработка "Пересчет по расписанию MV и WAP" - завершена!</pre>
+
+    <h3>4.3. Регресс данных (сравнение MXL) — пройден</h3>
+    <div class="block-info" style="border-left-color: var(--success); background: #e8f5e9;">
+      <strong>Результат:</strong> формальное сравнение «было / стало» выполнено в 1С (команда «Сравнить файлы», тип «Табличный документ»).
+      По MV и WAP получено сообщение <strong>«Файлы идентичны»</strong> — расхождений нет. Подтверждение: рис. 7а и 7б (скриншоты из Word-документа теста).
+    </div>
+    <table>
+      <thead>
+        <tr><th>Пара сравнения</th><th>Файлы</th><th>Итог</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>MV, период 18-19.05.2026</td>
+          <td><code>Регресс/МВ_Было_20052026.mxl</code> vs <code>МВ_Стало_20052026.mxl</code></td>
+          <td class="stat-ok">Идентичны (рис. 7а)</td>
+        </tr>
+        <tr>
+          <td>WAP, тот же период</td>
+          <td><code>Регресс/ВАП_Было_20052026.mxl</code> vs <code>ВАП_Стало_20052026.mxl</code></td>
+          <td class="stat-ok">Идентичны (рис. 7б)</td>
+        </tr>
+      </tbody>
+    </table>
+    <figure class="fig">
+      <img src="images/docx_image_5.png" alt="MV регресс идентичны">
+      <img src="images/docx_image_6.png" alt="WAP регресс идентичны" style="margin-top:10px;">
+      <figcaption>Рис. 7. Регресс: сравнение выгрузок до и после оптимизации (дублирование для раздела 4.3; полный размер — в п. 3.6).</figcaption>
+    </figure>
+    <h3>4.4. Прочие артефакты тестов</h3>
+    <table>
+      <thead>
+        <tr><th>Файл</th><th>Назначение</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><code>Тесты_MV_WAP_ПаралельныйЗапуск_*.xls</code></td><td>Массовый прогон (~17 тыс. портфелей)</td></tr>
+        <tr><td><code>ЗамерыОтладчика_8665.docx</code></td><td>Детальные замеры узких мест (до оптимизации)</td></tr>
+        <tr><td><code>Регресс/МВ_Было_*.mxl</code>, <code>ВАП_Было_*.mxl</code> (другие срезы)</td><td>Дополнительные сравнения по объему портфелей</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section id="work">
+    <h2>5. Выполненные работы по проекту (кратко)</h2>
+    <table>
+      <thead>
+        <tr><th>Направление</th><th>Реализация</th><th>Статус</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Параллельное удаление документов</td>
+          <td><code>УдалитьДокументыФоновоУниверсально</code>, пачки, <code>УдалитьПачкуДокументовВФоне</code></td>
+          <td><span class="tag tag-ok">Сделано</span></td>
+        </tr>
+        <tr>
+          <td>Параллельное создание MV/WAP</td>
+          <td><code>СформироватьДокументыПараллельно</code>, <code>СоздатьИПровестиДокументВФоне</code></td>
+          <td><span class="tag tag-ok">Сделано</span></td>
+        </tr>
+        <tr>
+          <td>Настройка потоков</td>
+          <td>Реквизит <code>ЧислоПараллельныхФоновыхЗаданий</code> на форме настроек EPF</td>
+          <td><span class="tag tag-ok">Сделано</span></td>
+        </tr>
+        <tr>
+          <td>Кеш курсов и валют WAP</td>
+          <td>Расширение <code>MV_WAP</code>: <code>РаботаСКурсамиВалют</code>, <code>ОбщегоНазначенияПовтИсп</code></td>
+          <td><span class="tag tag-ok">Сделано</span></td>
+        </tr>
+        <tr>
+          <td>Ускорение старта фоновых заданий</td>
+          <td>Перехват <code>ДлительныеОперации.ЗапуститьВыполнениеВФоне</code></td>
+          <td><span class="tag tag-ok">Сделано</span></td>
+        </tr>
+        <tr>
+          <td>Пакетные запросы MV (массив мандатов)</td>
+          <td>Расширение <code>MV_WAP</code>, документ <code>РасчетРыночнойСтоимости</code>: <code>&amp;ИзменениеИКонтроль</code> на точках замера (НКД, плановый НКД, ценные бумаги, плановые ЦБ, служебная ТЧ с <code>ВыполнитьПакет</code>); параметр <code>Мандат В (&amp;Мандат)</code> через <code>ОпределитьМножествоМандатов</code> / <code>ЗаменитьМандатНаВ</code></td>
+          <td><span class="tag tag-ok">Сделано</span></td>
+        </tr>
+        <tr>
+          <td>Пакетные запросы WAP (массив мандатов)</td>
+          <td><code>MV_WAP_ПолучитьДанныеРасчета</code> — один <code>ВыполнитьПакет</code> на массив мандатов; <code>&amp;Вместо ЗаполнитьДокумент</code>; <code>ПолучитьДанныеМандата</code> из общей структуры; запросы с <code>Мандат В (&amp;Мандат)</code></td>
+          <td><span class="tag tag-ok">Сделано</span></td>
+        </tr>
+        <tr>
+          <td>Массовый сценарий Retail (физлица)</td>
+          <td>EPF: служебный документ MV с <code>МассивМандатов</code>, <code>ПерезаполнитьВсеТЧ</code>, индекс, <code>КопироватьПоМандату</code>; WAP — один вызов <code>ПолучитьДанныеРасчета</code> на пачку (~2 924 мандата)</td>
+          <td><span class="tag tag-ok">Сделано</span></td>
+        </tr>
+        <tr>
+          <td>Оптимизация розничного мандата</td>
+          <td><code>&amp;Вместо МандатРозничноеДУ</code> в <code>ВТБ_АлгоритмыРасчета</code> (точка замера N=11)</td>
+          <td><span class="tag tag-ok">Сделано</span></td>
+        </tr>
+        <tr>
+          <td>Регресс данных (MXL)</td>
+          <td>Сравнение <code>МВ_Было/Стало_20052026</code>, <code>ВАП_Было/Стало_20052026</code> — «Файлы идентичны»</td>
+          <td><span class="tag tag-ok">Пройден</span></td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h3>5.1. Расширение MV_WAP: пакетность и массив мандатов (фактическая реализация)</h3>
+    <p>
+      В отчете ранее по ошибке стоял статус «План»: по коду расширения
+      <code>bases/Wim_Mo/projects/IMDEV-8665_Retail_MV/Расширения/MV_WAP</code>
+      доработки документов <strong>выполнены</strong> и используются в финальном тесте.
+    </p>
+
+    <table>
+      <thead>
+        <tr><th>Объект</th><th>Механизм</th><th>Зачем</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><code>РасчетРыночнойСтоимости</code></td>
+          <td>Служебный документ на пачку: <code>ДополнительныеСвойства.МассивМандатов</code>, один прогон запросов, <code>ПостроитьИндексПоМандатам</code>, раздача в документы мандатов через <code>КопироватьПоМандату</code></td>
+          <td>Один <code>Выполнить</code> / <code>ВыполнитьПакет</code> вместо N повторов по каждому мандату (точки замера N=1, 2, 8 и др.)</td>
+        </tr>
+        <tr>
+          <td><code>РасчетСредневзвешеннойСтоимости</code>, менеджер</td>
+          <td><code>MV_WAP_ПолучитьДанныеРасчета(Дата, МассивМандатов)</code> — пакет запросов, результат <code>Соответствие</code> по мандатам и активам</td>
+          <td>Один пакет на пачку WAP (точка замера N=3); далее <code>ЗаполнитьДокумент(, Данные)</code> без повторного пакета</td>
+        </tr>
+        <tr>
+          <td><code>РасчетСредневзвешеннойСтоимости</code>, объект</td>
+          <td><code>&amp;Вместо("ЗаполнитьДокумент")</code> — <code>MV_WAP_ЗаполнитьДокумент</code></td>
+          <td>Поддержка переданной структуры данных с массового расчета</td>
+        </tr>
+        <tr>
+          <td><code>ОбщегоНазначенияПовтИсп</code>, <code>РаботаСКурсамиВалют</code></td>
+          <td>Кеш сеанса: курсы и <code>ПолучитьВалютыРасчета</code></td>
+          <td>Точки замера N=12, N=13</td>
+        </tr>
+        <tr>
+          <td><code>ВТБ_АлгоритмыРасчета</code></td>
+          <td><code>MV_WAP_МандатРозничноеДУ</code></td>
+          <td>Корректная котировка для розничного контура без лишних обращений (N=11)</td>
+        </tr>
+        <tr>
+          <td>EPF <code>внРасчетMVиWAP</code></td>
+          <td><code>СформироватьПачкуДокументовВФоне</code> создает служебный MV/WAP и вызывает API расширения</td>
+          <td>Связка параллельных потоков EPF с пакетной логикой MV_WAP</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="block-info">
+      <strong>Схема для Retail (физлица), из <code>СформироватьПачкуДокументовВФоне</code>:</strong><br>
+      MV: один служебный <code>РасчетРыночнойСтоимости</code> на ~2 924 мандата → индекс ТЧ → для каждого мандата свой документ и проведение.<br>
+      WAP: один вызов <code>ПолучитьДанныеРасчета(ТекДата, МассивМандатов)</code> → для каждого мандата <code>ЗаполнитьДокумент(, ПолучитьДанныеМандата(...))</code>.
+    </div>
+
+    <div class="block-blue">
+      Подробное дерево изменений (часть пунктов в HTML-дереве устарела — ориентир на код MV_WAP):
+      <a href="../../IMDEV-8665_Retail_MV/Документация/changes_tree_IMDEV-8665.html">changes_tree_IMDEV-8665.html</a>.
+      Методика параллельных вызовов:
+      <a href="../../IMDEV-8665_Retail_MV/Документация/parallel_external_processing_methods_guide.html">parallel_external_processing_methods_guide.html</a>.
+    </div>
+  </section>
+
+  <section id="capabilities">
+    <h2>6. Возможности после внедрения</h2>
+    <ul>
+      <li>Масштабирование нагрузки изменением <code>ЧислоПараллельныхФоновыхЗаданий</code> без правки кода (в пределах ресурсов сервера и блокировок ИБ).</li>
+      <li>Раздельный контроль времени удаления и расчета (в финальном тесте - порядка 50/50 по длительности).</li>
+      <li>Снижение повторных обращений к <code>КурсыВалют</code> и запросу валют WAP за счет кеша сеанса.</li>
+      <li>Массовый расчет по массиву мандатов: один пакет запросов WAP и один служебный прогон MV на пачку фонового задания.</li>
+      <li>Сохранение совместимости с регламентными командами Retail (<code>Пересчет_MV_и_WAP_*_Retail</code>, IMAPPS-36383).</li>
+      <li>Набор MXL/XLS для регрессии и повторяемых сравнений «было/стало».</li>
+    </ul>
+  </section>
+
+  <section id="conclusions">
+    <h2>7. Выводы</h2>
+    <ol>
+      <li><strong class="stat-ok">Критерий производительности на 2 рабочих дня выполнен:</strong> 30 минут против ~4 часов на оригинале (ускорение в 8 раз), с полным циклом удаления и пересчета.</li>
+      <li><strong class="stat-ok">Корректность данных:</strong> регресс закрыт — MXL «было» и «стало» по MV и WAP за 18-19.05.2026 совпадают (рис. 7); оптимизация не меняет расчетные данные. Записи в логе старой версии про «Розничное ДУ» на результат не влияют.</li>
+      <li><strong class="stat-ok">Чистота лога:</strong> в оптимизированной версии те же предупреждения не воспроизводились (удобнее для мониторинга, не обязательный критерий приемки).</li>
+      <li><strong class="stat-info">Параллельность (5 потоков)</strong> подтвердила практическую применимость; дальнейшая настройка - по результатам мониторинга фоновых заданий на продуктиве.</li>
+      <li><strong class="stat-ok">Регресс данных (закрыт):</strong> сравнение в 1С выполнено успешно; MV и WAP — «Файлы идентичны» (раздел 4.3, рис. 7).</li>
+      <li><strong class="stat-ok">Пакетность в MV_WAP:</strong> реализована в расширении и задействована в финальном тесте (служебный MV + массовый <code>ПолучитьДанныеРасчета</code> для WAP); отдельный этап «только план» не требуется.</li>
+    </ol>
+    <div class="block-info">
+      <strong>Рекомендация для приемки в Jira:</strong> времена 20.05.2026 (4 ч → 30 мин), 5 потоков, ссылка на отчет; регресс — приложить пары MXL из <code>Регресс/</code> и скриншоты сравнения (рис. 7) с результатом «Файлы идентичны».
+    </div>
+  </section>
+
+  <section id="links">
+    <h2>8. Связанные материалы</h2>
+    <div class="nav-links">
+      <a href="../../IMDEV-8665_Retail_MV/Документация/imdev_8665_retail_mv_task.html">Постановка и разбор алгоритма (imdev_8665_retail_mv_task.html)</a>
+      <a href="../../IMDEV-8665_Retail_MV/Документация/measurements_table_IMDEV-8665.html">Таблица замеров отладчика (measurements_table_IMDEV-8665.html)</a>
+      <a href="../../IMDEV-8665_Retail_MV/Документация/changes_tree_IMDEV-8665.html">Дерево изменений (changes_tree_IMDEV-8665.html)</a>
+      <a href="../../IMDEV-8665_Retail_MV/README.md">README проекта IMDEV-8665_Retail_MV</a>
+      <a href="../../Финальный тест по задаче 8665.docx">Исходный документ: Финальный тест по задаче 8665.docx</a>
+    </div>
+    <footer>
+      Сформировано: 20.05.2026. Проект WIM_DEV, база Wim_Mo.
+      Исходники базы: <code>C:\1c\Cursor_1c\WORK\Wim_Mo</code>.
+    </footer>
+  </section>
+
+</main>
+</body>
+</html>
