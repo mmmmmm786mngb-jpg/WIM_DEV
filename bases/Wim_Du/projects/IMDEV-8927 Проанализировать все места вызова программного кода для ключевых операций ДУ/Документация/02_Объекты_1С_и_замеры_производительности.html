@@ -1,0 +1,925 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<title>Объекты 1С для ключевых операций ДУ + замеры производительности</title>
+<style>
+* { box-sizing: border-box; }
+body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    line-height: 1.55;
+    color: #212529;
+    background: #f4f6f8;
+    margin: 0;
+    padding: 24px;
+}
+.container { max-width: 1380px; margin: 0 auto; }
+h1 {
+    color: #6f42c1;
+    border-bottom: 3px solid #6f42c1;
+    padding-bottom: 10px;
+    margin-top: 0;
+}
+h2 {
+    color: #2c3e50;
+    margin-top: 36px;
+    border-bottom: 2px solid #dee2e6;
+    padding-bottom: 6px;
+}
+h3 { color: #2c3e50; margin-top: 22px; }
+.lead {
+    background: #ede7f6;
+    border-left: 4px solid #6f42c1;
+    padding: 14px 18px;
+    border-radius: 4px;
+    margin: 16px 0;
+}
+.info {
+    background: #d1ecf1;
+    border-left: 4px solid #17a2b8;
+    padding: 12px 16px;
+    border-radius: 4px;
+    margin: 12px 0;
+}
+.warn {
+    background: #fff3cd;
+    border-left: 4px solid #ffc107;
+    padding: 12px 16px;
+    border-radius: 4px;
+    margin: 12px 0;
+}
+.success {
+    background: #d4edda;
+    border-left: 4px solid #28a745;
+    padding: 12px 16px;
+    border-radius: 4px;
+    margin: 12px 0;
+}
+.danger {
+    background: #f8d7da;
+    border-left: 4px solid #dc3545;
+    padding: 12px 16px;
+    border-radius: 4px;
+    margin: 12px 0;
+}
+table {
+    width: 100%;
+    border-collapse: collapse;
+    background: #fff;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+    margin: 16px 0;
+    font-size: 13.5px;
+}
+thead th {
+    background: #6f42c1;
+    color: #fff;
+    text-align: left;
+    padding: 10px 12px;
+    border: 1px solid #5a32a3;
+    vertical-align: top;
+}
+tbody td {
+    border: 1px solid #dee2e6;
+    padding: 10px 12px;
+    vertical-align: top;
+}
+tbody tr:nth-child(even) { background: #f8f9fa; }
+tbody tr:hover { background: #fff8e1; }
+.num { text-align: center; font-weight: 600; width: 36px; }
+code, pre {
+    font-family: "Consolas", "Cascadia Code", monospace;
+}
+code {
+    background: #f1f3f5;
+    padding: 1px 5px;
+    border-radius: 3px;
+    font-size: 13px;
+    color: #c7254e;
+}
+pre {
+    background: #2d2d2d;
+    color: #f8f8f2;
+    padding: 14px 16px;
+    border-radius: 6px;
+    overflow-x: auto;
+    font-size: 13px;
+    line-height: 1.45;
+}
+pre.bsl { background: #1e1e1e; }
+pre code { background: transparent; color: inherit; padding: 0; }
+.prob {
+    display: inline-block;
+    min-width: 50px;
+    padding: 3px 10px;
+    border-radius: 12px;
+    font-weight: 600;
+    font-size: 12.5px;
+    text-align: center;
+    color: #fff;
+}
+.p-95 { background: #28a745; }
+.p-85 { background: #5cb85c; }
+.p-75 { background: #f0ad4e; }
+.p-60 { background: #ff9933; }
+.p-50 { background: #d9534f; }
+.p-low { background: #6c757d; }
+ul.tight { margin: 6px 0; padding-left: 22px; }
+ul.tight li { margin: 2px 0; }
+.path-tag {
+    display: inline-block;
+    background: #e9ecef;
+    border: 1px solid #ced4da;
+    color: #495057;
+    padding: 1px 7px;
+    border-radius: 3px;
+    font-family: "Consolas", monospace;
+    font-size: 12px;
+    margin-right: 4px;
+}
+.tag-doc { background: #cfe2ff; border-color: #9ec5fe; color: #084298; }
+.tag-cm  { background: #d1e7dd; border-color: #a3cfbb; color: #0f5132; }
+.tag-cat { background: #f8d7da; border-color: #f1aeb5; color: #842029; }
+.tag-epf { background: #fff3cd; border-color: #ffe69c; color: #664d03; }
+.tag-erf { background: #ffe5d0; border-color: #ffcc99; color: #663300; }
+.tag-rg  { background: #e2d9f3; border-color: #c5b3e6; color: #432874; }
+.tag-sj  { background: #cff4fc; border-color: #9eeaf9; color: #055160; }
+.flowchart {
+    background: #fff;
+    border: 1px solid #dee2e6;
+    border-radius: 6px;
+    padding: 16px;
+    margin: 14px 0;
+    text-align: center;
+    font-family: "Consolas", monospace;
+    font-size: 13px;
+    line-height: 1.8;
+}
+.arrow { color: #6f42c1; font-weight: 700; font-size: 16px; }
+.kbd {
+    display: inline-block;
+    background: #212529;
+    color: #fff;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-family: "Consolas", monospace;
+    font-size: 12.5px;
+}
+.legend {
+    display: flex;
+    gap: 18px;
+    flex-wrap: wrap;
+    margin: 14px 0;
+}
+.legend-item { display: flex; align-items: center; gap: 6px; font-size: 13px; }
+.footer {
+    text-align: center;
+    color: #6c757d;
+    font-size: 12px;
+    margin-top: 30px;
+    padding-top: 16px;
+    border-top: 1px solid #dee2e6;
+}
+</style>
+</head>
+<body>
+<div class="container">
+    <h1>Объекты 1С для ключевых операций ДУ + замеры производительности</h1>
+
+    <div class="lead">
+        <strong>Задача Jira:</strong> IMDEV-8927.<br>
+        <strong>Файл-источник:</strong> <code>Ключевые операции 15.xlsx</code> (вкладка "ДУ 15", 20 операций).<br>
+        <strong>Анализ выполнен по:</strong>
+        <span class="path-tag">C:\1c\Cursor_1c\WORK\Wim_Du\SRC\CF</span>
+        (базовая конфигурация, 296 общих модулей),
+        <span class="path-tag">C:\1c\Cursor_1c\WORK\Wim_Du\SRC\epf</span>
+        (342 внешние обработки, из них 195 c функцией <code>СведенияОВнешнейОбработке()</code>),
+        <span class="path-tag">C:\1c\Cursor_1c\WORK\Wim_Du\SRC\erf</span> (внешние отчёты).
+    </div>
+
+    <h2>Раздел 1. Архитектура запуска ключевых операций ДУ</h2>
+
+    <h3>1.1. Регламентное задание для дополнительных обработок (БСП)</h3>
+    <p>
+        Все внешние обработки <code>EPF</code>, имеющие признак "ДополнительнаяОбработка" в функции
+        <code>СведенияОВнешнейОбработке()</code>, регистрируются в справочнике
+        <span class="path-tag tag-cat">Справочник.ДополнительныеОтчетыИОбработки</span>
+        и выполняются по расписанию через регламентное задание
+        <span class="path-tag tag-sj">РегламентноеЗадание.ЗапускДополнительныхОбработок</span>.
+    </p>
+
+    <div class="flowchart">
+        <span class="path-tag tag-sj">РегламентноеЗадание.ЗапускДополнительныхОбработок</span>
+        <br><span class="arrow">&darr;</span> вызов <code>MethodName</code><br>
+        <span class="path-tag tag-cm">CommonModule.ДополнительныеОтчетыИОбработки.ВыполнитьОбработкуПоРегламентномуЗаданию</span>
+        <br><span class="arrow">&darr;</span> ищет в справочнике запись с указанной командой<br>
+        <span class="path-tag tag-cat">Справочник.ДополнительныеОтчетыИОбработки</span>
+        <span class="arrow">&rarr;</span> поле <code>ХранилищеОбработки</code>
+        <br><span class="arrow">&darr;</span> загрузка обработки во временный файл и вызов<br>
+        <code>ВнешниеОбработки.Создать(ИмяВременногоФайла).ВыполнитьКоманду(<wbr>ИдентификаторКоманды, ПараметрыВыполнения)</code>
+        <br><span class="arrow">&darr;</span><br>
+        <span class="path-tag tag-epf">EPF.ObjectModule.ВыполнитьКоманду(ИдентификаторКоманды, ПараметрыВыполнения)</span>
+    </div>
+
+    <p>
+        Ключевые поля справочника <code>ДополнительныеОтчетыИОбработки</code>:
+        <code>Наименование</code>, <code>ИмяОбъекта</code>, <code>ВидОбъекта</code>,
+        <code>ХранилищеОбработки</code>; и подчинённый табличный реквизит <code>Команды</code>
+        с полями <code>Идентификатор</code>, <code>Использование</code>, <code>БыстрыйДоступ</code>
+        и связанным регистром сведений <code>РасписаниеРегламентныхЗаданийДополнительныхОбработок</code>.
+    </p>
+
+    <h3>1.2. Регламентные операции ДУ (Утренние/Вечерние)</h3>
+    <p>
+        Утренние и вечерние регламенты &mdash; это <em>не отдельные обработки</em>, а пакетный
+        прогон процедур закрытия периода через документ
+        <span class="path-tag tag-doc">Документ.ПланРегламентныхОперацийДУ</span>.
+    </p>
+
+    <div class="flowchart">
+        <span class="path-tag tag-doc">Документ.ПланРегламентныхОперацийДУ</span>
+        <span class="arrow">&rarr;</span>
+        <code>ОбъектМодуль.ВыполнитьРегламентныеПроцедуры(Отказ, УчитыватьВыполненные, СоответствиеОперацияТаблица)</code>
+        <br><span class="arrow">&darr;</span><br>
+        <span class="path-tag tag-cat">Справочник.ВидыОперацийЗакрытияПериода</span>
+        <span class="arrow">&rarr;</span>
+        <code>МодульМенеджера.ВыполнитьИсполняемуюПроцедуруЗакрытияПериода(ПараметрыВыполнения, Отказ, ТекстОтказа)</code>
+        <br><span class="arrow">&darr;</span><br>
+        <span class="path-tag tag-cm">CommonModule.ИсполняемыеПроцедурыЗакрытияПериода.<wbr>Операция_XXXX_ИмяОперации(ЗакрытиеПериода, Дата, ДоговорДУ, СписокОпераций, Отказ, ТекстОтказа)</code>
+    </div>
+
+    <p>
+        Имя процедуры (<code>Операция_0010_УстановкаКотировок</code> и т.д.) хранится в реквизите
+        <code>ИсполняемаяПроцедура</code> элемента справочника <code>ВидыОперацийЗакрытияПериода</code>
+        и читается из строки методом <code>Выполнить()</code> на сервере.
+        Группировка операций (Утренние / Вечерние) задаётся реквизитом
+        <code>ГруппаОперацийПользователя</code> с предопределёнными кодами:
+    </p>
+    <ul class="tight">
+        <li><code>"1. \"Утренние\" операции"</code> &mdash; начисления % по депозитам, РЕПО, НКД, погашения, амортизации.</li>
+        <li><code>"2. \"Вечерние\" операции"</code> &mdash; переоценка активов, расчёт РСА/СЧА, расчёт доходности.</li>
+    </ul>
+
+    <h3>1.3. Легенда оценки вероятности</h3>
+    <div class="legend">
+        <div class="legend-item"><span class="prob p-95">90&ndash;100%</span> точное совпадение по имени и сигнатуре регистрации</div>
+        <div class="legend-item"><span class="prob p-85">80&ndash;89%</span> высокая релевантность (одна сущность с уточнениями)</div>
+        <div class="legend-item"><span class="prob p-75">70&ndash;79%</span> вероятный кандидат, требует подтверждения у владельца</div>
+        <div class="legend-item"><span class="prob p-60">50&ndash;69%</span> возможный участник цепочки</div>
+        <div class="legend-item"><span class="prob p-50">30&ndash;49%</span> косвенная связь</div>
+        <div class="legend-item"><span class="prob p-low">&lt; 30%</span> предположение, нужен поиск дополнительных артефактов</div>
+    </div>
+    <div class="legend">
+        <div class="legend-item"><span class="path-tag tag-doc">Документ</span></div>
+        <div class="legend-item"><span class="path-tag tag-cat">Справочник</span></div>
+        <div class="legend-item"><span class="path-tag tag-cm">ОбщийМодуль</span></div>
+        <div class="legend-item"><span class="path-tag tag-rg">Регистр</span></div>
+        <div class="legend-item"><span class="path-tag tag-sj">РегламентноеЗадание</span></div>
+        <div class="legend-item"><span class="path-tag tag-epf">EPF (внешняя обработка)</span></div>
+        <div class="legend-item"><span class="path-tag tag-erf">ERF (внешний отчёт)</span></div>
+    </div>
+
+    <h2>Раздел 2. Объекты 1С по каждой ключевой операции</h2>
+
+    <table>
+        <thead>
+            <tr>
+                <th class="num">№</th>
+                <th style="width:18%">Ключевая операция (Excel)</th>
+                <th style="width:9%">Вероятность</th>
+                <th>Объект конфигурации / метод вызова</th>
+                <th style="width:24%">Комментарий и источник</th>
+            </tr>
+        </thead>
+        <tbody>
+
+            <tr>
+                <td class="num">1</td>
+                <td>Исполнение сделок (авто закрытие Т-1, Т-2)</td>
+                <td><span class="prob p-95">95%</span></td>
+                <td>
+                    <span class="path-tag tag-epf">EPF</span> <code>внИсполнениеСделокТ+2_ДУ</code><br>
+                    <em>Регистрация: "Исполнение сделок Т+n ДУ1"</em><br>
+                    Команды: <code>ВыполнитьИсполнениеСделок</code>, <code>ВыполнитьИсполнениеСделокФон</code><br>
+                    Метод объекта: <code>ОбъектМодуль.ВыполнитьКоманду(ИдентификаторКоманды, ПараметрыВыполненияКоманды)</code>
+                </td>
+                <td>Запуск через регламентное задание <span class="path-tag tag-sj">ЗапускДополнительныхОбработок</span> в 09:00. Дополнительно: <span class="path-tag tag-epf">внИсполнениеСделокFX</span> (для FX-сделок, 60%).</td>
+            </tr>
+
+            <tr>
+                <td class="num">2</td>
+                <td>Загрузка сделок за дату Т, открытие Плановой позиции по РДУ</td>
+                <td><span class="prob p-95">95%</span></td>
+                <td>
+                    <span class="path-tag tag-epf">EPF</span> <code>внЗагрузкаСделокDU-NEW</code><br>
+                    <em>Регистрация: "Загрузка сделок", версия 4.47</em><br>
+                    Команды: <code>ФоновоеВыполнение</code> (текущий день),
+                    <code>ФоновоеВыполнениеT1</code> (Т-1),
+                    <code>ФоновоеВыполнениеРозничноеДУ</code> (РДУ)<br>
+                    + <span class="path-tag tag-cm">CM</span> <code>ИсполняемыеПроцедурыЗакрытияПериода.Операция_2_ИсполнениеПлановойПозиции(ЗакрытиеПериода, Дата, Отказ, ТекстОтказа)</code>
+                </td>
+                <td>Web-сервис ВТБ. Запуск в 17:00. Аналог: <span class="path-tag tag-epf">внЗагрузкаСделокРВИ</span> (75%).</td>
+            </tr>
+
+            <tr>
+                <td class="num">3</td>
+                <td>Обработка отчетов брокера за Т-1</td>
+                <td><span class="prob p-85">85%</span></td>
+                <td>
+                    <span class="path-tag tag-epf">EPF</span> <code>внЗагрузкаОтчетаБрокераТройкиИВТБКапитал</code><br>
+                    <em>Регистрация: "Загрузка отчета брокера Тройки, ВТБ Капитал и ВТБ24 для сверки"</em><br>
+                    + <span class="path-tag">DataProcessor</span> <code>Обработка.ОбщийОтчетБрокера</code>,
+                    <code>Обработка.ПакетнаяЗагрузкаОбщегоОтчетаБрокера</code><br>
+                    + <span class="path-tag">DataProcessor</span> <code>Обработка.ОтчетБрокера</code> (70%)
+                </td>
+                <td>Запуск в 09:00. Альтернативы: <span class="path-tag tag-epf">внПакетныйОтчетБрокераДУ_XML</span>, <span class="path-tag tag-epf">внПакетныйОтчетБрокераДУ_ДВО</span>.</td>
+            </tr>
+
+            <tr>
+                <td class="num">4</td>
+                <td>Загрузка выписок банка</td>
+                <td><span class="prob p-95">95%</span></td>
+                <td>
+                    <span class="path-tag tag-epf">EPF</span> <code>внЗагрузкаВыписокДУ</code><br>
+                    <em>Регистрация: "Загрузка выписок"</em><br>
+                    Метод: <code>ОбъектМодуль.ВыполнитьКоманду</code> + <span class="path-tag tag-cat">Справочник.НаборыПравилРазбораБанковскойВыписки</span>
+                </td>
+                <td>Системы-источники: Клиент-банк ДБО, IBankreport. Доп: <span class="path-tag tag-epf">внГенерацияВыписокИзCITIDirect</span>, <span class="path-tag tag-epf">внСортировщикВыписокПоСчетамДепо</span>.</td>
+            </tr>
+
+            <tr>
+                <td class="num">5</td>
+                <td>Сверка денежных средств</td>
+                <td><span class="prob p-95">95%</span></td>
+                <td>
+                    <span class="path-tag tag-epf">EPF</span> <code>внСверкаДенежныхСредств_обр</code><br>
+                    <em>Регистрация: "Сверка денежных средств"</em><br>
+                    Доп. проверка по брокерским счетам:
+                    <span class="path-tag tag-epf">EPF</span> <code>внСверкаДенежныхСредствПоБрокСчетам_обр</code>
+                </td>
+                <td>Версия с Quik: <span class="path-tag tag-epf">внСверкаДенежныхСредствПоБрокСчетам_обр_квик</span>. Сити: <span class="path-tag tag-epf">внСверка_РС_БС_City_обр</span>.</td>
+            </tr>
+
+            <tr>
+                <td class="num">6</td>
+                <td>Сверка денежных средств ЕРС</td>
+                <td><span class="prob p-95">95%</span></td>
+                <td>
+                    <span class="path-tag tag-epf">EPF</span> <code>внСверкаДенежныхСредствНаЕРС_обр</code><br>
+                    <em>Регистрация: "Сверка денежных средств на ЕРС"</em>
+                </td>
+                <td>Запуск 09:00, время 0.1 ч.</td>
+            </tr>
+
+            <tr>
+                <td class="num">7</td>
+                <td>Перевод денежных средств на биржу (формирование п/п) датой Т</td>
+                <td><span class="prob p-75">75%</span></td>
+                <td>
+                    <span class="path-tag tag-epf">EPF</span> <code>внВыгрузкаПлатежныхПорученийДУ_F527</code><br>
+                    <span class="path-tag tag-epf">EPF</span> <code>внГрупповоеСозданиеПлатежныхПорученийИзДокументовОснований</code><br>
+                    <span class="path-tag tag-epf">EPF</span> <code>внФормированиеПлатежныхПоручений</code><br>
+                    + <span class="path-tag tag-doc">Документ.ПлатежноеПоручение</code> (создание/проведение)
+                </td>
+                <td>Время точно не задано ("?"). Целевая система &mdash; Банк-клиент ДБО.</td>
+            </tr>
+
+            <tr>
+                <td class="num">8</td>
+                <td>Загрузка котировок 1-й сеанс за Т-1</td>
+                <td><span class="prob p-95">95%</span></td>
+                <td>
+                    <span class="path-tag tag-epf">EPF</span> <code>внЗагрузкаКотировокДУ</code><br>
+                    <em>Регистрация: "Загрузка котировок ц/б"</em><br>
+                    + <span class="path-tag tag-rg">РС</span> <code>РегистрСведений.КотировкиЦБНаБирже</code>,
+                    <code>КотировкиСрочногоРынка</code><br>
+                    + <span class="path-tag tag-cm">CM</span> <code>ИсполняемыеПроцедурыЗакрытияПериода.Операция_0010_УстановкаКотировок</code>
+                </td>
+                <td>Источники: Аванкор МО, Аванкор ПИФ. Запуск 11:00.</td>
+            </tr>
+
+            <tr>
+                <td class="num">9</td>
+                <td>Сверка загрузки котировок</td>
+                <td><span class="prob p-85">85%</span></td>
+                <td>
+                    <span class="path-tag tag-epf">EPF</span> <code>внОтчетКонтрольКотировок</code><br>
+                    <em>Регистрация: "Отчет контроль котировок"</em>
+                </td>
+                <td>Запуск 11:15, контроль расхождений после первой загрузки котировок.</td>
+            </tr>
+
+            <tr>
+                <td class="num">10</td>
+                <td>Загрузка котировок финальная за Т-1</td>
+                <td><span class="prob p-95">95%</span></td>
+                <td>
+                    <span class="path-tag tag-epf">EPF</span> <code>внЗагрузкаКотировокДУ</code> (тот же EPF, что и в №8, но другая команда / время запуска)<br>
+                    + <span class="path-tag tag-rg">РС</span> <code>ЗафиксированныеКотировкиЦБ</code>,
+                    <code>ЗафиксированныеКотировкиЦБ_НУ</code>
+                </td>
+                <td>Запуск 14:00. Финализирует котировки за Т-1 (используется в Вечерних регламентах для расчёта СЧА).</td>
+            </tr>
+
+            <tr>
+                <td class="num">11</td>
+                <td>Сверка с отчётом брокера</td>
+                <td><span class="prob p-95">95%</span></td>
+                <td>
+                    <span class="path-tag tag-epf">EPF</span> <code>внСверкаCделокДУСОтчетомБрокера</code><br>
+                    <em>Регистрация: "Сверка cделок ДУ с отчетом брокера"</em><br>
+                    + <span class="path-tag tag-epf">EPF</span> <code>внСверкаCделокДУСОтчетомБрокераРЕПОСберКИБ</code>
+                    (для РЕПО Сбер КИБ)<br>
+                    + <span class="path-tag tag-epf">EPF</span> <code>внСверкаОтчетовПрофучастникаРынкаЦБ</code>
+                </td>
+                <td>Запуск 09:00. Подтверждение/отклонение сделок: <span class="path-tag tag-epf">внУстановитьПризнакПодтвержденаОтчетомБрокера</span>.</td>
+            </tr>
+
+            <tr>
+                <td class="num">12</td>
+                <td>Сверка остатков ЦБ с депозитарием</td>
+                <td><span class="prob p-85">85%</span></td>
+                <td>
+                    <span class="path-tag tag-epf">EPF</span> <code>внСверкаОстатковЦБвДепозитарииБанкВТБ</code><br>
+                    + <span class="path-tag tag-epf">EPF</span> <code>внСверкаОстатковЦБ_БЭБ</code><br>
+                    + <span class="path-tag tag-epf">EPF</span> <code>внСверкаОстатковПоСчетамДепо</code><br>
+                    + <span class="path-tag tag-epf">EPF</span> <code>внСверкаЦБ</code> ("Сверка ценных бумаг")
+                </td>
+                <td>Запуск 09:00. Доп. вариант для ВТБ24: <span class="path-tag tag-epf">внСверкаОстатковЦБПоЭксВТБ24</span>, для Сити: <span class="path-tag tag-epf">внСверка_ЦБ_City_обр</span>.</td>
+            </tr>
+
+            <tr>
+                <td class="num">13</td>
+                <td>Сверка API сигнал vs Реестры платежей</td>
+                <td><span class="prob p-50">45%</span></td>
+                <td>
+                    Точная EPF не найдена. Кандидаты:<br>
+                    <span class="path-tag tag-epf">EPF</span> <code>внЗагрузкаРеестраПлатежей</code><br>
+                    + <span class="path-tag tag-doc">Документ.ПоступлениеНаРасчетныйСчет</code>
+                </td>
+                <td><span class="danger" style="display:inline-block;padding:4px 10px;margin:0">Требуется уточнение у владельца сверки. API сигнал может быть HTTP-сервисом (см. <span class="path-tag">HTTPServices</span>) или внешней процедурой.</span></td>
+            </tr>
+
+            <tr>
+                <td class="num">14</td>
+                <td>Процесс расторжения РДУ</td>
+                <td><span class="prob p-95">95%</span></td>
+                <td>
+                    <span class="path-tag tag-epf">EPF</span> <code>внРасторжениеДоговоровРозничногоДУ</code><br>
+                    <em>Регистрация: "Расторжение договоров розничного ДУ"</em><br>
+                    + <span class="path-tag tag-cat">Справочник.ДоговорДУ</code> (изменение статуса)
+                </td>
+                <td>Запуск 00:00. Связан с системами: Аванкор МО, Банк клиент ДБО, Аванкор Финансы.</td>
+            </tr>
+
+            <tr>
+                <td class="num">15</td>
+                <td>Загрузка договоров РДУ за Т, карточки клиента, автозаполнение аналитики</td>
+                <td><span class="prob p-85">85%</span></td>
+                <td>
+                    <span class="path-tag tag-epf">EPF</span> <code>внАвтоматическоеСозданиеДоговоровИАналитикиДУ</code> &mdash; основная<br>
+                    <span class="path-tag tag-epf">EPF</span> <code>внПродАвтоматическоеСозданиеДоговоровИАналитикиДУ</code> &mdash; продакшн-версия<br>
+                    <span class="path-tag tag-epf">EPF</span> <code>внАвтоматическоеЗаполнениеДоговораДУ-NEW</code> &mdash; индивидуальное заполнение<br>
+                    <span class="path-tag tag-epf">EPF</span> <code>внАвтоматическоеЗаполнениеАнкетКлиентовKoras</code> &mdash; анкеты клиентов
+                </td>
+                <td>Запуск 00:00. Может также вовлекаться <span class="path-tag tag-epf">внВыводРеквизитовДоговоровДУ</span>.</td>
+            </tr>
+
+            <tr>
+                <td class="num">16</td>
+                <td>Вечерние регламентные операции, расчёт РСА/СЧА за Т-1</td>
+                <td><span class="prob p-95">95%</span></td>
+                <td>
+                    <strong>Точка входа:</strong> <span class="path-tag tag-doc">Документ.ПланРегламентныхОперацийДУ</code>
+                    <span class="arrow">&rarr;</span>
+                    <code>ОбъектМодуль.ВыполнитьРегламентныеПроцедуры()</code><br>
+                    <strong>Состав вечерних процедур (модуль <span class="path-tag tag-cm">ИсполняемыеПроцедурыЗакрытияПериода</span>):</strong>
+                    <ul class="tight">
+                        <li><code>Операция_0100_ПереоценкаДенежныхСредств</code></li>
+                        <li><code>Операция_0110_ПереоценкаАктивов</code> &mdash; основная по времени</li>
+                        <li><code>Операция_0200_ПереоценкаВзаиморасчетов</code></li>
+                        <li><code>Операция_0300_ПереоценкаНезавершенныхСделокПоСправедливойСтоимости</code></li>
+                        <li><code>Операция_0400_РасчетРезервов</code></li>
+                        <li><code>Операция_1000_РасчетРСА_СЧА</code> &mdash; целевой РСА/СЧА</li>
+                        <li><code>Операция_1010_РасчетДоходностиПортфеля</code></li>
+                    </ul>
+                    + <span class="path-tag tag-doc">Документ.РасчетСЧА_РСА</code><br>
+                    + <span class="path-tag tag-cat">Справочник.РегламентныеПериоды.МодульМенеджера.<wbr>ЗаполнитьПараметрыСохраненияПакетнымиДаннымиВечернихОпераций()</code>
+                </td>
+                <td>Запуск 12:05. Группа кода <code>"2. \"Вечерние\" операции"</code>. См. также <span class="path-tag tag-cat">Справочник.ВидыОперацийЗакрытияПериода</span> (реквизит <code>ИсполняемаяПроцедура</code>) и <span class="path-tag tag-rg">РС</span> <code>ИсполнениеОпераций</code>.</td>
+            </tr>
+
+            <tr>
+                <td class="num">17</td>
+                <td>Утренние регламентные операции (% по депозитам, РЕПО, НКД, погашения)</td>
+                <td><span class="prob p-95">95%</span></td>
+                <td>
+                    <strong>Точка входа:</strong> <span class="path-tag tag-doc">Документ.ПланРегламентныхОперацийДУ</code>
+                    <span class="arrow">&rarr;</span>
+                    <code>ОбъектМодуль.ВыполнитьРегламентныеПроцедуры()</code><br>
+                    <strong>Состав утренних процедур (модуль <span class="path-tag tag-cm">ИсполняемыеПроцедурыЗакрытияПериода</span>):</strong>
+                    <ul class="tight">
+                        <li><code>Операция_0010_УстановкаКотировок</code></li>
+                        <li><code>Операция_0025_НачислениеПроцентовПоБанковскимСчетамПоГрафикуВыплат</code></li>
+                        <li><code>Операция_0030_НачислениеПроцентовПоБанковскимСчетам</code> &mdash; БУ/НУ/УУ</li>
+                        <li><code>Операция_0035_НачислениеПроцентовПоСделкамРЕПО</code></li>
+                        <li><code>Операция_0037_НачислениеЗадолженостиПоСделкамРЕПО</code></li>
+                        <li><code>Операция_0040_НачислениеКД</code> &mdash; купонный доход (НКД)</li>
+                        <li><code>Операция_0050_ПереводНКДВЗадолженностьЭмитента</code></li>
+                        <li><code>Операция_0055_ПогашениеОблигаций</code></li>
+                        <li><code>Операция_0075_РасчетЭСП</code></li>
+                    </ul>
+                    + <span class="path-tag tag-doc">Документ.НачислениеПроцентовПоСделкамРЕПО</span>,
+                    <span class="path-tag tag-doc">Документ.НачислениеЗадолженостиПоСделкамРЕПО</span>
+                </td>
+                <td>Запуск 16:00. Группа кода <code>"1. \"Утренние\" операции"</code>. По задаче IMDEV-8130 ведётся модификация утренних регламентов для РДУ.</td>
+            </tr>
+
+            <tr>
+                <td class="num">18</td>
+                <td>Начисление вознаграждения</td>
+                <td><span class="prob p-85">85%</span></td>
+                <td>
+                    <span class="path-tag tag-epf">EPF</span> <code>внРасчетВознагражденияРозничногоДУ</code><br>
+                    <span class="path-tag tag-epf">EPF</span> <code>MF_РасчетВознаграждения_РозничноеДУ</code><br>
+                    <span class="path-tag tag-epf">EPF</span> <code>внНачислениеВознаграждения_РозничноеДУ</code><br>
+                    + <span class="path-tag tag-doc">Документ.НачислениеВознаграждения</code>
+                    (создание/проведение)<br>
+                    + <span class="path-tag tag-cat">Справочник.НастройкиВознаграждения</code><br>
+                    + <span class="path-tag tag-cm">CM</span>
+                    <code>ИсполняемыеПроцедурыЗакрытияПериода.Операция_0060_НачислениеВознагражденияУК</code>,
+                    <code>Операция_0120_НачислениеВознагражденияЗаУспех</code>
+                </td>
+                <td>Ежеквартально. Семейство EPF "<code>внSF...РасчетВознаграждения...</code>", "<code>внMF...РасчетВознаграждения...</code>" (~80 шт.) &mdash; алгоритмы под отдельные продукты, привязываются к <span class="path-tag tag-cat">НастройкиВознаграждения</span>.</td>
+            </tr>
+
+            <tr>
+                <td class="num">19</td>
+                <td>Оплата вознаграждения</td>
+                <td><span class="prob p-75">75%</span></td>
+                <td>
+                    <span class="path-tag tag-epf">EPF</span> <code>внОплатаКЗПоКлиентамРДУ</code><br>
+                    <span class="path-tag tag-epf">EPF</span> <code>внОплатаВознагражденияHNWIПоСделкамСНотами_new</code><br>
+                    <span class="path-tag tag-epf">EPF</span> <code>внПоступленияНаРасчетныйСчет_РозничноеДУ</code><br>
+                    + <span class="path-tag tag-doc">Документ.ПлатежноеПоручение</code>
+                </td>
+                <td>Ежеквартально. Время не задано ("?"). Связь оплаты с НачислениемВознаграждения через регистры взаиморасчётов.</td>
+            </tr>
+
+            <tr>
+                <td class="num">20</td>
+                <td>Массовое построение Отчётов РДУ и выгрузка в КК (кабинет клиента)</td>
+                <td><span class="prob p-75">75%</span></td>
+                <td>
+                    <span class="path-tag tag-erf">ERF</span> <code>внМассоваяПечатьОтчетов_Prod</code><br>
+                    <span class="path-tag tag-epf">EPF</span> <code>внЭкспортДанныхКабиентHNWI_DU</code><br>
+                    <span class="path-tag tag-erf">ERF</span> <code>внОтчетПоКлиентамДУ_HNWI</code><br>
+                    + <span class="path-tag tag-doc">Документ.РасчетДоходностиПортфеля</code>
+                </td>
+                <td><span class="warn" style="display:inline-block;padding:4px 10px;margin:0">Текущая отметка в Excel "!!!" &mdash; на 100 000 договоров не выполняется (более 14 ч). Кандидат №1 на оптимизацию.</span></td>
+            </tr>
+
+        </tbody>
+    </table>
+
+    <h3>2.1. Сводка по найденным вызовам в EPF</h3>
+    <p>
+        Из 342 каталогов <code>SRC/epf</code> у 195 обработок есть функция
+        <code>СведенияОВнешнейОбработке()</code> с заполненными
+        <code>ПараметрыРегистрации</code> &mdash; они подключены через
+        <span class="path-tag tag-cat">Справочник.ДополнительныеОтчетыИОбработки</span>.
+        Остальные 145 каталогов &mdash; либо вспомогательные обработки без регистрации БСП
+        (запускаются вручную из меню "Файл &mdash; Открыть"), либо устаревшие версии.
+    </p>
+
+    <div class="success">
+        <strong>Итог по сопоставлению:</strong> для <strong>17 из 20</strong> ключевых операций
+        найден объект конфигурации с вероятностью &ge; 75%. Для №13 ("Сверка API сигнал vs Реестры платежей")
+        требуется уточнение архитектуры у бизнес-владельца сверки. №7 и №19 имеют корректное направление
+        вызова (платёжные поручения), но точная цепочка зависит от регламентных настроек.
+    </div>
+
+    <h2>Раздел 3. Как правильно вставить замер производительности в ключевую операцию</h2>
+
+    <div class="info">
+        В конфигурации Wim_Du уже подключена библиотечная подсистема БСП
+        <strong>"Оценка производительности"</strong> (общий модуль
+        <span class="path-tag tag-cm">ОценкаПроизводительности</span>,
+        296 общих модулей в CF). Использовать нужно её &mdash; без самописных таймеров.
+    </div>
+
+    <h3>3.1. Программный интерфейс БСП (что вызывать в коде)</h3>
+    <p>
+        Все методы &mdash; экспортные, лежат в общем модуле
+        <code>ОбщийМодуль.ОценкаПроизводительности</code> (с серверным контекстом).
+    </p>
+    <table>
+        <thead>
+            <tr>
+                <th style="width:34%">Метод</th>
+                <th>Назначение</th>
+                <th style="width:22%">Когда применять</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td><code>Функция НачатьЗамерВремени()</code> &rarr; Число</td>
+                <td>Возвращает время старта (UTC, мс) или 0, если замеры выключены константой <code>ВыполнятьЗамерыПроизводительности</code>.</td>
+                <td>Простая короткая операция, измеряется одной парой "старт-стоп".</td>
+            </tr>
+            <tr>
+                <td><code>Процедура ЗакончитьЗамерВремени(<wbr>КлючеваяОперация, ВремяНачала, ВесЗамера = 1, Комментарий = Неопределено, ВыполненСОшибкой = Ложь)</code></td>
+                <td>Записывает результат в <span class="path-tag tag-rg">РС.ЗамерыВремени</span>. <code>ВесЗамера</code> &mdash; кол-во обработанных строк (договоров, сделок и т.п.).</td>
+                <td>Парный вызов к <code>НачатьЗамерВремени()</code>.</td>
+            </tr>
+            <tr>
+                <td><code>Процедура ЗакончитьЗамерВремениТехнологический(<wbr>КлючеваяОперация, ВремяНачала, ВесЗамера = 1, Комментарий = Неопределено)</code></td>
+                <td>Пишет в отдельный <span class="path-tag tag-rg">РС.ЗамерыВремениТехнологические</span> &mdash; не показывается бизнес-пользователю.</td>
+                <td>Замеры внутри инфраструктуры (фоновые задания, диагностика).</td>
+            </tr>
+            <tr>
+                <td><code>Функция НачатьЗамерДлительнойОперации(КлючеваяОперация)</code> &rarr; Соответствие</td>
+                <td>Возвращает <code>ОписаниеЗамера</code> для длительной операции с вложенными шагами.</td>
+                <td>Длительные операции (регламенты, пакетные обработки).</td>
+            </tr>
+            <tr>
+                <td><code>Процедура ЗафиксироватьЗамерДлительнойОперации(<wbr>ОписаниеЗамера, КоличествоДанных, ИмяШага, Комментарий = "")</code></td>
+                <td>Фиксирует промежуточный шаг (например, "Запрос данных", "Запись регистра"). Накапливает длительность по имени шага.</td>
+                <td>Внутри цикла или между этапами длительной операции.</td>
+            </tr>
+            <tr>
+                <td><code>Процедура ЗакончитьЗамерДлительнойОперации(<wbr>ОписаниеЗамера, КоличествоДанных, ИмяШага = "", Комментарий = "")</code></td>
+                <td>Закрывает длительный замер, рассчитывает удельное время <code>(длительность / вес)</code>, пишет одной транзакцией.</td>
+                <td>Парный вызов к <code>НачатьЗамерДлительнойОперации()</code>.</td>
+            </tr>
+            <tr>
+                <td><code>Процедура СоздатьКлючевыеОперации(КлючевыеОперации)</code></td>
+                <td>Регистрирует ключевые операции (массив структур <code>ИмяКлючевойОперации, ЦелевоеВремя</code>) в <span class="path-tag tag-cat">Справочник.КлючевыеОперации</span>.</td>
+                <td>Из обработчика обновления конфигурации или из <code>ПриДобавленииПодсистемы</code>.</td>
+            </tr>
+            <tr>
+                <td><code>Процедура УстановитьЦелевоеВремя(КлючевыеОперации)</code></td>
+                <td>Обновляет целевое время уже зарегистрированных ключевых операций.</td>
+                <td>При изменении SLA в Excel-файле "Ключевые операции 15".</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <h3>3.2. Стандартный шаблон замера (короткая операция)</h3>
+    <p>
+        Применять для команд EPF, у которых одна точка входа &mdash; например,
+        <code>внСверкаДенежныхСредств_обр.ВыполнитьКоманду()</code>.
+    </p>
+
+<pre class="bsl"><code>// Описание: Точка входа команды дополнительной обработки. Запускается БСП через
+// регламентное задание ЗапускДополнительныхОбработок.
+//
+// Параметры:
+//  ИдентификаторКоманды    - Строка    - идентификатор команды из СведенийОВнешнейОбработке
+//  ПараметрыВыполненияКоманды - Структура - стандартные параметры БСП
+//
+Процедура ВыполнитьКоманду(ИдентификаторКоманды, ПараметрыВыполненияКоманды) Экспорт
+
+    ВремяНачала = ОценкаПроизводительности.НачатьЗамерВремени();
+
+    Попытка
+        ВыполнитьСверку(ПараметрыВыполненияКоманды);
+        ВыполненСОшибкой = Ложь;
+    Исключение
+        ВыполненСОшибкой = Истина;
+        ЗаписьЖурналаРегистрации(
+            "СверкаДенежныхСредств",
+            УровеньЖурналаРегистрации.Ошибка,
+            ,
+            ,
+            ОписаниеОшибки());
+        ВызватьИсключение;
+    КонецПопытки;
+
+    ОценкаПроизводительности.ЗакончитьЗамерВремени(
+        "ДУ.СверкаДенежныхСредств",   // Имя ключевой операции — должно совпадать с Excel
+        ВремяНачала,
+        1,                              // ВесЗамера: 1 запуск
+        ИдентификаторКоманды,           // Комментарий: какая именно команда отработала
+        ВыполненСОшибкой);
+
+КонецПроцедуры
+</code></pre>
+
+    <h3>3.3. Длительная операция с вложенными шагами (для регламентов ДУ)</h3>
+    <p>
+        Применять в <code>ОбщийМодуль.ИсполняемыеПроцедурыЗакрытияПериода.Операция_*</code>
+        и в <code>Документ.ПланРегламентныхОперацийДУ.ВыполнитьРегламентныеПроцедуры()</code> &mdash;
+        там, где обработка идёт по списку договоров и состоит из нескольких этапов.
+    </p>
+
+<pre class="bsl"><code>// Описание: Расчёт РСА/СЧА за указанную дату по группе договоров ДУ.
+// Вызывается через ВыполнитьИсполняемуюПроцедуруЗакрытияПериода
+// при проведении документа ПланРегламентныхОперацийДУ.
+//
+Процедура Операция_1000_РасчетРСА_СЧА(
+            ЗакрытиеПериода, Дата, ДоговорДУ, СписокОпераций, Отказ, ТекстОтказа) Экспорт
+
+    ОписаниеЗамера = ОценкаПроизводительности.НачатьЗамерДлительнойОперации(
+        "ДУ.ВечерниеРегламенты.РасчетРСА_СЧА");
+
+    // Шаг 1: Получение исходных данных
+    ВремяНачалаШага = ТекущаяУниверсальнаяДатаВМиллисекундах();
+    ИсходныеДанные = ПолучитьИсходныеДанные(Дата, ДоговорДУ);
+    ОценкаПроизводительности.ЗафиксироватьЗамерДлительнойОперации(
+        ОписаниеЗамера,
+        ИсходныеДанные.Активы.Количество(),
+        "ПолучениеДанных",
+        "Дата=" + Формат(Дата, "ДЛФ=DT"));
+
+    // Шаг 2: Расчёт стоимости активов
+    Расчёт = РассчитатьСтоимостьАктивов(ИсходныеДанные);
+    ОценкаПроизводительности.ЗафиксироватьЗамерДлительнойОперации(
+        ОписаниеЗамера,
+        Расчёт.КоличествоПозиций,
+        "РасчетСтоимости");
+
+    // Шаг 3: Запись документа
+    Документ = СоздатьИЗаписатьРасчётСЧА(Расчёт, Дата, ДоговорДУ, Отказ);
+    ОценкаПроизводительности.ЗафиксироватьЗамерДлительнойОперации(
+        ОписаниеЗамера,
+        ?(Документ = Неопределено, 0, 1),
+        "ЗаписьДокумента");
+
+    // Завершение длительного замера: считается удельное время и общая длительность,
+    // вес = СписокОпераций.Количество() (договоров в пачке)
+    ОценкаПроизводительности.ЗакончитьЗамерДлительнойОперации(
+        ОписаниеЗамера,
+        СписокОпераций.Количество(),
+        "Финал",
+        "Договор=" + Строка(ДоговорДУ));
+
+КонецПроцедуры
+</code></pre>
+
+    <div class="info">
+        <strong>Как читать длительные замеры:</strong> БСП пишет в регистр сразу несколько строк:
+        <code>ДУ.ВечерниеРегламенты.РасчетРСА_СЧА.ПолучениеДанных</code>,
+        <code>...РасчетСтоимости</code>,
+        <code>...ЗаписьДокумента</code>,
+        <code>...Удельный</code> (удельное время на 1 договор) и
+        <code>ДУ.ВечерниеРегламенты.РасчетРСА_СЧА</code> (общая длительность). По удельной строке удобно выявлять регрессии.
+    </div>
+
+    <h3>3.4. Замер цикла обработки (количество как ВесЗамера)</h3>
+    <p>
+        Применять, когда операция бежит по списку (например, проведение документов или загрузка сделок).
+    </p>
+
+<pre class="bsl"><code>// Описание: Загрузка сделок Т-1 через web-сервис ВТБ.
+// Точка входа — команда ФоновоеВыполнениеT1 обработки внЗагрузкаСделокDU-NEW.
+//
+Процедура ЗагрузитьСделкиТМинус1(ПараметрыВыполненияКоманды)
+
+    ВремяНачала = ОценкаПроизводительности.НачатьЗамерВремени();
+
+    МассивСделок = ПолучитьСделкиИзВебСервиса();
+    КоличествоОбработанных = 0;
+
+    Для Каждого СтрокаСделки Из МассивСделок Цикл
+        Попытка
+            СоздатьИПровестиСделку(СтрокаСделки);
+            КоличествоОбработанных = КоличествоОбработанных + 1;
+        Исключение
+            ЗаписатьВЖурналРегистрации(СтрокаСделки, ОписаниеОшибки());
+        КонецПопытки;
+    КонецЦикла;
+
+    // ВесЗамера = реально обработанное количество, а не общее в пачке.
+    // Это даёт корректное удельное время "секунд / 1 сделку".
+    ОценкаПроизводительности.ЗакончитьЗамерВремени(
+        "ДУ.ЗагрузкаСделок.ТМинус1",
+        ВремяНачала,
+        КоличествоОбработанных,
+        "Получено=" + МассивСделок.Количество());
+
+КонецПроцедуры
+</code></pre>
+
+    <h3>3.5. Регистрация ключевой операции при первом старте</h3>
+    <p>
+        Список ключевых операций должен быть зарегистрирован в справочнике
+        <span class="path-tag tag-cat">Справочник.КлючевыеОперации</span>. Регистрация делается один раз
+        (например, в обработчике обновления ИБ или при первом запуске обработки).
+    </p>
+
+<pre class="bsl"><code>// Описание: Регистрирует все 20 ключевых операций ДУ-15 в справочнике
+// КлючевыеОперации. Целевое время задано в часах согласно файлу
+// "Ключевые операции 15.xlsx", но БСП хранит его в секундах.
+//
+Процедура ЗарегистрироватьКлючевыеОперацииДУ_15() Экспорт
+
+    КлючевыеОперации = Новый Массив;
+
+    ДобавитьКО(КлючевыеОперации, "ДУ.ИсполнениеСделок.АвтоЗакрытие",       0.7 * 3600);
+    ДобавитьКО(КлючевыеОперации, "ДУ.ЗагрузкаСделок.ТекущийДень",          3.0 * 3600);
+    ДобавитьКО(КлючевыеОперации, "ДУ.ОтчетыБрокера.ОбработкаТМинус1",      0.1 * 3600);
+    ДобавитьКО(КлючевыеОперации, "ДУ.Выписки.ЗагрузкаБанк",                3.0 * 3600);
+    ДобавитьКО(КлючевыеОперации, "ДУ.Сверка.ДенежныхСредств",              0.1 * 3600);
+    ДобавитьКО(КлючевыеОперации, "ДУ.Сверка.ДенежныхСредствЕРС",           0.1 * 3600);
+    ДобавитьКО(КлючевыеОперации, "ДУ.Платежи.ПереводНаБиржу",              0.1 * 3600);
+    ДобавитьКО(КлючевыеОперации, "ДУ.Котировки.Сеанс1",                    0.5 * 3600);
+    ДобавитьКО(КлючевыеОперации, "ДУ.Котировки.Сверка",                    0.5 * 3600);
+    ДобавитьКО(КлючевыеОперации, "ДУ.Котировки.Финальная",                 0.5 * 3600);
+    ДобавитьКО(КлючевыеОперации, "ДУ.Сверка.СделокСОтчетомБрокера",        0.5 * 3600);
+    ДобавитьКО(КлючевыеОперации, "ДУ.Сверка.ОстатковЦБ",                   0.5 * 3600);
+    ДобавитьКО(КлючевыеОперации, "ДУ.Сверка.APISignal_Реестры",            0.5 * 3600);
+    ДобавитьКО(КлючевыеОперации, "ДУ.РДУ.Расторжение",                     0.5 * 3600);
+    ДобавитьКО(КлючевыеОперации, "ДУ.РДУ.ЗагрузкаДоговоров",               0.1 * 3600);
+    ДобавитьКО(КлючевыеОперации, "ДУ.ВечерниеРегламенты.РасчетРСА_СЧА",    3.0 * 3600, Истина);
+    ДобавитьКО(КлючевыеОперации, "ДУ.УтренниеРегламенты.НачисленияТ",      1.5 * 3600, Истина);
+    ДобавитьКО(КлючевыеОперации, "ДУ.Вознаграждение.Начисление",           0.3 * 3600);
+    ДобавитьКО(КлючевыеОперации, "ДУ.Вознаграждение.Оплата",               0.3 * 3600);
+    ДобавитьКО(КлючевыеОперации, "ДУ.КК.МассовоеПостроениеОтчетовРДУ",     5.0 * 3600, Истина);
+
+    ОценкаПроизводительности.СоздатьКлючевыеОперации(КлючевыеОперации);
+
+КонецПроцедуры
+
+// Описание: Внутренний помощник — добавляет описание ключевой операции в массив.
+//
+// Параметры:
+//  Массив                 - Массив   - массив для накопления структур
+//  ИмяКлючевойОперации    - Строка   - уникальное имя (PascalCase с точками)
+//  ЦелевоеВремя           - Число    - целевое время в секундах
+//  Длительная             - Булево   - признак фиксации удельного времени
+//
+Процедура ДобавитьКО(Массив, Знач ИмяКлючевойОперации, Знач ЦелевоеВремя, Знач Длительная = Ложь)
+
+    Описание = Новый Структура;
+    Описание.Вставить("ИмяКлючевойОперации", ИмяКлючевойОперации);
+    Описание.Вставить("ЦелевоеВремя",        ЦелевоеВремя);
+    Описание.Вставить("Длительная",          Длительная);
+    Массив.Добавить(Описание);
+
+КонецПроцедуры
+</code></pre>
+
+    <h3>3.6. Включение/выключение замеров и экспорт</h3>
+<pre class="bsl"><code>// Включить замеры (записывается в константу ВыполнятьЗамерыПроизводительности).
+// Выполнять однократно через консоль администратора.
+ОценкаПроизводительности.ВключитьЗамерыПроизводительности(Истина);
+
+// Выгрузка результатов в каталог (для последующей загрузки в АПДекс или другой коллектор).
+КаталогиЭкспорта = Новый Массив;
+КаталогиЭкспорта.Добавить("\\share\du15\performance");
+ОценкаПроизводительности.ЭкспортОценкиПроизводительности(КаталогиЭкспорта);
+</code></pre>
+
+    <p>
+        В конфигурации уже настроены типовые регламентные задания БСП:
+    </p>
+    <ul class="tight">
+        <li><span class="path-tag tag-sj">РегламентноеЗадание.ЭкспортОценкиПроизводительности</span> &mdash; периодический экспорт замеров.</li>
+        <li><span class="path-tag tag-sj">РегламентноеЗадание.ОчисткаЗамеровВремени</span> &mdash; чистка устаревших замеров (по периоду хранения).</li>
+    </ul>
+
+    <h3>3.7. Соглашения по именованию ключевых операций</h3>
+    <div class="warn">
+        Чтобы измерения отобразились в типовых отчётах "Производительность системы" и "АПДекс",
+        придерживайтесь соглашения:
+        <ul class="tight">
+            <li>Имя строится через точку: <code>&lt;Подсистема&gt;.&lt;Группа&gt;.&lt;Действие&gt;</code> &mdash;
+                например, <code>ДУ.ВечерниеРегламенты.РасчетРСА_СЧА</code>.</li>
+            <li>В качестве "Подсистема" используйте <code>ДУ</code> (укажет на ДУ-15).</li>
+            <li><strong>Не</strong> ставьте пробелы и символы вне ASCII в имени &mdash; ВСЕ имена сравниваются хешем MD5
+                в общем модуле БСП. Кириллица допустима, но избегайте кавычек и слэшей.</li>
+            <li>Длительные операции с вложенными шагами автоматически порождают записи
+                <code>...&lt;ИмяШага&gt;</code> и <code>...Удельный</code>.</li>
+            <li>Целевое время в БСП хранится в <strong>секундах</strong>, а в Excel приведено в <strong>часах</strong> &mdash;
+                умножайте на 3600 при регистрации.</li>
+        </ul>
+    </div>
+
+    <h3>3.8. Чек-лист для постановки задач IMDEV (на основании Jira IMDEV-8927)</h3>
+    <ol>
+        <li>Завести в <span class="path-tag tag-cat">Справочник.КлючевыеОперации</span> 20 элементов
+            из колонки "Имя ключевой операции" (см. примеры в п. 3.5).</li>
+        <li>Для каждого объекта из таблицы в Разделе 2 поставить под-задачу IMDEV "Добавить замер
+            в &lt;EPF/Документ/ОбщийМодуль&gt;" с шаблоном:
+            <ul class="tight">
+                <li>что измеряется (одна точка входа или цикл по договорам);</li>
+                <li>имя ключевой операции и тип (короткая / длительная);</li>
+                <li>что писать в <code>ВесЗамера</code> и <code>Комментарий</code>.</li>
+            </ul>
+        </li>
+        <li>Включить замеры в копии ПРОМ через
+            <code>ОценкаПроизводительности.ВключитьЗамерыПроизводительности(Истина)</code>.</li>
+        <li>Прогнать суточный цикл операций ДУ-15 с реальными объёмами и сравнить фактическое время
+            с колонкой "Целевое время на 100&nbsp;000 договоров" из Excel.</li>
+        <li>По результатам наполнить отчёт "Производительность системы" (типовой отчёт БСП) и
+            создать тикеты на оптимизацию для отстающих операций.</li>
+    </ol>
+
+    <div class="footer">
+        Анализ для IMDEV-8927 &nbsp;|&nbsp;
+        База: Wim_Du (ДУ 15) &nbsp;|&nbsp;
+        Источники: <code>SRC/CF</code>, <code>SRC/epf</code>, <code>SRC/erf</code>
+    </div>
+</div>
+</body>
+</html>

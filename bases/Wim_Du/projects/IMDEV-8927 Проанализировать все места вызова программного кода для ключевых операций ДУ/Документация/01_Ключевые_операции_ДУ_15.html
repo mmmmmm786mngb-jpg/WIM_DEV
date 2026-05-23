@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<title>Ключевые операции ДУ 15 — IMDEV-8927</title>
+<style>
+* { box-sizing: border-box; }
+body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    line-height: 1.5;
+    color: #212529;
+    background: #f4f6f8;
+    margin: 0;
+    padding: 24px;
+}
+.container { max-width: 1280px; margin: 0 auto; }
+h1 {
+    color: #17a2b8;
+    border-bottom: 3px solid #17a2b8;
+    padding-bottom: 10px;
+    margin-top: 0;
+}
+h2 { color: #2c3e50; margin-top: 32px; }
+.lead {
+    background: #e7f4f8;
+    border-left: 4px solid #17a2b8;
+    padding: 14px 18px;
+    border-radius: 4px;
+    margin: 16px 0;
+}
+.meta {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+    margin: 18px 0;
+}
+.meta-card {
+    background: #fff;
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    padding: 12px 16px;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+}
+.meta-card .label { font-size: 12px; color: #6c757d; text-transform: uppercase; letter-spacing: 0.5px; }
+.meta-card .value { font-size: 18px; font-weight: 600; color: #212529; }
+table {
+    width: 100%;
+    border-collapse: collapse;
+    background: #fff;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+    margin: 16px 0;
+    font-size: 14px;
+}
+thead th {
+    background: #17a2b8;
+    color: #fff;
+    text-align: left;
+    padding: 10px 12px;
+    border: 1px solid #138496;
+    vertical-align: top;
+}
+tbody td {
+    border: 1px solid #dee2e6;
+    padding: 10px 12px;
+    vertical-align: top;
+}
+tbody tr:nth-child(even) { background: #f8f9fa; }
+tbody tr:hover { background: #fff8e1; }
+.group-row td {
+    background: #2c3e50 !important;
+    color: #fff !important;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-size: 13px;
+}
+.num { text-align: center; font-weight: 600; width: 48px; }
+.time { white-space: nowrap; font-family: "Consolas", monospace; }
+.tag {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 12px;
+    font-weight: 500;
+}
+.tag-daily { background: #d1ecf1; color: #0c5460; }
+.tag-quarterly { background: #fff3cd; color: #856404; }
+.note { color: #6c757d; font-size: 13px; }
+.warn {
+    background: #fff3cd;
+    border-left: 4px solid #ffc107;
+    padding: 10px 14px;
+    border-radius: 4px;
+    margin: 14px 0;
+}
+.footer {
+    text-align: center;
+    color: #6c757d;
+    font-size: 12px;
+    margin-top: 30px;
+    padding-top: 16px;
+    border-top: 1px solid #dee2e6;
+}
+</style>
+</head>
+<body>
+<div class="container">
+    <h1>Ключевые операции ДУ 15</h1>
+
+    <div class="lead">
+        <strong>Задача Jira:</strong> IMDEV-8927 &mdash; Проанализировать все места вызова программного кода
+        для ключевых операций ДУ.<br>
+        <strong>Источник:</strong> "Ключевые операции 15.xlsx" (вкладка <em>Sheet1</em>, ДУ 15).<br>
+        <strong>Цель:</strong> подготовить перечень ключевых операций для дальнейшего сопоставления
+        с объектами конфигурации и постановки задач на добавление замеров производительности
+        (БСП "Оценка производительности").
+    </div>
+
+    <div class="meta">
+        <div class="meta-card">
+            <div class="label">Всего ключевых операций</div>
+            <div class="value">20</div>
+        </div>
+        <div class="meta-card">
+            <div class="label">Ежедневных</div>
+            <div class="value">17</div>
+        </div>
+        <div class="meta-card">
+            <div class="label">Ежеквартальных</div>
+            <div class="value">3</div>
+        </div>
+        <div class="meta-card">
+            <div class="label">Логических групп</div>
+            <div class="value">7</div>
+        </div>
+    </div>
+
+    <h2>Перечень ключевых операций (выгрузка из Excel)</h2>
+
+    <table>
+        <thead>
+            <tr>
+                <th class="num">№</th>
+                <th>Ключевая операция</th>
+                <th>Периодичность</th>
+                <th>Время начала</th>
+                <th>Среднее время, ч</th>
+                <th>Целевое время на 100 000 договоров, ч</th>
+                <th>Связь с системой</th>
+                <th>Примечание</th>
+                <th>Номера задач</th>
+            </tr>
+        </thead>
+        <tbody>
+
+            <tr class="group-row"><td colspan="9">Загрузка и исполнение сделок</td></tr>
+
+            <tr>
+                <td class="num">1</td>
+                <td>Исполнение сделок (авто закрытие Т-1, Т-2)</td>
+                <td><span class="tag tag-daily">Ежедневно</span></td>
+                <td class="time">09:00:00</td>
+                <td>1</td>
+                <td>0.7</td>
+                <td>&mdash;</td>
+                <td>45 минут на 100 000 сделок (генерация/получение 20 минут + создание БП 25 минут) = 0.45 мин / 1 000 сд.</td>
+                <td>Epic IMAPPS-34094, [Аванкор] IMAPPS-34560</td>
+            </tr>
+            <tr>
+                <td class="num">2</td>
+                <td>Загрузка сделок за дату Т, а также открытие Плановой позиции сделок Т по РДУ</td>
+                <td><span class="tag tag-daily">Ежедневно</span></td>
+                <td class="time">17:00:00</td>
+                <td>7</td>
+                <td>3</td>
+                <td>МЭБИ</td>
+                <td>32 мин на 100 000 сделок = 0.32 мин / 1 000 сд. + 1 ч 47 мин на 100 000 сделок = 1.07 мин / 1 000 сд.</td>
+                <td>IMAPPS-34861</td>
+            </tr>
+            <tr>
+                <td class="num">3</td>
+                <td>Обработка отчетов брокера за Т-1</td>
+                <td><span class="tag tag-daily">Ежедневно</span></td>
+                <td class="time">09:00:00</td>
+                <td>0.1</td>
+                <td>&mdash;</td>
+                <td>IBrockerReport</td>
+                <td>&mdash;</td>
+                <td>IMAPPS-34861</td>
+            </tr>
+
+            <tr class="group-row"><td colspan="9">Загрузка выписок</td></tr>
+
+            <tr>
+                <td class="num">4</td>
+                <td>Загрузка выписок банка</td>
+                <td><span class="tag tag-daily">Ежедневно</span></td>
+                <td class="time">09:00:00</td>
+                <td>3</td>
+                <td>&mdash;</td>
+                <td>Клиент банк ДБО, IBankreport</td>
+                <td>&mdash;</td>
+                <td>IMAPPS-34861</td>
+            </tr>
+            <tr>
+                <td class="num">5</td>
+                <td>Сверка денежных средств</td>
+                <td><span class="tag tag-daily">Ежедневно</span></td>
+                <td class="time">09:00:00</td>
+                <td>0.1</td>
+                <td>&mdash;</td>
+                <td>&mdash;</td>
+                <td>&mdash;</td>
+                <td>&mdash;</td>
+            </tr>
+            <tr>
+                <td class="num">6</td>
+                <td>Сверка денежных средств ЕРС</td>
+                <td><span class="tag tag-daily">Ежедневно</span></td>
+                <td class="time">09:00:00</td>
+                <td>0.1</td>
+                <td>&mdash;</td>
+                <td>&mdash;</td>
+                <td>&mdash;</td>
+                <td>&mdash;</td>
+            </tr>
+            <tr>
+                <td class="num">7</td>
+                <td>Перевод денежных средств на биржу (формирование п/п) датой Т</td>
+                <td><span class="tag tag-daily">Ежедневно</span></td>
+                <td class="time">?</td>
+                <td>0.1</td>
+                <td>&mdash;</td>
+                <td>Банк клиент ДБО</td>
+                <td>&mdash;</td>
+                <td>&mdash;</td>
+            </tr>
+
+            <tr class="group-row"><td colspan="9">Загрузка котировок</td></tr>
+
+            <tr>
+                <td class="num">8</td>
+                <td>Загрузка котировок 1-й сеанс за дату Т-1</td>
+                <td><span class="tag tag-daily">Ежедневно</span></td>
+                <td class="time">11:00:00</td>
+                <td>0.5</td>
+                <td>&mdash;</td>
+                <td>Аванкор МО, Аванкор ПИФ</td>
+                <td>&mdash;</td>
+                <td>&mdash;</td>
+            </tr>
+            <tr>
+                <td class="num">9</td>
+                <td>Сверка загрузки котировок</td>
+                <td><span class="tag tag-daily">Ежедневно</span></td>
+                <td class="time">11:15:00</td>
+                <td>0.5</td>
+                <td>&mdash;</td>
+                <td>&mdash;</td>
+                <td>&mdash;</td>
+                <td>&mdash;</td>
+            </tr>
+            <tr>
+                <td class="num">10</td>
+                <td>Загрузка котировок финальная за Т-1</td>
+                <td><span class="tag tag-daily">Ежедневно</span></td>
+                <td class="time">14:00:00</td>
+                <td>0.5</td>
+                <td>&mdash;</td>
+                <td>Аванкор ПИФ, Аванкор МО</td>
+                <td>&mdash;</td>
+                <td>&mdash;</td>
+            </tr>
+
+            <tr class="group-row"><td colspan="9">Сверки</td></tr>
+
+            <tr>
+                <td class="num">11</td>
+                <td>Сверка с отчетом брокера</td>
+                <td><span class="tag tag-daily">Ежедневно</span></td>
+                <td class="time">09:00:00</td>
+                <td>0.5</td>
+                <td>&mdash;</td>
+                <td>&mdash;</td>
+                <td>&mdash;</td>
+                <td>&mdash;</td>
+            </tr>
+            <tr>
+                <td class="num">12</td>
+                <td>Сверка остатков ЦБ с депозитарием</td>
+                <td><span class="tag tag-daily">Ежедневно</span></td>
+                <td class="time">09:00:00</td>
+                <td>0.5</td>
+                <td>&mdash;</td>
+                <td>&mdash;</td>
+                <td>&mdash;</td>
+                <td>&mdash;</td>
+            </tr>
+            <tr>
+                <td class="num">13</td>
+                <td>Сверка API сигнал vs Реестры платежей</td>
+                <td><span class="tag tag-daily">Ежедневно</span></td>
+                <td class="time">09:00:00</td>
+                <td>0.5</td>
+                <td>&mdash;</td>
+                <td>&mdash;</td>
+                <td>&mdash;</td>
+                <td>&mdash;</td>
+            </tr>
+
+            <tr class="group-row"><td colspan="9">Договоры РДУ</td></tr>
+
+            <tr>
+                <td class="num">14</td>
+                <td>Процесс расторжения РДУ</td>
+                <td><span class="tag tag-daily">Ежедневно</span></td>
+                <td class="time">00:00:00</td>
+                <td>0.5</td>
+                <td>&mdash;</td>
+                <td>Аванкор МО, Банк клиент ДБО, Аванкор Финансы</td>
+                <td>&mdash;</td>
+                <td>&mdash;</td>
+            </tr>
+            <tr>
+                <td class="num">15</td>
+                <td>Загрузка договоров РДУ за дату Т, карточки клиента, автозаполнение аналитики для ВУ</td>
+                <td><span class="tag tag-daily">Ежедневно</span></td>
+                <td class="time">00:00:00</td>
+                <td>0</td>
+                <td>&mdash;</td>
+                <td>&mdash;</td>
+                <td>&mdash;</td>
+                <td>&mdash;</td>
+            </tr>
+
+            <tr class="group-row"><td colspan="9">Регламентные операции</td></tr>
+
+            <tr>
+                <td class="num">16</td>
+                <td>Вечерние регламентные операции, расчет РСА/СЧА за Т-1</td>
+                <td><span class="tag tag-daily">Ежедневно</span></td>
+                <td class="time">12:05:00</td>
+                <td>3</td>
+                <td>&mdash;</td>
+                <td>&mdash;</td>
+                <td>&mdash;</td>
+                <td>IMAPPS-35039</td>
+            </tr>
+            <tr>
+                <td class="num">17</td>
+                <td>Утренние регламентные операции, начисления % по депозитам, РЕПО, НКД, погашения за дату Т</td>
+                <td><span class="tag tag-daily">Ежедневно</span></td>
+                <td class="time">16:00:00</td>
+                <td>1.5</td>
+                <td>&mdash;</td>
+                <td>&mdash;</td>
+                <td>По РДУ не каждый день нужны Утренние регламентные, запускаем отдельно при необходимости из-за медленной работы системы. Выставлена задача на модификацию Утренних для РДУ.</td>
+                <td>IMAPPS-35037, IMDEV-8130</td>
+            </tr>
+            <tr>
+                <td class="num">18</td>
+                <td>Начисление вознаграждения</td>
+                <td><span class="tag tag-quarterly">Ежеквартально</span></td>
+                <td class="time">&mdash;</td>
+                <td>0.3</td>
+                <td>&mdash;</td>
+                <td>&mdash;</td>
+                <td>&mdash;</td>
+                <td>IMAPPS-35316</td>
+            </tr>
+            <tr>
+                <td class="num">19</td>
+                <td>Оплата вознаграждения</td>
+                <td><span class="tag tag-quarterly">Ежеквартально</span></td>
+                <td class="time">&mdash;</td>
+                <td>?</td>
+                <td>&mdash;</td>
+                <td>&mdash;</td>
+                <td>&mdash;</td>
+                <td>IMAPPS-35316</td>
+            </tr>
+            <tr>
+                <td class="num">20</td>
+                <td>Массовое построение Отчетов РДУ и выгрузка в КК</td>
+                <td><span class="tag tag-quarterly">Ежеквартально</span></td>
+                <td class="time">&mdash;</td>
+                <td>!!!</td>
+                <td>&mdash;</td>
+                <td>Кабинет клиента</td>
+                <td>Пока не удалось построить, более 14-ти часов (если отработает в выходные).</td>
+                <td>&mdash;</td>
+            </tr>
+
+        </tbody>
+    </table>
+
+    <div class="warn">
+        <strong>Архитектурная заметка из Excel:</strong> действия по всем пунктам выше
+        (кроме загрузки сделок и процессов сверки) будут объединены в единую автоматическую
+        фоновую обработку <em>"Менеджер РДУ"</em>
+        (<a href="https://jira/browse/IMDEV-8471" target="_blank">IMDEV-8471</a>),
+        которая будет производить необходимые действия автоматически. Ошибки по итогам сверок
+        будут проходить ручной разбор &mdash; сотрудники будут работать только со сверками.
+    </div>
+
+    <div class="footer">
+        Источник: <code>Ключевые операции 15.xlsx</code> &nbsp;|&nbsp;
+        Базa: Wim_Du (ДУ 15) &nbsp;|&nbsp;
+        Задача: IMDEV-8927
+    </div>
+</div>
+</body>
+</html>
