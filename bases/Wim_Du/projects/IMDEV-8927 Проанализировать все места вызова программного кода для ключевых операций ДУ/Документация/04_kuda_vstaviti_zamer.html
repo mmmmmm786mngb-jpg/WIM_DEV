@@ -1,0 +1,460 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<title>Куда вставить замер — ключевые операции ДУ 15</title>
+<style>
+* { box-sizing: border-box; }
+body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    line-height: 1.5;
+    color: #212529;
+    background: #f4f6f8;
+    margin: 0;
+    padding: 24px;
+}
+.container { max-width: 1400px; margin: 0 auto; }
+h1 {
+    color: #17a2b8;
+    border-bottom: 3px solid #17a2b8;
+    padding-bottom: 10px;
+    margin-top: 0;
+}
+h2 { color: #2c3e50; margin-top: 32px; }
+.lead {
+    background: #e7f4f8;
+    border-left: 4px solid #17a2b8;
+    padding: 14px 18px;
+    border-radius: 4px;
+    margin: 16px 0;
+}
+.meta {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+    margin: 18px 0;
+}
+.meta-card {
+    background: #fff;
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    padding: 12px 16px;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+}
+.meta-card .label { font-size: 12px; color: #6c757d; text-transform: uppercase; letter-spacing: 0.5px; }
+.meta-card .value { font-size: 18px; font-weight: 600; color: #212529; }
+table {
+    width: 100%;
+    border-collapse: collapse;
+    background: #fff;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+    margin: 16px 0;
+    font-size: 13px;
+}
+thead th {
+    background: #17a2b8;
+    color: #fff;
+    text-align: left;
+    padding: 10px 12px;
+    border: 1px solid #138496;
+    vertical-align: top;
+}
+tbody td {
+    border: 1px solid #dee2e6;
+    padding: 10px 12px;
+    vertical-align: top;
+}
+tbody tr:nth-child(even) { background: #f8f9fa; }
+tbody tr:hover { background: #fff8e1; }
+.group-row td {
+    background: #2c3e50 !important;
+    color: #fff !important;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-size: 13px;
+}
+.num { text-align: center; font-weight: 600; width: 40px; }
+code, .mono {
+    font-family: Consolas, "Courier New", monospace;
+    font-size: 12px;
+    background: #f1f3f5;
+    padding: 1px 4px;
+    border-radius: 3px;
+}
+.tag {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 11px;
+    font-weight: 500;
+    white-space: nowrap;
+}
+.tag-daily { background: #d1ecf1; color: #0c5460; }
+.tag-quarterly { background: #fff3cd; color: #856404; }
+.tag-manual { background: #f8d7da; color: #721c24; }
+.tag-cfg { background: #e2e3e5; color: #383d41; }
+.tag-wait { background: #ffeaa7; color: #6c5700; }
+.target-block { margin-bottom: 8px; }
+.target-block:last-child { margin-bottom: 0; }
+.target-label {
+    font-size: 11px;
+    font-weight: 600;
+    color: #6c757d;
+    text-transform: uppercase;
+    margin-bottom: 2px;
+}
+.desc { color: #495057; font-size: 12px; margin-top: 6px; }
+.warn {
+    background: #fff3cd;
+    border-left: 4px solid #ffc107;
+    padding: 10px 14px;
+    border-radius: 4px;
+    margin: 14px 0;
+}
+.footer {
+    text-align: center;
+    color: #6c757d;
+    font-size: 12px;
+    margin-top: 30px;
+    padding-top: 16px;
+    border-top: 1px solid #dee2e6;
+}
+ul.tight { margin: 4px 0 0 18px; padding: 0; }
+ul.tight li { margin-bottom: 2px; }
+</style>
+</head>
+<body>
+<div class="container">
+    <h1>Куда вставить замер производительности — 20 ключевых операций ДУ 15</h1>
+
+    <div class="lead">
+        <strong>Задачи:</strong> <a href="https://jira/browse/IMDEV-8927">IMDEV-8927</a> (анализ),
+        <a href="https://jira/browse/IMDEV-8471">IMDEV-8471</a> (замеры).<br>
+        <strong>Источник перечня:</strong> <a href="01_Ключевые_операции_ДУ_15.html">01_Ключевые_операции_ДУ_15.html</a>
+        (Excel «Ключевые операции 15.xlsx»).<br>
+        <strong>Сопоставление EPF/РЗ:</strong> ответы BSS (Катунин), СписокРеглЗаданийВБазе,
+        <code>КлючевыеОперации_КудаВставитьЗамер.txt</code>.<br>
+        <strong>Технология замера:</strong> БСП «Оценка производительности»
+        (<code>НачатьЗамерВремени</code> / <code>ЗакончитьЗамерВремени</code> в точке входа серверного метода).
+    </div>
+
+    <div class="meta">
+        <div class="meta-card">
+            <div class="label">Операций</div>
+            <div class="value">20</div>
+        </div>
+        <div class="meta-card">
+            <div class="label">С EPF (доп. обработки)</div>
+            <div class="value">16</div>
+        </div>
+        <div class="meta-card">
+            <div class="label">Конфигурация (не EPF)</div>
+            <div class="value">3</div>
+        </div>
+        <div class="meta-card">
+            <div class="label">Не реализовано</div>
+            <div class="value">1</div>
+        </div>
+    </div>
+
+    <h2>Целевые объекты замера по операциям</h2>
+
+    <table>
+        <thead>
+            <tr>
+                <th class="num">№</th>
+                <th>Ключевая операция</th>
+                <th>Период.</th>
+                <th>Объект замера (EPF / модуль)</th>
+                <th>Команда</th>
+                <th>Регламентное задание</th>
+                <th>Расшифровка: куда вставить замер</th>
+            </tr>
+        </thead>
+        <tbody>
+
+            <tr class="group-row"><td colspan="7">Загрузка и исполнение сделок</td></tr>
+
+            <tr>
+                <td class="num">1</td>
+                <td>Исполнение сделок (авто закрытие Т-1, Т-2)</td>
+                <td><span class="tag tag-daily">Ежедн.</span></td>
+                <td><code>внИсполнениеСделокТ+2_ДУ</code></td>
+                <td><code>ФоновоеВыполнение_ПотоковоеИсполнениеСделокПул_ТМинус1</code></td>
+                <td>02:00, «Фоновое исполнение сделок T+n (Т-1) (Многопоточное, Пул)»</td>
+                <td class="desc">Серверный метод фоновой команды пула: многопоточное исполнение T-1. Замер на входе/выходе основной процедуры команды.</td>
+            </tr>
+            <tr>
+                <td class="num">2</td>
+                <td>Загрузка сделок за Т, плановая позиция по РДУ</td>
+                <td><span class="tag tag-daily">Ежедн.</span></td>
+                <td><code>внЗагрузкаСделокDU-NEW</code></td>
+                <td><code>ФоновоеВыполнениеРозничноеДУ</code></td>
+                <td>01:10, 11:30, 13:00, 16:30… «Загрузить сделки розничного ДУ (фон.)»</td>
+                <td class="desc">Серверный метод загрузки сделок РДУ из web-service и открытия плановой позиции.</td>
+            </tr>
+            <tr>
+                <td class="num">3</td>
+                <td>Обработка отчетов брокера за Т-1</td>
+                <td><span class="tag tag-daily">Ежедн.</span></td>
+                <td>
+                    <div class="target-block"><span class="target-label">ИДУ</span><code>внПакетныйОтчетБрокераДУ_XML</code></div>
+                    <div class="target-block"><span class="target-label">РДУ</span><code>внЗагрузкаВыписокДУ</code></div>
+                    <div class="target-block"><span class="target-label">РДУ</span><code>внРаспределениеДоходовПоЦеннымБумагам</code></div>
+                </td>
+                <td>
+                    <div class="target-block">ИДУ: <code>ПакетныйОтчетБрокера</code></div>
+                    <div class="target-block">РДУ: <code>ЗаполнитьWEB_VTB</code></div>
+                    <div class="target-block">РДУ: <code>внРаспределениеДоходовПоЦеннымБумагам</code></div>
+                </td>
+                <td>
+                    <div class="target-block">ИДУ: 05:05 «Пакетный отчет брокера ДУ»</div>
+                    <div class="target-block">РДУ: <span class="tag tag-manual">ручной</span></div>
+                </td>
+                <td class="desc">ИДУ — пакетный отчет брокера (фон, РЗ). РДУ — два отдельных ручных замера: выписки и распределение доходов по ЦБ.</td>
+            </tr>
+
+            <tr class="group-row"><td colspan="7">Загрузка выписок</td></tr>
+
+            <tr>
+                <td class="num">4</td>
+                <td>Загрузка выписок банка</td>
+                <td><span class="tag tag-daily">Ежедн.</span></td>
+                <td><code>внЗагрузкаВыписокДУ</code></td>
+                <td><code>ЗаполнитьWEB_VTB</code></td>
+                <td><span class="tag tag-manual">ручной</span></td>
+                <td class="desc">Загрузка выписок через web-service ВТБ. Замер в серверном коде команды (интерактивный/ручной запуск).</td>
+            </tr>
+            <tr>
+                <td class="num">5</td>
+                <td>Сверка денежных средств</td>
+                <td><span class="tag tag-daily">Ежедн.</span></td>
+                <td><code>внСверкаДенежныхСредств_обр</code></td>
+                <td><code>ФоновоеВыполнение</code></td>
+                <td>пн-пт 14:30 «Сверка денежных средств (фон.)»</td>
+                <td class="desc">Фоновая сверка остатков ДС.</td>
+            </tr>
+            <tr>
+                <td class="num">6</td>
+                <td>Сверка денежных средств ЕРС</td>
+                <td><span class="tag tag-daily">Ежедн.</span></td>
+                <td><code>внСверкаДенежныхСредствНаЕРС_обр</code></td>
+                <td><code>ФоновоеВыполнение</code></td>
+                <td>17:00 «Сверка денежных средств на ЕРС (фон.)»</td>
+                <td class="desc">Фоновая сверка ДС на едином реестре счетов.</td>
+            </tr>
+            <tr>
+                <td class="num">7</td>
+                <td>Перевод ДС на биржу (п/п) датой Т</td>
+                <td><span class="tag tag-daily">Ежедн.</span></td>
+                <td><code>внСинхронизацияНСИ</code> (2 команды)</td>
+                <td>
+                    <code>ФоновоеВыполнение</code><br>
+                    <code>ЗагрузкаПорученийИзДО</code>
+                </td>
+                <td>
+                    07:02 / 120 с «Синхронизация НСИ с ДО»<br>
+                    09:30 / 300 с «Загрузка поручений из ДО»
+                </td>
+                <td class="desc">Два замера в одной EPF: создание поручений по ДС и загрузка поручений из ДО (формирование п/п).</td>
+            </tr>
+
+            <tr class="group-row"><td colspan="7">Загрузка котировок</td></tr>
+
+            <tr>
+                <td class="num">8</td>
+                <td>Загрузка котировок 1-й сеанс за Т-1</td>
+                <td><span class="tag tag-daily">Ежедн.</span></td>
+                <td><code>внЗагрузкаКотировокДУ</code></td>
+                <td><code>ФоновоеВыполнение</code></td>
+                <td>09:00 «Загрузить котировки (в фоне)» — 1-й сеанс</td>
+                <td class="desc">Первичная загрузка котировок ц/б. Замер — первый запуск РЗ за сутки.</td>
+            </tr>
+            <tr>
+                <td class="num">9</td>
+                <td>Сверка загрузки котировок</td>
+                <td><span class="tag tag-daily">Ежедн.</span></td>
+                <td><code>внОтчетКонтрольКотировок</code></td>
+                <td><code>ФоновоеВыполнение</code></td>
+                <td>пн-пт 09:15 «Отчет контроль котировок»</td>
+                <td class="desc">Контрольный отчет и рассылка в ДУ. Сверка с эталоном — в ДОиО; здесь замер рассылки/контроля.</td>
+            </tr>
+            <tr>
+                <td class="num">10</td>
+                <td>Загрузка котировок финальная за Т-1</td>
+                <td><span class="tag tag-daily">Ежедн.</span></td>
+                <td><code>внЗагрузкаКотировокДУ</code></td>
+                <td><code>ФоновоеВыполнение</code></td>
+                <td>11:50 «Загрузить котировки (в фоне)» — 2-й сеанс</td>
+                <td class="desc">Финальная загрузка перед вечерними регламентами (СЧА). Та же EPF — второй запуск РЗ.</td>
+            </tr>
+
+            <tr class="group-row"><td colspan="7">Сверки</td></tr>
+
+            <tr>
+                <td class="num">11</td>
+                <td>Сверка с отчетом брокера</td>
+                <td><span class="tag tag-daily">Ежедн.</span></td>
+                <td><code>внСверкаCделокДУСОтчетомБрокера</code></td>
+                <td><code>ФоновоеВыполнение</code></td>
+                <td>09:00, 10:00, 12:00:01</td>
+                <td class="desc">Фоновая сверка сделок с отчетом брокера (отчет-рассылка).</td>
+            </tr>
+            <tr>
+                <td class="num">12</td>
+                <td>Сверка остатков ЦБ с депозитарием</td>
+                <td><span class="tag tag-daily">Ежедн.</span></td>
+                <td><code>внСверкаЦБ</code></td>
+                <td><code>ФоновоеВыполнение</code></td>
+                <td>пн-пт 12:00 «Сверка ценных бумаг»</td>
+                <td class="desc">Только ИДУ; для РДУ не применяется. Сверка остатков ЦБ с депозитарием.</td>
+            </tr>
+            <tr>
+                <td class="num">13</td>
+                <td>Сверка API сигнал vs Реестры платежей</td>
+                <td><span class="tag tag-daily">Ежедн.</span></td>
+                <td><span class="tag tag-wait">не реализовано</span></td>
+                <td>&mdash;</td>
+                <td>&mdash;</td>
+                <td class="desc">Замер после реализации <a href="https://jira/browse/IMDEV-8274">IMDEV-8274</a>.</td>
+            </tr>
+
+            <tr class="group-row"><td colspan="7">Договоры РДУ</td></tr>
+
+            <tr>
+                <td class="num">14</td>
+                <td>Процесс расторжения РДУ</td>
+                <td><span class="tag tag-daily">Ежедн.</span></td>
+                <td><code>внРасторжениеДоговоровРозничногоДУ</code></td>
+                <td><code>ФоновоеДоговорыИзДОКРасторжению</code></td>
+                <td>07:00-23:00 / 600 с</td>
+                <td class="desc">Загрузка из ДО данных о расторжении и фоновая обработка.</td>
+            </tr>
+            <tr>
+                <td class="num">15</td>
+                <td>Загрузка договоров РДУ, карточки, аналитика ВУ</td>
+                <td><span class="tag tag-daily">Ежедн.</span></td>
+                <td><code>внСинхронизацияНСИ</code> (2 команды)</td>
+                <td>
+                    <code>ФоновоеВыполнение</code><br>
+                    <code>ЗагрузкаПорученийИзДО</code>
+                </td>
+                <td>
+                    07:02 / 120 с «Синхронизация НСИ с ДО»<br>
+                    09:30 / 300 с «Загрузка поручений из ДО»
+                </td>
+                <td class="desc">Синхронизация НСИ, договоров и карточек из ДО. Два замера — две команды.</td>
+            </tr>
+
+            <tr class="group-row"><td colspan="7">Регламентные операции</td></tr>
+
+            <tr>
+                <td class="num">16</td>
+                <td>Вечерние регламентные операции, РСА/СЧА за Т-1</td>
+                <td><span class="tag tag-daily">Ежедн.</span></td>
+                <td><span class="tag tag-cfg">конфигурация</span><br>
+                    <code>Документ.ПланРегламентныхОперацийДУ</code><br>
+                    <code>ИсполняемыеПроцедурыЗакрытияПериода</code></td>
+                <td>Группа «2. Вечерние операции»</td>
+                <td>по расписанию закрытия периода</td>
+                <td class="desc">
+                    Точка входа: <code>ВыполнитьРегламентныеПроцедуры()</code>.
+                    Ключевые процедуры:
+                    <code>Операция_1000_РасчетРСА_СЧА</code>,
+                    <code>Операция_0110_ПереоценкаАктивов</code>.
+                    Замер: пакет + отдельно РСА/СЧА.
+                </td>
+            </tr>
+            <tr>
+                <td class="num">17</td>
+                <td>Утренние регламентные (% депозиты, РЕПО, НКД, погашения)</td>
+                <td><span class="tag tag-daily">Ежедн.</span></td>
+                <td><span class="tag tag-cfg">конфигурация</span><br>
+                    <code>Документ.ПланРегламентныхОперацийДУ</code><br>
+                    <code>ИсполняемыеПроцедурыЗакрытияПериода</code></td>
+                <td>Группа «1. Утренние операции»</td>
+                <td>по расписанию закрытия периода</td>
+                <td class="desc">
+                    Пакет утренних процедур:
+                    <code>Операция_0030</code>,
+                    <code>Операция_0035</code>,
+                    <code>Операция_0040</code>,
+                    <code>Операция_0055</code>.
+                    Для РДУ запуск не каждый день (IMDEV-8130).
+                </td>
+            </tr>
+            <tr>
+                <td class="num">18</td>
+                <td>Начисление вознаграждения</td>
+                <td><span class="tag tag-quarterly">Ежекварт.</span></td>
+                <td><span class="tag tag-cfg">конфигурация</span><br>
+                    <code>ИсполняемыеПроцедурыЗакрытияПериода</code><br>
+                    <code>Документ.НачислениеВознаграждения</code></td>
+                <td>
+                    <code>Операция_0060_НачислениеВознагражденияУК</code><br>
+                    <code>Операция_0120_НачислениеВознагражденияЗаУспех</code>
+                </td>
+                <td>ежеквартально, закрытие периода</td>
+                <td class="desc">
+                    Основной контур — регламент закрытия периода.
+                    Ручной EPF: <code>внНачислениеВознаграждения_РозничноеДУ</code>
+                    (команда <code>НачислениеВознагражденияЗаУправлениеРозничноеДУ</code>).
+                </td>
+            </tr>
+            <tr>
+                <td class="num">19</td>
+                <td>Оплата вознаграждения</td>
+                <td><span class="tag tag-quarterly">Ежекварт.</span></td>
+                <td>
+                    <div class="target-block"><span class="target-label">расчет</span><code>внРасчетВознагражденияРозничногоДУ</code></div>
+                    <div class="target-block"><span class="target-label">оплата</span><code>внОплатаКЗПоКлиентамРДУ</code></div>
+                </td>
+                <td>
+                    <div class="target-block"><code>ФоновоеВыполнение</code></div>
+                    <div class="target-block"><code>ЗаполнитьНачислениями</code></div>
+                </td>
+                <td>
+                    <div class="target-block">08:00 «Расчет вознаграждения розничного ДУ»</div>
+                    <div class="target-block"><span class="tag tag-manual">оплата: ручной</span></div>
+                </td>
+                <td class="desc">Цепочка: расчет (РЗ) → начисление (п.18) → оплата КЗ (ручная EPF). Два обязательных замера.</td>
+            </tr>
+            <tr>
+                <td class="num">20</td>
+                <td>Массовое построение отчетов РДУ и выгрузка в КК</td>
+                <td><span class="tag tag-quarterly">Ежекварт.</span></td>
+                <td>
+                    <div class="target-block"><span class="target-label">отчет</span><code>внЗапускПоРасписаниюОтчетаУправляющегоДУ</code></div>
+                    <div class="target-block"><span class="target-label">КК</span><code>внЭкспортДанныхКабиентHNWI_DU</code></div>
+                </td>
+                <td>фоновые команды регистрации</td>
+                <td>
+                    <div class="target-block">17:00 отчет управляющего (482П)</div>
+                    <div class="target-block">10:00 / 600 с экспорт в КК</div>
+                </td>
+                <td class="desc">Два замера: построение отчета и выгрузка в кабинет клиента. Приоритет оптимизации (&gt;14 ч на 100 000 договоров).</td>
+            </tr>
+
+        </tbody>
+    </table>
+
+    <div class="warn">
+        <strong>Легенда:</strong>
+        <span class="tag tag-manual">ручной</span> — РЗ нет, замер при ручном/интерактивном запуске;
+        <span class="tag tag-cfg">конфигурация</span> — не доп. обработка, замер в коде конфигурации;
+        <span class="tag tag-wait">не реализовано</span> — IMDEV-8274.
+        <br><br>
+        <strong>IMDEV-8471:</strong> действия (кроме загрузки сделок и сверок) планируется объединить
+        в фоновую обработку «Менеджер РДУ» — при появлении замеры переносятся в нее.
+    </div>
+
+    <div class="footer">
+        Источник: <code>Ключевые операции 15.xlsx</code> &nbsp;|&nbsp;
+        <code>КлючевыеОперации_КудаВставитьЗамер.txt</code> &nbsp;|&nbsp;
+        База: Wim_Du (ДУ 15) &nbsp;|&nbsp;
+        IMDEV-8927 / IMDEV-8471
+    </div>
+</div>
+</body>
+</html>
