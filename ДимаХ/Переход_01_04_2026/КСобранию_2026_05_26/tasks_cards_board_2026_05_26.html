@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Карточки задач по статусам и системам — 26.05.2026</title>
+  <style>
+    :root {
+      --bg: #eef2f8;
+      --text: #152238;
+      --muted: #5a6578;
+      --card: #fff;
+      --border: #c8d4e8;
+      --du: #1d4fa0;
+      --du-bg: #e8f0ff;
+      --fin: #0e6b52;
+      --fin-bg: #e4f5ef;
+      --mo: #b84d0e;
+      --mo-bg: #fff2e8;
+      --lane-release: #0d7a5a;
+      --lane-work: #1a5fb4;
+      --lane-vendor: #6b3fa0;
+      --lane-plan: #b35900;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font: 14px/1.45 "Segoe UI", Arial, sans-serif;
+    }
+    .page {
+      max-width: 1320px;
+      margin: 0 auto;
+      padding: 20px 16px 40px;
+    }
+    header {
+      background: linear-gradient(120deg, #112952, #1b4799);
+      color: #fff;
+      border-radius: 12px;
+      padding: 18px 22px;
+      margin-bottom: 22px;
+    }
+    header h1 { margin: 0 0 8px; font-size: 1.35rem; }
+    header p { margin: 0; font-size: 12.5px; opacity: 0.88; line-height: 1.55; }
+
+    .legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px 18px;
+      margin-bottom: 18px;
+      font-size: 12.5px;
+      color: var(--muted);
+    }
+    .legend span {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+    .dot-du { background: var(--du); }
+    .dot-fin { background: var(--fin); }
+    .dot-mo { background: var(--mo); }
+
+    .board {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 14px;
+      align-items: stretch;
+    }
+    @media (max-width: 1100px) {
+      .board { grid-template-columns: repeat(2, 1fr); }
+    }
+    @media (max-width: 640px) {
+      .board { grid-template-columns: 1fr; }
+    }
+
+    .lane {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      min-height: 120px;
+    }
+    .lane-head {
+      padding: 10px 12px;
+      font-weight: 800;
+      font-size: 12.5px;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      color: #fff;
+    }
+    .lane--release .lane-head { background: var(--lane-release); }
+    .lane--work .lane-head { background: var(--lane-work); }
+    .lane--vendor .lane-head { background: var(--lane-vendor); }
+    .lane--plan .lane-head { background: var(--lane-plan); }
+    .lane-body {
+      padding: 10px;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .group-label {
+      font-size: 10px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--muted);
+      margin: 2px 2px 4px;
+      padding-top: 4px;
+      border-top: 1px dashed var(--border);
+    }
+    .group-label:first-child { border-top: 0; padding-top: 0; }
+
+    .card {
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      padding: 10px 11px 11px;
+      background: #fafbfd;
+      box-shadow: 0 1px 2px rgba(20, 40, 80, 0.06);
+    }
+    .card--du { border-left: 4px solid var(--du); background: var(--du-bg); }
+    .card--fin { border-left: 4px solid var(--fin); background: var(--fin-bg); }
+    .card--mo { border-left: 4px solid var(--mo); background: var(--mo-bg); }
+
+    .chip {
+      display: inline-block;
+      font-size: 10px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      padding: 2px 8px;
+      border-radius: 999px;
+      margin-bottom: 6px;
+      color: #fff;
+    }
+    .chip--du { background: var(--du); }
+    .chip--fin { background: var(--fin); }
+    .chip--mo { background: var(--mo); }
+
+    .card-title {
+      font-weight: 700;
+      font-size: 13px;
+      line-height: 1.35;
+      margin: 0 0 6px;
+    }
+    .card-meta {
+      font-size: 11.5px;
+      color: var(--muted);
+      line-height: 1.4;
+    }
+    .date-block {
+      margin-top: 8px;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      border-radius: 7px;
+      padding: 4px 8px;
+      border: 1px solid;
+      font-size: 10.5px;
+      line-height: 1.2;
+    }
+    .date-label {
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      opacity: 0.9;
+    }
+    .date-value { font-weight: 700; }
+    .date-release {
+      background: #e0f2fe;
+      color: #0c4a6e;
+      border-color: #7dd3fc;
+    }
+    .date-deadline {
+      background: #fee2e2;
+      color: #7f1d1d;
+      border-color: #fca5a5;
+    }
+    .date-start {
+      background: #ffedd5;
+      color: #7c2d12;
+      border-color: #fdba74;
+    }
+    .pill {
+      display: inline-block;
+      margin-top: 8px;
+      font-size: 10.5px;
+      font-weight: 700;
+      padding: 3px 8px;
+      border-radius: 6px;
+    }
+    .pill-ok { background: #d4f0dc; color: #145a28; border: 1px solid #8fd4a2; }
+    .pill-wip { background: #dbeafe; color: #153e75; border: 1px solid #7eb6f0; }
+    .pill-vendor { background: #ede9fe; color: #4c1d95; border: 1px solid #b4a3e8; }
+    .pill-plan { background: #ffedd5; color: #8a3b00; border: 1px solid #fdba74; }
+    .pill-warn { background: #fef3c7; color: #854d0e; border: 1px solid #fcd34d; }
+
+    footer {
+      margin-top: 22px;
+      font-size: 11.5px;
+      color: var(--muted);
+      line-height: 1.5;
+    }
+    footer code { font-size: 11px; }
+  </style>
+</head>
+<body>
+<div class="page">
+  <header>
+    <h1>Карточки задач: статусы и системы</h1>
+    <p>Свод к совещанию 26.05.2026. Четыре колонки = разделы 1.2, 1.3, 1.3.5, 1.4. Внутри колонки карточки сгруппированы по системе: ДУ 1.5, ФИН 2.0, МО.</p>
+  </header>
+
+  <div class="legend">
+    <span><span class="dot dot-du" aria-hidden="true"></span> ДУ (ДУ 1.5)</span>
+    <span><span class="dot dot-fin" aria-hidden="true"></span> ФИН (ДУ 2.0)</span>
+    <span><span class="dot dot-mo" aria-hidden="true"></span> МО</span>
+  </div>
+
+  <div class="board">
+
+    <section class="lane lane--release" aria-labelledby="h-release">
+      <div class="lane-head" id="h-release">1.2 К релизу</div>
+      <div class="lane-body">
+        <div class="group-label">МО</div>
+        <article class="card card--mo">
+          <span class="chip chip--mo">МО</span>
+          <h2 class="card-title">Регламенты МО под РДУ (IMDEV-8665)</h2>
+          <p class="card-meta">Retail MV/WAP: финальный тест «стало» пройден, релиз установлен на прод. Детали: measurements_table_IMDEV-8665.html.</p>
+          <div class="date-block date-release"><span class="date-label">Прод</span><span class="date-value">установлено</span></div>
+          <span class="pill pill-ok">На проде</span>
+        </article>
+        <div class="group-label">ФИН (ДУ 2.0)</div>
+        <article class="card card--fin">
+          <span class="chip chip--fin">ФИН 2.0</span>
+          <h2 class="card-title">Перерегистрации при проведении (IMDEV-8662)</h2>
+          <p class="card-meta">Цель по сквозному тесту достигнута. Задача передана вендору Avancore (Аванкор).</p>
+          <span class="pill pill-vendor">Вендор: готово, ожидает релиза</span>
+        </article>
+        <article class="card card--fin">
+          <span class="chip chip--fin">ФИН 2.0</span>
+          <h2 class="card-title">IMAPPS-36274 / 36275</h2>
+          <p class="card-meta">Фильтр регламентов без РДУ; статистика и топ медленных по РДУ (связанные подзадачи к линии РДУ). Оплата с вендором согласована, работы в разработке у Avancore.</p>
+          <span class="pill pill-vendor">Вендор: готово, ожидает релиза</span>
+        </article>
+      </div>
+    </section>
+
+    <section class="lane lane--work" aria-labelledby="h-work">
+      <div class="lane-head" id="h-work">1.3 В работе</div>
+      <div class="lane-body">
+        <div class="group-label">ДУ (ДУ 1.5)</div>
+        <article class="card card--du">
+          <span class="chip chip--du">ДУ 1.5</span>
+          <h2 class="card-title">Ключевые операции ДУ: анализ вызовов (IMDEV-8927)</h2>
+          <p class="card-meta">Сопоставление 20 ключевых операций из Excel с объектами 1С, EPF и регламентами; уточнение 8 «неизвестных» по ответам разработчика. Материалы: Документация/01–03 в проекте IMDEV-8927.</p>
+          <div class="date-block date-start"><span class="date-label">Статус</span><span class="date-value">в работе</span></div>
+          <span class="pill pill-wip">В работе</span>
+        </article>
+        <div class="group-label">МО</div>
+        <article class="card card--mo">
+          <span class="chip chip--mo">МО</span>
+          <h2 class="card-title">Оценка производительности БСП 3.1 (IMDEV-8928)</h2>
+          <p class="card-meta">Обновить только подсистему «Оценка производительности»: реквизит «вес замера», справочник «профили ключевых операций»; проверить совместимость текущих замеров. Сейчас: выбор версии БСП 3.1, сравнение ОП с действующей в МО.</p>
+          <div class="date-block date-start"><span class="date-label">Статус</span><span class="date-value">BA in progress</span></div>
+          <span class="pill pill-wip">В работе</span>
+        </article>
+      </div>
+    </section>
+
+    <section class="lane lane--vendor" aria-labelledby="h-vendor">
+      <div class="lane-head" id="h-vendor">1.3.5 Вендор Avancore</div>
+      <div class="lane-body">
+        <div class="group-label">ФИН (ДУ 2.0)</div>
+        <article class="card card--fin">
+          <span class="chip chip--fin">ФИН 2.0</span>
+          <h2 class="card-title">Расчет НДФЛ в ФИН (IMDEV-7330)</h2>
+          <p class="card-meta">DR-регресс 07—08.05.2026: цель по времени достигнута; данные сверены. Материалы переданы вендору Avancore (Аванкор).</p>
+          <span class="pill pill-vendor">Вендор: рассмотрение не начато</span>
+        </article>
+        <article class="card card--fin">
+          <span class="chip chip--fin">ФИН 2.0</span>
+          <h2 class="card-title">Регламенты ФИН под РДУ</h2>
+          <p class="card-meta">Цель по DR-тесту достигнута. Оплата с вендором согласована; работы у Avancore не начаты, идёт изучение материалов.</p>
+          <span class="pill pill-vendor">Вендор: оплата согласована, ожидаем ФТ и шаблона с примером</span>
+        </article>
+      </div>
+    </section>
+
+    <section class="lane lane--plan" aria-labelledby="h-plan">
+      <div class="lane-head" id="h-plan">1.4 Ближайшие планы</div>
+      <div class="lane-body">
+        <div class="group-label">ДУ (ДУ 1.5)</div>
+        <article class="card card--du">
+          <span class="chip chip--du">ДУ 1.5</span>
+          <h2 class="card-title">Замеры ключевых операций ДУ 1.5</h2>
+          <p class="card-meta">Следующий этап после IMDEV-8927: постановка замеров производительности (БСП «Оценка производительности») по 20 ключевым операциям РДУ; приоритет — ежедневные регламенты.</p>
+          <div class="date-block date-start"><span class="date-label">Основание</span><span class="date-value">IMDEV-8927, перечень 20 операций</span></div>
+          <span class="pill pill-plan">Ближайшие планы</span>
+        </article>
+        <article class="card card--du">
+          <span class="chip chip--du">ДУ 1.5</span>
+          <h2 class="card-title">Вечерние регламенты, этап 2 (IMDEV-8899)</h2>
+          <p class="card-meta">После выката этапа 1 на прод: оптимизация узких мест по замерам 15–16.05 (~17&nbsp;154 дог., 5–10 потоков). Расширение rev2: предварительный отсев договоров, перехват формы регламентного периода.</p>
+          <div class="date-block date-start"><span class="date-label">Статус</span><span class="date-value">разработка rev2, тесты у заказчика</span></div>
+          <span class="pill pill-plan">Ближайшие планы</span>
+        </article>
+        <div class="group-label">МО</div>
+        <article class="card card--mo">
+          <span class="chip chip--mo">МО</span>
+          <h2 class="card-title">Замеры ключевых операций МО (IMDEV-8883)</h2>
+          <p class="card-meta">APDEX для 15 ключевых регламентных операций РДУ. Обследование 17.05: 4 операции найдены, 7 частично, 4 требуют уточнения; подсистема APDEX в МО неполная.</p>
+          <div class="date-block date-start"><span class="date-label">Старт</span><span class="date-value">обследование завершено, внедрение замеров</span></div>
+          <span class="pill pill-plan">Ближайшие планы</span>
+        </article>
+      </div>
+    </section>
+
+  </div>
+
+  <footer>
+    Источник деталей и таблиц: <code>tasks_tree_table_grouped_2026_05_19.html</code>, обновление карточек — 26.05.2026.
+  </footer>
+</div>
+</body>
+</html>
