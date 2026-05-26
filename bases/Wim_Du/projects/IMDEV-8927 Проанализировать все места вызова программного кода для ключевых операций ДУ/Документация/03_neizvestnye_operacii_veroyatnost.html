@@ -1,0 +1,803 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<title>IMDEV-8927 — Неизвестные ключевые операции: подсказка по EPF</title>
+<style>
+* { box-sizing: border-box; }
+body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    line-height: 1.5;
+    color: #212529;
+    background: #f4f6f8;
+    margin: 0;
+    padding: 24px;
+}
+.container { max-width: 1200px; margin: 0 auto; }
+h1 {
+    color: #17a2b8;
+    border-bottom: 3px solid #17a2b8;
+    padding-bottom: 10px;
+    margin-top: 0;
+}
+h2 {
+    color: #2c3e50;
+    margin-top: 40px;
+    padding-top: 8px;
+    border-top: 2px solid #dee2e6;
+}
+h3 { color: #495057; margin-top: 20px; }
+.lead {
+    background: #e7f4f8;
+    border-left: 4px solid #17a2b8;
+    padding: 14px 18px;
+    border-radius: 4px;
+    margin: 16px 0;
+}
+.dev-answer {
+    background: #fff8e1;
+    border-left: 4px solid #ffc107;
+    padding: 12px 16px;
+    border-radius: 4px;
+    margin: 12px 0 16px;
+}
+.dev-answer strong { color: #856404; }
+.user-mark {
+    background: #f8d7da;
+    border-left: 4px solid #dc3545;
+    padding: 10px 14px;
+    border-radius: 4px;
+    margin: 10px 0;
+    font-size: 14px;
+}
+.not-implemented {
+    background: #f5c6cb;
+    border-left: 4px solid #dc3545;
+    padding: 12px 16px;
+    border-radius: 4px;
+    margin: 12px 0;
+}
+.meta {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 12px;
+    margin: 18px 0;
+}
+.meta-card {
+    background: #fff;
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    padding: 12px 16px;
+}
+.meta-card .label { font-size: 12px; color: #6c757d; text-transform: uppercase; }
+.meta-card .value { font-size: 17px; font-weight: 600; }
+table {
+    width: 100%;
+    border-collapse: collapse;
+    background: #fff;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+    margin: 12px 0 20px;
+    font-size: 14px;
+}
+thead th {
+    background: #17a2b8;
+    color: #fff;
+    text-align: left;
+    padding: 10px 12px;
+    border: 1px solid #138496;
+}
+tbody td {
+    border: 1px solid #dee2e6;
+    padding: 10px 12px;
+    vertical-align: top;
+}
+tbody tr:nth-child(even) { background: #f8f9fa; }
+tbody tr.row-top td { background: #e8f5e9; }
+.prob-bar-wrap {
+    background: #e9ecef;
+    border-radius: 6px;
+    height: 22px;
+    position: relative;
+    min-width: 120px;
+}
+.prob-bar {
+    height: 100%;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    padding-right: 8px;
+    font-size: 12px;
+    font-weight: 600;
+    color: #fff;
+    min-width: 36px;
+}
+.bar-90 { background: #28a745; }
+.bar-80 { background: #5cb85c; }
+.bar-70 { background: #7bc96f; }
+.bar-60 { background: #f0ad4e; }
+.bar-50 { background: #ff9933; }
+.bar-40 { background: #ec971f; }
+.bar-30 { background: #d9534f; }
+.bar-10 { background: #6c757d; }
+.bar-0  { background: #adb5bd; width: 4% !important; min-width: 4px; }
+.prob-num {
+    display: inline-block;
+    min-width: 44px;
+    font-weight: 700;
+    text-align: right;
+}
+code, .mono {
+    font-family: Consolas, "Courier New", monospace;
+    font-size: 13px;
+    background: #f1f3f5;
+    padding: 1px 5px;
+    border-radius: 3px;
+}
+.tag {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 11px;
+    font-weight: 600;
+    margin-right: 4px;
+}
+.tag-epf { background: #fff3cd; color: #664d03; }
+.tag-erf { background: #ffe5d0; color: #663300; }
+.tag-cf { background: #cfe2ff; color: #084298; }
+.tag-sj { background: #cff4fc; color: #055160; }
+.tag-dev { background: #d4edda; color: #155724; }
+.tag-warn { background: #f8d7da; color: #721c24; }
+.legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    margin: 14px 0;
+    font-size: 13px;
+}
+.legend span { display: flex; align-items: center; gap: 6px; }
+.swatch {
+    width: 14px;
+    height: 14px;
+    border-radius: 3px;
+    display: inline-block;
+}
+.nav-op {
+    background: #fff;
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    padding: 14px 18px;
+    margin: 16px 0;
+}
+.nav-op ol { margin: 8px 0 0; padding-left: 22px; }
+.nav-op a { color: #17a2b8; text-decoration: none; }
+.nav-op a:hover { text-decoration: underline; }
+.rj {
+    font-size: 12px;
+    color: #495057;
+    margin-top: 4px;
+}
+.footer {
+    text-align: center;
+    color: #6c757d;
+    font-size: 12px;
+    margin-top: 32px;
+    padding-top: 16px;
+    border-top: 1px solid #dee2e6;
+}
+</style>
+</head>
+<body>
+<div class="container">
+
+<h1>Неизвестные ключевые операции ДУ: подсказка по обработкам</h1>
+
+<div class="lead">
+    <strong>Задача:</strong> IMDEV-8927 — сопоставить ключевые операции из Excel с кодом 1С и EPF.<br>
+    <strong>Источники анализа:</strong>
+    <code>КлючевыеОперации_Неизвестно.txt</code> (ваши гипотезы),
+    <code>Обработки производительность_Катунин.docx</code> (ответ разработчика),
+    <code>СписокРеглЗаданийВБазе</code> (фактические регламенты в ИБ),
+    <code>КлючевыеОперации_ЧемДелаются.txt</code> (черновик сопоставления).<br>
+    <strong>Код:</strong> CF — <code>C:\1c\Cursor_1c\WORK\Wim_Du\SRC\CF</code>,
+    EPF — <code>C:\1c\Cursor_1c\WORK\Wim_Du\SRC\epf</code>
+    (запуск через <code>ДополнительныеОтчетыИОбработки</code> и РЗ <code>ЗапускДополнительныхОбработок</code>).
+</div>
+
+<div class="meta">
+    <div class="meta-card">
+        <div class="label">Операций в файле</div>
+        <div class="value">8</div>
+    </div>
+    <div class="meta-card">
+        <div class="label">Подтверждено разработчиком</div>
+        <div class="value">5 из 8</div>
+    </div>
+    <div class="meta-card">
+        <div class="label">Не реализовано</div>
+        <div class="value">1 (п. 5)</div>
+    </div>
+    <div class="meta-card">
+        <div class="label">Дата отчета</div>
+        <div class="value">26.05.2026</div>
+    </div>
+</div>
+
+<h2>Как читать вероятности</h2>
+<p>
+    Процент — оценка того, что <strong>именно эта обработка</strong> является основным исполнителем
+    ключевой операции (для постановки замера производительности), с учетом:
+</p>
+<ul>
+    <li>совпадения с ответом разработчика (Катунин) — вес до +25 п.п.;</li>
+    <li>наличия регламентного задания в базе с подходящим расписанием — до +15 п.п.;</li>
+    <li>ваших пометок <code>!!!</code> в <code>КлючевыеОперации_Неизвестно.txt</code> — до +10 п.п.;</li>
+    <li>сегмента ДУ (индивидуальное / РДУ / HNWI) — при несовпадении сегмента вероятность снижается.</li>
+</ul>
+<div class="legend">
+    <span><span class="swatch" style="background:#28a745"></span> 85-95% — ставить замер в первую очередь</span>
+    <span><span class="swatch" style="background:#5cb85c"></span> 70-84% — основной кандидат, уточнить у владельца</span>
+    <span><span class="swatch" style="background:#f0ad4e"></span> 50-69% — участник цепочки или альтернатива</span>
+    <span><span class="swatch" style="background:#d9534f"></span> &lt; 50% — маловероятно / другой контур</span>
+</div>
+
+<nav class="nav-op">
+    <strong>Быстрый переход:</strong>
+    <ol>
+        <li><a href="#op1">Обработка отчетов брокера за Т-1</a></li>
+        <li><a href="#op2">Перевод ДС на биржу (п/п) датой Т</a></li>
+        <li><a href="#op3">Сверка загрузки котировок</a></li>
+        <li><a href="#op4">Сверка остатков ЦБ с депозитарием</a></li>
+        <li><a href="#op5">Сверка API сигнал vs Реестры платежей</a></li>
+        <li><a href="#op6">Загрузка договоров РДУ / синхронизация НСИ</a></li>
+        <li><a href="#op7">Оплата вознаграждения</a></li>
+        <li><a href="#op8">Массовое построение отчетов РДУ и выгрузка в КК</a></li>
+    </ol>
+</nav>
+
+<!-- ========== OP 1 ========== -->
+<h2 id="op1">1. Обработка отчетов брокера за Т-1</h2>
+<div class="user-mark">
+    Ваша пометка: <strong>!!! внЗагрузкаОтчетаБрокераТройкиИВТБКапитал !!!</strong>
+    (ожидание запуска около 09:00).
+</div>
+<div class="dev-answer">
+    <strong>Ответ разработчика (Катунин):</strong>
+    для <em>индивидуального ДУ</em> — «Пакетный отчет брокера ДУ»;
+    для <em>РДУ</em> — «Загрузка выписок», «Распределение доходов по ценным бумагам»
+    (отдельный контур, не один EPF на все сегменты).
+</div>
+<table>
+    <thead>
+        <tr>
+            <th style="width:42%">Кандидат (EPF / CF)</th>
+            <th style="width:12%">Вероятность</th>
+            <th>Обоснование</th>
+            <th style="width:28%">Регламент в базе</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr class="row-top">
+            <td><span class="tag tag-epf">EPF</span> <code>внПакетныйОтчетБрокераДУ_XML</code> / рег. «Пакетный отчет брокера ДУ»</td>
+            <td>
+                <div class="prob-bar-wrap"><div class="prob-bar bar-90" style="width:88%">88%</div></div>
+            </td>
+            <td><span class="tag tag-dev">Разработчик</span> прямо указал пакетный отчет для индивидуального ДУ. Высший приоритет для сегмента ИДУ.</td>
+            <td class="rj">РЗ: «Пакетный отчет брокера ДУ», ежедневно <strong>05:05</strong>, svc_avancore, Использование=Да</td>
+        </tr>
+        <tr class="row-top">
+            <td><span class="tag tag-epf">EPF</span> <code>внЗагрузкаОтчетаБрокераТройкиИВТБКапитал</code></td>
+            <td>
+                <div class="prob-bar-wrap"><div class="prob-bar bar-80" style="width:82%">82%</div></div>
+            </td>
+            <td><span class="tag tag-warn">Ваша пометка</span> + подтверждение в <code>КлючевыеОперации_ЧемДелаются.txt</code>. Сверка отчетов Тройки / ВТБ Капитал / ВТБ24 — отдельная ветка от пакетного отчета.</td>
+            <td class="rj">РЗ: «Загрузка отчета брокера Тройки, ВТБ Капитал и ВТБ24 для сверки», <strong>04:00-22:00</strong> каждые 600 с</td>
+        </tr>
+        <tr>
+            <td><span class="tag tag-epf">EPF</span> <code>внПакетныйОтчетБрокераДУ_ДВО</code></td>
+            <td>
+                <div class="prob-bar-wrap"><div class="prob-bar bar-50" style="width:45%">45%</div></div>
+            </td>
+            <td>Альтернатива пакетной загрузки (ДВО). Уточнить, какие договоры попадают в ключевую операцию Excel.</td>
+            <td class="rj">См. пакетный отчет брокера (возможна та же регистрация в справочнике)</td>
+        </tr>
+        <tr>
+            <td><span class="tag tag-cf">CF</span> <code>Обработка.ОбщийОтчетБрокера</code>, <code>Обработка.ОтчетБрокера</code></td>
+            <td>
+                <div class="prob-bar-wrap"><div class="prob-bar bar-40" style="width:38%">38%</div></div>
+            </td>
+            <td>Объекты конфигурации; по ответу разработчика основной поток — внешние EPF. Оставить как запасной путь вызова.</td>
+            <td class="rj">Прямого РЗ на CF не найдено</td>
+        </tr>
+        <tr>
+            <td><span class="tag tag-epf">EPF</span> <code>внЗагрузкаВыписокДУ</code> (контур РДУ)</td>
+            <td>
+                <div class="prob-bar-wrap"><div class="prob-bar bar-60" style="width:58%">58%</div></div>
+            </td>
+            <td><span class="tag tag-dev">Разработчик</span> для РДУ указал загрузку выписок, а не отчет брокера в классическом виде.</td>
+            <td class="rj">Проверить регистрацию в <code>ДополнительныеОтчетыИОбработки</code> (в выгрузке РЗ имя может отличаться)</td>
+        </tr>
+    </tbody>
+</table>
+<p><strong>Рекомендация:</strong> для замера «Обработка отчетов брокера за Т-1» разделить на два замера: (А) пакетный отчет ИДУ — <code>внПакетныйОтчетБрокераДУ_XML</code>; (Б) сверка брокеров Тройка/ВТБ — <code>внЗагрузкаОтчетаБрокераТройкиИВТБКапитал</code>.</p>
+
+<!-- ========== OP 2 ========== -->
+<h2 id="op2">2. Перевод денежных средств на биржу (формирование п/п) датой Т</h2>
+<div class="dev-answer">
+    <strong>Ответ разработчика:</strong>
+    «Синхронизация НСИ с ДО тут создает поручение по ДС» — платежные поручения могут появляться
+    как побочный результат синхронизации, а не отдельной EPF «перевод на биржу».
+</div>
+<table>
+    <thead>
+        <tr>
+            <th>Кандидат</th>
+            <th>Вероятность</th>
+            <th>Обоснование</th>
+            <th>Регламент в базе</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr class="row-top">
+            <td><span class="tag tag-epf">EPF</span> <code>внСинхронизацияНСИ</code> (создание п/п из ДО)</td>
+            <td>
+                <div class="prob-bar-wrap"><div class="prob-bar bar-80" style="width:78%">78%</div></div>
+            </td>
+            <td><span class="tag tag-dev">Разработчик</span> — основной механизм формирования поручений. Команды «Синхронизация НСИ с ДО», «Загрузка поручений из ДО».</td>
+            <td class="rj">РЗ: «Синхронизация НСИ с ДО» <strong>07:02</strong> каждые 120 с; «Загрузка поручений из ДО» <strong>09:30</strong> каждые 300 с</td>
+        </tr>
+        <tr>
+            <td><span class="tag tag-epf">EPF</span> <code>внВыгрузкаПлатежныхПорученийДУ_F527</code></td>
+            <td>
+                <div class="prob-bar-wrap"><div class="prob-bar bar-60" style="width:55%">55%</div></div>
+            </td>
+            <td>Выгрузка в банк-клиент (F527). Логичен как второй шаг после создания п/п. В Excel время «?».</td>
+            <td class="rj">В <code>СписокРеглЗаданийВБазе</code> по имени не найден — возможен ручной запуск или другое наименование в справочнике</td>
+        </tr>
+        <tr>
+            <td><span class="tag tag-epf">EPF</span> <code>внГрупповоеСозданиеПлатежныхПорученийИзДокументовОснований</code></td>
+            <td>
+                <div class="prob-bar-wrap"><div class="prob-bar bar-50" style="width:48%">48%</div></div>
+            </td>
+            <td>Массовое создание п/п из оснований — альтернатива, если поручения не приходят из ДО.</td>
+            <td class="rj">—</td>
+        </tr>
+        <tr>
+            <td><span class="tag tag-epf">EPF</span> <code>внФормированиеПлатежныхПоручений</code></td>
+            <td>
+                <div class="prob-bar-wrap"><div class="prob-bar bar-50" style="width:42%">42%</div></div>
+            </td>
+            <td>Общая форма формирования; ниже приоритет при наличии синхронизации НСИ.</td>
+            <td class="rj">—</td>
+        </tr>
+        <tr>
+            <td><span class="tag tag-cf">CF</span> <code>Документ.ПлатежноеПоручение</code></td>
+            <td>
+                <div class="prob-bar-wrap"><div class="prob-bar bar-40" style="width:35%">35%</div></div>
+            </td>
+            <td>Объект результата, а не исполнитель регламентной операции.</td>
+            <td class="rj">—</td>
+        </tr>
+    </tbody>
+</table>
+<p><strong>Рекомендация:</strong> уточнить у владельца процесса: замер на <code>внСинхронизацияНСИ</code> (создание) + отдельно на выгрузку в ДБО, если она в критическом пути.</p>
+
+<!-- ========== OP 3 ========== -->
+<h2 id="op3">3. Сверка загрузки котировок</h2>
+<div class="dev-answer">
+    <strong>Ответ разработчика:</strong>
+    контур ПИФ/ДОиО: «Выгрузить стоимость пая ПИФ RATES»;
+    «сама сверка делается в ДОиО: Загрузка котировок ц/б» — в ДУ остается контрольный отчет после загрузки.
+</div>
+<table>
+    <thead>
+        <tr>
+            <th>Кандидат</th>
+            <th>Вероятность</th>
+            <th>Обоснование</th>
+            <th>Регламент в базе</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr class="row-top">
+            <td><span class="tag tag-epf">EPF</span> <code>внОтчетКонтрольКотировок</code></td>
+            <td>
+                <div class="prob-bar-wrap"><div class="prob-bar bar-90" style="width:88%">88%</div></div>
+            </td>
+            <td>Прямое имя «контроль котировок»; совпадает с вашим списком и <code>ЧемДелаются.txt</code>. Запуск после первой загрузки (в Excel ~11:15).</td>
+            <td class="rj">РЗ: «Отчет контроль котировок», пн-пт <strong>09:15</strong> (в Excel указано 11:15 — проверить актуальность расписания)</td>
+        </tr>
+        <tr>
+            <td><span class="tag tag-epf">EPF</span> <code>внЗагрузкаКотировокДУ</code></td>
+            <td>
+                <div class="prob-bar-wrap"><div class="prob-bar bar-40" style="width:32%">32%</div></div>
+            </td>
+            <td>Загрузка, не сверка; по разработчику сверка — в ДОиО. Участвует как предшествующий шаг цепочки.</td>
+            <td class="rj">РЗ: «Загрузка котировок ц/б», <strong>09:00</strong> и <strong>11:50</strong></td>
+        </tr>
+        <tr>
+            <td>Внешняя система ДОиО / ПИФ RATES</td>
+            <td>
+                <div class="prob-bar-wrap"><div class="prob-bar bar-30" style="width:28%">28%</div></div>
+            </td>
+            <td><span class="tag tag-dev">Разработчик</span> — источник эталона для сверки вне ДУ.</td>
+            <td class="rj">Замер в 1С ДУ не покроет полностью</td>
+        </tr>
+    </tbody>
+</table>
+
+<!-- ========== OP 4 ========== -->
+<h2 id="op4">4. Сверка остатков ЦБ с депозитарием</h2>
+<div class="user-mark">
+    Ваша пометка: <strong>!!! EPF внСверкаОстатковЦБвДепозитарииБанкВТБ !!!</strong>
+</div>
+<div class="dev-answer">
+    <strong>Ответ разработчика:</strong>
+    «Сверки только для индивидуального ДУ. Для РДУ сверки не применяются».
+    В <code>ЧемДелаются.txt</code> указан <code>внСверкаЦБ</code>.
+</div>
+<table>
+    <thead>
+        <tr>
+            <th>Кандидат</th>
+            <th>Вероятность</th>
+            <th>Обоснование</th>
+            <th>Регламент в базе</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr class="row-top">
+            <td><span class="tag tag-epf">EPF</span> <code>внСверкаЦБ</code> («Сверка ценных бумаг»)</td>
+            <td>
+                <div class="prob-bar-wrap"><div class="prob-bar bar-90" style="width:85%">85%</div></div>
+            </td>
+            <td>Совпадает с <code>ЧемДелаются.txt</code> и РЗ в базе. Универсальное имя для ИДУ.</td>
+            <td class="rj">РЗ: «Сверка ценных бумаг», пн-пт <strong>12:00</strong></td>
+        </tr>
+        <tr class="row-top">
+            <td><span class="tag tag-epf">EPF</span> <code>внСверкаОстатковЦБвДепозитарииБанкВТБ</code></td>
+            <td>
+                <div class="prob-bar-wrap"><div class="prob-bar bar-80" style="width:80%">80%</div></div>
+            </td>
+            <td><span class="tag tag-warn">Ваша пометка</span> — узкая сверка по депозитарию ВТБ; для портфеля ВТБ может быть главнее <code>внСверкаЦБ</code>.</td>
+            <td class="rj">В выгрузке РЗ по точному имени не найден — проверить синоним в справочнике доп. обработок</td>
+        </tr>
+        <tr>
+            <td><span class="tag tag-epf">EPF</span> <code>внСверкаОстатковПоСчетамДепо</code></td>
+            <td>
+                <div class="prob-bar-wrap"><div class="prob-bar bar-70" style="width:68%">68%</div></div>
+            </td>
+            <td>Близко по смыслу (счета депо); есть активное РЗ.</td>
+            <td class="rj">РЗ: «Сверка остатков по счетам депо», <strong>15:00</strong></td>
+        </tr>
+        <tr>
+            <td><span class="tag tag-epf">EPF</span> <code>внСверкаОстатковЦБ_БЭБ</code></td>
+            <td>
+                <div class="prob-bar-wrap"><div class="prob-bar bar-50" style="width:48%">48%</div></div>
+            </td>
+            <td>Сегмент БЭБ; включать только если ключевая операция Excel охватывает БЭБ.</td>
+            <td class="rj">—</td>
+        </tr>
+        <tr>
+            <td><span class="tag tag-epf">EPF</span> <code>внСверкаОстатковЦБПоЭксВТБ24</code></td>
+            <td>
+                <div class="prob-bar-wrap"><div class="prob-bar bar-50" style="width:45%">45%</div></div>
+            </td>
+            <td>Вариант для ВТБ24 (из вашего файла).</td>
+            <td class="rj">РЗ: «Сверка остатков ЦБ по экс ВТБ24», <strong>15:00</strong></td>
+        </tr>
+    </tbody>
+</table>
+<p><strong>Рекомендация:</strong> для РДУ в Excel пометить «не применяется» (по Катунину). Для ИДУ — первый замер на <code>внСверкаЦБ</code>, второй — <code>внСверкаОстатковЦБвДепозитарииБанкВТБ</code> при работе с ВТБ.</p>
+
+<!-- ========== OP 5 ========== -->
+<h2 id="op5">5. Сверка API сигнал vs Реестры платежей</h2>
+<div class="not-implemented">
+    <strong>Ответ разработчика:</strong> «Это еще не реализовано» —
+    задача <a href="https://jira/browse/IMDEV-8274">IMDEV-8274</a>.
+    Постановка замера производительности на код 1С пока преждевременна.
+</div>
+<table>
+    <thead>
+        <tr>
+            <th>Кандидат</th>
+            <th>Вероятность</th>
+            <th>Обоснование</th>
+            <th>Регламент в базе</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr>
+            <td><span class="tag tag-epf">EPF</span> <code>внЗагрузкаРеестраПлатежей</code></td>
+            <td>
+                <div class="prob-bar-wrap"><div class="prob-bar bar-30" style="width:25%">25%</div></div>
+            </td>
+            <td>Только загрузка реестра; сверки с API Signal нет. Может стать частью будущей реализации IMDEV-8274.</td>
+            <td class="rj">В <code>ЧемДелаются.txt</code> регистрация пустая <code>() []</code></td>
+        </tr>
+        <tr>
+            <td>HTTP-сервис / интеграция API Signal</td>
+            <td>
+                <div class="prob-bar-wrap"><div class="prob-bar bar-10" style="width:15%">15%</div></div>
+            </td>
+            <td>Гипотеза из вашего файла; код не найден в EPF.</td>
+            <td class="rj">—</td>
+        </tr>
+        <tr>
+            <td>Будущая реализация IMDEV-8274</td>
+            <td>
+                <div class="prob-bar-wrap"><div class="prob-bar bar-0" style="width:5%"></div></div>
+                <span class="prob-num">0%*</span>
+            </td>
+            <td>*Сейчас в проде отсутствует. После релиза — пересчитать карту кандидатов.</td>
+            <td class="rj">—</td>
+        </tr>
+    </tbody>
+</table>
+
+<!-- ========== OP 6 ========== -->
+<h2 id="op6">6. Загрузка договоров РДУ за Т, карточки клиента, автозаполнение аналитики</h2>
+<div class="user-mark">
+    Ваша пометка: синхронизация НСИ — <strong>!!! внСинхронизацияНСИ !!!</strong>
+    (в комментарии: загрузка договоров РДУ = синхронизация НСИ).
+</div>
+<div class="dev-answer">
+    <strong>Ответ разработчика:</strong> «Синхронизация НСИ с ДО» — прямое подтверждение.
+</div>
+<table>
+    <thead>
+        <tr>
+            <th>Кандидат</th>
+            <th>Вероятность</th>
+            <th>Обоснование</th>
+            <th>Регламент в базе</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr class="row-top">
+            <td><span class="tag tag-epf">EPF</span> <code>внСинхронизацияНСИ</code></td>
+            <td>
+                <div class="prob-bar-wrap"><div class="prob-bar bar-90" style="width:92%">92%</div></div>
+            </td>
+            <td><span class="tag tag-dev">Разработчик</span> + <span class="tag tag-warn">ваша пометка</span> + два РЗ в базе. Основной объект для замера.</td>
+            <td class="rj">РЗ: «Синхронизация НСИ с ДО» <strong>07:02</strong> / 120 с; «Загрузка поручений из ДО» <strong>09:30</strong> / 300 с</td>
+        </tr>
+        <tr>
+            <td><span class="tag tag-epf">EPF</span> <code>внАвтоматическоеСозданиеДоговоровИАналитикиДУ</code></td>
+            <td>
+                <div class="prob-bar-wrap"><div class="prob-bar bar-40" style="width:35%">35%</div></div>
+            </td>
+            <td>Из вашего списка как «основная» до ответа разработчика; теперь — доп. автоматизация после синхронизации.</td>
+            <td class="rj">В Excel ожидание запуска <strong>00:00</strong> — сверить с фактическим РЗ</td>
+        </tr>
+        <tr>
+            <td><span class="tag tag-epf">EPF</span> <code>внПродАвтоматическоеСозданиеДоговоровИАналитикиДУ</code></td>
+            <td>
+                <div class="prob-bar-wrap"><div class="prob-bar bar-30" style="width:28%">28%</div></div>
+            </td>
+            <td>Прод-ветка того же сценария.</td>
+            <td class="rj">—</td>
+        </tr>
+        <tr>
+            <td><span class="tag tag-epf">EPF</span> <code>внАвтоматическоеЗаполнениеАнкетКлиентовKoras</code></td>
+            <td>
+                <div class="prob-bar-wrap"><div class="prob-bar bar-30" style="width:25%">25%</div></div>
+            </td>
+            <td>Только анкеты клиентов, не полная загрузка договоров.</td>
+            <td class="rj">—</td>
+        </tr>
+    </tbody>
+</table>
+
+<!-- ========== OP 7 ========== -->
+<h2 id="op7">7. Оплата вознаграждения</h2>
+<div class="dev-answer">
+    <strong>Ответ разработчика:</strong>
+    цепочка: «Расчет вознаграждения розничного ДУ»,
+    «Начисление вознаграждения за управление: Розничное ДУ»,
+    «Оплата КЗ по клиентам РДУ».
+    Начисление — через МОНИТОР (регламент закрытия периода), не отдельная EPF «оплата».
+</div>
+<table>
+    <thead>
+        <tr>
+            <th>Кандидат</th>
+            <th>Вероятность</th>
+            <th>Обоснование</th>
+            <th>Регламент в базе</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr class="row-top">
+            <td><span class="tag tag-epf">EPF</span> <code>внОплатаКЗПоКлиентамРДУ</code></td>
+            <td>
+                <div class="prob-bar-wrap"><div class="prob-bar bar-90" style="width:86%">86%</div></div>
+            </td>
+            <td><span class="tag tag-dev">Разработчик</span> явно назвал «Оплата КЗ по клиентам РДУ» для розничного контура.</td>
+            <td class="rj">В выгрузке РЗ по точному имени не найден — искать синоним «Оплата КЗ» / «РДУ» в справочнике</td>
+        </tr>
+        <tr>
+            <td><span class="tag tag-epf">EPF</span> «Расчет вознаграждения розничного ДУ» (внРасчет* / рег. имя)</td>
+            <td>
+                <div class="prob-bar-wrap"><div class="prob-bar bar-70" style="width:72%">72%</div></div>
+            </td>
+            <td>Предшествующий шаг; без расчета оплаты нет. <span class="tag tag-dev">Разработчик</span>.</td>
+            <td class="rj">РЗ: «Расчет вознаграждения розничного ДУ», <strong>08:00</strong></td>
+        </tr>
+        <tr>
+            <td><span class="tag tag-cf">CF</span> МОНИТОР — начисление вознаграждения</td>
+            <td>
+                <div class="prob-bar-wrap"><div class="prob-bar bar-60" style="width:58%">58%</div></div>
+            </td>
+            <td>Начисление в регламенте закрытия; оплата — отдельно EPF.</td>
+            <td class="rj">Не РЗ на EPF; <code>ПланРегламентныхОперацийДУ</code></td>
+        </tr>
+        <tr>
+            <td><span class="tag tag-epf">EPF</span> <code>внОплатаВознагражденияHNWIПоСделкамСНотами_new</code></td>
+            <td>
+                <div class="prob-bar-wrap"><div class="prob-bar bar-40" style="width:38%">38%</div></div>
+            </td>
+            <td>Только HNWI / ноты; в <code>ЧемДелаются.txt</code> помечено «??». Не основной путь для РДУ 15.</td>
+            <td class="rj">РЗ: «Оплата вознаграждения HNWI по сделкам с нотами», понедельник <strong>17:00</strong></td>
+        </tr>
+        <tr>
+            <td><span class="tag tag-cf">CF</span> <code>Документ.ПлатежноеПоручение</code></td>
+            <td>
+                <div class="prob-bar-wrap"><div class="prob-bar bar-30" style="width:30%">30%</div></div>
+            </td>
+            <td>Результат оплаты, не процесс.</td>
+            <td class="rj">—</td>
+        </tr>
+    </tbody>
+</table>
+<p><strong>Рекомендация:</strong> замер «Оплата вознаграждения» — на <code>внОплатаКЗПоКлиентамРДУ</code>; ежеквартальность из Excel учесть в календаре замеров.</p>
+
+<!-- ========== OP 8 ========== -->
+<h2 id="op8">8. Массовое построение отчетов РДУ и выгрузка в КК (кабинет клиента)</h2>
+<div class="dev-answer">
+    <strong>Ответ разработчика:</strong>
+    «Отчет управляющего ДУ, согласно 482П_новая версия отчета, использовать с 01.10.2017 (ускор.)».
+    В <code>ЧемДелаются.txt</code>: <code>внЗапускПоРасписаниюОтчетаУправляющегоДУ</code>.
+    В Excel отмечено «!!!» — на 100 000 договоров не укладывается в 14 ч (кандидат на оптимизацию).
+</div>
+<table>
+    <thead>
+        <tr>
+            <th>Кандидат</th>
+            <th>Вероятность</th>
+            <th>Обоснование</th>
+            <th>Регламент в базе</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr class="row-top">
+            <td><span class="tag tag-epf">EPF</span> <code>внЗапускПоРасписаниюОтчетаУправляющегоДУ</code></td>
+            <td>
+                <div class="prob-bar-wrap"><div class="prob-bar bar-90" style="width:90%">90%</div></div>
+            </td>
+            <td><span class="tag tag-dev">Разработчик</span> + <code>ЧемДелаются.txt</code> + РЗ с 21.01.2026. Массовое построение отчета управляющего (482П).</td>
+            <td class="rj">РЗ: «Запуск по расписанию отчета управляющего ДУ», <strong>17:00</strong></td>
+        </tr>
+        <tr>
+            <td><span class="tag tag-epf">EPF</span> <code>внЭкспортДанныхКабиентHNWI_DU</code></td>
+            <td>
+                <div class="prob-bar-wrap"><div class="prob-bar bar-80" style="width:78%">78%</div></div>
+            </td>
+            <td>Выгрузка в кабинет клиента (КК); из вашего списка. Дополняет построение отчета.</td>
+            <td class="rj">РЗ: «Экспорт данных кабиент HNWI (DU)», <strong>10:00</strong> каждые 600 с</td>
+        </tr>
+        <tr>
+            <td><span class="tag tag-erf">ERF</span> <code>внМассоваяПечатьОтчетов_Prod</code></td>
+            <td>
+                <div class="prob-bar-wrap"><div class="prob-bar bar-50" style="width:48%">48%</div></div>
+            </td>
+            <td>Массовая печать — может быть частью цепочки, но разработчик указал отчет управляющего.</td>
+            <td class="rj">—</td>
+        </tr>
+        <tr>
+            <td><span class="tag tag-erf">ERF</span> <code>внОтчетПоКлиентамДУ_HNWI</code></td>
+            <td>
+                <div class="prob-bar-wrap"><div class="prob-bar bar-30" style="width:32%">32%</div></div>
+            </td>
+            <td>Сегмент HNWI; не основной для массового РДУ.</td>
+            <td class="rj">—</td>
+        </tr>
+        <tr>
+            <td><span class="tag tag-cf">CF</span> <code>Документ.РасчетДоходностиПортфеля</code></td>
+            <td>
+                <div class="prob-bar-wrap"><div class="prob-bar bar-30" style="width:28%">28%</div></div>
+            </td>
+            <td>Связанные данные; не драйвер массовой печати.</td>
+            <td class="rj">—</td>
+        </tr>
+    </tbody>
+</table>
+<p><strong>Рекомендация:</strong> приоритет оптимизации (из Excel) — замеры на <code>внЗапускПоРасписаниюОтчетаУправляющегоДУ</code> и <code>внЭкспортДанныхКабиентHNWI_DU</code> по отдельности.</p>
+
+<h2>Сводная таблица: что ставить в замер первым</h2>
+<table>
+    <thead>
+        <tr>
+            <th>№</th>
+            <th>Ключевая операция</th>
+            <th>EPF для замера (1-й приоритет)</th>
+            <th>Вероятность</th>
+            <th>Статус по разработчику</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr>
+            <td>1</td>
+            <td>Обработка отчетов брокера Т-1</td>
+            <td><code>внПакетныйОтчетБрокераДУ_XML</code> + <code>внЗагрузкаОтчетаБрокераТройкиИВТБКапитал</code></td>
+            <td>88% / 82%</td>
+            <td>Подтверждено (разные сегменты)</td>
+        </tr>
+        <tr>
+            <td>2</td>
+            <td>Перевод ДС на биржу (п/п)</td>
+            <td><code>внСинхронизацияНСИ</code></td>
+            <td>78%</td>
+            <td>Уточнено: п/п из синхронизации НСИ</td>
+        </tr>
+        <tr>
+            <td>3</td>
+            <td>Сверка загрузки котировок</td>
+            <td><code>внОтчетКонтрольКотировок</code></td>
+            <td>88%</td>
+            <td>Подтверждено</td>
+        </tr>
+        <tr>
+            <td>4</td>
+            <td>Сверка остатков ЦБ с депозитарием</td>
+            <td><code>внСверкаЦБ</code></td>
+            <td>85%</td>
+            <td>Только ИДУ; для РДУ — N/A</td>
+        </tr>
+        <tr>
+            <td>5</td>
+            <td>Сверка API Signal vs реестры</td>
+            <td>—</td>
+            <td>0%</td>
+            <td>Не реализовано (IMDEV-8274)</td>
+        </tr>
+        <tr>
+            <td>6</td>
+            <td>Загрузка договоров РДУ / НСИ</td>
+            <td><code>внСинхронизацияНСИ</code></td>
+            <td>92%</td>
+            <td>Подтверждено</td>
+        </tr>
+        <tr>
+            <td>7</td>
+            <td>Оплата вознаграждения</td>
+            <td><code>внОплатаКЗПоКлиентамРДУ</code></td>
+            <td>86%</td>
+            <td>Подтверждено (цепочка с расчетом)</td>
+        </tr>
+        <tr>
+            <td>8</td>
+            <td>Массовые отчеты РДУ / КК</td>
+            <td><code>внЗапускПоРасписаниюОтчетаУправляющегоДУ</code></td>
+            <td>90%</td>
+            <td>Подтверждено; кандидат на оптимизацию</td>
+        </tr>
+    </tbody>
+</table>
+
+<h2>Связанные файлы проекта</h2>
+<ul>
+    <li><code>Документация/01_Ключевые_операции_ДУ_15.html</code> — полный перечень из Excel</li>
+    <li><code>Документация/02_Объекты_1С_и_замеры_производительности.html</code> — все 20 операций и архитектура запуска</li>
+    <li><code>КлючевыеОперации_Неизвестно.txt</code> — исходные гипотезы</li>
+    <li><code>Обработки производительность_Катунин.docx</code> — ответ разработчика</li>
+    <li><code>СписокРеглЗаданийВБазе</code> — выгрузка РЗ из ИБ</li>
+</ul>
+
+<div class="footer">
+    IMDEV-8927 | Wim_Du | Сгенерировано для сопоставления неизвестных ключевых операций с EPF
+</div>
+
+</div>
+</body>
+</html>
