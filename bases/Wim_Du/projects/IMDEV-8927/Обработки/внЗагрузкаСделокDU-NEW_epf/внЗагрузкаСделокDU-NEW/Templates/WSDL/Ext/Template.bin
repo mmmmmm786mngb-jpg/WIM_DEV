@@ -1,0 +1,404 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--Created by TIBCO WSDL-->
+<wsdl:definitions xmlns:ns1="http://www.avancore.ru/securities" xmlns:tns="http://xmlns.example.com/1340190469675" xmlns:wsdl="http://schemas.xmlsoap.org/wsdl/" xmlns:ns0="http://www.avancore.ru/deals" xmlns:soap="http://schemas.xmlsoap.org/wsdl/soap/" name="Untitled" targetNamespace="http://xmlns.example.com/1340190469675">
+    <wsdl:types>
+        <xs:schema xmlns:tns="http://www.avancore.ru/securities" xmlns:xs="http://www.w3.org/2001/XMLSchema" targetNamespace="http://www.avancore.ru/securities" elementFormDefault="qualified" attributeFormDefault="qualified">
+            <xs:simpleType name="CFI">
+                <xs:restriction base="xs:string">
+                    <xs:maxLength value="15"/>
+                </xs:restriction>
+            </xs:simpleType>
+            <xs:simpleType name="ISIN">
+                <xs:restriction base="xs:string">
+                    <xs:maxLength value="15"/>
+                </xs:restriction>
+            </xs:simpleType>
+            <xs:complexType name="Актив" abstract="true"/>
+            <xs:complexType name="АктивСсылка">
+                <xs:complexContent>
+                    <xs:extension base="tns:Актив">
+                        <xs:choice>
+                            <xs:element name="CFI" type="tns:CFI" minOccurs="0"/>
+                            <xs:element name="ISIN" type="tns:ISIN" minOccurs="0"/>
+                            <xs:element name="КодЦБнаММВБ" type="tns:КодЦБнаММВБ" minOccurs="0"/>
+                            <xs:element name="НомерГосРегистрацииВыпуска" type="tns:НомерГосРегистрацииВыпуска" minOccurs="0"/>
+                        </xs:choice>
+                    </xs:extension>
+                </xs:complexContent>
+            </xs:complexType>
+            <xs:complexType name="Акция">
+                <xs:complexContent>
+                    <xs:extension base="tns:Актив">
+                        <xs:sequence>
+                            <xs:element name="Наименование" type="tns:Наименование"/>
+                            <xs:element name="НаименованиеПолное" type="tns:НаименованиеПолное"/>
+                            <xs:element name="ДатаВыпуска" nillable="true" type="tns:Дата" minOccurs="0"/>
+                            <xs:element name="НомерВыпуска" type="tns:НомерВыпуска"/>
+                            <xs:element name="НомерГосРегистрацииВыпуска" type="tns:НомерГосРегистрацииВыпуска"/>
+                            <xs:element name="ISIN" type="tns:ISIN"/>
+                            <xs:element name="CFI" nillable="true" type="tns:CFI"/>
+                            <xs:element name="КоличествоВВыпуске" type="tns:КоличествоВВыпуске"/>
+                            <xs:element name="ВалютаНоминальнойСтоимости" type="tns:Валюта"/>
+                            <xs:element name="НоминальнаяСтоимость" type="tns:Число20_2"/>
+                            <xs:element name="Отрасль" nillable="true" type="tns:Отрасль" minOccurs="0"/>
+                            <xs:element name="ВидДепозитарнойРасписки" nillable="true" type="tns:ВидыДепозитарныхРасписок" minOccurs="0"/>
+                            <xs:element name="ВидАктива" type="tns:ВидыАктивов"/>
+                            <xs:element name="КодЦБнаММВБ" type="tns:КодЦБнаММВБ" minOccurs="0"/>
+                            <xs:element name="Эмитент" type="tns:Контрагент"/>
+                            <xs:element name="Регистратор" nillable="true" type="tns:Контрагент" minOccurs="0"/>
+                            <xs:element name="ТипПривилегированнойАкции" nillable="true" type="tns:Наименование" minOccurs="0"/>
+                            <xs:element name="КвалИнвестор" type="tns:ВнешнийКод" minOccurs="0"/>
+                            <xs:element name="КодТипаЦБ" type="tns:ВнешнийКод" minOccurs="0"/>
+                        </xs:sequence>
+                    </xs:extension>
+                </xs:complexContent>
+            </xs:complexType>
+            <xs:complexType name="АмортизационныеВыплаты">
+                <xs:sequence>
+                    <xs:element name="ЧастичноеПогашение" type="tns:ЧастичноеПогашение" minOccurs="0" maxOccurs="999"/>
+                </xs:sequence>
+            </xs:complexType>
+            <xs:complexType name="Биржа">
+                <xs:sequence>
+                    <xs:element name="Наименование" type="tns:Наименование"/>
+                    <xs:element name="ВнешнийКод" type="tns:ВнешнийКод" minOccurs="0"/>
+                </xs:sequence>
+            </xs:complexType>
+            <xs:complexType name="Валюта">
+                <xs:sequence>
+                    <xs:element name="КодВалюты" type="tns:КодВалюты"/>
+                    <xs:element name="Наименование" type="tns:Наименование"/>
+                </xs:sequence>
+            </xs:complexType>
+            <xs:simpleType name="ВидыАктивов">
+                <xs:restriction base="xs:string">
+                    <xs:maxLength value="150"/>
+                    <xs:enumeration value="АкцииАИФ"/>
+                    <xs:enumeration value="АкцииИГ"/>
+                    <xs:enumeration value="АкцииОбыкновенныеАО"/>
+                    <xs:enumeration value="АкцииОбыкновенныеЗАО"/>
+                    <xs:enumeration value="АкцииПривилегированныеАО"/>
+                    <xs:enumeration value="ОблигацииГосРФ"/>
+                    <xs:enumeration value="ОблигацииСубРФ"/>
+                    <xs:enumeration value="Еврооблигации"/>
+                    <xs:enumeration value="ОблигацииМунРФ"/>
+                    <xs:enumeration value="ОблигацииИГ"/>
+                    <xs:enumeration value="ОблигацииМФО"/>
+                    <xs:enumeration value="ОблигацииРосХО"/>
+                    <xs:enumeration value="ОблигацииСИпотечПокрытием"/>
+                </xs:restriction>
+            </xs:simpleType>
+            <xs:simpleType name="ВидыДепозитарныхРасписок">
+                <xs:restriction base="xs:string">
+                    <xs:length value="3"/>
+                    <xs:enumeration value="ADR"/>
+                    <xs:enumeration value="GDR"/>
+                    <xs:enumeration value="RDR"/>
+                </xs:restriction>
+            </xs:simpleType>
+            <xs:simpleType name="ВнешнийКод">
+                <xs:restriction base="xs:string">
+                    <xs:maxLength value="20"/>
+                </xs:restriction>
+            </xs:simpleType>
+            <xs:simpleType name="Дата">
+                <xs:restriction base="xs:date"/>
+            </xs:simpleType>
+            <xs:simpleType name="ИНН">
+                <xs:restriction base="xs:string">
+                    <xs:maxLength value="20"/>
+                </xs:restriction>
+            </xs:simpleType>
+            <xs:simpleType name="КодВалюты">
+                <xs:restriction base="xs:string">
+                    <xs:maxLength value="3"/>
+                </xs:restriction>
+            </xs:simpleType>
+            <xs:simpleType name="КодЦБнаММВБ">
+                <xs:restriction base="xs:string">
+                    <xs:maxLength value="35"/>
+                </xs:restriction>
+            </xs:simpleType>
+            <xs:simpleType name="КоличествоВВыпуске">
+                <xs:restriction base="xs:decimal">
+                    <xs:totalDigits value="35"/>
+                    <xs:fractionDigits value="0"/>
+                </xs:restriction>
+            </xs:simpleType>
+            <xs:complexType name="Контрагент">
+                <xs:sequence>
+                    <xs:element name="Наименование" type="tns:Наименование"/>
+                    <xs:element name="ПолноеНаименование" type="tns:НаименованиеПолное" minOccurs="0"/>
+                    <xs:element name="ИНН" type="tns:ИНН" minOccurs="0"/>
+                    <xs:element name="ВнешнийКод" type="tns:ВнешнийКод" minOccurs="0"/>
+                    <xs:element name="СтранаКод" type="tns:ИНН" minOccurs="0"/>
+                    <xs:element name="КПП" type="tns:ИНН" minOccurs="0"/>
+                    <xs:element name="ОГРН" type="tns:ИНН" minOccurs="0"/>
+                </xs:sequence>
+            </xs:complexType>
+            <xs:complexType name="Корень">
+                <xs:sequence>
+                    <xs:element name="Условия" nillable="true" type="tns:Условия" minOccurs="0"/>
+                    <xs:element name="СписокАктивов" type="tns:СписокАктивов" minOccurs="0" maxOccurs="99999"/>
+                </xs:sequence>
+            </xs:complexType>
+            <xs:complexType name="Купон">
+                <xs:sequence>
+                    <xs:element name="НомерКупонногоПериода" type="xs:integer" minOccurs="0"/>
+                    <xs:element name="ДатаНачалаКупонногоПериода" nillable="true" type="tns:Дата" minOccurs="0"/>
+                    <xs:element name="ДатаОкончанияКупонногоПериода" type="tns:Дата" minOccurs="0"/>
+                    <xs:element name="КолДнейВКупонномПериоде" type="xs:decimal" minOccurs="0"/>
+                    <xs:element name="РазмерДоходаВРублях" type="tns:Число20_2" minOccurs="0"/>
+                    <xs:element name="РазмерДоходаВПроцентах" type="tns:Число8_3" minOccurs="0"/>
+                    <xs:element name="ДатаФиксацииРеестраВладельцевЦБ" nillable="true" type="tns:Дата" minOccurs="0"/>
+                    <xs:element name="ДатаВыплатыКупонногоДохода" nillable="true" type="tns:Дата" minOccurs="0"/>
+                    <xs:element name="РасчетКупонаОтПроцента" nillable="true" type="xs:boolean" minOccurs="0"/>
+                </xs:sequence>
+            </xs:complexType>
+            <xs:complexType name="Купоны">
+                <xs:sequence>
+                    <xs:element name="Купон" type="tns:Купон" minOccurs="0" maxOccurs="999"/>
+                </xs:sequence>
+            </xs:complexType>
+            <xs:complexType name="НаборОблигаций">
+                <xs:sequence>
+                    <xs:element name="Облигация" type="tns:Облигация" minOccurs="0" maxOccurs="9999"/>
+                </xs:sequence>
+            </xs:complexType>
+            <xs:simpleType name="Наименование">
+                <xs:restriction base="xs:string">
+                    <xs:maxLength value="250"/>
+                </xs:restriction>
+            </xs:simpleType>
+            <xs:simpleType name="НаименованиеПолное">
+                <xs:restriction base="xs:string">
+                    <xs:maxLength value="255"/>
+                </xs:restriction>
+            </xs:simpleType>
+            <xs:simpleType name="НомерВыпуска">
+                <xs:restriction base="xs:string">
+                    <xs:maxLength value="5"/>
+                </xs:restriction>
+            </xs:simpleType>
+            <xs:simpleType name="НомерГосРегистрацииВыпуска">
+                <xs:restriction base="xs:string">
+                    <xs:maxLength value="20"/>
+                </xs:restriction>
+            </xs:simpleType>
+            <xs:complexType name="Облигация">
+                <xs:complexContent>
+                    <xs:extension base="tns:Актив">
+                        <xs:sequence>
+                            <xs:element name="Наименование" type="tns:Наименование"/>
+                            <xs:element name="НаименованиеПолное" type="tns:НаименованиеПолное"/>
+                            <xs:element name="ДатаВыпуска" type="tns:Дата"/>
+                            <xs:element name="ДатаПогашения" nillable="true" type="tns:Дата" minOccurs="0"/>
+                            <xs:element name="НомерВыпуска" type="tns:НомерВыпуска"/>
+                            <xs:element name="ДатаГосРегистрации" type="tns:Дата"/>
+                            <xs:element name="НомерГосРегистрацииВыпуска" type="tns:НомерГосРегистрацииВыпуска"/>
+                            <xs:element name="ISIN" type="tns:ISIN"/>
+                            <xs:element name="CFI" nillable="true" type="tns:CFI" minOccurs="0"/>
+                            <xs:element name="КоличествоВВыпуске" type="tns:КоличествоВВыпуске"/>
+                            <xs:element name="ВалютаНоминальнойСтоимости" type="tns:Валюта"/>
+                            <xs:element name="НоминальнаяСтоимость" type="tns:Число20_2"/>
+                            <xs:element name="Отрасль" nillable="true" type="tns:Отрасль" minOccurs="0"/>
+                            <xs:element name="ВидАктива" type="tns:ВидыАктивов"/>
+                            <xs:element name="КодЦБнаММВБ" nillable="true" type="tns:КодЦБнаММВБ" minOccurs="0"/>
+                            <xs:element name="Эмитент" type="tns:Контрагент"/>
+                            <xs:element name="Регистратор" nillable="true" type="tns:Контрагент" minOccurs="0"/>
+                            <xs:element name="Купоны" type="tns:Купоны"/>
+                            <xs:element name="АмортизационныеВыплаты" nillable="true" type="tns:АмортизационныеВыплаты" minOccurs="0"/>
+                            <xs:element name="КвалИнвестор" type="tns:ВнешнийКод" minOccurs="0"/>
+                            <xs:element name="КодТипаЦБ" type="tns:ВнешнийКод" minOccurs="0"/>
+                        </xs:sequence>
+                    </xs:extension>
+                </xs:complexContent>
+            </xs:complexType>
+            <xs:simpleType name="Отрасль">
+                <xs:restriction base="xs:string">
+                    <xs:maxLength value="50"/>
+                </xs:restriction>
+            </xs:simpleType>
+            <xs:complexType name="СписокАктивов">
+                <xs:sequence>
+                    <xs:element name="Облигация" type="tns:Облигация" minOccurs="0" maxOccurs="9999"/>
+                    <xs:element name="Акция" type="tns:Акция" minOccurs="0" maxOccurs="9999"/>
+                </xs:sequence>
+            </xs:complexType>
+            <xs:simpleType name="ТипБумаги">
+                <xs:restriction base="xs:string">
+                    <xs:maxLength value="20"/>
+                    <xs:enumeration value="Акция"/>
+                    <xs:enumeration value="Облигация"/>
+                </xs:restriction>
+            </xs:simpleType>
+            <xs:simpleType name="ТорговыйКод">
+                <xs:restriction base="xs:string">
+                    <xs:maxLength value="50"/>
+                </xs:restriction>
+            </xs:simpleType>
+            <xs:simpleType name="УровеньКотиовальногоЛиста">
+                <xs:restriction base="xs:string">
+                    <xs:length value="4"/>
+                </xs:restriction>
+            </xs:simpleType>
+            <xs:complexType name="Условия">
+                <xs:sequence>
+                    <xs:element name="ISIN" type="tns:Наименование" minOccurs="0"/>
+                    <xs:element name="НомерГосРег" type="tns:НомерГосРегистрацииВыпуска" minOccurs="0"/>
+                    <xs:element name="КодЦБнаММВБ" type="tns:КодЦБнаММВБ" minOccurs="0"/>
+                    <xs:element name="ТипБумаги" type="tns:ТипБумаги" minOccurs="0"/>
+                    <xs:element name="Наименование" type="tns:Наименование" minOccurs="0"/>
+                </xs:sequence>
+            </xs:complexType>
+            <xs:complexType name="ЧастичноеПогашение">
+                <xs:sequence>
+                    <xs:element name="ДатаПогашения" type="tns:Дата"/>
+                    <xs:element name="ПроцентНоминала" type="tns:Число8_3"/>
+                    <xs:element name="СуммаПогашения" type="tns:Число20_2"/>
+                    <xs:element name="ОстатокНоминала" type="tns:Число20_2"/>
+                </xs:sequence>
+            </xs:complexType>
+            <xs:simpleType name="Число10_4">
+                <xs:restriction base="xs:decimal">
+                    <xs:totalDigits value="10"/>
+                    <xs:fractionDigits value="4"/>
+                </xs:restriction>
+            </xs:simpleType>
+            <xs:simpleType name="Число20_2">
+                <xs:restriction base="xs:decimal">
+                    <xs:totalDigits value="45"/>
+                    <xs:fractionDigits value="25"/>
+                </xs:restriction>
+            </xs:simpleType>
+            <xs:simpleType name="Число8_3">
+                <xs:restriction base="xs:decimal">
+                    <xs:totalDigits value="20"/>
+                    <xs:fractionDigits value="15"/>
+                </xs:restriction>
+            </xs:simpleType>
+            <xs:element name="Корень" type="tns:Корень"/>
+            <xs:element name="НаборОблигаций" type="tns:НаборОблигаций"/>
+            <xs:element name="Облигация" type="tns:Облигация"/>
+            <xs:element name="СписокАктивов" type="tns:СписокАктивов"/>
+            <xs:element name="Условия" type="tns:Условия"/>
+        </xs:schema>
+        <xs:schema xmlns:tns="http://www.avancore.ru/deals" xmlns:xs="http://www.w3.org/2001/XMLSchema" targetNamespace="http://www.avancore.ru/deals" elementFormDefault="qualified" attributeFormDefault="unqualified">
+            <xs:import namespace="http://www.avancore.ru/securities"/>
+            <xs:complexType name="Корень">
+                <xs:sequence>
+                    <xs:element name="Условия" type="tns:Условия" minOccurs="0"/>
+                    <xs:element name="Сделки" type="tns:Сделки" minOccurs="0" maxOccurs="99999"/>
+                </xs:sequence>
+            </xs:complexType>
+            <xs:complexType name="Сделка">
+                <xs:sequence>
+                    <xs:element name="КодКлиента" type="ns1:ТорговыйКод"/>
+                    <xs:element name="Актив" type="ns1:АктивСсылка"/>
+                    <xs:element name="ТипСделки" type="tns:ТипСделки"/>
+                    <xs:element name="ДатаСделки" type="xs:date"/>
+                    <xs:element name="ВремяСделки" type="xs:time"/>
+                    <xs:element name="НомерСделки" type="xs:string"/>
+                    <xs:element name="Биржа" type="ns1:Биржа"/>
+                    <xs:element name="Количество" type="tns:Число15_3"/>
+                    <xs:element name="Сумма" type="tns:Число20_2"/>
+                    <xs:element name="Цена" type="tns:Число18_8"/>
+                    <xs:element name="НКД" type="tns:Число20_2"/>
+                    <xs:element name="КомиссияБиржи" type="tns:Число20_2"/>
+                    <xs:element name="КомиссияТС" nillable="true" type="tns:Число20_2" minOccurs="0"/>
+                    <xs:element name="КомиссияБрокера" nillable="true" type="tns:Число20_2" minOccurs="0"/>
+                    <xs:element name="РежимТоргов" type="xs:string"/>
+                    <xs:element name="РежимT_n" nillable="true" type="xs:integer" minOccurs="0"/>
+                    <xs:element name="ВалютаСделки" nillable="true" type="ns1:КодВалюты" minOccurs="0"/>
+                    <xs:element name="КурсВалютыСделки" nillable="true" type="ns1:Число10_4" minOccurs="0"/>
+                    <xs:element name="КратностьВалютыСделки" nillable="true" type="ns1:Число10_4" minOccurs="0"/>
+                    <xs:element name="Комментарий" nillable="true" type="xs:string"/>
+                    <xs:element name="ДатаРасчетов" type="xs:date"/>
+                    <xs:element name="ДатаОплаты" type="xs:date"/>
+                    <xs:element name="РЕПОСрок" nillable="true" type="tns:Число15_3" minOccurs="0"/>
+                    <xs:element name="РЕПОСтавка" nillable="true" type="tns:Число18_8" minOccurs="0"/>
+                    <xs:element name="РЕПОСумма2" nillable="true" type="tns:Число20_2" minOccurs="0"/>
+                    <xs:element name="РЕПОЦена2" nillable="true" type="tns:Число18_8" minOccurs="0"/>
+                    <xs:element name="РЕПОНКД2" nillable="true" type="tns:Число20_2" minOccurs="0"/>
+                    <xs:element name="РЕПОДатаРасчетов2" nillable="true" type="xs:date" minOccurs="0"/>
+                    <xs:element name="РЕПОДисконт" nillable="true" type="tns:Число18_8" minOccurs="0"/>
+                    <xs:element name="КодБрокера" type="ns1:ТорговыйКод"/>
+                    <xs:element name="ОТСчерезБрокера" nillable="true" type="tns:Число18_8" minOccurs="0"/>
+                    <xs:element name="Мандата" nillable="true" type="xs:string"/>
+                    <xs:element name="ПлатежныеУсловия" nillable="true" type="xs:string"/>
+                </xs:sequence>
+            </xs:complexType>
+            <xs:complexType name="Сделки">
+                <xs:sequence>
+                    <xs:element name="Сделка" type="tns:Сделка" minOccurs="0" maxOccurs="99999"/>
+                </xs:sequence>
+            </xs:complexType>
+            <xs:simpleType name="ТипСделки">
+                <xs:restriction base="xs:string">
+                    <xs:enumeration value="покупка"/>
+                    <xs:enumeration value="продажа"/>
+                </xs:restriction>
+            </xs:simpleType>
+            <xs:complexType name="Условия">
+                <xs:sequence>
+                    <xs:element name="ДатаС" type="xs:date" minOccurs="0"/>
+                    <xs:element name="ДатаПо" type="xs:date" minOccurs="0"/>
+                    <xs:element name="База" type="xs:string" minOccurs="0"/>
+                    <xs:element name="База2" type="xs:string" minOccurs="0"/>
+                </xs:sequence>
+            </xs:complexType>
+            <xs:simpleType name="Число15_3">
+                <xs:restriction base="xs:decimal">
+                    <xs:totalDigits value="15"/>
+                    <xs:fractionDigits value="3"/>
+                </xs:restriction>
+            </xs:simpleType>
+            <xs:simpleType name="Число18_5">
+                <xs:restriction base="xs:decimal">
+                    <xs:totalDigits value="18"/>
+                    <xs:fractionDigits value="5"/>
+                </xs:restriction>
+            </xs:simpleType>
+            <xs:simpleType name="Число18_8">
+                <xs:restriction base="xs:decimal">
+                    <xs:totalDigits value="18"/>
+                    <xs:fractionDigits value="8"/>
+                </xs:restriction>
+            </xs:simpleType>
+            <xs:simpleType name="Число20_2">
+                <xs:restriction base="xs:decimal">
+                    <xs:totalDigits value="20"/>
+                    <xs:fractionDigits value="2"/>
+                </xs:restriction>
+            </xs:simpleType>
+            <xs:element name="Корень" type="tns:Корень"/>
+            <xs:element name="Сделки" type="tns:Сделки"/>
+        </xs:schema>
+    </wsdl:types>
+    <wsdl:service name="ServiceDeal">
+        <wsdl:port name="PortTypeEndpoint1" binding="tns:PortTypeEndpoint1Binding">
+            <soap:address location="http://AMAPTIBCO:8889/Deals/ServiceDeal.serviceagent/PortTypeEndpoint1"/>
+        </wsdl:port>
+    </wsdl:service>
+    <wsdl:portType name="PortType">
+        <wsdl:operation name="GetDeals">
+            <wsdl:input message="tns:Deal"/>
+            <wsdl:output message="tns:Deal"/>
+        </wsdl:operation>
+    </wsdl:portType>
+    <wsdl:binding name="PortTypeEndpoint1Binding" type="tns:PortType">
+        <soap:binding style="document" transport="http://schemas.xmlsoap.org/soap/http"/>
+        <wsdl:operation name="GetDeals">
+            <soap:operation style="document" soapAction="/ServiceDeal.serviceagent/PortTypeEndpoint1/GetDeals"/>
+            <wsdl:input>
+                <soap:body use="literal" parts="Deals"/>
+            </wsdl:input>
+            <wsdl:output>
+                <soap:body use="literal" parts="Deals"/>
+            </wsdl:output>
+        </wsdl:operation>
+    </wsdl:binding>
+    <wsdl:message name="Deal">
+        <wsdl:part name="Deals" element="ns0:Корень"/>
+    </wsdl:message>
+</wsdl:definitions>
