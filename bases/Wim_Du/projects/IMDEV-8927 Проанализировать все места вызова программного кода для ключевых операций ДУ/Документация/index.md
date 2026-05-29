@@ -7,6 +7,7 @@
 | [03_neizvestnye_operacii_veroyatnost.html](03_neizvestnye_operacii_veroyatnost.html) | Подсказка по 8 неизвестным операциям: EPF и вероятности с учетом ответа разработчика |
 | [04_kuda_vstaviti_zamer.html](04_kuda_vstaviti_zamer.html) | 20 операций: таблица «куда вставить замер» (EPF, команда, РЗ, расшифровка) |
 | [KudaVstavitiZamer_DU15.xlsx](KudaVstavitiZamer_DU15.xlsx) | Тот же перечень в Excel (формат как `КО.xlsx`: объект, запуск, процедуры замеров) |
+| [KudaVstavitiZamer_DU15_kratko.txt](KudaVstavitiZamer_DU15_kratko.txt) | Краткая сводка: объект, точка вставки, вариант замера (в целом / поэтапный) |
 | [../КлючевыеОперации_КудаВставитьЗамер.txt](../КлючевыеОперации_КудаВставитьЗамер.txt) | 20 операций: целевые EPF/команды/РЗ для замера (текст, без альтернатив) |
 | [../jira_comment_zamery_20_operaciy.txt](../jira_comment_zamery_20_operaciy.txt) | Jira Wiki: комментарий с {panel} по 20 операциям (вставка в задачу) |
 | [../КлючевыеОперации_ЧемДелаются_с_ответами.txt](../КлючевыеОперации_ЧемДелаются_с_ответами.txt) | Полный перечень обработок с ответами BSS |
