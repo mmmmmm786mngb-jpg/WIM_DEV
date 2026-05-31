@@ -22,11 +22,15 @@
     </p>
     <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="margin-bottom:20px; background:#f0fff4; border-left:4px solid #38a169;">
     <tr><td style="padding:12px 16px; color:#276749; font-size:13px;">
-        <strong>Выполнено (разработка rev2):</strong> этапы 1–2 — модуль менеджера РС и перехват формы
-        <code>РегламентныйПериод</code>; в <code>Catalogs/РегламентныеПериоды.xml</code> добавлен
-        <code>ExtendedConfigurationObject</code> = UUID каталога из основной КФ
-        (<code>6fed2cd2-584b-403c-800c-afd445d98f73</code>, см. <code>WORK/Wim_Du/SRC/CF/ConfigDumpInfo.xml</code>);
-        загрузка в WIM_DU и пересборка <code>Расширения/rev2.cfe</code>.
+        <strong>Выполнено (разработка rev2):</strong> этапы 1–2 — модуль менеджера РС (~700 строк) и перехват формы
+        <code>РегламентныйПериод</code>; этап 4 — только пакетные процедуры <code>*Оптимизированно</code>
+        (переоценка ДС, дефолт, контроль портфеля; v1-ветки и переключатель удалены);
+        заимствован РС <code>ЗначенияПараметровДоговораДУ</code> + экспорт
+        <code>ЗначенияПараметровДоговоровДУ</code> (кеш параметров по массиву договоров);
+        в <code>Catalogs/РегламентныеПериоды.xml</code> — <code>ExtendedConfigurationObject</code>
+        (<code>6fed2cd2-584b-403c-800c-afd445d98f73</code>);
+        скрипт <code>Скрипты/load_rev2_to_wim_du_and_dump_cfe.ps1</code>;
+        <code>cfe-validate</code> OK; загрузка в <code>localhost/WIM_DU</code> (без авторизации) и <code>Расширения/rev2.cfe</code> (~33 КБ).
     </td></tr>
     </table>
     <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="margin-bottom:20px; background:#fffaf0; border-left:4px solid #dd6b20;">
@@ -46,26 +50,35 @@
     <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="margin-bottom:20px; background:#f7fafc; border:1px solid #e2e8f0;">
     <tr><td style="padding:14px 16px;">
         <pre style="margin:0; font-size:12px; line-height:1.6; overflow-x:auto;">Расширения/
-  rev2.cfe                                      (сборка из ИБ, для установки)
+  rev2.cfe                                      (сборка из ИБ, ~33 КБ)
   rev2/
     Configuration.xml
     ConfigDumpInfo.xml
     Languages/Русский.xml
+    StyleItems/ЦветОшибки.xml                   (Adopted)
+    CommonPictures/ ...                         (Adopted, для формы)
+    SettingsStorages/ХранилищеВариантовОтчетов.xml (Adopted)
     Catalogs/
-      РегламентныеПериоды.xml                    (Adopted, ExtendedConfigurationObject = UUID основной КФ)
-      РегламентныеПериоды/Forms/
-        РегламентныйПериод.xml                    (Adopted, Form = Extended)
-        РегламентныйПериод/Ext/Form/
-          Module.bsl                              (этап 2, ~137 строк, ИзменениеИКонтроль)
+      РегламентныеПериоды.xml                    (Adopted, ExtendedConfigurationObject)
+      РегламентныеПериоды/Forms/РегламентныйПериод/
+        Ext/Form/Module.bsl                       (~137 строк, ИзменениеИКонтроль)
     InformationRegisters/
-      ВидыОптимизируемыхРегламентныхОперацийДУ.xml
+      ВидыОптимизируемыхРегламентныхОперацийДУ.xml (новый)
       ВидыОптимизируемыхРегламентныхОперацийДУ/Ext/
         RecordSetModule.bsl                       (пустой)
-        ManagerModule.bsl                         (этап 1, ~310 строк)</pre>
+        ManagerModule.bsl                         (~700 строк, этапы 1+4, только *Оптимизированно)
+      ЗначенияПараметровДоговораДУ.xml           (Adopted)
+      ЗначенияПараметровДоговораДУ/Ext/
+        ManagerModule.bsl                         (новый: ЗначенияПараметровДоговоровДУ)
+Скрипты/
+  load_rev2_to_wim_du_and_dump_cfe.ps1          (validate + load + dump CFE)
+  build_rev2_form_module.py                     (генерация Form/Module.bsl)</pre>
         <p style="margin:12px 0 0 0; font-size:12px; color:#4a5568;">
             В <code>Configuration.xml</code> / <code>ChildObjects</code>: язык <code>Русский</code>,
-            заимствованный <code>РегламентныеПериоды</code>, новый РС <code>ВидыОптимизируемыхРегламентныхОперацийДУ</code>.
-            Префикс расширения: <code>rev2_</code>. Версия: <code>0.1.0.0</code>.
+            заимствованные UI-объекты, <code>РегламентныеПериоды</code>,
+            РС <code>ВидыОптимизируемыхРегламентныхОперацийДУ</code> (новый),
+            РС <code>ЗначенияПараметровДоговораДУ</code> (заимствован).
+            Префикс: <code>rev2_</code>. Версия: <code>0.1.0.0</code>. Совместимость: <code>Version8_3_12</code>.
         </p>
     </td></tr>
     </table>
@@ -98,9 +111,9 @@
         <td style="padding:8px 12px; border-bottom:1px solid #e2e8f0;">Не обязательно в v1</td>
     </tr>
     <tr>
-        <td style="padding:8px 12px;">Этап 4: пакетизация запросов в менеджере</td>
-        <td style="padding:8px 12px;">По плану</td>
-        <td style="padding:8px 12px;">После замеров</td>
+        <td style="padding:8px 12px;">Замер вечернего расчета (T4)</td>
+        <td style="padding:8px 12px;">Заказчик</td>
+        <td style="padding:8px 12px;">Фиксация выигрыша с пакетным отсевом</td>
     </tr>
     </table>
 
@@ -136,18 +149,26 @@
         </td>
     </tr>
     <tr style="background:#f0fff4;">
-        <td style="padding:8px 12px; border-bottom:1px solid #e2e8f0;">Модуль менеджера РС</td>
+        <td style="padding:8px 12px; border-bottom:1px solid #e2e8f0;">Модуль менеджера РС <code>ВидыОптимизируемыхРегламентныхОперацийДУ</code></td>
         <td style="padding:8px 12px; text-align:center; border-bottom:1px solid #e2e8f0; color:#276749; font-weight:600;">Готово</td>
         <td style="padding:8px 12px; border-bottom:1px solid #e2e8f0;">
-            <code>ManagerModule.bsl</code>: <code>ОтфильтроватьСписокОперацийЗакрытия</code>,
-            <code>ПолучитьДоговорыДляСохраненияВыполнения</code>; загружен в ИБ WIM_DU
+            <code>ManagerModule.bsl</code> (~700 строк): отсев только <code>*Оптимизированно</code>,
+            <code>ТаблицаПериодовКонтроляУменьшенияПортфеля</code> с пакетным кешем параметров
+        </td>
+    </tr>
+    <tr style="background:#f0fff4;">
+        <td style="padding:8px 12px; border-bottom:1px solid #e2e8f0;">РС <code>ЗначенияПараметровДоговораДУ</code> (заимствован)</td>
+        <td style="padding:8px 12px; text-align:center; border-bottom:1px solid #e2e8f0; color:#276749; font-weight:600;">Готово</td>
+        <td style="padding:8px 12px; border-bottom:1px solid #e2e8f0;">
+            Экспорт <code>ЗначенияПараметровДоговоровДУ(МассивДоговоровДУ, Параметры, Дата)</code> —
+            <code>Соответствие</code>(ДоговорДУ -&gt; Соответствие параметров); один запрос <code>СрезПоследних</code>
         </td>
     </tr>
     <tr style="background:#f0fff4;">
         <td style="padding:8px 12px; border-bottom:1px solid #e2e8f0;">Сборка <code>rev2.cfe</code></td>
         <td style="padding:8px 12px; text-align:center; border-bottom:1px solid #e2e8f0; color:#276749; font-weight:600;">Готово</td>
         <td style="padding:8px 12px; border-bottom:1px solid #e2e8f0;">
-            Каталог <code>Расширения/rev2.cfe</code>; <code>DumpCfg -Extension rev2</code> без ошибок
+            <code>Расширения/rev2.cfe</code> (~33 КБ); сборка через <code>load_rev2_to_wim_du_and_dump_cfe.ps1</code>
         </td>
     </tr>
     <tr style="background:#f0fff4;">
@@ -213,16 +234,15 @@
         <p style="margin:0 0 8px 0; color:#4a5568;"><strong>Критерии отсева по видам (первая версия):</strong></p>
         <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="border-collapse:collapse; font-size:12px;">
         <tr style="background:#edf2f7;"><th style="padding:5px 8px; text-align:left;">Вид операции</th><th style="padding:5px 8px; text-align:left;">Оставить выполнение, если</th></tr>
-        <tr><td style="padding:5px 8px; border-bottom:1px solid #e2e8f0;">ПереоценкаДенежныхСредств_БУ/НУ/УУ</td><td style="padding:5px 8px; border-bottom:1px solid #e2e8f0;">Пакетный запрос: валютные остатки на Транзитные/Текущие/ДепозитныеСчетаВВалюте, субконто БанковскиеСчета (упрощение по смыслу <code>ПереоценкаДенежныхСредств</code>; брокерские счета — этап 4)</td></tr>
-        <tr style="background:#f7fafc;"><td style="padding:5px 8px; border-bottom:1px solid #e2e8f0;">СписаниеДефолтныхОблигаций_БУ/НУ/УУ</td><td style="padding:5px 8px; border-bottom:1px solid #e2e8f0;">Есть данные <code>ДефолтноеСобытиеЭмитента.СтатусыЭмитентовДоговораДУ</code></td></tr>
-        <tr><td style="padding:5px 8px;">КонтрольУменьшенияСтоимостиПортфеля_УУ</td><td style="padding:5px 8px;">Оставить, если <code>СЧАПредыдущийПериод &lt;&gt; 0</code> и не (<code>ВводВыводАктивовВИзДУ = 0</code> и <code>СЧА &gt;= СЧАПредыдущийПериод</code>) — по логике <code>РасчитатьУменьшенииеСтоимостиПортфеля</code> / <code>Операция_1020</code></td></tr>
+        <tr><td style="padding:5px 8px; border-bottom:1px solid #e2e8f0;">ПереоценкаДенежныхСредств_БУ/НУ/УУ</td><td style="padding:5px 8px; border-bottom:1px solid #e2e8f0;"><code>ДоговорыСОснованиемДляПереоценкиДСОптимизированно</code> — банк + брокер + ВУ + УУ (как <code>Операция_0100</code> / <code>ПереоценкаДенежныхСредств</code>)</td></tr>
+        <tr style="background:#f7fafc;"><td style="padding:5px 8px; border-bottom:1px solid #e2e8f0;">СписаниеДефолтныхОблигаций_БУ/НУ/УУ</td><td style="padding:5px 8px; border-bottom:1px solid #e2e8f0;"><code>ДоговорыСДефолтнымиСобытиямиОптимизированно</code> — пакет по регистру дефолтов и источникам публикаций (эквивалент непустых <code>СтатусыЭмитентовДоговораДУ</code>)</td></tr>
+        <tr><td style="padding:5px 8px;">КонтрольУменьшенияСтоимостиПортфеля_УУ</td><td style="padding:5px 8px;">Всегда <code>ДоговорыДляКонтроляУменьшенияПортфеляОптимизированно</code>: пакет СЧА/ввод-вывод; периоды — один вызов <code>ЗначенияПараметровДоговоровДУ</code> + <code>ПредыдущийПериод...ПоПериодичности</code></td></tr>
         </table>
         <p style="margin:8px 0 0 0; font-size:12px; color:#718096;">
-            Развертывание: <code>LoadConfigFromFiles</code> из <code>Расширения/rev2</code>,
-            <code>UpdateDBCfg -Extension rev2</code>; сборка <code>DumpCfg</code> в <code>Расширения/rev2.cfe</code>.
-            Дефолт: пока цикл по договорам (<code>СтатусыЭмитентовДоговораДУ</code>); пакетизация — этап 4.
-            Проверка пула <code>Розничное ДУ</code> по наименованию — в <code>ОтфильтроватьСписокОперацийЗакрытия</code>
-            (при нарушении однородности отсев не выполняется).
+            Развертывание: <code>Скрипты/load_rev2_to_wim_du_and_dump_cfe.ps1</code> или
+            <code>LoadConfigFromFiles</code> + <code>UpdateDBCfg -Extension rev2</code> + <code>DumpCfg</code>.
+            Все виды отсева — только пакетные процедуры (v1 и переключатель удалены).
+            Проверка пула <code>Розничное ДУ</code> — в <code>ОтфильтроватьСписокОперацийЗакрытия</code>.
         </p>
     </td>
     </tr>
@@ -291,18 +311,20 @@
         <span style="display:inline-block; width:32px; height:32px; line-height:32px; background:#38a169; color:#fff; font-weight:700; text-align:center; border-radius:4px;">4</span>
     </td>
     <td style="padding:14px 16px 14px 0; vertical-align:top;">
-        <p style="margin:0 0 6px 0; font-weight:600; color:#276749;">Оптимизация запросов в менеджере — реализовано (переключатель)</p>
-        <p style="margin:0 0 8px 0; color:#4a5568;">В <code>ManagerModule.bsl</code> две ветки; переключение:</p>
-        <pre style="margin:0 0 10px 0; padding:10px; background:#f7fafc; border:1px solid #e2e8f0; font-size:12px;">Функция ИспользоватьОптимизированныеЗапросыОтсева()
-    Возврат Ложь;  // Истина — пакетные процедуры *Оптимизированно
-КонецФункции</pre>
+        <p style="margin:0 0 6px 0; font-weight:600; color:#276749;">Оптимизация запросов в менеджере — выполнено (только пакетные процедуры)</p>
+        <p style="margin:0 0 8px 0; color:#4a5568;">В <code>ManagerModule.bsl</code> для всех видов из РС — только <code>*Оптимизированно</code>:</p>
         <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="border-collapse:collapse; font-size:12px;">
-        <tr style="background:#edf2f7;"><th style="padding:5px 8px; text-align:left;">v1 (базовая)</th><th style="padding:5px 8px; text-align:left;">Оптимизированная</th></tr>
-        <tr><td style="padding:5px 8px; border-bottom:1px solid #e2e8f0;"><code>ДоговорыСОснованиемДляПереоценкиДС</code> — только банк. счета</td><td style="padding:5px 8px; border-bottom:1px solid #e2e8f0;"><code>...ДСОптимизированно</code> — банк + брокер + ВУ + УУ (как <code>ПереоценкаДенежныхСредств</code>)</td></tr>
-        <tr style="background:#f7fafc;"><td style="padding:5px 8px; border-bottom:1px solid #e2e8f0;"><code>ДоговорыСДефолтнымиСобытиями</code> — цикл <code>СтатусыЭмитентовДоговораДУ</code></td><td style="padding:5px 8px; border-bottom:1px solid #e2e8f0;"><code>...СобытиямиОптимизированно</code> — один запрос</td></tr>
-        <tr><td style="padding:5px 8px;"><code>ДоговорыДляКонтроляУменьшенияПортфеля</code> — цикл</td><td style="padding:5px 8px;"><code>...ПортфеляОптимизированно</code> — СЧА/ввод-вывод пакетом</td></tr>
+        <tr style="background:#edf2f7;"><th style="padding:5px 8px; text-align:left;">Вид</th><th style="padding:5px 8px; text-align:left;">Процедура отсева</th></tr>
+        <tr><td style="padding:5px 8px; border-bottom:1px solid #e2e8f0;">ПереоценкаДенежныхСредств_*</td><td style="padding:5px 8px; border-bottom:1px solid #e2e8f0;"><code>ДоговорыСОснованиемДляПереоценкиДСОптимизированно</code></td></tr>
+        <tr style="background:#f7fafc;"><td style="padding:5px 8px; border-bottom:1px solid #e2e8f0;">СписаниеДефолтныхОблигаций_*</td><td style="padding:5px 8px; border-bottom:1px solid #e2e8f0;"><code>ДоговорыСДефолтнымиСобытиямиОптимизированно</code></td></tr>
+        <tr><td style="padding:5px 8px;">КонтрольУменьшенияСтоимостиПортфеля_УУ</td><td style="padding:5px 8px;"><code>ДоговорыДляКонтроляУменьшенияПортфеляОптимизированно</code></td></tr>
         </table>
-        <p style="margin:8px 0 0 0; font-size:12px; color:#718096;">Сравнение результатов: переключите флаг, прогоните один отбор, сравните множества договоров с <code>Выполнять = Истина</code>.</p>
+        <p style="margin:8px 0 0 0; font-size:12px; color:#718096;">
+            Удалены v1: <code>ДоговорыСОснованиемДляПереоценкиДС</code>, цикл <code>ДоговорыСДефолтнымиСобытиями</code>,
+            переключатель <code>ИспользоватьОптимизированныеЗапросыОтсева</code>.
+            <strong>Пакетный кеш параметров (контроль портфеля):</strong>
+            <code>ЗначенияПараметровДоговоровДУ</code> + <code>ПредыдущийПериод...ПоПериодичности</code>.
+        </p>
     </td>
     </tr>
     </table>
@@ -351,7 +373,7 @@
     <tr style="background:#f0fff4;"><td style="padding:8px 12px; border-bottom:1px solid #e2e8f0;">1. Модуль менеджера РС</td><td style="padding:8px 12px; text-align:right; border-bottom:1px solid #e2e8f0; color:#276749;">выполнено</td><td style="padding:8px 12px; border-bottom:1px solid #e2e8f0;">+ загрузка в ИБ, rev2.cfe</td></tr>
     <tr style="background:#f0fff4;"><td style="padding:8px 12px; border-bottom:1px solid #e2e8f0;">2. Перехват формы</td><td style="padding:8px 12px; text-align:right; border-bottom:1px solid #e2e8f0; color:#276749;">выполнено</td><td style="padding:8px 12px; border-bottom:1px solid #e2e8f0;">+ загрузка в ИБ, rev2.cfe</td></tr>
     <tr style="background:#fffaf0;"><td style="padding:8px 12px; border-bottom:1px solid #e2e8f0;">3. Данные РС + ИБ</td><td style="padding:8px 12px; text-align:right; border-bottom:1px solid #e2e8f0; color:#c05621;">заказчик</td><td style="padding:8px 12px; border-bottom:1px solid #e2e8f0;">Вне scope разработки</td></tr>
-    <tr style="background:#f0fff4;"><td style="padding:8px 12px; border-bottom:1px solid #e2e8f0;">4. Оптимизация запросов</td><td style="padding:8px 12px; text-align:right; border-bottom:1px solid #e2e8f0; color:#276749;">реализовано</td><td style="padding:8px 12px; border-bottom:1px solid #e2e8f0;">Переключатель <code>ИспользоватьОптимизированныеЗапросыОтсева</code></td></tr>
+    <tr style="background:#f0fff4;"><td style="padding:8px 12px; border-bottom:1px solid #e2e8f0;">4. Оптимизация запросов + кеш параметров</td><td style="padding:8px 12px; text-align:right; border-bottom:1px solid #e2e8f0; color:#276749;">выполнено</td><td style="padding:8px 12px; border-bottom:1px solid #e2e8f0;">Только пакетные процедуры; v1 удалены</td></tr>
     <tr style="background:#fffaf0;"><td style="padding:8px 12px; border-bottom:1px solid #e2e8f0;">5. Тесты и замер</td><td style="padding:8px 12px; text-align:right; border-bottom:1px solid #e2e8f0; color:#c05621;">заказчик</td><td style="padding:8px 12px; border-bottom:1px solid #e2e8f0;">Вне scope разработки</td></tr>
     <tr style="font-weight:600;"><td style="padding:8px 12px;">Итого разработка (этапы 1–2, MVP)</td><td style="padding:8px 12px; text-align:right; color:#276749;">выполнено</td><td style="padding:8px 12px;"></td></tr>
     </table>
@@ -363,13 +385,17 @@
     <tr><td style="padding:6px 0;">&#9745; <code>Form/Module.bsl</code> с перехватом и <code>#Вставка</code> (загружен в WIM_DU)</td></tr>
     <tr><td style="padding:6px 0;">&#9745; <code>Catalogs/РегламентныеПериоды.xml</code>: <code>ExtendedConfigurationObject</code> = UUID основной КФ; <code>cfe-validate</code> OK</td></tr>
     <tr><td style="padding:6px 0;">&#9745; <code>Расширения/rev2.cfe</code>: загрузка в WIM_DU и <code>UpdateDBCfg</code> успешны</td></tr>
+    <tr><td style="padding:6px 0;">&#9745; РС <code>ЗначенияПараметровДоговораДУ</code> заимствован; <code>ЗначенияПараметровДоговоровДУ</code> в расширении</td></tr>
+    <tr><td style="padding:6px 0;">&#9745; Пакетный отбор контроля портфеля + кеш параметров по договорам</td></tr>
+    <tr><td style="padding:6px 0;">&#9745; <code>Скрипты/load_rev2_to_wim_du_and_dump_cfe.ps1</code></td></tr>
     <tr><td style="padding:6px 0;">&#9744; <em>(заказчик)</em> 7 записей в РС, константа включена в тестовой ИБ</td></tr>
+    <tr><td style="padding:6px 0;">&#9744; <em>(заказчик)</em> T1–T4, замер вечернего расчета</td></tr>
     <tr><td style="padding:6px 0;">&#9744; <em>(заказчик)</em> T1–T4 пройдены, замер зафиксирован</td></tr>
     </table>
 
     <p style="margin:0; font-size:12px; color:#718096;">
-        Источник состояния: репозиторий <code>Расширения/rev2</code> + <code>Расширения/rev2.cfe</code>, ИБ WIM_DU.
-        Дата обновления плана: 18.05.2026 (метаданные каталога, пересборка CFE, scope заказчика).
+        Источник состояния: репозиторий <code>Расширения/rev2</code> + <code>Расширения/rev2.cfe</code>, ИБ <code>localhost/WIM_DU</code>.
+        Дата обновления плана: 31.05.2026 (только пакетный отсев, cfe-validate OK, загрузка WIM_DU без авторизации, rev2.cfe ~33 КБ).
         Постановка: <code>_БАГИ и задачи 2-ого этапа/developer_task_phase2_optimization.html</code>.
     </p>
 
