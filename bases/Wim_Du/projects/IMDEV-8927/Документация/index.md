@@ -3,6 +3,9 @@
 | Файл | Назначение |
 |------|------------|
 | [01_Ключевые_операции_ДУ_15.html](01_Ключевые_операции_ДУ_15.html) | Перечень 20 ключевых операций из Excel |
+| [paketny_otchet_broker_du_zamery.md](paketny_otchet_broker_du_zamery.md) | Замеры EPF внПакетныйОтчетБрокераДУ_ДВО (операция №03, ИДУ) |
+| [raspredelenie_dohodov_cb_zamery.md](raspredelenie_dohodov_cb_zamery.md) | Замеры EPF внРаспределениеДоходовПоЦеннымБумагам (операция №03, РДУ) |
+| [rastorzhenie_rdu_zamery.md](rastorzhenie_rdu_zamery.md) | Замеры EPF внРасторжениеДоговоровРозничногоДУ (операция №14) |
 | [02_Объекты_1С_и_замеры_производительности.html](02_Объекты_1С_и_замеры_производительности.html) | Объекты 1С, архитектура запуска, замеры |
 | [03_neizvestnye_operacii_veroyatnost.html](03_neizvestnye_operacii_veroyatnost.html) | Подсказка по 8 неизвестным операциям: EPF и вероятности с учетом ответа разработчика |
 | [04_kuda_vstaviti_zamer.html](04_kuda_vstaviti_zamer.html) | 20 операций: таблица «куда вставить замер» (EPF, команда, РЗ, расшифровка) |
