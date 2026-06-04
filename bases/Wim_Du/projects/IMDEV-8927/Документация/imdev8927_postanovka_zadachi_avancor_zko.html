@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>IMDEV-8927: Постановка задачи вендору Аванкор (перенос из расширения zko)</title>
+	<style>
+		:root {
+			--p1: #2c5282;
+			--p2: #276749;
+			--p3: #9c4221;
+			--common: #4a5568;
+		}
+		body {
+			font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+			margin: 1rem 2rem 2rem;
+			max-width: 960px;
+			line-height: 1.55;
+			color: #1a202c;
+			background: #fafafa;
+		}
+		h1 {
+			color: #1a5276;
+			border-bottom: 2px solid #1a5276;
+			padding-bottom: 0.3em;
+			font-size: 1.45rem;
+		}
+		h2 { color: #2874a6; margin-top: 1.6em; }
+		h3 { color: #5499c7; margin-top: 1em; }
+		.meta { color: #666; font-size: 0.95em; margin-bottom: 1.2em; }
+		.doc-purpose {
+			margin: 0 0 1.5em;
+			padding: 1rem 1.25rem;
+			background: linear-gradient(135deg, #fff3cd 0%, #ffe69c 100%);
+			border: 2px solid #f59e0b;
+			border-left: 6px solid #d97706;
+			border-radius: 8px;
+			font-size: 1.05rem;
+			line-height: 1.6;
+			color: #78350f;
+			box-shadow: 0 2px 8px rgba(217, 119, 6, 0.15);
+		}
+		.doc-purpose .purpose-label {
+			display: block;
+			font-size: 0.78rem;
+			font-weight: 700;
+			letter-spacing: 0.06em;
+			text-transform: uppercase;
+			color: #92400e;
+			margin-bottom: 0.45rem;
+		}
+		.doc-purpose strong { color: #7c2d12; }
+		.transfer-section {
+			margin: 2em 0 1.5em;
+			padding: 1.25rem 1.5rem 1.5rem;
+			background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
+			border: 2px solid #10b981;
+			border-left: 6px solid #059669;
+			border-radius: 8px;
+			box-shadow: 0 2px 10px rgba(5, 150, 105, 0.18);
+		}
+		.transfer-section h2 {
+			margin: 0 0 0.75em;
+			padding: 0 0 0.5em;
+			border-bottom: 2px solid #059669;
+			color: #065f46;
+			font-size: 1.25rem;
+		}
+		.transfer-section > p,
+		.transfer-section > ol {
+			color: #064e3b;
+			font-size: 1.02rem;
+		}
+		.transfer-section ol {
+			margin-top: 0.75em;
+			padding-left: 1.4em;
+		}
+		.transfer-section ol li {
+			margin-bottom: 0.6em;
+		}
+		.transfer-section ol li strong { color: #047857; }
+		.transfer-section .transfer-note {
+			margin-top: 1em;
+			padding: 0.85rem 1rem;
+			background: rgba(255, 255, 255, 0.65);
+			border: 1px solid #6ee7b7;
+			border-radius: 6px;
+			font-size: 0.95rem;
+			color: #065f46;
+		}
+		.transfer-section .transfer-warning {
+			margin-top: 1em;
+			padding: 0.85rem 1rem;
+			background: #fffbeb;
+			border: 1px solid #fbbf24;
+			border-left: 4px solid #f59e0b;
+			border-radius: 6px;
+			font-size: 0.95rem;
+			color: #78350f;
+		}
+		.transfer-section .transfer-warning strong { color: #92400e; }
+		blockquote {
+			margin: 1em 0;
+			padding: 0.8em 1em;
+			background: #ebf5fb;
+			border-left: 4px solid #2874a6;
+		}
+		pre {
+			background: #f4f6f7;
+			padding: 1em;
+			overflow-x: auto;
+			border-radius: 4px;
+			font-size: 0.88em;
+		}
+		.code-inline {
+			font-family: Consolas, monospace;
+			background: #f4f6f7;
+			padding: 0.1em 0.3em;
+		}
+		ul, ol { margin: 0.5em 0 1em 1.2em; }
+		table { border-collapse: collapse; width: 100%; margin: 1em 0; font-size: 0.92em; }
+		th, td { border: 1px solid #bdc3c7; padding: 0.5em 0.75em; text-align: left; vertical-align: top; }
+		th { background: #d5dbdb; }
+		.footer { margin-top: 2em; font-size: 0.9em; color: #666; }
+		.ref-block {
+			margin-bottom: 1.5rem;
+			padding: 0.75rem 1rem;
+			background: #ebf8ff;
+			border: 1px solid #90cdf4;
+			border-radius: 6px;
+			font-size: 0.9rem;
+		}
+		.ref-block strong { color: #2b6cb0; }
+		.ref-block .cf-note {
+			margin-top: 0.5rem;
+			font-size: 0.85rem;
+			color: #4a5568;
+		}
+		ul.tree {
+			list-style: none;
+			padding-left: 1.2rem;
+			margin: 0.2rem 0 1.5rem;
+		}
+		ul.tree ul {
+			padding-left: 1.2rem;
+			border-left: 1px solid #e2e8f0;
+			margin-left: 0.35rem;
+		}
+		.branch { margin: 0.25rem 0; }
+		.branch > .cap {
+			cursor: pointer;
+			display: inline-flex;
+			align-items: center;
+			gap: 0.35rem;
+			padding: 0.15rem 0;
+		}
+		.branch > .cap:hover { background: #edf2f7; border-radius: 3px; }
+		.toggle { font-size: 0.7rem; color: #718096; user-select: none; }
+		.name { font-weight: 600; }
+		.pts {
+			font-size: 0.75rem;
+			padding: 0.1rem 0.4rem;
+			border-radius: 4px;
+			white-space: nowrap;
+		}
+		.pts.p1 { background: #bee3f8; color: var(--p1); }
+		.pts.p2 { background: #c6f6d5; color: var(--p2); }
+		.pts.p3 { background: #feebc8; color: var(--p3); }
+		.pts.common { background: #e2e8f0; color: var(--common); }
+		.leaf {
+			padding-left: 1.5rem;
+			margin: 0.15rem 0;
+			display: flex;
+			align-items: center;
+			gap: 0.4rem;
+			flex-wrap: wrap;
+		}
+		.leaf .name {
+			font-weight: 400;
+			font-family: Consolas, monospace;
+			font-size: 0.9rem;
+		}
+		.legend {
+			margin: 1rem 0 1.5rem;
+			padding: 0.75rem 1rem;
+			background: #fff;
+			border: 1px solid #e2e8f0;
+			border-radius: 6px;
+			font-size: 0.85rem;
+		}
+		.legend h3 { margin: 0 0 0.5rem 0; font-size: 0.95rem; color: #2d3748; }
+		.legend span { display: inline-block; margin-right: 0.75rem; margin-bottom: 0.25rem; }
+	</style>
+</head>
+<body>
+
+<div class="ref-block">
+	<strong>Вендор: Аванкор.</strong> Базовая конфигурация Wim_Du (AvancoreDU). Доработки выполнены во временном расширении <code>zko</code> (префикс <code>zko_</code>, синоним «Замеры регламентных операций ДУ», поставка <code>zko.cfe</code>). Цель передачи документа — включить замеры производительности БСП в штатную поставку и снять зависимость от расширения.
+	<p class="cf-note">Связанные задачи: IMDEV-8927 (анализ точек замера), IMDEV-8471 (внедрение замеров). Замеры для операций №16–18 реализованы только в расширении <code>zko</code>; остальные ключевые операции — во внешних обработках (EPF), в этот документ не входят.</p>
+	<p class="cf-note">Источник кода: <code>Расширения/zko/Catalogs/РегламентныеПериоды/Ext/ManagerModule.bsl</code>. Маркеры в коде: комментарии <code>// IMDEV-8927</code> и блоки <code>#Вставка</code> / <code>#КонецВставки</code>.</p>
+</div>
+
+<h1>IMDEV-8927: Постановка задачи вендору Аванкор</h1>
+<div class="doc-purpose">
+	<span class="purpose-label">Назначение документа</span>
+	Перенос доработок из расширения <strong>zko</strong> в базовую конфигурацию. Документ предназначен для передачи вендору с целью включения замеров производительности регламентных операций ДУ в типовую поставку.
+</div>
+
+<h2>Дерево изменяемых объектов расширения zko</h2>
+<p class="meta">Интерактивное дерево: клик по ветке сворачивает или разворачивает поддерево. Метки <span class="pts p1">16</span> / <span class="pts p2">17</span> / <span class="pts p3">18</span> — номера ключевых операций из перечня «ДУ 15».</p>
+
+<ul class="tree">
+	<li class="branch">
+		<span class="cap"><span class="toggle">[+]</span> <span class="name">Расширение zko</span> <span class="pts common">16–18</span></span>
+		<ul>
+			<li class="branch">
+				<span class="cap"><span class="toggle">[+]</span> <span class="name">Справочники (заимствование)</span> <span class="pts common">16–18</span></span>
+				<ul>
+					<li class="branch">
+						<span class="cap"><span class="toggle">[+]</span> <span class="name">РегламентныеПериоды</span> <span class="pts common">16–18</span></span>
+						<ul>
+							<li class="branch">
+								<span class="cap"><span class="toggle">[+]</span> <span class="name">Модуль менеджера</span> <span class="pts common">16–18</span></span>
+								<ul>
+									<li class="leaf">
+										<span class="name">zko_СформироватьРегламентныеОперации</span>
+										<span class="pts common">16–18</span>
+										<span style="font-size:0.8rem;color:#64748b;">перехват &amp;ИзменениеИКонтроль(&quot;СформироватьРегламентныеОперации&quot;); 5 блоков #Вставка IMDEV-8927</span>
+									</li>
+									<li class="leaf">
+										<span class="name">zko_ИмяКлючевойОперацииЗамераПоГруппе</span>
+										<span class="pts common">16–18</span>
+										<span style="font-size:0.8rem;color:#64748b;">новая функция; имя КО по реквизиту Код группы операций</span>
+									</li>
+								</ul>
+							</li>
+						</ul>
+					</li>
+				</ul>
+			</li>
+		</ul>
+	</li>
+</ul>
+
+<div class="legend">
+	<h3>Ключевые операции, покрываемые замером zko</h3>
+	<span><span class="pts p1">16</span> Вечерние регламентные операции, расчет РСА/СЧА за T-1</span><br>
+	<span><span class="pts p2">17</span> Утренние регламентные операции (% по депозитам, РЕПО, НКД, погашения)</span><br>
+	<span><span class="pts p3">18</span> Начисление вознаграждения (ежеквартально, тот же контур регламентов)</span>
+</div>
+
+<h2>1. Зачем это было сделано</h2>
+
+<p>Ключевые операции №16–18 выполняются не через внешние обработки, а через цепочку регламентного закрытия периода ДУ: фоновое задание вызывает процедуру <code class="code-inline">СформироватьРегламентныеОперации</code> модуля менеджера справочника <strong>РегламентныеПериоды</strong>, которая последовательно формирует документы закрытия по списку договоров.</p>
+
+<p>Для мониторинга производительности (задача IMDEV-8471, подсистема БСП <strong>Оценка производительности</strong>) необходимо фиксировать длительность этой процедуры с разбивкой по пачкам договоров и с отдельными именами ключевых операций для утренней, вечерней и прочих групп регламентов.</p>
+
+<blockquote>
+	<strong>Итог:</strong> в точке массового формирования регламентных операций добавлен <strong>длительный замер БСП</strong> (<code class="code-inline">НачатьЗамерДлительнойОперации</code> / <code class="code-inline">ЗафиксироватьЗамерДлительнойОперации</code> / <code class="code-inline">ЗакончитьЗамерДлительнойОперации</code>). Вес шага равен числу договоров в обработанной пачке — для расчета удельного времени на один договор. Изменения должны быть перенесены в базовую конфигурацию, чтобы не зависеть от расширения <code>zko</code>.
+</blockquote>
+
+<h2>2. Что было сделано в расширении zko</h2>
+
+<p>В расширении <strong>zko</strong> заимствован справочник <strong>РегламентныеПериоды</strong>. В модуле менеджера выполнена подмена экспортной процедуры:</p>
+
+<ul>
+	<li><code class="code-inline">СформироватьРегламентныеОперации</code> &rarr; <code class="code-inline">zko_СформироватьРегламентныеОперации</code> (&amp;ИзменениеИКонтроль)</li>
+</ul>
+
+<p>Добавлена вспомогательная функция <code class="code-inline">zko_ИмяКлючевойОперацииЗамераПоГруппе</code> (в базу переносится без префикса <code class="code-inline">zko_</code>).</p>
+
+<h3>2.1. Имена ключевых операций</h3>
+
+<p>Имя ключевой операции формируется по группе операций пользователя (<code class="code-inline">ГруппаОперацийПользователя</code> из <code class="code-inline">ПараметрыСохранения.МассивРодителей</code>):</p>
+
+<table>
+	<thead>
+		<tr>
+			<th>Группа (реквизит <code class="code-inline">Код</code>)</th>
+			<th>Имя ключевой операции в БСП</th>
+			<th>Ключевая операция Excel</th>
+		</tr>
+	</thead>
+	<tbody>
+		<tr>
+			<td><code class="code-inline">1. "Утренние" операции</code></td>
+			<td><code class="code-inline">ДУ.РегламентныеОперации.1. Утренние операции</code></td>
+			<td>№17</td>
+		</tr>
+		<tr>
+			<td><code class="code-inline">2. "Вечерние" операции</code></td>
+			<td><code class="code-inline">ДУ.РегламентныеОперации.2. Вечерние операции</code></td>
+			<td>№16</td>
+		</tr>
+		<tr>
+			<td>Другие / пустая группа</td>
+			<td><code class="code-inline">ДУ.РегламентныеОперации.&lt;Код без кавычек&gt;</code> или <code class="code-inline">...БезГруппы</code></td>
+			<td>№18 и прочие регламенты</td>
+		</tr>
+	</tbody>
+</table>
+
+<p>Двойные кавычки в коде группы удаляются: БСП сравнивает имена ключевых операций по хешу MD5 и не рекомендует кавычки в имени.</p>
+
+<h3>2.2. Пять точек вставки в СформироватьРегламентныеОперации</h3>
+
+<table>
+	<thead>
+		<tr>
+			<th>№</th>
+			<th>Место в процедуре</th>
+			<th>Суть изменения</th>
+		</tr>
+	</thead>
+	<tbody>
+		<tr>
+			<td>1</td>
+			<td>Начало процедуры, до инициализации результата</td>
+			<td>Объявление переменной <code class="code-inline">ОписаниеЗамераПроизводительности = Неопределено</code>.</td>
+		</tr>
+		<tr>
+			<td>2</td>
+			<td>После определения <code class="code-inline">ГруппаОперацийПользователя</code> и <code class="code-inline">ВыполнятьПакетнуюЗагрузку</code>, перед циклом по пачкам</td>
+			<td>Вызов <code class="code-inline">ИмяКлючевойОперацииЗамераПоГруппе(...)</code> и <code class="code-inline">ОценкаПроизводительности.НачатьЗамерДлительнойОперации(...)</code>.</td>
+		</tr>
+		<tr>
+			<td>3</td>
+			<td>Конец каждой итерации цикла по пачкам договоров</td>
+			<td><code class="code-inline">ЗафиксироватьЗамерДлительнойОперации</code> с шагом <code class="code-inline">"ОбработкаПачкиДоговоров"</code>, вес = <code class="code-inline">РазмерТекущейПачки</code>.</td>
+		</tr>
+		<tr>
+			<td>4</td>
+			<td>После успешного завершения всех пачек, перед финальным прогрессом 100%</td>
+			<td><code class="code-inline">ЗакончитьЗамерДлительнойОперации</code> с весом <strong>0</strong> (вес уже накоплен по пачкам), комментарий с числом договоров и потоков.</td>
+		</tr>
+		<tr>
+			<td>5</td>
+			<td>Блок <code class="code-inline">Исключение</code></td>
+			<td>Если замер был начат — <code class="code-inline">ЗакончитьЗамерДлительнойОперации</code> с весом 0 и текстом ошибки.</td>
+		</tr>
+	</tbody>
+</table>
+
+<h3>2.3. Функция ИмяКлючевойОперацииЗамераПоГруппе</h3>
+
+<p>Новая серверная функция модуля менеджера (не экспортная). Префикс имени: <code class="code-inline">ДУ.РегламентныеОперации.</code>. Если <code class="code-inline">ГруппаОперацийПользователя</code> не заполнена — возвращает <code class="code-inline">ДУ.РегламентныеОперации.БезГруппы</code>.</p>
+
+<pre>Функция ИмяКлючевойОперацииЗамераПоГруппе(ГруппаОперацийПользователя)
+
+	ПрефиксКлючевойОперации = "ДУ.РегламентныеОперации.";
+
+	ИмяГруппы = "";
+	Если ЗначениеЗаполнено(ГруппаОперацийПользователя) Тогда
+		ИмяГруппы = СокрЛП(ГруппаОперацийПользователя.Код);
+	КонецЕсли;
+
+	Если ПустаяСтрока(ИмяГруппы) Тогда
+		Возврат ПрефиксКлючевойОперации + "БезГруппы";
+	КонецЕсли;
+
+	ИмяГруппы = СтрЗаменить(ИмяГруппы, """", "");
+
+	Возврат ПрефиксКлючевойОперации + ИмяГруппы;
+
+КонецФункции</pre>
+
+<h3>2.4. Пример фрагментов замера (из расширения)</h3>
+
+<pre>// Старт замера (после определения ГруппаОперацийПользователя)
+ИмяКлючевойОперацииЗамера = ИмяКлючевойОперацииЗамераПоГруппе(ГруппаОперацийПользователя);
+ОписаниеЗамераПроизводительности = ОценкаПроизводительности.НачатьЗамерДлительнойОперации(ИмяКлючевойОперацииЗамера);
+
+// В конце итерации по пачке
+ОценкаПроизводительности.ЗафиксироватьЗамерДлительнойОперации(
+	ОписаниеЗамераПроизводительности,
+	РазмерТекущейПачки,
+	"ОбработкаПачкиДоговоров",
+	СтрШаблон(НСтр("ru='Пачка %1, договоров: %2'"), ИндексПачки + 1, РазмерТекущейПачки));
+
+// Успешное завершение (вес 0 — не дублировать накопленный по пачкам)
+ОценкаПроизводительности.ЗакончитьЗамерДлительнойОперации(
+	ОписаниеЗамераПроизводительности,
+	0,
+	"",
+	СтрШаблон(
+		НСтр("ru='Обработано договоров: %1; Потоков: %2'"),
+		ТекущийНомер,
+		Константы.МаксимальноеКоличествоПараллельныхПотоков.Получить()));</pre>
+
+<div class="transfer-section">
+	<h2>3. Что необходимо перенести в базовую конфигурацию</h2>
+
+	<p>В базовый модуль менеджера справочника <strong>РегламентныеПериоды</strong> (<code class="code-inline">Catalogs/РегламентныеПериоды/Ext/ManagerModule.bsl</code>) нужно перенести:</p>
+
+	<ol>
+		<li><strong>Функцию</strong> <code class="code-inline">ИмяКлючевойОперацииЗамераПоГруппе</code> — целиком из расширения (без префикса <code class="code-inline">zko_</code>).</li>
+		<li><strong>В процедуру</strong> <code class="code-inline">СформироватьРегламентныеОперации</code> — все пять блоков между маркерами <code class="code-inline">#Вставка</code> / <code class="code-inline">#КонецВставки</code>, помеченных комментарием <code class="code-inline">// IMDEV-8927</code>, с заменой вызова <code class="code-inline">zko_ИмяКлючевойОперацииЗамераПоГруппе</code> на <code class="code-inline">ИмяКлючевойОперацииЗамераПоГруппе</code>.</li>
+	</ol>
+
+	<p class="transfer-note">Маркеры <code class="code-inline">// IMDEV-8927</code>, <code class="code-inline">#Вставка</code> / <code class="code-inline">#КонецВставки</code> при переносе в базу можно удалить; в расширении они использовались для идентификации фрагментов.</p>
+
+	<div class="transfer-warning">
+		<strong>Примечание по процедуре СформироватьРегламентныеОперации.</strong> В расширении <code>zko</code> процедура перехвачена целиком (&amp;ИзменениеИКонтроль) и может содержать и другие доработки (например, разбивку списка договоров на пачки — IMDEV-8926). При переносе в базу вендору нужно включить <strong>только фрагменты IMDEV-8927</strong> (замеры БСП) в актуальную типовую версию процедуры, не откатывая прочие исправления базовой конфигурации.
+	</div>
+</div>
+
+<h2>4. Проверка после переноса</h2>
+
+<ul>
+	<li>Константа <code class="code-inline">ВыполнятьЗамерыПроизводительности</code> = Истина.</li>
+	<li>Запуск вечерних регламентов (группа «2. "Вечерние" операции») — в <code class="code-inline">РС.ЗамерыВремени</code> появляются записи с ключевой операцией <code class="code-inline">ДУ.РегламентныеОперации.2. Вечерние операции</code> и шагами <code class="code-inline">...ОбработкаПачкиДоговоров</code>, <code class="code-inline">...Удельный</code>.</li>
+	<li>Запуск утренних регламентов — аналогично для <code class="code-inline">ДУ.РегламентныеОперации.1. Утренние операции</code>.</li>
+	<li>Вес промежуточных шагов соответствует числу договоров в пачке; итоговый <code class="code-inline">ЗакончитьЗамерДлительнойОперации</code> вызывается с весом 0.</li>
+	<li>При принудительной ошибке в середине формирования замер завершается в блоке <code class="code-inline">Исключение</code> (без «висящих» незакрытых замеров).</li>
+</ul>
+
+<h2>5. Справочная информация</h2>
+
+<ul>
+	<li><strong>Задача:</strong> IMDEV-8927.</li>
+	<li><strong>База:</strong> Wim_Du (AvancoreDU).</li>
+	<li><strong>Объект:</strong> Справочник <strong>РегламентныеПериоды</strong>, модуль менеджера.</li>
+	<li><strong>Процедура:</strong> <code class="code-inline">СформироватьРегламентныеОперации</code> (экспорт, вызов из фонового задания регламентного закрытия).</li>
+	<li><strong>Новая функция:</strong> <code class="code-inline">ИмяКлючевойОперацииЗамераПоГруппе</code>.</li>
+	<li><strong>Источник доработок:</strong> расширение <strong>zko</strong>, файл <code class="code-inline">Catalogs/РегламентныеПериоды/Ext/ManagerModule.bsl</code>.</li>
+	<li><strong>Ключевые операции Excel:</strong> №16 (вечерние), №17 (утренние), №18 (начисление вознаграждения в контуре регламентов).</li>
+	<li><strong>Точка входа регламентов:</strong> <code class="code-inline">Документ.ПланРегламентныхОперацийДУ</code> &rarr; <code class="code-inline">ВыполнитьРегламентныеПроцедуры()</code> &rarr; исполняемые процедуры закрытия периода.</li>
+</ul>
+
+<p class="footer">Документ подготовлен для передачи вендору Аванкор в рамках переноса замеров производительности из расширения zko в базовую конфигурацию Wim_Du. Проект IMDEV-8927.</p>
+
+<script>
+	document.querySelectorAll('.branch > .cap').forEach(function (cap) {
+		cap.addEventListener('click', function () {
+			var ul = this.nextElementSibling;
+			if (!ul) return;
+			var toggle = this.querySelector('.toggle');
+			if (ul.style.display === 'none') {
+				ul.style.display = 'block';
+				if (toggle) toggle.textContent = '[−]';
+			} else {
+				ul.style.display = 'none';
+				if (toggle) toggle.textContent = '[+]';
+			}
+		});
+	});
+	document.querySelectorAll('.branch > ul').forEach(function (ul) {
+		ul.style.display = 'block';
+		var t = ul.previousElementSibling.querySelector('.toggle');
+		if (t) t.textContent = '[−]';
+	});
+</script>
+
+</body>
+</html>

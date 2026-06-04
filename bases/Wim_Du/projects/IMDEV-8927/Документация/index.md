@@ -2,6 +2,7 @@
 
 | Файл | Назначение |
 |------|------------|
+| [imdev8927_postanovka_zadachi_avancor_zko.html](imdev8927_postanovka_zadachi_avancor_zko.html) | Постановка для вендора Аванкор: перенос замеров из расширения zko (операции №16–18) |
 | [01_Ключевые_операции_ДУ_15.html](01_Ключевые_операции_ДУ_15.html) | Перечень 20 ключевых операций из Excel |
 | [paketny_otchet_broker_du_zamery.md](paketny_otchet_broker_du_zamery.md) | Замеры EPF внПакетныйОтчетБрокераДУ_ДВО (операция №03, ИДУ) |
 | [raspredelenie_dohodov_cb_zamery.md](raspredelenie_dohodov_cb_zamery.md) | Замеры EPF внРаспределениеДоходовПоЦеннымБумагам (операция №03, РДУ) |
