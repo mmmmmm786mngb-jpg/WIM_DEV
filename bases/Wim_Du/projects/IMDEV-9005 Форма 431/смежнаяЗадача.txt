@@ -1,0 +1,317 @@
+Skip to main contentSkip to sidebar
+Linked Applications
+VTB Capital - JIRA
+Dashboards
+Projects
+Issues
+Boards
+Structure
+Create
+ 
+Search
+Help
+Administration
+User profile for Chmykhalov, Aleksey
+IM Development
+Project Type: software
+Kanban board
+Releases
+Reports
+Issues
+Components
+Structure
+
+Uploaded image for project: 'IM Application Support'
+IM Application SupportIMAPPS-37477
+0420431 не формируется в аванкоре
+ Edit
+ Comment
+Assign
+More
+Return To IT Test
+ Export
+Details
+Type: Change Request
+Status:UAT (View Workflow)
+Priority: High
+Resolution:Unresolved
+Affects Version/s:None
+Fix Version/s:None
+Component/s:
+AvancoreDU
+Security Level:Internal Only
+Labels:
+Settlement_priority_list
+IM Department:IM Back-Office Settle
+IM Department (list):IM Back-Office Settle
+Description
+0420431 не формируется в аванкоре
+
+
+
+ 
+
+Options
+Attachments
+Drop files to attach, or browse.
+Add Link
+Create and Link
+Issue Links
+relates to
+Change Request -  IMDEV-9005 Оптимизация 431-ой формы xbrl отчетности в Аванкоре ДУ	High - Major loss of function. Open
+Delete this link
+Structure Settings
+Structure
+Activity
+All
+Comments
+Work Log
+History
+Activity
+Transitions
+Ascending order - Click to sort in descending order
+Permalink Edit Delete  
+JUkhanaeva
+Ukhanaeva, Julia added a comment - 01/Jun/26 11:39 +0300
+Ошибка при вызове метода контекста (Записать)
+
+{ВнешняяОбработка.внЗаполнениеРеглОтчетаПоДоговорамДУ_0420431_71.МодульОбъекта(111)}
+:ОбъектНазначения.Записать();
+
+{ОбщийМодуль.ДополнительныеОтчетыИОбработки.Модуль(877)}
+:ВнешняяОбработка.ВыполнитьКоманду(ИдентификаторКоманды, ОбъектыНазначения, ПараметрыВыполненияКоманды);
+
+{ОбщийМодуль.ДополнительныеОтчетыИОбработки.Модуль(832)}
+:ВыполнитьКомандуОбработки(ВнешняяОбработкаСсылка, ОбъектыНазначения, ИдентификаторКоманды, ВнешняяОбработка, ПараметрыВыполненияКоманды);
+
+{ОбщийМодуль.ДополнительныеОтчетыИОбработки.Модуль(908)}
+:ВыполнитьОбработкуНепосредственно(
+
+{(1)}
+:ДополнительныеОтчетыИОбработки.ВыполнитьОбработкуВКонтекстеСеанса(Параметры[0],Параметры[1])
+
+{ОбщийМодуль.ОбщегоНазначения.Модуль(224)}
+:Выполнить ИмяЭкспортнойПроцедуры + "(" + ПараметрыСтрока + ")";
+
+по причине:
+Число строк табличной части объекта превышает максимально допустимое - 'Регл. отчет "(XBRL7.1) (0420431) Сведения об осуществлении проф. участником рынка ценных бумаг брокерской деятельности и деятельности по управлению ц/б" (в ред. Указания №7119).Раздел4'
+
+Reply
+Permalink Edit Delete  
+JUkhanaeva
+Ukhanaeva, Julia added a comment - 01/Jun/26 11:41 +0300
+табличная часть объекта метаданных может хранить до 99 999 строк (100 000 − 1). Это ограничение установлено платформой.
+
+а у нас получается в этом месяце больше 100 000
+
+Reply
+Permalink Edit Delete  
+JUkhanaeva
+Ukhanaeva, Julia added a comment - 01/Jun/26 11:49 +0300 - edited
+но на платформе 8.3.27 появилось свойство ДлинаНомераСтроки
+
+
+
+но при увеличении длины ошибка совместимости
+
+
+
+а у нас режим совместимости 8.3.12
+
+
+
+Reply
+Permalink Edit Delete  
+OKaraseva
+Karaseva, Olga added a comment - 01/Jun/26 11:52 +0300
+и с каждым месяцем будет только больше и больше
+
+Reply
+Permalink Edit Delete  
+JUkhanaeva
+Ukhanaeva, Julia added a comment - 01/Jun/26 13:10 +0300
+пока придумала два плана:
+1 - в базе РЕГР ДУ - рестор, поднятие совместимости, увеличение длины
+пробудем сформировать, донести до ортикона и т.д.
+2 - в прод ДУ формируем ДВА отчета, например договоры с номером до 7000 и после
+а потом несем в ортикон, объединяем и т.д.
+
+Reply
+Permalink Edit Delete  
+JUkhanaeva
+Ukhanaeva, Julia added a comment - 01/Jun/26 14:16 +0300 - edited
+база Srvr="smsk02mg138U:6541";Ref="AVC_REGR_DU";
+
+поменяла совместимость, увеличила длину, сейчас идет реструктуризация
+
+огромная рестурктуризация
+
+
+Reply
+Permalink Edit Delete  
+JUkhanaeva
+Ukhanaeva, Julia added a comment - 02/Jun/26 10:21 +0300
+реструктуризация закончена, запустила формирование отчета
+
+Reply
+Permalink Edit Delete  
+JUkhanaeva
+Ukhanaeva, Julia added a comment - 02/Jun/26 14:22 +0300
+на текущий момент тестим оба варианта 
+
+1 - в регр ду сформировали отчет, он большой, но сформировался
+сейчас несем ему в ортикон и проверяем
+
+2 - и параллельно сейчас в ду т-1 формируем два отчета - 
+разделила Договоры ду по типам,  в одном только физики, в другом все остальные 
+сейчас все сформируется и тоже понесем в ортикон и будем сравнивать 
+
+Reply
+Permalink Edit Delete  
+JUkhanaeva
+Ukhanaeva, Julia added a comment - 02/Jun/26 18:08 +0300
+в ду т-1 сформировала два отчета, сохранила файлы, дальше будем пытаться их объединить в один в ортиконе
++ повторяю это в регр ду
+
+Reply
+Permalink Edit Delete  
+OKaraseva
+Karaseva, Olga added a comment - 03/Jun/26 10:57 +0300
+Ожидаем от коллег сообщения, что можно формировать 431 форму - это обычно 7-8-ой раб день. Иногда правки вносятся и вечером 8-го р.д., 
+
+Также для подтверждения доходностей у коллег понадобится 431 форма в 4 р.д. (будут предварительные данные в прод базе).
+
+На тек. момент непонятно - как нам формировать итоговый файл 431 формы для закачки в Ортикон, для проверки и подтверждения.
+
+Reply
+Permalink Edit Delete  
+JUkhanaeva
+Ukhanaeva, Julia added a comment - 03/Jun/26 14:42 +0300
+сейчас так:
+
+в ортиконе 4 отчета
+
+
+один полноценный из регр ду
+два - половинки из регр ду (это я клиентов поделила примерно пополам)
+и один - объединенный из половинок
+
+сейчас чекнем что полноценный равен объединенному
+и тогда можем и в прод ду формировать половинками и сдавать из прод ду
+
+Reply
+Permalink Edit Delete  
+JUkhanaeva
+Ukhanaeva, Julia added a comment - 03/Jun/26 16:37 +0300 - edited
+сверяли полноценный и объединённый
+написала обработку код сравнения.t1c (чтоб не потерялось)
+
+в разделе 4 расхождение в одной строке, но это мы выяснили, просто в мо ему поменяли стратегию, а я один отчет сформировала до смены, а второй после
+
+
+ща посверяю остальные и отпишусь -
+
+во всех разделах он и 10069, 9680
+
+
+
+
+
+
+
+
+
+
+
+Reply
+Permalink Edit Delete  
+JUkhanaeva
+Ukhanaeva, Julia added a comment - 03/Jun/26 17:23 +0300
+сильно разошлись два раздела
+431 раздел 1.3 и 459
+потому что при объединении ортикон слепил два отчета вместе не сгруппировав их
+
+например вот
+первые две строки из отчета объединенного из двух
+а третья из полноценного
+
+
+
+Reply
+Permalink Edit Delete  
+OKaraseva
+Karaseva, Olga added a comment - 03/Jun/26 17:41 +0300
+в 431 форме разделы 1.3 и 459 - полностью совпадают со старой версией отчета. Это единственные разделы которые не подверглись изменениям
+
+Reply
+Permalink Edit Delete  
+JUkhanaeva
+Ukhanaeva, Julia added a comment - 03/Jun/26 19:06 +0300
+код сравнения все разделы.t1c
+
+так
+объединять хорошо раздел 1.3 тоже научилась
+и в проде создала 3 отчета - первая половинка, вторая половинка и объединенный из половинок
+
+осталось еще 459 хорошо объединить и вроде успех
+
+Reply
+Permalink Edit Delete  
+OKaraseva
+Karaseva, Olga added a comment - 04/Jun/26 9:14 +0300
+пакет с 431 формой (которая всегда делается в последний момент) включает также 409 форму и 414 форму. Как нам их теперь туда закачивать? Ранее создавался пакет 409+414+431, заводились 409 и 414 формы и потом 431.
+
+Reply
+Permalink Edit Delete  
+JUkhanaeva
+Ukhanaeva, Julia added a comment - 04/Jun/26 10:12 +0300
+сейчас будем делать чуть по другому
+
+1 - создаем итоговый пакет 409+414+431
+2 - заливаем туда 409 и 414
+3 - создаем промежуточные два пакета 431-1 (первая половина) и 431-2 (вторая половина)
+4 - объединяем пакеты из шага 3 в еще один промежуточный 431 объединенный
+5 - переливаем из пакета шага 4 данные в итоговый пакет из шага 1
+
+Reply
+Permalink Edit Delete  
+JUkhanaeva
+Ukhanaeva, Julia added a comment - 04/Jun/26 19:30 +0300
+по согласованию с Ольгой понизила до хай
+
+Reply
+Permalink Edit Delete  
+JUkhanaeva
+Ukhanaeva, Julia added a comment - 05/Jun/26 17:24 +0300
++ проконсультировала по разделу 2 и отрицательным суммам, убрали условие - выводить только положительные
+
+Reply
+ Comment
+People
+Assignee:	
+JUkhanaeva
+ Ukhanaeva, Julia
+Assign to me
+Reporter:	
+OKaraseva
+ Karaseva, Olga
+Watchers:	4 
+Start watching this issue 
+Dates
+Created:	01/Jun/26 10:38 +0300
+Updated:	05/Jun/26 17:24 +0300
+Log work
+Time Tracking
+Include structure sub-issues
+Σ Estimated:	
+Original Estimate - 0 minutes
+0m
+Σ Remaining:	
+Remaining Estimate - 0 minutes
+0m
+Σ Logged:	
+Time Spent - 1 day, 4 hours
+1d 4h
+Agile
+View on Board
+
