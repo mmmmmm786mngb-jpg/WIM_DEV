@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>IMDEV-9005 v1.20 — Две оптимизации заполнения формы 0420431</title>
+<style>
+  * { box-sizing: border-box; }
+  body { font-family: 'Segoe UI', Arial, sans-serif; line-height: 1.65; color: #2c3e50;
+         max-width: 1100px; margin: 0 auto; padding: 24px; background: #f0f4f8; }
+  h1 { color: #1a2b48; font-size: 28px; border-bottom: 3px solid #17a2b8; padding-bottom: 12px; margin-bottom: 8px; }
+  h2 { color: #17a2b8; font-size: 20px; margin-top: 36px; border-left: 4px solid #17a2b8; padding-left: 12px; }
+  h3 { color: #1a2b48; font-size: 16px; margin-top: 22px; }
+  h4 { color: #42526e; font-size: 14px; margin-top: 16px; text-transform: uppercase; letter-spacing: 0.04em; }
+  .card { background: #fff; border-radius: 8px; padding: 18px 24px; margin: 16px 0;
+          box-shadow: 0 1px 4px rgba(0,0,0,0.08); }
+  .intro { background: #eaf6f8; border-left: 4px solid #17a2b8; }
+  .theory { background: #f4f0ff; border-left: 4px solid #6554c0; }
+  .practice { background: #fff8e8; border-left: 4px solid #ff991f; }
+  .warn { background: #fff8e1; border-left: 4px solid #f0ad4e; }
+  .ok   { background: #eafaf1; border-left: 4px solid #28a745; }
+  .stat-ok { color: #28a745; font-weight: 700; }
+  .stat-bad { color: #dc3545; font-weight: 700; }
+  .stat-info { color: #17a2b8; font-weight: 700; }
+  table { width: 100%; border-collapse: collapse; margin: 12px 0; font-size: 14px; }
+  th, td { border: 1px solid #dfe3e8; padding: 8px 12px; text-align: left; vertical-align: top; }
+  th { background: #1a2b48; color: #fff; font-weight: 600; }
+  tr:nth-child(even) { background: #f7f9fb; }
+  code { background: #eef1f4; padding: 2px 6px; border-radius: 4px; font-family: Consolas, 'Courier New', monospace;
+         font-size: 13px; color: #b8005a; }
+  pre { background: #1e1e1e; color: #d4d4d4; padding: 14px 16px; border-radius: 6px; overflow-x: auto;
+        font-family: Consolas, 'Courier New', monospace; font-size: 12.5px; line-height: 1.45; margin: 10px 0; }
+  .tag { display: inline-block; background: #17a2b8; color: #fff; font-size: 11px; font-weight: 700;
+         padding: 2px 8px; border-radius: 10px; vertical-align: middle; }
+  .tag-v { background: #6554c0; }
+  .muted { color: #6b7785; font-size: 13px; }
+  ul, ol { margin: 8px 0; padding-left: 22px; }
+  li { margin: 5px 0; }
+  .opt-badge { display: inline-block; width: 32px; height: 32px; line-height: 32px; text-align: center;
+               background: #1a2b48; color: #fff; border-radius: 50%; font-weight: 700; margin-right: 10px; font-size: 15px; }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  @media (max-width: 800px) { .grid2 { grid-template-columns: 1fr; } }
+  .flow { background: #fafbfc; border: 1px dashed #c1c7d0; padding: 12px 16px; border-radius: 6px; font-size: 14px; }
+</style>
+</head>
+<body>
+
+<h1>IMDEV-9005 v1.20 — Оптимизации заполнения регламентированного отчета 0420431</h1>
+<p class="muted">
+  Обработка: <code>внЗаполнениеРеглОтчетаПоДоговорамДУ_0420431_71</code> &nbsp;|&nbsp;
+  Версия EPF: <code>1.20</code> &nbsp;|&nbsp;
+  Каталог: <code>epf_Оптимизиция/</code> &nbsp;|&nbsp;
+  База сборки: <code>Srvr="localhost";Ref="WIM_DU"</code> &nbsp;|&nbsp;
+  Маркировка: <span class="tag">IMDEV-9005 ++ / --</span>
+</p>
+
+<!-- ===== INTRO ===== -->
+<div class="card intro">
+  <h2 style="border:0;margin-top:0;padding:0;">Введение и цель работ</h2>
+  <p>Заполнение формы 0420431 (таксономия 7.1, по договорам ДУ) — длительная операция.
+  По результатам профилирования (<code>Тесты_замеры_9005.docx</code>, локальная база WIM_DU, период <b>февраль 2026</b>)
+  основное время уходило не на SQL-запросы базы ДУ, а на:</p>
+  <ul>
+    <li><b>многократные COM-вызовы расчета TWR</b> во внешней базе МО;</li>
+    <li><b>линейный поиск</b> <code>НайтиСтроки</code> в больших таблицах значений.</li>
+  </ul>
+  <p>В версии <b>1.20</b> реализованы <b>две независимые оптимизации</b>, каждая закрывает отдельный «горячий» участок профиля.
+  Бизнес-логика и итоговые данные отчета сохранены; изменен только способ получения данных.</p>
+</div>
+
+<!-- ===== PROFILING ===== -->
+<h2>Обоснование: замеры и цели оптимизации</h2>
+<div class="card warn">
+  <p>Источник профилирования: <code>Тесты_замеры_9005.docx</code> (до оптимизаций, февраль 2026).</p>
+  <table>
+    <thead>
+      <tr>
+        <th>Участок кода</th>
+        <th>Строка (прод)</th>
+        <th>Доля времени</th>
+        <th>Цель оптимизации</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><code>СформироватьВТ_ДанныеПоСтратегиям</code> — весь блок</td>
+        <td>~608</td>
+        <td class="stat-bad">63%</td>
+        <td>Главный узкий участок всего заполнения</td>
+      </tr>
+      <tr>
+        <td><code>TWR</code> в цикле «соединение МО x стратегия»</td>
+        <td>~770</td>
+        <td class="stat-bad">~50% внутри блока МО</td>
+        <td>Один batch-вызов TWR вместо N вызовов</td>
+      </tr>
+      <tr>
+        <td><code>НайтиСтроки</code> по мандату в таблице TWR</td>
+        <td>~801</td>
+        <td class="stat-bad">~10%</td>
+        <td>Индекс <code>Соответствие</code> вместо COM-сканирования</td>
+      </tr>
+      <tr>
+        <td><code>ЗаполнитьРаздел_1</code> — весь блок</td>
+        <td>~2400</td>
+        <td class="stat-info">20%</td>
+        <td>Второй по значимости блок</td>
+      </tr>
+      <tr>
+        <td>Два <code>НайтиСтроки</code> в цикле раздела 1.2</td>
+        <td>~2470–2502</td>
+        <td class="stat-bad">12% + 6%</td>
+        <td>Индекс по ключу группы + кэш обработанных групп</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- ===== OPT 1 ===== -->
+<h2><span class="opt-badge">1</span> Оптимизация обращения к базе МО (TWR + MANDATE_STRATEGY)</h2>
+
+<div class="card theory">
+  <h3>Теория</h3>
+  <h4>Проблема</h4>
+  <p>Процедура <code>СформироватьВТ_ДанныеПоСтратегиям</code> для каждого COM-соединения с МО и для <b>каждой стратегии</b>
+  вызывала <code>ВТБ_РасчетДоходностиСервер.TWR</code> с группировкой <code>"MANDATE"</code> и отбором по <code>ТекущаяСтрока.Стратегия</code>.
+  При десятках стратегий это давало десятки полных пересчетов TWR через COM.</p>
+
+  <h4>Почему нельзя просто MANDATE + Неопределено</h4>
+  <p>Режим <code>Группировка = "MANDATE"</code> при <code>Стратегия = Неопределено</code> считает доходность
+  <b>сводно по всему мандату</b> (все стратегии вместе). Это дает другие значения, чем per-strategy расчет.</p>
+
+  <h4>Решение: MANDATE_STRATEGY</h4>
+  <p>В отчете МО <code>VTBAM_MWR_TWR</code> режим <code>"MANDATE_STRATEGY"</code> считает TWR отдельно
+  для каждой пары <b>(мандат, нормализованная стратегия)</b>. Ключ результата:</p>
+  <pre>Разделитель = КодМандата + "_" + КодСтратегии</pre>
+  <p>Нормализация стратегии (подъем к родителю) совпадает с логикой запроса ДУ к МО.
+  Каждый «общий» мандат имеет ровно одну нормализованную стратегию (мандаты с несколькими стратегиями уходят в ветку <code>IS-001</code>),
+  поэтому batch-вызов эквивалентен N отдельным per-strategy вызовам.</p>
+
+  <h4>Исключение IS-001</h4>
+  <p>Для индивидуальных стратегий (<code>ИдентификаторСтратегии = "IS-001"</code>) в запросе МО поле <code>Стратегия = ""</code>.
+  Сохранен оригинальный вызов <code>TWR(..., "MANDATE")</code> со <code>Стратегия = ТекущаяСтрока.Стратегия</code> — один вызов на всю группу IS-001.</p>
+</div>
+
+<div class="card practice">
+  <h3>Практика (версия 1.20)</h3>
+  <p><b>Процедура:</b> <code>СформироватьВТ_ДанныеПоСтратегиям</code>, строки ~747–867.</p>
+
+  <div class="flow">
+    <b>Алгоритм (на каждое соединение МО):</b><br>
+    1. Запрос к МО -> <code>ДанныеПоСтратегиям</code> (добавлена колонка <code>КодМандата</code>)<br>
+    2. Предцикл: собрать <code>МассивМандатовОбщих</code> (без IS-001, с дедупликацией по <code>КодМандата</code>)<br>
+    3. Один вызов: <code>TWR(..., МассивМандатовОбщих, Неопределено, "MANDATE_STRATEGY")</code><br>
+    4. Построить <code>ИндексДоходностиОбщих</code> (локальное <code>Соответствие</code>, ключ = строка <code>Разделитель</code>)<br>
+    5. Цикл по стратегиям: общие -> индекс; IS-001 -> отдельный TWR + <code>НайтиСтроки</code> по мандату
+  </div>
+
+  <pre>// Предрасчет (один раз на соединение)
+ДанныеДоходностиОбщие = Соединение.ВТБ_РасчетДоходностиСервер.TWR(
+    НачалоПериодаTWR, ОтчетОбъект.КонецПериода,
+    Соединение.Справочники.Валюты.RUB,
+    ВознаграждениеКакПассив, ?(ТипУчета = "Плановый", Истина, Ложь),
+    МассивМандатовОбщих, Неопределено, "MANDATE_STRATEGY",
+    КоммисияКакПассив, НДФЛКакПассив);
+
+// Поиск в цикле (общие стратегии)
+КлючРазделителя  = ТекСтрока.КодМандата + "_" + ТекущаяСтрока.ИдентификаторСтратегии;
+СтрокиДоходности = ИндексДоходностиОбщих.Получить(КлючРазделителя);</pre>
+
+  <table>
+    <thead><tr><th>Было (прод)</th><th>Стало (v1.20)</th></tr></thead>
+    <tbody>
+      <tr>
+        <td>N вызовов <code>TWR</code> (по стратегии), <code>"MANDATE"</code></td>
+        <td>1 вызов <code>"MANDATE_STRATEGY"</code> + 1 для IS-001</td>
+      </tr>
+      <tr>
+        <td><code>НайтиСтроки</code> по <code>Разделитель = Мандат</code> (COM-таблица)</td>
+        <td><code>ИндексДоходностиОбщих.Получить(КодМандата_КодСтратегии)</code> — O(1)</td>
+      </tr>
+      <tr>
+        <td>Дедупликация мандатов — не требовалась (per-strategy)</td>
+        <td><code>МандатыОбщихДобавлены</code> — локальное <code>Соответствие</code> по строковому <code>КодМандата</code></td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- ===== OPT 2 ===== -->
+<h2><span class="opt-badge">2</span> Оптимизация НайтиСтроки в разделе 1.2</h2>
+
+<div class="card theory">
+  <h3>Теория</h3>
+  <h4>Проблема</h4>
+  <p>При заполнении <code>Раздел1_Подраздел1_2</code> для каждой строки агрегата выполнялись
+  <b>два линейных поиска</b> в таблице <code>СведенияПоДоговорам</code>:</p>
+  <ul>
+    <li><code>СведенияПоДоговорам.НайтиСтроки(Отбор)</code> — 10 полей отбора;</li>
+    <li><code>СведенияПоДоговорамЗагруженные.НайтиСтроки(Отбор)</code> — проверка «группа уже обработана».</li>
+  </ul>
+  <p>Сложность: <b>O(N x M)</b> — число строк отчета умножается на число договоров во временной таблице.</p>
+
+  <h4>Решение: индекс + кэш</h4>
+  <p>Классический прием «построить индекс один раз, читать много раз»:</p>
+  <ul>
+    <li><code>ИндексСтрокПоГруппе</code> — <code>Соответствие</code> «составной ключ -> Массив строк ТЗ»;</li>
+    <li><code>ОбработанныеГруппы</code> — <code>Соответствие</code> для O(1) проверки «уже считали»;</li>
+    <li>ключ формирует <code>КлючГруппыРаздел1_2()</code> из 10 полей (нормализация через <code>XMLСтрока</code>).</li>
+  </ul>
+  <p>Итоговая сложность: <b>O(N + M)</b>. Логика подсчета договоров (заключен / прекращен / на конец периода) не изменена.</p>
+</div>
+
+<div class="card practice">
+  <h3>Практика (версия 1.20)</h3>
+  <p><b>Процедура:</b> <code>ЗаполнитьРаздел_1</code>, строки ~2500–2611.</p>
+
+  <div class="flow">
+    <b>Алгоритм:</b><br>
+    1. Выгрузить <code>СведенияПоДоговорам</code> из ВТ<br>
+    2. Один проход -> <code>ИндексСтрокПоГруппе</code><br>
+    3. В цикле по <code>ДанныеРаздела_1_2</code>:<br>
+    &nbsp;&nbsp;- <code>Строки = ИндексСтрокПоГруппе.Получить(КлючГруппы)</code><br>
+    &nbsp;&nbsp;- <code>СтрокиУжеЗагружены = ОбработанныеГруппы.Получить(КлючГруппы) <> Неопределено</code><br>
+    4. Подсчет количеств договоров — без изменений
+  </div>
+
+  <pre>// Построение индекса (один проход)
+КлючГруппы = КлючГруппыРаздел1_2(
+    СтрокаДоговора.КвалификацияИнвестора,
+    СтрокаДоговора.КодПоОКАТОиОКСМ, ...);
+СтрокиГруппы = ИндексСтрокПоГруппе.Получить(КлючГруппы);
+// ... Добавить(СтрокаДоговора)
+
+// В цикле раздела 1.2
+Строки = ИндексСтрокПоГруппе.Получить(КлючГруппы);
+СтрокиУжеЗагружены = ОбработанныеГруппы.Получить(КлючГруппы) <> Неопределено;</pre>
+
+  <table>
+    <thead><tr><th>Было (прод)</th><th>Стало (v1.20)</th></tr></thead>
+    <tbody>
+      <tr>
+        <td>2 x <code>НайтиСтроки</code> на каждую строку раздела 1.2</td>
+        <td>2 x <code>Соответствие.Получить()</code> — O(1)</td>
+      </tr>
+      <tr>
+        <td>Таблица <code>СведенияПоДоговорамЗагруженные</code> как кэш</td>
+        <td><code>ОбработанныеГруппы</code> — легковесный кэш ключей</td>
+      </tr>
+      <tr>
+        <td>Сложность O(N x M)</td>
+        <td>Сложность O(N + M)</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- ===== COMPARISON ===== -->
+<h2>Сравнение двух оптимизаций</h2>
+<div class="card">
+  <div class="grid2">
+    <div>
+      <h3>Опт. 1 — МО / TWR</h3>
+      <ul>
+        <li>Узкое место: <b>63%</b> профиля</li>
+        <li>Тип: сокращение COM-вызовов</li>
+        <li>Механизм МО: <code>MANDATE_STRATEGY</code></li>
+        <li>Индекс: по строковому <code>Разделитель</code></li>
+        <li>Риск: эквивалентность при 2-уровневой иерархии стратегий</li>
+      </ul>
+    </div>
+    <div>
+      <h3>Опт. 2 — Раздел 1.2</h3>
+      <ul>
+        <li>Узкое место: <b>~18%</b> профиля</li>
+        <li>Тип: индексация в памяти ДУ</li>
+        <li>Механизм: <code>Соответствие</code> + <code>КлючГруппыРаздел1_2</code></li>
+        <li>Индекс: 10-полевой составной ключ</li>
+        <li>Риск: минимальный (логика подсчета не менялась)</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<!-- ===== TECH ===== -->
+<h2>Технология</h2>
+<div class="card">
+  <table>
+    <thead><tr><th>Компонент</th><th>Описание</th></tr></thead>
+    <tbody>
+      <tr>
+        <td>COM / внешнее соединение с МО</td>
+        <td>Расчет доходности через <code>ВТБ_РасчетДоходностиСервер.TWR</code> во внешнем сеансе МО (<code>МассивСоединений</code>)</td>
+      </tr>
+      <tr>
+        <td>Режим <code>MANDATE_STRATEGY</code></td>
+        <td>Отчет <code>VTBAM_MWR_TWR</code>, группировка по паре (мандат, стратегия); ключ <code>КодМандата_КодСтратегии</code></td>
+      </tr>
+      <tr>
+        <td>Индексация в памяти</td>
+        <td><code>Соответствие</code> + <code>Массив</code> вместо <code>ТаблицаЗначений.НайтиСтроки</code> или COM-<code>НайтиСтроки</code></td>
+      </tr>
+      <tr>
+        <td>Выбор типа Соответствие</td>
+        <td>Строковый ключ -> локальное <code>Новый Соответствие</code>; COM-ссылка -> <code>Соединение.NewObject("Соответствие")</code></td>
+      </tr>
+      <tr>
+        <td>Сборка EPF</td>
+        <td>Платформа 8.3.27, база <code>localhost/WIM_DU</code>, исходники <code>epf_Оптимизиция/</code></td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- ===== TEST PLAN ===== -->
+<h2>План проверки</h2>
+<div class="card ok">
+  <ol>
+    <li><b>Регресс:</b> сверить все табличные части документа <b>ДО</b> и <b>ПОСЛЕ</b> оптимизации.</li>
+    <li>Замерить полное время заполнения на том же периоде <b>ДО</b> и <b>ПОСЛЕ</b> оптимизации.</li>
+  </ol>
+</div>
+
+<h2>Выводы</h2>
+<div class="card ok">
+  <ol>
+    <li>Обе оптимизации выбраны по <b>измеримым долям времени</b> в профиле, а не произвольно.</li>
+    <li>Опт. 1 (TWR + <code>MANDATE_STRATEGY</code>) устраняет главный узкий участок (~63%) с сохранением per-strategy точности за счет правильного режима группировки МО.</li>
+    <li>Опт. 2 (индекс раздела 1.2) снимает еще ~18% за счет замены O(N x M) на O(N + M).</li>
+    <li>Все изменения изолированы маркерами <span class="tag">IMDEV-9005 ++ / --</span> для ревью и переноса.</li>
+    <li>Версия обработки: <span class="tag tag-v">1.20</span></li>
+  </ol>
+</div>
+
+<p class="muted" style="margin-top:32px;">
+  Документ: 07.06.2026 &nbsp;|&nbsp; Проект: IMDEV-9005 Форма 431 &nbsp;|&nbsp;
+  Исходные замеры: <code>Тесты_замеры_9005.docx</code> &nbsp;|&nbsp;
+  EPF: <code>epf_Оптимизиция/внЗаполнениеРеглОтчетаПоДоговорамДУ_0420431_71.epf</code>
+</p>
+
+</body>
+</html>
