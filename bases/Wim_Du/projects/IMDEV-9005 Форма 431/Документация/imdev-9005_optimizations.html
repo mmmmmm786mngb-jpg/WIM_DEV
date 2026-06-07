@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>IMDEV-9005 — Оптимизации заполнения формы 0420431</title>
+<style>
+  * { box-sizing: border-box; }
+  body { font-family: 'Segoe UI', Arial, sans-serif; line-height: 1.6; color: #2c3e50;
+         max-width: 1080px; margin: 0 auto; padding: 24px; background: #f5f7fa; }
+  h1 { color: #1a2b48; font-size: 26px; border-bottom: 3px solid #17a2b8; padding-bottom: 12px; }
+  h2 { color: #17a2b8; font-size: 20px; margin-top: 32px; border-left: 4px solid #17a2b8; padding-left: 12px; }
+  h3 { color: #1a2b48; font-size: 16px; margin-top: 22px; }
+  .card { background: #fff; border-radius: 8px; padding: 18px 24px; margin: 16px 0;
+          box-shadow: 0 1px 4px rgba(0,0,0,0.08); }
+  .intro { background: #eaf6f8; border-left: 4px solid #17a2b8; }
+  .warn { background: #fff8e1; border-left: 4px solid #f0ad4e; }
+  .ok   { background: #eafaf1; border-left: 4px solid #28a745; }
+  .stat-ok { color: #28a745; font-weight: 700; }
+  .stat-bad { color: #dc3545; font-weight: 700; }
+  .stat-info { color: #17a2b8; font-weight: 700; }
+  table { width: 100%; border-collapse: collapse; margin: 12px 0; font-size: 14px; }
+  th, td { border: 1px solid #dfe3e8; padding: 8px 10px; text-align: left; vertical-align: top; }
+  th { background: #1a2b48; color: #fff; font-weight: 600; }
+  tr:nth-child(even) { background: #f7f9fb; }
+  code { background: #eef1f4; padding: 2px 6px; border-radius: 4px; font-family: Consolas, 'Courier New', monospace;
+         font-size: 13px; color: #b8005a; }
+  pre { background: #1e1e1e; color: #d4d4d4; padding: 14px 16px; border-radius: 6px; overflow-x: auto;
+        font-family: Consolas, 'Courier New', monospace; font-size: 12.5px; line-height: 1.45; }
+  .tag { display: inline-block; background: #17a2b8; color: #fff; font-size: 11px; font-weight: 700;
+         padding: 2px 8px; border-radius: 10px; vertical-align: middle; }
+  .muted { color: #6b7785; font-size: 13px; }
+  ul { margin: 8px 0; } li { margin: 4px 0; }
+  .opt-num { display: inline-block; width: 28px; height: 28px; line-height: 28px; text-align: center;
+             background: #1a2b48; color: #fff; border-radius: 50%; font-weight: 700; margin-right: 8px; }
+</style>
+</head>
+<body>
+
+<h1>IMDEV-9005 — Оптимизации заполнения регламентного отчета 0420431</h1>
+<p class="muted">
+  Обработка: <code>внЗаполнениеРеглОтчетаПоДоговорамДУ_0420431_71</code> &nbsp;|&nbsp;
+  Версия: <code>1.10</code> &nbsp;|&nbsp;
+  База: <code>Srvr="localhost";Ref="WIM_DU"</code> &nbsp;|&nbsp;
+  Маркировка изменений: <span class="tag">IMDEV-9005 ++ / --</span>
+</p>
+
+<div class="card intro">
+  <h2 style="border:0;margin-top:0;padding:0;">Введение</h2>
+  <p>Заполнение формы 0420431 (таксономия 7.1, по договорам ДУ) — длительная операция.
+  По результатам профилирования (файл <code>Тесты_замеры_9005.docx</code>) основное время уходило не на SQL-запросы базы ДУ,
+  а на <b>многократные обращения к базе МО</b> и на <b>линейный поиск в таблицах значений</b> (<code>НайтиСтроки</code>).</p>
+  <p>Реализованы <b>три независимые оптимизации</b>, каждая закрывает отдельный «горячий» участок профиля.</p>
+</div>
+
+<h2>Обоснование выбора (профилирование)</h2>
+<div class="card warn">
+  <p>Источник: <code>bases/Wim_Du/projects/IMDEV-9005 Форма 431/Тесты_замеры_9005.docx</code> — замеры на локальной базе, период <b>февраль 2026</b>.</p>
+  <table>
+    <thead>
+      <tr>
+        <th>Участок кода</th>
+        <th>Строка (до оптимизации)</th>
+        <th>Доля времени</th>
+        <th>Вывод</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><code>СформироватьВТ_ДанныеПоСтратегиям</code></td>
+        <td>257</td>
+        <td class="stat-bad">63%</td>
+        <td>Главный узкий участок всего заполнения</td>
+      </tr>
+      <tr>
+        <td>TWR в цикле по каждому соединению МО и каждой стратегии</td>
+        <td>~801</td>
+        <td class="stat-bad">~50% внутри блока МО</td>
+        <td>Нужен один вызов TWR на все мандаты</td>
+      </tr>
+      <tr>
+        <td><code>НайтиСтроки</code> по мандату в таблице доходности TWR</td>
+        <td>~832</td>
+        <td class="stat-bad">~10%</td>
+        <td>Нужен индекс <code>Соответствие</code> по мандату</td>
+      </tr>
+      <tr>
+        <td><code>ЗаполнитьРаздел_1</code></td>
+        <td>260</td>
+        <td class="stat-info">20%</td>
+        <td>Второй по значимости блок</td>
+      </tr>
+      <tr>
+        <td>Два <code>НайтиСтроки</code> в цикле раздела 1.2</td>
+        <td>~2501–2502</td>
+        <td class="stat-bad">12% + 6%</td>
+        <td>Нужен индекс по ключу группы + кэш обработанных групп</td>
+      </tr>
+      <tr>
+        <td>Разделы 2–7 и реестр ЦБ</td>
+        <td>последовательно</td>
+        <td>остаток после п.1–2</td>
+        <td>Кандидат на параллельный расчет по пачкам договоров</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<h2>Три вида оптимизаций</h2>
+
+<div class="card">
+  <h3><span class="opt-num">1</span> Оптимизировано обращение к базе МО</h3>
+  <p><b>Было:</b> для каждого внешнего соединения с МО и для каждой стратегии отдельный вызов
+  <code>ВТБ_РасчетДоходностиСервер.TWR</code>; затем в цикле — <code>ДанныеДоходности.НайтиСтроки(Отбор)</code> по мандату.</p>
+  <p><b>Стало:</b></p>
+  <ul>
+    <li>Один раз собирается <code>МассивВсехМандатов</code> по всем строкам <code>ДанныеПоСтратегиям</code>.</li>
+    <li>Один вызов <code>TWR(..., МассивВсехМандатов, ..., "MANDATE", ...)</code> на соединение.</li>
+    <li>Индекс <code>ДоходностьПоМандатам</code> (<code>Соответствие</code> мандат -> массив строк) вместо <code>НайтиСтроки</code> в цикле.</li>
+  </ul>
+  <p><b>Маркеры в коде:</b> строки ~768–870, комментарии <span class="tag">IMDEV-9005</span>.</p>
+  <pre>// IMDEV-9005 ++ один вызов TWR на все мандаты
+// IMDEV-9005 ++ индекс строк TWR по мандату (Соответствие вместо НайтиСтроки)
+СтрокиДоходности = ДоходностьПоМандатам.Получить(ТекСтрока.Мандат);</pre>
+</div>
+
+<div class="card">
+  <h3><span class="opt-num">2</span> Оптимизированы <code>НайтиСтроки</code> для раздела 1.2</h3>
+  <p><b>Было:</b> для каждой строки агрегата раздела 1.2 — два линейных поиска в таблице значений
+  (<code>СведенияПоДоговорам.НайтиСтроки</code> и поиск в кэше <code>СведенияПоДоговорамЗагруженные</code>).</p>
+  <p><b>Стало:</b></p>
+  <ul>
+    <li>Перед циклом — один проход по <code>СведенияПоДоговорам</code>, построение <code>ИндексСтрокПоГруппе</code> (<code>Соответствие</code>).</li>
+    <li>Ключ группы — функция <code>КлючГруппыРаздел1_2()</code> (10 полей отбора, нормализация через <code>XMLСтрока</code>).</li>
+    <li>Кэш обработанных групп — <code>ОбработанныеГруппы</code> (<code>Соответствие</code>) вместо второй таблицы с <code>НайтиСтроки</code>.</li>
+  </ul>
+  <p><b>Сложность:</b> O(N x M) -> O(N + M).</p>
+  <p><b>Маркеры в коде:</b> строки ~2499–2677.</p>
+</div>
+
+<div class="card">
+  <h3><span class="opt-num">3</span> Параллельное вычисление разделов 2–7 и реестра ЦБ</h3>
+  <p><b>Было:</b> после раздела 1 все разделы 2–7 и реестр ЦБ считаются последовательно в одном сеансе.</p>
+  <p><b>Стало:</b></p>
+  <ul>
+    <li>Раздел 1 — всегда в основном сеансе (агрегаты по всем договорам).</li>
+    <li>Договоры делятся на N пачек; каждая пачка — отдельное фоновое задание БСП
+        (<code>РассчитатьПачкуРазделов9005</code>).</li>
+    <li>Воркер: свой <code>МВТ</code> с фильтром пачки, расчет разделов 2–7 + реестр, результат через <code>ВременноеХранилище</code>.</li>
+    <li>Основной сеанс склеивает табличные части (<code>СклеитьРезультатыПачек9005</code>).</li>
+  </ul>
+  <p>Число потоков: <code>ПолучитьКоличествоПотоковЗаполнения9005()</code> (константа в модуле, по умолчанию 1 = последовательный режим).</p>
+  <p>Подробнее: <code>IMDEV-9005_parallel_zapolnenie.html</code> в корне проекта.</p>
+</div>
+
+<h2>Результаты замеров</h2>
+<div class="card">
+  <p class="muted">Данные из <code>Тесты_замеры_9005.docx</code>. Окружение: локальная база WIM_DU, доступ к МO.</p>
+  <table>
+    <thead>
+      <tr>
+        <th>Сценарий</th>
+        <th>Период отчета</th>
+        <th>Старт</th>
+        <th>Финиш</th>
+        <th>Длительность</th>
+        <th>Комментарий</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>До оптимизаций (профилирование)</td>
+        <td>Февраль 2026</td>
+        <td>16:53</td>
+        <td>17:06</td>
+        <td>~13 мин</td>
+        <td>63% — МO/TWR, 18% — НайтиСтроки в разделе 1.2</td>
+      </tr>
+      <tr>
+        <td>После опт. 1–2, без параллели</td>
+        <td>Февраль 2026</td>
+        <td>19:15</td>
+        <td>19:25</td>
+        <td class="stat-ok">~10 мин</td>
+        <td>Узкое место сместилось на получение данных</td>
+      </tr>
+      <tr>
+        <td>После опт. 1–2, без параллели</td>
+        <td>Май 2026</td>
+        <td>20:01:48</td>
+        <td>20:24:09</td>
+        <td class="stat-ok">~22 мин</td>
+        <td>Более тяжелый период; время в основном на загрузку данных</td>
+      </tr>
+      <tr>
+        <td>После опт. 1–2 + 5 потоков</td>
+        <td>Февраль 2026</td>
+        <td>21:25:51</td>
+        <td>21:34:05</td>
+        <td class="stat-ok">~8 мин</td>
+        <td>Параллельный режим разделов 2–7</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<h2>Технология (кратко)</h2>
+<div class="card">
+  <ul>
+    <li><b>COM / внешнее соединение с МO:</b> расчет доходности через <code>ВТБ_РасчетДоходностиСервер.TWR</code> во внешнем сеансе МO.</li>
+    <li><b>Индексация в памяти:</b> <code>Соответствие</code> + <code>Массив</code> вместо <code>ТаблицаЗначений.НайтиСтроки</code>.</li>
+    <li><b>Фоновые задания БСП:</b> <code>ФоновыеЗадания.Выполнить</code> + команда <code>РассчитатьПачкуРазделов9005</code>.</li>
+    <li><b>Сборка EPF:</b> платформа 8.3.27, база <code>localhost/WIM_DU</code>, исходники в <code>Обраб/</code>.</li>
+  </ul>
+</div>
+
+<h2>Выводы</h2>
+<div class="card ok">
+  <ol>
+    <li>Три оптимизации выбраны по <b>измеримым долям времени</b> в профиле, а не «наугад».</li>
+    <li>Оптимизация МO (TWR + индекс) снимает ~60% нагрузки исходного профиля.</li>
+    <li>Индекс для раздела 1.2 снимает еще ~18% (два <code>НайтиСтроки</code> на каждую строку отчета).</li>
+    <li>Параллельный режим ускоряет оставшуюся часть (разделы 2–7) пропорционально числу потоков, при наличии ресурсов сервера и лицензий.</li>
+    <li>Все изменения изолированы маркерами <span class="tag">IMDEV-9005 ++ / --</span> для простого ревью и переноса.</li>
+  </ol>
+</div>
+
+<p class="muted" style="margin-top:32px;">
+  Документ сгенерирован: 07.06.2026 &nbsp;|&nbsp;
+  Проект: IMDEV-9005 Форма 431 &nbsp;|&nbsp;
+  Исходные замеры: <code>Тесты_замеры_9005.docx</code>
+</p>
+
+</body>
+</html>
