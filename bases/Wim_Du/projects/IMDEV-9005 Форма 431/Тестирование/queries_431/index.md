@@ -33,5 +33,5 @@ Filled by external processor `внЗаполнениеРеглОтчетаПоД
 | `08_razdel6.txt` | `Раздел6` |
 | `09_razdel7.txt` | `Раздел7` |
 | `10_reestr_cb.txt` | `РеестрЦенныхБумаг` |
-| `00_row_counts_all_sections.txt` | counts for all sections |
+| `00_row_counts_all_sections.txt` | counts for all sections (incl. Раздел10) |
 | `00_find_document.txt` | find document ref |
