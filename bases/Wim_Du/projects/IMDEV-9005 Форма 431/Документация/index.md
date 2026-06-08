@@ -15,3 +15,4 @@
 | [jira/jira_comment_opt1_mo_query.txt](jira/jira_comment_opt1_mo_query.txt) | Опт. 1: база МO, TWR |
 | [jira/jira_comment_opt2_section12_findrows.txt](jira/jira_comment_opt2_section12_findrows.txt) | Опт. 2: НайтиСтроки раздел 1.2 |
 | [jira/jira_comment_opt3_parallel_sections.txt](jira/jira_comment_opt3_parallel_sections.txt) | Опт. 3: параллель разделов 2–7 |
+| [jira/jira_comment_compare_0420431.txt](jira/jira_comment_compare_0420431.txt) | Обработка {{внСравнение0420431}} — сравнение двух документов 0420431 |
