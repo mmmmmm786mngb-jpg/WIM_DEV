@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>IMDEV-9005 — Отчет о замерах заполнения 0420431 (май 2026)</title>
+<style>
+  * { box-sizing: border-box; }
+  body { font-family: 'Segoe UI', Arial, sans-serif; line-height: 1.65; color: #2c3e50;
+         max-width: 1100px; margin: 0 auto; padding: 24px; background: #f0f4f8; }
+  h1 { color: #1a2b48; font-size: 28px; border-bottom: 3px solid #17a2b8; padding-bottom: 12px; margin-bottom: 8px; }
+  h2 { color: #17a2b8; font-size: 20px; margin-top: 36px; border-left: 4px solid #17a2b8; padding-left: 12px; }
+  h3 { color: #1a2b48; font-size: 16px; margin-top: 22px; }
+  .card { background: #fff; border-radius: 8px; padding: 18px 24px; margin: 16px 0;
+          box-shadow: 0 1px 4px rgba(0,0,0,0.08); }
+  .intro { background: #eaf6f8; border-left: 4px solid #17a2b8; }
+  .theory { background: #f4f0ff; border-left: 4px solid #6554c0; }
+  .warn { background: #fff8e1; border-left: 4px solid #f0ad4e; }
+  .ok { background: #eafaf1; border-left: 4px solid #28a745; }
+  .bug { background: #fff3cd; border-left: 4px solid #ffc107; }
+  .stat-ok { color: #28a745; font-weight: 700; }
+  .stat-bad { color: #dc3545; font-weight: 700; }
+  .stat-info { color: #17a2b8; font-weight: 700; }
+  .stat-warn { color: #f0ad4e; font-weight: 700; }
+  table { width: 100%; border-collapse: collapse; margin: 12px 0; font-size: 14px; }
+  th, td { border: 1px solid #dfe3e8; padding: 8px 12px; text-align: left; vertical-align: middle; }
+  th { background: #1a2b48; color: #fff; font-weight: 600; }
+  tr:nth-child(even) { background: #f7f9fb; }
+  td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+  code { background: #eef1f4; padding: 2px 6px; border-radius: 4px; font-family: Consolas, 'Courier New', monospace;
+         font-size: 13px; color: #b8005a; }
+  pre { background: #1e1e1e; color: #d4d4d4; padding: 14px 16px; border-radius: 6px; overflow-x: auto;
+        font-family: Consolas, 'Courier New', monospace; font-size: 12.5px; line-height: 1.45; margin: 10px 0; }
+  .tag { display: inline-block; background: #17a2b8; color: #fff; font-size: 11px; font-weight: 700;
+         padding: 2px 8px; border-radius: 10px; vertical-align: middle; }
+  .tag-warn { background: #f0ad4e; }
+  .tag-bad { background: #dc3545; }
+  .muted { color: #6b7785; font-size: 13px; }
+  ul, ol { margin: 8px 0; padding-left: 22px; }
+  li { margin: 5px 0; }
+  .grid3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
+  @media (max-width: 800px) { .grid3 { grid-template-columns: 1fr; } }
+  .kpi { text-align: center; padding: 16px; }
+  .kpi .val { font-size: 32px; font-weight: 700; color: #1a2b48; }
+  .kpi .lbl { font-size: 13px; color: #6b7785; margin-top: 4px; }
+  .bar-wrap { background: #eef1f4; border-radius: 4px; height: 18px; min-width: 80px; }
+  .bar { height: 100%; border-radius: 4px; }
+  .bar-hot { background: #dc3545; }
+  .bar-warm { background: #f0ad4e; }
+  .bar-cool { background: #17a2b8; }
+  .bar-ok { background: #28a745; }
+  .row-hot td:first-child { font-weight: 600; }
+  .row-hot { background: #fff5f5 !important; }
+  .row-warm { background: #fffbf0 !important; }
+</style>
+</head>
+<body>
+
+<h1>IMDEV-9005 — Отчет о замерах заполнения формы 0420431</h1>
+<p class="muted">
+  Обработка: <code>внЗаполнениеРеглОтчетаПоДоговорамДУ_0420431_71 - Замеры</code> &nbsp;|&nbsp;
+  Среда: <b>т-1</b> &nbsp;|&nbsp;
+  База: <code>Srvr="SMSK02MG138U";Ref="AVC_PP_DU"</code> &nbsp;|&nbsp;
+  Дата замера: <b>09.06.2026 19:42:52</b> &nbsp;|&nbsp;
+  Период отчета: <b>01.05.2026 - 31.05.2026</b>
+</p>
+
+<!-- ===== 1. ВВЕДЕНИЕ ===== -->
+<div class="card intro">
+  <h2 style="border:0;margin-top:0;padding:0;">Введение</h2>
+  <p>Отчет фиксирует результаты <b>профилирования</b> заполнения регламентированного отчета
+  <code>0420431</code> (таксономия XBRL 7.1, по договорам ДУ) на <b>оригинальной</b> обработке
+  с встроенными замерами времени. Цель — определить узкие места перед внедрением оптимизаций v1.20.</p>
+  <p><b>Объект тестирования:</b> документ
+  <code>РО_XBRL7_1_0420431_СведенияОДеятельностиПоУправлениюЦБ_7119У</code>,
+  ссылка <code>000000016 от 09.06.2026 17:48:48</code>.</p>
+</div>
+
+<!-- ===== 2. ТЕХНОЛОГИЯ ===== -->
+<h2>Технология замеров</h2>
+<div class="card theory">
+  <h3>Механизм профилирования в обработке</h3>
+  <p>Замеры реализованы в модуле объекта внешней обработки (версия «Замеры»):</p>
+  <ul>
+    <li><b>Метка времени:</b> <code>ТекущаяУниверсальнаяДатаВМиллисекундах()</code> — пары «начало/конец» на каждом этапе.</li>
+    <li><b>Накопление:</b> таблица значений <code>ТаблицаЗамеров</code> (колонки: Этап, ДлительностьМс, ДлительностьСек).</li>
+    <li><b>Вывод:</b> <code>ЗаписьЖурналаРегистрации("IMDEV-9005.Замеры", ...)</code> — событие журнала с полным текстом отчета.</li>
+    <li><b>Точек замера:</b> 17 (16 этапов + строка ИТОГО).</li>
+  </ul>
+
+  <h3>Параметры подключения</h3>
+  <table>
+    <tr><th>Параметр</th><th>Значение</th></tr>
+    <tr><td>Среда</td><td><b>т-1</b></td></tr>
+    <tr><td>Строка подключения</td><td><code>Srvr="SMSK02MG138U";Ref="AVC_PP_DU";</code></td></tr>
+    <tr><td>Базы МО</td><td>из настроек обработки (<code>ВнешниеБазыМО</code>)</td></tr>
+  </table>
+
+  <h3>Иерархия замеров</h3>
+  <pre>ВыполнитьКоманду
+  |-- ПодключениеБазМО
+  |-- ЗаполнитьОтчет
+  |-- ЗаполнитьРазделыОтчета (итого)
+  |     |-- СформироватьМенеджерВременныхТаблиц
+  |     |-- СформироватьВТ_ДанныеПоСтратегиям   &lt;-- 85.6%
+  |     |-- ДополнитьВременныеТаблицы
+  |     |-- ДополнитьВТ_ВводыВыводы
+  |     |-- ЗаполнитьРаздел_1                  &lt;-- 10.7%
+  |     |-- ЗаполнитьРаздел_2_3
+  |     |-- ЗаполнитьРаздел_4
+  |     |-- ЗаполнитьРаздел_5
+  |     |-- ЗаполнитьРаздел_6
+  |     |-- ЗаполнитьРаздел_7
+  |     |-- ЗаполнитьРазделРеестрЦБ
+  |-- ДозаполнениеПустыхЗначений
+  |-- ЗаписатьОтчет
+  +-- ИТОГО</pre>
+</div>
+
+<!-- ===== 3. СТАТИСТИКА ===== -->
+<h2>Сводная статистика</h2>
+<div class="grid3">
+  <div class="card kpi">
+    <div class="val stat-bad">1 ч 54 мин</div>
+    <div class="lbl">Общее время (ИТОГО)</div>
+    <div class="muted">6 837,4 сек</div>
+  </div>
+  <div class="card kpi">
+    <div class="val stat-bad">85,6%</div>
+    <div class="lbl">Доля TWR / данные МО</div>
+    <div class="muted">5 851 сек</div>
+  </div>
+  <div class="card kpi">
+    <div class="val stat-warn">99 998</div>
+    <div class="lbl">Строк в Раздел4</div>
+    <div class="muted">заполнено строк</div>
+  </div>
+</div>
+
+<div class="card">
+  <h3>Распределение времени (топ-5)</h3>
+  <table>
+    <thead>
+      <tr>
+        <th>Этап</th>
+        <th class="num">Сек</th>
+        <th class="num">%</th>
+        <th style="width:35%">Доля</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr class="row-hot">
+        <td>СформироватьВТ_ДанныеПоСтратегиям</td>
+        <td class="num">5 850,8</td>
+        <td class="num stat-bad">85,6</td>
+        <td><div class="bar-wrap"><div class="bar bar-hot" style="width:85.6%"></div></div></td>
+      </tr>
+      <tr class="row-warm">
+        <td>ЗаполнитьРаздел_1</td>
+        <td class="num">734,9</td>
+        <td class="num stat-warn">10,7</td>
+        <td><div class="bar-wrap"><div class="bar bar-warm" style="width:10.7%"></div></div></td>
+      </tr>
+      <tr>
+        <td>ДополнитьВременныеТаблицы</td>
+        <td class="num">47,3</td>
+        <td class="num">0,7</td>
+        <td><div class="bar-wrap"><div class="bar bar-cool" style="width:0.7%"></div></div></td>
+      </tr>
+      <tr>
+        <td>ЗаполнитьРаздел_4</td>
+        <td class="num">55,6</td>
+        <td class="num">0,8</td>
+        <td><div class="bar-wrap"><div class="bar bar-cool" style="width:0.8%"></div></div></td>
+      </tr>
+      <tr>
+        <td>ЗаполнитьРаздел_5</td>
+        <td class="num">45,5</td>
+        <td class="num">0,7</td>
+        <td><div class="bar-wrap"><div class="bar bar-cool" style="width:0.7%"></div></div></td>
+      </tr>
+    </tbody>
+  </table>
+  <p class="muted">Остальные 11 этапов суммарно дают менее 3% времени.</p>
+</div>
+
+<!-- ===== 4. ДЕТАЛИ ЗАМЕРОВ ===== -->
+<h2>Детали замеров</h2>
+<div class="card">
+  <table>
+    <thead>
+      <tr>
+        <th>Этап</th>
+        <th class="num">Сек</th>
+        <th class="num">%</th>
+        <th class="num">мс</th>
+        <th>Оценка</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>ПодключениеБазМО</td>
+        <td class="num">6,093</td>
+        <td class="num">0,1</td>
+        <td class="num">6 093</td>
+        <td class="stat-ok">OK</td>
+      </tr>
+      <tr>
+        <td>ЗаполнитьОтчет</td>
+        <td class="num">0,206</td>
+        <td class="num">&lt;0,1</td>
+        <td class="num">206</td>
+        <td class="stat-ok">OK</td>
+      </tr>
+      <tr>
+        <td>СформироватьМенеджерВременныхТаблиц</td>
+        <td class="num">0,654</td>
+        <td class="num">&lt;0,1</td>
+        <td class="num">654</td>
+        <td class="stat-ok">OK</td>
+      </tr>
+      <tr class="row-hot">
+        <td><b>СформироватьВТ_ДанныеПоСтратегиям</b></td>
+        <td class="num"><b>5 850,775</b></td>
+        <td class="num stat-bad"><b>85,6</b></td>
+        <td class="num">5 850 775</td>
+        <td class="stat-bad">УЗКОЕ МЕСТО</td>
+      </tr>
+      <tr>
+        <td>ДополнитьВременныеТаблицы</td>
+        <td class="num">47,269</td>
+        <td class="num">0,7</td>
+        <td class="num">47 269</td>
+        <td class="stat-info">средне</td>
+      </tr>
+      <tr>
+        <td>ДополнитьВТ_ВводыВыводы</td>
+        <td class="num">4,590</td>
+        <td class="num">0,1</td>
+        <td class="num">4 590</td>
+        <td class="stat-ok">OK</td>
+      </tr>
+      <tr class="row-warm">
+        <td><b>ЗаполнитьРаздел_1</b></td>
+        <td class="num"><b>734,934</b></td>
+        <td class="num stat-warn"><b>10,7</b></td>
+        <td class="num">734 934</td>
+        <td class="stat-warn">2-е узкое место</td>
+      </tr>
+      <tr>
+        <td>ЗаполнитьРаздел_2_3</td>
+        <td class="num">3,309</td>
+        <td class="num">&lt;0,1</td>
+        <td class="num">3 309</td>
+        <td class="stat-ok">OK</td>
+      </tr>
+      <tr>
+        <td>ЗаполнитьРаздел_4</td>
+        <td class="num">55,598</td>
+        <td class="num">0,8</td>
+        <td class="num">55 598</td>
+        <td class="stat-ok">OK (56 сек / 99 998 строк)</td>
+      </tr>
+      <tr>
+        <td>ЗаполнитьРаздел_5</td>
+        <td class="num">45,498</td>
+        <td class="num">0,7</td>
+        <td class="num">45 498</td>
+        <td class="stat-ok">OK</td>
+      </tr>
+      <tr>
+        <td>ЗаполнитьРаздел_6</td>
+        <td class="num">0,215</td>
+        <td class="num">&lt;0,1</td>
+        <td class="num">215</td>
+        <td class="stat-ok">OK</td>
+      </tr>
+      <tr>
+        <td>ЗаполнитьРаздел_7</td>
+        <td class="num">14,397</td>
+        <td class="num">0,2</td>
+        <td class="num">14 397</td>
+        <td class="stat-ok">OK</td>
+      </tr>
+      <tr>
+        <td>ЗаполнитьРазделРеестрЦБ</td>
+        <td class="num">19,177</td>
+        <td class="num">0,3</td>
+        <td class="num">19 177</td>
+        <td class="stat-ok">OK</td>
+      </tr>
+      <tr>
+        <td>ЗаполнитьРазделыОтчета (итого)</td>
+        <td class="num">6 778,292</td>
+        <td class="num">99,1</td>
+        <td class="num">6 778 292</td>
+        <td class="stat-info">обертка разделов</td>
+      </tr>
+      <tr>
+        <td>ДозаполнениеПустыхЗначений</td>
+        <td class="num">28,684</td>
+        <td class="num">0,4</td>
+        <td class="num">28 684</td>
+        <td class="stat-ok">OK</td>
+      </tr>
+      <tr>
+        <td>ЗаписатьОтчет</td>
+        <td class="num">24,092</td>
+        <td class="num">0,4</td>
+        <td class="num">24 092</td>
+        <td class="stat-ok">OK</td>
+      </tr>
+      <tr style="background:#1a2b48;color:#fff;font-weight:700;">
+        <td>ИТОГО</td>
+        <td class="num">6 837,393</td>
+        <td class="num">100,0</td>
+        <td class="num">6 837 393</td>
+        <td>1 ч 54 мин</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<h3>Исходный лог из журнала регистрации</h3>
+<div class="card">
+<pre>IMDEV-9005 - Zamery zapolneniya otcheta 0420431
+Data: 09.06.2026 19:42:52
+Otchyot: Регл. отчет "(XBRL7.1) (0420431) ..." 000000016 от 09.06.2026 17:48:48
+Period: 01.05.2026 - 31.05.2026
+Razdel4 strok: 99998
+
+Etap                                    Sek       %        ms
+--------------------------------------------------------------------------------
+ПодключениеБазМО                        6,093     0,1      6093
+ЗаполнитьОтчет                          0,206                206
+СформироватьМенеджерВременныхТаблиц     0,654                654
+СформироватьВТ_ДанныеПоСтратегиям       5850,775  85,6     5850775
+ДополнитьВременныеТаблицы               47,269    0,7      47269
+ДополнитьВТ_ВводыВыводы                 4,590     0,1      4590
+ЗаполнитьРаздел_1                       734,934   10,7     734934
+ЗаполнитьРаздел_2_3                     3,309                3309
+ЗаполнитьРаздел_4                       55,598    0,8      55598
+ЗаполнитьРаздел_5                       45,498    0,7      45498
+ЗаполнитьРаздел_6                       0,215                215
+ЗаполнитьРаздел_7                       14,397    0,2      14397
+ЗаполнитьРазделРеестрЦБ                 19,177    0,3      19177
+ЗаполнитьРазделыОтчета (итого)          6778,292  99,1     6778292
+ДозаполнениеПустыхЗначений              28,684    0,4      28684
+ЗаписатьОтчет                           24,092    0,4      24092
+ИТОГО                                   6837,393  100,0    6837393</pre>
+</div>
+
+<!-- ===== 5. ВОЗМОЖНОСТИ ОПТИМИЗАЦИИ ===== -->
+<h2>Возможности оптимизации</h2>
+<div class="card practice" style="background:#fff8e8;border-left:4px solid #ff991f;">
+  <table>
+    <thead>
+      <tr>
+        <th>Приоритет</th>
+        <th>Оптимизация</th>
+        <th>Целевой этап</th>
+        <th class="num">Текущее время</th>
+        <th class="num">Ожидаемый выигрыш</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><span class="tag tag-bad">1</span></td>
+        <td>Batch-вызов TWR вместо N COM-вызовов (v1.20 opt.1)</td>
+        <td><code>СформироватьВТ_ДанныеПоСтратегиям</code></td>
+        <td class="num">5 851 сек</td>
+        <td class="num stat-ok">~40-50 мин</td>
+      </tr>
+      <tr>
+        <td><span class="tag tag-warn">2</span></td>
+        <td>Индекс вместо <code>НайтиСтроки</code> (v1.20 opt.2)</td>
+        <td><code>ЗаполнитьРаздел_1</code></td>
+        <td class="num">735 сек</td>
+        <td class="num stat-ok">~5-10 мин</td>
+      </tr>
+      <tr>
+        <td><span class="tag">3</span></td>
+        <td>Параллельное заполнение разделов 2-7 (opt.3)</td>
+        <td>разделы 2-7</td>
+        <td class="num">~139 сек</td>
+        <td class="num">~1-2 мин</td>
+      </tr>
+    </tbody>
+  </table>
+  <p class="muted">Подробнее: <code>imdev-9005_optimizations_v120.html</code></p>
+</div>
+
+<!-- ===== 6. ВЫВОДЫ ===== -->
+<h2>Выводы</h2>
+<div class="card ok">
+  <ol>
+    <li><b>96,3% времени</b> (5 851 + 735 сек) сосредоточено в двух этапах: данные МО/TWR и раздел 1.</li>
+    <li>Оптимизация <b>v1.20</b> нацелена именно на эти 96% — замер подтверждает приоритеты из профиля февраля 2026.</li>
+    <li>Заполнение <b>Раздел4</b> (56 сек на 99 998 строк) не является узким местом по времени.</li>
+    <li>Подключение МО (6 сек), запись (24 сек) и разделы 2-7 (суммарно ~139 сек) — не требуют срочной оптимизации.</li>
+    <li>После внедрения v1.20 рекомендуется <b>повторить замер</b> на том же периоде (май 2026) для сравнения ДО/ПОСЛЕ.</li>
+  </ol>
+</div>
+
+<p class="muted" style="margin-top:32px;text-align:center;">
+  IMDEV-9005 | Отчет о замерах | Сгенерирован 09.06.2026 | т-1 AVC_PP_DU
+</p>
+
+</body>
+</html>

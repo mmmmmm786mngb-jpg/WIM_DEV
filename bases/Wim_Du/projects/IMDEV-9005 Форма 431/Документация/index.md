@@ -2,6 +2,7 @@
 
 | Файл | Описание |
 |------|----------|
+| [imdev-9005_measurements_may2026.html](imdev-9005_measurements_may2026.html) | **Замеры** оригинальной обработки, среда т-1 (`AVC_PP_DU`), период май 2026 (1 ч 54 мин) |
 | [imdev-9005_optimizations_v120.html](imdev-9005_optimizations_v120.html) | **v1.20** — две оптимизации (TWR/MANDATE_STRATEGY + раздел 1.2), теория и практика |
 | [imdev-9005_optimizations.html](imdev-9005_optimizations.html) | Краткая документация по трем оптимизациям и обоснованию замерами |
 | [../IMDEV-9005_parallel_zapolnenie.html](../IMDEV-9005_parallel_zapolnenie.html) | Подробно: параллельное заполнение разделов 2–7 |
