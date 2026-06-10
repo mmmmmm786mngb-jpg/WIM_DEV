@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>IMDEV-9005 — Итоговый отчет о разработке (0420431)</title>
+<style>
+  * { box-sizing: border-box; }
+  body { font-family: 'Segoe UI', Arial, sans-serif; line-height: 1.65; color: #2c3e50;
+         max-width: 1100px; margin: 0 auto; padding: 24px; background: #f0f4f8; }
+  h1 { color: #1a2b48; font-size: 28px; border-bottom: 3px solid #17a2b8; padding-bottom: 12px; margin-bottom: 8px; }
+  h2 { color: #17a2b8; font-size: 20px; margin-top: 36px; border-left: 4px solid #17a2b8; padding-left: 12px; }
+  h3 { color: #1a2b48; font-size: 16px; margin-top: 22px; }
+  .card { background: #fff; border-radius: 8px; padding: 18px 24px; margin: 16px 0;
+          box-shadow: 0 1px 4px rgba(0,0,0,0.08); }
+  .intro { background: #eaf6f8; border-left: 4px solid #17a2b8; }
+  .theory { background: #f4f0ff; border-left: 4px solid #6554c0; }
+  .warn { background: #fff8e1; border-left: 4px solid #f0ad4e; }
+  .ok { background: #eafaf1; border-left: 4px solid #28a745; }
+  .bug { background: #fff3cd; border-left: 4px solid #ffc107; }
+  .stat-ok { color: #28a745; font-weight: 700; }
+  .stat-bad { color: #dc3545; font-weight: 700; }
+  .stat-info { color: #17a2b8; font-weight: 700; }
+  table { width: 100%; border-collapse: collapse; margin: 12px 0; font-size: 14px; }
+  th, td { border: 1px solid #dfe3e8; padding: 8px 12px; text-align: left; vertical-align: top; }
+  th { background: #1a2b48; color: #fff; font-weight: 600; }
+  tr:nth-child(even) { background: #f7f9fb; }
+  td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+  code { background: #eef1f4; padding: 2px 6px; border-radius: 4px; font-family: Consolas, 'Courier New', monospace;
+         font-size: 13px; color: #b8005a; }
+  pre { background: #1e1e1e; color: #d4d4d4; padding: 14px 16px; border-radius: 6px; overflow-x: auto;
+        font-family: Consolas, 'Courier New', monospace; font-size: 12.5px; line-height: 1.45; margin: 10px 0; }
+  .tag { display: inline-block; background: #17a2b8; color: #fff; font-size: 11px; font-weight: 700;
+         padding: 2px 8px; border-radius: 10px; vertical-align: middle; }
+  .tag-du { background: #6554c0; }
+  .tag-mo { background: #f0ad4e; color: #333; }
+  .tag-ok { background: #28a745; }
+  .muted { color: #6b7785; font-size: 13px; }
+  ul, ol { margin: 8px 0; padding-left: 22px; }
+  li { margin: 5px 0; }
+  .grid3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
+  @media (max-width: 800px) { .grid3 { grid-template-columns: 1fr; } }
+  .kpi { text-align: center; padding: 16px; }
+  .kpi .val { font-size: 28px; font-weight: 700; color: #1a2b48; }
+  .kpi .lbl { font-size: 13px; color: #6b7785; margin-top: 4px; }
+  .row-hot { background: #fff5f5 !important; }
+  .row-fix { background: #f0fff4 !important; }
+  .screenshot { max-width: 100%; border: 1px solid #dfe3e8; border-radius: 6px; margin: 10px 0; }
+  .screenshot-caption { font-size: 13px; color: #6b7785; margin-bottom: 8px; }
+  .diff-del { color: #dc3545; text-decoration: line-through; }
+  .diff-add { color: #28a745; font-weight: 600; }
+  a { color: #17a2b8; }
+</style>
+</head>
+<body>
+
+<h1>IMDEV-9005 — Итоговый отчет о разработке</h1>
+<p class="muted">
+  Форма <code>0420431</code> (XBRL 7.1) &nbsp;|&nbsp;
+  Обработка: <code>NEW_Оптимизация/внЗаполнениеРеглОтчетаПоДоговорамДУ_0420431_71</code> &nbsp;|&nbsp;
+  10.06.2026
+</p>
+
+<!-- ===== 1. ВВЕДЕНИЕ ===== -->
+<div class="card intro">
+  <h2 style="border:0;margin-top:0;padding:0;">Введение</h2>
+  <p>Задача IMDEV-9005 — ускорить заполнение регламентированного отчета
+  <code>0420431</code> по договорам ДУ без изменения результата отчета.</p>
+  <p><b>Итоговая разработка</b> сфокусирована на устранении узких мест
+  <code>НайтиСтроки</code>, выявленных профилировщиком на среде т-1:</p>
+  <ul>
+    <li><span class="tag tag-du">ДУ</span> две точечные доработки внешней обработки;</li>
+    <li><span class="tag tag-mo">МО</span> исправление индекса таблицы значений <code>MV</code> в <code>РасчетTWR</code>.</li>
+  </ul>
+  <p>Замеры до/после и регрессия: <a href="imdev-9005_measurements_before_after.html">imdev-9005_measurements_before_after.html</a></p>
+</div>
+
+<!-- ===== 2. ТЕХНОЛОГИЯ ===== -->
+<h2>Технология и контекст</h2>
+<div class="card theory">
+  <h3>Архитектура заполнения 0420431</h3>
+  <pre>ДУ: внЗаполнениеРеглОтчетаПоДоговорамДУ_0420431_71
+  |-- COM --> МО: ВТБ_РасчетДоходностиСервер.TWR (64 x MANDATE)
+  |              --> Отчет.VTBAM_MWR_TWR.РасчетTWR (MV.НайтиСтроки)
+  |-- ЗаполнитьРаздел_1 (СведенияПоДоговорам.НайтиСтроки)
+  +-- Разделы 2-7, запись документа</pre>
+
+  <h3>Параметры замеров (т-1)</h3>
+  <table>
+    <tr><th>Параметр</th><th>Значение</th></tr>
+    <tr><td>База ДУ</td><td><code>Srvr="SMSK02MG138U";Ref="AVC_PP_DU"</code></td></tr>
+    <tr><td>Период</td><td>май 2026</td></tr>
+    <tr><td>Инструмент</td><td>Замер производительности 1С (фоновое задание)</td></tr>
+    <tr><td>База МО (retail)</td><td><code>PROD_AVC_Retail_MO</code>, период апрель 2026</td></tr>
+  </table>
+</div>
+
+<!-- ===== 3. СТАТИСТИКА ПРОБЛЕМ ===== -->
+<h2>Статистика узких мест (до исправлений)</h2>
+<div class="grid3">
+  <div class="card kpi">
+    <div class="val stat-bad">6 097 сек</div>
+    <div class="lbl">Общий замер (старый алгоритм)</div>
+    <div class="muted">~1 ч 42 мин чистого</div>
+  </div>
+  <div class="card kpi">
+    <div class="val stat-bad">46,1%</div>
+    <div class="lbl">НайтиСтроки в ДУ</div>
+    <div class="muted">стр. 801 + 2470 + 2471</div>
+  </div>
+  <div class="card kpi">
+    <div class="val stat-bad">90,9%</div>
+    <div class="lbl">MV.НайтиСтроки в МО</div>
+    <div class="muted">стр. 2275 РасчетTWR</div>
+  </div>
+</div>
+
+<div class="card">
+  <h3>Профилировщик — строки, устраненные в финальной разработке</h3>
+  <table>
+    <thead>
+      <tr>
+        <th>База</th>
+        <th>Стр.</th>
+        <th>Код</th>
+        <th class="num">Вызовов</th>
+        <th class="num">Сек</th>
+        <th class="num">%</th>
+        <th>Решение</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr class="row-hot">
+        <td>ДУ</td>
+        <td>801</td>
+        <td><code>СтрокиДоходности = ДанныеДоходности.НайтиСтроки(Отбор)</code></td>
+        <td class="num">25 729</td>
+        <td class="num">2 355,5</td>
+        <td class="num">38,63</td>
+        <td><span class="tag tag-du">ДУ</span> COM-<code>Соответствие</code></td>
+      </tr>
+      <tr class="row-hot">
+        <td>ДУ</td>
+        <td>2470</td>
+        <td><code>Строки = СведенияПоДоговорам.НайтиСтроки(Отбор)</code></td>
+        <td class="num">22 466</td>
+        <td class="num">335,9</td>
+        <td class="num">5,51</td>
+        <td rowspan="2"><span class="tag tag-du">ДУ</span> <code>ИндексСтрокПоГруппе</code></td>
+      </tr>
+      <tr class="row-hot">
+        <td>ДУ</td>
+        <td>2471</td>
+        <td><code>СтрокиУжеЗагружены = ...Загруженные.НайтиСтроки(Отбор).Количество()</code></td>
+        <td class="num">22 466</td>
+        <td class="num">155,4</td>
+        <td class="num">2,55</td>
+      </tr>
+      <tr class="row-hot">
+        <td>МО</td>
+        <td>2275</td>
+        <td><code>СтрокиРазделителя = MV.НайтиСтроки(ПараметрыПоискаСтрок)</code></td>
+        <td class="num">14 869</td>
+        <td class="num">1 333,2</td>
+        <td class="num">90,87</td>
+        <td><span class="tag tag-mo">МО</span> индекс <code>MV</code></td>
+      </tr>
+    </tbody>
+  </table>
+  <p class="muted">Суммарно три точки <code>НайтиСтроки</code> в ДУ давали <b>2 847 сек</b> (~46% замера).
+  В МО одна строка 2275 — <b>90,9%</b> времени <code>РасчетTWR</code>.</p>
+</div>
+
+<!-- ===== 4. ДЕТАЛИ: ДУ ===== -->
+<h2>Выполненная работа — база ДУ</h2>
+
+<div class="card ok">
+  <h3><span class="tag tag-du">ДУ-1</span> Стр. 801 — индекс доходности по мандату</h3>
+  <p><b>Проблема:</b> после каждого из 64 вызовов TWR для каждого мандата стратегии выполнялся
+  <code>ДанныеДоходности.НайтиСтроки</code> — 25 729 полных переборов таблицы, 2 355 сек.</p>
+  <p><b>Решение:</b> один проход по результату TWR, построение COM-<code>Соответствие</code>
+  (ключ — ссылка мандата из МО), далее O(1) получение строк.</p>
+
+  <pre>// БЫЛО (стр. 801):
+Отбор = Соединение.NewObject("Структура");
+Отбор.Вставить("Разделитель", ТекСтрока.Мандат);
+СтрокиДоходности = ДанныеДоходности.НайтиСтроки(Отбор);
+
+// СТАЛО:
+ДоходностьПоМандатам = Соединение.NewObject("Соответствие");
+Для Каждого СтрокаДоходности Из ДанныеДоходности Цикл
+    Мандат = СтрокаДоходности.Разделитель;
+    СтрокиМандата = ДоходностьПоМандатам.Получить(Мандат);
+    Если СтрокиМандата = Неопределено Тогда
+        СтрокиМандата = Соединение.NewObject("Массив");
+        ДоходностьПоМандатам.Вставить(Мандат, СтрокиМандата);
+    КонецЕсли;
+    СтрокиМандата.Добавить(СтрокаДоходности);
+КонецЦикла;
+// ...
+СтрокиДоходности = ДоходностьПоМандатам.Получить(ТекСтрока.Мандат);</pre>
+
+  <p><b>Важно:</b> для COM-объектов из МО используется <code>Соединение.NewObject("Соответствие")</code>,
+  не локальное <code>Новый Соответствие</code> — иначе ключи-ссылки не сопоставляются.</p>
+  <p><b>Результат замера:</b> вместо стр. 801 (2 355 сек) — стр. 781 <code>ДоходностьПоМандатам.Получить</code> (~34 сек).</p>
+</div>
+
+<div class="card ok">
+  <h3><span class="tag tag-du">ДУ-2</span> Стр. 2470/2471 — раздел 1.2, индекс по группе договоров</h3>
+  <p><b>Проблема:</b> для каждой строки раздела 1.2 — два <code>НайтиСтроки</code> по
+  <code>СведенияПоДоговорам</code> (44 932 вызова, 491 сек суммарно).</p>
+  <p><b>Решение:</b> предварительный проход — построение <code>ИндексСтрокПоГруппе</code>
+  (ключ из 10 полей группировки) + <code>ОбработанныеГруппы</code> вместо повторного поиска «уже загруженных».</p>
+
+  <pre>// БЫЛО (стр. 2470-2471):
+Отбор = Новый Структура(...);  // 10 полей группы
+Строки = СведенияПоДоговорам.НайтиСтроки(Отбор);
+СтрокиУжеЗагружены = СведенияПоДоговорамЗагруженные.НайтиСтроки(Отбор).Количество();
+
+// СТАЛО:
+ИндексСтрокПоГруппе = Новый Соответствие;  // один проход при загрузке
+ОбработанныеГруппы = Новый Соответствие;   // кэш обработанных ключей
+КлючГруппы = КлючГруппыРаздел1_2(...);
+Строки = ИндексСтрокПоГруппе.Получить(КлючГруппы);
+СтрокиУжеЗагружены = ОбработанныеГруппы.Получить(КлючГруппы) <> Неопределено;</pre>
+
+  <p><b>Результат замера:</b> <code>ЗаполнитьРаздел_1</code> — 510 сек → 51 сек (-90%).</p>
+</div>
+
+<!-- ===== 5. ДЕТАЛИ: МО ===== -->
+<h2>Выполненная работа — база МО</h2>
+
+<div class="card ok">
+  <h3><span class="tag tag-mo">МО-1</span> Стр. 2275 — исправление индекса таблицы MV</h3>
+  <p><b>Проблема:</b> в <code>Отчет.VTBAM_MWR_TWR.РасчетTWR</code> цикл по разделителям вызывает:</p>
+  <pre>СтрокиРазделителя = MV.НайтиСтроки(ПараметрыПоискаСтрок);
+// ПараметрыПоискаСтрок = Новый Структура("Разделитель", ТекРазделитель.Ключ)</pre>
+  <p>14 869 вызовов, 1 333 сек, <b>90,87%</b> времени <code>РасчетTWR</code>.</p>
+
+  <p><b>Корневая причина:</b> индекс таблицы <code>MV</code> был объявлен по двум полям, а поиск —
+  только по одному полю <code>Разделитель</code>. Платформа не использовала индекс эффективно.</p>
+
+  <table>
+    <tr><th>Вариант</th><th>Код</th><th>Эффект</th></tr>
+    <tr class="row-hot">
+      <td>БЫЛО</td>
+      <td><code>MV.Индексы.Добавить("Разделитель, Период");</code></td>
+      <td class="stat-bad">НайтиСтроки по одному полю — 1 333 сек</td>
+    </tr>
+    <tr class="row-fix">
+      <td>СТАЛО</td>
+      <td><code>MV.Индексы.Добавить("Разделитель");</code></td>
+      <td class="stat-ok">Индекс совпадает с полем поиска — ускорение TWR</td>
+    </tr>
+  </table>
+
+  <p>Исправление минимальное: одна строка в конфигурации МО. Логика <code>РасчетTWR</code> не переписывалась.</p>
+  <p class="screenshot-caption">Профилировщик МО — БЫЛО: доминирует стр. 2275</p>
+  <img class="screenshot" src="media/measurements_before_after/image9.png" alt="МО БЫЛО стр 2275">
+  <p class="screenshot-caption">Профилировщик МО — СТАЛО: стр. 2275 исчезла из топа, вместо нее сортировка/индекс</p>
+  <img class="screenshot" src="media/measurements_before_after/image11.png" alt="МО СТАЛО">
+  <p class="screenshot-caption">Строка индекса в коде МО</p>
+  <img class="screenshot" src="media/measurements_before_after/image12.png" alt="Индекс MV">
+</div>
+
+<!-- ===== 6. РЕЗУЛЬТАТЫ ===== -->
+<h2>Результаты (замеры и регрессия)</h2>
+<div class="card">
+  <table>
+    <thead>
+      <tr><th>Метрика</th><th class="num">БЫЛО</th><th class="num">СТАЛО</th><th>Источник ускорения</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Общее время (профилировщик ДУ)</td>
+        <td class="num stat-bad">6 097 сек</td>
+        <td class="num stat-ok">711 сек</td>
+        <td>ДУ + МО</td>
+      </tr>
+      <tr>
+        <td>Стр. 801 / индекс доходности</td>
+        <td class="num">2 355 сек</td>
+        <td class="num stat-ok">~34 сек</td>
+        <td><span class="tag tag-du">ДУ-1</span></td>
+      </tr>
+      <tr>
+        <td>Стр. 2470+2471 / раздел 1.2</td>
+        <td class="num">491 сек</td>
+        <td class="num stat-ok">в составе 51 сек</td>
+        <td><span class="tag tag-du">ДУ-2</span></td>
+      </tr>
+      <tr>
+        <td>TWR стр. 770 (64 вызова)</td>
+        <td class="num">2 949 сек</td>
+        <td class="num stat-ok">360 сек</td>
+        <td><span class="tag tag-mo">МО-1</span></td>
+      </tr>
+      <tr>
+        <td>TWR retail (3 стратегии, апрель)</td>
+        <td class="num">1 281 сек</td>
+        <td class="num stat-ok">266 сек</td>
+        <td><span class="tag tag-mo">МО-1</span></td>
+      </tr>
+      <tr class="row-fix">
+        <td>Регрессия 0420431</td>
+        <td class="num">000000016</td>
+        <td class="num">000000017</td>
+        <td>Документы идентичны</td>
+      </tr>
+    </tbody>
+  </table>
+  <p>Финальный прогон ДУ: <b>11:30 - 11:49</b> (10.06.2026), ~20 мин на стене.
+  Вывод из замеров: <span class="stat-ok">результат оптимизации удовлетворительный</span>.</p>
+  <p class="screenshot-caption">Регрессионное сравнение обработкой внСравнение0420431</p>
+  <img class="screenshot" src="media/measurements_before_after/image17.png" alt="Регрессия">
+</div>
+
+<!-- ===== 7. АРТЕФАКТЫ ===== -->
+<h2>Артефакты проекта</h2>
+<div class="card theory">
+  <table>
+    <thead>
+      <tr><th>Артефакт</th><th>Назначение</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><code>NEW_Оптимизация/.../ObjectModule.bsl</code></td>
+        <td>Финальная обработка ДУ (ДУ-1, ДУ-2)</td>
+      </tr>
+      <tr>
+        <td><code>NEW_Оптимизация/.../внЗаполнение...71.epf</code></td>
+        <td>Собранная внешняя обработка для ДУ</td>
+      </tr>
+      <tr>
+        <td>Индекс <code>MV.Индексы.Добавить("Разделитель")</code> в МО</td>
+        <td>Исправление стр. 2275 (МО-1)</td>
+      </tr>
+      <tr>
+        <td><code>Отчеты/внVTBAM_TWR_MANDATE.erf</code></td>
+        <td>Замер TWR per-strategy в МО</td>
+      </tr>
+      <tr>
+        <td><code>Отчеты/внVTBAM_TWR_MANDATE_STRATEGY.erf</code></td>
+        <td>Замер TWR batch для сравнения режимов</td>
+      </tr>
+      <tr>
+        <td><code>Отчеты/IMDEV-9005_RaschetTWR_patch_VTBAM_MWR_TWR.bsl</code></td>
+        <td>Черновик расширенного патча (не применен в финале)</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- ===== 8. ВЫВОДЫ ===== -->
+<h2>Выводы</h2>
+<div class="card ok">
+  <ol>
+    <li>Финальная разработка — <b>три точечных исправления</b> узких мест <code>НайтиСтроки</code>
+    без смены бизнес-логики.</li>
+    <li>В ДУ: COM-<code>Соответствие</code> для доходности (стр. 801) и локальный индекс групп
+    раздела 1.2 (стр. 2470/2471) — убрали <b>~2 800 сек</b> линейных поисков.</li>
+    <li>В МО: одна строка — индекс <code>MV</code> по полю <code>Разделитель</code> вместо
+    <code>"Разделитель, Период"</code> — устранила <b>90,9%</b> времени <code>РасчетTWR</code>.</li>
+    <li>Совместный эффект: ускорение заполнения 0420431 с ~1 ч 54 мин до ~20 мин на стене (~8,6x по чистому времени).</li>
+    <li>Регрессия данных пройдена — документы 000000016 и 000000017 идентичны.</li>
+  </ol>
+</div>
+
+<p class="muted" style="margin-top:32px;text-align:center;">
+  IMDEV-9005 | Итоговый отчет о разработке | 10.06.2026 |
+  <a href="imdev-9005_measurements_before_after.html">замеры БЫЛО/СТАЛО</a> |
+  <a href="imdev-9005_measurements_t1_profiler.html">профилировщик т-1</a>
+</p>
+
+</body>
+</html>
