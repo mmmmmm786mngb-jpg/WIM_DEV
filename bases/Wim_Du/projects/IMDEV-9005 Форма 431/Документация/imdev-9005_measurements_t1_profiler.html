@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>IMDEV-9005 — Замеры 0420431, среда т-1 (профилировщик)</title>
+<style>
+  * { box-sizing: border-box; }
+  body { font-family: 'Segoe UI', Arial, sans-serif; line-height: 1.65; color: #2c3e50;
+         max-width: 1100px; margin: 0 auto; padding: 24px; background: #f0f4f8; }
+  h1 { color: #1a2b48; font-size: 28px; border-bottom: 3px solid #17a2b8; padding-bottom: 12px; margin-bottom: 8px; }
+  h2 { color: #17a2b8; font-size: 20px; margin-top: 36px; border-left: 4px solid #17a2b8; padding-left: 12px; }
+  h3 { color: #1a2b48; font-size: 16px; margin-top: 22px; }
+  .card { background: #fff; border-radius: 8px; padding: 18px 24px; margin: 16px 0;
+          box-shadow: 0 1px 4px rgba(0,0,0,0.08); }
+  .intro { background: #eaf6f8; border-left: 4px solid #17a2b8; }
+  .theory { background: #f4f0ff; border-left: 4px solid #6554c0; }
+  .warn { background: #fff8e1; border-left: 4px solid #f0ad4e; }
+  .ok { background: #eafaf1; border-left: 4px solid #28a745; }
+  .bug { background: #fff3cd; border-left: 4px solid #ffc107; }
+  .stat-ok { color: #28a745; font-weight: 700; }
+  .stat-bad { color: #dc3545; font-weight: 700; }
+  .stat-info { color: #17a2b8; font-weight: 700; }
+  .stat-warn { color: #f0ad4e; font-weight: 700; }
+  table { width: 100%; border-collapse: collapse; margin: 12px 0; font-size: 14px; }
+  th, td { border: 1px solid #dfe3e8; padding: 8px 12px; text-align: left; vertical-align: middle; }
+  th { background: #1a2b48; color: #fff; font-weight: 600; }
+  tr:nth-child(even) { background: #f7f9fb; }
+  td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+  code { background: #eef1f4; padding: 2px 6px; border-radius: 4px; font-family: Consolas, 'Courier New', monospace;
+         font-size: 13px; color: #b8005a; }
+  pre { background: #1e1e1e; color: #d4d4d4; padding: 14px 16px; border-radius: 6px; overflow-x: auto;
+        font-family: Consolas, 'Courier New', monospace; font-size: 12.5px; line-height: 1.45; margin: 10px 0; }
+  .tag { display: inline-block; background: #17a2b8; color: #fff; font-size: 11px; font-weight: 700;
+         padding: 2px 8px; border-radius: 10px; vertical-align: middle; }
+  .tag-warn { background: #f0ad4e; }
+  .tag-bad { background: #dc3545; }
+  .muted { color: #6b7785; font-size: 13px; }
+  ul, ol { margin: 8px 0; padding-left: 22px; }
+  li { margin: 5px 0; }
+  .grid3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
+  @media (max-width: 800px) { .grid3 { grid-template-columns: 1fr; } }
+  .kpi { text-align: center; padding: 16px; }
+  .kpi .val { font-size: 32px; font-weight: 700; color: #1a2b48; }
+  .kpi .lbl { font-size: 13px; color: #6b7785; margin-top: 4px; }
+  .bar-wrap { background: #eef1f4; border-radius: 4px; height: 18px; min-width: 80px; }
+  .bar { height: 100%; border-radius: 4px; }
+  .bar-hot { background: #dc3545; }
+  .bar-warm { background: #f0ad4e; }
+  .bar-cool { background: #17a2b8; }
+  .bar-ok { background: #28a745; }
+  .row-hot td:first-child { font-weight: 600; }
+  .row-hot { background: #fff5f5 !important; }
+  .row-warm { background: #fffbf0 !important; }
+  .screenshot { max-width: 100%; border: 1px solid #dfe3e8; border-radius: 6px; margin: 10px 0; }
+  .screenshot-caption { font-size: 13px; color: #6b7785; margin-bottom: 8px; }
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  @media (max-width: 800px) { .two-col { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+
+<h1>IMDEV-9005 — Замеры заполнения формы 0420431 (старый алгоритм)</h1>
+<p class="muted">
+  Источник: <code>Замеры 431 форма Т-1 в журнал регистрации.docx</code> &nbsp;|&nbsp;
+  Среда: <b>т-1</b> &nbsp;|&nbsp;
+  База ДУ: <code>Srvr="SMSK02MG138U";Ref="AVC_PP_DU"</code> &nbsp;|&nbsp;
+  Период отчета: <b>01.05.2026 - 31.05.2026</b> &nbsp;|&nbsp;
+  Дата замера: <b>09.06.2026</b>
+</p>
+
+<!-- ===== 1. ВВЕДЕНИЕ ===== -->
+<div class="card intro">
+  <h2 style="border:0;margin-top:0;padding:0;">Введение</h2>
+  <p>Отчет фиксирует результаты <b>профилирования старого алгоритма</b> заполнения регламентированного отчета
+  <code>0420431</code> (таксономия XBRL 7.1, по договорам ДУ) на среде <b>т-1</b>.
+  Использованы два инструмента: <b>замер производительности платформы</b> (отладчик) и
+  <b>журнал регистрации</b> (событие <code>IMDEV-9005.Замеры</code>).</p>
+  <p><b>Объект тестирования:</b> документ
+  <code>РО_XBRL7_1_0420431_СведенияОДеятельностиПоУправлениюЦБ_7119У</code>,
+  номер <code>000000016</code> от <code>09.06.2026</code>, УК «АО ВИМ Инвестиции».</p>
+  <p><b>Хронометраж прогона:</b> старт <b>17:50</b>, финиш <b>09.06.2026 19:42:53</b>
+  (на стене ~1 ч 53 мин). Дополнительно на копии базы МО (от 08.06.2026) выполнен прогон
+  «по-старому» с замерами отладчика: <b>21:24:01 - 23:06:29</b> (~1,5 ч).</p>
+</div>
+
+<!-- ===== 2. ТЕХНОЛОГИЯ ===== -->
+<h2>Технология замеров</h2>
+<div class="card theory">
+  <h3>Два уровня измерений</h3>
+  <table>
+    <tr><th>Уровень</th><th>Инструмент</th><th>Что измеряет</th></tr>
+    <tr>
+      <td>Макро (этапы обработки)</td>
+      <td>Журнал регистрации <code>IMDEV-9005.Замеры</code></td>
+      <td>17 этапов заполнения: подключение МО, TWR, разделы 1-7, запись</td>
+    </tr>
+    <tr>
+      <td>Микро (строки кода)</td>
+      <td>Замер производительности 1С (фоновое задание)</td>
+      <td>Конкретные строки BSL: TWR, НайтиСтроки, ЗаполнитьРаздел_1</td>
+    </tr>
+    <tr>
+      <td>МО (ядро TWR)</td>
+      <td>Отладчик в конфигураторе МО</td>
+      <td><code>Отчет.VTBAM_MWR_TWR.РасчетTWR</code>, стр. 2275 — <code>MV.НайтиСтроки</code></td>
+    </tr>
+  </table>
+
+  <h3>Параметры подключения</h3>
+  <table>
+    <tr><th>Параметр</th><th>Значение</th></tr>
+    <tr><td>Среда</td><td><b>т-1</b></td></tr>
+    <tr><td>База ДУ</td><td><code>Srvr="SMSK02MG138U";Ref="AVC_PP_DU"</code></td></tr>
+    <tr><td>Фоновое задание</td><td><code>Admin (4), SMSK02MG138U:6560</code></td></tr>
+    <tr><td>База МО (детальный замер)</td><td>копия от 08.06.2026, без режима совместимости</td></tr>
+    <tr><td>Обработка</td><td><code>внЗаполнениеРеглОтчетаПоДоговорамДУ_0420431_71</code> (старый алгоритм)</td></tr>
+  </table>
+
+  <h3>Иерархия узких мест (профилировщик ДУ)</h3>
+  <pre>ВыполнитьКоманду (внешняя обработка)
+  |-- ЗаполнитьРазделыОтчета                    6 036 сек   98,99%
+  |     |-- СформироватьВТ_ДанныеПоСтратегиям   5 393 сек   88,44%
+  |     |     |-- TWR(...)  стр.770              2 949 сек   48,37%  (64 вызова)
+  |     |     |-- НайтиСтроки  стр.801           2 355 сек   38,63%  (25 729 вызовов)
+  |     |-- ЗаполнитьРаздел_1  стр.237            510 сек    8,37%
+  |     |     |-- НайтиСтроки  стр.2470            336 сек    5,51%  (22 466)
+  |     |     |-- НайтиСтроки  стр.2471            155 сек    2,55%  (22 466)
+  +-- ИТОГО замера                               6 097 сек  100,00%</pre>
+</div>
+
+<!-- ===== 3. СТАТИСТИКА ===== -->
+<h2>Сводная статистика</h2>
+<div class="grid3">
+  <div class="card kpi">
+    <div class="val stat-bad">1 ч 42 мин</div>
+    <div class="lbl">Чистое время (профилировщик)</div>
+    <div class="muted">6 097,5 сек</div>
+  </div>
+  <div class="card kpi">
+    <div class="val stat-bad">87,0%</div>
+    <div class="lbl">TWR + НайтиСтроки (ДУ)</div>
+    <div class="muted">стр. 770 + 801 = 5 305 сек</div>
+  </div>
+  <div class="card kpi">
+    <div class="val stat-bad">77-91%</div>
+    <div class="lbl">MV.НайтиСтроки (МО)</div>
+    <div class="muted">стр. 2275 VTBAM_MWR_TWR</div>
+  </div>
+</div>
+
+<div class="card">
+  <h3>Распределение времени — профилировщик ДУ (топ-7 строк)</h3>
+  <table>
+    <thead>
+      <tr>
+        <th>Стр.</th>
+        <th>Операция</th>
+        <th class="num">Вызовов</th>
+        <th class="num">Сек</th>
+        <th class="num">%</th>
+        <th style="width:30%">Доля</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>106</td>
+        <td><code>ЗаполнитьРазделыОтчета(...)</code></td>
+        <td class="num">1</td>
+        <td class="num">6 036,0</td>
+        <td class="num stat-info">99,0</td>
+        <td><div class="bar-wrap"><div class="bar bar-cool" style="width:99%"></div></div></td>
+      </tr>
+      <tr class="row-hot">
+        <td>234</td>
+        <td><code>СформироватьВТ_ДанныеПоСтратегиям(...)</code></td>
+        <td class="num">1</td>
+        <td class="num">5 392,5</td>
+        <td class="num stat-bad">88,4</td>
+        <td><div class="bar-wrap"><div class="bar bar-hot" style="width:88.4%"></div></div></td>
+      </tr>
+      <tr class="row-hot">
+        <td>770</td>
+        <td><code>ВТБ_РасчетДоходностиСервер.TWR(...)</code></td>
+        <td class="num">64</td>
+        <td class="num">2 949,2</td>
+        <td class="num stat-bad">48,4</td>
+        <td><div class="bar-wrap"><div class="bar bar-hot" style="width:48.4%"></div></div></td>
+      </tr>
+      <tr class="row-hot">
+        <td>801</td>
+        <td><code>ДанныеДоходности.НайтиСтроки(Отбор)</code></td>
+        <td class="num">25 729</td>
+        <td class="num">2 355,5</td>
+        <td class="num stat-bad">38,6</td>
+        <td><div class="bar-wrap"><div class="bar bar-hot" style="width:38.6%"></div></div></td>
+      </tr>
+      <tr class="row-warm">
+        <td>237</td>
+        <td><code>ЗаполнитьРаздел_1(...)</code></td>
+        <td class="num">1</td>
+        <td class="num">510,1</td>
+        <td class="num stat-warn">8,4</td>
+        <td><div class="bar-wrap"><div class="bar bar-warm" style="width:8.4%"></div></div></td>
+      </tr>
+      <tr>
+        <td>2470</td>
+        <td><code>СведенияПоДоговорам.НайтиСтроки(Отбор)</code></td>
+        <td class="num">22 466</td>
+        <td class="num">335,9</td>
+        <td class="num">5,5</td>
+        <td><div class="bar-wrap"><div class="bar bar-cool" style="width:5.5%"></div></div></td>
+      </tr>
+      <tr>
+        <td>2471</td>
+        <td><code>...Загруженные.НайтиСтроки(Отбор).Количество()</code></td>
+        <td class="num">22 466</td>
+        <td class="num">155,4</td>
+        <td class="num">2,6</td>
+        <td><div class="bar-wrap"><div class="bar bar-cool" style="width:2.6%"></div></div></td>
+      </tr>
+    </tbody>
+  </table>
+  <p class="muted">Строки 770 и 801 внутри <code>СформироватьВТ_ДанныеПоСтратегиям</code> дают суммарно ~87% всего замера.</p>
+</div>
+
+<!-- ===== 4. ДЕТАЛИ: МО ===== -->
+<h2>Узкое место в базе МО</h2>
+<div class="card bug">
+  <p>На копии базы МО (08.06.2026) профилировщик выявил главный узел внутри штатного отчета
+  <code>VTBAM_MWR_TWR</code> — функция <code>РасчетTWR</code>:</p>
+  <table>
+    <thead>
+      <tr>
+        <th>Модуль / стр.</th>
+        <th>Код</th>
+        <th class="num">Вызовов</th>
+        <th class="num">Сек (чист.)</th>
+        <th class="num">%</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><code>VTBAM_MWR_TWR</code> стр. 1940</td>
+        <td><code>ДанныеTWR = РасчетTWR(MV, ВводыВыводы)</code></td>
+        <td class="num">1</td>
+        <td class="num">11 353,2</td>
+        <td class="num">84,9</td>
+      </tr>
+      <tr class="row-hot">
+        <td><code>VTBAM_MWR_TWR</code> стр. 2275</td>
+        <td><code>СтрокиРазделителя = MV.НайтиСтроки(ПараметрыПоискаСтрок)</code></td>
+        <td class="num">5 226 / 14 869</td>
+        <td class="num">152,8 / 1 333,2</td>
+        <td class="num stat-bad">77,5 / 90,9</td>
+      </tr>
+    </tbody>
+  </table>
+  <p>Цикл по <code>Разделители</code> с полным перебором <code>MV</code> на каждой итерации —
+  типичный паттерн O(N*M). При тысячах мандатов и сотнях периодов это миллионы операций поиска.</p>
+  <pre>Для каждого ТекРазделитель Из Разделители Цикл
+    ПараметрыПоискаСтрок = Новый Структура("Разделитель", ТекРазделитель.Ключ);
+    СтрокиРазделителя = MV.НайтиСтроки(ПараметрыПоискаСтрок);  // 77-91% времени
+    Для каждого ТекСтрока Из СтрокиРазделителя Цикл
+        Rn_Накопленный = Rn_Накопленный * ТекСтрока.Rn;
+        ...
+    КонецЦикла;
+КонецЦикла;</pre>
+  <p class="muted">Патч с индексом и одним проходом: <code>Отчеты/IMDEV-9005_RaschetTWR_patch_VTBAM_MWR_TWR.bsl</code>.
+  Базовую конфигурацию МО в рамках IMDEV-9005 не меняем.</p>
+</div>
+
+<!-- ===== 5. СКРИНШОТЫ ===== -->
+<h2>Скриншоты из исходного документа</h2>
+<div class="card">
+  <div class="two-col">
+    <div>
+      <p class="screenshot-caption">Запуск заполнения отчета 0420431, период май 2026</p>
+      <img class="screenshot" src="media/measurements_t1/image1.png" alt="Запуск заполнения">
+    </div>
+    <div>
+      <p class="screenshot-caption">Результат: более 106 000 строк в разделе отчета</p>
+      <img class="screenshot" src="media/measurements_t1/image2.png" alt="Заполненный отчет">
+    </div>
+  </div>
+  <p class="screenshot-caption">Профилировщик: общая картина (фоновое задание Admin, SMSK02MG138U)</p>
+  <img class="screenshot" src="media/measurements_t1/image3.png" alt="Профилировщик общий">
+  <p class="screenshot-caption">Профилировщик: детализация строк 770, 801, 2470, 2471</p>
+  <img class="screenshot" src="media/measurements_t1/image4.png" alt="Профилировщик детали">
+  <p class="screenshot-caption">МО: стр. 2275 — MV.НайтиСтроки в РасчетTWR (77,46%)</p>
+  <img class="screenshot" src="media/measurements_t1/image5.png" alt="МО НайтиСтроки">
+  <div class="two-col">
+    <div>
+      <p class="screenshot-caption">МО: код РасчетTWR, цикл по MV</p>
+      <img class="screenshot" src="media/measurements_t1/image6.png" alt="Код РасчетTWR">
+    </div>
+    <div>
+      <p class="screenshot-caption">МО: полоса профилировщика на стр. 2275</p>
+      <img class="screenshot" src="media/measurements_t1/image7.png" alt="Полоса 77%">
+    </div>
+  </div>
+</div>
+
+<!-- ===== 6. СВЯЗЬ С ЖУРНАЛОМ ===== -->
+<h2>Сопоставление с журналом регистрации</h2>
+<div class="card">
+  <p>Тот же прогон (17:50 - 19:42:53) зафиксирован обработкой «Замеры» в журнале регистрации.
+  Макро-замер по этапам — в отчете
+  <a href="imdev-9005_measurements_may2026.html">imdev-9005_measurements_may2026.html</a>:</p>
+  <table>
+    <thead>
+      <tr><th>Метрика</th><th class="num">Журнал (этапы)</th><th class="num">Профилировщик (строки)</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Общее время</td>
+        <td class="num">6 837 сек (1 ч 54 мин)</td>
+        <td class="num">6 097 сек (1 ч 42 мин)</td>
+      </tr>
+      <tr>
+        <td>Данные МО / TWR</td>
+        <td class="num">5 851 сек (85,6%)</td>
+        <td class="num">5 393 сек (88,4%)</td>
+      </tr>
+      <tr>
+        <td>Раздел 1</td>
+        <td class="num">735 сек (10,7%)</td>
+        <td class="num">510 сек (8,4%)</td>
+      </tr>
+      <tr>
+        <td>НайтиСтроки в разделе 1</td>
+        <td class="num">в составе 735 сек</td>
+        <td class="num">491 сек (стр. 2470+2471)</td>
+      </tr>
+    </tbody>
+  </table>
+  <p class="muted">Разница в абсолютных секундах объясняется разными границами замера: журнал включает подключение МО,
+  дозаполнение и запись; профилировщик считает чистое время выполнения строк BSL.</p>
+</div>
+
+<h3>Исходные строки из docx (текст профилировщика)</h3>
+<div class="card">
+<pre>ОБЩИЕ
+Итого : ЗаполнитьРазделыОтчета(ОбъектНазначения);          6 036,02 сек   98,99%
+Стр. 234 - СформироватьВТ_ДанныеПоСтратегиям(...);         5 392,52 сек   88,44%
+Стр 237 - ЗаполнитьРаздел_1(...);                            510,12 сек    8,37%
+
+ДЕТАЛЬНЫЕ
+ДанныеДоходности = Соединение.ВТБ_РасчетДоходностиСервер.TWR(...);  2 949,22 сек   48,37%  (64)
+СтрокиДоходности = ДанныеДоходности.НайтиСтроки(Отбор);            2 355,48 сек   38,63%  (25 729)
+Строки = СведенияПоДоговорам.НайтиСтроки(Отбор);                     335,89 сек    5,51%  (22 466)
+СтрокиУжеЗагружены = ...Загруженные.НайтиСтроки(...);                155,44 сек    2,55%  (22 466)
+
+В МО слабое место:
+Отчет.VTBAM_MWR_TWR стр.1940  РасчетTWR(MV,ВводыВыводы);          11 353,24 сек   84,92%
+Отчет.VTBAM_MWR_TWR стр.2275  MV.НайтиСтроки(...);                 1 333,21 сек   90,87%</pre>
+</div>
+
+<!-- ===== 7. ОПТИМИЗАЦИИ ===== -->
+<h2>Возможности оптимизации</h2>
+<div class="card warn">
+  <table>
+    <thead>
+      <tr>
+        <th>Приоритет</th>
+        <th>Оптимизация</th>
+        <th>Целевая строка</th>
+        <th class="num">Текущее время</th>
+        <th class="num">Ожидаемый выигрыш</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><span class="tag tag-bad">1</span></td>
+        <td>Индекс + один проход вместо <code>MV.НайтиСтроки</code> в <code>РасчетTWR</code></td>
+        <td>МО стр. 2275</td>
+        <td class="num">77-91% TWR</td>
+        <td class="num stat-ok">кратное ускорение TWR</td>
+      </tr>
+      <tr>
+        <td><span class="tag tag-bad">2</span></td>
+        <td>Batch-вызов TWR / MANDATE_STRATEGY (v1.20 opt.1)</td>
+        <td>ДУ стр. 770 (64 COM-вызова)</td>
+        <td class="num">2 949 сек</td>
+        <td class="num stat-ok">~40-50 мин</td>
+      </tr>
+      <tr>
+        <td><span class="tag tag-warn">3</span></td>
+        <td>Индекс вместо <code>НайтиСтроки</code> в обработке (v1.20 opt.2)</td>
+        <td>ДУ стр. 801, 2470, 2471</td>
+        <td class="num">2 847 сек</td>
+        <td class="num stat-ok">~5-10 мин</td>
+      </tr>
+      <tr>
+        <td><span class="tag">4</span></td>
+        <td>Параллельное заполнение разделов 2-7 (opt.3)</td>
+        <td>разделы 2-7</td>
+        <td class="num">~139 сек</td>
+        <td class="num">~1-2 мин</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- ===== 8. ВЫВОДЫ ===== -->
+<h2>Выводы</h2>
+<div class="card ok">
+  <ol>
+    <li><b>96% времени</b> старого алгоритма — TWR и операции <code>НайтиСтроки</code> (подтверждено и журналом, и профилировщиком).</li>
+    <li>Вызов <code>TWR</code> из обработки (стр. 770, 64 раза) и последующий <code>НайтиСтроки</code> по результату (стр. 801, 25 729 раз) — два главных узла на стороне ДУ.</li>
+    <li>Внутри МО корневая причина — <code>MV.НайтиСтроки</code> в цикле по разделителям (стр. 2275, 77-91% <code>РасчетTWR</code>).</li>
+    <li>Оптимизация v1.20 (batch TWR + индексы в разделе 1) и патч <code>РасчетTWR</code> в МО бьют в одни и те же 96% — приоритеты подтверждены замерами т-1.</li>
+    <li>После внедрения оптимизаций рекомендуется повторить замер на том же периоде (май 2026) для сравнения ДО/ПОСЛЕ.</li>
+  </ol>
+</div>
+
+<p class="muted" style="margin-top:32px;text-align:center;">
+  IMDEV-9005 | Замеры старого алгоритма | Сгенерирован 09.06.2026 | т-1 AVC_PP_DU | источник: docx + профилировщик
+</p>
+
+</body>
+</html>
