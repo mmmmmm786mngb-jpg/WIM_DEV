@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Wim_Du: схема записи замеров в РС ЗамерыВремени</title>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<style>
+* { box-sizing: border-box; }
+body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    line-height: 1.55;
+    color: #212529;
+    background: linear-gradient(160deg, #eef1f5 0%, #f8f9fb 45%, #eceff4 100%);
+    margin: 0;
+    padding: 24px;
+}
+.container { max-width: 1280px; margin: 0 auto; }
+.hero {
+    background: linear-gradient(135deg, #4a2c82 0%, #6f42c1 55%, #8b5cf6 100%);
+    color: #fff;
+    border-radius: 12px;
+    padding: 28px 32px;
+    margin-bottom: 24px;
+    box-shadow: 0 8px 24px rgba(79, 45, 140, 0.25);
+}
+.hero h1 {
+    margin: 0 0 8px 0;
+    font-size: 1.75rem;
+    font-weight: 700;
+    border: none;
+    color: #fff;
+}
+.hero .subtitle {
+    opacity: 0.92;
+    font-size: 1rem;
+    max-width: 900px;
+}
+.meta-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 16px;
+}
+.badge {
+    display: inline-block;
+    background: rgba(255,255,255,0.18);
+    border: 1px solid rgba(255,255,255,0.35);
+    border-radius: 20px;
+    padding: 4px 12px;
+    font-size: 0.82rem;
+}
+h2 {
+    color: #2c3e50;
+    margin-top: 32px;
+    border-bottom: 2px solid #dee2e6;
+    padding-bottom: 6px;
+    font-size: 1.25rem;
+}
+.card {
+    background: #fff;
+    border-radius: 10px;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+    padding: 20px 24px;
+    margin: 16px 0;
+}
+.info {
+    background: #d1ecf1;
+    border-left: 4px solid #17a2b8;
+    padding: 12px 16px;
+    border-radius: 4px;
+    margin: 12px 0;
+}
+.warn {
+    background: #fff3cd;
+    border-left: 4px solid #ffc107;
+    padding: 12px 16px;
+    border-radius: 4px;
+    margin: 12px 0;
+}
+.success {
+    background: #d4edda;
+    border-left: 4px solid #28a745;
+    padding: 12px 16px;
+    border-radius: 4px;
+    margin: 12px 0;
+}
+.danger {
+    background: #f8d7da;
+    border-left: 4px solid #dc3545;
+    padding: 12px 16px;
+    border-radius: 4px;
+    margin: 12px 0;
+}
+.diagram-wrap {
+    background: #fff;
+    border-radius: 12px;
+    padding: 24px 16px;
+    margin: 20px 0;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.07);
+    overflow-x: auto;
+}
+.mermaid { text-align: center; }
+table {
+    width: 100%;
+    border-collapse: collapse;
+    background: #fff;
+    font-size: 13.5px;
+    margin: 12px 0;
+}
+thead th {
+    background: #6f42c1;
+    color: #fff;
+    text-align: left;
+    padding: 10px 12px;
+    border: 1px solid #5a32a3;
+}
+tbody td {
+    padding: 9px 12px;
+    border: 1px solid #dee2e6;
+    vertical-align: top;
+}
+tbody tr:nth-child(even) { background: #f8f9fa; }
+code, pre {
+    font-family: Consolas, "Courier New", monospace;
+    font-size: 12.5px;
+}
+pre {
+    background: #1e1e2e;
+    color: #cdd6f4;
+    padding: 14px 16px;
+    border-radius: 8px;
+    overflow-x: auto;
+    line-height: 1.45;
+}
+.legend {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 12px;
+    margin-top: 16px;
+}
+.legend-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    font-size: 13px;
+}
+.legend-swatch {
+    width: 14px;
+    height: 14px;
+    border-radius: 3px;
+    flex-shrink: 0;
+    margin-top: 3px;
+}
+.footer {
+    text-align: center;
+    color: #6c757d;
+    font-size: 12px;
+    margin-top: 32px;
+    padding-bottom: 16px;
+}
+ul.compact { margin: 8px 0; padding-left: 22px; }
+ul.compact li { margin: 4px 0; }
+</style>
+</head>
+<body>
+<div class="container">
+
+<div class="hero">
+    <h1>Wim_Du: запись замеров в РС ЗамерыВремени</h1>
+    <p class="subtitle">
+        Фактическая схема подсистемы «Оценка производительности» в конфигурации ДУ 1.5
+        (БСП 2.1.1.12). Без использования <code>УстановитьОтключениеБезопасногоРежима</code>.
+    </p>
+    <div class="meta-row">
+        <span class="badge">База: Wim_Du</span>
+        <span class="badge">Проект: IMDEV-8927</span>
+        <span class="badge">РС: ЗамерыВремени</span>
+        <span class="badge">Совместимость: 8.3.12</span>
+        <a class="badge" href="06_wim_du_zamery_diagram_formats.html" style="color:#fff;text-decoration:none">6 форматов схемы</a>
+    </div>
+</div>
+
+<div class="card">
+    <h2 style="margin-top:0">Кратко</h2>
+
+    <div class="info" style="border-left-color:#6f42c1;background:#f3effa">
+        <strong>Принцип БСП: запись не через роли на регистр.</strong><br>
+        Подсистема «Оценка производительности» устроена так, что обычным пользователям
+        <strong>не выдают</strong> право «Изменение» на регистр сведений <code>ЗамерыВремени</code>
+        (и не требуется настраивать роли/профили для записи замеров).
+        Вместо этого типовой серверный код перед записью вызывает
+        <code>УстановитьПривилегированныйРежим(Истина)</code> — платформа временно
+        <strong>не проверяет права ролей</strong> на объекты метаданных, и набор записей
+        или менеджер записи пишет строку в <code>ЗамерыВремени</code> от имени служебной логики БСП.
+        В реквизите <code>Пользователь</code> фиксируется тот, под кем выполнялась операция,
+        но сам доступ к регистру обеспечивается не ролью, а привилегированным режимом.
+    </div>
+
+    <div class="success">
+        Итого: замер может выполнить пользователь с любыми штатными ролями ДУ —
+        достаточно включенной константы <code>ВыполнятьЗамерыПроизводительности</code>
+        и отсутствия блокирующих условий (безопасный режим, монопольный режим).
+    </div>
+    <div class="warn">
+        При активном <strong>безопасном режиме</strong> типовой код <code>ЗафиксироватьДлительностьКлючевойОперации</code>
+        пишет в журнал регистрации и <strong>не сохраняет</strong> замер. Метод
+        <code>УстановитьОтключениеБезопасногоРежима</code> в конфигурации Wim_Du <strong>нигде не вызывается</strong>.
+    </div>
+    <div class="info">
+        Все 17 внешних обработок/отчётов в папках <code>Замеры</code> и <code>Замеры_2</code> проекта IMDEV-8927
+        регистрируются с <code>ПараметрыРегистрации.Вставить("БезопасныйРежим", Ложь)</code> —
+        чтобы замеры через <code>ОценкаПроизводительности</code> могли записываться в регистр.
+    </div>
+</div>
+
+<h2>Общая схема (Mermaid)</h2>
+<div class="diagram-wrap">
+<pre class="mermaid">
+flowchart TB
+    U(["Инициатор: пользователь / EPF / серверный код"])
+    CTX{"Контекст выполнения"}
+    U --> CTX
+
+    CTX -->|"Безопасный режим EPF"| SM["БезопасныйРежим = Истина"]
+    SM --> XDU["Wim_Du (совм. 8.3.12):<br/>журнал, ВЫХОД без записи"]
+    SM --> XMO["Wim_Mo (совм. 8.3.6):<br/>ошибка при Записать(),<br/>обработка падает"]
+
+    CTX -->|"Серверный замер"| S["НачатьЗамерВремени →<br/>ЗакончитьЗамерВремени"]
+    CTX -->|"Клиентский замер"| C["Буфер на клиенте<br/>ЗафиксироватьДлительностьКлючевыхОпераций"]
+
+    S --> P["УстановитьПривилегированныйРежим(Истина)"]
+    C --> P
+    P --> R[("РС ЗамерыВремени")]
+
+    classDef stop fill:#fff3cd,stroke:#ffc107,color:#856404
+    classDef danger fill:#f8d7da,stroke:#dc3545,color:#721c24
+    classDef ok fill:#d4edda,stroke:#28a745,color:#155724
+    class XDU stop
+    class XMO danger
+    class R ok
+</pre>
+</div>
+
+<div class="legend">
+    <div class="legend-item">
+        <span class="legend-swatch" style="background:#d4edda;border:1px solid #28a745"></span>
+        <span>Успешная запись в РС через УстановитьПривилегированныйРежим (без прав Update у роли)</span>
+    </div>
+    <div class="legend-item">
+        <span class="legend-swatch" style="background:#fff3cd;border:1px solid #ffc107"></span>
+        <span>Wim_Du: безопасный режим EPF — запись в ЖР, выход без записи в регистр</span>
+    </div>
+    <div class="legend-item">
+        <span class="legend-swatch" style="background:#f8d7da;border:1px solid #dc3545"></span>
+        <span>Wim_Mo: безопасный режим EPF — исключение при записи замера, обработка прерывается</span>
+    </div>
+</div>
+
+<div class="warn" style="margin-top:12px">
+    <strong>Wim_Mo (МидлОфис, совместимость 8.3.6).</strong>
+    В старой подсистеме «Оценка производительности» модуль
+    <code>ОценкаПроизводительностиВызовСервераПолныеПрава</code>
+    <strong>не проверяет</strong> <code>БезопасныйРежим()</code> перед записью и сразу вызывает
+    <code>МенеджерЗаписи.Записать()</code>.
+    При <code>БезопасныйРежим = Истина</code> у EPF песочница блокирует запись в РС —
+    типичный исход: <strong>ошибка выполнения и падение обработки</strong>, а не мягкий выход как в Wim_Du.
+    На совместимости 8.3.6 также недоступен <code>УстановитьОтключениеБезопасногоРежима</code> (с 8.3.9);
+    поэтому в МО для EPF с замерами обязательно
+    <code>ПараметрыРегистрации.БезопасныйРежим = Ложь</code>.
+</div>
+
+<div class="info" style="margin-top:12px">
+    <strong>Серверный вызов</strong> — основной путь для EPF в <code>ObjectModule.bsl</code>, регламентных заданий,
+    серверных процедур форм и любого кода, где вызываются
+    <code>ОценкаПроизводительности.НачатьЗамерВремени()</code> и
+    <code>ЗакончитьЗамерВремени()</code> на сервере.
+    Запись сразу через <code>ЗафиксироватьДлительностьКлючевойОперации</code>;
+    при активном <code>БезопасныйРежим()</code> замер не пишется (проверка есть только на этом канале).
+    Для штатного кода конфигурации и РЗ безопасный режим обычно выключен — ветка «Безопасный режим EPF»
+    к ним не относится.
+</div>
+
+<h2>Два канала записи</h2>
+<div class="card">
+    <table>
+        <thead>
+            <tr>
+                <th>Канал</th>
+                <th>Когда</th>
+                <th>Как пишет</th>
+                <th>Проверка БезопасныйРежим()</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td><strong>Серверный</strong></td>
+                <td><code>ЗакончитьЗамерВремени</code> в модуле объекта, регламенте, серверной процедуре</td>
+                <td>Сразу: <code>ЗафиксироватьДлительностьКлючевойОперации</code> -&gt; <code>МенеджерЗаписи.Записать()</code></td>
+                <td><strong>Да</strong> — при Истина замер не пишется</td>
+            </tr>
+            <tr>
+                <td><strong>Клиентский</strong></td>
+                <td>Замер на клиенте, авто-завершение по таймеру или закрытие сеанса</td>
+                <td>Пакетом: <code>ЗафиксироватьДлительностьКлючевыхОпераций</code> -&gt; <code>НаборЗаписей.Записать()</code></td>
+                <td><strong>Нет</strong> в типовом коде (сразу привилегированный режим)</td>
+            </tr>
+        </tbody>
+    </table>
+</div>
+
+<h2>Привилегированный режим vs безопасный режим</h2>
+<div class="card">
+    <table>
+        <thead>
+            <tr>
+                <th>Механизм</th>
+                <th>Назначение в Wim_Du</th>
+                <th>Используется в ОценкаПроизводительности?</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td><code>УстановитьПривилегированныйРежим(Истина)</code></td>
+                <td>Обход проверки <strong>прав ролей</strong> при записи в <code>ЗамерыВремени</code> и создании <code>КлючевыеОперации</code></td>
+                <td class="success" style="background:#d4edda">Да — основной механизм записи</td>
+            </tr>
+            <tr>
+                <td><code>БезопасныйРежим()</code> + выход</td>
+                <td>Защита от записи замеров из песочницы внешних обработок</td>
+                <td class="warn" style="background:#fff3cd">Да — проверка, не отключение</td>
+            </tr>
+            <tr>
+                <td><code>ПараметрыРегистрации.БезопасныйРежим = Ложь</code></td>
+                <td>EPF не запускается в безопасном режиме при подключении через БСП</td>
+                <td class="success" style="background:#d4edda">Да — во всех 17 объектах IMDEV-8927</td>
+            </tr>
+            <tr>
+                <td><code>УстановитьОтключениеБезопасногоРежима</code></td>
+                <td>Программное снятие песочницы (доступно с платформы 8.3.9, совместимость 8.3.9+)</td>
+                <td class="danger" style="background:#f8d7da">Нет — в конфигурации Wim_Du не используется</td>
+            </tr>
+        </tbody>
+    </table>
+</div>
+
+<h2>Ключевой фрагмент типового кода (Wim_Du)</h2>
+<div class="card">
+    <p>Проверка безопасного режима и включение привилегированного — модуль <code>ОценкаПроизводительности</code>:</p>
+<pre>Если БезопасныйРежим() &lt;&gt; Ложь Тогда
+    ЗаписьЖурналаРегистрации("... не поддерживается в безопасном режиме ...");
+    Возврат;
+КонецЕсли;
+
+УстановитьПривилегированныйРежим(Истина);
+// ... запись в РегистрыСведений.ЗамерыВремени</pre>
+
+    <p>Регистрация внешней обработки (пример: внЗагрузкаКотировокДУ, IMDEV-8927):</p>
+<pre>ПараметрыРегистрации.Вставить("БезопасныйРежим", Ложь);
+ПараметрыРегистрации.Вставить("ВерсияБСП", "2.1.1.12");</pre>
+</div>
+
+<h2>Права и роли (что настраивать не нужно)</h2>
+<div class="card">
+    <p style="margin-top:0">
+        Частая ошибка при внедрении замеров — искать в конфигураторе роль с правом
+        «Регистр сведений ЗамерыВремени — изменение» и назначать её пользователям.
+        В типовой БСП так <strong>не делают</strong>: право Update на этот регистр
+        пользователям обычно не дают вовсе.
+    </p>
+    <ul class="compact">
+        <li>Роль <code>НастройкаИОценкаПроизводительности</code> — только <strong>чтение/просмотр</strong> <code>ЗамерыВремени</code> (для отчёта и настроек APDEX), без Update.</li>
+        <li>Обычные профили (бухгалтер, операционист и т.д.) — явных прав на <code>ЗамерыВремени</code> нет.</li>
+        <li>Запись при выполнении ключевых операций — только через <code>УстановитьПривилегированныйРежим</code> в модулях <code>ОценкаПроизводительности</code> и <code>ОценкаПроизводительностиВызовСервера</code>.</li>
+        <li>Для просмотра накопленных замеров администратору достаточно роли на отчёт «Оценка производительности», а не права изменять регистр.</li>
+    </ul>
+</div>
+
+<h2>Условия, при которых замер не попадет в регистр</h2>
+<div class="card">
+    <table>
+        <thead>
+            <tr><th>Условие</th><th>Результат</th></tr>
+        </thead>
+        <tbody>
+            <tr><td>Константа <code>ВыполнятьЗамерыПроизводительности = Ложь</code></td><td>Замеры не выполняются</td></tr>
+            <tr><td>Монопольный режим</td><td>Запись пропускается</td></tr>
+            <tr><td><code>БезопасныйРежим() = Истина</code> (серверный одиночный замер)</td><td>Запись в ЖР, выход</td></tr>
+            <tr><td>EPF подключена с <code>БезопасныйРежим = Истина</code></td><td>Риск потери серверных замеров</td></tr>
+            <tr><td>Ошибка при <code>НаборЗаписей.Записать()</code></td><td>Ошибка в ЖР, пользователю не показывается</td></tr>
+        </tbody>
+    </table>
+</div>
+
+<div class="footer">
+    IMDEV-8927 / Wim_Du / Документация / Схема записи замеров производительности
+</div>
+
+</div>
+
+<script>
+    mermaid.initialize({
+        startOnLoad: true,
+        theme: "base",
+        themeVariables: {
+            primaryColor: "#ede7f6",
+            primaryTextColor: "#2c3e50",
+            primaryBorderColor: "#6f42c1",
+            lineColor: "#6c757d",
+            secondaryColor: "#e7f1ff",
+            tertiaryColor: "#f8f9fa",
+            fontFamily: "-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif",
+            fontSize: "14px"
+        },
+        flowchart: {
+            htmlLabels: true,
+            curve: "basis",
+            padding: 16,
+            nodeSpacing: 40,
+            rankSpacing: 50
+        }
+    });
+</script>
+</body>
+</html>
