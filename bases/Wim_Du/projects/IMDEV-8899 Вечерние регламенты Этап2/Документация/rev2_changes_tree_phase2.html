@@ -184,10 +184,11 @@
   </div>
 
   <div class="summary-grid">
-    <div class="summary-card"><strong>4</strong><span>пункта сделано (3.1, +1, +2, часть 3.2)</span></div>
-    <div class="summary-card"><strong>4</strong><span>пункта не делали (3.3, 3.6, 3.7, полный 3.2)</span></div>
+    <div class="summary-card"><strong>6</strong><span>пунктов сделано (3.1, 3.6, 3.7, +1, +2, часть 3.2)</span></div>
+    <div class="summary-card"><strong>1</strong><span>пункт частично (3.2)</span></div>
+    <div class="summary-card"><strong>1</strong><span>пункт не делали (3.3)</span></div>
     <div class="summary-card"><strong>3</strong><span>пункта вне scope (3.4, 3.5, +3)</span></div>
-    <div class="summary-card"><strong>10</strong><span>объектов метаданных в rev2</span></div>
+    <div class="summary-card"><strong>11</strong><span>объектов метаданных в rev2</span></div>
   </div>
 
   <!-- ========== 3.1 ========== -->
@@ -278,32 +279,31 @@
   </div>
 
   <!-- ========== 3.6 ========== -->
-  <div class="plan-branch">
-    <h2><span class="tag tag-planned">не делали</span> 3.6 РегламентныеПериоды — НайтиСтроки, стр. 686 (4,27%)</h2>
-    <p class="pct">17 154 линейных поиска в <code>СформироватьДокументыЗакрытияПериода</code>.</p>
+  <div class="plan-branch done-branch">
+    <h2><span class="tag tag-done">сделано</span> 3.6 РегламентныеПериоды — НайтиСтроки, стр. 686 (4,27%)</h2>
+    <p class="pct">Согласованное решение: составные индексы таблиц значений на форме перед передачей в <code>ПараметрыСохранения</code>. Базовый индекс <code>ДоговорДУ</code> (КФ) сохранён; добавлены составные для горячих <code>НайтиСтроки</code> в менеджере.</p>
     <div class="plan-item">
-      <div class="plan-item-title">Что есть в rev2 (не закрывает пункт)</div>
+      <div class="plan-item-title">Справочник.РегламентныеПериоды.Форма.РегламентныйПериод <span class="tag tag-intercept">перехват</span></div>
       <div class="path">Catalogs/РегламентныеПериоды/Forms/РегламентныйПериод/Ext/Form/Module.bsl</div>
       <ul class="delta-list">
-        <li><span class="tag tag-partial">косвенно</span> <code>СписокОпераций.Индексы.Добавить("ДоговорДУ")</code> на форме — ускоряет последующие обращения к ТЗ, но не заменяет <code>НайтиСтроки</code> в менеджере (стр. 686).</li>
-      </ul>
-    </div>
-    <div class="plan-item">
-      <div class="plan-item-title"><span class="tag tag-planned">осталось</span></div>
-      <ul class="delta-list">
-        <li>Соответствие / предварительная группировка <code>СписокОпераций</code> в <code>СформироватьДокументыЗакрытияПериода</code>.</li>
+        <li><code>ПолучитьДоговораДУпоДинамическомуСписку</code> — после отсева +2 и базового <code>Индексы.Добавить("ДоговорДУ")</code>:
+          <code>СписокОпераций.Индексы.Добавить("ДоговорДУ,ГруппаОперацийПользователя")</code> (#Вставка).</li>
+        <li>После выгрузки планов: <code>ДокументыПоДоговорам.Индексы.Добавить("ДоговорДУ,ГруппаОперацийПользователя")</code> (#Вставка).</li>
+        <li>Ускоряет <code>НайтиСтроки</code> в <code>СформироватьДокументыЗакрытияПериода</code>: <code>СписокОпераций</code> (стр. ~729) и <code>ДокументыПоДоговорам</code> (стр. ~719) по паре (договор, группа); поиск только по <code>ДоговорДУ</code> (стр. ~743) — через базовый индекс.</li>
       </ul>
     </div>
   </div>
 
   <!-- ========== 3.7 ========== -->
-  <div class="plan-branch">
-    <h2><span class="tag tag-planned">не делали</span> 3.7 ПланРегламентныхОперацийДУ.МодульМенеджера, стр. 21 (2,10%)</h2>
-    <p class="pct">Пакетная обработка запроса менеджера плана — в rev2 объект не заимствован.</p>
+  <div class="plan-branch done-branch">
+    <h2><span class="tag tag-done">сделано</span> 3.7 ПланРегламентныхОперацийДУ.МодульМенеджера, стр. 21 (2,10%)</h2>
+    <p class="pct">Вариант A (минимальный): двухшаговый запрос к <code>КритерийОтбора.СвязанныеДокументы</code> — сначала ПОМЕСТИТЬ в ВТ, затем отбор по <code>ПометкаУдаления</code> (по аналогии с IMDEV-8662 / WIM_FIn).</p>
     <div class="plan-item">
+      <div class="plan-item-title">Документ.ПланРегламентныхОперацийДУ.МодульМенеджера <span class="tag tag-intercept">перехват</span></div>
+      <div class="path">Documents/ПланРегламентныхОперацийДУ/Ext/ManagerModule.bsl</div>
       <ul class="delta-list">
-        <li>Связано с п. 3.2 и блоком «ПланРегламентныхОперацийДУ» (~30 мин в оценке).</li>
-        <li>Частично смягчается индексацией реквизитов плана (п. +3, см. ниже — вне rev2).</li>
+        <li><code>ПометитьНаУдалениеПодчиненныеДокументы</code> — вместо одного запроса с условием по критерию: шаг 1 <code>ВТ_СвязанныеДокументы</code> (<code>СвязанныеДокументы.Ссылка</code>), шаг 2 <code>НЕ Ссылка.ПометкаУдаления</code>.</li>
+        <li>Цикл пометки подчиненных документов без изменений.</li>
       </ul>
     </div>
   </div>
@@ -349,7 +349,8 @@
       <div class="plan-item-title">Справочник.РегламентныеПериоды.Форма.РегламентныйПериод <span class="tag tag-intercept">перехват</span></div>
       <div class="path">Catalogs/РегламентныеПериоды/Forms/РегламентныйПериод/Ext/Form/Module.bsl</div>
       <ul class="delta-list">
-        <li><code>ПолучитьДоговораДУпоДинамическомуСписку</code> — вызов <code>ОтфильтроватьСписокОперацийЗакрытия</code> при включенной константе.</li>
+        <li><code>ПолучитьДоговораДУпоДинамическомуСписку</code> — вызов <code>ОтфильтроватьСписокОперацийЗакрытия</code> при включенной константе (п. +2).</li>
+        <li>Тот же перехват — составные индексы ТЗ (п. 3.6).</li>
       </ul>
     </div>
 
@@ -382,12 +383,14 @@
 │   └── РегламентныеПериоды                      <span style="color:#3d0a91">[Adopted + перехват]</span>
 │       ├── Ext/ManagerModule.bsl                → 3.1 (пакет РЕПО)
 │       └── Forms/РегламентныйПериод/
-│           └── Ext/Form/Module.bsl              → +2 (отсев на форме)
+│           └── Ext/Form/Module.bsl              → +2 (отсев), 3.6 (индексы ТЗ)
 ├── Documents/
 │   ├── ПереоценкаАктивов                        <span style="color:#3d0a91">[Adopted + перехват]</span>
 │   │   └── Ext/ObjectModule.bsl                 → 3.1 (ЗаполнитьТЧ)
-│   └── РасчетСЧА_РСА                            <span style="color:#3d0a91">[Adopted]</span>
-│       └── Ext/ManagerModule.bsl                → +1 (коллизия номера)
+│   ├── РасчетСЧА_РСА                            <span style="color:#3d0a91">[Adopted]</span>
+│   │   └── Ext/ManagerModule.bsl                → +1 (коллизия номера)
+│   └── ПланРегламентныхОперацийДУ               <span style="color:#3d0a91">[Adopted + перехват]</span>
+│       └── Ext/ManagerModule.bsl                → 3.7 (двухшаговый запрос СвязанныеДокументы)
 ├── InformationRegisters/
 │   ├── ВидыОптимизируемыхРегламентныхОперацийДУ <span style="color:#0c5460">[НОВЫЙ]</span>
 │   │   └── Ext/ManagerModule.bsl                → +2 (отсев), 3.1 (РЕПО)
@@ -397,9 +400,7 @@
 <span style="color:#6c757d">Не в rev2 (план):</span>
 ├── Документ.РасчетСЧА_РСА / ObjectModule        → 3.3
 ├── Документ.НачислениеКупонногоДохода           → 3.4 <span style="color:#adb5bd">skip</span>
-├── Документ.РасчетСЧА_РСА / ManagerModule (запрос) → 3.5 <span style="color:#adb5bd">skip</span>
-├── Справочник.РегламентныеПериоды (НайтиСтроки) → 3.6
-├── Документ.ПланРегламентныхОперацийДУ           → 3.7 / +3 (индексы в КФ)</div>
+└── Документ.РасчетСЧА_РСА / ManagerModule (запрос) → 3.5 <span style="color:#adb5bd">skip</span></div>
 
   <h2 style="margin:1.75rem 0 0.75rem; font-size:1.15rem; color:#2d3748;">Матрица «пункт постановки → статус»</h2>
   <table class="mini-table">
@@ -445,14 +446,14 @@
       <tr>
         <td><strong>3.6</strong> РегламентныеПериоды / НайтиСтроки</td>
         <td>4,27%</td>
-        <td><span class="tag tag-planned">не делали</span></td>
-        <td>индекс на форме — косвенно</td>
+        <td><span class="tag tag-done">сделано</span></td>
+        <td>Форма РегламентныйПериод: индексы ДоговорДУ + составные на СписокОпераций и ДокументыПоДоговорам</td>
       </tr>
       <tr>
         <td><strong>3.7</strong> ПланРегламентныхОперацийДУ</td>
         <td>2,10%</td>
-        <td><span class="tag tag-planned">не делали</span></td>
-        <td>—</td>
+        <td><span class="tag tag-done">сделано</span></td>
+        <td>ПланРегламентныхОперацийДУ.ManagerModule (ВТ_СвязанныеДокументы)</td>
       </tr>
       <tr>
         <td><strong>+1</strong> Коллизия номера РСА</td>
