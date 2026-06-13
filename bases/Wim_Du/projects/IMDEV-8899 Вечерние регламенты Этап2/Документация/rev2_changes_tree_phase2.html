@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>IMDEV-8899 этап 2 - дерево изменений rev2</title>
+  <title>Оптимизация вечерних регламентов, этап 2 — дерево изменений расширения</title>
   <style>
     :root {
       --text: #212529;
@@ -60,7 +60,7 @@
     .tag-skip { background: #f1f3f5; color: #495057; text-decoration: line-through; }
     .tag-new { background: #d1ecf1; color: #0c5460; }
     .tag-intercept { background: #e7deff; color: #3d0a91; }
-    .tag-adopted { background: #f8f9fa; color: #495057; border: 1px solid #ced4da; }
+    .tag-cf { background: #fdebd0; color: #7d4e00; }
     .summary-grid {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -84,6 +84,7 @@
       box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
     }
     .plan-branch.skip-branch { border-left-color: var(--skip); background: #f8f9fa; opacity: 0.92; }
+    .plan-branch.cf-branch { border-left-color: #e67e22; background: #fffaf5; }
     .plan-branch.done-branch { border-left-color: var(--done); }
     .plan-branch.partial-branch { border-left-color: var(--partial); }
     .plan-branch > h2 {
@@ -134,6 +135,35 @@
       overflow-x: auto;
       white-space: pre;
     }
+    .tree-excluded {
+      margin: 0.75rem 0 0 0;
+      padding: 0.65rem 0.9rem;
+      background: #f1f3f5;
+      border: 1px dashed #ced4da;
+      border-radius: 6px;
+      font-size: 0.84rem;
+      color: #6c757d;
+    }
+    .tree-excluded-title {
+      font-weight: 600;
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+      color: #868e96;
+      margin-bottom: 0.45rem;
+    }
+    .tree-excluded ul {
+      margin: 0;
+      padding-left: 1.15rem;
+    }
+    .tree-excluded li {
+      margin: 0.2rem 0;
+      text-decoration: line-through;
+    }
+    .tree-excluded li strong {
+      text-decoration: none;
+      color: #495057;
+    }
     .mini-table {
       width: 100%;
       border-collapse: collapse;
@@ -161,22 +191,20 @@
   </style>
 </head>
 <body>
-  <h1>IMDEV-8899 этап 2: дерево изменений расширения rev2</h1>
+  <h1>Оптимизация вечерних регламентов, этап 2: дерево изменений расширения</h1>
   <p class="lead">
-    Сопоставление пунктов постановки
-    <a href="../_БАГИ и задачи 2-ого этапа/developer_task_phase2_optimization.html">developer_task_phase2_optimization.html</a>
-    с фактическими объектами и модулями в <code>Расширения/rev2</code>.
-    Сборка: <code>Расширения/rev2.cfe</code>, ИБ <code>localhost/WIM_DU</code>.
+    Сопоставление пунктов постановки по оптимизации с фактическими объектами и модулями в расширении конфигурации
+    (<code>rev2</code>). Артефакт поставки: файл расширения <code>rev2.cfe</code>, тестовая серверная ИБ.
   </p>
   <p class="meta">
-    Обновлено: 12.06.2026. Исключено из scope: п. <strong>3.4</strong>, <strong>3.5</strong> (узкие места);
-    п. <strong>+3</strong> (индексация ПланРегламентныхОперацийДУ) — уже в базовой КФ (IMAPPS-35992), в rev2 не входит.
+    Обновлено: 12.06.2026. Вне scope этапа 2: п. <strong>3.4</strong>, <strong>3.5</strong>.
+    П. <strong>+3</strong> (индексация ПланРегламентныхОперацийДУ) — <strong>не входит в задание этапа 2</strong>, выполнено ранее в базовой КФ.
+    П. <strong>3.3</strong> — план в базовой КФ (индекс РегистрРСА_СЧА).
   </p>
 
   <div class="legend">
     <span><span class="tag tag-done">сделано</span> в rev2</span>
-    <span><span class="tag tag-partial">частично</span> задел / не полный объём пункта</span>
-    <span><span class="tag tag-planned">не делали</span> в rev2</span>
+    <span><span class="tag tag-cf">план в КФ</span> / <span class="tag tag-cf">ранее в КФ</span></span>
     <span><span class="tag tag-skip">вне scope</span></span>
     <span><span class="tag tag-new">новый</span> объект расширения</span>
     <span><span class="tag tag-intercept">перехват</span> &amp;ИзменениеИКонтроль</span>
@@ -184,17 +212,16 @@
   </div>
 
   <div class="summary-grid">
-    <div class="summary-card"><strong>6</strong><span>пунктов сделано (3.1, 3.6, 3.7, +1, +2, часть 3.2)</span></div>
-    <div class="summary-card"><strong>1</strong><span>пункт частично (3.2)</span></div>
-    <div class="summary-card"><strong>1</strong><span>пункт не делали (3.3)</span></div>
-    <div class="summary-card"><strong>3</strong><span>пункта вне scope (3.4, 3.5, +3)</span></div>
-    <div class="summary-card"><strong>11</strong><span>объектов метаданных в rev2</span></div>
+    <div class="summary-card"><strong>7</strong><span>пунктов сделано в rev2 (3.1, 3.2, 3.6, 3.7, +1, +2)</span></div>
+    <div class="summary-card"><strong>1</strong><span>план в КФ (3.3)</span></div>
+    <div class="summary-card"><strong>2</strong><span>пункта вне scope (3.4, 3.5)</span></div>
+    <div class="summary-card"><strong>13</strong><span>объектов в составе rev2</span></div>
   </div>
 
   <!-- ========== 3.1 ========== -->
   <div class="plan-branch done-branch">
     <h2><span class="tag tag-done">сделано</span> 3.1 ПереоценкаАктивов — запрос РЕПО, стр. 880 (7,80%)</h2>
-    <p class="pct">Оптимизация: пакетный запрос остатков РЕПО + пропуск <code>АктивыПоРЕПОЗаполнить()</code> для розницы без РЕПО (не меняя саму процедуру).</p>
+    <p class="pct">Оптимизация: пакетный запрос остатков РЕПО + пропуск <code>АктивыПоРЕПОЗаполнить()</code> для договоров целевого пула без РЕПО (не меняя саму процедуру).</p>
 
     <div class="plan-item">
       <div class="plan-item-title">РегистрСведений.ВидыОптимизируемыхРегламентныхОперацийДУ <span class="tag tag-new">новый</span></div>
@@ -226,7 +253,7 @@
       <div class="plan-item-title">Документ.ПереоценкаАктивов.МодульОбъекта <span class="tag tag-intercept">перехват</span> <span class="tag tag-adopted">заимствован</span></div>
       <div class="path">Documents/ПереоценкаАктивов/Ext/ObjectModule.bsl</div>
       <ul class="delta-list">
-        <li><code>ЗаполнитьТЧ</code> — разбор структуры пакетных данных; условный пропуск <code>АктивыПоРЕПОЗаполнить()</code> при рознице + <code>ПропускРЕПОВетки = Истина</code>.</li>
+        <li><code>ЗаполнитьТЧ</code> — разбор структуры пакетных данных; условный пропуск <code>АктивыПоРЕПОЗаполнить()</code> при целевом пуле + <code>ПропускРЕПОВетки = Истина</code>.</li>
         <li><span class="tag tag-new">добавлено</span> <code>rev2_РазобратьПараметрыЗаполнитьТЧ</code>, <code>rev2_ПропуститьЗаполнениеРЕПО</code>, <code>rev2_НаименованиеПулаДоговораДУ</code>.</li>
         <li>Включение: константа <code>ИспользоватьПредварительныеЗапросыДляВечернихРегламентов</code> — только в вызывающем коде базы (не внутри пакетной функции).</li>
       </ul>
@@ -234,48 +261,47 @@
   </div>
 
   <!-- ========== 3.2 ========== -->
-  <div class="plan-branch partial-branch">
-    <h2><span class="tag tag-partial">частично</span> 3.2 ЗначенияПараметровДоговораДУ — запрос, стр. 73 (7,49%)</h2>
-    <p class="pct">136 443 вызова — целевой пакетный кэш по пачке договоров. В rev2 есть инфраструктура, но не подключена ко всему регламенту.</p>
+  <div class="plan-branch done-branch">
+    <h2><span class="tag tag-done">сделано</span> 3.2 ЗначенияПараметровДоговораДУ — запрос, стр. 73 (7,49%)</h2>
+    <p class="pct">136 443 вызова — оптимизация единичного запроса (срез с фильтром вместо ПОМЕСТИТЬ + ЛЕВОЕ СОЕДИНЕНИЕ) + пакетная функция для контроля портфеля. Бенчмарк: 3000 договоров x 4 набора, 0 расхождений, -69% к КФ.</p>
 
     <div class="plan-item">
-      <div class="plan-item-title">РегистрСведений.ЗначенияПараметровДоговораДУ <span class="tag tag-adopted">заимствован</span></div>
+      <div class="plan-item-title">РегистрСведений.ЗначенияПараметровДоговораДУ <span class="tag tag-adopted">заимствован</span> <span class="tag tag-intercept">перехват</span></div>
       <div class="path">InformationRegisters/ЗначенияПараметровДоговораДУ/Ext/ManagerModule.bsl</div>
       <ul class="delta-list">
-        <li><span class="tag tag-new">добавлено</span> <code>ЗначенияПараметровДоговоровДУ(МассивДоговоровДУ, Параметры, Дата)</code> — один запрос <code>СрезПоследних</code> по массиву договоров.</li>
-        <li><span class="tag tag-partial">использование</span> только из <code>ДоговорыДляКонтроляУменьшенияПортфеляОптимизированно</code> (п. +2), не заменяет точечные вызовы <code>ЗначенияПараметровДоговораДУ(...)</code> в регламентных процедурах.</li>
-      </ul>
-    </div>
-
-    <div class="plan-item">
-      <div class="plan-item-title"><span class="tag tag-planned">осталось</span></div>
-      <ul class="delta-list">
-        <li>Подключить пакетное чтение параметров в горячих точках регламента (связка с п. 3.7 и блоком «План + внутренние алгоритмы»).</li>
-        <li>Замер «до/после» по строке 73 базового модуля менеджера.</li>
+        <li><span class="tag tag-intercept">перехват</span> <code>ЗначенияПараметровДоговораДУ(ДоговорДУ, Параметры, Дата)</code> — предзаполнение <code>Неопределено</code> + один <code>СрезПоследних</code> с <code>Параметр В (&amp;Параметры)</code>; логирование как в КФ.</li>
+        <li><span class="tag tag-new">добавлено</span> <code>ЗначенияПараметровДоговоровДУ(МассивДоговоровДУ, Параметры, Дата)</code> — пакетный срез по массиву договоров (п. +2).</li>
       </ul>
     </div>
   </div>
 
   <!-- ========== 3.3 ========== -->
-  <div class="plan-branch">
-    <h2><span class="tag tag-planned">не делали</span> 3.3 РасчетСЧА_РСА.МодульОбъекта — запрос, стр. 154 (6,22%)</h2>
-    <p class="pct">Оптимизация текста запроса / индексация полей отбора — в rev2 нет перехвата модуля объекта.</p>
+  <div class="plan-branch cf-branch">
+    <h2><span class="tag tag-cf">план в КФ</span> 3.3 РасчетСЧА_РСА.МодульОбъекта — запрос, стр. 154 (6,22%)</h2>
+    <p class="pct">
+      Узкое место — не расчет сумм (<code>ПолучитьСуммыРСАСЧА</code> в менеджере), а поиск и удаление записей регистра
+      в <code>ОтменитьРасчетРСА_СЧА()</code> при проведении/отмене проведения документа.
+      В расширении перехвата модуля объекта нет; оптимизация — <strong>индексация реквизита регистра сведений в базовой КФ</strong>
+      (аналогично п. +3).
+    </p>
+
     <div class="plan-item">
+      <div class="plan-item-title">Горячий запрос (точка замера)</div>
+      <div class="path">Documents/РасчетСЧА_РСА/Ext/ObjectModule.bsl → <code>ОтменитьРасчетРСА_СЧА</code>, стр. 154</div>
       <ul class="delta-list">
-        <li>Объект <code>Документ.РасчетСЧА_РСА</code> в rev2 заимствован только для п. +1 (модуль менеджера).</li>
-        <li><span class="tag tag-planned">план</span> анализ запроса <code>ПолучитьСуммыРСАСЧА</code> / строка 154, индексы, пакетность.</li>
+        <li>~17 154 вызова <code>Запрос.Выполнить()</code> в вечернем регламенте; в сценарии «только РСА+СЧА» — до ~20% времени блока.</li>
+        <li>Отбор: <code>Период = &amp;Период</code> (начало дня) <strong>И</strong> <code>ДокументОснование = &amp;ДокументОснование</code> (ссылка на текущий <code>РасчетСЧА_РСА</code>).</li>
+        <li>Измерение <code>ДоговорДУ</code> в запросе <strong>не используется</strong>, хотя известно из контекста документа — из-за этого СУБД вынуждена искать по неиндексированному реквизиту внутри среза периода.</li>
       </ul>
     </div>
-  </div>
 
-  <!-- ========== 3.4 3.5 skip ========== -->
-  <div class="plan-branch skip-branch">
-    <h2><span class="tag tag-skip">вне scope</span> 3.4 НачислениеКупонногоДохода, стр. 2005 (5,40%)</h2>
-    <p class="pct">По решению команды — не реализуем в этапе 2.</p>
-  </div>
-  <div class="plan-branch skip-branch">
-    <h2><span class="tag tag-skip">вне scope</span> 3.5 РасчетСЧА_РСА.МодульМенеджера, стр. 216 (4,78%)</h2>
-    <p class="pct">По решению команды — не реализуем в этапе 2.</p>
+    <div class="plan-item">
+      <div class="plan-item-title"><span class="tag tag-cf">в КФ</span></div>
+      <div class="path">InformationRegisters/РегистрРСА_СЧА.xml → реквизит <code>ДокументОснование</code></div>
+      <ul class="delta-list">
+        <li>Включить <strong>Индексировать</strong> (<code>DontIndex</code> → <code>Index</code>). Загрузить КФ, обновить БД на сервере (~1 мин. реструктуризация).</li>
+      </ul>
+    </div>
   </div>
 
   <!-- ========== 3.6 ========== -->
@@ -297,7 +323,7 @@
   <!-- ========== 3.7 ========== -->
   <div class="plan-branch done-branch">
     <h2><span class="tag tag-done">сделано</span> 3.7 ПланРегламентныхОперацийДУ.МодульМенеджера, стр. 21 (2,10%)</h2>
-    <p class="pct">Вариант A (минимальный): двухшаговый запрос к <code>КритерийОтбора.СвязанныеДокументы</code> — сначала ПОМЕСТИТЬ в ВТ, затем отбор по <code>ПометкаУдаления</code> (по аналогии с IMDEV-8662 / WIM_FIn).</p>
+    <p class="pct">Вариант A (минимальный): двухшаговый запрос к <code>КритерийОтбора.СвязанныеДокументы</code> — сначала ПОМЕСТИТЬ в ВТ, затем отбор по <code>ПометкаУдаления</code> (типовой паттерн из смежного проекта).</p>
     <div class="plan-item">
       <div class="plan-item-title">Документ.ПланРегламентныхОперацийДУ.МодульМенеджера <span class="tag tag-intercept">перехват</span></div>
       <div class="path">Documents/ПланРегламентныхОперацийДУ/Ext/ManagerModule.bsl</div>
@@ -330,7 +356,7 @@
   <!-- ========== +2 ========== -->
   <div class="plan-branch done-branch">
     <h2><span class="tag tag-done">сделано</span> +2 Предварительный отсев договоров ДУ без расчета</h2>
-    <p class="pct">Прочие расчеты без движений (~20 мин): переоценка ДС, дефолтные, контроль уменьшения портфеля. Только пул «Розничное ДУ», константа <code>ИспользоватьПредварительныеЗапросыДляВечернихРегламентов</code>.</p>
+    <p class="pct">Прочие расчеты без движений (~20 мин): переоценка ДС, дефолтные, контроль уменьшения портфеля. Только целевой пул договоров ДУ, константа <code>ИспользоватьПредварительныеЗапросыДляВечернихРегламентов</code>.</p>
 
     <div class="plan-item">
       <div class="plan-item-title">РегистрСведений.ВидыОптимизируемыхРегламентныхОперацийДУ <span class="tag tag-new">новый</span></div>
@@ -341,7 +367,7 @@
         <li><code>ДоговорыСОснованиемДляПереоценкиДСОптимизированно</code> — переоценка ДС.</li>
         <li><code>ДоговорыСДефолтнымиСобытиямиОптимизированно</code> — списание дефолтных облигаций.</li>
         <li><code>ДоговорыДляКонтроляУменьшенияПортфеляОптимизированно</code> — контроль портфеля (использует <code>ЗначенияПараметровДоговоровДУ</code>).</li>
-        <li><code>ВсеДоговорыСПуломРозничноеДУ</code> — отсев не применяется при смешанном отборе.</li>
+        <li><code>ВсеДоговорыСПуломРозничноеДУ</code> — отсев не применяется при смешанном отборе договоров.</li>
       </ul>
     </div>
 
@@ -363,10 +389,10 @@
     </div>
   </div>
 
-  <!-- ========== +3 skip ========== -->
+  <!-- ========== +3 КФ (вне задания) ========== -->
   <div class="plan-branch skip-branch">
-    <h2><span class="tag tag-skip">вне scope rev2</span> +3 Индексация ПланРегламентныхОперацийДУ (ДоговорДУ, ГруппаОперацийПользователя)</h2>
-    <p class="pct">Уже выполнено / согласовано в базовой КФ (IMAPPS-35992). В расширение rev2 не входит.</p>
+    <h2><span class="tag tag-skip">не в задании</span> <span class="tag tag-cf">ранее в КФ</span> +3 Индексация ПланРегламентныхОперацийДУ (ДоговорДУ, ГруппаОперацийПользователя)</h2>
+    <p class="pct">Справочно: выполнено до этапа 2 в базовой конфигурации. В текущее задание и в расширение не входит.</p>
   </div>
 
   <!-- ========== Дерево метаданных ========== -->
@@ -394,13 +420,21 @@
 ├── InformationRegisters/
 │   ├── ВидыОптимизируемыхРегламентныхОперацийДУ <span style="color:#0c5460">[НОВЫЙ]</span>
 │   │   └── Ext/ManagerModule.bsl                → +2 (отсев), 3.1 (РЕПО)
-│   └── ЗначенияПараметровДоговораДУ             <span style="color:#3d0a91">[Adopted]</span>
-│       └── Ext/ManagerModule.bsl                → 3.2 частично (+2 контроль портфеля)
+│   └── ЗначенияПараметровДоговораДУ             <span style="color:#3d0a91">[Adopted + перехват]</span>
+│       └── Ext/ManagerModule.bsl                → 3.2 (единичный + пакетный срез), +2 контроль портфеля
 
-<span style="color:#6c757d">Не в rev2 (план):</span>
-├── Документ.РасчетСЧА_РСА / ObjectModule        → 3.3
-├── Документ.НачислениеКупонногоДохода           → 3.4 <span style="color:#adb5bd">skip</span>
-└── Документ.РасчетСЧА_РСА / ManagerModule (запрос) → 3.5 <span style="color:#adb5bd">skip</span></div>
+<span style="color:#6c757d">Не в rev2 (план КФ):</span>
+├── InformationRegister.РегистрРСА_СЧА              <span style="color:#7d4e00">[КФ]</span>
+│   └── Attribute.ДокументОснование                 → 3.3 (Indexing: DontIndex → Index)
+└── Документ.РасчетСЧА_РСА / ObjectModule           → 3.3 (запрос стр. 154, без перехвата)</div>
+
+  <div class="tree-excluded" aria-label="Пункты вне scope этапа 2">
+    <div class="tree-excluded-title">Исключено из этапа 2 — не реализуем</div>
+    <ul>
+      <li><strong>3.4</strong> Документ.НачислениеКупонногоДохода (5,40%) — по решению команды</li>
+      <li><strong>3.5</strong> Документ.РасчетСЧА_РСА / ManagerModule, запрос стр. 216 (4,78%) — по решению команды</li>
+    </ul>
+  </div>
 
   <h2 style="margin:1.75rem 0 0.75rem; font-size:1.15rem; color:#2d3748;">Матрица «пункт постановки → статус»</h2>
   <table class="mini-table">
@@ -408,7 +442,7 @@
       <tr>
         <th>Пункт</th>
         <th>% замера</th>
-        <th>Статус в rev2</th>
+        <th>Статус</th>
         <th>Ключевые объекты</th>
       </tr>
     </thead>
@@ -422,14 +456,14 @@
       <tr>
         <td><strong>3.2</strong> Параметры договора ДУ</td>
         <td>7,49%</td>
-        <td><span class="tag tag-partial">частично</span></td>
-        <td>РС ЗначенияПараметровДоговораДУ (пакетная функция; нет полной интеграции)</td>
+        <td><span class="tag tag-done">сделано</span></td>
+        <td>РС ЗначенияПараметровДоговораДУ: перехват единичного запроса + пакетная функция</td>
       </tr>
       <tr>
         <td><strong>3.3</strong> РасчетСЧА_РСА объект</td>
         <td>6,22%</td>
-        <td><span class="tag tag-planned">не делали</span></td>
-        <td>—</td>
+        <td><span class="tag tag-cf">план в КФ</span></td>
+        <td>РС РегистрРСА_СЧА: индекс реквизита ДокументОснование (запрос ОтменитьРасчетРСА_СЧА, стр. 154)</td>
       </tr>
       <tr style="background:#f8f9fa; color:#6c757d;">
         <td><strong>3.4</strong> НачислениеКД</td>
@@ -470,18 +504,15 @@
       <tr style="background:#f8f9fa; color:#6c757d;">
         <td><strong>+3</strong> Индексы плана</td>
         <td>—</td>
-        <td><span class="tag tag-skip">вне rev2</span> (в КФ)</td>
-        <td>ПланРегламентныхОперацийДУ.xml базы</td>
+        <td><span class="tag tag-skip">не в задании</span> <span class="tag tag-cf">ранее в КФ</span></td>
+        <td>ПланРегламентныхОперацийДУ.xml — индекс ДоговорДУ, ГруппаОперацийПользователя (до этапа 2)</td>
       </tr>
     </tbody>
   </table>
 
   <footer>
-    Связанные материалы:
-    <a href="../_БАГИ и задачи 2-ого этапа/developer_task_phase2_optimization.html">постановка этап 2</a> |
-    <a href="extension_rev2_development_plan.html">план доработки rev2 (+2)</a> |
-    <code>Расширения/rev2.cfe</code> |
-    скрипт <code>Скрипты/load_rev2_to_wim_du_and_dump_cfe.ps1</code>
+    Поставка: файл расширения <code>rev2.cfe</code>.
+    Загрузка: конфигуратор, <code>LoadConfigFromFiles</code> + <code>UpdateDBCfg</code> для расширения.
   </footer>
 </body>
 </html>
