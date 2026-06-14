@@ -58,13 +58,17 @@
 | Параметр | Значение |
 |----------|----------|
 | Название | Rezen Grace Hotel, Taikoo Hui, Tianhe Sports Center, Tianhe District, Guangzhou |
-| Адрес | Tianhe District, Guangzhou (Taikoo Hui, Tianhe Sports Center; метро Shipaiqiao) |
-| Заезд | 01.08.2026 |
-| Выезд | 07.08.2026 |
+| Адрес | 30th Floor, No. 236 Tianhe Road, Tianhe District, Guangzhou, Guangdong, China |
+| Email | **3364896015@qq.com** |
+| Телефон | +86-20-38680666, +86-13318737273 |
+| Trip.com Booking No. | **1539366027245155** |
+| Hotel Confirmation No. | **1939337** |
+| Заезд | 01.08.2026 (стандартно **после 14:00**) |
+| Выезд | 07.08.2026 (до 12:00) |
 | Ночей | 6 |
-| Номер | Семейный пижамный люкс (Family Pajama Suite), вид на Taikoo Hui |
-| Кровати | 1 x king-size + 1 футон |
-| Завтраки | 4 завтрака в день (Breakfast, 4 в день) |
+| Номер | Family Pajama Suite - Little Degree Soothing Sleep - Night View Of Taikoo Hui |
+| Гости (как в ваучере) | ALEKSEI CHMYKHALOV, ANNA CHMYKHALOVA, PAVEL CHMYKHALOV, SOFIIA CHMYKHALOVA |
+| Завтраки | 02-07.08 — Breakfast for 4 guests per room (6 дней) |
 | Залог при заезде | 200 CNY (наличные, карта, WeChat, Alipay и др.) |
 | Отмена | Бесплатно до 31.07.2026 23:00 |
 

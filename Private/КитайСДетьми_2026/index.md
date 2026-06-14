@@ -11,7 +11,7 @@
 | [family_and_booking.md](family_and_booking.md) | Состав семьи, рейсы, отель, бюджет, данные для бронирования |
 | [pre_arrival_checklist.md](pre_arrival_checklist.md) | SIM-карта, трансфер, ранний заезд, документы, чек-лист до вылета |
 | [itinerary_6_days.md](itinerary_6_days.md) | Программа по дням: Гонконг, пляж, сафари, шопинг, аквапарк |
-| [early_checkin_letter.md](early_checkin_letter.md) | Письмо отелю на ранний заезд (EN + CN) |
+| [early_checkin_letter.md](early_checkin_letter.md) | **Письмо отелю** early check-in (EN/CN, email 3364896015@qq.com, бронь 1939337) |
 | [Гид_Гуанчжоу_2026.html](Гид_Гуанчжоу_2026.html) | **Новый формат** — тёмный путеводитель с лентой дней (рекомендуется) |
 | [Презентация_поездки.html](Презентация_поездки.html) | Классическая HTML-презентация (светлая, разделы) |
 
