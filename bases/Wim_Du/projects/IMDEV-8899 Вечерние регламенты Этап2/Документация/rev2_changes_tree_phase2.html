@@ -61,6 +61,23 @@
     .tag-new { background: #d1ecf1; color: #0c5460; }
     .tag-intercept { background: #e7deff; color: #3d0a91; }
     .tag-cf { background: #fdebd0; color: #7d4e00; }
+    .tag-adopted { background: #e9ecef; color: #495057; }
+    .tag-noedit {
+      background: #f8f9fa;
+      color: #6c757d;
+      border: 1px dashed #adb5bd;
+      font-weight: 500;
+    }
+    .tag-export { background: #cfe2ff; color: #084298; }
+    .tree-note {
+      margin: 0.65rem 0 0 0;
+      padding: 0.55rem 0.85rem;
+      background: #fff;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      font-size: 0.84rem;
+      color: #495057;
+    }
     .summary-grid {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -197,25 +214,28 @@
     (<code>rev2</code>). Артефакт поставки: файл расширения <code>rev2.cfe</code>, тестовая серверная ИБ.
   </p>
   <p class="meta">
-    Обновлено: 12.06.2026. Вне scope этапа 2: п. <strong>3.4</strong>, <strong>3.5</strong>.
+    Обновлено: 14.06.2026. Вне scope этапа 2: п. <strong>3.4</strong>, <strong>3.5</strong>.
     П. <strong>+3</strong> (индексация ПланРегламентныхОперацийДУ) — <strong>не входит в задание этапа 2</strong>, выполнено ранее в базовой КФ.
-    П. <strong>3.3</strong> — план в базовой КФ (индекс РегистрРСА_СЧА).
+    П. <strong>3.3</strong> — <strong>выполнить в базовой конфигурации</strong> (индекс РегистрРСА_СЧА).
   </p>
 
   <div class="legend">
     <span><span class="tag tag-done">сделано</span> в rev2</span>
-    <span><span class="tag tag-cf">план в КФ</span> / <span class="tag tag-cf">ранее в КФ</span></span>
+    <span><span class="tag tag-cf">выполнить в конфигурации</span> / <span class="tag tag-cf">ранее в КФ</span></span>
     <span><span class="tag tag-skip">вне scope</span></span>
     <span><span class="tag tag-new">новый</span> объект расширения</span>
     <span><span class="tag tag-intercept">перехват</span> &amp;ИзменениеИКонтроль</span>
+    <span><span class="tag tag-export">новый метод</span> без перехвата</span>
     <span><span class="tag tag-adopted">заимствован</span></span>
+    <span><span class="tag tag-noedit">без доработки</span> в составе CFE, логики нет</span>
   </div>
 
   <div class="summary-grid">
     <div class="summary-card"><strong>7</strong><span>пунктов сделано в rev2 (3.1, 3.2, 3.6, 3.7, +1, +2)</span></div>
-    <div class="summary-card"><strong>1</strong><span>план в КФ (3.3)</span></div>
+    <div class="summary-card"><strong>1</strong><span>выполнить в конфигурации (п. 3.3)</span></div>
     <div class="summary-card"><strong>2</strong><span>пункта вне scope (3.4, 3.5)</span></div>
     <div class="summary-card"><strong>13</strong><span>объектов в составе rev2</span></div>
+    <div class="summary-card"><strong>6</strong><span>объектов верхнего уровня <span class="tag tag-noedit">без доработки</span>; также Form.xml и пустой RecordSetModule</span></div>
   </div>
 
   <!-- ========== 3.1 ========== -->
@@ -263,32 +283,34 @@
   <!-- ========== 3.2 ========== -->
   <div class="plan-branch done-branch">
     <h2><span class="tag tag-done">сделано</span> 3.2 ЗначенияПараметровДоговораДУ — запрос, стр. 73 (7,49%)</h2>
-    <p class="pct">136 443 вызова — оптимизация единичного запроса (срез с фильтром вместо ПОМЕСТИТЬ + ЛЕВОЕ СОЕДИНЕНИЕ) + пакетная функция для контроля портфеля. Бенчмарк: 3000 договоров x 4 набора, 0 расхождений, -69% к КФ.</p>
+    <p class="pct">136 443 вызова — оптимизация единичного запроса (срез с фильтром вместо ПОМЕСТИТЬ + ЛЕВОЕ СОЕДИНЕНИЕ). Бенчмарк: 3000 договоров x 4 набора, 0 расхождений, -69% к КФ. Пакетный срез — отдельно, см. п. +2.</p>
 
     <div class="plan-item">
       <div class="plan-item-title">РегистрСведений.ЗначенияПараметровДоговораДУ <span class="tag tag-adopted">заимствован</span> <span class="tag tag-intercept">перехват</span></div>
       <div class="path">InformationRegisters/ЗначенияПараметровДоговораДУ/Ext/ManagerModule.bsl</div>
       <ul class="delta-list">
-        <li><span class="tag tag-intercept">перехват</span> <code>ЗначенияПараметровДоговораДУ(ДоговорДУ, Параметры, Дата)</code> — предзаполнение <code>Неопределено</code> + один <code>СрезПоследних</code> с <code>Параметр В (&amp;Параметры)</code>; логирование как в КФ.</li>
-        <li><span class="tag tag-new">добавлено</span> <code>ЗначенияПараметровДоговоровДУ(МассивДоговоровДУ, Параметры, Дата)</code> — пакетный срез по массиву договоров (п. +2).</li>
+        <li><span class="tag tag-intercept">перехват (3.2)</span> <code>ЗначенияПараметровДоговораДУ(ДоговорДУ, Параметры, Дата)</code> — предзаполнение <code>Неопределено</code> + один <code>СрезПоследних</code> с <code>Параметр В (&amp;Параметры)</code>; логирование как в КФ.</li>
+        <li><span class="tag tag-export">новый метод (+2)</span> <code>ЗначенияПараметровДоговоровДУ(МассивДоговоровДУ, Параметры, Дата)</code> — пакетный срез по массиву договоров; вызывается из контроля уменьшения портфеля (п. +2), не из общего потока 3.2.</li>
       </ul>
     </div>
   </div>
 
   <!-- ========== 3.3 ========== -->
   <div class="plan-branch cf-branch">
-    <h2><span class="tag tag-cf">план в КФ</span> 3.3 РасчетСЧА_РСА.МодульОбъекта — запрос, стр. 154 (6,22%)</h2>
+    <h2><span class="tag tag-cf">выполнить в конфигурации</span> 3.3 Узкое место: РасчетСЧА_РСА.ObjectModule, стр. 154 (6,22%)</h2>
     <p class="pct">
       Узкое место — не расчет сумм (<code>ПолучитьСуммыРСАСЧА</code> в менеджере), а поиск и удаление записей регистра
       в <code>ОтменитьРасчетРСА_СЧА()</code> при проведении/отмене проведения документа.
+      <strong>Код модуля объекта не меняется</strong> (ни в rev2, ни в базовой КФ).
       В расширении перехвата модуля объекта нет; оптимизация — <strong>индексация реквизита регистра сведений в базовой КФ</strong>
       (аналогично п. +3).
     </p>
 
     <div class="plan-item">
-      <div class="plan-item-title">Горячий запрос (точка замера)</div>
+      <div class="plan-item-title">Горячий запрос <span class="tag tag-noedit">только точка замера</span></div>
       <div class="path">Documents/РасчетСЧА_РСА/Ext/ObjectModule.bsl → <code>ОтменитьРасчетРСА_СЧА</code>, стр. 154</div>
       <ul class="delta-list">
+        <li>Строка из замера отладчиком; доработки кода здесь <strong>не планируются</strong>.</li>
         <li>~17 154 вызова <code>Запрос.Выполнить()</code> в вечернем регламенте; в сценарии «только РСА+СЧА» — до ~20% времени блока.</li>
         <li>Отбор: <code>Период = &amp;Период</code> (начало дня) <strong>И</strong> <code>ДокументОснование = &amp;ДокументОснование</code> (ссылка на текущий <code>РасчетСЧА_РСА</code>).</li>
         <li>Измерение <code>ДоговорДУ</code> в запросе <strong>не используется</strong>, хотя известно из контекста документа — из-за этого СУБД вынуждена искать по неиндексированному реквизиту внутри среза периода.</li>
@@ -296,7 +318,7 @@
     </div>
 
     <div class="plan-item">
-      <div class="plan-item-title"><span class="tag tag-cf">в КФ</span></div>
+      <div class="plan-item-title"><span class="tag tag-cf">выполнить в конфигурации</span></div>
       <div class="path">InformationRegisters/РегистрРСА_СЧА.xml → реквизит <code>ДокументОснование</code></div>
       <ul class="delta-list">
         <li>Включить <strong>Индексировать</strong> (<code>DontIndex</code> → <code>Index</code>). Загрузить КФ, обновить БД на сервере (~1 мин. реструктуризация).</li>
@@ -338,7 +360,7 @@
   <div class="plan-branch done-branch">
     <h2><span class="tag tag-done">сделано</span> +1 РасчетСЧА_РСА — коллизия номера при записи</h2>
     <div class="plan-item">
-      <div class="plan-item-title">Документ.РасчетСЧА_РСА.МодульМенеджера <span class="tag tag-adopted">заимствован</span></div>
+      <div class="plan-item-title">Документ.РасчетСЧА_РСА.МодульМенеджера <span class="tag tag-adopted">заимствован</span> <span class="tag tag-export">новый метод</span></div>
       <div class="path">Documents/РасчетСЧА_РСА/Ext/ManagerModule.bsl</div>
       <ul class="delta-list">
         <li><span class="tag tag-new">добавлено</span> <code>ЗаписатьСОбработкойКоллизииНомера</code> — до 30 попыток, <code>УстановитьНовыйНомер()</code> при «не уникально».</li>
@@ -397,11 +419,21 @@
 
   <!-- ========== Дерево метаданных ========== -->
   <h2 style="margin:2rem 0 0.75rem; font-size:1.15rem; color:#2d3748;">Сводное дерево объектов расширения rev2</h2>
+  <p class="tree-note">
+    Объекты с меткой <span class="tag tag-noedit">без доработки</span> включены в CFE только как зависимости платформы
+    (язык, элементы UI формы, хранилище настроек). Их не переносят в КФ и не сопровождают отдельно — при слиянии
+    расширения в конфигурацию эти узлы отпадают сами.
+  </p>
   <div class="tree">rev2/  <span class="tag tag-adopted" style="font-family:sans-serif">Configuration</span>
-├── Languages/Русский.xml
-├── StyleItems/ЦветОшибки.xml                    <span style="color:#6c757d">[Adopted, UI формы]</span>
-├── CommonPictures/ ...                          <span style="color:#6c757d">[Adopted, UI формы]</span>
-├── SettingsStorages/ХранилищеВариантовОтчетов   <span style="color:#6c757d">[Adopted]</span>
+│
+├── <span class="tag tag-noedit" style="font-family:sans-serif">без доработки</span>  Languages/Русский.xml
+├── <span class="tag tag-noedit" style="font-family:sans-serif">без доработки</span>  StyleItems/ЦветОшибки.xml
+├── CommonPictures/
+│   ├── <span class="tag tag-noedit" style="font-family:sans-serif">без доработки</span>  КоллекцияДокументы.xml
+│   ├── <span class="tag tag-noedit" style="font-family:sans-serif">без доработки</span>  ДокументПроведенКоннекторВерх.xml
+│   └── <span class="tag tag-noedit" style="font-family:sans-serif">без доработки</span>  ВосклицательныйЗнакСерый.xml
+├── <span class="tag tag-noedit" style="font-family:sans-serif">без доработки</span>  SettingsStorages/ХранилищеВариантовОтчетов.xml
+│
 ├── CommonModules/
 │   └── ИсполняемыеПроцедурыЗакрытияПериода      <span style="color:#3d0a91">[Adopted + перехват]</span>
 │       └── Ext/Module.bsl                       → 3.1 (0110), +1 (1000)
@@ -409,24 +441,28 @@
 │   └── РегламентныеПериоды                      <span style="color:#3d0a91">[Adopted + перехват]</span>
 │       ├── Ext/ManagerModule.bsl                → 3.1 (пакет РЕПО)
 │       └── Forms/РегламентныйПериод/
+│           ├── Form.xml                         <span class="tag tag-noedit" style="font-family:sans-serif">без доработки</span> (метаданные формы)
 │           └── Ext/Form/Module.bsl              → +2 (отсев), 3.6 (индексы ТЗ)
 ├── Documents/
 │   ├── ПереоценкаАктивов                        <span style="color:#3d0a91">[Adopted + перехват]</span>
 │   │   └── Ext/ObjectModule.bsl                 → 3.1 (ЗаполнитьТЧ)
-│   ├── РасчетСЧА_РСА                            <span style="color:#3d0a91">[Adopted]</span>
-│   │   └── Ext/ManagerModule.bsl                → +1 (коллизия номера)
+│   ├── РасчетСЧА_РСА                            <span style="color:#084298">[Adopted + новый метод]</span>
+│   │   └── Ext/ManagerModule.bsl                → +1 (ЗаписатьСОбработкойКоллизииНомера)
 │   └── ПланРегламентныхОперацийДУ               <span style="color:#3d0a91">[Adopted + перехват]</span>
 │       └── Ext/ManagerModule.bsl                → 3.7 (двухшаговый запрос СвязанныеДокументы)
 ├── InformationRegisters/
 │   ├── ВидыОптимизируемыхРегламентныхОперацийДУ <span style="color:#0c5460">[НОВЫЙ]</span>
-│   │   └── Ext/ManagerModule.bsl                → +2 (отсев), 3.1 (РЕПО)
-│   └── ЗначенияПараметровДоговораДУ             <span style="color:#3d0a91">[Adopted + перехват]</span>
-│       └── Ext/ManagerModule.bsl                → 3.2 (единичный + пакетный срез), +2 контроль портфеля
+│   │   ├── Ext/ManagerModule.bsl                → +2 (отсев), 3.1 (РЕПО)
+│   │   └── Ext/RecordSetModule.bsl              <span class="tag tag-noedit" style="font-family:sans-serif">без доработки</span> (пустой)
+│   └── ЗначенияПараметровДоговораДУ             <span style="color:#3d0a91">[Adopted + перехват + новый метод]</span>
+│       └── Ext/ManagerModule.bsl                → 3.2 (перехват единичного среза);
+│                                                  +2 (новый ЗначенияПараметровДоговоровДУ)
 
-<span style="color:#6c757d">Не в rev2 (план КФ):</span>
-├── InformationRegister.РегистрРСА_СЧА              <span style="color:#7d4e00">[КФ]</span>
+<span style="color:#6c757d">Не в rev2 (выполнить в конфигурации):</span>
+├── InformationRegister.РегистрРСА_СЧА              <span style="color:#7d4e00">[конфигурация — меняется]</span>
 │   └── Attribute.ДокументОснование                 → 3.3 (Indexing: DontIndex → Index)
-└── Документ.РасчетСЧА_РСА / ObjectModule           → 3.3 (запрос стр. 154, без перехвата)</div>
+└── Документ.РасчетСЧА_РСА / ObjectModule           <span class="tag tag-noedit" style="font-family:sans-serif">только точка замера</span>
+    → 3.3 (стр. 154, ОтменитьРасчетРСА_СЧА; код не меняется)</div>
 
   <div class="tree-excluded" aria-label="Пункты вне scope этапа 2">
     <div class="tree-excluded-title">Исключено из этапа 2 — не реализуем</div>
@@ -457,13 +493,13 @@
         <td><strong>3.2</strong> Параметры договора ДУ</td>
         <td>7,49%</td>
         <td><span class="tag tag-done">сделано</span></td>
-        <td>РС ЗначенияПараметровДоговораДУ: перехват единичного запроса + пакетная функция</td>
+        <td>РС ЗначенияПараметровДоговораДУ: перехват единичного запроса (3.2); пакетный метод — в п. +2</td>
       </tr>
       <tr>
-        <td><strong>3.3</strong> РасчетСЧА_РСА объект</td>
+        <td><strong>3.3</strong> РСА / СЧА (узкое место в ObjectModule)</td>
         <td>6,22%</td>
-        <td><span class="tag tag-cf">план в КФ</span></td>
-        <td>РС РегистрРСА_СЧА: индекс реквизита ДокументОснование (запрос ОтменитьРасчетРСА_СЧА, стр. 154)</td>
+        <td><span class="tag tag-cf">выполнить в конфигурации</span></td>
+        <td>Изменение: РС РегистрРСА_СЧА, индекс ДокументОснование. ObjectModule — только точка замера (стр. 154)</td>
       </tr>
       <tr style="background:#f8f9fa; color:#6c757d;">
         <td><strong>3.4</strong> НачислениеКД</td>
