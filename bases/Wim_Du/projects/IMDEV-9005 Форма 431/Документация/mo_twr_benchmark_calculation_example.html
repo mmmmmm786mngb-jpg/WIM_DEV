@@ -1,0 +1,490 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MO VTBAM_MWR_TWR — пример расчета TWR_Бенчмарк</title>
+<style>
+  * { box-sizing: border-box; }
+  body { font-family: 'Segoe UI', Arial, sans-serif; line-height: 1.65; color: #2c3e50;
+         max-width: 1000px; margin: 0 auto; padding: 24px; background: #f0f4f8; }
+  h1 { color: #1a2b48; font-size: 26px; border-bottom: 3px solid #17a2b8; padding-bottom: 12px; margin-bottom: 8px; }
+  h2 { color: #17a2b8; font-size: 20px; margin-top: 32px; border-left: 4px solid #17a2b8; padding-left: 12px; }
+  h3 { color: #1a2b48; font-size: 16px; margin-top: 20px; }
+  .card { background: #fff; border-radius: 8px; padding: 18px 24px; margin: 16px 0;
+          box-shadow: 0 1px 4px rgba(0,0,0,0.08); }
+  .intro { background: #eaf6f8; border-left: 4px solid #17a2b8; }
+  .theory { background: #f4f0ff; border-left: 4px solid #6554c0; }
+  .warn { background: #fff8e1; border-left: 4px solid #f0ad4e; }
+  .ok { background: #eafaf1; border-left: 4px solid #28a745; }
+  .bug { background: #fff3cd; border-left: 4px solid #ffc107; }
+  .stat-ok { color: #28a745; font-weight: 700; }
+  .stat-bad { color: #dc3545; font-weight: 700; }
+  .stat-info { color: #17a2b8; font-weight: 700; }
+  .stat-warn { color: #f0ad4e; font-weight: 700; }
+  table { width: 100%; border-collapse: collapse; margin: 12px 0; font-size: 14px; }
+  th, td { border: 1px solid #dfe3e8; padding: 8px 12px; text-align: left; vertical-align: middle; }
+  th { background: #1a2b48; color: #fff; font-weight: 600; }
+  tr:nth-child(even) { background: #f7f9fb; }
+  td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+  code { background: #eef1f4; padding: 2px 6px; border-radius: 4px; font-family: Consolas, 'Courier New', monospace;
+         font-size: 13px; color: #b8005a; }
+  pre { background: #1e1e1e; color: #d4d4d4; padding: 14px 16px; border-radius: 6px; overflow-x: auto;
+        font-family: Consolas, 'Courier New', monospace; font-size: 12.5px; line-height: 1.45; margin: 10px 0; }
+  .tag { display: inline-block; background: #17a2b8; color: #fff; font-size: 11px; font-weight: 700;
+         padding: 2px 8px; border-radius: 10px; vertical-align: middle; }
+  .tag-warn { background: #f0ad4e; }
+  .tag-bad { background: #dc3545; }
+  .tag-ok { background: #28a745; }
+  .muted { color: #6b7785; font-size: 13px; }
+  ul, ol { margin: 8px 0; padding-left: 22px; }
+  li { margin: 5px 0; }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .grid3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
+  @media (max-width: 800px) { .grid2, .grid3 { grid-template-columns: 1fr; } }
+  .kpi { text-align: center; padding: 16px; border-radius: 8px; background: #fff; border: 1px solid #dfe3e8; }
+  .kpi .val { font-size: 28px; font-weight: 700; }
+  .kpi .lbl { font-size: 13px; color: #6b7785; margin-top: 4px; }
+  .kpi-same .val { color: #f0ad4e; }
+  .kpi-diff .val { color: #dc3545; }
+  .kpi-ok .val { color: #28a745; }
+  .formula { font-family: Consolas, 'Courier New', monospace; background: #f7f9fb; padding: 10px 14px;
+             border-radius: 6px; border: 1px solid #dfe3e8; margin: 8px 0; }
+  .row-highlight td { background: #fff3cd !important; font-weight: 600; }
+</style>
+</head>
+<body>
+
+<h1>Отчет доходности МО: пример расчета TWR_Бенчмарк</h1>
+<p class="muted">
+  Объект: <code>Отчет.VTBAM_MWR_TWR</code> &nbsp;|&nbsp;
+  Функция: <code>РасчетTWR</code> &nbsp;|&nbsp;
+  База: <code>Wim_Mo</code> &nbsp;|&nbsp;
+  Режим: <b>TWR</b> (Time-Weighted Return)
+</p>
+
+<!-- ===== 1. ВВЕДЕНИЕ ===== -->
+<div class="card intro">
+  <h2 style="border:0;margin-top:0;padding:0;">Введение</h2>
+  <p>
+    Документ объясняет на <b>числовом примере</b>, почему в режиме TWR колонка
+    <code>TWR_Бенчмарк</code> в отчете МО <b>не является отдельным показателем бенчмарка</b>,
+    а фактически повторяет портфельную доходность (<code>Доходность</code>).
+  </p>
+  <p>
+    Пример рассчитан для одного мандата за <b>2 дня</b>, на второй день есть
+    <b>пополнение счета</b> (+500). Такой сценарий типичен для выявления расхождения формул.
+  </p>
+</div>
+
+<!-- ===== 2. КАК СЧИТАЕТ МО ===== -->
+<h2>Как устроен расчет в МО</h2>
+
+<div class="card theory">
+  <h3 style="margin-top:0;">Шаг 1. Дневные коэффициенты (для каждого дня периода)</h3>
+  <table>
+    <thead>
+      <tr>
+        <th>Показатель</th>
+        <th>Формула в коде МО</th>
+        <th>Смысл</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><code>Rn</code> (портфель)</td>
+        <td class="formula">(MVn - IO) / MVn_1</td>
+        <td>Доходность дня <b>без</b> влияния ввода/вывода</td>
+      </tr>
+      <tr>
+        <td><code>Rn_Бенчмарк</code></td>
+        <td class="formula">MVn / MVn_1</td>
+        <td>Относительное изменение стоимости <b>без</b> вычитания IO</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3>Шаг 2. Накопление за период</h3>
+  <table>
+    <thead>
+      <tr>
+        <th>Колонка отчета</th>
+        <th>Как должно быть логически</th>
+        <th>Как сделано в коде МО</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><code>Доходность</code></td>
+        <td>Произведение всех <code>Rn</code> - 1</td>
+        <td class="stat-ok">Произведение всех <code>Rn</code> - 1</td>
+      </tr>
+      <tr class="row-highlight">
+        <td><code>TWR_Бенчмарк</code></td>
+        <td>Произведение всех <code>Rn_Бенчмарк</code> - 1</td>
+        <td class="stat-bad">Произведение всех <code>Rn</code> - 1</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <p class="muted">
+    Подробные фрагменты кода с номерами строк — в разделе
+    <a href="#code-location">«Место в коде конфигурации МО»</a> ниже.
+  </p>
+</div>
+
+<!-- ===== 2a. МЕСТО В КОДЕ ===== -->
+<h2 id="code-location">Место в коде конфигурации МО</h2>
+
+<div class="card">
+  <table>
+    <thead>
+      <tr>
+        <th>Объект метаданных</th>
+        <th>Модуль</th>
+        <th>Функция</th>
+        <th>Строки</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><code>Отчет.VTBAM_MWR_TWR</code></td>
+        <td><code>Модуль объекта</code><br>
+            <span class="muted">Wim_Mo/SRC/CF/Reports/VTBAM_MWR_TWR/Ext/ObjectModule.bsl</span></td>
+        <td><code>РасчетTWR(MV, ВводыВыводы)</code></td>
+        <td><b>2212</b> - <b>2302</b></td>
+      </tr>
+      <tr>
+        <td><code>Отчет.MWR_TWR</code> (аналог)</td>
+        <td><code>Модуль объекта</code><br>
+            <span class="muted">Wim_Mo/SRC/CF/Reports/MWR_TWR/Ext/ObjectModule.bsl</span></td>
+        <td><code>РасчетTWR(MV, ВводыВыводы)</code></td>
+        <td><b>1135</b> - <b>1139</b> (тот же паттерн)</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<div class="card theory">
+  <h3 style="margin-top:0;">
+    <span class="tag tag-ok">ШАГ 1</span>
+    Дневные коэффициенты — две разные формулы (строки 2242-2261)
+  </h3>
+  <p>
+    Здесь код <b>намеренно</b> считает портфель и бенчмарк по-разному: для портфеля вычитается
+    <code>IO</code>, для бенчмарка — нет. Это не выглядит как опечатка.
+  </p>
+  <pre>// Отчет.VTBAM_MWR_TWR / Модуль объекта / Функция РасчетTWR
+// Файл: Wim_Mo/SRC/CF/Reports/VTBAM_MWR_TWR/Ext/ObjectModule.bsl
+
+2242|  Если (ТекMV.MVn_1&lt;&gt;0 )  тогда
+2243|      Rn = (ТекMV.MVn - ТекMV.IO)/ТекMV.MVn_1;      // портфель: без IO
+2244|      Rn_Бенчмарк = (ТекMV.MVn)/ТекMV.MVn_1;        // бенчмарк: MVn/MVn_1
+2245|  КонецЕсли;
+...
+2260|  ТекMV.Rn           = Rn;
+2261|  ТекMV.Rn_Бенчмарк  = Rn_Бенчмарк;                 // сохраняется в колонку, но далее...</pre>
+</div>
+
+<div class="card bug">
+  <h3 style="margin-top:0;">
+    <span class="tag tag-bad">ШАГ 2</span>
+    Накопление TWR — подозрительная строка <b>2283</b>
+  </h3>
+  <p>
+    <b>Вероятная опечатка или недоделка:</b> для <code>Rn_НакопленныйБенчмарк</code> умножается
+    <code>ТекСтрока.Rn</code> вместо <code>ТекСтрока.Rn_Бенчмарк</code>.
+    Из-за этого <code>TWR_Бенчмарк</code> совпадает с <code>Доходность</code>.
+  </p>
+  <pre>// Отчет.VTBAM_MWR_TWR / Модуль объекта / Функция РасчетTWR
+// Файл: Wim_Mo/SRC/CF/Reports/VTBAM_MWR_TWR/Ext/ObjectModule.bsl
+
+2280|  Для каждого ТекСтрока из СтрокиРазделителя Цикл
+2281|
+2282|       Rn_Накопленный         = Rn_Накопленный * ТекСтрока.Rn;           // OK: портфель
+2283|       Rn_НакопленныйБенчмарк = Rn_НакопленныйБенчмарк * ТекСтрока.Rn;  // ??? должно быть Rn_Бенчмарк?
+2284|
+2285|       ТекСтрока.Доходность    = Rn_Накопленный - 1;
+2286|       ТекСтрока.TWR_Бенчмарк  = Rn_НакопленныйБенчмарк - 1;
+2287|
+2288|  КонецЦикла;</pre>
+
+  <p><b>Как могло бы быть</b> (если бизнес подтвердит использование дневного <code>Rn_Бенчмарк</code>):</p>
+  <pre>2283|  Rn_НакопленныйБенчмарк = Rn_НакопленныйБенчмарк * ТекСтрока.Rn_Бенчмарк;</pre>
+
+  <p class="muted">
+    Без комментария в коде и без истории задачи нельзя на 100% утверждать «опечатка» —
+    возможно, так оставили намеренно. Но тогда колонка <code>Rn_Бенчмарк</code> (стр. 2244, 2261)
+    в итоговый расчет не используется, что выглядит нелогично.
+  </p>
+</div>
+
+<div class="card warn">
+  <h3 style="margin-top:0;">
+    <span class="tag tag-warn">ДОПОЛНИТЕЛЬНО</span>
+    Ограничение скачка только для портфеля (строки 2255-2257)
+  </h3>
+  <p>
+    При аномальном дневном <code>Rn &gt; 2</code> портфельная ставка обнуляется до 1 (без доходности).
+    Для <code>Rn_Бенчмарк</code> такого ограничения нет — но в накоплении бенчмарка все равно
+    используется <code>Rn</code>, поэтому на практике это вторично.
+  </p>
+  <pre>2255|  Если Rn &gt; 2 тогда     // A.Sakhartsev 2015-08-27
+2256|      Rn = 1;
+2257|  КонецЕсли;</pre>
+</div>
+
+<div class="card">
+  <h3 style="margin-top:0;">
+    <span class="tag">АНАЛОГ</span>
+    Тот же паттерн в отчете <code>MWR_TWR</code> (строки 1135-1139)
+  </h3>
+  <p>Дублирование логики в старом/параллельном отчете — признак давнего копирования, а не разовой ошибки.</p>
+  <pre>// Отчет.MWR_TWR / Модуль объекта / Функция РасчетTWR
+// Файл: Wim_Mo/SRC/CF/Reports/MWR_TWR/Ext/ObjectModule.bsl
+
+1135|   Rn_Накопленный         = Rn_Накопленный * ТекСтрока.Rn;
+1136|   Rn_НакопленныйБенчмарк = Rn_НакопленныйБенчмарк * ТекСтрока.Rn;
+1137|
+1138|   ТекСтрока.TWR          = Rn_Накопленный - 1;
+1139|   ТекСтрока.TWR_Бенчмарк = Rn_НакопленныйБенчмарк - 1;</pre>
+</div>
+
+<div class="card ok">
+  <h3 style="margin-top:0;">
+    <span class="tag tag-ok">ДЛЯ СРАВНЕНИЯ</span>
+    Режим MWR — бенчмарк считается отдельно (строки 1888-1897)
+  </h3>
+  <p>
+    В том же модуле <code>VTBAM_MWR_TWR</code>, функция <code>РасчетMWR</code>,
+    колонки <code>Доходность</code> и <code>MWR_Бенчмарк</code> в запросе разведены —
+    там формулы действительно разные.
+  </p>
+  <pre>// Отчет.VTBAM_MWR_TWR / Модуль объекта / Функция РасчетMWR (запрос, фрагмент)
+
+1888|  ... (MVE.Сумма - MVS - SUM_IO) / ACI  ...  КАК Доходность,    // с учетом IO
+1896|  ... (MVE.Сумма - MVS) / ACI           ...  КАК MWR_Бенчмарк  // без SUM_IO</pre>
+</div>
+
+<!-- ===== 3. ИСХОДНЫЕ ДАННЫЕ ===== -->
+<h2>Исходные данные примера</h2>
+
+<div class="card">
+  <p>Один мандат, 2 торговых дня. На 2-й день клиент вносит <b>500</b> (пополнение).</p>
+  <table>
+    <thead>
+      <tr>
+        <th>День</th>
+        <th class="num">MV на начало (MVn_1)</th>
+        <th class="num">Ввод/вывод (IO)</th>
+        <th class="num">MV на конец (MVn)</th>
+        <th>Комментарий</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>1</td>
+        <td class="num">1 000</td>
+        <td class="num">0</td>
+        <td class="num">1 050</td>
+        <td>Рост стоимости на 5% без движений денег</td>
+      </tr>
+      <tr>
+        <td>2</td>
+        <td class="num">1 050</td>
+        <td class="num">+500</td>
+        <td class="num">1 650</td>
+        <td>Пополнение 500; инвестиционный результат отдельно от ввода</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- ===== 4. ПОДНЕВНОЙ РАСЧЕТ ===== -->
+<h2>Подневной расчет</h2>
+
+<div class="card">
+  <h3 style="margin-top:0;">День 1 (без вводов и выводов)</h3>
+  <div class="formula">Rn = (1050 - 0) / 1000 = <b>1,0500</b> &nbsp; (+5,00%)</div>
+  <div class="formula">Rn_Бенчмарк = 1050 / 1000 = <b>1,0500</b> &nbsp; (+5,00%)</div>
+  <p>На день без IO обе формулы <b>совпадают</b>.</p>
+
+  <h3>День 2 (пополнение +500)</h3>
+  <div class="formula">Rn = (1650 - 500) / 1050 = 1150 / 1050 = <b>1,0952</b> &nbsp; (+9,52%)</div>
+  <div class="formula">Rn_Бенчмарк = 1650 / 1050 = <b>1,5714</b> &nbsp; (+57,14%)</div>
+  <p>
+    Портфельная формула «отрезает» пополнение: из 1650 вычитается IO=500, остается прирост
+    <b>1150</b> от базы <b>1050</b>. Формула бенчмарка видит полный рост MV с 1050 до 1650.
+  </p>
+</div>
+
+<table>
+  <thead>
+    <tr>
+      <th>День</th>
+      <th class="num">Rn (портфель)</th>
+      <th class="num">Доходность дня, %</th>
+      <th class="num">Rn_Бенчмарк</th>
+      <th class="num">«Бенчмарк» дня, %</th>
+      <th>Разница формул</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>1</td>
+      <td class="num">1,0500</td>
+      <td class="num">+5,00</td>
+      <td class="num">1,0500</td>
+      <td class="num">+5,00</td>
+      <td class="stat-ok">Нет</td>
+    </tr>
+    <tr class="row-highlight">
+      <td>2</td>
+      <td class="num">1,0952</td>
+      <td class="num">+9,52</td>
+      <td class="num">1,5714</td>
+      <td class="num">+57,14</td>
+      <td class="stat-bad">Да</td>
+    </tr>
+  </tbody>
+</table>
+
+<!-- ===== 5. ИТОГИ ===== -->
+<h2>Итог за период: что показывает отчет МО</h2>
+
+<div class="grid3">
+  <div class="kpi kpi-same">
+    <div class="val">15,0%</div>
+    <div class="lbl"><code>Доходность</code><br>1,05 x 1,0952 - 1</div>
+  </div>
+  <div class="kpi kpi-same">
+    <div class="val">15,0%</div>
+    <div class="lbl"><code>TWR_Бенчмарк</code> (как в МО)<br>1,05 x 1,0952 - 1</div>
+  </div>
+  <div class="kpi kpi-diff">
+    <div class="val">65,0%</div>
+    <div class="lbl">Через <code>Rn_Бенчмарк</code><br>1,05 x 1,5714 - 1</div>
+  </div>
+</div>
+
+<div class="card warn">
+  <p><span class="tag tag-warn">ВЫВОД</span></p>
+  <p>
+    Отчет МО выводит <code>Доходность</code> = <code>TWR_Бенчмарк</code> = <b>15,0%</b>.
+    Колонки <b>совпадают</b>, хотя на 2-й день дневные коэффициенты портфеля и «бенчмарка»
+    различались (<b>9,52%</b> vs <b>57,14%</b>).
+  </p>
+  <p>
+  Если бы в накопление бенчмарка попадал рассчитанный <code>Rn_Бенчмарк</code>, итог был бы
+  <b>65,0%</b> — это не «правильный индексный бенчмарк» в финансовом смысле, но показывает,
+  что <b>две заложенные формулы различаются</b>, а в отчет уходит только одна.
+  </p>
+</div>
+
+<!-- ===== 6. КОГДА НЕ ВИДНО ===== -->
+<h2>Когда проблема не заметна</h2>
+
+<div class="card ok">
+  <h3 style="margin-top:0;">Период без вводов и выводов (IO = 0 каждый день)</h3>
+  <p>Пример: 1000 &rarr; 1050 &rarr; 1102,50 без пополнений.</p>
+  <table>
+    <thead>
+      <tr>
+        <th>День</th>
+        <th class="num">MVn_1</th>
+        <th class="num">IO</th>
+        <th class="num">MVn</th>
+        <th class="num">Rn</th>
+        <th class="num">Rn_Бенчмарк</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>1</td>
+        <td class="num">1 000</td>
+        <td class="num">0</td>
+        <td class="num">1 050</td>
+        <td class="num">1,05</td>
+        <td class="num">1,05</td>
+      </tr>
+      <tr>
+        <td>2</td>
+        <td class="num">1 050</td>
+        <td class="num">0</td>
+        <td class="num">1 102,50</td>
+        <td class="num">1,05</td>
+        <td class="num">1,05</td>
+      </tr>
+    </tbody>
+  </table>
+  <div class="formula">Итог = 1,05 x 1,05 - 1 = <b>10,25%</b> (обе колонки одинаковы)</div>
+  <p>
+    При нулевых IO формулы <code>Rn</code> и <code>Rn_Бенчмарк</code> совпадают каждый день,
+    поэтому отчет выглядит корректно, хотя колонка бенчмарка по-прежнему не независима.
+  </p>
+</div>
+
+<!-- ===== 7. СВОДКА ===== -->
+<h2>Сводка для бизнеса</h2>
+
+<div class="card">
+  <table>
+    <thead>
+      <tr>
+        <th>Часть отчета МО</th>
+        <th>Оценка</th>
+        <th>Комментарий</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>TWR — портфель (<code>Доходность</code>)</td>
+        <td class="stat-ok">OK</td>
+        <td>Классическая логика TWR с учетом IO</td>
+      </tr>
+      <tr>
+        <td>TWR — бенчмарк (<code>TWR_Бенчмарк</code>)</td>
+        <td class="stat-bad">Вопрос</td>
+        <td>Дублирует портфель; <code>Rn_Бенчмарк</code> не используется в итоге</td>
+      </tr>
+      <tr>
+        <td>MWR — портфель и <code>MWR_Бенчмарк</code></td>
+        <td class="stat-ok">OK</td>
+        <td>Отдельные формулы в запросе (другой режим отчета)</td>
+      </tr>
+      <tr>
+        <td>Скорость TWR на больших объемах</td>
+        <td class="stat-warn">Медленно</td>
+        <td>Вопрос производительности, не искажения цифр</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<div class="card bug">
+  <h3 style="margin-top:0;">Обнаруженная логическая особенность</h3>
+  <p>
+    <span class="tag tag-bad">TWR_Бенчмарк</span>
+    В режиме TWR показатель «доходность бенчмарка» <b>не является отдельным расчетом</b>:
+    он повторяет портфельную цепочку <code>Rn</code>. На периодах с вводами и выводами
+    сравнение «портфель vs бенчмарк» внутри отчета <b>бессмысленно</b> — цифры будут одинаковыми.
+  </p>
+  <p class="muted">
+    Для принятия решения о доработке нужно согласовать с бизнесом целевую методику бенчмарка в TWR.
+    Технический факт: сейчас в итог не попадает рассчитанный <code>Rn_Бенчмарк</code>.
+  </p>
+</div>
+
+<p class="muted" style="margin-top:32px;">
+  Основной источник:
+  <code>Отчет.VTBAM_MWR_TWR</code> &rarr;
+  <code>Модуль объекта</code> &rarr;
+  <code>РасчетTWR</code> &rarr;
+  строки <b>2242-2244</b> (дневные ставки),
+  <b>2282-2286</b> (накопление, ключевая строка <b>2283</b>).
+  Аналог: <code>Отчет.MWR_TWR</code>, строки <b>1135-1139</b>.
+  Документ подготовлен для пояснения бизнес-пользователям и аналитикам.
+</p>
+
+</body>
+</html>
