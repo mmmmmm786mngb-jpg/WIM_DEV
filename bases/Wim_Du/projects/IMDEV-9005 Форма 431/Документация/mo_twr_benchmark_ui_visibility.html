@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MO VTBAM_MWR_TWR — TWR_Бенчмарк: расчет есть, колонки на экране нет</title>
+<style>
+  * { box-sizing: border-box; }
+  body { font-family: 'Segoe UI', Arial, sans-serif; line-height: 1.65; color: #2c3e50;
+         max-width: 1000px; margin: 0 auto; padding: 24px; background: #f0f4f8; }
+  h1 { color: #1a2b48; font-size: 26px; border-bottom: 3px solid #17a2b8; padding-bottom: 12px; margin-bottom: 8px; }
+  h2 { color: #17a2b8; font-size: 20px; margin-top: 32px; border-left: 4px solid #17a2b8; padding-left: 12px; }
+  h3 { color: #1a2b48; font-size: 16px; margin-top: 20px; }
+  .card { background: #fff; border-radius: 8px; padding: 18px 24px; margin: 16px 0;
+          box-shadow: 0 1px 4px rgba(0,0,0,0.08); }
+  .intro { background: #eaf6f8; border-left: 4px solid #17a2b8; }
+  .theory { background: #f4f0ff; border-left: 4px solid #6554c0; }
+  .warn { background: #fff8e1; border-left: 4px solid #f0ad4e; }
+  .ok { background: #eafaf1; border-left: 4px solid #28a745; }
+  .bug { background: #fff3cd; border-left: 4px solid #ffc107; }
+  .stat-ok { color: #28a745; font-weight: 700; }
+  .stat-bad { color: #dc3545; font-weight: 700; }
+  .stat-info { color: #17a2b8; font-weight: 700; }
+  .stat-warn { color: #f0ad4e; font-weight: 700; }
+  table { width: 100%; border-collapse: collapse; margin: 12px 0; font-size: 14px; }
+  th, td { border: 1px solid #dfe3e8; padding: 8px 12px; text-align: left; vertical-align: middle; }
+  th { background: #1a2b48; color: #fff; font-weight: 600; }
+  tr:nth-child(even) { background: #f7f9fb; }
+  td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+  td.yes { background: #eafaf1; color: #28a745; font-weight: 600; text-align: center; }
+  td.no { background: #fdecea; color: #dc3545; font-weight: 600; text-align: center; }
+  td.partial { background: #fff8e1; color: #b8860b; font-weight: 600; text-align: center; }
+  code { background: #eef1f4; padding: 2px 6px; border-radius: 4px; font-family: Consolas, 'Courier New', monospace;
+         font-size: 13px; color: #b8005a; }
+  pre { background: #1e1e1e; color: #d4d4d4; padding: 14px 16px; border-radius: 6px; overflow-x: auto;
+        font-family: Consolas, 'Courier New', monospace; font-size: 12.5px; line-height: 1.45; margin: 10px 0; }
+  .tag { display: inline-block; background: #17a2b8; color: #fff; font-size: 11px; font-weight: 700;
+         padding: 2px 8px; border-radius: 10px; vertical-align: middle; }
+  .tag-warn { background: #f0ad4e; }
+  .tag-bad { background: #dc3545; }
+  .tag-ok { background: #28a745; }
+  .muted { color: #6b7785; font-size: 13px; }
+  ul, ol { margin: 8px 0; padding-left: 22px; }
+  li { margin: 5px 0; }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .grid3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
+  @media (max-width: 800px) { .grid2, .grid3 { grid-template-columns: 1fr; } }
+  .kpi { text-align: center; padding: 16px; border-radius: 8px; background: #fff; border: 1px solid #dfe3e8; }
+  .kpi .val { font-size: 28px; font-weight: 700; }
+  .kpi .lbl { font-size: 13px; color: #6b7785; margin-top: 4px; }
+  .kpi-ok .val { color: #28a745; }
+  .kpi-warn .val { color: #f0ad4e; }
+  .kpi-bad .val { color: #dc3545; }
+  .flow { background: #f7f9fb; border: 1px solid #dfe3e8; border-radius: 8px; padding: 16px 20px;
+          font-family: Consolas, 'Courier New', monospace; font-size: 13px; line-height: 1.8; }
+  .arrow { color: #17a2b8; font-weight: 700; }
+  a { color: #17a2b8; }
+  .related { font-size: 14px; margin-top: 24px; padding-top: 16px; border-top: 1px solid #dfe3e8; }
+</style>
+</head>
+<body>
+
+<h1>TWR_Бенчмарк в отчете МО: расчет есть, колонки на экране нет</h1>
+<p class="muted">
+  Объект: <code>Отчет.VTBAM_MWR_TWR</code> &nbsp;|&nbsp;
+  База: <code>Wim_Mo</code> &nbsp;|&nbsp;
+  Контекст: IMDEV-9005, замечание аналитика (Chukhachov, Alexander)
+</p>
+
+<!-- ===== 1. ВВЕДЕНИЕ ===== -->
+<div class="card intro">
+  <h2 style="border:0;margin-top:0;padding:0;">Введение</h2>
+  <p>
+    Аналитик отметил: в коде отчета доходности МО есть расчет и <code>TWR</code>, и
+    <code>TWR_Бенчмарк</code>, но конечный пользователь на экране видит только колонку
+    <b>TWR</b>. Колонка <code>TWR_Бенчмарк</code> в интерфейсе отчета <b>отсутствует</b>.
+  </p>
+  <p>
+    Это замечание <span class="stat-ok">корректно</span>. Расхождение объясняется не ошибкой
+    запуска отчета, а разделением двух уровней: <b>расчет в модуле объекта</b> и
+    <b>вывод в макете печатной формы</b>.
+  </p>
+</div>
+
+<!-- ===== 2. КРАТКИЙ ВЫВОД ===== -->
+<h2>Краткий вывод</h2>
+
+<div class="grid3">
+  <div class="kpi kpi-ok">
+    <div class="val">Да</div>
+    <div class="lbl"><code>TWR_Бенчмарк</code> считается в <code>РасчетTWR</code></div>
+  </div>
+  <div class="kpi kpi-bad">
+    <div class="val">Нет</div>
+    <div class="lbl">Колонки <code>TWR_Бенчмарк</code> в макете VTBAM нет</div>
+  </div>
+  <div class="kpi kpi-warn">
+    <div class="val">Частично</div>
+    <div class="lbl">На экране виден только дневной <code>Rn_Бенчмарк</code></div>
+  </div>
+</div>
+
+<!-- ===== 3. ЧТО ВИДИТ ПОЛЬЗОВАТЕЛЬ ===== -->
+<h2>Что видит пользователь в режиме TWR</h2>
+
+<div class="card">
+  <p>Отчет <code>VTBAM_MWR_TWR</code> формирует табличный документ через макет
+     <code>Результат</code>, область <code>СтрокаTWR</code>. В заголовке и строках данных
+     для режима TWR присутствуют следующие колонки, связанные с бенчмарком и доходностью:</p>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Заголовок на экране</th>
+        <th>Параметр макета</th>
+        <th>Поле в таблице расчета</th>
+        <th>Тип показателя</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Rn</td>
+        <td><code>Rn</code></td>
+        <td><code>Rn</code></td>
+        <td>Дневная доходность портфеля</td>
+      </tr>
+      <tr>
+        <td>Rn Бенчмарк</td>
+        <td><code>Rn_Бенчмарк</code></td>
+        <td><code>Rn_Бенчмарк</code></td>
+        <td>Дневная доходность бенчмарка</td>
+      </tr>
+      <tr>
+        <td>TWR</td>
+        <td><code>Доходность</code></td>
+        <td><code>Доходность</code></td>
+        <td>Накопленный TWR портфеля за период</td>
+      </tr>
+      <tr style="background:#fdecea;">
+        <td><b>— отсутствует —</b></td>
+        <td><code>TWR_Бенчмарк</code></td>
+        <td><code>TWR_Бенчмарк</code></td>
+        <td>Накопленный TWR бенчмарка — <span class="stat-bad">не выводится</span></td>
+      </tr>
+    </tbody>
+  </table>
+
+  <p>
+    Важно: заголовок последней видимой колонки — <b>«TWR»</b>, а не «TWR Бенчмарк».
+    Пользователь видит накопленную доходность <b>портфеля</b>, а не накопленный бенчмарк.
+  </p>
+</div>
+
+<!-- ===== 4. ГДЕ СЧИТАЕТСЯ ===== -->
+<h2>Где считается TWR_Бенчмарк</h2>
+
+<div class="card theory">
+  <h3 style="margin-top:0;">Модуль объекта отчета</h3>
+  <p>
+    Файл: <code>Wim_Mo/SRC/CF/Reports/VTBAM_MWR_TWR/Ext/ObjectModule.bsl</code><br>
+    Функция: <code>РасчетTWR(MV, ВводыВыводы)</code>, строки ~2212–2302
+  </p>
+
+  <p>В возвращаемую таблицу <code>MV</code> добавляются колонки:</p>
+  <ul>
+    <li><code>Доходность</code> — накопленный TWR портфеля;</li>
+    <li><code>TWR_Бенчмарк</code> — накопленный TWR бенчмарка.</li>
+  </ul>
+
+  <pre>// Шаг 1: дневные коэффициенты (разные формулы)
+ТекСтрока.Rn           = (MVn - IO) / MVn_1;   // портфель
+ТекСтрока.Rn_Бенчмарк  = MVn / MVn_1;          // бенчмарк
+
+// Шаг 2: накопление за период
+Rn_Накопленный         = Rn_Накопленный * ТекСтрока.Rn;
+Rn_НакопленныйБенчмарк = Rn_НакопленныйБенчмарк * ТекСтрока.Rn;  // см. примечание ниже
+
+ТекСтрока.Доходность   = Rn_Накопленный - 1;
+ТекСтрока.TWR_Бенчмарк = Rn_НакопленныйБенчмарк - 1;</pre>
+
+  <div class="card bug" style="margin:12px 0;">
+    <b>Примечание (отдельная тема, не про видимость колонки):</b>
+    в накоплении бенчмарка умножается <code>ТекСтрока.Rn</code>, а не
+    <code>ТекСтрока.Rn_Бенчмарк</code>. Из-за этого значение <code>TWR_Бенчмарк</code>
+    в данных может совпадать с <code>Доходность</code>. Подробный числовой пример —
+    в документе
+    <a href="mo_twr_benchmark_calculation_example.html">mo_twr_benchmark_calculation_example.html</a>.
+  </div>
+</div>
+
+<!-- ===== 5. ПОЧЕМУ НЕ ВИДНО ===== -->
+<h2>Почему колонка не попадает на экран</h2>
+
+<div class="card warn">
+  <h3 style="margin-top:0;">Цепочка вывода отчета</h3>
+
+  <div class="flow">
+    РасчетTWR() &nbsp;<span class="arrow">=&gt;</span>&nbsp; таблица MV (есть TWR_Бенчмарк)<br>
+    &nbsp;&nbsp;<span class="arrow">|</span><br>
+    ОтчетПоДоходности(ТЗ) &nbsp;<span class="arrow">=&gt;</span>&nbsp; цикл по строкам<br>
+    &nbsp;&nbsp;<span class="arrow">|</span><br>
+    Строка = Макет.ПолучитьОбласть("СтрокаTWR")<br>
+    ЗаполнитьЗначенияСвойств(Строка.Параметры, ТекСтрока)<br>
+    &nbsp;&nbsp;<span class="arrow">|</span><br>
+    В макет попадают <b>только</b> поля, для которых объявлен параметр области
+  </div>
+
+  <p>
+    Функция <code>ОтчетПоДоходности</code> (строки ~100–144) копирует свойства строки
+    расчета в параметры макета через <code>ЗаполнитьЗначенияСвойств</code>.
+    Если в области <code>СтрокаTWR</code> нет параметра <code>TWR_Бенчмарк</code>,
+    значение из таблицы расчета <b>игнорируется при выводе</b>.
+  </p>
+
+  <p>
+    Файл макета:
+    <code>Wim_Mo/SRC/CF/Reports/VTBAM_MWR_TWR/Templates/Результат/Ext/Template.xml</code><br>
+    Область: <code>СтрокаTWR</code> — параметры <code>Rn_Бенчмарк</code> и
+    <code>Доходность</code> (заголовок «TWR»). Параметра <code>TWR_Бенчмарк</code> нет.
+  </p>
+</div>
+
+<!-- ===== 6. СРАВНЕНИЕ ОТЧЕТОВ ===== -->
+<h2>Сравнение VTBAM_MWR_TWR и старого MWR_TWR</h2>
+
+<div class="card">
+  <table>
+    <thead>
+      <tr>
+        <th>Показатель</th>
+        <th>Отчет MWR_TWR (старый)</th>
+        <th>Отчет VTBAM_MWR_TWR (текущий)</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Дневной <code>Rn_Бенчмарк</code> на экране</td>
+        <td class="yes">Да</td>
+        <td class="yes">Да</td>
+      </tr>
+      <tr>
+        <td>Накопленный <code>TWR_Бенчмарк</code> на экране</td>
+        <td class="yes">Да (параметр <code>TWR_Бенчмарк</code> в макете)</td>
+        <td class="no">Нет</td>
+      </tr>
+      <tr>
+        <td>Накопленный TWR портфеля на экране</td>
+        <td class="yes">Да (<code>TWR</code>)</td>
+        <td class="yes">Да (<code>Доходность</code>, заголовок «TWR»)</td>
+      </tr>
+      <tr>
+        <td><code>MWR_Бенчмарк</code> на экране (режим MWR)</td>
+        <td class="yes">Да</td>
+        <td class="no">Нет (считается в коде, но не в макете)</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <p class="muted">
+    Вывод: при переходе на <code>VTBAM_MWR_TWR</code> накопленные показатели бенчмарка
+    (<code>TWR_Бенчмарк</code>, <code>MWR_Бенчмарк</code>) из пользовательского интерфейса
+  убраны. Осталась только дневная колонка <code>Rn_Бенчмарк</code> в режиме TWR.
+  </p>
+</div>
+
+<!-- ===== 7. ГДЕ ИСПОЛЬЗУЕТСЯ TWR_Бенчмарк ===== -->
+<h2>Где TWR_Бенчмарк используется вне экрана отчета</h2>
+
+<div class="card ok">
+  <p>
+    Поле <code>TWR_Бенчмарк</code> остается в таблице, которую возвращает расчет TWR.
+    Его читают <b>интеграции и внешние потребители</b>, а не пользователь отчета в МО.
+  </p>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Канал</th>
+        <th>Модуль / объект</th>
+        <th>Назначение</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>COM / API МО</td>
+        <td><code>ОбщийМодуль.ВТБ_РасчетДоходностиСервер</code>, функция <code>TWR()</code></td>
+        <td>Возвращает таблицу расчета TWR за период; в строках есть <code>TWR_Бенчмарк</code></td>
+      </tr>
+      <tr>
+        <td>Форма 0420431 (ДУ)</td>
+        <td>Обработка <code>внЗаполнениеРеглОтчетаПоДоговорамДУ_0420431_71</code></td>
+        <td>Из последней строки TWR берется <code>TWR_Бенчмарк</code> как доходность стратегии</td>
+      </tr>
+      <tr>
+        <td>Отдельный API бенчмарка</td>
+        <td><code>ДоходностьБенчмарка()</code>, <code>ДоходностьБенчмаркаСтратегииМандата()</code></td>
+        <td>Другой путь: расчет по регистру <code>ДанныеБенчмарка</code>, не колонка отчета TWR</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <p>
+    Для формы 431 важно различать: пользователь МО не видит <code>TWR_Бенчмарк</code> в отчете,
+    но ДУ может получать это поле программно через COM при заполнении регламентированного отчета.
+  </p>
+</div>
+
+<!-- ===== 8. СХЕМА РАЗДЕЛЕНИЯ ===== -->
+<h2>Схема: расчет vs отображение vs интеграция</h2>
+
+<div class="card theory">
+  <table>
+    <thead>
+      <tr>
+        <th>Слой</th>
+        <th>TWR портфеля</th>
+        <th>Rn_Бенчмарк (дневной)</th>
+        <th>TWR_Бенчмарк (накопленный)</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Расчет в <code>РасчетTWR</code></td>
+        <td class="yes">Да (<code>Доходность</code>)</td>
+        <td class="yes">Да</td>
+        <td class="yes">Да</td>
+      </tr>
+      <tr>
+        <td>Макет VTBAM (экран пользователя)</td>
+        <td class="yes">Да (колонка «TWR»)</td>
+        <td class="yes">Да</td>
+        <td class="no">Нет</td>
+      </tr>
+      <tr>
+        <td>COM / форма 0420431</td>
+        <td class="partial">Косвенно</td>
+        <td class="partial">Косвенно</td>
+        <td class="yes">Да (читается из таблицы)</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- ===== 9. ОТВЕТ АНАЛИТИКУ ===== -->
+<h2>Формулировка для ответа аналитику</h2>
+
+<div class="card intro">
+  <ol>
+    <li>
+      <b>Замечание верное:</b> в отчете <code>VTBAM_MWR_TWR</code> колонки
+      <code>TWR_Бенчмарк</code> для конечного пользователя нет.
+    </li>
+    <li>
+      <b>Код расчета существует:</b> поле заполняется в функции <code>РасчетTWR</code>
+      и присутствует в возвращаемой таблице.
+    </li>
+    <li>
+      <b>Причина невидимости:</b> в макете <code>Результат</code> (область
+      <code>СтрокаTWR</code>) не объявлен параметр <code>TWR_Бенчмарк</code>;
+      вывод идет только в <code>Доходность</code> (заголовок «TWR») и
+      <code>Rn_Бенчмарк</code>.
+    </li>
+    <li>
+      <b>Это не сбой отчета,</b> а следствие состава макета текущей версии отчета.
+      В старом <code>MWR_TWR</code> колонка на экране была.
+    </li>
+    <li>
+      <b>Для интеграций</b> (в т.ч. 0420431) поле по-прежнему доступно через API,
+      хотя пользователь МО его не видит.
+    </li>
+  </ol>
+</div>
+
+<!-- ===== 10. ВОЗМОЖНОЕ ИСПРАВЛЕНИЕ ===== -->
+<h2>Если нужно вернуть колонку на экран</h2>
+
+<div class="card warn">
+  <p>Минимальные шаги (только макет, без изменения расчета):</p>
+  <ol>
+    <li>В <code>Templates/Результат/Ext/Template.xml</code> добавить в область
+        <code>ЗаголовокТаблицыTWR</code> заголовок «TWR Бенчмарк».</li>
+    <li>В область <code>СтрокаTWR</code> добавить параметр <code>TWR_Бенчмарк</code>
+        (по аналогии со старым отчетом <code>MWR_TWR</code>).</li>
+    <li>Проверить, что <code>ЗаполнитьЗначенияСвойств</code> подхватывает поле из таблицы
+        (имена должны совпадать).</li>
+  </ol>
+  <p class="muted">
+    Отдельно от видимости: перед публикацией стоит подтвердить бизнес-логику накопления
+    (<code>Rn</code> vs <code>Rn_Бенчмарк</code> в цикле) — см. связанный документ с примером.
+  </p>
+</div>
+
+<!-- ===== 11. ССЫЛКИ ===== -->
+<div class="related">
+  <b>Связанные материалы:</b>
+  <ul>
+    <li><a href="mo_twr_benchmark_calculation_example.html">Числовой пример расчета TWR_Бенчмарк и расхождения формул</a></li>
+    <li>Исходники МО: <code>Wim_Mo/SRC/CF/Reports/VTBAM_MWR_TWR/</code></li>
+    <li>API: <code>Wim_Mo/SRC/CF/CommonModules/ВТБ_РасчетДоходностиСервер/Ext/Module.bsl</code></li>
+  </ul>
+  <p class="muted">Документ подготовлен: IMDEV-9005, июнь 2026.</p>
+</div>
+
+</body>
+</html>

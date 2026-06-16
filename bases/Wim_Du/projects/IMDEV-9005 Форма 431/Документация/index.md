@@ -8,6 +8,8 @@
 | [imdev-9005_final_development_report.html](imdev-9005_final_development_report.html) | **Итоговая разработка** — ДУ: стр. 801/2470/2471; МО: индекс MV по Разделитель |
 | [imdev-9005_optimizations_v120.html](imdev-9005_optimizations_v120.html) | **v1.20** — две оптимизации (TWR/MANDATE_STRATEGY + раздел 1.2), теория и практика |
 | [imdev-9005_optimizations.html](imdev-9005_optimizations.html) | Краткая документация по трем оптимизациям и обоснованию замерами |
+| [mo_twr_benchmark_ui_visibility.html](mo_twr_benchmark_ui_visibility.html) | **TWR_Бенчмарк** — расчет есть, колонки на экране VTBAM нет (UI vs API) |
+| [mo_twr_benchmark_calculation_example.html](mo_twr_benchmark_calculation_example.html) | Числовой пример расчета TWR_Бенчмарк и расхождения формул в МО |
 | [../IMDEV-9005_parallel_zapolnenie.html](../IMDEV-9005_parallel_zapolnenie.html) | Подробно: параллельное заполнение разделов 2–7 |
 | [../Тесты_замеры_9005.docx](../Тесты_замеры_9005.docx) | Исходные замеры производительности |
 
