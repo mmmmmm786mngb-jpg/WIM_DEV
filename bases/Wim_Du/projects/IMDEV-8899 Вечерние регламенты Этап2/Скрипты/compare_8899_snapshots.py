@@ -5,14 +5,26 @@
 from collections import Counter, defaultdict
 from pathlib import Path
 
-OLD_PATH = Path(
+BASE_PATH = Path(
     r"c:\1c\Cursor_1c\WIM_DEV\bases\Wim_Du\projects\IMDEV-8899 Вечерние регламенты Этап2"
-    r"\Обработки\внБыстроеУдалениеПлановРеглОперацийДУ_epf\8899_OLD_20260610.8899.csv"
+    r"\Обработки\внБыстроеУдалениеПлановРеглОперацийДУ_epf"
 )
-NEW_PATH = Path(
-    r"c:\1c\Cursor_1c\WIM_DEV\bases\Wim_Du\projects\IMDEV-8899 Вечерние регламенты Этап2"
-    r"\Обработки\внБыстроеУдалениеПлановРеглОперацийДУ_epf\8899_snapshot_20260610.8899_НОВЫЙ.8899.csv"
-)
+SNAPSHOT_PATHS = {
+    "OLD": BASE_PATH / "8899_OLD_20260610.8899.csv",
+    "OLD2": BASE_PATH / "8899_OLD2_20260610.8899.csv",
+    "NEW": BASE_PATH / "8899_snapshot_20260610.8899_НОВЫЙ.8899.csv",
+}
+
+VID_NAMES = {
+    "ed8da25e-e59e-4932-9edc-643a2add8ba9": "PereocDS_UU",
+    "fc5efdc7-4f64-4d5a-bfe0-fa1eee366caf": "Defolt_BU",
+    "74e61bfc-d148-4ae7-832e-b73d5a2f1164": "Defolt_UU",
+    "f096371e-bb4e-4203-af5f-28d32833c95f": "Kontrol_UU",
+    "4b4f7a79-db26-492d-a380-2b17ea75edcd": "NKD_UU",
+    "5e5d4997-eb05-49c4-98f5-f373c84e6992": "Pereoc_UU",
+    "8b24ba06-b0de-4ef9-b48d-247f98102e45": "RSA_BU",
+    "2fc35b83-3d32-446f-b745-fd3aad76d7b0": "SCA_BU",
+}
 
 
 def load(path):
@@ -59,114 +71,114 @@ def subdoc_profile(data):
     return len(data["subdocs"]), counts, posted_sub
 
 
-def main():
-    old_meta, old_rows = load(OLD_PATH)
-    new_meta, new_rows = load(NEW_PATH)
-    old_c = plan_summary(old_rows)
-    new_c = plan_summary(new_rows)
+def types_set(data):
+    return {s["ТипДокумента"] for s in data["subdocs"]}
 
-    print("=== META ===")
-    for key in sorted(set(old_meta) | set(new_meta)):
-        print(f"{key}: OLD={old_meta.get(key)} NEW={new_meta.get(key)}")
 
-    contracts_old = set(old_c)
-    contracts_new = set(new_c)
-    common = contracts_old & contracts_new
-    print(f"\nContracts: OLD={len(contracts_old)} NEW={len(contracts_new)} common={len(common)}")
+def compare_snapshots(label_left, label_right):
+    left_meta, left_rows = load(SNAPSHOT_PATHS[label_left])
+    right_meta, right_rows = load(SNAPSHOT_PATHS[label_right])
+    left_c = plan_summary(left_rows)
+    right_c = plan_summary(right_rows)
+    common = set(left_c) & set(right_c)
 
-    old_posted = {c for c, d in old_c.items() if d["posted"] == "1"}
-    new_posted = {c for c, d in new_c.items() if d["posted"] == "1"}
-    print(f"Plan posted: OLD={len(old_posted)} unposted={len(contracts_old - old_posted)}")
-    print(f"Plan posted: NEW={len(new_posted)} unposted={len(contracts_new - new_posted)}")
+    print("=" * 60)
+    print(f"COMPARE {label_left} vs {label_right}")
+    print(
+        f"META {label_left}: MARK={left_meta.get('MARK')} ROWS={left_meta.get('ROWS')} "
+        f"CREATED={left_meta.get('CREATED')}"
+    )
+    print(
+        f"META {label_right}: MARK={right_meta.get('MARK')} ROWS={right_meta.get('ROWS')} "
+        f"CREATED={right_meta.get('CREATED')}"
+    )
 
-    posted_diff = [c for c in common if old_c[c]["posted"] != new_c[c]["posted"]]
-    old0_new1 = [c for c in posted_diff if old_c[c]["posted"] == "0" and new_c[c]["posted"] == "1"]
-    old1_new0 = [c for c in posted_diff if old_c[c]["posted"] == "1" and new_c[c]["posted"] == "0"]
-    print(f"Posting status changed: {len(posted_diff)}")
-    print(f"  OLD unposted -> NEW posted: {len(old0_new1)}")
-    print(f"  OLD posted -> NEW unposted: {len(old1_new0)}")
+    left_posted = sum(1 for contract in left_c if left_c[contract]["posted"] == "1")
+    right_posted = sum(1 for contract in right_c if right_c[contract]["posted"] == "1")
+    print(
+        f"Plans posted: {label_left}={left_posted} unposted={len(left_c) - left_posted}; "
+        f"{label_right}={right_posted} unposted={len(right_c) - right_posted}"
+    )
 
-    subdoc_diff = []
+    posted_diff = [c for c in common if left_c[c]["posted"] != right_c[c]["posted"]]
+    left_fail_right_ok = [
+        c for c in posted_diff if left_c[c]["posted"] == "0" and right_c[c]["posted"] == "1"
+    ]
+    left_ok_right_fail = [
+        c for c in posted_diff if left_c[c]["posted"] == "1" and right_c[c]["posted"] == "0"
+    ]
+    print(
+        f"Posting changed: {len(posted_diff)} "
+        f"({label_left} fail -> {label_right} ok: {len(left_fail_right_ok)}, reverse: {len(left_ok_right_fail)})"
+    )
+
     same_profile = 0
+    profile_diff = 0
+    transitions = Counter()
     for contract in common:
-        old_prof = subdoc_profile(old_c[contract])
-        new_prof = subdoc_profile(new_c[contract])
-        if old_prof != new_prof:
-            subdoc_diff.append((contract, old_prof, new_prof))
-        else:
+        left_prof = subdoc_profile(left_c[contract])
+        right_prof = subdoc_profile(right_c[contract])
+        if left_prof == right_prof:
             same_profile += 1
-    print(f"\nSubdoc profile same: {same_profile}")
-    print(f"Subdoc profile different: {len(subdoc_diff)}")
+        else:
+            profile_diff += 1
+            transitions[(left_prof[0], right_prof[0])] += 1
+    print(f"Subdoc profile same: {same_profile}, different: {profile_diff}")
+    if transitions:
+        print("Subdoc count transitions:")
+        for pair, count in sorted(transitions.items(), key=lambda item: -item[1])[:10]:
+            print(f"  {pair[0]} -> {pair[1]}: {count}")
 
-    breakdown = Counter((o[0], n[0]) for _, o, n in subdoc_diff)
-    print("Subdoc count transitions (old -> new):")
-    for pair, count in sorted(breakdown.items(), key=lambda x: -x[1])[:15]:
-        print(f"  {pair[0]} -> {pair[1]}: {count}")
+    left_types = Counter(
+        row["ТипДокумента"] for row in left_rows if row["ТипДокумента"] != "<строка плана>"
+    )
+    right_types = Counter(
+        row["ТипДокумента"] for row in right_rows if row["ТипДокумента"] != "<строка плана>"
+    )
+    print(f"Subdoc totals {label_left}:", dict(left_types))
+    print(f"Subdoc totals {label_right}:", dict(right_types))
+
+    for label, data in ((label_left, left_c), (label_right, right_c)):
+        three_types = sum(
+            1 for contract in data if data[contract]["posted"] == "1" and len(types_set(data[contract])) == 3
+        )
+        rsa_only = sum(
+            1
+            for contract in data
+            if data[contract]["posted"] == "1" and types_set(data[contract]) == {"Расчет СЧА/РСА"}
+        )
+        zero_subdocs = sum(1 for contract in data if subdoc_profile(data[contract])[0] == 0)
+        print(
+            f"{label}: posted 3-types={three_types}, posted rsa-only={rsa_only}, zero-subdocs={zero_subdocs}"
+        )
 
     vid_changes = Counter()
     for contract in common:
-        old_vids = {r["ВидОперации"]: r["Выполнять"] for r in old_c[contract]["plan_rows"]}
-        new_vids = {r["ВидОперации"]: r["Выполнять"] for r in new_c[contract]["plan_rows"]}
-        for vid in set(old_vids) | set(new_vids):
-            if old_vids.get(vid) != new_vids.get(vid):
-                vid_changes[(vid, old_vids.get(vid), new_vids.get(vid))] += 1
-    print("\nVypolnyat changes (vid_prefix, old, new): count")
-    for (vid, old_v, new_v), count in vid_changes.most_common(20):
-        print(f"  {vid[:8]}... {old_v}->{new_v}: {count}")
+        left_vids = {row["ВидОперации"]: row["Выполнять"] for row in left_c[contract]["plan_rows"]}
+        right_vids = {row["ВидОперации"]: row["Выполнять"] for row in right_c[contract]["plan_rows"]}
+        for vid in set(left_vids) | set(right_vids):
+            if left_vids.get(vid) != right_vids.get(vid):
+                name = VID_NAMES.get(vid, vid[:8])
+                vid_changes[(name, left_vids.get(vid), right_vids.get(vid))] += 1
+    if vid_changes:
+        print("Vypolnyat changes:")
+        for (name, old_value, new_value), count in vid_changes.most_common(10):
+            print(f"  {name} {old_value}->{new_value}: {count}")
 
-    old_types = Counter(
-        r["ТипДокумента"] for r in old_rows if r["ТипДокумента"] != "<строка плана>"
+    both_posted_same = sum(
+        1
+        for contract in common
+        if left_c[contract]["posted"] == "1"
+        and right_c[contract]["posted"] == "1"
+        and subdoc_profile(left_c[contract])[:2] == subdoc_profile(right_c[contract])[:2]
     )
-    new_types = Counter(
-        r["ТипДокумента"] for r in new_rows if r["ТипДокумента"] != "<строка плана>"
-    )
-    print("\nSubdoc types OLD:", dict(old_types))
-    print("Subdoc types NEW:", dict(new_types))
+    print(f"Both posted + same subdoc types/count: {both_posted_same}")
 
-    old_zero = sum(1 for c in contracts_old if subdoc_profile(old_c[c])[0] == 0)
-    new_zero = sum(1 for c in contracts_new if subdoc_profile(new_c[c])[0] == 0)
-    print(f"\nContracts with 0 subdocs: OLD={old_zero} NEW={new_zero}")
 
-    both_posted_same = 0
-    both_posted_diff = 0
-    for contract in common:
-        if old_c[contract]["posted"] == "1" and new_c[contract]["posted"] == "1":
-            if subdoc_profile(old_c[contract])[:2] == subdoc_profile(new_c[contract])[:2]:
-                both_posted_same += 1
-            else:
-                both_posted_diff += 1
-    print(f"\nBoth posted: same subdoc profile {both_posted_same}, different {both_posted_diff}")
-
-    rsa_only = []
-    three_types = []
-    for contract in old0_new1:
-        n = new_c[contract]
-        types = set(s["ТипДокумента"] for s in n["subdocs"])
-        if types == {"Расчет СЧА/РСА"}:
-            rsa_only.append(contract)
-        elif len(types) == 3:
-            three_types.append(contract)
-    print(f"\nAmong {len(old0_new1)} OLD-fail -> NEW-ok:")
-    print(f"  NEW has all 3 subdoc types: {len(three_types)}")
-    print(f"  NEW has only RSA/SCA: {len(rsa_only)}")
-
-    print("\nSample OLD unposted -> NEW posted:")
-    for contract in old0_new1[:3]:
-        o = old_c[contract]
-        n = new_c[contract]
-        n_types = sorted({s["ТипДокумента"] for s in n["subdocs"]})
-        print(f"  {contract}: sub OLD={len(o['subdocs'])} NEW={len(n['subdocs'])} types={n_types}")
-
-    # Plan rows count per contract
-    plan_rows_old = Counter(len(d["plan_rows"]) for d in old_c.values())
-    plan_rows_new = Counter(len(d["plan_rows"]) for d in new_c.values())
-    print("\nPlan rows per contract OLD:", dict(sorted(plan_rows_old.items())))
-    print("Plan rows per contract NEW:", dict(sorted(plan_rows_new.items())))
-
-    # Vypolnyat=0 count in NEW for all contracts
-    new_v0 = sum(1 for r in new_rows if r["ТипДокумента"] == "<строка плана>" and r["Выполнять"] == "0")
-    old_v0 = sum(1 for r in old_rows if r["ТипДокумента"] == "<строка плана>" and r["Выполнять"] == "0")
-    print(f"\nPlan rows with Vypolnyat=0: OLD={old_v0} NEW={new_v0}")
+def main():
+    compare_snapshots("OLD2", "NEW")
+    compare_snapshots("OLD", "OLD2")
+    compare_snapshots("OLD", "NEW")
 
 
 if __name__ == "__main__":
