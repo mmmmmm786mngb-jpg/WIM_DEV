@@ -1,0 +1,65 @@
+{
+  "title": "Восстановление реквизита по версиям",
+  "properties": { "autoTitle": false, "windowOpeningMode": "Independent" },
+  "events": { "OnCreateAtServer": "ПриСозданииНаСервере" },
+  "elements": [
+    { "group": "vertical", "name": "ГруппаОтбор", "showTitle": true, "title": "Отбор", "representation": "weak", "children": [
+      { "group": "horizontal", "name": "ГруппаПериод", "children": [
+        { "input": "ДатаНачала", "path": "ДатаНачала", "title": "С" },
+        { "input": "ДатаОкончания", "path": "ДатаОкончания", "title": "По" }
+      ]},
+      { "group": "horizontal", "name": "ГруппаОбъект", "children": [
+        { "input": "ПолноеИмяОбъекта", "path": "ПолноеИмяОбъекта", "title": "Тип объекта", "inputHint": "Справочник.Контрагенты (пусто = все)", "width": 40 },
+        { "input": "ИмяРеквизита", "path": "ИмяРеквизита", "title": "Реквизит", "inputHint": "КДУ_ИД", "markIncomplete": true }
+      ]},
+      { "input": "Автор", "path": "Автор", "title": "Автор версии", "choiceButton": true, "clearButton": true }
+    ]},
+    { "group": "vertical", "name": "ГруппаКомандыПоиск", "children": [
+      { "group": "horizontal", "name": "ГруппаКнопкаПоиск", "children": [
+        { "button": "НайтиИзменения", "command": "НайтиИзменения", "defaultButton": true }
+      ]},
+      { "input": "ТекстСообщения", "path": "ТекстСообщения", "title": "Сообщение", "multiLine": true, "readOnly": true, "height": 3, "horizontalStretch": true, "titleLocation": "top" }
+    ]},
+    { "table": "ТаблицаИзменений", "path": "ТаблицаИзменений", "title": "Найденные изменения", "height": 12, "columns": [
+      { "check": "ТаблицаИзмененийВосстанавливать", "path": "ТаблицаИзменений.Восстанавливать", "title": "Восст." },
+      { "input": "ТаблицаИзмененийПредставлениеОбъекта", "path": "ТаблицаИзменений.ПредставлениеОбъекта", "title": "Объект", "readOnly": true },
+      { "input": "ТаблицаИзмененийЗначениеСтарое", "path": "ТаблицаИзменений.ЗначениеСтарое", "title": "Старое значение (до изменения)", "readOnly": true },
+      { "input": "ТаблицаИзмененийЗначениеНовое", "path": "ТаблицаИзменений.ЗначениеНовое", "title": "Новое значение (текущее)", "readOnly": true },
+      { "input": "ТаблицаИзмененийДатаВерсии", "path": "ТаблицаИзменений.ДатаВерсии", "title": "Дата версии", "readOnly": true },
+      { "input": "ТаблицаИзмененийАвтор", "path": "ТаблицаИзменений.Автор", "title": "Автор", "readOnly": true },
+      { "input": "ТаблицаИзмененийНомерВерсии", "path": "ТаблицаИзменений.НомерВерсии", "title": "Версия", "readOnly": true },
+      { "input": "ТаблицаИзмененийНомерПредыдущейВерсии", "path": "ТаблицаИзменений.НомерПредыдущейВерсии", "title": "Пред. версия", "readOnly": true }
+    ]},
+    { "group": "horizontal", "name": "ГруппаКомандыВосстановление", "children": [
+      { "button": "ОтметитьВсе", "command": "ОтметитьВсе", "title": "Отметить все" },
+      { "button": "СнятьОтметки", "command": "СнятьОтметки", "title": "Снять отметки" },
+      { "button": "ВосстановитьОтмеченные", "command": "ВосстановитьОтмеченные", "title": "Восстановить отмеченные" }
+    ]}
+  ],
+  "attributes": [
+    { "name": "Объект", "type": "ExternalDataProcessorObject.внВосстановлениеРеквизитаПоВерсиям", "main": true },
+    { "name": "ДатаНачала", "type": "dateTime" },
+    { "name": "ДатаОкончания", "type": "dateTime" },
+    { "name": "ПолноеИмяОбъекта", "type": "string(150)" },
+    { "name": "ИмяРеквизита", "type": "string(150)" },
+    { "name": "Автор", "type": "CatalogRef.Пользователи" },
+    { "name": "ТекстСообщения", "type": "string" },
+    { "name": "ТаблицаИзменений", "type": "ValueTable", "columns": [
+      { "name": "Объект", "type": "CatalogRef.Контрагенты" },
+      { "name": "ПредставлениеОбъекта", "type": "string(200)" },
+      { "name": "НомерВерсии", "type": "decimal(10,0)" },
+      { "name": "НомерПредыдущейВерсии", "type": "decimal(10,0)" },
+      { "name": "ДатаВерсии", "type": "dateTime" },
+      { "name": "Автор", "type": "string(150)" },
+      { "name": "ЗначениеНовое", "type": "string(500)" },
+      { "name": "ЗначениеСтарое", "type": "string(500)" },
+      { "name": "Восстанавливать", "type": "boolean" }
+    ]}
+  ],
+  "commands": [
+    { "name": "НайтиИзменения", "action": "НайтиИзменения", "title": "Найти изменения", "shortcut": "Ctrl+Enter" },
+    { "name": "ОтметитьВсе", "action": "ОтметитьВсе", "title": "Отметить все" },
+    { "name": "СнятьОтметки", "action": "СнятьОтметки", "title": "Снять отметки" },
+    { "name": "ВосстановитьОтмеченные", "action": "ВосстановитьОтмеченные", "title": "Восстановить отмеченные" }
+  ]
+}
