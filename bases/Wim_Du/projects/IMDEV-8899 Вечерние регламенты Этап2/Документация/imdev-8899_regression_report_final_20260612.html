@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>IMDEV-8899 — регрессионный отчет, финальный тест 12.06.2026</title>
+<style>
+  * { box-sizing: border-box; }
+  body { font-family: 'Segoe UI', Arial, sans-serif; line-height: 1.65; color: #2c3e50;
+         max-width: 1040px; margin: 0 auto; padding: 24px; background: #f0f4f8; }
+  h1 { color: #1a2b48; font-size: 26px; border-bottom: 3px solid #17a2b8; padding-bottom: 12px; margin-bottom: 8px; }
+  h2 { color: #17a2b8; font-size: 20px; margin-top: 32px; border-left: 4px solid #17a2b8; padding-left: 12px; }
+  h3 { color: #1a2b48; font-size: 16px; margin-top: 20px; }
+  .card { background: #fff; border-radius: 8px; padding: 18px 24px; margin: 16px 0;
+          box-shadow: 0 1px 4px rgba(0,0,0,0.08); }
+  .intro { background: #eaf6f8; border-left: 4px solid #17a2b8; }
+  .ok { background: #eafaf1; border-left: 4px solid #28a745; }
+  .warn { background: #fff8e1; border-left: 4px solid #f0ad4e; }
+  .bug { background: #fff3cd; border-left: 4px solid #ffc107; }
+  .theory { background: #f4f0ff; border-left: 4px solid #6554c0; }
+  .stat-ok { color: #28a745; font-weight: 700; }
+  .stat-bad { color: #dc3545; font-weight: 700; }
+  .stat-info { color: #17a2b8; font-weight: 700; }
+  .stat-warn { color: #f0ad4e; font-weight: 700; }
+  table { width: 100%; border-collapse: collapse; margin: 12px 0; font-size: 14px; }
+  th, td { border: 1px solid #dfe3e8; padding: 8px 12px; text-align: left; vertical-align: middle; }
+  th { background: #1a2b48; color: #fff; font-weight: 600; }
+  tr:nth-child(even) { background: #f7f9fb; }
+  td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+  td.yes { background: #eafaf1; color: #1e7e34; font-weight: 600; text-align: center; }
+  td.no { background: #fdecea; color: #c0392b; font-weight: 600; text-align: center; }
+  td.neutral { background: #f7f9fb; text-align: center; }
+  code { background: #eef1f4; padding: 2px 6px; border-radius: 4px; font-family: Consolas, 'Courier New', monospace;
+         font-size: 13px; color: #b8005a; }
+  pre { background: #1e1e1e; color: #d4d4d4; padding: 14px 16px; border-radius: 6px; overflow-x: auto;
+        font-family: Consolas, 'Courier New', monospace; font-size: 12.5px; line-height: 1.45; margin: 10px 0; }
+  .tag { display: inline-block; color: #fff; font-size: 11px; font-weight: 700;
+         padding: 3px 10px; border-radius: 10px; vertical-align: middle; }
+  .tag-ok { background: #28a745; }
+  .tag-bad { background: #dc3545; }
+  .tag-info { background: #17a2b8; }
+  .muted { color: #6b7785; font-size: 13px; }
+  ul, ol { margin: 8px 0; padding-left: 22px; }
+  li { margin: 5px 0; }
+  .grid3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  @media (max-width: 800px) { .grid3, .grid2 { grid-template-columns: 1fr; } }
+  .kpi { text-align: center; padding: 18px 14px; border-radius: 8px; background: #fff; border: 1px solid #dfe3e8; }
+  .kpi .val { font-size: 30px; font-weight: 700; line-height: 1.2; }
+  .kpi .lbl { font-size: 13px; color: #6b7785; margin-top: 6px; }
+  .kpi-ok .val { color: #28a745; }
+  .kpi-bad .val { color: #dc3545; }
+  .kpi-info .val { color: #17a2b8; }
+  .verdict { font-size: 22px; font-weight: 700; color: #28a745; text-align: center; padding: 20px; }
+  .bar-wrap { background: #eef1f4; border-radius: 6px; height: 22px; overflow: hidden; margin: 6px 0; }
+  .bar-fill { height: 100%; border-radius: 6px; display: flex; align-items: center; justify-content: flex-end;
+              padding-right: 8px; color: #fff; font-size: 11px; font-weight: 700; }
+  .bar-ok { background: linear-gradient(90deg, #28a745, #20c997); }
+  .bar-warn { background: linear-gradient(90deg, #f0ad4e, #ffc107); }
+  .flow { background: #f7f9fb; border: 1px solid #dfe3e8; border-radius: 8px; padding: 16px 20px;
+          font-family: Consolas, 'Courier New', monospace; font-size: 13px; line-height: 1.9; }
+  .arrow { color: #17a2b8; font-weight: 700; }
+  .footer { margin-top: 28px; padding-top: 16px; border-top: 1px solid #dfe3e8; font-size: 13px; color: #6b7785; }
+</style>
+</head>
+<body>
+
+<h1>IMDEV-8899: регрессионный отчет</h1>
+<p class="muted">
+  Финальный тест вечерних регламентов &nbsp;|&nbsp;
+  Дата регламента: <b>12.06.2026</b> &nbsp;|&nbsp;
+  Пул: <b>Розничное ДУ</b> &nbsp;|&nbsp;
+  Сравнение: <code>old12</code> (база) vs <code>new12</code> (с доработкой)
+</p>
+<p>
+  <span class="tag tag-ok">РЕГРЕССИИ НЕТ</span>
+  <span class="tag tag-info">17 154 договора</span>
+</p>
+
+<!-- ===== 1. ВВЕДЕНИЕ ===== -->
+<div class="card intro">
+  <h2 style="border:0;margin-top:0;padding:0;">Введение</h2>
+  <p>
+    Отчет фиксирует результат <b>финального регрессионного теста</b> этапа 2 IMDEV-8899
+    (оптимизация вечерних регламентов ДУ). Сравниваются CSV-снимки состояния планов
+    регламентных операций, сформированные обработкой
+    <code>внБыстроеУдалениеПлановРеглОперацийДУ</code>.
+  </p>
+  <p>
+    <b>Базовый прогон (OLD):</b> конфигурация без доработки, зафиксирован 1 сбой проведения.<br>
+    <b>Новый прогон (NEW):</b> с подключенным расширением rev2, все планы проведены.
+  </p>
+</div>
+
+<!-- ===== 2. KPI ===== -->
+<h2>Сводка</h2>
+<div class="grid3">
+  <div class="kpi kpi-info">
+    <div class="val">17 154</div>
+    <div class="lbl">договоров в обоих снимках</div>
+  </div>
+  <div class="kpi kpi-ok">
+    <div class="val">17 153</div>
+    <div class="lbl">идентичный бизнес-профиль</div>
+  </div>
+  <div class="kpi kpi-ok">
+    <div class="val">1</div>
+    <div class="lbl">сбой устранен (МИ10917)</div>
+  </div>
+</div>
+
+<div class="card ok verdict">
+  ТЕСТ ПРОЙДЕН: расхождений по бизнес-составу регламентов не выявлено
+</div>
+
+<!-- ===== 3. ТЕХНОЛОГИЯ ===== -->
+<h2>Технология сравнения</h2>
+<div class="card theory">
+  <h3 style="margin-top:0;">Источники данных</h3>
+  <table>
+    <thead>
+      <tr>
+        <th>Роль</th>
+        <th>Файл</th>
+        <th>Метка</th>
+        <th>Создан</th>
+        <th class="num">Строк</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>База (OLD)</td>
+        <td><code>8899_old12_20260612.8899.8899.csv</code></td>
+        <td>old12</td>
+        <td>2026-06-18 11:50:22</td>
+        <td class="num">85 505</td>
+      </tr>
+      <tr>
+        <td>Доработка (NEW)</td>
+        <td><code>8899_new12_20260612.8899.csv</code></td>
+        <td>new12</td>
+        <td>2026-06-18 09:58:16</td>
+        <td class="num">85 507</td>
+      </tr>
+      <tr>
+        <td>Лог ошибок OLD</td>
+        <td><code>ОЛД_12_проблемы.txt</code></td>
+        <td colspan="2">2 строки, договор МИ10917</td>
+        <td class="num">—</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3>Формат снимка <code>8899-SNAPSHOT-1</code></h3>
+  <p>Каждая строка CSV описывает либо строку плана, либо поддокумент регламента:</p>
+  <pre>ДоговорДУ | План | ГруппаОпераций | ПланПроведен | ТипДокумента | Документ | ДокументПроведен | ВидОперации | Выполнять</pre>
+
+  <h3>Критерии сравнения</h3>
+  <ol>
+    <li><b>Проведение плана</b> — флаг <code>ПланПроведен</code> по договору.</li>
+    <li><b>Профиль поддокументов</b> — набор типов (<code>Расчет СЧА/РСА</code>, <code>Переоценка активов</code>) и флаг <code>ДокументПроведен</code>.</li>
+    <li><b>Флаги оптимизации</b> — <code>Выполнять</code> на строках плана (в данном снимке — 3 вида операций на договор).</li>
+    <li>GUID планов и документов <b>не сравниваются</b> — прогоны выполнялись отдельно, документы пересоздаются.</li>
+  </ol>
+
+  <p class="muted">
+    Примечание: снимок old12/new12 компактный — 3 строки плана и 2 типа поддокументов на договор.
+    НКД и прочие операции в этот снимок не входят (ограничение обработки экспорта).
+  </p>
+</div>
+
+<!-- ===== 4. СТАТИСТИКА ===== -->
+<h2>Статистика</h2>
+<div class="card">
+  <table>
+    <thead>
+      <tr>
+        <th>Показатель</th>
+        <th class="num">OLD (old12)</th>
+        <th class="num">NEW (new12)</th>
+        <th class="num">Разница</th>
+        <th>Оценка</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Договоров в пуле</td>
+        <td class="num">17 154</td>
+        <td class="num">17 154</td>
+        <td class="num">0</td>
+        <td class="yes">OK</td>
+      </tr>
+      <tr>
+        <td>Планов проведено</td>
+        <td class="num">17 153</td>
+        <td class="num">17 154</td>
+        <td class="num">+1</td>
+        <td class="yes">OK</td>
+      </tr>
+      <tr>
+        <td>Планов не проведено</td>
+        <td class="num">1</td>
+        <td class="num">0</td>
+        <td class="num">-1</td>
+        <td class="yes">OK</td>
+      </tr>
+      <tr>
+        <td>Строк плана</td>
+        <td class="num">51 462</td>
+        <td class="num">51 462</td>
+        <td class="num">0</td>
+        <td class="yes">OK</td>
+      </tr>
+      <tr>
+        <td>Поддокументов RSA</td>
+        <td class="num">17 153</td>
+        <td class="num">17 154</td>
+        <td class="num">+1</td>
+        <td class="yes">OK</td>
+      </tr>
+      <tr>
+        <td>Поддокументов «Переоценка активов»</td>
+        <td class="num">16 890</td>
+        <td class="num">16 891</td>
+        <td class="num">+1</td>
+        <td class="yes">OK</td>
+      </tr>
+      <tr>
+        <td>Договоров «только RSA» (без переоценки)</td>
+        <td class="num">263</td>
+        <td class="num">263</td>
+        <td class="num">0</td>
+        <td class="yes">OK</td>
+      </tr>
+      <tr>
+        <td>Изменений <code>Выполнять</code> на строках плана</td>
+        <td class="num">—</td>
+        <td class="num">—</td>
+        <td class="num">0</td>
+        <td class="yes">OK</td>
+      </tr>
+      <tr>
+        <td>Проведены в обоих, профиль поддокументов совпадает</td>
+        <td class="num" colspan="2">17 153 из 17 153</td>
+        <td class="num">100%</td>
+        <td class="yes">OK</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <p><b>Охват совпадения профиля (среди проведенных в OLD):</b></p>
+  <div class="bar-wrap">
+    <div class="bar-fill bar-ok" style="width:100%;">100%</div>
+  </div>
+  <p class="muted">17 153 договора с идентичным набором типов поддокументов и флагами проведения.</p>
+</div>
+
+<!-- ===== 5. ЛОГ ОШИБОК ===== -->
+<h2>Связь с логом ошибок OLD</h2>
+<div class="card bug">
+  <h3 style="margin-top:0;">Файл <code>ОЛД_12_проблемы.txt</code></h3>
+  <pre>Не удалось провести документ Регламентная операция (ДУ) МИ10917-0091 от 12.06.2026 23:55:00
+т.к. при выполнении регламентных операций были ошибки.
+
+Не удалось провести документ Переоценка активов МИ10917-0086 от 12.06.2026 23:55:05</pre>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Документ в логе</th>
+        <th>Тип</th>
+        <th>В снимке OLD</th>
+        <th>В снимке NEW</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>МИ10917-0091</td>
+        <td>Расчет СЧА/РСА</td>
+        <td class="no">не создан (план не проведен)</td>
+        <td class="yes">создан и проведен</td>
+      </tr>
+      <tr>
+        <td>МИ10917-0086</td>
+        <td>Переоценка активов</td>
+        <td class="no">не создан</td>
+        <td class="yes">создан и проведен</td>
+      </tr>
+    </tbody>
+  </table>
+  <p>
+  Количество сбоев в логе (<b>1 договор</b>) = количеству непроведенных планов в OLD (<b>1</b>).
+  В NEW все планы проведены.
+  </p>
+</div>
+
+<!-- ===== 6. ВОССТАНОВЛЕННЫЙ ДОГОВОР ===== -->
+<h2>Детали восстановленного договора</h2>
+<div class="card">
+  <table>
+    <thead>
+      <tr>
+        <th>Поле</th>
+        <th>OLD</th>
+        <th>NEW</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>ДоговорДУ (GUID)</td>
+        <td colspan="2"><code>93633a0c-08bd-11f1-b2d1-0050569f27c0</code></td>
+      </tr>
+      <tr>
+        <td>Номер в логе</td>
+        <td colspan="2">МИ10917</td>
+      </tr>
+      <tr>
+        <td>ПланПроведен</td>
+        <td class="no">0</td>
+        <td class="yes">1</td>
+      </tr>
+      <tr>
+        <td>Поддокументов</td>
+        <td class="num">0</td>
+        <td class="num">2</td>
+      </tr>
+      <tr>
+        <td>Профиль поддокументов</td>
+        <td class="neutral">—</td>
+        <td>Переоценка активов + Расчет СЧА/РСА (оба проведены)</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="flow">
+    OLD: план не проведен <span class="arrow">=&gt;</span> 0 поддокументов<br>
+    NEW: план проведен <span class="arrow">=&gt;</span> Переоценка (проведена) + RSA (проведен)
+  </div>
+</div>
+
+<!-- ===== 7. ПРОФИЛЬ RSA-ONLY ===== -->
+<h2>Договоры «только RSA»</h2>
+<div class="card warn">
+  <p>
+    <b>263 договора</b> в обоих снимках имеют единственный поддокумент
+    <code>Расчет СЧА/РСА</code> без переоценки. Набор договоров
+    <span class="stat-ok">полностью совпадает</span> между OLD и NEW.
+  </p>
+  <p class="muted">
+    Это штатное поведение базовой конфигурации для части договоров пула
+    (отсутствие переоценки по составу активов), а не следствие доработки rev2.
+  </p>
+</div>
+
+<!-- ===== 8. МЕТОДИКА ПРИЕМКИ ===== -->
+<h2>Методика приемки</h2>
+<div class="card theory">
+  <table>
+    <thead>
+      <tr>
+        <th>Шаг</th>
+        <th>Действие</th>
+        <th>Результат</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>1</td>
+        <td>Запуск вечернего регламента на пуле «Розничное ДУ», дата 12.06.2026</td>
+        <td class="yes">Выполнено</td>
+      </tr>
+      <tr>
+        <td>2</td>
+        <td>Экспорт снимка OLD (база) и NEW (rev2)</td>
+        <td class="yes">Выполнено</td>
+      </tr>
+      <tr>
+        <td>3</td>
+        <td>Сопоставление по профилю поддокументов (тип + проведение)</td>
+        <td class="yes">17 153 / 17 153 совпадают</td>
+      </tr>
+      <tr>
+        <td>4</td>
+        <td>Проверка устранения сбоев из лога OLD</td>
+        <td class="yes">1 / 1 устранен</td>
+      </tr>
+      <tr>
+        <td>5</td>
+        <td>Контроль неизменности профиля «только RSA» (263 дог.)</td>
+        <td class="yes">Набор не изменился</td>
+      </tr>
+      <tr>
+        <td>6</td>
+        <td>Контроль флагов <code>Выполнять</code> в снимке</td>
+        <td class="yes">Изменений нет</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- ===== 9. ВЫВОДЫ ===== -->
+<h2>Выводы</h2>
+<div class="card ok">
+  <ol>
+    <li>
+      <b>Регрессии по бизнес-составу регламентов не обнаружено.</b>
+      Для 17 153 договоров, успешно проведенных в OLD, профиль поддокументов в NEW идентичен.
+    </li>
+    <li>
+      <b>Единственный сбой OLD (договор МИ10917)</b> полностью устранен в NEW:
+      план проведен, созданы и проведены переоценка и RSA.
+    </li>
+    <li>
+      <b>263 договора с профилем «только RSA»</b> — без изменений, тот же набор в обоих снимках.
+    </li>
+    <li>
+      <b>Дельта +2 строки</b> в снимке NEW (85 507 vs 85 505) объясняется двумя поддокументами
+      восстановленного договора. Других расхождений нет.
+    </li>
+    <li>
+      <b>Финальный тест 12.06.2026 пройден.</b> Доработка rev2 не ухудшает результат регламентов
+      и устраняет единственный зафиксированный сбой базового прогона.
+    </li>
+  </ol>
+</div>
+
+<div class="footer">
+  <p>
+    <b>Проект:</b> IMDEV-8899, этап 2 — оптимизация вечерних регламентов ДУ<br>
+    <b>База:</b> Wim_Du &nbsp;|&nbsp; <b>Расширение:</b> rev2<br>
+    <b>Инструмент сравнения:</b> Python-скрипт по формату <code>8899-SNAPSHOT-1</code><br>
+    <b>Дата отчета:</b> 18.06.2026
+  </p>
+</div>
+
+</body>
+</html>
