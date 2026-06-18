@@ -10,34 +10,30 @@
 <tr><td style="padding:24px 20px;">
 
     <p style="margin:0 0 4px 0; font-size:11px; text-transform:uppercase; letter-spacing:0.5px; color:#6b7280;">
-        IMDEV-8899 / этап 2 / расширение rev2 / план доработки
+        IMDEV-8899 / этап 2 / расширение rev2 / план (без +2)
     </p>
     <h1 style="margin:0 0 8px 0; font-size:22px; font-weight:600; color:#1a365d; border-bottom:3px solid #2b6cb0; padding-bottom:10px;">
-        План доработки расширения rev2
+        План расширения rev2 (этап 2, без предварительного отсева +2)
     </h1>
     <p style="margin:0 0 12px 0; color:#718096; font-size:13px;">
         ИБ: <strong>localhost/WIM_DU</strong> (без логина/пароля). Режим совместимости КФ и расширения: <strong>8.3.12</strong>.
-        Задача: п. 5 «+2» постановки
-        <code>developer_task_phase2_optimization.html</code> — предварительный отсев договоров ДУ.
+        Пункт <strong>+2</strong> постановки отменен заказчиком — РС <code>ВидыОптимизируемыхРегламентныхОперацийДУ</code> и отсев на форме удалены.
+        В поставке: <strong>3.1, 3.2, 3.6, 3.7, +1</strong>.
     </p>
     <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="margin-bottom:20px; background:#f0fff4; border-left:4px solid #38a169;">
     <tr><td style="padding:12px 16px; color:#276749; font-size:13px;">
-        <strong>Выполнено (разработка rev2):</strong> этапы 1–2 — модуль менеджера РС (~700 строк) и перехват формы
-        <code>РегламентныйПериод</code>; этап 4 — только пакетные процедуры <code>*Оптимизированно</code>
-        (переоценка ДС, дефолт, контроль портфеля; v1-ветки и переключатель удалены);
-        заимствован РС <code>ЗначенияПараметровДоговораДУ</code> + экспорт
-        <code>ЗначенияПараметровДоговоровДУ</code> (кеш параметров по массиву договоров);
-        в <code>Catalogs/РегламентныеПериоды.xml</code> — <code>ExtendedConfigurationObject</code>
-        (<code>6fed2cd2-584b-403c-800c-afd445d98f73</code>);
-        скрипт <code>Скрипты/load_rev2_to_wim_du_and_dump_cfe.ps1</code>;
-        <code>cfe-validate</code> OK; загрузка в <code>localhost/WIM_DU</code> (без авторизации) и <code>Расширения/rev2.cfe</code> (~33 КБ).
+        <strong>Состав rev2:</strong> перехваты <code>РегламентныеПериоды</code> (3.1 РЕПО, 3.6 индексы),
+        <code>ЗначенияПараметровДоговораДУ</code> (3.2), <code>ПланРегламентныхОперацийДУ</code> (3.7),
+        <code>ПереоценкаАктивов</code> (3.1), <code>РасчетСЧА_РСА</code> и <code>ИсполняемыеПроцедурыЗакрытияПериода</code> (+1).
+        Функция <code>ЗаполнитьСоответствиеПропускРЕПОВетки</code> — в модуле менеджера <code>РегламентныеПериоды</code>.
+        Скрипт <code>Скрипты/load_rev2_to_wim_du_and_dump_cfe.ps1</code>.
     </td></tr>
     </table>
     <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="margin-bottom:20px; background:#fffaf0; border-left:4px solid #dd6b20;">
     <tr><td style="padding:12px 16px; color:#744210; font-size:13px;">
-        <strong>Вне scope разработки (выполняет заказчик в ИБ):</strong> 7 записей в РС
-        <code>ВидыОптимизируемыхРегламентныхОперацийДУ</code>, включение константы
-        <code>ИспользоватьПредварительныеЗапросыДляВечернихРегламентов</code>, функциональные тесты T1–T4 и замер.
+        <strong>Настройка ИБ (заказчик):</strong> константа КФ
+        <code>ИспользоватьПредварительныеЗапросыДляВечернихРегламентов</code> = Истина (для пакетной предподготовки вечерних операций, в т.ч. 3.1);
+        функциональные тесты T1–T4 и замер.
     </td></tr>
     </table>
     <p style="margin:0 0 20px 0; color:#718096; font-size:13px;">
@@ -60,24 +56,20 @@
     SettingsStorages/ХранилищеВариантовОтчетов.xml (Adopted)
     Catalogs/
       РегламентныеПериоды.xml                    (Adopted, ExtendedConfigurationObject)
+      РегламентныеПериоды/Ext/ManagerModule.bsl   (3.1 РЕПО, перехваты пакетной подготовки)
       РегламентныеПериоды/Forms/РегламентныйПериод/
-        Ext/Form/Module.bsl                       (~137 строк, ИзменениеИКонтроль)
+        Ext/Form/Module.bsl                       (3.6 индексы, ИзменениеИКонтроль)
     InformationRegisters/
-      ВидыОптимизируемыхРегламентныхОперацийДУ.xml (новый)
-      ВидыОптимизируемыхРегламентныхОперацийДУ/Ext/
-        RecordSetModule.bsl                       (пустой)
-        ManagerModule.bsl                         (~700 строк, этапы 1+4, только *Оптимизированно)
       ЗначенияПараметровДоговораДУ.xml           (Adopted)
       ЗначенияПараметровДоговораДУ/Ext/
-        ManagerModule.bsl                         (новый: ЗначенияПараметровДоговоровДУ)
+        ManagerModule.bsl                         (3.2 перехват единичного запроса)
 Скрипты/
   load_rev2_to_wim_du_and_dump_cfe.ps1          (validate + load + dump CFE)
   build_rev2_form_module.py                     (генерация Form/Module.bsl)</pre>
         <p style="margin:12px 0 0 0; font-size:12px; color:#4a5568;">
             В <code>Configuration.xml</code> / <code>ChildObjects</code>: язык <code>Русский</code>,
             заимствованные UI-объекты, <code>РегламентныеПериоды</code>,
-            РС <code>ВидыОптимизируемыхРегламентныхОперацийДУ</code> (новый),
-            РС <code>ЗначенияПараметровДоговораДУ</code> (заимствован).
+            РС <code>ЗначенияПараметровДоговораДУ</code> (заимствован), документы и общий модуль по п. 3.1, 3.7, +1.
             Префикс: <code>rev2_</code>. Версия: <code>0.1.0.0</code>. Совместимость: <code>Version8_3_12</code>.
         </p>
     </td></tr>

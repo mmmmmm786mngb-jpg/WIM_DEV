@@ -214,7 +214,7 @@
     (<code>rev2</code>). Артефакт поставки: файл расширения <code>rev2.cfe</code>, тестовая серверная ИБ.
   </p>
   <p class="meta">
-    Обновлено: 14.06.2026. Вне scope этапа 2: п. <strong>3.4</strong>, <strong>3.5</strong>.
+    Обновлено: 18.06.2026. Пункт <strong>+2</strong> отменен заказчиком — РС ВидыОптимизируемых… удален из rev2.
     П. <strong>+3</strong> (индексация ПланРегламентныхОперацийДУ) — <strong>не входит в задание этапа 2</strong>, выполнено ранее в базовой КФ.
     П. <strong>3.3</strong> — <strong>выполнить в базовой конфигурации</strong> (индекс РегистрРСА_СЧА).
   </p>
@@ -231,11 +231,11 @@
   </div>
 
   <div class="summary-grid">
-    <div class="summary-card"><strong>7</strong><span>пунктов сделано в rev2 (3.1, 3.2, 3.6, 3.7, +1, +2)</span></div>
+    <div class="summary-card"><strong>6</strong><span>пунктов в rev2 (3.1, 3.2, 3.6, 3.7, +1; +2 отменен)</span></div>
     <div class="summary-card"><strong>1</strong><span>выполнить в конфигурации (п. 3.3)</span></div>
     <div class="summary-card"><strong>2</strong><span>пункта вне scope (3.4, 3.5)</span></div>
-    <div class="summary-card"><strong>13</strong><span>объектов в составе rev2</span></div>
-    <div class="summary-card"><strong>6</strong><span>объектов верхнего уровня <span class="tag tag-noedit">без доработки</span>; также Form.xml и пустой RecordSetModule</span></div>
+    <div class="summary-card"><strong>12</strong><span>объектов в составе rev2</span></div>
+    <div class="summary-card"><strong>5</strong><span>объектов верхнего уровня <span class="tag tag-noedit">без доработки</span></span></div>
   </div>
 
   <!-- ========== 3.1 ========== -->
@@ -244,17 +244,10 @@
     <p class="pct">Оптимизация: пакетный запрос остатков РЕПО + пропуск <code>АктивыПоРЕПОЗаполнить()</code> для договоров целевого пула без РЕПО (не меняя саму процедуру).</p>
 
     <div class="plan-item">
-      <div class="plan-item-title">РегистрСведений.ВидыОптимизируемыхРегламентныхОперацийДУ <span class="tag tag-new">новый</span></div>
-      <div class="path">InformationRegisters/ВидыОптимизируемыхРегламентныхОперацийДУ/Ext/ManagerModule.bsl</div>
-      <ul class="delta-list">
-        <li><span class="tag tag-new">добавлено</span> <code>ЗаполнитьСоответствиеПропускРЕПОВетки(МассивДоговоровДУ, ДатаПроведения)</code> — пакет к <code>СтоимостьАктивовПоСделкамРЕПОУправленческий.Остатки</code>; дата = <code>ДатаСЗаданнымиСекундами(ДатаПроведения, 5)</code> (как у документа ПереоценкаАктивов).</li>
-      </ul>
-    </div>
-
-    <div class="plan-item">
-      <div class="plan-item-title">Справочник.РегламентныеПериоды.МодульМенеджера <span class="tag tag-intercept">перехват</span></div>
+      <div class="plan-item-title">Справочник.РегламентныеПериоды.МодульМенеджера <span class="tag tag-intercept">перехват</span> <span class="tag tag-export">новый метод</span></div>
       <div class="path">Catalogs/РегламентныеПериоды/Ext/ManagerModule.bsl</div>
       <ul class="delta-list">
+        <li><span class="tag tag-new">добавлено</span> <code>ЗаполнитьСоответствиеПропускРЕПОВетки(МассивДоговоровДУ, ДатаПроведения)</code> — пакет к <code>СтоимостьАктивовПоСделкамРЕПОУправленческий.Остатки</code>.</li>
         <li><code>ЗаполнитьПараметрыСохраненияПакетнымиДаннымиВечернихОпераций</code> — вызов <code>ЗаполнитьСоответствиеПропускРЕПОВетки</code>, ключ <code>СоответствиеПропускРЕПОВетки</code> в <code>ПараметрыСохранения</code>.</li>
         <li><code>СформироватьДокументыЗакрытияПериода</code> — структура <code>{КэшКотировокУУ, СоответствиеПропускРЕПОВетки}</code> в <code>СоответствиеОперацияТаблица</code> для операции 0110.</li>
         <li><code>ОчиститьПакетныеДанныеПараметрыСохранения</code> — удаление ключа <code>СоответствиеПропускРЕПОВетки</code>.</li>
@@ -283,14 +276,13 @@
   <!-- ========== 3.2 ========== -->
   <div class="plan-branch done-branch">
     <h2><span class="tag tag-done">сделано</span> 3.2 ЗначенияПараметровДоговораДУ — запрос, стр. 73 (7,49%)</h2>
-    <p class="pct">136 443 вызова — оптимизация единичного запроса (срез с фильтром вместо ПОМЕСТИТЬ + ЛЕВОЕ СОЕДИНЕНИЕ). Бенчмарк: 3000 договоров x 4 набора, 0 расхождений, -69% к КФ. Пакетный срез — отдельно, см. п. +2.</p>
+    <p class="pct">136 443 вызова — оптимизация единичного запроса (срез с фильтром вместо ПОМЕСТИТЬ + ЛЕВОЕ СОЕДИНЕНИЕ). Бенчмарк: 3000 договоров x 4 набора, 0 расхождений, -69% к КФ.</p>
 
     <div class="plan-item">
       <div class="plan-item-title">РегистрСведений.ЗначенияПараметровДоговораДУ <span class="tag tag-adopted">заимствован</span> <span class="tag tag-intercept">перехват</span></div>
       <div class="path">InformationRegisters/ЗначенияПараметровДоговораДУ/Ext/ManagerModule.bsl</div>
       <ul class="delta-list">
         <li><span class="tag tag-intercept">перехват (3.2)</span> <code>ЗначенияПараметровДоговораДУ(ДоговорДУ, Параметры, Дата)</code> — предзаполнение <code>Неопределено</code> + один <code>СрезПоследних</code> с <code>Параметр В (&amp;Параметры)</code>; логирование как в КФ.</li>
-        <li><span class="tag tag-export">новый метод (+2)</span> <code>ЗначенияПараметровДоговоровДУ(МассивДоговоровДУ, Параметры, Дата)</code> — пакетный срез по массиву договоров; вызывается из контроля уменьшения портфеля (п. +2), не из общего потока 3.2.</li>
       </ul>
     </div>
   </div>
@@ -375,40 +367,10 @@
     </div>
   </div>
 
-  <!-- ========== +2 ========== -->
-  <div class="plan-branch done-branch">
-    <h2><span class="tag tag-done">сделано</span> +2 Предварительный отсев договоров ДУ без расчета</h2>
-    <p class="pct">Прочие расчеты без движений (~20 мин): переоценка ДС, дефолтные, контроль уменьшения портфеля. Только целевой пул договоров ДУ, константа <code>ИспользоватьПредварительныеЗапросыДляВечернихРегламентов</code>.</p>
-
-    <div class="plan-item">
-      <div class="plan-item-title">РегистрСведений.ВидыОптимизируемыхРегламентныхОперацийДУ <span class="tag tag-new">новый</span></div>
-      <div class="path">InformationRegisters/ВидыОптимизируемыхРегламентныхОперацийДУ/</div>
-      <ul class="delta-list">
-        <li><code>ОтфильтроватьСписокОперацийЗакрытия</code> — снимает <code>Выполнять</code> у «пустых» договоров по видам из РС.</li>
-        <li><code>ПолучитьДоговорыДляСохраненияВыполнения</code> — маршрутизация по виду операции.</li>
-        <li><code>ДоговорыСОснованиемДляПереоценкиДСОптимизированно</code> — переоценка ДС.</li>
-        <li><code>ДоговорыСДефолтнымиСобытиямиОптимизированно</code> — списание дефолтных облигаций.</li>
-        <li><code>ДоговорыДляКонтроляУменьшенияПортфеляОптимизированно</code> — контроль портфеля (использует <code>ЗначенияПараметровДоговоровДУ</code>).</li>
-        <li><code>ВсеДоговорыСПуломРозничноеДУ</code> — отсев не применяется при смешанном отборе договоров.</li>
-      </ul>
-    </div>
-
-    <div class="plan-item">
-      <div class="plan-item-title">Справочник.РегламентныеПериоды.Форма.РегламентныйПериод <span class="tag tag-intercept">перехват</span></div>
-      <div class="path">Catalogs/РегламентныеПериоды/Forms/РегламентныйПериод/Ext/Form/Module.bsl</div>
-      <ul class="delta-list">
-        <li><code>ПолучитьДоговораДУпоДинамическомуСписку</code> — вызов <code>ОтфильтроватьСписокОперацийЗакрытия</code> при включенной константе (п. +2).</li>
-        <li>Тот же перехват — составные индексы ТЗ (п. 3.6).</li>
-      </ul>
-    </div>
-
-    <div class="plan-item">
-      <div class="plan-item-title"><span class="tag tag-planned">вне кода rev2</span> (настройка ИБ)</div>
-      <ul class="delta-list">
-        <li>Заполнение РС <code>ВидыОптимизируемыхРегламентныхОперацийДУ</code> (7 видов операций).</li>
-        <li>Включение константы, функциональные тесты T1–T4, замер блока «прочие расчеты».</li>
-      </ul>
-    </div>
+  <!-- ========== +2 отменен ========== -->
+  <div class="plan-branch skip-branch">
+    <h2><span class="tag tag-skip">отменен</span> +2 Предварительный отсев договоров ДУ без расчета</h2>
+    <p class="pct">По решению заказчика не входит в поставку rev2. РС ВидыОптимизируемыхРегламентныхОперацийДУ и связанный код удалены из расширения.</p>
   </div>
 
   <!-- ========== +3 КФ (вне задания) ========== -->
@@ -439,10 +401,10 @@
 │       └── Ext/Module.bsl                       → 3.1 (0110), +1 (1000)
 ├── Catalogs/
 │   └── РегламентныеПериоды                      <span style="color:#3d0a91">[Adopted + перехват]</span>
-│       ├── Ext/ManagerModule.bsl                → 3.1 (пакет РЕПО)
+│       ├── Ext/ManagerModule.bsl                → 3.1 (пакет РЕПО, ЗаполнитьСоответствиеПропускРЕПОВетки)
 │       └── Forms/РегламентныйПериод/
 │           ├── Form.xml                         <span class="tag tag-noedit" style="font-family:sans-serif">без доработки</span> (метаданные формы)
-│           └── Ext/Form/Module.bsl              → +2 (отсев), 3.6 (индексы ТЗ)
+│           └── Ext/Form/Module.bsl              → 3.6 (индексы ТЗ)
 ├── Documents/
 │   ├── ПереоценкаАктивов                        <span style="color:#3d0a91">[Adopted + перехват]</span>
 │   │   └── Ext/ObjectModule.bsl                 → 3.1 (ЗаполнитьТЧ)
@@ -451,12 +413,8 @@
 │   └── ПланРегламентныхОперацийДУ               <span style="color:#3d0a91">[Adopted + перехват]</span>
 │       └── Ext/ManagerModule.bsl                → 3.7 (двухшаговый запрос СвязанныеДокументы)
 ├── InformationRegisters/
-│   ├── ВидыОптимизируемыхРегламентныхОперацийДУ <span style="color:#0c5460">[НОВЫЙ]</span>
-│   │   ├── Ext/ManagerModule.bsl                → +2 (отсев), 3.1 (РЕПО)
-│   │   └── Ext/RecordSetModule.bsl              <span class="tag tag-noedit" style="font-family:sans-serif">без доработки</span> (пустой)
-│   └── ЗначенияПараметровДоговораДУ             <span style="color:#3d0a91">[Adopted + перехват + новый метод]</span>
-│       └── Ext/ManagerModule.bsl                → 3.2 (перехват единичного среза);
-│                                                  +2 (новый ЗначенияПараметровДоговоровДУ)
+│   └── ЗначенияПараметровДоговораДУ             <span style="color:#3d0a91">[Adopted + перехват]</span>
+│       └── Ext/ManagerModule.bsl                → 3.2 (перехват единичного среза)
 
 <span style="color:#6c757d">Не в rev2 (выполнить в конфигурации):</span>
 ├── InformationRegister.РегистрРСА_СЧА              <span style="color:#7d4e00">[конфигурация — меняется]</span>
@@ -487,13 +445,13 @@
         <td><strong>3.1</strong> ПереоценкаАктивов / РЕПО</td>
         <td>7,80%</td>
         <td><span class="tag tag-done">сделано</span></td>
-        <td>РС ВидыОптимизируемых…, РегламентныеПериоды, ИсполняемыеПроцедуры…, ПереоценкаАктивов</td>
+        <td>РегламентныеПериоды, ИсполняемыеПроцедуры…, ПереоценкаАктивов</td>
       </tr>
       <tr>
         <td><strong>3.2</strong> Параметры договора ДУ</td>
         <td>7,49%</td>
         <td><span class="tag tag-done">сделано</span></td>
-        <td>РС ЗначенияПараметровДоговораДУ: перехват единичного запроса (3.2); пакетный метод — в п. +2</td>
+        <td>РС ЗначенияПараметровДоговораДУ: перехват единичного запроса (3.2)</td>
       </tr>
       <tr>
         <td><strong>3.3</strong> РСА / СЧА (узкое место в ObjectModule)</td>
@@ -531,11 +489,11 @@
         <td><span class="tag tag-done">сделано</span></td>
         <td>РасчетСЧА_РСА.ManagerModule, ИсполняемыеПроцедуры…</td>
       </tr>
-      <tr>
+      <tr style="background:#f8f9fa; color:#6c757d;">
         <td><strong>+2</strong> Предварительный отсев</td>
         <td>~20 мин блок</td>
-        <td><span class="tag tag-done">сделано</span></td>
-        <td>РС ВидыОптимизируемых…, форма РегламентныйПериод</td>
+        <td><span class="tag tag-skip">отменен</span></td>
+        <td>не входит в rev2 (удален РС ВидыОптимизируемых…)</td>
       </tr>
       <tr style="background:#f8f9fa; color:#6c757d;">
         <td><strong>+3</strong> Индексы плана</td>
