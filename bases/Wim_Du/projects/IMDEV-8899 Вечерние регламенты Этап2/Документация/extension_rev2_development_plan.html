@@ -1,398 +1,417 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-    <meta charset="UTF-8">
-    <title>План доработки расширения rev2 (IMDEV-8899)</title>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>IMDEV-8899 — постановка для переноса rev2 в базовую конфигурацию (Аванкор)</title>
+  <style>
+    :root {
+      --text: #212529;
+      --muted: #6c757d;
+      --border: #dee2e6;
+      --head-bg: #e7f5f8;
+      --info: #17a2b8;
+      --done: #28a745;
+      --cf: #e67e22;
+      --skip: #adb5bd;
+      --hero-bg: #e8f4fd;
+    }
+    body {
+      font-family: "Segoe UI", system-ui, sans-serif;
+      color: var(--text);
+      line-height: 1.55;
+      max-width: 1100px;
+      margin: 1.5rem auto;
+      padding: 0 1rem 2.5rem;
+    }
+    h1 {
+      font-size: 1.45rem;
+      font-weight: 600;
+      margin-bottom: 0.35rem;
+      color: #0c5460;
+      border-bottom: 3px solid var(--info);
+      padding-bottom: 0.5rem;
+    }
+    h2 {
+      font-size: 1.12rem;
+      margin: 1.75rem 0 0.65rem;
+      color: #0a58ca;
+      border-left: 4px solid var(--info);
+      padding-left: 0.65rem;
+    }
+    h3 {
+      font-size: 0.98rem;
+      margin: 1rem 0 0.4rem;
+      color: #0c5460;
+    }
+    .lead { font-size: 0.96rem; margin: 0.75rem 0; }
+    .muted { color: var(--muted); font-size: 0.88rem; }
+    a { color: #0d6efd; }
+    .hero {
+      margin: 1rem 0 1.25rem;
+      padding: 1rem 1.15rem;
+      background: var(--hero-bg);
+      border: 2px solid #0d6efd;
+      border-radius: 8px;
+    }
+    .hero strong { color: #084298; }
+    .legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem 1rem;
+      margin: 0.75rem 0 1rem;
+      padding: 0.65rem 0.85rem;
+      background: #f0f9fb;
+      border-left: 4px solid var(--info);
+      border-radius: 4px;
+      font-size: 0.86rem;
+    }
+    .tag {
+      display: inline-block;
+      padding: 0.1rem 0.45rem;
+      border-radius: 4px;
+      font-size: 0.76rem;
+      font-weight: 600;
+      margin-right: 0.25rem;
+      vertical-align: middle;
+    }
+    .tag-merge { background: #d4edda; color: #155724; }
+    .tag-cf { background: #fff3cd; color: #856404; }
+    .tag-skip { background: #f1f3f5; color: #495057; text-decoration: line-through; }
+    .tag-new { background: #cfe2ff; color: #084298; }
+    .tag-no { background: #f8f9fa; color: #6c757d; border: 1px dashed #adb5bd; }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.86rem;
+      margin: 0.65rem 0 1rem;
+    }
+    th, td {
+      border: 1px solid var(--border);
+      padding: 0.45rem 0.55rem;
+      vertical-align: top;
+    }
+    th {
+      background: var(--head-bg);
+      text-align: left;
+      font-weight: 600;
+      color: #0c5460;
+    }
+    tr:nth-child(even) { background: #f8f9fa; }
+    .path {
+      font-family: Consolas, "Courier New", monospace;
+      font-size: 0.78rem;
+      color: #0d5e6e;
+      word-break: break-all;
+    }
+    .card {
+      margin: 0.85rem 0;
+      padding: 0.85rem 1rem;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      background: #fff;
+    }
+    .card-done { border-left: 4px solid var(--done); }
+    .card-cf { border-left: 4px solid var(--cf); }
+    .card-skip { border-left: 4px solid var(--skip); background: #f8f9fa; }
+    ul { margin: 0.35rem 0; padding-left: 1.2rem; }
+    li { margin: 0.3rem 0; }
+    ol.steps { counter-reset: step; list-style: none; padding-left: 0; }
+    ol.steps li {
+      counter-increment: step;
+      margin: 0.55rem 0;
+      padding-left: 2rem;
+      position: relative;
+    }
+    ol.steps li::before {
+      content: counter(step);
+      position: absolute;
+      left: 0;
+      width: 1.4rem;
+      height: 1.4rem;
+      line-height: 1.4rem;
+      text-align: center;
+      background: var(--info);
+      color: #fff;
+      border-radius: 50%;
+      font-size: 0.75rem;
+      font-weight: 700;
+    }
+    pre {
+      background: #1e1e1e;
+      color: #d4d4d4;
+      padding: 0.75rem 0.9rem;
+      border-radius: 6px;
+      overflow-x: auto;
+      font-size: 0.78rem;
+      line-height: 1.45;
+    }
+    .warn-box {
+      background: #fff8e1;
+      border-left: 4px solid #f0ad4e;
+      padding: 0.75rem 0.9rem;
+      margin: 0.75rem 0;
+      border-radius: 0 6px 6px 0;
+      font-size: 0.88rem;
+    }
+  </style>
 </head>
-<body style="margin:0; padding:0; font-family:'Segoe UI', Calibri, Arial, sans-serif; font-size:14px; line-height:1.5; color:#333333;">
+<body>
 
-<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="max-width:920px; margin:0 auto;">
-<tr><td style="padding:24px 20px;">
+  <h1>IMDEV-8899, этап 2: перенос доработок из расширения rev2 в базовую конфигурацию</h1>
+  <p class="lead"><strong>Адресат:</strong> Аванкор (разработчик базовой конфигурации ДУ 1.5).</p>
+  <p class="lead">
+    Доработки этапа 2 реализованы и протестированы в расширении <code>rev2</code>.
+    Задача Аванкора — перенести код и изменения метаданных в основную конфигурацию,
+    после чего расширение можно отключить или удалить.
+  </p>
 
-    <p style="margin:0 0 4px 0; font-size:11px; text-transform:uppercase; letter-spacing:0.5px; color:#6b7280;">
-        IMDEV-8899 / этап 2 / расширение rev2 / план (без +2)
-    </p>
-    <h1 style="margin:0 0 8px 0; font-size:22px; font-weight:600; color:#1a365d; border-bottom:3px solid #2b6cb0; padding-bottom:10px;">
-        План расширения rev2 (этап 2, без предварительного отсева +2)
-    </h1>
-    <p style="margin:0 0 12px 0; color:#718096; font-size:13px;">
-        ИБ: <strong>localhost/WIM_DU</strong> (без логина/пароля). Режим совместимости КФ и расширения: <strong>8.3.12</strong>.
-        Пункт <strong>+2</strong> постановки отменен заказчиком — РС <code>ВидыОптимизируемыхРегламентныхОперацийДУ</code> и отсев на форме удалены.
-        В поставке: <strong>3.1, 3.2, 3.6, 3.7, +1</strong>.
-    </p>
-    <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="margin-bottom:20px; background:#f0fff4; border-left:4px solid #38a169;">
-    <tr><td style="padding:12px 16px; color:#276749; font-size:13px;">
-        <strong>Состав rev2:</strong> перехваты <code>РегламентныеПериоды</code> (3.1 РЕПО, 3.6 индексы),
-        <code>ЗначенияПараметровДоговораДУ</code> (3.2), <code>ПланРегламентныхОперацийДУ</code> (3.7),
-        <code>ПереоценкаАктивов</code> (3.1), <code>РасчетСЧА_РСА</code> и <code>ИсполняемыеПроцедурыЗакрытияПериода</code> (+1).
-        Функция <code>ЗаполнитьСоответствиеПропускРЕПОВетки</code> — в модуле менеджера <code>РегламентныеПериоды</code>.
-        Скрипт <code>Скрипты/load_rev2_to_wim_du_and_dump_cfe.ps1</code>.
-    </td></tr>
-    </table>
-    <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="margin-bottom:20px; background:#fffaf0; border-left:4px solid #dd6b20;">
-    <tr><td style="padding:12px 16px; color:#744210; font-size:13px;">
-        <strong>Настройка ИБ (заказчик):</strong> константа КФ
-        <code>ИспользоватьПредварительныеЗапросыДляВечернихРегламентов</code> = Истина (для пакетной предподготовки вечерних операций, в т.ч. 3.1);
-        функциональные тесты T1–T4 и замер.
-    </td></tr>
-    </table>
-    <p style="margin:0 0 20px 0; color:#718096; font-size:13px;">
-        XML-исходники: <code>Расширения/rev2</code>. Сборка для установки: <code>Расширения/rev2.cfe</code>
-        (не в подкаталоге <code>rev2</code>).
-    </p>
+  <div class="hero">
+    <strong>Что переносить:</strong> 5 пунктов кода (3.1, 3.2, 3.6, 3.7, +1) + 1 изменение метаданных (3.3).<br>
+    <strong>Что не переносить:</strong> пункт +2 (отменен), объекты расширения без логики (язык, картинки, хранилище настроек).<br>
+    <strong>Артефакт:</strong> XML-исходники <code>Расширения/rev2</code>, сборка <code>Расширения/rev2.cfe</code>.
+    Детализация изменений: <a href="rev2_changes_tree_phase2.html">rev2_changes_tree_phase2.html</a>.
+    Результаты замеров: <a href="imdev-8899_timing_report_20260619.html">imdev-8899_timing_report_20260619.html</a>.
+  </div>
 
-    <!-- Дерево выгрузки -->
-    <h2 style="margin:0 0 12px 0; font-size:16px; color:#2d3748;">1. Состав репозитория (Расширения/rev2)</h2>
-    <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="margin-bottom:20px; background:#f7fafc; border:1px solid #e2e8f0;">
-    <tr><td style="padding:14px 16px;">
-        <pre style="margin:0; font-size:12px; line-height:1.6; overflow-x:auto;">Расширения/
-  rev2.cfe                                      (сборка из ИБ, ~33 КБ)
-  rev2/
-    Configuration.xml
-    ConfigDumpInfo.xml
-    Languages/Русский.xml
-    StyleItems/ЦветОшибки.xml                   (Adopted)
-    CommonPictures/ ...                         (Adopted, для формы)
-    SettingsStorages/ХранилищеВариантовОтчетов.xml (Adopted)
-    Catalogs/
-      РегламентныеПериоды.xml                    (Adopted, ExtendedConfigurationObject)
-      РегламентныеПериоды/Ext/ManagerModule.bsl   (3.1 РЕПО, перехваты пакетной подготовки)
-      РегламентныеПериоды/Forms/РегламентныйПериод/
-        Ext/Form/Module.bsl                       (3.6 индексы, ИзменениеИКонтроль)
-    InformationRegisters/
-      ЗначенияПараметровДоговораДУ.xml           (Adopted)
-      ЗначенияПараметровДоговораДУ/Ext/
-        ManagerModule.bsl                         (3.2 перехват единичного запроса)
-Скрипты/
-  load_rev2_to_wim_du_and_dump_cfe.ps1          (validate + load + dump CFE)
-  build_rev2_form_module.py                     (генерация Form/Module.bsl)</pre>
-        <p style="margin:12px 0 0 0; font-size:12px; color:#4a5568;">
-            В <code>Configuration.xml</code> / <code>ChildObjects</code>: язык <code>Русский</code>,
-            заимствованные UI-объекты, <code>РегламентныеПериоды</code>,
-            РС <code>ЗначенияПараметровДоговораДУ</code> (заимствован), документы и общий модуль по п. 3.1, 3.7, +1.
-            Префикс: <code>rev2_</code>. Версия: <code>0.1.0.0</code>. Совместимость: <code>Version8_3_12</code>.
-        </p>
-    </td></tr>
-    </table>
+  <div class="legend">
+    <span><span class="tag tag-merge">перенести код</span> из rev2 в модуль КФ</span>
+    <span><span class="tag tag-cf">только метаданные КФ</span> без правки BSL</span>
+    <span><span class="tag tag-new">новая процедура</span> добавить в КФ</span>
+    <span><span class="tag tag-no">не переносить</span> служебные объекты CFE</span>
+    <span><span class="tag tag-skip">вне scope</span> / отменено</span>
+  </div>
 
-  <h3 style="margin:0 0 10px 0; font-size:14px; color:#4a5568;">Осталось (заказчик / опционально)</h3>
-    <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="margin-bottom:20px; border-collapse:collapse; font-size:13px;">
-    <tr style="background:#4a5568; color:#fff;">
-        <th style="padding:8px 12px; text-align:left;">Задача</th>
-        <th style="padding:8px 12px; text-align:left;">Кто</th>
-        <th style="padding:8px 12px; text-align:left;">Зачем</th>
-    </tr>
-    <tr>
-        <td style="padding:8px 12px; border-bottom:1px solid #e2e8f0;">7 записей в РС <code>ВидыОптимизируемыхРегламентныхОперацийДУ</code></td>
-        <td style="padding:8px 12px; border-bottom:1px solid #e2e8f0;">Заказчик</td>
-        <td style="padding:8px 12px; border-bottom:1px solid #e2e8f0;">Без данных отсев по видам не срабатывает</td>
-    </tr>
-    <tr style="background:#f7fafc;">
-        <td style="padding:8px 12px; border-bottom:1px solid #e2e8f0;">Константа <code>ИспользоватьПредварительныеЗапросыДляВечернихРегламентов</code> = Истина</td>
-        <td style="padding:8px 12px; border-bottom:1px solid #e2e8f0;">Заказчик</td>
-        <td style="padding:8px 12px; border-bottom:1px solid #e2e8f0;">Включает вызов фильтра на форме</td>
-    </tr>
-    <tr>
-        <td style="padding:8px 12px; border-bottom:1px solid #e2e8f0;">Тесты T1–T4, замер вечернего расчета</td>
-        <td style="padding:8px 12px; border-bottom:1px solid #e2e8f0;">Заказчик</td>
-        <td style="padding:8px 12px; border-bottom:1px solid #e2e8f0;">См. справочник сценариев в разделе 4 (этап 5)</td>
-    </tr>
-    <tr style="background:#f7fafc;">
-        <td style="padding:8px 12px; border-bottom:1px solid #e2e8f0;">Формы РС, роль, права</td>
-        <td style="padding:8px 12px; border-bottom:1px solid #e2e8f0;">Опционально</td>
-        <td style="padding:8px 12px; border-bottom:1px solid #e2e8f0;">Не обязательно в v1</td>
-    </tr>
-    <tr>
-        <td style="padding:8px 12px;">Замер вечернего расчета (T4)</td>
-        <td style="padding:8px 12px;">Заказчик</td>
-        <td style="padding:8px 12px;">Фиксация выигрыша с пакетным отсевом</td>
-    </tr>
-    </table>
+  <!-- ===== СВОДНАЯ МАТРИЦА ===== -->
+  <h2>1. Сводная матрица: что взять из rev2</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>Пункт</th>
+        <th>Действие Аванкора</th>
+        <th>Источник в rev2</th>
+        <th>Куда в КФ</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>3.1</strong> РЕПО / Переоценка</td>
+        <td><span class="tag tag-merge">перенести код</span></td>
+        <td class="path">Catalogs/РегламентныеПериоды/Ext/ManagerModule.bsl<br>
+          Documents/ПереоценкаАктивов/Ext/ObjectModule.bsl<br>
+          CommonModules/ИсполняемыеПроцедурыЗакрытияПериода/Ext/Module.bsl</td>
+        <td>Те же модули базовой конфигурации</td>
+      </tr>
+      <tr>
+        <td><strong>3.2</strong> Параметры договора ДУ</td>
+        <td><span class="tag tag-merge">перенести код</span></td>
+        <td class="path">InformationRegisters/ЗначенияПараметровДоговораДУ/Ext/ManagerModule.bsl</td>
+        <td>Модуль менеджера РС <code>ЗначенияПараметровДоговораДУ</code></td>
+      </tr>
+      <tr>
+        <td><strong>3.3</strong> РСА / СЧА</td>
+        <td><span class="tag tag-cf">только метаданные</span></td>
+        <td class="path">— (в rev2 кода нет)</td>
+        <td>РС <code>РегистрРСА_СЧА</code>, реквизит <code>ДокументОснование</code>: Index</td>
+      </tr>
+      <tr style="color:#6c757d;">
+        <td><strong>3.4</strong> НКД</td>
+        <td><span class="tag tag-skip">вне scope</span></td>
+        <td>—</td>
+        <td>—</td>
+      </tr>
+      <tr style="color:#6c757d;">
+        <td><strong>3.5</strong> РСА менеджер</td>
+        <td><span class="tag tag-skip">вне scope</span></td>
+        <td>—</td>
+        <td>—</td>
+      </tr>
+      <tr>
+        <td><strong>3.6</strong> НайтиСтроки</td>
+        <td><span class="tag tag-merge">перенести код</span></td>
+        <td class="path">Catalogs/РегламентныеПериоды/Forms/РегламентныйПериод/Ext/Form/Module.bsl</td>
+        <td>Модуль формы <code>РегламентныйПериод</code></td>
+      </tr>
+      <tr>
+        <td><strong>3.7</strong> План регл. операций</td>
+        <td><span class="tag tag-merge">перенести код</span></td>
+        <td class="path">Documents/ПланРегламентныхОперацийДУ/Ext/ManagerModule.bsl</td>
+        <td>Модуль менеджера документа</td>
+      </tr>
+      <tr>
+        <td><strong>+1</strong> Коллизия номера</td>
+        <td><span class="tag tag-new">новая процедура</span> + <span class="tag tag-merge">правка вызова</span></td>
+        <td class="path">Documents/РасчетСЧА_РСА/Ext/ManagerModule.bsl<br>
+          CommonModules/ИсполняемыеПроцедурыЗакрытияПериода/Ext/Module.bsl</td>
+        <td>Менеджер <code>РасчетСЧА_РСА</code> + общий модуль</td>
+      </tr>
+      <tr style="color:#6c757d;">
+        <td><strong>+2</strong> Предварительный отсев</td>
+        <td><span class="tag tag-skip">отменен</span></td>
+        <td>Удален из rev2</td>
+        <td>Не реализовывать</td>
+      </tr>
+    </tbody>
+  </table>
 
-    <!-- Статус -->
-    <h2 style="margin:0 0 12px 0; font-size:16px; color:#2d3748;">2. Статус объектов</h2>
-    <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="margin-bottom:20px; border-collapse:collapse; font-size:13px;">
-    <tr style="background:#4a5568; color:#fff;">
-        <th style="padding:8px 12px; text-align:left;">Объект</th>
-        <th style="padding:8px 12px; text-align:center; width:100px;">Статус</th>
-        <th style="padding:8px 12px; text-align:left;">Детали по выгрузке</th>
-    </tr>
-    <tr style="background:#f0fff4;">
-        <td style="padding:8px 12px; border-bottom:1px solid #e2e8f0;">Расширение <code>rev2</code> (метаданные)</td>
-        <td style="padding:8px 12px; text-align:center; border-bottom:1px solid #e2e8f0; color:#276749; font-weight:600;">Готово</td>
-        <td style="padding:8px 12px; border-bottom:1px solid #e2e8f0;">Customization, <code>Version8_3_12</code>, Vendor WIM_DEV</td>
-    </tr>
-    <tr style="background:#f0fff4;">
-        <td style="padding:8px 12px; border-bottom:1px solid #e2e8f0;">Язык <code>Русский</code></td>
-        <td style="padding:8px 12px; text-align:center; border-bottom:1px solid #e2e8f0; color:#276749; font-weight:600;">Готово</td>
-        <td style="padding:8px 12px; border-bottom:1px solid #e2e8f0;">Adopted</td>
-    </tr>
-    <tr style="background:#f0fff4;">
-        <td style="padding:8px 12px; border-bottom:1px solid #e2e8f0;">РС <code>ВидыОптимизируемыхРегламентныхОперацийДУ</code></td>
-        <td style="padding:8px 12px; text-align:center; border-bottom:1px solid #e2e8f0; color:#276749; font-weight:600;">Каркас</td>
-        <td style="padding:8px 12px; border-bottom:1px solid #e2e8f0;">Непериодический, независимая запись; измерение <code>ВидОперации</code> (ссылка на <code>ВидыОперацийЗакрытияПериода</code>)</td>
-    </tr>
-    <tr style="background:#f0fff4;">
-        <td style="padding:8px 12px; border-bottom:1px solid #e2e8f0;">Справочник <code>РегламентныеПериоды</code> + форма <code>РегламентныйПериод</code></td>
-        <td style="padding:8px 12px; text-align:center; border-bottom:1px solid #e2e8f0; color:#276749; font-weight:600;">Готово</td>
-        <td style="padding:8px 12px; border-bottom:1px solid #e2e8f0;">
-            Каталог: <code>ExtendedConfigurationObject</code> = <code>6fed2cd2-...</code> (основная КФ);
-            форма <code>Extended</code>; <code>Module.bsl</code> с перехватом
-        </td>
-    </tr>
-    <tr style="background:#f0fff4;">
-        <td style="padding:8px 12px; border-bottom:1px solid #e2e8f0;">Модуль менеджера РС <code>ВидыОптимизируемыхРегламентныхОперацийДУ</code></td>
-        <td style="padding:8px 12px; text-align:center; border-bottom:1px solid #e2e8f0; color:#276749; font-weight:600;">Готово</td>
-        <td style="padding:8px 12px; border-bottom:1px solid #e2e8f0;">
-            <code>ManagerModule.bsl</code> (~700 строк): отсев только <code>*Оптимизированно</code>,
-            <code>ТаблицаПериодовКонтроляУменьшенияПортфеля</code> с пакетным кешем параметров
-        </td>
-    </tr>
-    <tr style="background:#f0fff4;">
-        <td style="padding:8px 12px; border-bottom:1px solid #e2e8f0;">РС <code>ЗначенияПараметровДоговораДУ</code> (заимствован)</td>
-        <td style="padding:8px 12px; text-align:center; border-bottom:1px solid #e2e8f0; color:#276749; font-weight:600;">Готово</td>
-        <td style="padding:8px 12px; border-bottom:1px solid #e2e8f0;">
-            Экспорт <code>ЗначенияПараметровДоговоровДУ(МассивДоговоровДУ, Параметры, Дата)</code> —
-            <code>Соответствие</code>(ДоговорДУ -&gt; Соответствие параметров); один запрос <code>СрезПоследних</code>
-        </td>
-    </tr>
-    <tr style="background:#f0fff4;">
-        <td style="padding:8px 12px; border-bottom:1px solid #e2e8f0;">Сборка <code>rev2.cfe</code></td>
-        <td style="padding:8px 12px; text-align:center; border-bottom:1px solid #e2e8f0; color:#276749; font-weight:600;">Готово</td>
-        <td style="padding:8px 12px; border-bottom:1px solid #e2e8f0;">
-            <code>Расширения/rev2.cfe</code> (~33 КБ); сборка через <code>load_rev2_to_wim_du_and_dump_cfe.ps1</code>
-        </td>
-    </tr>
-    <tr style="background:#f0fff4;">
-        <td style="padding:8px 12px; border-bottom:1px solid #e2e8f0;">Модуль формы <code>РегламентныйПериод</code></td>
-        <td style="padding:8px 12px; text-align:center; border-bottom:1px solid #e2e8f0; color:#276749; font-weight:600;">Готово</td>
-        <td style="padding:8px 12px; border-bottom:1px solid #e2e8f0;">
-            <code>&amp;ИзменениеИКонтроль("ПолучитьДоговораДУпоДинамическомуСписку")</code>,
-            <code>#Вставка</code> перед <code>Индексы.Добавить("ДоговорДУ")</code>
-        </td>
-    </tr>
-    <tr style="background:#fffaf0;">
-        <td style="padding:8px 12px; border-bottom:1px solid #e2e8f0;">Данные РС + константа в ИБ</td>
-        <td style="padding:8px 12px; text-align:center; border-bottom:1px solid #e2e8f0; color:#c05621; font-weight:600;">Заказчик</td>
-        <td style="padding:8px 12px; border-bottom:1px solid #e2e8f0;">Не входит в поставку разработки rev2</td>
-    </tr>
-    <tr style="background:#f7fafc;">
-        <td style="padding:8px 12px;">Функциональные тесты / замер</td>
-        <td style="padding:8px 12px; text-align:center; color:#c05621; font-weight:600;">Заказчик</td>
-        <td style="padding:8px 12px;">Справочник сценариев T1–T4 — см. этап 5</td>
-    </tr>
-    </table>
+  <!-- ===== ОБЩИЕ ПРАВИЛА ===== -->
+  <h2>2. Общие правила переноса</h2>
+  <div class="card">
+    <ol class="steps">
+      <li>Открыть модуль в rev2 и соответствующий модуль в базовой КФ.</li>
+      <li>Найти блоки <code>#Вставка</code> / <code>#Удаление</code> внутри процедур с аннотацией <code>&amp;ИзменениеИКонтроль</code>.</li>
+      <li>Применить те же изменения <strong>напрямую</strong> в модуле КФ: удалить старый фрагмент, вставить новый. Аннотации расширения и префикс <code>rev2_</code> в именах процедур <strong>не переносятся</strong>.</li>
+      <li>Новые процедуры (без префикса <code>rev2_</code> в rev2) — скопировать в модуль КФ как есть, с документирующими комментариями.</li>
+      <li>Вспомогательные процедуры с префиксом <code>rev2_</code> (например, в <code>ПереоценкаАктивов</code>) — перенести в КФ <strong>без префикса</strong> или встроить inline по смыслу; имена выбрать в стиле КФ.</li>
+      <li>Объекты <span class="tag tag-no">без доработки</span> (Languages, CommonPictures, SettingsStorages, Form.xml) — <strong>не переносить</strong>, они нужны только для работы CFE.</li>
+      <li>После переноса: обновить конфигурацию БД, прогнать регрессию вечернего регламента.</li>
+    </ol>
+  </div>
 
-    <!-- Архитектура -->
-    <h2 style="margin:0 0 12px 0; font-size:16px; color:#2d3748;">3. Целевая архитектура (кратко)</h2>
-    <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="margin-bottom:20px; background:#ebf8ff; border-left:4px solid #2b6cb0;">
-    <tr><td style="padding:14px 16px; color:#4a5568;">
-        <ol style="margin:0; padding-left:20px;">
-            <li>Форма <code>РегламентныйПериод</code> строит <code>СписокОпераций</code> (как в базе).</li>
-            <li>Перед <code>СписокОпераций.Индексы.Добавить("ДоговорДУ")</code> — вызов
-                <code>ОтфильтроватьСписокОперацийЗакрытия(...)</code> при включенной константе
-                и только если <strong>все</strong> договоры из отбора формы (<code>СписокДоговоровДУ</code>)
-                имеют <code>ДоговорДУ.Пул</code> с наименованием <code>Розничное ДУ</code>.</li>
-            <li>Модуль менеджера РС по видам из регистра снимает <code>Выполнять = Ложь</code> там, где пакетный отбор показывает отсутствие оснований для расчета.</li>
-            <li>Дальше базовая логика: план создается только для строк с <code>Выполнять = Истина</code>.</li>
-        </ol>
-        <p style="margin:10px 0 0 0; font-size:12px;">
-            Эталон: RduPF (WIM_FIn, IMDEV-8641) — однородность пула перед отсевом; разрез <strong>ДоговорДУ</strong>
-            (реквизит <code>Пул</code>, не портфель). В отборе формы по замерам: пул «Розничное ДУ».
-        </p>
-    </td></tr>
-    </table>
+  <div class="warn-box">
+    <strong>Константа</strong> <code>ИспользоватьПредварительныеЗапросыДляВечернихРегламентов</code>
+    должна быть = <code>Истина</code> на продуктивных и тестовых стендах, где используется пакетная подготовка (п. 3.1).
+    Константа уже есть в КФ; значение выставляет заказчик/эксплуатация.
+  </div>
 
-    <!-- Этапы -->
-    <h2 style="margin:0 0 12px 0; font-size:16px; color:#2d3748;">4. Этапы доработки</h2>
+  <!-- ===== ДЕТАЛИ ПО ПУНКТАМ ===== -->
+  <h2>3. Детализация по пунктам</h2>
 
-    <!-- 1 -->
-    <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="margin-bottom:14px; border:1px solid #38a169;">
-    <tr>
-    <td style="padding:14px 16px; width:48px; background:#f0fff4; vertical-align:top;">
-        <span style="display:inline-block; width:32px; height:32px; line-height:32px; background:#38a169; color:#fff; font-weight:700; text-align:center; border-radius:4px;">1</span>
-    </td>
-    <td style="padding:14px 16px 14px 0; vertical-align:top;">
-        <p style="margin:0 0 6px 0; font-weight:600; color:#276749;">Модуль менеджера РС — выполнено</p>
-        <p style="margin:0 0 8px 0; color:#4a5568;">Создать файл:</p>
-        <p style="margin:0 0 8px 0;"><code>InformationRegisters/ВидыОптимизируемыхРегламентныхОперацийДУ/Ext/ManagerModule.bsl</code></p>
-        <p style="margin:0 0 8px 0; color:#4a5568;"><strong>Экспортный интерфейс:</strong></p>
-        <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="margin:0 0 10px 0; border-collapse:collapse; font-size:12px;">
-        <tr style="background:#edf2f7;"><th style="padding:5px 8px; text-align:left;">Процедура/функция</th><th style="padding:5px 8px; text-align:left;">Назначение</th></tr>
-        <tr><td style="padding:5px 8px; border-bottom:1px solid #e2e8f0;"><code>ОтфильтроватьСписокОперацийЗакрытия(ДатаПериода, СписокОпераций, МассивДоговоровДУ)</code></td><td style="padding:5px 8px; border-bottom:1px solid #e2e8f0;">Точка входа с формы; проверка константы и пула <code>Розничное ДУ</code></td></tr>
-        <tr style="background:#f7fafc;"><td style="padding:5px 8px; border-bottom:1px solid #e2e8f0;"><code>ПолучитьДоговорыДляСохраненияВыполнения(МассивДоговоровДУ, День, ВидОперации)</code></td><td style="padding:5px 8px; border-bottom:1px solid #e2e8f0;">Подмножество договоров, оставляем <code>Выполнять = Истина</code></td></tr>
-        <tr><td style="padding:5px 8px;"><code>ВидОперацииВРегистреОптимизации</code> (служебная)</td><td style="padding:5px 8px;">Проверка записи в РС</td></tr>
-        </table>
-        <p style="margin:0 0 8px 0; color:#4a5568;"><strong>Критерии отсева по видам (первая версия):</strong></p>
-        <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="border-collapse:collapse; font-size:12px;">
-        <tr style="background:#edf2f7;"><th style="padding:5px 8px; text-align:left;">Вид операции</th><th style="padding:5px 8px; text-align:left;">Оставить выполнение, если</th></tr>
-        <tr><td style="padding:5px 8px; border-bottom:1px solid #e2e8f0;">ПереоценкаДенежныхСредств_БУ/НУ/УУ</td><td style="padding:5px 8px; border-bottom:1px solid #e2e8f0;"><code>ДоговорыСОснованиемДляПереоценкиДСОптимизированно</code> — банк + брокер + ВУ + УУ (как <code>Операция_0100</code> / <code>ПереоценкаДенежныхСредств</code>)</td></tr>
-        <tr style="background:#f7fafc;"><td style="padding:5px 8px; border-bottom:1px solid #e2e8f0;">СписаниеДефолтныхОблигаций_БУ/НУ/УУ</td><td style="padding:5px 8px; border-bottom:1px solid #e2e8f0;"><code>ДоговорыСДефолтнымиСобытиямиОптимизированно</code> — пакет по регистру дефолтов и источникам публикаций (эквивалент непустых <code>СтатусыЭмитентовДоговораДУ</code>)</td></tr>
-        <tr><td style="padding:5px 8px;">КонтрольУменьшенияСтоимостиПортфеля_УУ</td><td style="padding:5px 8px;">Всегда <code>ДоговорыДляКонтроляУменьшенияПортфеляОптимизированно</code>: пакет СЧА/ввод-вывод; периоды — один вызов <code>ЗначенияПараметровДоговоровДУ</code> + <code>ПредыдущийПериод...ПоПериодичности</code></td></tr>
-        </table>
-        <p style="margin:8px 0 0 0; font-size:12px; color:#718096;">
-            Развертывание: <code>Скрипты/load_rev2_to_wim_du_and_dump_cfe.ps1</code> или
-            <code>LoadConfigFromFiles</code> + <code>UpdateDBCfg -Extension rev2</code> + <code>DumpCfg</code>.
-            Все виды отсева — только пакетные процедуры (v1 и переключатель удалены).
-            Проверка пула <code>Розничное ДУ</code> — в <code>ОтфильтроватьСписокОперацийЗакрытия</code>.
-        </p>
-    </td>
-    </tr>
-    </table>
+  <!-- 3.1 -->
+  <div class="card card-done">
+    <h3><span class="tag tag-merge">3.1</span> Пакет РЕПО и пропуск ветки в Переоценке активов</h3>
+    <p class="muted">Эффект: ускорение <code>ЗаполнитьТЧ</code> (~63% на замере 1 поток).</p>
 
-    <!-- 2 -->
-    <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="margin-bottom:14px; border:1px solid #38a169;">
-    <tr>
-    <td style="padding:14px 16px; width:48px; background:#f0fff4; vertical-align:top;">
-        <span style="display:inline-block; width:32px; height:32px; line-height:32px; background:#38a169; color:#fff; font-weight:700; text-align:center; border-radius:4px;">2</span>
-    </td>
-    <td style="padding:14px 16px 14px 0; vertical-align:top;">
-        <p style="margin:0 0 6px 0; font-weight:600; color:#276749;">Перехват формы — выполнено</p>
-        <p style="margin:0 0 8px 0; color:#4a5568;">Файл:</p>
-        <p style="margin:0 0 8px 0;"><code>Catalogs/РегламентныеПериоды/Forms/РегламентныйПериод/Ext/Form/Module.bsl</code></p>
-        <ul style="margin:0 0 10px 0; padding-left:18px; color:#4a5568;">
-            <li><code>&amp;ИзменениеИКонтроль("ПолучитьДоговораДУпоДинамическомуСписку")</code>, функция <code>rev2_ПолучитьДоговораДУпоДинамическомуСписку</code>.</li>
-            <li>Полное тело из базы (<code>Module.bsl</code> стр. 1157–1286) + <code>#Вставка</code> перед <code>Индексы.Добавить("ДоговорДУ")</code>.</li>
-            <li>Вызов отсева (проверка константы на форме; пул «Розничное ДУ» — в менеджере РС):
-                <ul style="margin:6px 0 0 0; padding-left:18px;">
-                    <li>константа <code>ИспользоватьПредварительныеЗапросыДляВечернихРегламентов</code>;</li>
-                    <li>передается <code>СписокДоговоровДУ</code> в <code>ОтфильтроватьСписокОперацийЗакрытия</code>.</li>
-                </ul>
-            </li>
-            <li>Сборка: скрипт <code>Скрипты/build_rev2_form_module.py</code> (повторная генерация из базы).</li>
-        </ul>
-        <pre style="margin:0 0 10px 0; padding:10px; background:#f7fafc; border:1px solid #e2e8f0; font-size:12px; overflow-x:auto;">#Вставка
-    Если Константы.ИспользоватьПредварительныеЗапросыДляВечернихРегламентов.Получить() Тогда
-        РегистрыСведений.ВидыОптимизируемыхРегламентныхОперацийДУ.ОтфильтроватьСписокОперацийЗакрытия(
-            ДатаПериода, СписокОпераций, СписокДоговоровДУ);
-    КонецЕсли;
-#КонецВставки</pre>
-        <p style="margin:0 0 8px 0; font-size:12px; color:#718096;">
-            Проверка пула выполняется в <code>ManagerModule.bsl</code> (<code>ВсеДоговорыСПуломРозничноеДУ</code>):
-            при хотя бы одном договоре с другим/пустым пулом процедура завершается без изменения <code>Выполнять</code>.
-        </p>
-        <p style="margin:0; font-size:12px; color:#718096;">Не выгружать полный <code>Form.xml</code> с раскладкой (ограничение 8.3.12 на переопределение свойств заимствованных объектов).</p>
-    </td>
-    </tr>
-    </table>
+    <p><strong>A. Справочник.РегламентныеПериоды, модуль менеджера</strong></p>
+    <ul>
+      <li><span class="tag tag-new">добавить</span> экспортную функцию <code>ЗаполнитьСоответствиеПропускРЕПОВетки(МассивДоговоровДУ, ДатаПроведения)</code> — целиком из rev2 (пакетный запрос к <code>СтоимостьАктивовПоСделкамРЕПОУправленческий.Остатки</code>).</li>
+      <li><span class="tag tag-merge">изменить</span> <code>ЗаполнитьПараметрыСохраненияПакетнымиДаннымиВечернихОпераций</code> — блок #Вставка: вызов функции, ключ <code>СоответствиеПропускРЕПОВетки</code> в <code>ПараметрыСохранения</code>.</li>
+      <li><span class="tag tag-merge">изменить</span> <code>СформироватьДокументыЗакрытияПериода</code> — для операции 0110 передавать структуру <code>{КэшКотировокУУ, СоответствиеПропускРЕПОВетки}</code> вместо одного кэша.</li>
+      <li><span class="tag tag-merge">изменить</span> <code>ОчиститьПакетныеДанныеПараметрыСохранения</code> — удаление ключа <code>СоответствиеПропускРЕПОВетки</code>.</li>
+    </ul>
+    <p class="path">rev2: Catalogs/РегламентныеПериоды/Ext/ManagerModule.bsl</p>
 
-    <!-- 3 -->
-    <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="margin-bottom:14px; border:1px dashed #dd6b20;">
-    <tr>
-    <td style="padding:14px 16px; width:48px; background:#fffaf0; vertical-align:top;">
-        <span style="display:inline-block; width:32px; height:32px; line-height:32px; background:#dd6b20; color:#fff; font-weight:700; text-align:center; border-radius:4px;">3</span>
-    </td>
-    <td style="padding:14px 16px 14px 0; vertical-align:top;">
-        <p style="margin:0 0 6px 0; font-weight:600; color:#744210;">Наполнение РС и настройка ИБ — выполняет заказчик</p>
-        <ul style="margin:0; padding-left:18px; color:#4a5568;">
-            <li>Добавить 7 записей в <code>ВидыОптимизируемыхРегламентныхОперацийДУ</code> (по одной на вид из таблицы этапа 1).</li>
-            <li>В тестовой ИБ включить <code>ИспользоватьПредварительныеЗапросыДляВечернихРегламентов</code> (константа основной КФ).</li>
-            <li>Установка расширения: <code>Расширения/rev2.cfe</code> (собран из актуального XML в репозитории).</li>
-        </ul>
-        <p style="margin:8px 0 0 0; font-size:12px; color:#718096;">
-            Не входит в задачи разработки rev2; без этих шагов отсев в рантайме не активируется.
-        </p>
-    </td>
-    </tr>
-    </table>
+    <p><strong>B. ОбщийМодуль.ИсполняемыеПроцедурыЗакрытияПериода</strong></p>
+    <ul>
+      <li><span class="tag tag-merge">изменить</span> <code>Операция_0110_ПереоценкаАктивов</code> — передавать в <code>ЗаполнитьТЧ</code> полную структуру <code>ДополнительныеДанные</code>, а не только кэш котировок.</li>
+    </ul>
+    <p class="path">rev2: CommonModules/ИсполняемыеПроцедурыЗакрытияПериода/Ext/Module.bsl</p>
 
-    <!-- 4 -->
-    <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="margin-bottom:14px; border:1px solid #38a169;">
-    <tr>
-    <td style="padding:14px 16px; width:48px; background:#f0fff4; vertical-align:top;">
-        <span style="display:inline-block; width:32px; height:32px; line-height:32px; background:#38a169; color:#fff; font-weight:700; text-align:center; border-radius:4px;">4</span>
-    </td>
-    <td style="padding:14px 16px 14px 0; vertical-align:top;">
-        <p style="margin:0 0 6px 0; font-weight:600; color:#276749;">Оптимизация запросов в менеджере — выполнено (только пакетные процедуры)</p>
-        <p style="margin:0 0 8px 0; color:#4a5568;">В <code>ManagerModule.bsl</code> для всех видов из РС — только <code>*Оптимизированно</code>:</p>
-        <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="border-collapse:collapse; font-size:12px;">
-        <tr style="background:#edf2f7;"><th style="padding:5px 8px; text-align:left;">Вид</th><th style="padding:5px 8px; text-align:left;">Процедура отсева</th></tr>
-        <tr><td style="padding:5px 8px; border-bottom:1px solid #e2e8f0;">ПереоценкаДенежныхСредств_*</td><td style="padding:5px 8px; border-bottom:1px solid #e2e8f0;"><code>ДоговорыСОснованиемДляПереоценкиДСОптимизированно</code></td></tr>
-        <tr style="background:#f7fafc;"><td style="padding:5px 8px; border-bottom:1px solid #e2e8f0;">СписаниеДефолтныхОблигаций_*</td><td style="padding:5px 8px; border-bottom:1px solid #e2e8f0;"><code>ДоговорыСДефолтнымиСобытиямиОптимизированно</code></td></tr>
-        <tr><td style="padding:5px 8px;">КонтрольУменьшенияСтоимостиПортфеля_УУ</td><td style="padding:5px 8px;"><code>ДоговорыДляКонтроляУменьшенияПортфеляОптимизированно</code></td></tr>
-        </table>
-        <p style="margin:8px 0 0 0; font-size:12px; color:#718096;">
-            Удалены v1: <code>ДоговорыСОснованиемДляПереоценкиДС</code>, цикл <code>ДоговорыСДефолтнымиСобытиями</code>,
-            переключатель <code>ИспользоватьОптимизированныеЗапросыОтсева</code>.
-            <strong>Пакетный кеш параметров (контроль портфеля):</strong>
-            <code>ЗначенияПараметровДоговоровДУ</code> + <code>ПредыдущийПериод...ПоПериодичности</code>.
-        </p>
-    </td>
-    </tr>
-    </table>
+    <p><strong>C. Документ.ПереоценкаАктивов, модуль объекта</strong></p>
+    <ul>
+      <li><span class="tag tag-merge">изменить</span> <code>ЗаполнитьТЧ</code> — разбор структуры пакетных данных; условный пропуск <code>АктивыПоРЕПОЗаполнить()</code> для пула «Розничное ДУ» при <code>ПропускРЕПОВетки = Истина</code>.</li>
+      <li><span class="tag tag-new">добавить</span> вспомогательные функции из rev2 (без префикса <code>rev2_</code>): разбор параметров, проверка пропуска РЕПО, наименование пула договора.</li>
+    </ul>
+    <p class="path">rev2: Documents/ПереоценкаАктивов/Ext/ObjectModule.bsl</p>
+  </div>
 
-    <!-- 5 -->
-    <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="margin-bottom:14px; border:1px dashed #dd6b20;">
-    <tr>
-    <td style="padding:14px 16px; width:48px; background:#fffaf0; vertical-align:top;">
-        <span style="display:inline-block; width:32px; height:32px; line-height:32px; background:#dd6b20; color:#fff; font-weight:700; text-align:center; border-radius:4px;">5</span>
-    </td>
-    <td style="padding:14px 16px 14px 0; vertical-align:top;">
-        <p style="margin:0 0 6px 0; font-weight:600; color:#744210;">Тестирование и замер — выполняет заказчик (справочник сценариев)</p>
-        <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="border-collapse:collapse; font-size:12px;">
-        <tr style="background:#2b6cb0; color:#fff;"><th style="padding:6px 8px;">#</th><th style="padding:6px 8px;">Сценарий</th><th style="padding:6px 8px;">Ожидание</th></tr>
-        <tr><td style="padding:6px 8px; border-bottom:1px solid #e2e8f0;">T1</td><td style="padding:6px 8px; border-bottom:1px solid #e2e8f0;">Константа выкл.</td><td style="padding:6px 8px; border-bottom:1px solid #e2e8f0;">Как база, без вызова фильтра</td></tr>
-        <tr style="background:#f7fafc;"><td style="padding:6px 8px; border-bottom:1px solid #e2e8f0;">T2</td><td style="padding:6px 8px; border-bottom:1px solid #e2e8f0;">Константа вкл., РС заполнен, отбор только <code>Пул = Розничное ДУ</code></td><td style="padding:6px 8px; border-bottom:1px solid #e2e8f0;">Часть строк <code>Выполнять = Ложь</code></td></tr>
-        <tr><td style="padding:6px 8px; border-bottom:1px solid #e2e8f0;">T2a</td><td style="padding:6px 8px; border-bottom:1px solid #e2e8f0;">Константа вкл., в отборе есть договор не из пула РДУ</td><td style="padding:6px 8px; border-bottom:1px solid #e2e8f0;">Отсев не вызывается, поведение как база</td></tr>
-        <tr><td style="padding:6px 8px; border-bottom:1px solid #e2e8f0;">T3</td><td style="padding:6px 8px; border-bottom:1px solid #e2e8f0;">«Пустые» договоры по виду</td><td style="padding:6px 8px; border-bottom:1px solid #e2e8f0;">Нет лишних документов переоценки ДС / дефолта / контроля</td></tr>
-        <tr style="background:#f7fafc;"><td style="padding:6px 8px;">T4</td><td style="padding:6px 8px;">Полный вечерний расчет (~17 тыс. ДУ)</td><td style="padding:6px 8px;">Сокращение блока «прочие расчеты» (~20 мин в оценке)</td></tr>
-        </table>
-    </td>
-    </tr>
-    </table>
+  <!-- 3.2 -->
+  <div class="card card-done">
+    <h3><span class="tag tag-merge">3.2</span> Оптимизация запроса параметров договора ДУ</h3>
+    <p class="muted">Эффект: один <code>СрезПоследних</code> с фильтром <code>Параметр В (&amp;Параметры)</code> вместо ПОМЕСТИТЬ + ЛЕВОЕ СОЕДИНЕНИЕ; бенчмарк -69%.</p>
+    <ul>
+      <li><span class="tag tag-merge">заменить</span> тело функции <code>ЗначенияПараметровДоговораДУ(ДоговорДУ, Параметры, Дата)</code> по блокам #Удаление / #Вставка из rev2.</li>
+      <li>Предзаполнение <code>Неопределено</code> для всех запрошенных параметров; логирование через <code>ОбщегоНазначенияДУ.ДобавитьВЛогОтладки</code> — сохранить.</li>
+    </ul>
+    <p class="path">rev2: InformationRegisters/ЗначенияПараметровДоговораДУ/Ext/ManagerModule.bsl</p>
+  </div>
 
-    <!-- 6 optional -->
-    <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="margin-bottom:20px; border:1px dashed #cbd5e0;">
-    <tr>
-    <td style="padding:14px 16px; width:48px; background:#f7fafc; vertical-align:top;">
-        <span style="display:inline-block; width:32px; height:32px; line-height:32px; background:#a0aec0; color:#fff; font-weight:700; text-align:center; border-radius:4px;">6</span>
-    </td>
-    <td style="padding:14px 16px 14px 0; vertical-align:top;">
-        <p style="margin:0 0 6px 0; font-weight:600; color:#718096;">Опционально</p>
-        <ul style="margin:0; padding-left:18px; color:#4a5568;">
-            <li>Ранний выход в <code>СформироватьДокументыЗакрытияПериода</code>, если нет операций к выполнению.</li>
-            <li>Формы списка/записи РС, роль с правами.</li>
-            <li>Не входит в rev2: п. 3.1–3.7 постановки (ПереоценкаАктивов, параметры договора, РСА и др.).</li>
-        </ul>
-    </td>
-    </tr>
-    </table>
+  <!-- 3.3 -->
+  <div class="card card-cf">
+    <h3><span class="tag tag-cf">3.3</span> Индексация регистра РегистрРСА_СЧА (только метаданные)</h3>
+    <p><strong>Код не меняется</strong> — ни в rev2, ни в КФ. Узкое место: <code>ОтменитьРасчетРСА_СЧА()</code> в модуле объекта <code>РасчетСЧА_РСА</code>, строка ~154.</p>
+    <ul>
+      <li>В конфигураторе: <code>РегистрСведений.РегистрРСА_СЧА</code> → реквизит <code>ДокументОснование</code>.</li>
+      <li>Установить <strong>Индексировать</strong> (<code>DontIndex</code> → <code>Index</code>).</li>
+      <li>Обновить конфигурацию БД (~1 мин. реструктуризация на тестовом стенде).</li>
+    </ul>
+    <p class="muted">Запрос отбирает по <code>Период</code> и <code>ДокументОснование</code>; без индекса СУБД сканирует срез периода.</p>
+  </div>
 
-    <!-- Оценка -->
-    <h2 style="margin:0 0 12px 0; font-size:16px; color:#2d3748;">5. Оценка трудозатрат</h2>
-    <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="margin-bottom:20px; border-collapse:collapse; font-size:13px;">
-    <tr style="background:#4a5568; color:#fff;"><th style="padding:8px 12px; text-align:left;">Этап</th><th style="padding:8px 12px; text-align:right;">Часы</th><th style="padding:8px 12px; text-align:left;">Зависимости</th></tr>
-    <tr style="background:#f0fff4;"><td style="padding:8px 12px; border-bottom:1px solid #e2e8f0;">1. Модуль менеджера РС</td><td style="padding:8px 12px; text-align:right; border-bottom:1px solid #e2e8f0; color:#276749;">выполнено</td><td style="padding:8px 12px; border-bottom:1px solid #e2e8f0;">+ загрузка в ИБ, rev2.cfe</td></tr>
-    <tr style="background:#f0fff4;"><td style="padding:8px 12px; border-bottom:1px solid #e2e8f0;">2. Перехват формы</td><td style="padding:8px 12px; text-align:right; border-bottom:1px solid #e2e8f0; color:#276749;">выполнено</td><td style="padding:8px 12px; border-bottom:1px solid #e2e8f0;">+ загрузка в ИБ, rev2.cfe</td></tr>
-    <tr style="background:#fffaf0;"><td style="padding:8px 12px; border-bottom:1px solid #e2e8f0;">3. Данные РС + ИБ</td><td style="padding:8px 12px; text-align:right; border-bottom:1px solid #e2e8f0; color:#c05621;">заказчик</td><td style="padding:8px 12px; border-bottom:1px solid #e2e8f0;">Вне scope разработки</td></tr>
-    <tr style="background:#f0fff4;"><td style="padding:8px 12px; border-bottom:1px solid #e2e8f0;">4. Оптимизация запросов + кеш параметров</td><td style="padding:8px 12px; text-align:right; border-bottom:1px solid #e2e8f0; color:#276749;">выполнено</td><td style="padding:8px 12px; border-bottom:1px solid #e2e8f0;">Только пакетные процедуры; v1 удалены</td></tr>
-    <tr style="background:#fffaf0;"><td style="padding:8px 12px; border-bottom:1px solid #e2e8f0;">5. Тесты и замер</td><td style="padding:8px 12px; text-align:right; border-bottom:1px solid #e2e8f0; color:#c05621;">заказчик</td><td style="padding:8px 12px; border-bottom:1px solid #e2e8f0;">Вне scope разработки</td></tr>
-    <tr style="font-weight:600;"><td style="padding:8px 12px;">Итого разработка (этапы 1–2, MVP)</td><td style="padding:8px 12px; text-align:right; color:#276749;">выполнено</td><td style="padding:8px 12px;"></td></tr>
-    </table>
+  <!-- 3.6 -->
+  <div class="card card-done">
+    <h3><span class="tag tag-merge">3.6</span> Составные индексы таблиц значений на форме</h3>
+    <p class="muted">Эффект: ускорение <code>НайтиСтроки</code> в <code>СформироватьДокументыЗакрытияПериода</code>.</p>
+    <ul>
+      <li>В процедуре <code>ПолучитьДоговораДУпоДинамическомуСписку</code> после <code>СписокОпераций.Индексы.Добавить("ДоговорДУ")</code> добавить:
+        <code>СписокОпераций.Индексы.Добавить("ДоговорДУ,ГруппаОперацийПользователя")</code>.</li>
+      <li>После выгрузки <code>ДокументыПоДоговорам</code> добавить:
+        <code>ДокументыПоДоговорам.Индексы.Добавить("ДоговорДУ,ГруппаОперацийПользователя")</code>.</li>
+      <li>Базовый индекс <code>ДоговорДУ</code> из КФ не удалять.</li>
+    </ul>
+    <p class="path">rev2: Catalogs/РегламентныеПериоды/Forms/РегламентныйПериод/Ext/Form/Module.bsl</p>
+    <p class="muted">Переносить только два блока #Вставка; полный модуль формы из rev2 не копировать.</p>
+  </div>
 
-    <!-- Чеклист -->
-    <h2 style="margin:0 0 12px 0; font-size:16px; color:#2d3748;">6. Чеклист готовности к сдаче</h2>
-    <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="margin-bottom:20px; font-size:13px;">
-    <tr><td style="padding:6px 0;">&#9745; <code>ManagerModule.bsl</code> в репозитории и в ИБ WIM_DU</td></tr>
-    <tr><td style="padding:6px 0;">&#9745; <code>Form/Module.bsl</code> с перехватом и <code>#Вставка</code> (загружен в WIM_DU)</td></tr>
-    <tr><td style="padding:6px 0;">&#9745; <code>Catalogs/РегламентныеПериоды.xml</code>: <code>ExtendedConfigurationObject</code> = UUID основной КФ; <code>cfe-validate</code> OK</td></tr>
-    <tr><td style="padding:6px 0;">&#9745; <code>Расширения/rev2.cfe</code>: загрузка в WIM_DU и <code>UpdateDBCfg</code> успешны</td></tr>
-    <tr><td style="padding:6px 0;">&#9745; РС <code>ЗначенияПараметровДоговораДУ</code> заимствован; <code>ЗначенияПараметровДоговоровДУ</code> в расширении</td></tr>
-    <tr><td style="padding:6px 0;">&#9745; Пакетный отбор контроля портфеля + кеш параметров по договорам</td></tr>
-    <tr><td style="padding:6px 0;">&#9745; <code>Скрипты/load_rev2_to_wim_du_and_dump_cfe.ps1</code></td></tr>
-    <tr><td style="padding:6px 0;">&#9744; <em>(заказчик)</em> 7 записей в РС, константа включена в тестовой ИБ</td></tr>
-    <tr><td style="padding:6px 0;">&#9744; <em>(заказчик)</em> T1–T4, замер вечернего расчета</td></tr>
-    <tr><td style="padding:6px 0;">&#9744; <em>(заказчик)</em> T1–T4 пройдены, замер зафиксирован</td></tr>
-    </table>
+  <!-- 3.7 -->
+  <div class="card card-done">
+    <h3><span class="tag tag-merge">3.7</span> Двухшаговый запрос СвязанныеДокументы</h3>
+    <ul>
+      <li>В <code>ПометитьНаУдалениеПодчиненныеДокументы</code> заменить одношаговый запрос на двухшаговый:
+        шаг 1 — <code>ПОМЕСТИТЬ ВТ_СвязанныеДокументы</code> из критерия;
+        шаг 2 — отбор <code>НЕ Ссылка.ПометкаУдаления</code>.</li>
+      <li>Цикл пометки подчиненных документов — без изменений.</li>
+    </ul>
+    <p class="path">rev2: Documents/ПланРегламентныхОперацийДУ/Ext/ManagerModule.bsl</p>
+  </div>
 
-    <p style="margin:0; font-size:12px; color:#718096;">
-        Источник состояния: репозиторий <code>Расширения/rev2</code> + <code>Расширения/rev2.cfe</code>, ИБ <code>localhost/WIM_DU</code>.
-        Дата обновления плана: 31.05.2026 (только пакетный отсев, cfe-validate OK, загрузка WIM_DU без авторизации, rev2.cfe ~33 КБ).
-        Постановка: <code>_БАГИ и задачи 2-ого этапа/developer_task_phase2_optimization.html</code>.
-    </p>
+  <!-- +1 -->
+  <div class="card card-done">
+    <h3><span class="tag tag-new">+1</span> Обработка коллизии номера РасчетСЧА_РСА</h3>
+    <p class="muted">Устраняет сбой проведения при параллельной записи (договор МИ10917 на 12 потоках).</p>
+    <ul>
+      <li><span class="tag tag-new">добавить</span> в модуль менеджера <code>РасчетСЧА_РСА</code> экспортную процедуру
+        <code>ЗаписатьСОбработкойКоллизииНомера(ДокументОбъект, РежимЗаписи)</code> — скопировать из rev2 целиком (до 30 попыток, <code>УстановитьНовыйНомер()</code> при «не уникально»).</li>
+      <li><span class="tag tag-merge">изменить</span> <code>Операция_1000_РасчетРСА_СЧА</code> в <code>ИсполняемыеПроцедурыЗакрытияПериода</code> — вызов записи/проведения через новую процедуру вместо прямого <code>Записать()</code>.</li>
+    </ul>
+    <p class="path">rev2: Documents/РасчетСЧА_РСА/Ext/ManagerModule.bsl,
+      CommonModules/ИсполняемыеПроцедурыЗакрытияПериода/Ext/Module.bsl</p>
+  </div>
 
-</td></tr>
-</table>
+  <!-- skip -->
+  <div class="card card-skip">
+    <h3><span class="tag tag-skip">Не переносить</span></h3>
+    <ul>
+      <li><strong>+2</strong> — предварительный отсев, РС <code>ВидыОптимизируемыхРегламентныхОперацийДУ</code>: отменен заказчиком, в актуальном rev2 отсутствует.</li>
+      <li><strong>3.4, 3.5</strong> — вне scope этапа 2 по решению команды.</li>
+      <li><strong>+3</strong> — индекс <code>ПланРегламентныхОперацийДУ</code> (ДоговорДУ, ГруппаОперацийПользователя): выполнен ранее в КФ, в rev2 нет.</li>
+      <li>Служебные объекты CFE: <code>Languages/Русский</code>, <code>CommonPictures/*</code>, <code>SettingsStorages/ХранилищеВариантовОтчетов</code>, <code>Form.xml</code> формы (без изменений логики).</li>
+    </ul>
+  </div>
+
+  <!-- ===== ПОРЯДОК РАБОТ ===== -->
+  <h2>4. Рекомендуемый порядок работ</h2>
+  <div class="card">
+    <ol class="steps">
+      <li>Создать ветку / конфигурацию поставки с версией после IMDEV-8899.</li>
+      <li>Выполнить п. <strong>3.3</strong> (индекс метаданных) — можно отдельным коммитом, без BSL.</li>
+      <li>Перенести независимые модули: <strong>3.2</strong>, <strong>3.7</strong>, <strong>+1</strong>.</li>
+      <li>Перенести <strong>3.6</strong> (две строки индексов на форме).</li>
+      <li>Перенести <strong>3.1</strong> (связанные изменения в трех модулях — одним коммитом).</li>
+      <li>Обновить конфигурацию БД на тестовом контуре DR.</li>
+      <li>Убедиться, что константа <code>ИспользоватьПредварительныеЗапросыДляВечернихРегламентов = Истина</code>.</li>
+      <li>Отключить расширение rev2 и прогнать регрессию.</li>
+    </ol>
+  </div>
+
+  <!-- ===== ФАЙЛЫ ===== -->
+  <h2>5. Файлы для работы</h2>
+  <table>
+    <thead>
+      <tr><th>Назначение</th><th>Путь в репозитории проекта</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>Готовая сборка CFE</td><td class="path">.../Расширения/rev2.cfe</td></tr>
+      <tr><td>Дерево изменений (справочно)</td><td class="path"><a href="rev2_changes_tree_phase2.html">rev2_changes_tree_phase2.html</a></td></tr>
+      <tr><td>Отчет о замерах (обоснование)</td><td class="path"><a href="imdev-8899_timing_report_20260619.html">imdev-8899_timing_report_20260619.html</a></td></tr>
+      <tr><td>Регрессионный отчет CSV</td><td class="path"><a href="imdev-8899_regression_report_final_20260612.html">imdev-8899_regression_report_final_20260612.html</a></td></tr>
+    </tbody>
+  </table>
+
+  <p class="muted" style="margin-top:1.5rem;">
+    IMDEV-8899, этап 2. Документ отражает фактическую реализацию в rev2 после отмены п. +2.
+    Совместимость расширения с КФ: платформа 8.3.12+.
+  </p>
 
 </body>
 </html>

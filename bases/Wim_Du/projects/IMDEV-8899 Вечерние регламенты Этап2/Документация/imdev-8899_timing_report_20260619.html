@@ -1,0 +1,917 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>IMDEV-8899 — отчет о замерах времени вечерних регламентов</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    font-family: "Segoe UI", system-ui, sans-serif;
+    line-height: 1.65;
+    color: #2c3e50;
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 24px;
+    background: #f0f4f8;
+  }
+  h1 {
+    color: #1a2b48;
+    font-size: 26px;
+    border-bottom: 3px solid #17a2b8;
+    padding-bottom: 12px;
+    margin-bottom: 8px;
+  }
+  h2 {
+    color: #17a2b8;
+    font-size: 20px;
+    margin-top: 32px;
+    border-left: 4px solid #17a2b8;
+    padding-left: 12px;
+  }
+  h3 { color: #1a2b48; font-size: 16px; margin-top: 20px; }
+  .card {
+    background: #fff;
+    border-radius: 8px;
+    padding: 18px 24px;
+    margin: 16px 0;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+  }
+  .intro { background: #eaf6f8; border-left: 4px solid #17a2b8; }
+  .ok { background: #eafaf1; border-left: 4px solid #28a745; }
+  .warn { background: #fff8e1; border-left: 4px solid #f0ad4e; }
+  .info { background: #eef7ff; border-left: 4px solid #0d6efd; }
+  .theory { background: #f4f0ff; border-left: 4px solid #6554c0; }
+  .stat-ok { color: #28a745; font-weight: 700; }
+  .stat-bad { color: #dc3545; font-weight: 700; }
+  .stat-info { color: #17a2b8; font-weight: 700; }
+  .stat-warn { color: #f0ad4e; font-weight: 700; }
+  table { width: 100%; border-collapse: collapse; margin: 12px 0; font-size: 14px; }
+  th, td {
+    border: 1px solid #dfe3e8;
+    padding: 8px 12px;
+    text-align: left;
+    vertical-align: middle;
+  }
+  th { background: #1a2b48; color: #fff; font-weight: 600; }
+  tr:nth-child(even) { background: #f7f9fb; }
+  td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+  td.yes { background: #eafaf1; color: #1e7e34; font-weight: 600; text-align: center; }
+  td.no { background: #fdecea; color: #c0392b; font-weight: 600; text-align: center; }
+  td.neutral { background: #f7f9fb; text-align: center; }
+  td.improved { background: #d4edda; color: #155724; font-weight: 600; }
+  td.degraded { background: #fdecea; color: #721c24; }
+  code {
+    background: #eef1f4;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-family: Consolas, "Courier New", monospace;
+    font-size: 13px;
+    color: #b8005a;
+  }
+  pre {
+    background: #1e1e1e;
+    color: #d4d4d4;
+    padding: 14px 16px;
+    border-radius: 6px;
+    overflow-x: auto;
+    font-family: Consolas, "Courier New", monospace;
+    font-size: 12.5px;
+    line-height: 1.45;
+    margin: 10px 0;
+  }
+  .tag {
+    display: inline-block;
+    color: #fff;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 3px 10px;
+    border-radius: 10px;
+    vertical-align: middle;
+  }
+  .tag-ok { background: #28a745; }
+  .tag-bad { background: #dc3545; }
+  .tag-info { background: #17a2b8; }
+  .tag-warn { background: #f0ad4e; }
+  .tag-done { background: #28a745; }
+  .tag-cf { background: #e67e22; color: #fff; }
+  .tag-skip { background: #adb5bd; }
+  .muted { color: #6b7785; font-size: 13px; }
+  ul, ol { margin: 8px 0; padding-left: 22px; }
+  li { margin: 5px 0; }
+  .grid4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; }
+  .grid3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  @media (max-width: 900px) {
+    .grid4, .grid3, .grid2 { grid-template-columns: 1fr; }
+  }
+  .kpi {
+    text-align: center;
+    padding: 18px 14px;
+    border-radius: 8px;
+    background: #fff;
+    border: 1px solid #dfe3e8;
+  }
+  .kpi .val { font-size: 28px; font-weight: 700; line-height: 1.2; }
+  .kpi .lbl { font-size: 12px; color: #6b7785; margin-top: 6px; }
+  .kpi-ok .val { color: #28a745; }
+  .kpi-bad .val { color: #dc3545; }
+  .kpi-info .val { color: #17a2b8; }
+  .kpi-warn .val { color: #f0ad4e; }
+  .verdict {
+    font-size: 20px;
+    font-weight: 700;
+    color: #28a745;
+    text-align: center;
+    padding: 20px;
+  }
+  .bar-wrap {
+    background: #eef1f4;
+    border-radius: 6px;
+    height: 24px;
+    overflow: hidden;
+    margin: 6px 0;
+    position: relative;
+  }
+  .bar-fill {
+    height: 100%;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    padding-right: 8px;
+    color: #fff;
+    font-size: 11px;
+    font-weight: 700;
+  }
+  .bar-old { background: linear-gradient(90deg, #dc3545, #e74c3c); }
+  .bar-new { background: linear-gradient(90deg, #28a745, #20c997); }
+  .bar-label {
+    position: absolute;
+    left: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 11px;
+    font-weight: 600;
+    color: #495057;
+  }
+  .compare-row { margin: 14px 0; }
+  .compare-row .lbl { font-size: 13px; font-weight: 600; margin-bottom: 4px; }
+  .flow {
+    background: #f7f9fb;
+    border: 1px solid #dfe3e8;
+    border-radius: 8px;
+    padding: 16px 20px;
+    font-family: Consolas, "Courier New", monospace;
+    font-size: 13px;
+    line-height: 1.9;
+  }
+  .arrow { color: #17a2b8; font-weight: 700; }
+  .footer {
+    margin-top: 28px;
+    padding-top: 16px;
+    border-top: 1px solid #dfe3e8;
+    font-size: 13px;
+    color: #6b7785;
+  }
+  .matrix-done { background: #d4edda; }
+  .matrix-cf { background: #fff3cd; }
+  .matrix-skip { background: #f1f3f5; color: #6c757d; }
+  .delta-pos { color: #28a745; font-weight: 700; }
+  .delta-neg { color: #dc3545; font-weight: 700; }
+  a { color: #0d6efd; }
+  .hero-result {
+    margin: 20px 0 24px 0;
+    padding: 28px 32px 32px;
+    border-radius: 12px;
+    background: linear-gradient(135deg, #e8f8ef 0%, #d4edda 45%, #c3e6cb 100%);
+    border: 3px solid #28a745;
+    box-shadow: 0 4px 20px rgba(40, 167, 69, 0.25);
+    text-align: center;
+  }
+  .hero-result .hero-label {
+    display: inline-block;
+    font-size: 12px;
+    font-weight: 800;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: #155724;
+    background: #fff;
+    padding: 6px 16px;
+    border-radius: 20px;
+    margin-bottom: 16px;
+    border: 2px solid #28a745;
+  }
+  .hero-result .hero-title {
+    font-size: 22px;
+    font-weight: 700;
+    color: #1a2b48;
+    margin: 0 0 20px 0;
+    line-height: 1.35;
+  }
+  .hero-metrics {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+    margin: 0 0 22px 0;
+  }
+  @media (max-width: 700px) {
+    .hero-metrics { grid-template-columns: 1fr; }
+  }
+  .hero-metric {
+    background: #fff;
+    border-radius: 10px;
+    padding: 20px 16px;
+    border: 2px solid #28a745;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+  }
+  .hero-metric .num {
+    font-size: 42px;
+    font-weight: 800;
+    color: #28a745;
+    line-height: 1.1;
+    font-variant-numeric: tabular-nums;
+  }
+  .hero-metric .unit {
+    font-size: 15px;
+    font-weight: 600;
+    color: #1a2b48;
+    margin-top: 6px;
+  }
+  .hero-metric .desc {
+    font-size: 12px;
+    color: #6b7785;
+    margin-top: 4px;
+  }
+  .hero-result .hero-quality {
+    font-size: 18px;
+    font-weight: 700;
+    color: #155724;
+    background: #fff;
+    padding: 14px 24px;
+    border-radius: 8px;
+    border: 2px dashed #28a745;
+    margin: 0;
+    line-height: 1.45;
+  }
+  .hero-result .hero-context {
+    font-size: 14px;
+    color: #495057;
+    margin: 16px 0 0 0;
+  }
+  .conclusion-highlight {
+    list-style: none;
+    margin: 16px 0;
+    padding: 20px 24px;
+    background: linear-gradient(135deg, #e8f8ef, #d4edda);
+    border: 2px solid #28a745;
+    border-radius: 10px;
+    font-size: 17px;
+    line-height: 1.55;
+  }
+  .conclusion-highlight li { margin: 0; }
+</style>
+</head>
+<body>
+
+<h1>IMDEV-8899: отчет о замерах времени</h1>
+<p class="muted">
+  Оптимизация вечерних регламентов, этап 2 (расширение <code>rev2</code>) &nbsp;|&nbsp;
+  Пул: <b>Розничное ДУ</b> &nbsp;|&nbsp;
+  Договоров: <b>17 154</b>
+</p>
+<p>
+  <span class="tag tag-ok">ВРЕМЯ УЛУЧШИЛОСЬ</span>
+  <span class="tag tag-info">РЕГРЕССИИ НЕТ</span>
+  <span class="tag tag-ok">ЗАДАЧИ REV2 ВЫПОЛНЕНЫ</span>
+</p>
+
+<!-- ===== ОСНОВНОЙ РЕЗУЛЬТАТ ===== -->
+<div class="hero-result" id="main-result">
+  <span class="hero-label">Основной результат для бизнеса</span>
+  <p class="hero-title">12 потоков (режим ПРОД), оптимизированная конфигурация rev2</p>
+  <div class="hero-metrics">
+    <div class="hero-metric">
+      <div class="num">17 154</div>
+      <div class="unit">договоров ДУ</div>
+      <div class="desc">пул «Розничное ДУ»</div>
+    </div>
+    <div class="hero-metric">
+      <div class="num">50</div>
+      <div class="unit">минут</div>
+      <div class="desc">полный прогон регламента</div>
+    </div>
+    <div class="hero-metric">
+      <div class="num">344</div>
+      <div class="unit">дог./мин</div>
+      <div class="desc">скорость обработки</div>
+    </div>
+  </div>
+  <p class="hero-quality">
+    Регрессия CSV: расхождений по бизнес-профилю нет<br>
+    <span style="font-size:15px;font-weight:600;">17 153 из 17 153 проведенных договоров — идентичный состав операций</span>
+  </p>
+  <p class="hero-context">
+    Сокращенный набор операций: «Переоценка активов» и «Расчет СЧА/РСА».
+    Ускорение достигнуто без изменения бизнес-логики регламентов.
+  </p>
+</div>
+
+<!-- ===== 1. ВВЕДЕНИЕ ===== -->
+<div class="card intro">
+  <h2 style="border:0;margin-top:0;padding:0;">Введение</h2>
+  <p>
+    Отчет обобщает результаты тестирования производительности вечерних регламентов
+    и подтверждает выполнение плана оптимизации этапа 2.
+  </p>
+  <p><b>Цель:</b> показать, что все пункты оптимизации этапа 2 реализованы в расширении
+    <code>rev2</code>, время выполнения вечернего регламента сократилось, а бизнес-результат
+    (состав проведенных операций) не ухудшился.</p>
+  <p><b>Два уровня замеров:</b></p>
+  <ol>
+    <li><b>1 поток</b> (11.06.2026) — сравнение «БЫЛО» (базовая КФ) и «СТАЛО» (rev2) с детализацией профилировщика.</li>
+    <li><b>12 потоков</b> (режим как на ПРОД) — сокращенный набор операций
+      (Переоценка активов + РСА/СЧА), сверка CSV-снимков.</li>
+  </ol>
+</div>
+
+<!-- ===== 2. KPI ===== -->
+<h2>Ключевые показатели</h2>
+<div class="grid4">
+  <div class="kpi kpi-bad">
+    <div class="val">4 ч 25 мин</div>
+    <div class="lbl">БЫЛО, 1 поток<br>15 919 сек</div>
+  </div>
+  <div class="kpi kpi-ok">
+    <div class="val">2 ч 43 мин</div>
+    <div class="lbl">СТАЛО, 1 поток<br>9 800 сек</div>
+  </div>
+  <div class="kpi kpi-info">
+    <div class="val">-38%</div>
+    <div class="lbl">экономия времени<br>1 поток</div>
+  </div>
+  <div class="kpi kpi-ok">
+    <div class="val">344</div>
+    <div class="lbl">дог./мин, 12 потоков<br>rev2</div>
+  </div>
+</div>
+
+<div class="card ok verdict">
+  <a href="#main-result" style="color:inherit;text-decoration:none;">
+    Основной результат: 17 154 договора за 50 мин (344 дог./мин), регрессии по профилю нет
+  </a>
+</div>
+
+<!-- ===== 3. ТЕХНОЛОГИЯ ===== -->
+<h2>Технология замеров</h2>
+<div class="card theory">
+  <p>
+    Замеры проводились на <b>тестовой базе контура DR</b> (копия ПРОД, конфигурация ДУ 1.5).
+    На одном и том же объеме данных (пул «Розничное ДУ», 17 154 договора) последовательно
+    запускались вечерние регламенты: сначала на <b>текущей версии 1С</b> (базовая конфигурация),
+    затем на <b>оптимизированной</b> (расширение <code>rev2</code>).
+  </p>
+  <p>
+    Время фиксировалось по старту/финишу фонового задания и детализировалось
+    встроенным замером производительности 1С. Корректность результата проверялась
+    сравнением CSV-снимков (см. <a href="imdev-8899_regression_report_final_20260612.html">отчет регрессии</a>).
+  </p>
+</div>
+
+<!-- ===== 4. СТАТИСТИКА: 1 ПОТОК ===== -->
+<h2>Статистика: 1 поток</h2>
+<div class="card">
+  <table>
+    <thead>
+      <tr>
+        <th>Показатель</th>
+        <th class="num">БЫЛО (КФ)</th>
+        <th class="num">СТАЛО (rev2)</th>
+        <th class="num">Изменение</th>
+        <th>Оценка</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Дата прогона</td>
+        <td class="num">11.06.2026</td>
+        <td class="num">11-17.06.2026</td>
+        <td class="num">—</td>
+        <td class="neutral">—</td>
+      </tr>
+      <tr>
+        <td>Старт / финиш</td>
+        <td>09:39 / 14:12</td>
+        <td>18:00 / 17.06 20:50</td>
+        <td>—</td>
+        <td class="neutral">—</td>
+      </tr>
+      <tr>
+        <td>Общее время, сек</td>
+        <td class="num">15 918</td>
+        <td class="num">9 800</td>
+        <td class="num improved">-6 118</td>
+        <td class="yes">OK</td>
+      </tr>
+      <tr>
+        <td>Общее время, мин</td>
+        <td class="num">265</td>
+        <td class="num">163</td>
+        <td class="num improved">-102</td>
+        <td class="yes">OK</td>
+      </tr>
+      <tr>
+        <td>Скорость, дог./мин</td>
+        <td class="num">62</td>
+        <td class="num">105</td>
+        <td class="num improved">+69%</td>
+        <td class="yes">OK</td>
+      </tr>
+      <tr>
+        <td>Договоров обработано</td>
+        <td class="num">17 154</td>
+        <td class="num">17 154</td>
+        <td class="num">0</td>
+        <td class="yes">OK</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="compare-row">
+    <div class="lbl">Wall-clock время (1 поток), сек — меньше лучше</div>
+    <div class="bar-wrap">
+      <div class="bar-fill bar-old" style="width:100%;">15 918</div>
+    </div>
+    <div class="bar-wrap">
+      <div class="bar-fill bar-new" style="width:61.6%;">9 800</div>
+      <span class="bar-label">rev2: -38%</span>
+    </div>
+  </div>
+
+  <div class="compare-row">
+    <div class="lbl">Скорость обработки, дог./мин — больше лучше</div>
+    <div class="bar-wrap">
+      <div class="bar-fill bar-old" style="width:18%;">62</div>
+    </div>
+    <div class="bar-wrap">
+      <div class="bar-fill bar-new" style="width:30.5%;">105</div>
+      <span class="bar-label">rev2: +69%</span>
+    </div>
+  </div>
+</div>
+
+<!-- ===== 5. СТАТИСТИКА: 12 ПОТОКОВ ===== -->
+<h2>Статистика: 12 потоков</h2>
+<div class="card">
+  <p class="muted">
+    Источник: <code>Новые замеры Времени.docx</code>.
+    Пул «Розничное ДУ», 12 потоков (как на ПРОД).
+    Сокращенный набор: «Переоценка активов» и «Расчет СЧА/РСА»
+    (без НКД, дефолтных облигаций и пр.).
+  </p>
+
+  <h3 style="margin-top:0;">Условия прогона</h3>
+  <table>
+    <thead>
+      <tr><th>Параметр</th><th>Значение</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>Пул</td><td>Розничное ДУ (физические лица)</td></tr>
+      <tr><td>Договоров ДУ</td><td class="num">17 154</td></tr>
+      <tr><td>Параллелизм</td><td>12 потоков</td></tr>
+      <tr><td>Группа операций</td><td>«Вечерние» — Переоценка ц/б (УУ), Расчет РСА, Расчет СЧА</td></tr>
+      <tr><td>Общие операции по пулам</td><td>Установка котировок ц/б (по пулам)</td></tr>
+      <tr><td>Исключено из прогона</td><td>НКД, дефолтные облигации, переоценка ДС, контроль уменьшения стоимости портфеля</td></tr>
+    </tbody>
+  </table>
+
+  <h3>СТАЛО</h3>
+  <table>
+    <thead>
+      <tr>
+        <th>Показатель</th>
+        <th class="num">Значение (rev2)</th>
+        <th>Оценка</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Старт (wall-clock)</td>
+        <td>08:53</td>
+        <td class="neutral">—</td>
+      </tr>
+      <tr>
+        <td>Финиш (wall-clock)</td>
+        <td>09:43</td>
+        <td class="neutral">—</td>
+      </tr>
+      <tr>
+        <td>Общее время, мин</td>
+        <td class="num improved">50</td>
+        <td class="yes">OK</td>
+      </tr>
+      <tr>
+        <td>Общее время, сек</td>
+        <td class="num">3 000</td>
+        <td class="yes">OK</td>
+      </tr>
+      <tr>
+        <td>Скорость, дог./мин</td>
+        <td class="num improved">344</td>
+        <td class="yes">OK</td>
+      </tr>
+      <tr>
+        <td>Договоров обработано</td>
+        <td class="num">17 154</td>
+        <td class="yes">OK</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="compare-row">
+    <div class="lbl">Скорость обработки rev2, дог./мин</div>
+    <div class="bar-wrap">
+      <div class="bar-fill bar-new" style="width:100%;">344</div>
+    </div>
+  </div>
+  <div class="compare-row">
+    <div class="lbl">Wall-clock rev2, мин</div>
+    <div class="bar-wrap">
+      <div class="bar-fill bar-new" style="width:100%;">50</div>
+    </div>
+  </div>
+
+  <h3>Сверка CSV-снимков (old12 vs new12)</h3>
+  <p class="muted">После прогонов выполнена сверка снимков планов регламентных операций.</p>
+  <table>
+    <thead>
+      <tr>
+        <th>Показатель</th>
+        <th class="num">БЫЛО (old12)</th>
+        <th class="num">СТАЛО (new12)</th>
+        <th>Оценка</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Файл снимка</td>
+        <td><code>8899_old12_*.8899.csv</code></td>
+        <td><code>8899_new12_*.8899.csv</code></td>
+        <td class="neutral">—</td>
+      </tr>
+      <tr>
+        <td>Строк в снимке</td>
+        <td class="num">85 505</td>
+        <td class="num">85 507</td>
+        <td class="yes">OK</td>
+      </tr>
+      <tr>
+        <td>Договоров в пуле</td>
+        <td class="num">17 154</td>
+        <td class="num">17 154</td>
+        <td class="yes">OK</td>
+      </tr>
+      <tr>
+        <td>Планов проведено</td>
+        <td class="num">17 153</td>
+        <td class="num">17 154</td>
+        <td class="yes">OK</td>
+      </tr>
+      <tr>
+        <td>Планов не проведено</td>
+        <td class="num">1</td>
+        <td class="num">0</td>
+        <td class="yes">OK</td>
+      </tr>
+      <tr>
+        <td>Строк плана</td>
+        <td class="num">51 462</td>
+        <td class="num">51 462</td>
+        <td class="yes">OK</td>
+      </tr>
+      <tr>
+        <td>Поддокументов «Расчет СЧА/РСА»</td>
+        <td class="num">17 153</td>
+        <td class="num">17 154</td>
+        <td class="yes">OK</td>
+      </tr>
+      <tr>
+        <td>Поддокументов «Переоценка активов»</td>
+        <td class="num">16 890</td>
+        <td class="num">16 891</td>
+        <td class="yes">OK</td>
+      </tr>
+      <tr>
+        <td>Договоров «только RSA» (без переоценки)</td>
+        <td class="num">263</td>
+        <td class="num">263</td>
+        <td class="yes">OK</td>
+      </tr>
+      <tr>
+        <td>Профиль поддокументов совпадает</td>
+        <td class="num">17 153</td>
+        <td class="num">17 153</td>
+        <td class="yes">100%</td>
+      </tr>
+      <tr>
+        <td>Изменений флага <code>Выполнять</code></td>
+        <td class="num">0</td>
+        <td class="num">0</td>
+        <td class="yes">OK</td>
+      </tr>
+      <tr>
+        <td>Сбой договора МИ10917 (коллизия номера)</td>
+        <td class="no">1</td>
+        <td class="yes">0</td>
+        <td class="yes">устранен (+1)</td>
+      </tr>
+    </tbody>
+  </table>
+  <p>Подробный отчет сверки: <a href="imdev-8899_regression_report_final_20260612.html">imdev-8899_regression_report_final_20260612.html</a></p>
+</div>
+
+<!-- ===== 6. ДЕТАЛИ: ПРОФИЛИРОВЩИК 1 ПОТОК ===== -->
+<h2>Детали замеров: профилировщик (1 поток)</h2>
+
+<div class="card">
+  <h3 style="margin-top:0;">БЫЛО — общая картина (15 918,68 сек)</h3>
+  <p class="muted">Источник: скриншот профилировщика, <code>тестыВремени.docx</code>, прогон 11.06, 1 поток, базовая КФ.</p>
+  <table>
+    <thead>
+      <tr>
+        <th>Модуль</th>
+        <th class="num">Стр.</th>
+        <th>Строка кода</th>
+        <th class="num">Кол.</th>
+        <th class="num">Время, сек</th>
+        <th class="num">%</th>
+        <th>Пункт плана</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Справочник.РегламентныеПериоды.МодульМенеджера</td>
+        <td class="num">399</td>
+        <td><code>СформироватьДокументыЗакрытияПериода(</code></td>
+        <td class="num">17 154</td>
+        <td class="num">15 842,53</td>
+        <td class="num">99,52</td>
+        <td>—</td>
+      </tr>
+      <tr>
+        <td>ОбщийМодуль.ИсполняемыеПроцедурыЗакрытияПериода</td>
+        <td class="num">1 689</td>
+        <td><code>ДокументПереоценки.ЗаполнитьТЧ(КэшКотировокУУ);</code></td>
+        <td class="num">17 154</td>
+        <td class="num">2 708,35</td>
+        <td class="num">17,01</td>
+        <td><span class="tag tag-done">3.1</span></td>
+      </tr>
+      <tr>
+        <td>ОбщийМодуль.ИсполняемыеПроцедурыЗакрытияПериода</td>
+        <td class="num">1 053</td>
+        <td><code>ДокументНКД.Записать(РежимЗаписиДокумента.Проведение);</code></td>
+        <td class="num">16 891</td>
+        <td class="num">2 477,71</td>
+        <td class="num">15,56</td>
+        <td class="tag tag-skip">3.4</td>
+      </tr>
+      <tr>
+        <td>ОбщийМодуль.ИсполняемыеПроцедурыЗакрытияПериода</td>
+        <td class="num">1 699</td>
+        <td><code>ДокументПереоценки.Записать(...)</code></td>
+        <td class="num">16 891</td>
+        <td class="num">2 307,34</td>
+        <td class="num">14,49</td>
+        <td>—</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<div class="card ok">
+  <h3 style="margin-top:0;">СТАЛО — rev2 (9 842,73 сек по профилировщику)</h3>
+  <p class="muted">Источник: скриншот профилировщика, <code>тестыВремени.docx</code>, прогон 11.06, 1 поток, rev2.</p>
+  <table>
+    <thead>
+      <tr>
+        <th>Модуль</th>
+        <th class="num">Стр.</th>
+        <th>Строка кода</th>
+        <th class="num">Кол.</th>
+        <th class="num">БЫЛО, сек</th>
+        <th class="num">СТАЛО, сек</th>
+        <th class="num">Экономия</th>
+        <th>Пункт</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><b>Итого</b></td>
+        <td class="num">—</td>
+        <td>Фоновое задание (полное)</td>
+        <td class="num">1</td>
+        <td class="num">15 918,68</td>
+        <td class="num">9 842,73</td>
+        <td class="num improved">-38,2%</td>
+        <td>—</td>
+      </tr>
+      <tr>
+        <td>rev2 ИсполняемыеПроцедурыЗакрытияПериода</td>
+        <td class="num">40</td>
+        <td><code>ДокументПереоценки.ЗаполнитьТЧ(ДополнительныеДанные);</code></td>
+        <td class="num">17 154</td>
+        <td class="num">2 708,35</td>
+        <td class="num">1 014,41</td>
+        <td class="num improved">-63%</td>
+        <td><span class="tag tag-done">3.1</span></td>
+      </tr>
+      <tr>
+        <td>rev2 ИсполняемыеПроцедурыЗакрытияПериода</td>
+        <td class="num">51</td>
+        <td><code>ДокументПереоценки.Записать(...)</code></td>
+        <td class="num">16 891</td>
+        <td class="num">2 307,34</td>
+        <td class="num">1 633,16</td>
+        <td class="num improved">-29%</td>
+        <td>—</td>
+      </tr>
+      <tr>
+        <td>rev2 РС.ЗначенияПараметровДоговораДУ</td>
+        <td class="num">79</td>
+        <td><code>Выборка = Запрос.Выполнить().Выбрать();</code></td>
+        <td class="num">102 174</td>
+        <td class="num">—</td>
+        <td class="num">264,20</td>
+        <td class="num">2,68% от total</td>
+        <td><span class="tag tag-done">3.2</span></td>
+      </tr>
+      <tr>
+        <td>Документ.НачислениеКупонногоДохода</td>
+        <td class="num">2 005</td>
+        <td><code>Результат = Запрос.Выполнить().Выгрузить();</code></td>
+        <td class="num">16 891</td>
+        <td class="num">—</td>
+        <td class="num">807,99</td>
+        <td class="num">8,21% (не оптим.)</td>
+        <td class="tag tag-skip">3.4</td>
+      </tr>
+      <tr>
+        <td>Документ.РасчетСЧА_РСА.МодульМенеджера</td>
+        <td class="num">216</td>
+        <td><code>Результат = Запрос.Выполнить();</code></td>
+        <td class="num">17 154</td>
+        <td class="num">—</td>
+        <td class="num">678,85</td>
+        <td class="num">6,90% (не оптим.)</td>
+        <td class="tag tag-skip">3.5</td>
+      </tr>
+    </tbody>
+  </table>
+  <p>
+    После оптимизации в TOP остались только процедуры <b>вне scope</b> этапа 2
+    (НКД — 3.4, запросы менеджера РСА — 3.5) и точка 3.3 (индексация в КФ).
+    Это подтверждает, что целевые узкие места rev2 отработали корректно.
+  </p>
+</div>
+
+<!-- ===== 7. РЕАЛИЗАЦИЯ ЗАДАЧ ===== -->
+<h2>Реализация задач этапа 2</h2>
+<div class="card info">
+  <p>Сопоставление с <a href="rev2_changes_tree_phase2.html">rev2_changes_tree_phase2.html</a>.
+    Статус на дату 18.06.2026.</p>
+  <table>
+    <thead>
+      <tr>
+        <th>Пункт</th>
+        <th>% замера</th>
+        <th>Статус</th>
+        <th>Эффект в замерах</th>
+        <th>Объекты rev2</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr class="matrix-done">
+        <td><strong>3.1</strong> ПереоценкаАктивов / РЕПО</td>
+        <td class="num">7,80%</td>
+        <td><span class="tag tag-done">сделано</span></td>
+        <td class="improved">ЗаполнитьТЧ: 2 708 → 1 014 сек (-63%)</td>
+        <td>РегламентныеПериоды, ИсполняемыеПроцедуры…, ПереоценкаАктивов</td>
+      </tr>
+      <tr class="matrix-done">
+        <td><strong>3.2</strong> ЗначенияПараметровДоговораДУ</td>
+        <td class="num">7,49%</td>
+        <td><span class="tag tag-done">сделано</span></td>
+        <td class="improved">102 174 вызова, 264 сек (2,68% total); бенчмарк -69% к КФ</td>
+        <td>РС ЗначенияПараметровДоговораДУ (перехват среза)</td>
+      </tr>
+      <tr class="matrix-cf">
+        <td><strong>3.3</strong> РСА / СЧА ObjectModule</td>
+        <td class="num">6,22%</td>
+        <td><span class="tag tag-cf">выполнить в КФ</span></td>
+        <td>Индексация <code>ДокументОснование</code> в РС РегистрРСА_СЧА; код ObjectModule не меняется</td>
+        <td>— (базовая конфигурация)</td>
+      </tr>
+      <tr class="matrix-skip">
+        <td><strong>3.4</strong> НачислениеКД</td>
+        <td class="num">5,40%</td>
+        <td><span class="tag tag-skip">вне scope</span></td>
+        <td>808 сек (8,21%) — остается в TOP после rev2</td>
+        <td>—</td>
+      </tr>
+      <tr class="matrix-skip">
+        <td><strong>3.5</strong> РасчетСЧА_РСА менеджер</td>
+        <td class="num">4,78%</td>
+        <td><span class="tag tag-skip">вне scope</span></td>
+        <td>679 + 678 сек — остается в TOP после rev2</td>
+        <td>—</td>
+      </tr>
+      <tr class="matrix-done">
+        <td><strong>3.6</strong> РегламентныеПериоды / НайтиСтроки</td>
+        <td class="num">4,27%</td>
+        <td><span class="tag tag-done">сделано</span></td>
+        <td>Составные индексы ТЗ на форме; ускорение внутри 15 843 сек блока</td>
+        <td>Форма РегламентныйПериод</td>
+      </tr>
+      <tr class="matrix-done">
+        <td><strong>3.7</strong> ПланРегламентныхОперацийДУ</td>
+        <td class="num">2,10%</td>
+        <td><span class="tag tag-done">сделано</span></td>
+        <td>Двухшаговый запрос СвязанныеДокументы</td>
+        <td>ПланРегламентныхОперацийДУ.ManagerModule</td>
+      </tr>
+      <tr class="matrix-done">
+        <td><strong>+1</strong> Коллизия номера РСА</td>
+        <td class="num">—</td>
+        <td><span class="tag tag-done">сделано</span></td>
+        <td class="improved">Сбой МИ10917 устранен (12 потоков)</td>
+        <td>РасчетСЧА_РСА.ManagerModule, ИсполняемыеПроцедуры…</td>
+      </tr>
+      <tr class="matrix-skip">
+        <td><strong>+2</strong> Предварительный отсев</td>
+        <td class="num">~20 мин</td>
+        <td><span class="tag tag-skip">отменен</span></td>
+        <td>Не входит в rev2 по решению заказчика</td>
+        <td>—</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<div class="card">
+  <h3 style="margin-top:0;">Проверка входа в оптимизированный код (12 потоков, rev2)</h3>
+  <p class="muted">По материалам <code>Вечерний регламент_НовыеТесты.docx</code> — точки входа подтверждены:</p>
+  <div class="flow">
+    3.1  ПереоценкаАктивов — пакет РЕПО, пропуск ветки РЕПО для целевого пула<br>
+    3.2  ЗначенияПараметровДоговораДУ — перехват единичного СрезПоследних<br>
+    3.3  РасчетСЧА_РСА — индексация реквизита в КФ (не в rev2)<br>
+    3.6  РегламентныеПериоды — индексы ТЗ (ДоговорДУ + составные)<br>
+    3.7  ПланРегламентныхОперацийДУ — ВТ_СвязанныеДокументы<br>
+    +1   РасчетСЧА_РСА — ЗаписатьСОбработкойКоллизииНомера<br>
+    +2   <span class="stat-warn">отменен</span> — РС ВидыОптимизируемых… удален из rev2
+  </div>
+</div>
+
+<!-- ===== 8. ИЗВЕСТНЫЕ ПРОБЛЕМЫ БЫЛО ===== -->
+<h2>Ошибки базового прогона (БЫЛО)</h2>
+<div class="card warn">
+  <h3 style="margin-top:0;">12 потоков — 1 сбой (коллизия номера)</h3>
+  <pre>Не удалось провести документ Регламентная операция (ДУ) МИ10917-0091 от 12.06.2026 23:55:00
+Не удалось провести документ Переоценка активов МИ10917-0086 от 12.06.2026 23:55:05</pre>
+  <p>В rev2 устранено пунктом <strong>+1</strong> (<code>ЗаписатьСОбработкойКоллизииНомера</code>).</p>
+</div>
+
+<!-- ===== 10. ВЫВОДЫ ===== -->
+<h2>Выводы</h2>
+<div class="card ok">
+  <ul class="conclusion-highlight">
+    <li>
+      <b>12 потоков (rev2) — основной результат:</b>
+      17 154 договора обработаны за <b>50 минут</b> (<b>344 дог./мин</b>)
+      при сокращенном наборе операций (Переоценка активов + РСА/СЧА).
+      <b>Регрессия CSV подтвердила: расхождений по бизнес-профилю нет.</b>
+    </li>
+  </ul>
+  <ol>
+    <li>
+      <b>Все задачи rev2 этапа 2 реализованы</b> (пункты 3.1, 3.2, 3.6, 3.7, +1).
+      Пункт 3.3 — в базовой КФ (индексация). Пункты 3.4, 3.5 — вне scope. +2 отменен.
+    </li>
+    <li>
+      <b>Ключевые оптимизации подтверждены профилировщиком:</b>
+      п. 3.1 (ЗаполнитьТЧ -63%), п. 3.2 (перехват параметров договора в TOP rev2),
+      п. +1 (устранение сбоя МИ10917).
+    </li>
+    <li>
+      <b>Дополнительно, 1 поток:</b> время сократилось на 38%
+      (с 4 ч 25 мин до 2 ч 43 мин), скорость выросла с 62 до 105 дог./мин.
+    </li>
+    <li>
+      <b>Регрессии по составу регламентов нет.</b> Доработка rev2 ускоряет обработку
+      и устраняет сбои проведения, не меняя профиль поддокументов.
+    </li>
+  </ol>
+</div>
+
+</body>
+</html>
