@@ -2,6 +2,7 @@
 
 | Файл | Описание |
 |------|----------|
+| [avancor_razdel4_register_integration_spec.html](avancor_razdel4_register_integration_spec.html) | **ТЗ для Аванкор** — перенос Раздел4 в регистр перед `Записать()`, код EPF + вопросы Q1–Q6 |
 | [imdev-9005_measurements_may2026.html](imdev-9005_measurements_may2026.html) | **Замеры** оригинальной обработки, среда т-1 (`AVC_PP_DU`), период май 2026 (1 ч 54 мин) |
 | [imdev-9005_measurements_t1_profiler.html](imdev-9005_measurements_t1_profiler.html) | **Замеры т-1 (docx)** — профилировщик + журнал, старый алгоритм, узкие места TWR/НайтиСтроки |
 | [imdev-9005_measurements_before_after.html](imdev-9005_measurements_before_after.html) | **БЫЛО / СТАЛО** — сравнение замеров, МО retail, финальный прогон ДУ, регрессия 0420431 |

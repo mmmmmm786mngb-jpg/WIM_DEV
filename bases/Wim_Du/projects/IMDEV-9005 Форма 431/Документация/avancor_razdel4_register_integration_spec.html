@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>IMDEV-9005 — Раздел4 в регистре: ТЗ для доработки EPF</title>
+<style>
+  * { box-sizing: border-box; }
+  body { font-family: 'Segoe UI', Arial, sans-serif; line-height: 1.6; color: #2c3e50;
+         max-width: 960px; margin: 0 auto; padding: 24px; background: #f5f7fa; }
+  h1 { color: #1a2b48; font-size: 24px; border-bottom: 3px solid #17a2b8; padding-bottom: 10px; }
+  h2 { color: #17a2b8; font-size: 18px; margin-top: 28px; border-left: 4px solid #17a2b8; padding-left: 10px; }
+  h3 { color: #1a2b48; font-size: 15px; margin-top: 18px; }
+  .card { background: #fff; border-radius: 8px; padding: 16px 20px; margin: 14px 0;
+          box-shadow: 0 1px 4px rgba(0,0,0,0.08); }
+  .warn { background: #fff8e1; border-left: 4px solid #f0ad4e; }
+  code { background: #eef1f4; padding: 2px 6px; border-radius: 4px; font-family: Consolas, monospace; font-size: 13px; }
+  pre { background: #1e1e1e; color: #d4d4d4; padding: 12px 14px; border-radius: 6px; overflow-x: auto;
+        font-family: Consolas, monospace; font-size: 12px; line-height: 1.45; }
+  pre .c { color: #6a9955; }
+  pre .k { color: #569cd6; }
+  .muted { color: #6b7785; font-size: 13px; }
+  table { width: 100%; border-collapse: collapse; margin: 10px 0; font-size: 14px; }
+  th, td { border: 1px solid #dfe3e8; padding: 7px 9px; text-align: left; vertical-align: top; }
+  th { background: #1a2b48; color: #fff; }
+  tr:nth-child(even) { background: #f7f9fb; }
+  .flow { font-family: Consolas, monospace; font-size: 13px; background: #fbfcfd;
+          border: 1px dashed #b9c4cf; border-radius: 6px; padding: 12px 14px; white-space: pre; }
+  .avancor-section { margin-top: 36px; border-top: 4px solid #dc3545; padding-top: 4px; }
+  .avancor-section h2 { color: #dc3545; border-left-color: #dc3545; }
+  .question-block {
+    background: #fff3cd; border: 2px solid #ffc107; border-left: 6px solid #e67e00;
+    border-radius: 8px; padding: 14px 18px; margin: 14px 0;
+  }
+  .question-block h4 { color: #856404; margin: 0 0 8px 0; font-size: 14px; }
+  .question-block .q-num {
+    display: inline-block; background: #e67e00; color: #fff; font-weight: 700;
+    font-size: 11px; padding: 2px 7px; border-radius: 10px; margin-right: 6px;
+  }
+  .question-block p { margin: 6px 0; color: #5c4a00; }
+  .answer-line { margin-top: 10px; padding-top: 8px; border-top: 1px dashed #e0a800; color: #6b7785; font-size: 13px; }
+</style>
+</head>
+<body>
+
+<h1>Раздел4 формы 0420431 — доработка EPF (перенос в регистр)</h1>
+<p class="muted">
+  Обработка: <code>внЗаполнениеРеглОтчетаПоДоговорамДУ_0420431_71</code> &nbsp;|&nbsp;
+  Документ: <code>РО_XBRL7_1_0420431_СведенияОДеятельностиПоУправлениюЦБ_7119У</code> &nbsp;|&nbsp;
+  IMDEV-9005 / IMAPPS-37477
+</p>
+
+<div class="card warn">
+  <strong>Проблема:</strong> в <code>Раздел4</code> &gt;99&nbsp;999 строк — ошибка при <code>Записать()</code> (лимит платформы).
+  <strong>Решение EPF:</strong> заполняем <code>Раздел4</code> как сейчас; перед <code>Записать()</code> при активном режиме —
+  <code>Выгрузить()</code> в ТЗ, записать в регистр CF, <code>Раздел4.Очистить()</code>.
+</div>
+
+<!-- ============================================================ -->
+<h2>1. Точка вставки</h2>
+<div class="card">
+  Файл: <code>NEW_Оптимизация/.../Ext/ObjectModule.bsl</code>, процедура <code>ВыполнитьКоманду</code>.
+  Одна строка <strong>между</strong> дозаполнением и записью:
+</div>
+<div class="flow">ЗаполнитьРазделыОтчета(ОбъектНазначения);
+РегламентированнаяОтчетность.ДозаполнениеПустыхЗначенийПоОтчетамПрофучастника(ОбъектНазначения);
+<span style="color:#28a745">ПеренестиРаздел4ВРегистрПриНеобходимости(ОбъектНазначения);  // НОВОЕ</span>
+ОбъектНазначения.Записать();</div>
+<p class="muted"><code>ЗаполнитьРаздел_4</code> и остальные разделы не меняются.</p>
+
+<!-- ============================================================ -->
+<h2>2. Новые процедуры и функции модуля объекта</h2>
+
+<h3>2.1. Константы метаданных (имена — из ответов Аванкор, Q1)</h3>
+<div class="card">
+<pre><span class="k">Функция</span> ИмяФлагаХраненияРаздел4ВРегистре()
+    <span class="k">Возврат</span> "???";  <span class="c">// Q1</span>
+<span class="k">КонецФункции</span>
+
+<span class="k">Функция</span> ИмяРегистраРаздел4()
+    <span class="k">Возврат</span> "???";  <span class="c">// Q1</span>
+<span class="k">КонецФункции</span>
+
+<span class="k">Функция</span> ИмяРесурсаХранилищаРаздел4()
+    <span class="k">Возврат</span> "???";  <span class="c">// Q1</span>
+<span class="k">КонецФункции</span></pre>
+</div>
+
+<h3>2.2. НужноХранитьРаздел4ВРегистре</h3>
+<div class="card">
+  Проверка режима: все три условия одновременно. На старых CF без новых метаданных — <code>Ложь</code>.
+<pre><span class="c">// Возвращаемое значение: Булево</span>
+<span class="k">Функция</span> НужноХранитьРаздел4ВРегистре(ОтчетОбъект)
+
+    ИмяДокумента = ОтчетОбъект.Метаданные().Имя;
+    МетаДок = Метаданные.Документы[ИмяДокумента];
+
+    <span class="k">Если</span> МетаДок.Реквизиты.Найти(ИмяФлагаХраненияРаздел4ВРегистре()) = Неопределено <span class="k">Тогда</span>
+        <span class="k">Возврат</span> <span class="k">Ложь</span>;
+    <span class="k">КонецЕсли</span>;
+
+    <span class="k">Если</span> Метаданные.РегистрыСведений.Найти(ИмяРегистраРаздел4()) = Неопределено <span class="k">Тогда</span>
+        <span class="k">Возврат</span> <span class="k">Ложь</span>;
+    <span class="k">КонецЕсли</span>;
+
+    <span class="c">// Q3: флаг должен быть Истина до вызова EPF (или EPF выставляет сама — уточнить)</span>
+    <span class="k">Возврат</span> ОбщегоНазначения.ЗначениеРеквизитаОбъекта(
+        ОтчетОбъект, ИмяФлагаХраненияРаздел4ВРегистре()) = <span class="k">Истина</span>;
+
+<span class="k">КонецФункции</span></pre>
+</div>
+
+<h3>2.3. ПеренестиРаздел4ВРегистрПриНеобходимости</h3>
+<div class="card">
+<pre><span class="k">Процедура</span> ПеренестиРаздел4ВРегистрПриНеобходимости(ОтчетОбъект)
+
+    <span class="k">Если</span> <span class="k">НЕ</span> НужноХранитьРаздел4ВРегистре(ОтчетОбъект) <span class="k">Тогда</span>
+        <span class="k">Возврат</span>;
+    <span class="k">КонецЕсли</span>;
+
+    <span class="k">Если</span> <span class="k">НЕ</span> ЗначениеЗаполнено(ОтчетОбъект.Ссылка) <span class="k">Тогда</span>
+        <span class="k">ВызватьИсключение</span> "Документ должен быть записан в ИБ перед переносом Раздел4 в регистр.";
+    <span class="k">КонецЕсли</span>;
+
+    <span class="k">Если</span> ОтчетОбъект.Раздел4.Количество() = 0 <span class="k">Тогда</span>
+        <span class="c">// Q4: пустой регистр или не трогать</span>
+        ОчиститьРегистрРаздел4(ОтчетОбъект.Ссылка);
+        <span class="k">Возврат</span>;
+    <span class="k">КонецЕсли</span>;
+
+    ТаблицаРаздел4 = ОтчетОбъект.Раздел4.Выгрузить();
+    ЗаписатьРаздел4ВРегистр(ОтчетОбъект.Ссылка, ТаблицаРаздел4);
+    ОтчетОбъект.Раздел4.Очистить();
+
+<span class="k">КонецПроцедуры</span></pre>
+</div>
+
+<h3>2.4. ЗаписатьРаздел4ВРегистр / ОчиститьРегистрРаздел4</h3>
+<div class="card">
+  Модель: <strong>одна запись</strong> регистра на документ, ресурс = <code>ХранилищеЗначений(ТаблицаРаздел4)</code> (Q2).
+<pre><span class="k">Процедура</span> ЗаписатьРаздел4ВРегистр(Регистратор, ТаблицаРаздел4)
+
+    <span class="c">// Q5: сжатие или без</span>
+    Хранилище = <span class="k">Новый</span> ХранилищеЗначения(ТаблицаРаздел4);
+
+    НаборЗаписей = РегистрыСведений[ИмяРегистраРаздел4()].СоздатьНаборЗаписей();
+    НаборЗаписей.Отбор.Регистратор.Установить(Регистратор);
+
+    Запись = НаборЗаписей.Добавить();
+    Запись.Регистратор = Регистратор;
+    Запись[ИмяРесурсаХранилищаРаздел4()] = Хранилище;
+
+    НаборЗаписей.Записать(<span class="k">Истина</span>);
+
+<span class="k">КонецПроцедуры</span>
+
+<span class="k">Процедура</span> ОчиститьРегистрРаздел4(Регистратор)
+
+    НаборЗаписей = РегистрыСведений[ИмяРегистраРаздел4()].СоздатьНаборЗаписей();
+    НаборЗаписей.Отбор.Регистратор.Установить(Регистратор);
+    НаборЗаписей.Записать(<span class="k">Истина</span>);
+
+<span class="k">КонецПроцедуры</span></pre>
+</div>
+
+<!-- ============================================================ -->
+<h2>3. Данные в регистре</h2>
+<div class="card">
+  Содержимое <code>ХранилищеЗначений</code> = результат <code>ОтчетОбъект.Раздел4.Выгрузить()</code>
+  (все реквизиты ТЧ + <code>НомерСтроки</code>). EPF заполняет те же поля, что и сейчас; отличий в расчёте нет.
+</div>
+
+<!-- ============================================================ -->
+<div class="avancor-section">
+<h2>4. Вопросы к Аванкор (нужны для разработки EPF)</h2>
+
+<div class="question-block">
+  <h4><span class="q-num">Q1</span> Имена метаданных</h4>
+  <p>Точные имена: реквизита-флага (Булево) документа 0420431; регистра сведений; ресурса типа <code>ХранилищеЗначений</code>.</p>
+  <div class="answer-line"><strong>Ответ:</strong> _________________________________________________</div>
+</div>
+
+<div class="question-block">
+  <h4><span class="q-num">Q2</span> Модель регистра</h4>
+  <p>Подтвердите: регистр подчинён документу; <strong>одна запись</strong> на документ; в ресурсе — целая <code>ТаблицаЗначений</code> (не построчные записи регистра).</p>
+  <div class="answer-line"><strong>Ответ:</strong> _________________________________________________</div>
+</div>
+
+<div class="question-block">
+  <h4><span class="q-num">Q3</span> Флаг</h4>
+  <p>Кто выставляет флаг = Истина (CF / пользователь / EPF)? Должен ли он быть установлен <em>до</em> запуска EPF?</p>
+  <div class="answer-line"><strong>Ответ:</strong> _________________________________________________</div>
+</div>
+
+<div class="question-block">
+  <h4><span class="q-num">Q4</span> Пустой Раздел4</h4>
+  <p>При флаге = Истина и 0 строк после заполнения: очистить регистр по регистратору (<code>НаборЗаписей.Записать(Истина)</code> без строк) или не трогать регистр?</p>
+  <div class="answer-line"><strong>Ответ:</strong> _________________________________________________</div>
+</div>
+
+<div class="question-block">
+  <h4><span class="q-num">Q5</span> ХранилищеЗначений</h4>
+  <p>Достаточно <code>Новый ХранилищеЗначения(Таблица)</code> или CF использует сжатие (<code>СжатиеДанных</code>)? Структура ТЗ = <code>Раздел4.Выгрузить()</code>?</p>
+  <div class="answer-line"><strong>Ответ:</strong> _________________________________________________</div>
+</div>
+
+<div class="question-block">
+  <h4><span class="q-num">Q6</span> Кто пишет регистр</h4>
+  <p>EPF — единственный источник записи регистра при заполнении через доп. обработку, или CF тоже переносит ТЧ в регистр при <code>Записать()</code>?</p>
+  <div class="answer-line"><strong>Ответ:</strong> _________________________________________________</div>
+</div>
+
+</div>
+
+<p class="muted" style="margin-top:24px;">VTB Capital IM &nbsp;|&nbsp; 20.06.2026</p>
+
+</body>
+</html>
