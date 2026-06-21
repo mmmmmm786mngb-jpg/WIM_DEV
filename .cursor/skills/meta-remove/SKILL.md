@@ -32,7 +32,7 @@ allowed-tools:
 ## Команда
 
 ```powershell
-powershell.exe -NoProfile -File .cursor/skills/meta-remove/scripts/meta-remove.ps1 -ConfigDir "<путь>" -Object "Catalog.Товары"
+powershell.exe -NoProfile -File ".cursor/skills/meta-remove/scripts/meta-remove.ps1" -ConfigDir "<путь>" -Object "Catalog.Товары"
 ```
 
 ## Поддерживаемые типы

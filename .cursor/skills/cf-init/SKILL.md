@@ -24,7 +24,7 @@ allowed-tools:
 | `CompatibilityMode` | Режим совместимости (default: `Version8_3_24`) |
 
 ```powershell
-powershell.exe -NoProfile -File .cursor/skills/cf-init/scripts/cf-init.ps1 -Name "МояКонфигурация"
+powershell.exe -NoProfile -File ".cursor/skills/cf-init/scripts/cf-init.ps1" -Name "МояКонфигурация"
 ```
 
 ## Примеры

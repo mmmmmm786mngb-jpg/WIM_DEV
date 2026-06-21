@@ -23,7 +23,7 @@ allowed-tools:
 ## Команда
 
 ```powershell
-powershell.exe -NoProfile -File .cursor/skills/form-validate/scripts/form-validate.ps1 -FormPath "Catalogs/Номенклатура/Forms/ФормаЭлемента"
-powershell.exe -NoProfile -File .cursor/skills/form-validate/scripts/form-validate.ps1 -FormPath "src/МояОбработка/Forms/Форма/Ext/Form.xml"
+powershell.exe -NoProfile -File ".cursor/skills/form-validate/scripts/form-validate.ps1" -FormPath "Catalogs/Номенклатура/Forms/ФормаЭлемента"
+powershell.exe -NoProfile -File ".cursor/skills/form-validate/scripts/form-validate.ps1" -FormPath "src/МояОбработка/Forms/Форма/Ext/Form.xml"
 ```
 

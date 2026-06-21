@@ -29,13 +29,13 @@ allowed-tools:
 ### Inline mode
 
 ```powershell
-powershell.exe -NoProfile -File '.cursor/skills/interface-edit/scripts/interface-edit.ps1' -CIPath '<path>' -Operation hide -Value '<cmd>'
+powershell.exe -NoProfile -File ".cursor/skills/interface-edit/scripts/interface-edit.ps1" -CIPath '<path>' -Operation hide -Value '<cmd>'
 ```
 
 ### JSON mode
 
 ```powershell
-powershell.exe -NoProfile -File '.cursor/skills/interface-edit/scripts/interface-edit.ps1' -CIPath '<path>' -DefinitionFile '<json>'
+powershell.exe -NoProfile -File ".cursor/skills/interface-edit/scripts/interface-edit.ps1" -CIPath '<path>' -DefinitionFile '<json>'
 ```
 
 ## Операции

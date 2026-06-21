@@ -29,7 +29,7 @@ allowed-tools:
 ## Команда
 
 ```powershell
-powershell.exe -NoProfile -File .cursor/skills/mxl-compile/scripts/mxl-compile.ps1 -JsonPath "<путь>.json" -OutputPath "<путь>/Template.xml"
+powershell.exe -NoProfile -File ".cursor/skills/mxl-compile/scripts/mxl-compile.ps1" -JsonPath "<путь>.json" -OutputPath "<путь>/Template.xml"
 ```
 
 ## Рабочий процесс

@@ -71,7 +71,7 @@ allowed-tools:
 ## Команда
 
 ```powershell
-powershell.exe -NoProfile -File .cursor/skills/cfe-borrow/scripts/cfe-borrow.ps1 -ExtensionPath src -ConfigPath C:\cfsrc\erp -Object "Catalog.Контрагенты"
+powershell.exe -NoProfile -File ".cursor/skills/cfe-borrow/scripts/cfe-borrow.ps1" -ExtensionPath src -ConfigPath C:\cfsrc\erp -Object "Catalog.Контрагенты"
 ```
 
 ## Примеры

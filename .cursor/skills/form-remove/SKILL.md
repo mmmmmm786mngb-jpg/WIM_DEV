@@ -31,7 +31,7 @@ allowed-tools:
 ## Команда
 
 ```powershell
-powershell.exe -NoProfile -File .cursor/skills/form-remove/scripts/remove-form.ps1 -ObjectName "<ObjectName>" -FormName "<FormName>" [-SrcDir "<SrcDir>"]
+powershell.exe -NoProfile -File ".cursor/skills/form-remove/scripts/remove-form.ps1" -ObjectName "<ObjectName>" -FormName "<FormName>" [-SrcDir "<SrcDir>"]
 ```
 
 ## Что удаляется

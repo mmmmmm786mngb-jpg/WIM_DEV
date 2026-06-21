@@ -44,7 +44,7 @@ allowed-tools:
 ## Команда
 
 ```powershell
-powershell.exe -NoProfile -File .cursor/skills/cfe-init/scripts/cfe-init.ps1 -Name "МоёРасширение"
+powershell.exe -NoProfile -File ".cursor/skills/cfe-init/scripts/cfe-init.ps1" -Name "МоёРасширение"
 ```
 
 ## Примеры
