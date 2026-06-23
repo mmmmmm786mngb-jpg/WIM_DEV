@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>IMDEV-8661: двухволновой обмен ДУ-ФИН - кратко</title>
+    <style>
+        body {
+            font-family: "Segoe UI", Tahoma, sans-serif;
+            margin: 28px 36px;
+            line-height: 1.6;
+            color: #212529;
+            max-width: 860px;
+        }
+        h1 {
+            font-size: 1.45rem;
+            border-bottom: 3px solid #17a2b8;
+            padding-bottom: 10px;
+        }
+        h2 {
+            font-size: 1.15rem;
+            margin-top: 28px;
+            color: #343a40;
+        }
+        h3 {
+            font-size: 1.02rem;
+            margin-top: 18px;
+            color: #495057;
+        }
+        .lead {
+            font-size: 1.05rem;
+            color: #495057;
+            margin: 16px 0 24px;
+        }
+        .idea {
+            padding: 18px 22px;
+            margin: 20px 0;
+            background: linear-gradient(135deg, #d1f2e8, #a8e6cf);
+            border: 2px solid #1e8449;
+            border-radius: 10px;
+            font-size: 1.05rem;
+            line-height: 1.65;
+        }
+        .idea strong { color: #145a32; }
+        .example-box {
+            padding: 16px 20px;
+            margin: 16px 0;
+            background: #fff8e6;
+            border: 1px solid #ffc107;
+            border-radius: 8px;
+        }
+        .example-box h3 {
+            margin-top: 0;
+            color: #856404;
+        }
+        .diagram {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            padding: 16px 18px;
+            font-family: Consolas, monospace;
+            font-size: 0.84rem;
+            line-height: 1.5;
+            white-space: pre;
+            overflow-x: auto;
+            margin: 12px 0 18px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 12px 0 20px;
+            font-size: 0.94rem;
+        }
+        th, td {
+            border: 1px solid #dee2e6;
+            padding: 9px 12px;
+            text-align: left;
+            vertical-align: top;
+        }
+        th { background: #e9ecef; }
+        tr.total td {
+            font-weight: 600;
+            background: #f1f3f5;
+        }
+        .was { color: #c0392b; }
+        .became { color: #1e8449; }
+        .gain {
+            display: inline-block;
+            padding: 2px 10px;
+            border-radius: 12px;
+            background: #d4edda;
+            color: #155724;
+            font-weight: 600;
+            font-size: 0.92rem;
+        }
+        code {
+            font-family: Consolas, monospace;
+            font-size: 0.9em;
+            background: #f1f3f5;
+            padding: 1px 5px;
+            border-radius: 3px;
+        }
+        .note {
+            font-size: 0.9rem;
+            color: #6c757d;
+            margin-top: 8px;
+        }
+        .footer {
+            margin-top: 32px;
+            padding-top: 16px;
+            border-top: 1px solid #dee2e6;
+            font-size: 0.92rem;
+            color: #6c757d;
+        }
+        a { color: #0c5460; }
+    </style>
+</head>
+<body>
+
+<h1>Двухволновой обмен ДУ-ФИН - кратко</h1>
+<p class="lead">IMDEV-8661. На одном числовом примере: что не так сейчас, как исправить и какой выигрыш по времени.</p>
+
+<h2>1. В чем проблема сейчас</h2>
+
+<p>
+    Обмен запускается в несколько параллельных потоков, но <strong>документ «Сделка»</strong>
+    (перерегистрация ц/б) попадает в <em>один общий</em> поток вместе со справочниками и остальными документами.
+    Все сделки выгружаются и загружаются <strong>последовательно в одной пачке</strong> - ее нельзя разбить.
+    Пока этот поток не закончится, весь обмен «стоит» на самом тяжелом участке.
+</p>
+
+<div class="example-box">
+    <h3>Пример: вечерний обмен после торгового дня</h3>
+    <p>В очереди на выгрузку в ФИН накопилось:</p>
+    <table>
+        <tr><th>Что в очереди</th><th>Количество</th><th>Куда идет сейчас</th></tr>
+        <tr>
+            <td>Справочники, платежи, прочие документы</td>
+            <td>~2 500 объектов</td>
+            <td>Поток 0 (общий)</td>
+        </tr>
+        <tr>
+            <td>Документ <code>Сделка</code></td>
+            <td><strong>12 000</strong> документов</td>
+            <td>Поток 0 (общий) - в одной куче</td>
+        </tr>
+        <tr>
+            <td>Бизнес-процесс <code>СделкиTn</code></td>
+            <td>3 000 шт.</td>
+            <td>6 параллельных потоков (уже разбито)</td>
+        </tr>
+    </table>
+    <p>
+        Потоки 1-6 по <code>СделкиTn</code> отрабатывают за ~18 минут (самый тяжелый пул).
+        А общий поток 0 тянет 2 500 «легких» объектов (~4 мин) <strong>плюс</strong> все 12 000 сделок (~45 мин) -
+        итого <strong>~49 минут</strong>. Именно он задает длительность всего обмена.
+    </p>
+    <div class="diagram">Сейчас (тот же пример)
+|
++-- Поток 0 (общий) .............. ~49 мин  &lt;-- все ждут его
+|     2 500 прочих объектов (~4 мин)
+|     12 000 Документ.Сделка (~45 мин) в одной пачке
+|
+\-- Потоки 1..6 (СделкиTn) ....... ~18 мин  (параллельно, уже успевают раньше)</div>
+</div>
+
+<h2>2. Главная идея</h2>
+
+<div class="idea">
+    <strong>Разбить один запуск на две волны подряд.</strong><br><br>
+    <strong>Волна 1:</strong> общий поток <em>без</em> <code>Документ.Сделка</code> + 6 пачек только <code>СделкиTn</code> (как сейчас).<br>
+    <strong>Волна 2</strong> (после полного завершения волны 1): общий поток снова без сделок + 6 пачек только <code>Документ.Сделка</code> по портфелям - по тому же принципу, что уже работает для <code>СделкиTn</code>.
+</div>
+
+<h2>3. Тот же пример - как будет и замеры «было / стало»</h2>
+
+<div class="diagram">Станет (тот же пример, 12 000 Сделка + 3 000 СделкиTn)
+|
++-- ВОЛНА 1
+|     +-- Поток 0: без СделкиTn и без Сделка ... ~4 мин
+|     \-- Потоки 1..6: только СделкиTn ......... ~18 мин
+|         (волна 1 целиком: max(4, 18) = ~18 мин)
+|
+\-- ВОЛНА 2  (старт после волны 1)
+      +-- Поток 0: без СделкиTn и без Сделка ... ~1 мин
+      \-- Потоки 1..6: только Сделка (~2 000 в пуле) ... ~8 мин
+          (волна 2 целиком: max(1, 8) = ~8 мин)</div>
+
+<h3>Расчетное время на тестовом примере</h3>
+<p class="note">Допущения расчета: ~0,22 сек на один документ <code>Сделка</code>; равномерное распределение по 6 пулам; прочие объекты - ~0,1 сек/шт.</p>
+
+<table>
+    <thead>
+        <tr>
+            <th>Участок обмена</th>
+            <th class="was">Было (сейчас)</th>
+            <th class="became">Станет (две волны)</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr>
+            <td>Прочие объекты (справочники, документы)</td>
+            <td class="was">~4 мин (в общем потоке)</td>
+            <td class="became">~4 мин (волна 1, поток 0)</td>
+        </tr>
+        <tr>
+            <td><code>СделкиTn</code> (3 000 шт., 6 пулов)</td>
+            <td class="was">~18 мин (параллельно с общим)</td>
+            <td class="became">~18 мин (волна 1, пулы 1-6)</td>
+        </tr>
+        <tr>
+            <td><code>Документ.Сделка</code> (12 000 шт.)</td>
+            <td class="was">~45 мин (в общем потоке, одна пачка)</td>
+            <td class="became">~8 мин (волна 2, 6 пулов по ~2 000)</td>
+        </tr>
+        <tr>
+            <td>Догоняющий общий поток волны 2</td>
+            <td class="was">-</td>
+            <td class="became">~1 мин</td>
+        </tr>
+        <tr class="total">
+            <td><strong>Итого wall-clock (календарное время)</strong></td>
+            <td class="was"><strong>~49 мин</strong><br><small>max(49 общий, 18 Tn) = 49</small></td>
+            <td class="became"><strong>~26 мин</strong><br><small>18 (волна 1) + 8 (волна 2)</small></td>
+        </tr>
+    </tbody>
+</table>
+
+<p><span class="gain">Выигрыш на примере: ~23 мин (~47%)</span></p>
+
+<p class="note">
+    На реальной базе цифры будут другими, но логика та же: сейчас длительность определяет один длинный общий пакет со всеми <code>Сделка</code>,
+    после доработки - самый тяжелый пул из шести по сделкам.
+</p>
+
+<h2>4. Что меняем в коде</h2>
+<table>
+    <thead>
+        <tr><th>Где</th><th>Что сделать</th></tr>
+    </thead>
+    <tbody>
+        <tr>
+            <td>EPF <code>внОбменДУ-Финансы3.0(потоки)</code></td>
+            <td>Две волны подряд; для волны 2 - распределение <code>Документ.Сделка</code> по портфелям</td>
+        </tr>
+        <tr>
+            <td><code>VTB_ОбщийМодуль</code></td>
+            <td>В общем потоке отключать <code>СделкиTn</code> и <code>Сделка</code>; в пакетном - только нужный тип</td>
+        </tr>
+        <tr>
+            <td>Макет правил</td>
+            <td>Не менять</td>
+        </tr>
+    </tbody>
+</table>
+
+<p class="footer">
+    Подробное руководство и код для разработчиков:
+    <a href="exchange-two-wave-implementation-guide.html">exchange-two-wave-implementation-guide.html</a>
+    (Приложение 1).
+</p>
+
+</body>
+</html>
