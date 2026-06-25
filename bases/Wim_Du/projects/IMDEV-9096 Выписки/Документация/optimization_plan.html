@@ -1,0 +1,599 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<title>IMDEV-9096 - План оптимизации выписок</title>
+<style>
+* { box-sizing: border-box; }
+body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    line-height: 1.55;
+    color: #212529;
+    background: #f4f6f8;
+    margin: 0;
+    padding: 24px;
+}
+.container { max-width: 1200px; margin: 0 auto; }
+h1 {
+    color: #1565c0;
+    border-bottom: 3px solid #1565c0;
+    padding-bottom: 10px;
+    margin-top: 0;
+}
+h2 {
+    color: #2c3e50;
+    margin-top: 40px;
+    border-bottom: 2px solid #dee2e6;
+    padding-bottom: 6px;
+}
+h3 {
+    color: #37474f;
+    margin-top: 28px;
+    padding-left: 10px;
+    border-left: 4px solid #1565c0;
+}
+h4 { color: #455a64; margin-top: 18px; }
+.lead {
+    background: #e3f2fd;
+    border-left: 4px solid #1565c0;
+    padding: 14px 18px;
+    border-radius: 4px;
+    margin: 16px 0;
+}
+.info {
+    background: #d1ecf1;
+    border-left: 4px solid #17a2b8;
+    padding: 12px 16px;
+    border-radius: 4px;
+    margin: 12px 0;
+}
+.warn {
+    background: #fff3cd;
+    border-left: 4px solid #ffc107;
+    padding: 12px 16px;
+    border-radius: 4px;
+    margin: 12px 0;
+}
+.success {
+    background: #d4edda;
+    border-left: 4px solid #28a745;
+    padding: 12px 16px;
+    border-radius: 4px;
+    margin: 12px 0;
+}
+.block-header {
+    background: #1565c0;
+    color: #fff;
+    padding: 16px 20px;
+    border-radius: 6px;
+    margin: 32px 0 16px;
+    font-size: 1.15em;
+    font-weight: 600;
+}
+.block-header.block-2 { background: #2e7d32; }
+table {
+    width: 100%;
+    border-collapse: collapse;
+    background: #fff;
+    margin: 14px 0;
+    font-size: 13.5px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+}
+thead th {
+    background: #e9ecef;
+    padding: 9px 12px;
+    border: 1px solid #dee2e6;
+    text-align: left;
+    vertical-align: top;
+}
+tbody td {
+    padding: 8px 12px;
+    border: 1px solid #dee2e6;
+    vertical-align: top;
+}
+tbody tr:nth-child(even) { background: #f8f9fa; }
+code, pre {
+    font-family: Consolas, "Courier New", monospace;
+    font-size: 12.5px;
+}
+pre {
+    background: #263238;
+    color: #eceff1;
+    padding: 14px 16px;
+    border-radius: 4px;
+    overflow-x: auto;
+    line-height: 1.45;
+    margin: 12px 0;
+}
+.tag {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 3px;
+    font-size: 11px;
+    font-weight: 600;
+    margin-right: 4px;
+}
+.tag-read { background: #bbdefb; color: #0d47a1; }
+.tag-parse { background: #c8e6c9; color: #1b5e20; }
+.tag-sql { background: #ffe0b2; color: #e65100; }
+.tag-loop { background: #f8bbd0; color: #880e4f; }
+.mermaid-wrap {
+    background: #fff;
+    border: 1px solid #dee2e6;
+    border-radius: 4px;
+    padding: 16px;
+    margin: 16px 0;
+    overflow-x: auto;
+}
+ul.compact { margin: 8px 0; padding-left: 22px; }
+ul.compact li { margin: 5px 0; }
+.meta { color: #6c757d; font-size: 14px; }
+.footer {
+    margin-top: 48px;
+    padding-top: 16px;
+    border-top: 1px solid #dee2e6;
+    color: #6c757d;
+    font-size: 13px;
+}
+.step-num {
+    display: inline-block;
+    background: #1565c0;
+    color: #fff;
+    width: 26px;
+    height: 26px;
+    line-height: 26px;
+    text-align: center;
+    border-radius: 50%;
+    font-size: 13px;
+    font-weight: 700;
+    margin-right: 8px;
+}
+</style>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script>mermaid.initialize({ startOnLoad: true, theme: "neutral", securityLevel: "loose" });</script>
+</head>
+<body>
+<div class="container">
+
+<h1>IMDEV-9096: план оптимизации загрузки выписок</h1>
+<p class="meta">Версия: 1.0 | Дата: 25.06.2026 | База: Wim_Du | EPF: внЗагрузкаВыписокДУ</p>
+
+<div class="lead">
+    Два независимых блока работ по результатам замера отладчика (<code>замерОтладчика_было.docx</code>):<br>
+    <strong>Блок 1</strong> — кнопка <span class="tag tag-read">Прочитать</span>: устранить 3 повторяющихся SQL-запроса и 1 процедуру с тяжелым циклом в <code>ПрочитатьОбъекты</code>.<br>
+    <strong>Блок 2</strong> — кнопка <span class="tag tag-parse">Разобрать отмеченные</span>: ускорение за счет параллельной фоновой обработки групп (IMDEV-9096).
+</div>
+
+<div class="info">
+    <strong>Связанные документы:</strong><br>
+    <a href="statement_loading_optimization.html">statement_loading_optimization.html</a> — полный анализ и замеры<br>
+    <a href="mass_load_parallel_background_spec.html">mass_load_parallel_background_spec.html</a> — детальное ТЗ блока 2 (код, тесты)
+</div>
+
+<!-- ================================================================== -->
+<div class="block-header">Блок 1. Кнопка «Прочитать» — EPF ObjectModule</div>
+
+<div class="warn">
+    <strong>Базовая линия (замер):</strong> 1 день (24.06.2026), ~137 выписок, ~118 ЕРС-платежей.
+    <code>ПрочитатьОбъекты</code> — <strong>322,76 с (98,7%)</strong> от общего времени кнопки.
+    Три SQL дают ~71% чистого времени в детализации; цикл поиска по назначению — ~3 млн итераций.
+</div>
+
+<div class="mermaid-wrap">
+<pre class="mermaid">
+flowchart TB
+    A["ЗапросКСервисуНаСервере"] --> B["ПрочитатьОбъекты"]
+    B --> Q1["1.1 ДоговорДУПоСчету<br/>30,66%"]
+    B --> Q2["1.2 ЕРС ПоСчетуИСчетуДепо<br/>22,43%"]
+    B --> Q3["1.3 ЕРС ПоПлатежномуПоручению<br/>18,36%"]
+    B --> L["1.4 ЕРС ПоСчетуИНазначению<br/>цикл ~3M"]
+    Q1 --> C["ИдентифицироватьПлатежи"]
+    Q2 --> C
+    Q3 --> C
+    L --> C
+</pre>
+</div>
+
+<p><strong>Общий принцип блока 1:</strong> только EPF, без изменений CF. Перед циклом по выпискам/платежам —
+пакетная предзагрузка и кэши на уровне сеанса <code>ПрочитатьОбъекты</code>.</p>
+
+<!-- 1.1 -->
+<h3><span class="step-num">1</span> Запрос 1: <code>ДоговорДУПоСчету</code></h3>
+
+<table>
+<tbody>
+<tr><th style="width:160px">Функция</th><td><code>ДоговорДУПоСчету(НомерСчета)</code></td></tr>
+<tr><th>Строка SQL</th><td>1286 — <code>Результат = Запрос.Выполнить();</code></td></tr>
+<tr><th>Вызовы</th><td>стр. 2061 (на выписку), стр. 2202 (ERS fallback); всего <strong>255</strong> раз</td></tr>
+<tr><th>Замер</th><td><strong>100,26 с — 30,66%</strong></td></tr>
+<tr><th>Суть запроса</th><td>UNION: <code>АналитическиеСчета</code> + <code>БанковскиеСчета</code> по <code>НомерСчета</code>, сортировка <code>ДоговорДУ УБЫВ</code></td></tr>
+</tbody>
+</table>
+
+<h4>Проблема</h4>
+<p>Один и тот же тяжелый UNION выполняется для каждой выписки и повторно в ERS-fallback на тот же номер счета.</p>
+
+<h4>План доработки</h4>
+<ol class="compact">
+    <li>В начале <code>ПрочитатьОбъекты</code> собрать массив уникальных <code>НомерСчета</code> из ответа сервиса.</li>
+    <li>Один пакетный запрос: <code>ВЫБРАТЬ НомерСчета, ДоговорДУ ИЗ ... ГДЕ НомерСчета В (&amp;СписокСчетов)</code> (аналог текущей логики UNION).</li>
+    <li>Заполнить <code>КэшДоговоровПоСчету = Новый Соответствие</code> (ключ — нормализованный номер счета).</li>
+    <li><code>ДоговорДУПоСчету</code> — сначала lookup в кэше; SQL только при промахе (редкий счет вне отбора).</li>
+    <li>Сохранить текущее правило «более 1 договора — пустая ссылка».</li>
+</ol>
+
+<h4>Критерий приемки</h4>
+<div class="success">
+    Количество вызовов <code>Запрос.Выполнить</code> на стр. 1286 снижается с 255 до 1 (+ редкие промахи).
+    Повторный замер «Прочитать» 1 день: доля стр. 1286 &lt; 5%, экономия ~90 с.
+</div>
+
+<!-- 1.2 -->
+<h3><span class="step-num">2</span> Запрос 2: <code>ЕРС_ДоговорДУ_ПоСчетуИСчетуДепо</code></h3>
+
+<table>
+<tbody>
+<tr><th style="width:160px">Функция</th><td><code>ЕРС_ДоговорДУ_ПоСчетуИСчетуДепо(НомерСчета, НазначениеПлатежа)</code></td></tr>
+<tr><th>Строка SQL</th><td>1624 — <code>Результат = Запрос.Выполнить();</code></td></tr>
+<tr><th>Вызов</th><td>стр. 2173 в цепочке ERS; <strong>118</strong> раз (по числу ЕРС-платежей)</td></tr>
+<tr><th>Замер</th><td>SQL: <strong>73,33 с — 22,43%</strong>; вызов функции: <strong>119,83 с — 36,64%</strong> (с циклом по выборке)</td></tr>
+<tr><th>Суть запроса</th><td>JOIN <code>СчетаДепо</code> с подзапросом по АС/БанковскиеСчета для <code>&amp;НомерСчета</code></td></tr>
+</tbody>
+</table>
+
+<h4>Проблема</h4>
+<p>На каждый ЕРС-платеж — полный JOIN, хотя для одного <code>НомерСчета</code> результат запроса одинаков; различается только сопоставление с назначением платежа в цикле 1С.</p>
+
+<h4>План доработки</h4>
+<ol class="compact">
+    <li>Разделить функцию: <code>ПолучитьДанныеДепоПоСчету(НомерСчета)</code> (SQL) + <code>НайтиДоговорВДанныхДепо(Данные, НазначениеПлатежа)</code> (1С).</li>
+    <li>Кэш <code>Соответствие(НомерСчета -&gt; ТаблицаЗначений)</code> — SQL один раз на счет за проход <code>ПрочитатьОбъекты</code>.</li>
+    <li>Данные <code>ЕРС_ДоговорДУ_Отбор_ПоСчетуИНазначению</code> (уже есть на выписку) использовать для раннего выхода до вызова депо-эвристики.</li>
+    <li>Оставить существующую логику сопоставления в цикле (No.DU, ACC, KUP/PROC и т.д.) без изменения бизнес-правил.</li>
+</ol>
+
+<h4>Критерий приемки</h4>
+<div class="success">
+    Вызовов SQL на стр. 1624 — не более числа уникальных ЕРС-счетов (десятки, не сотни).
+    Доля <code>ЕРС_ПоСчетуИСчетуДепо</code> в замере &lt; 10%.
+</div>
+
+<!-- 1.3 -->
+<h3><span class="step-num">3</span> Запрос 3: <code>ЕРС_ДоговорДУ_ПоПлатежномуПоручению</code></h3>
+
+<table>
+<tbody>
+<tr><th style="width:160px">Функция</th><td><code>ЕРС_ДоговорДУ_ПоПлатежномуПоручению(БанковскийСчет, НазначениеПлатежа, Номер, Дата)</code></td></tr>
+<tr><th>Строка SQL</th><td>1725 — <code>Результат = Запрос.Выполнить();</code></td></tr>
+<tr><th>Вызов</th><td>стр. 2164; <strong>118</strong> раз</td></tr>
+<tr><th>Замер</th><td><strong>60,02 с — 18,36%</strong> (SQL) + цикл <code>Пока Выборка.Следующий</code> в 1С</td></tr>
+<tr><th>Суть запроса</th><td>Все <code>ПлатежноеПоручение</code> за период <strong>±5 дней</strong> по счету; номер ищется в коде</td></tr>
+</tbody>
+</table>
+
+<h4>Проблема</h4>
+<p>Широкая выборка ПП на каждый платеж; фильтр по номеру документа — в цикле 1С после выгрузки всех строк периода.</p>
+
+<h4>План доработки</h4>
+<ol class="compact">
+    <li>Кэш по ключу <code>(БанковскийСчет, НачалоДня(Дата))</code> — один SQL на пару счет+день выписки.</li>
+    <li>В SQL добавить условие по номеру (или по списку номеров платежей выписки, если пакетировать по выписке).</li>
+    <li>Заменить <code>НАЧАЛОПЕРИОДА(...) МЕЖДУ ... ±5 дней</code> на диапазон <code>Дата &gt;= &amp;Начало И Дата &lt;= &amp;Конец</code> (индекс по дате).</li>
+    <li>Сузить окно с ±5 до ±1 дня, если бизнес допускает (согласовать с аналитиком).</li>
+    <li>Поиск в 1С — по предзагруженной таблице в памяти, не повторный <code>Запрос.Выполнить</code>.</li>
+</ol>
+
+<h4>Критерий приемки</h4>
+<div class="success">
+    Вызовов SQL на стр. 1725 — по числу уникальных (счет, день), не по числу платежей.
+    Экономия ~50 с на сценарии 1 день / 118 платежей.
+</div>
+
+<!-- 1.4 -->
+<h3><span class="step-num">4</span> Процедура с циклом: <code>ЕРС_ДоговорДУ_ПоСчетуИНазначению</code></h3>
+
+<table>
+<tbody>
+<tr><th style="width:160px">Функция</th><td><code>ЕРС_ДоговорДУ_ПоСчетуИНазначению(Данные, НомерСчета, НазначениеПлатежа)</code></td></tr>
+<tr><th>Цикл</th><td>стр. 1355 — <code>Для Каждого Выборка Из Данные Цикл</code></td></tr>
+<tr><th>Тело цикла</th><td>стр. 1356, 1359 — <code>СтрНайти(ГдеИскать, "Ф" + Префикс + "ОТ"/"OT")</code></td></tr>
+<tr><th>Итерации</th><td><strong>~2 962 950</strong> на каждую ветку <code>СтрНайти</code></td></tr>
+<tr><th>Замер</th><td>~<strong>18,5 с (~5,7%)</strong> + нагрузка на CPU</td></tr>
+<tr><th>Контекст</th><td><code>Данные</code> — результат <code>ЕРС_ДоговорДУ_Отбор_ПоСчетуИНазначению</code> (1 SQL на ЕРС-выписку, ~25k договоров в таблице)</td></tr>
+</tbody>
+</table>
+
+<h4>Проблема</h4>
+<p>Алгоритм O(платежи x договоры_ЕРС): для каждого платежа перебираются все префиксы договоров счета с конкатенацией строк в <code>СтрНайти</code>.</p>
+
+<h4>План доработки</h4>
+<ol class="compact">
+    <li>Нормализовать <code>ГдеИскать</code> один раз (уже есть: ВРег, замена F/пробелов/дефисов).</li>
+    <li>При загрузке <code>Данные</code> (в <code>ЕРС_ДоговорДУ_Отбор_ПоСчетуИНазначению</code> или при первом обращении) построить
+        <code>Соответствие</code>: ключ <code>"Ф" + Префикс + "ОТ"</code> и <code>"Ф" + Префикс + "OT"</code> -&gt; <code>ДоговорДУ</code>.</li>
+    <li>Альтернатива: извлечь из <code>ГдеИскать</code> токен вида <code>Ф\d+ОТ</code> регексом/разбором и lookup за O(1).</li>
+    <li>Убрать цикл <code>Для Каждого Выборка</code> — заменить на 1-2 поиска по индексу.</li>
+    <li>Кэшировать индекс префиксов на уровне <code>НомерСчета</code> (данные <code>Данные</code> не меняются в рамках выписки).</li>
+</ol>
+
+<pre>
+// Было: O(N) на платеж
+Для Каждого Выборка Из Данные Цикл
+    Если СтрНайти(ГдеИскать, "Ф" + Выборка.Префикс + "ОТ") > 0 Тогда ...
+
+// Стало: O(1) lookup
+ИндексПрефиксов = ПолучитьИндексПрефиксовЕРС(Данные); // один раз на выписку
+ДоговорДУ = НайтиДоговорПоНазначениюЕРС(ГдеИскать, ИндексПрефиксов);
+</pre>
+
+<h4>Критерий приемки</h4>
+<div class="success">
+    Строки 1355-1359 не фигурируют в топ-20 замера (0 многомillionных итераций).
+    Время <code>ЕРС_ПоСчетуИНазначению</code> &lt; 1 с на весь сценарий.
+</div>
+
+<h4>Сводка блока 1</h4>
+<table>
+<thead>
+<tr>
+    <th>#</th>
+    <th>Объект</th>
+    <th>Тип</th>
+    <th>Было (замер)</th>
+    <th>Целевое</th>
+    <th>OPT-ID</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+    <td>1.1</td>
+    <td><code>ДоговорДУПоСчету</code></td>
+    <td><span class="tag tag-sql">SQL</span></td>
+    <td>255 x 30,66%</td>
+    <td>1 пакетный запрос + кэш</td>
+    <td>OPT-02</td>
+</tr>
+<tr>
+    <td>1.2</td>
+    <td><code>ЕРС_ПоСчетуИСчетуДепо</code></td>
+    <td><span class="tag tag-sql">SQL</span></td>
+    <td>118 x 22,43%</td>
+    <td>кэш по счету</td>
+    <td>OPT-17</td>
+</tr>
+<tr>
+    <td>1.3</td>
+    <td><code>ЕРС_ПоПлатежномуПоручению</code></td>
+    <td><span class="tag tag-sql">SQL</span></td>
+    <td>118 x 18,36%</td>
+    <td>кэш по (счет, день) + фильтр в SQL</td>
+    <td>OPT-05</td>
+</tr>
+<tr>
+    <td>1.4</td>
+    <td><code>ЕРС_ПоСчетуИНазначению</code></td>
+    <td><span class="tag tag-loop">цикл</span></td>
+    <td>~3M итераций</td>
+    <td>индекс префиксов O(1)</td>
+    <td>OPT-18</td>
+</tr>
+</tbody>
+</table>
+
+<div class="info">
+    <strong>Ожидаемый суммарный эффект блока 1:</strong> «Прочитать» 1 день с ~323 с до ~80-120 с
+    (оценка; подтвердить повторным замером). Изменения только в EPF <code>ObjectModule.bsl</code>.
+</div>
+
+<!-- ================================================================== -->
+<div class="block-header block-2">Блок 2. Кнопка «Разобрать отмеченные» — параллельность (IMDEV-9096)</div>
+
+<div class="warn">
+    <strong>Базовая линия (замер):</strong> 12 выписок за 09.06.2026, синхронный цикл ~<strong>383 с</strong>.
+    Узкие места внутри <code>КлиентБанк</code> (правила, проведение) остаются; блок 2 сокращает
+    <em>стеновое время ожидания пользователя</em> за счет параллельных фоновых групп.
+</div>
+
+<h3>Цель и подход</h3>
+<p>
+    Вместо последовательного цикла «1 выписка = 1 полный <code>КлиентБанк</code>» — сгруппировать отмеченные
+    выписки по <code>(БанковскийСчет, ДоговорДУ)</code> и обрабатывать до <code>N</code> групп параллельно
+    в фоновых заданиях БСП. Внутри группы — последовательно (сохранить <code>ПослеЗагрузкиВыписки</code>).
+</p>
+
+<div class="mermaid-wrap">
+<pre class="mermaid">
+flowchart TB
+    subgraph client["Клиент"]
+        B1["РазобратьОтмеченные"]
+        B2["ПоказатьЛогВыписки"]
+    end
+
+    subgraph server["Сервер формы"]
+        M1["МассоваяЗагрузкаНаСервере"]
+        M2["МассоваяЗагрузкаПуломГруппНаСервере(N)"]
+        M3["МассоваяЗагрузкаСинхронно (fallback)"]
+    end
+
+    subgraph pool["Пул до N фонов"]
+        F1["Группа 1: счет A + договор 1"]
+        F2["Группа 2: счет B + договор 2"]
+        F3["Группа ..."]
+    end
+
+    B1 --> M1
+    M1 -->|"фон доступен"| M2
+    M1 -->|"fallback"| M3
+    M2 --> F1
+    M2 --> F2
+    M2 --> F3
+    F1 --> R["ОбработатьЗавершеннуюГруппуВФоне"]
+    F2 --> R
+    F3 --> R
+    R --> M2
+    M2 --> B2
+    M3 --> B2
+</pre>
+</div>
+
+<h3>Ключевые решения</h3>
+<table>
+<thead>
+<tr><th>Тема</th><th>Решение</th></tr>
+</thead>
+<tbody>
+<tr>
+    <td>Единица параллелизма</td>
+    <td>Группа выписок с одинаковыми <code>(БанковскийСчет, ДоговорДУ)</code></td>
+</tr>
+<tr>
+    <td>Лимит</td>
+    <td>Не более <code>N</code> активных фонов (<code>МаксПараллельныхГрупп</code>, по умолчанию 3-5)</td>
+</tr>
+<tr>
+    <td>API фона</td>
+    <td><code>ДлительныеОперации.ВыполнитьПроцедуруМодуляОбъектаОбработки</code> -&gt; <code>ЗагрузитьГруппуВыписокВФоне</code></td>
+</tr>
+<tr>
+    <td>Передача данных</td>
+    <td>XML: <code>УпаковатьДанныеВXML</code> / <code>РаспаковатьДанныеИзXML</code> (пакет в фон, результат в хранилище)</td>
+</tr>
+<tr>
+    <td>Проверка завершения</td>
+    <td><code>ФоновыеЗадания.НайтиПоУникальномуИдентификатору</code> — <strong>запрещено</strong> <code>ДлительныеОперации.ЗаданиеВыполнено</code> (исключение при аварии)</td>
+</tr>
+<tr>
+    <td>Сообщения из фона</td>
+    <td><code>ДлительныеОперации.СообщенияПользователю</code> после каждой группы</td>
+</tr>
+<tr>
+    <td>Ошибка группы</td>
+    <td>Не прерывает очередь; текст в <code>ОбщийЛог</code> и <code>Сообщить</code></td>
+</tr>
+<tr>
+    <td>Fallback</td>
+    <td>Нет регистрации в <code>ДополнительныеОтчетыИОбработки</code> — синхронный режим без изменений UX</td>
+</tr>
+</tbody>
+</table>
+
+<h3>Этапы реализации</h3>
+<table>
+<thead>
+<tr><th>Этап</th><th>Где</th><th>Содержание</th></tr>
+</thead>
+<tbody>
+<tr>
+    <td>1</td>
+    <td>ObjectModule.bsl</td>
+    <td><code>УпаковатьДанныеВXML</code>, <code>ЗагрузитьГруппуВыписокВФоне</code>, <code>ЗапуститьГруппуВыписокВФоне</code>, <code>СформироватьИмпортРасчетныеСчета</code></td>
+</tr>
+<tr>
+    <td>2</td>
+    <td>Form/Module.bsl</td>
+    <td><code>СгруппироватьОтмеченныеВыпискиНаСервере</code>, <code>МассоваяЗагрузкаПуломГруппНаСервере</code></td>
+</tr>
+<tr>
+    <td>3</td>
+    <td>Form/Module.bsl</td>
+    <td>Оркестратор: <code>ПолучитьФоновоеЗаданиеПоИдентификатору</code>, <code>ОбработатьЗавершеннуюГруппуВФоне</code></td>
+</tr>
+<tr>
+    <td>4</td>
+    <td>Form/Module.bsl</td>
+    <td>Рефактор <code>МассоваяЗагрузкаНаСервере</code>: ветка фон / синхронный fallback</td>
+</tr>
+<tr>
+    <td>5</td>
+    <td>Form.xml</td>
+    <td>Реквизиты <code>МаксПараллельныхГрупп</code>, <code>ИспользоватьФоновуюМассовуюЗагрузку</code> (опционально)</td>
+</tr>
+<tr>
+    <td>6</td>
+    <td>Тестирование</td>
+    <td>T-01..T-09: группы, пул N, авария фона, сообщения, XML round-trip, fallback</td>
+</tr>
+</tbody>
+</table>
+
+<h3>Ожидаемый эффект блока 2</h3>
+<table>
+<thead>
+<tr><th>Сценарий</th><th>Было</th><th>Стало (оценка)</th></tr>
+</thead>
+<tbody>
+<tr>
+    <td>12 выписок / 12 групп, N=4</td>
+    <td>~383 с последовательно</td>
+    <td>~100-120 с стеновое время (3 «волны» по 4 группы)</td>
+</tr>
+<tr>
+    <td>50 выписок / ~20 групп, N=5</td>
+    <td>линейный рост</td>
+    <td>~4 «волны» вместо 50 последовательных циклов</td>
+</tr>
+</tbody>
+</table>
+
+<div class="success">
+    <strong>Детальное ТЗ с кодом (приложения B, C), структурами данных и тест-планом:</strong>
+    <a href="mass_load_parallel_background_spec.html">mass_load_parallel_background_spec.html</a>
+</div>
+
+<!-- ================================================================== -->
+<h2>Порядок выполнения работ</h2>
+
+<table>
+<thead>
+<tr><th>Очередь</th><th>Блок</th><th>Действие</th><th>Зависимости</th></tr>
+</thead>
+<tbody>
+<tr>
+    <td>1</td>
+    <td>1.1</td>
+    <td>Кэш <code>ДоговорДУПоСчету</code></td>
+    <td>—</td>
+</tr>
+<tr>
+    <td>2</td>
+    <td>1.4</td>
+    <td>Индекс префиксов <code>ЕРС_ПоСчетуИНазначению</code></td>
+    <td>—</td>
+</tr>
+<tr>
+    <td>3</td>
+    <td>1.2 + 1.3</td>
+    <td>Кэши SQL ЕРС (депо, ПП)</td>
+    <td>после 1.1 (общий паттерн кэшей)</td>
+</tr>
+<tr>
+    <td>4</td>
+    <td>—</td>
+    <td>Повторный замер «Прочитать»</td>
+    <td>блок 1 завершен</td>
+</tr>
+<tr>
+    <td>5</td>
+    <td>2</td>
+    <td>Фоновая параллельная загрузка (IMDEV-9096)</td>
+    <td>можно параллельно с блоком 1</td>
+</tr>
+<tr>
+    <td>6</td>
+    <td>—</td>
+    <td>Повторный замер «Разобрать отмеченные»</td>
+    <td>блок 2 завершен</td>
+</tr>
+</tbody>
+</table>
+
+<div class="footer">
+    Проект: IMDEV-9096 / Wim_Du<br>
+    Документ: optimization_plan.html<br>
+    Замеры: замерОтладчика_было.docx<br>
+    EPF: erf_Оптимизация/внЗагрузкаВыписокДУ_epf/
+</div>
+
+</div>
+</body>
+</html>

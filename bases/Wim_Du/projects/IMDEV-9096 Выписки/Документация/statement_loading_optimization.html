@@ -161,13 +161,261 @@ ul.compact li { margin: 4px 0; }
 
 <div class="info">
     <strong>Источники кода в репозитории:</strong><br>
-    EPF: <code>bases/Wim_Du/projects/IMDEV-8927/Обработки/внЗагрузкаВыписокДУ_epf/</code><br>
+    EPF: <code>bases/Wim_Du/projects/IMDEV-9096 Выписки/erf_Оптимизация/внЗагрузкаВыписокДУ_epf/</code><br>
     CF: <code>C:\1c\Cursor_1c\WORK\Wim_Du\SRC\CF\DataProcessors\КлиентБанк\</code>,
     <code>...\Catalogs\НаборыПравилРазбораБанковскойВыписки\</code>
 </div>
 
+<div class="warn">
+    <strong>Обновлено по замерам отладчика</strong> (<code>замерОтладчика_было.docx</code>, IMDEV-9096, 2026-06).
+    Теоретические оценки SQL-кратности (разделы 2.1, 3.1) дополнены фактическими % времени.
+    Приоритеты OPT-* пересмотрены: в EPF доминирует цепочка ЕРС; в КлиентБанк — правила <code>Выполн()</code> и проведение.
+</div>
+
 <!-- ============================================================ -->
-<h2>1. Общая схема процесса (2 контура)</h2>
+<h2>1. Замеры отладчика (базовая линия «было»)</h2>
+
+<p>Источник: <code>bases/Wim_Du/projects/IMDEV-9096 Выписки/замерОтладчика_было.docx</code>.
+Два сценария на тестовой базе Wim_Du.</p>
+
+<h3>1.1. Сценарий «Прочитать» — 1 день (24.06.2026)</h3>
+
+<figure style="margin:16px 0;">
+    <img src="profiler_images/image1.png" alt="Форма: кнопка Прочитать, 1 день" style="max-width:100%;border:1px solid #dee2e6;border-radius:4px;">
+    <figcaption style="color:#6c757d;font-size:13px;margin-top:6px;">Форма: режим Загрузка, ДУ, период 24.06.2026 — 1 день</figcaption>
+</figure>
+
+<table>
+<thead>
+<tr>
+    <th>Уровень</th>
+    <th>Строка</th>
+    <th>Код</th>
+    <th>Кол.</th>
+    <th>Время, с</th>
+    <th>%</th>
+</tr>
+</thead>
+<tbody>
+<tr style="background:#fff3cd;">
+    <td>Форма</td>
+    <td>566</td>
+    <td><code>ЗапросКСервисуНаСервере(Отказ)</code></td>
+    <td>1</td>
+    <td>326,74</td>
+    <td><strong>99,92</strong></td>
+</tr>
+<tr>
+    <td>Форма</td>
+    <td>583</td>
+    <td><code>ТекОбъект.ЗагрузитьДанные(...)</code></td>
+    <td>1</td>
+    <td>326,41</td>
+    <td>99,82</td>
+</tr>
+<tr style="background:#ffcdd2;">
+    <td>ObjectModule</td>
+    <td>1987</td>
+    <td><code>ПрочитатьОбъекты(Ответ)</code></td>
+    <td>1</td>
+    <td>322,76</td>
+    <td><strong>98,70</strong></td>
+</tr>
+</tbody>
+</table>
+
+<figure style="margin:16px 0;">
+    <img src="profiler_images/image2.png" alt="Топ замеров ПрочитатьОбъекты" style="max-width:100%;border:1px solid #dee2e6;border-radius:4px;">
+    <figcaption style="color:#6c757d;font-size:13px;margin-top:6px;">Детализация внутри <code>ПрочитатьОбъекты</code> (топ по % времени)</figcaption>
+</figure>
+
+<p><strong>Контекст сценария:</strong> ~137 выписок, ~118 ЕРС-платежей (по кратности вызовов).
+Web <code>GetStatementOfAccount</code> — 3,35 с (1,02%), не доминирует. Узкое место — разбор на сервере.</p>
+
+<table>
+<thead>
+<tr>
+    <th>Строка</th>
+    <th>Процедура / операция</th>
+    <th>Кол.</th>
+    <th>Время, с</th>
+    <th>%</th>
+    <th>Вывод</th>
+</tr>
+</thead>
+<tbody>
+<tr style="background:#ffcdd2;">
+    <td>2173</td>
+    <td><code>ЕРС_ДоговорДУ_ПоСчетуИСчетуДепо(...)</code></td>
+    <td>118</td>
+    <td>119,83</td>
+    <td><strong>36,64</strong></td>
+    <td>Главный узел EPF; тяжелый JOIN на каждый ЕРС-платеж</td>
+</tr>
+<tr style="background:#ffcdd2;">
+    <td>1286</td>
+    <td><code>ДоговорДУПоСчету</code> — <code>Запрос.Выполнить()</code></td>
+    <td>255</td>
+    <td>100,26</td>
+    <td><strong>30,66</strong></td>
+    <td>N+1: ~137 выписок + ~118 fallback</td>
+</tr>
+<tr style="background:#ffe0b2;">
+    <td>1624</td>
+    <td><code>ЕРС_ДоговорДУ_ПоСчетуИСчетуДепо</code> — SQL</td>
+    <td>118</td>
+    <td>73,33</td>
+    <td>22,43</td>
+    <td>Тот же JOIN изнутри функции</td>
+</tr>
+<tr style="background:#ffe0b2;">
+    <td>2164</td>
+    <td><code>ЕРС_ДоговорДУ_ПоПлатежномуПоручению(...)</code></td>
+    <td>118</td>
+    <td>60,06</td>
+    <td>18,37</td>
+    <td>Широкий запрос ПП ±5 дней + цикл 1С</td>
+</tr>
+<tr style="background:#ffe0b2;">
+    <td>1725</td>
+    <td><code>ЕРС_ДоговорДУ_ПоПлатежномуПоручению</code> — SQL</td>
+    <td>118</td>
+    <td>60,02</td>
+    <td>18,36</td>
+    <td>Дублирует строку выше (вызов + запрос)</td>
+</tr>
+<tr>
+    <td>2202</td>
+    <td><code>ДоговорДУПоСчету(ПлательщикСчет)</code> — ERS fallback</td>
+    <td>118</td>
+    <td>59,02</td>
+    <td>18,05</td>
+    <td>Повторный SQL после неудачной цепочки</td>
+</tr>
+<tr>
+    <td>2061</td>
+    <td><code>ДоговорДУПоСчету(НомерСчета)</code> — на выписку</td>
+    <td>137</td>
+    <td>41,32</td>
+    <td>12,64</td>
+    <td>SQL на каждую выписку</td>
+</tr>
+<tr>
+    <td>2140</td>
+    <td><code>ЕРС_ДоговорДУ_ПоСчетуИНазначению(...)</code></td>
+    <td>119</td>
+    <td>31,97</td>
+    <td>9,78</td>
+    <td>In-memory, но дорогой цикл</td>
+</tr>
+<tr>
+    <td>1356–1359</td>
+    <td><code>СтрНайти</code> в цикле <code>Для Каждого Выборка Из Данные</code></td>
+    <td>~3 000 000</td>
+    <td>~18,5</td>
+    <td>~5,7</td>
+    <td>Алгоритм O(платежи x договоры_ЕРС)</td>
+</tr>
+<tr>
+    <td>1661</td>
+    <td><code>ВНазначенииПлатежаЕстьНомерАккаунта</code></td>
+    <td>1 016 579</td>
+    <td>25,31</td>
+    <td>7,74</td>
+    <td>Миллионы итераций по ключевым словам</td>
+</tr>
+</tbody>
+</table>
+
+<figure style="margin:16px 0;">
+    <img src="profiler_images/image3.png" alt="Детализация SQL и циклов ЕРС" style="max-width:100%;border:1px solid #dee2e6;border-radius:4px;">
+    <figcaption style="color:#6c757d;font-size:13px;margin-top:6px;">Три SQL (стр. 1286, 1624, 1725) дают ~71% чистого времени в детализации ObjectModule</figcaption>
+</figure>
+
+<div class="danger">
+    <strong>Коррекция теоретического плана:</strong> <code>БанкXDTO</code> и <code>ИдентифицироватьПлатежи</code>
+    <em>не попали в топ-10</em> замера «Прочитать» за 1 день. Для ЕРС-сценария приоритет — цепочка
+    <code>ЕРС_ДоговорДУ_*</code> и кэш <code>ДоговорДУПоСчету</code>, а не банки по БИК.
+</div>
+
+<h3>1.2. Сценарий «Разобрать отмеченные» — 1 день (09.06.2026)</h3>
+
+<figure style="margin:16px 0;">
+    <img src="profiler_images/image4.png" alt="Форма: 12 отмеченных выписок" style="max-width:100%;border:1px solid #dee2e6;border-radius:4px;">
+    <figcaption style="color:#6c757d;font-size:13px;margin-top:6px;">12 выписок за 09.06.2026, кнопка «Разобрать отмеченные»</figcaption>
+</figure>
+
+<p><strong>Оценка полного времени сценария:</strong> ~383 с (по доле топ-строки 87 с / 22,73%).</p>
+
+<table>
+<thead>
+<tr>
+    <th>Модуль</th>
+    <th>Строка</th>
+    <th>Код</th>
+    <th>Кол.</th>
+    <th>Время, с</th>
+    <th>%</th>
+</tr>
+</thead>
+<tbody>
+<tr style="background:#ffcdd2;">
+    <td>КлиентБанк</td>
+    <td>1985</td>
+    <td><code>Выполнить(СтрокаДерева.Правило.Выполнение)</code></td>
+    <td>1 105</td>
+    <td>87,04</td>
+    <td><strong>22,73</strong></td>
+</tr>
+<tr style="background:#ffcdd2;">
+    <td>КлиентБанк</td>
+    <td>2922</td>
+    <td><code>Записать(РежимЗаписиДокумента.Проведение)</code></td>
+    <td>303</td>
+    <td>76,87</td>
+    <td><strong>20,09</strong></td>
+</tr>
+<tr style="background:#ffe0b2;">
+    <td>КлиентБанк</td>
+    <td>2071</td>
+    <td><code>ЗапросПоискаДокумента.Выполнить()</code></td>
+    <td>314</td>
+    <td>46,99</td>
+    <td>12,27</td>
+</tr>
+<tr>
+    <td>КлиентБанк</td>
+    <td>2901</td>
+    <td><code>Записать(РежимЗаписиДокумента.Запись)</code></td>
+    <td>298</td>
+    <td>22,61</td>
+    <td>5,91</td>
+</tr>
+<tr>
+    <td>EPF Форма</td>
+    <td>636</td>
+    <td><code>МассоваяЗагрузкаНаСервере(ОбщийЛог)</code></td>
+    <td>1</td>
+    <td>~18</td>
+    <td>4,73</td>
+</tr>
+</tbody>
+</table>
+
+<figure style="margin:16px 0;">
+    <img src="profiler_images/image5.png" alt="Топ замеров КлиентБанк" style="max-width:100%;border:1px solid #dee2e6;border-radius:4px;">
+    <figcaption style="color:#6c757d;font-size:13px;margin-top:6px;">КлиентБанк: правила + проведение + поиск документа — 55% суммарно</figcaption>
+</figure>
+
+<div class="danger">
+    <strong>Коррекция теоретического плана:</strong> «5 SQL на строку» в <code>РаспознатьДанныеВСтрокеДокумента</code>
+    не доминирует в замере. На первом месте — <code>Выполн()</code> правил разбора (OPT-12),
+    затем проведение (OPT-08), затем один запрос поиска документа (OPT-04/10).
+    <strong>Нужен доп. замер</strong> в разрезе <code>СтрокаДерева.Правило</code> и <code>СтрокаДокумента.ВидДокумента</code>.
+</div>
+
+<!-- ============================================================ -->
+<h2>2. Общая схема процесса (2 контура)</h2>
 
 <div class="mermaid-wrap">
 <pre class="mermaid">
@@ -212,7 +460,7 @@ flowchart TB
 </div>
 
 <!-- ============================================================ -->
-<h2>2. Дерево вызовов — контур EPF (РазборВыписок)</h2>
+<h2>3. Дерево вызовов — контур EPF (РазборВыписок)</h2>
 
 <div class="tree">ЗапросКСервисуНаСервере()                          [Form/Module.bsl ~579]
 └── ЗагрузитьДанные()                               [ObjectModule.bsl ~1756]
@@ -246,46 +494,72 @@ flowchart TB
                 ├── Выписки.НайтиСтроки()           [~2234]  O(n)
                 └── ПлатежныеДокументы.НайтиСтроки() [~2245]  O(n)</div>
 
-<h3>2.1. Оценка кратности SQL (EPF, типовой сценарий)</h3>
+<h3>3.1. Факт vs теория (EPF, замер «Прочитать» 1 день)</h3>
 <table>
 <thead>
 <tr>
     <th>Операция</th>
-    <th>Множитель</th>
-    <th>Пример: 50 выписок, 300 платежей, 30% ЕРС</th>
+    <th>Теор. кратность</th>
+    <th>Факт: вызовы</th>
+    <th>Факт: % времени</th>
+    <th>Приоритет</th>
 </tr>
 </thead>
 <tbody>
-<tr>
-    <td><code>БанковскийСчетXDTO</code></td>
-    <td>x выписки</td>
-    <td>~50 SQL</td>
+<tr style="background:#ffcdd2;">
+    <td><code>ЕРС_ДоговорДУ_ПоСчетуИСчетуДепо</code></td>
+    <td>x ЕРС-платежи</td>
+    <td>118</td>
+    <td><strong>36,64%</strong></td>
+    <td><span class="tag tag-p0">P0</span></td>
+</tr>
+<tr style="background:#ffcdd2;">
+    <td><code>ДоговорДУПоСчету</code> (стр. 1286)</td>
+    <td>x выписки + fallback</td>
+    <td>255</td>
+    <td><strong>30,66%</strong></td>
+    <td><span class="tag tag-p0">P0</span></td>
+</tr>
+<tr style="background:#ffe0b2;">
+    <td><code>ЕРС_ДоговорДУ_ПоПлатежномуПоручению</code></td>
+    <td>x ЕРС-платежи</td>
+    <td>118</td>
+    <td>18,37%</td>
+    <td><span class="tag tag-p0">P0</span></td>
 </tr>
 <tr>
-    <td><code>ДоговорДУПоСчету</code></td>
-    <td>x выписки + x ЕРС-платежи (fallback)</td>
-    <td>~50 + ~27 = ~77 SQL</td>
+    <td><code>ЕРС_ДоговорДУ_ПоСчетуИНазначению</code> (цикл)</td>
+    <td>x платежи x договоры</td>
+    <td>~3M итераций</td>
+    <td>~5,7%</td>
+    <td><span class="tag tag-p1">P1</span></td>
+</tr>
+<tr>
+    <td><code>ВНазначенииПлатежаЕстьНомерАккаунта</code></td>
+    <td>x платежи x слова</td>
+    <td>~1M</td>
+    <td>7,74%</td>
+    <td><span class="tag tag-p1">P1</span></td>
 </tr>
 <tr>
     <td><code>БанкXDTO</code></td>
     <td>x2 x платежи</td>
-    <td>~600 SQL</td>
-</tr>
-<tr>
-    <td>ERS-цепочка (среднее 3 SQL на неидентиф. платеж)</td>
-    <td>x ЕРС-платежи</td>
-    <td>~270 SQL</td>
+    <td>не в топ-10</td>
+    <td>&lt; 5%</td>
+    <td><span class="tag tag-p1">P1</span> (снижен)</td>
 </tr>
 <tr>
     <td><code>ИдентифицироватьПлатежи</code></td>
-    <td>1 тяжелый пакетный запрос</td>
-    <td>1 SQL (но дорогой)</td>
+    <td>1 пакетный SQL</td>
+    <td>не в топ-10</td>
+    <td>&lt; 5%</td>
+    <td><span class="tag tag-p2">P2</span> (снижен)</td>
 </tr>
 </tbody>
 </table>
 
 <!-- ============================================================ -->
-<h2>3. Дерево вызовов — контур КлиентБанк (загрузка в БД)</h2>
+<h2>4. Дерево вызовов — контур КлиентБанк (загрузка в БД)</h2>
 
 <div class="tree">МассоваяЗагрузкаНаСервере()                      [Form/Module.bsl ~644]
 └── [на каждую выписку с флагом Загружать]
@@ -327,53 +601,135 @@ flowchart TB
 <div class="mermaid-wrap">
 <pre class="mermaid">
 flowchart LR
-    subgraph perPay["На 1 платеж в КлиентБанк"]
-        R1["РаспознатьДанныеВСтрокеДокумента<br/>~5 SQL"]
-        R2["Правила ПриРазбореСтроки<br/>Выполн() x N"]
-        R3["Правила Перед/При/После<br/>Выполн() x 3N"]
-        R4["ЗаписатьОбъект<br/>1-3 транзакции"]
+    subgraph perPay["На 1 платеж в КлиентБанк (замер)"]
+        R2["Правила Выполн()<br/>22,73%"]
+        R4["Записать Проведение<br/>20,09%"]
+        R1["ЗапросПоискаДокумента<br/>12,27%"]
+        R3["Прочие SQL + Запись<br/>&lt; 10%"]
     end
-    R1 --> R2 --> R3 --> R4
+    R2 --> R4 --> R1 --> R3
 </pre>
 </div>
 
-<h3>3.1. Оценка кратности (КлиентБанк, 300 платежей)</h3>
+<h3>4.1. Факт vs теория (КлиентБанк, замер «Разобрать» 12 выписок)</h3>
 <table>
 <thead>
 <tr>
     <th>Этап</th>
-    <th>SQL / операции</th>
-    <th>Оценка</th>
+    <th>Теор. оценка</th>
+    <th>Факт: вызовы</th>
+    <th>Факт: % времени</th>
+    <th>Приоритет</th>
 </tr>
 </thead>
 <tbody>
+<tr style="background:#ffcdd2;">
+    <td><code>Выполнить(Правило.Выполнение)</code></td>
+    <td>x правила x строки</td>
+    <td>1 105</td>
+    <td><strong>22,73%</strong></td>
+    <td><span class="tag tag-p0">P0</span> OPT-12</td>
+</tr>
+<tr style="background:#ffcdd2;">
+    <td><code>Записать(Проведение)</code></td>
+    <td>1 x документ</td>
+    <td>303</td>
+    <td><strong>20,09%</strong></td>
+    <td><span class="tag tag-p0">P0</span> OPT-08</td>
+</tr>
+<tr style="background:#ffe0b2;">
+    <td><code>ЗапросПоискаДокумента</code></td>
+    <td>~1 SQL x строка</td>
+    <td>314</td>
+    <td>12,27%</td>
+    <td><span class="tag tag-p1">P1</span> OPT-04/10</td>
+</tr>
 <tr>
-    <td><code>РаспознатьДанныеВСтрокеДокумента</code></td>
+    <td><code>Записать(Запись)</code></td>
+    <td>1 x документ</td>
+    <td>298</td>
+    <td>5,91%</td>
+    <td><span class="tag tag-p1">P1</span> OPT-08</td>
+</tr>
+<tr>
+    <td>Прочие SQL <code>РаспознатьДанные...</code></td>
     <td>~5 SQL x строка</td>
-    <td>~1500 SQL</td>
+    <td>не в топ-5</td>
+    <td>&lt; 10%</td>
+    <td><span class="tag tag-p1">P1</span> (после замера по видам)</td>
 </tr>
 <tr>
-    <td><code>ВыполнитьПравилаПоДеревуПравил</code></td>
-    <td>зависит от правил ВТБ</td>
-    <td>+N..10N запросов</td>
-</tr>
-<tr>
-    <td><code>ЗаписатьОбъект</code></td>
-    <td>1-3 записи x документ</td>
-    <td>300-900 записей БД</td>
-</tr>
-<tr>
-    <td>Запрос «документы на удаление»</td>
-    <td>1 UNION x выписка</td>
-    <td>50 SQL (50 выписок)</td>
+    <td><code>МассоваяЗагрузкаНаСервере</code> (архитектура)</td>
+    <td>1 выписка = 1 цикл</td>
+    <td>12 выписок</td>
+    <td>—</td>
+    <td><span class="tag tag-p1">P1</span> OPT-13 / IMDEV-9096</td>
 </tr>
 </tbody>
 </table>
 
 <!-- ============================================================ -->
-<h2>4. Детальный перечень мест оптимизации</h2>
+<h2>5. Детальный перечень мест оптимизации</h2>
 
-<h3><span class="tag tag-p0">P0</span> Критичные (максимальный эффект)</h3>
+<h3><span class="tag tag-p0">P0</span> Критичные (по замерам отладчика)</h3>
+
+<table>
+<thead>
+<tr>
+    <th>ID</th>
+    <th>Место</th>
+    <th>Файл / процедура</th>
+    <th>Замер</th>
+    <th>Рекомендация</th>
+</tr>
+</thead>
+<tbody>
+<tr style="background:#fff8e1;">
+    <td>OPT-17</td>
+    <td><span class="tag tag-sql">SQL</span> <span class="tag tag-epf">EPF</span></td>
+    <td class="path"><code>ЕРС_ДоговорДУ_ПоСчетуИСчетуДепо</code> ~1582, вызов ~2173</td>
+    <td><strong>36,64%</strong>, 118 вызовов, SQL стр. 1624 — 22,43%</td>
+    <td>Кэш JOIN по <code>(НомерСчета, КодСчетаДепо)</code> на сеанс. Использовать результат <code>ЕРС_ДоговорДУ_Отбор_ПоСчетуИНазначению</code>. Ранний выход в цепочке ЕРС до этой эвристики.</td>
+</tr>
+<tr style="background:#fff8e1;">
+    <td>OPT-02</td>
+    <td><span class="tag tag-n1">N+1</span> <span class="tag tag-epf">EPF</span></td>
+    <td class="path"><code>ДоговорДУПоСчету</code> ~1252, стр. 1286</td>
+    <td><strong>30,66%</strong>, 255 SQL (137 выписк + 118 fallback)</td>
+    <td>Кэш <code>Соответствие(НомерСчета -&gt; ДоговорДУ)</code>. Пакетная предзагрузка всех счетов отбора одним запросом.</td>
+</tr>
+<tr style="background:#fff8e1;">
+    <td>OPT-05</td>
+    <td><span class="tag tag-sql">SQL</span> <span class="tag tag-epf">EPF</span></td>
+    <td class="path"><code>ЕРС_ДоговорДУ_ПоПлатежномуПоручению</code> ~1697, стр. 1725</td>
+    <td><strong>18,37%</strong>, 118 вызовов</td>
+    <td>Сузить период, фильтр по номеру в SQL. Кэш ПП по <code>(Счет, Дата, Номер)</code>.</td>
+</tr>
+<tr style="background:#fff8e1;">
+    <td>OPT-03</td>
+    <td><span class="tag tag-sql">SQL chain</span> <span class="tag tag-epf">EPF</span></td>
+    <td class="path">блок ERS в <code>ПрочитатьОбъекты</code> ~2140-2202</td>
+    <td>цепочка ~60-120 с на 118 платежей</td>
+    <td>Строгий ранний выход после первого найденного договора. Не вызывать fallback <code>ДоговорДУПоСчету</code> если уже есть результат отбора ЕРС.</td>
+</tr>
+<tr style="background:#fff8e1;">
+    <td>OPT-12</td>
+    <td><span class="tag tag-cf">CF</span></td>
+    <td class="path"><code>ВыполнитьПравилаПоДеревуПравил</code> ~1985</td>
+    <td><strong>22,73%</strong>, 1 105 вызовов <code>Выполн()</code></td>
+    <td><strong>Сначала</strong> замер в разрезе <code>СтрокаДерева.Правило</code>. Аудит «Набор правил ВТБ». Вынести тяжелые правила в код. Кэш дерева на <code>(Счет, Событие)</code>.</td>
+</tr>
+<tr style="background:#fff8e1;">
+    <td>OPT-08</td>
+    <td><span class="tag tag-cf">CF</span></td>
+    <td class="path"><code>ЗаписатьОбъект</code> ~2871, проведение стр. 2922</td>
+    <td><strong>20,09%</strong> проведение + 5,91% запись</td>
+    <td>Пропуск перепроведения если данные не изменились. Минимизировать <code>ОтменаПроведения</code> + <code>Запись</code> + <code>Проведение</code>.</td>
+</tr>
+</tbody>
+</table>
+
+<h3><span class="tag tag-p0">P0</span> Бывшие критичные (теория; снижены по замеру)</h3>
 
 <table>
 <thead>
@@ -389,37 +745,16 @@ flowchart LR
 <tr>
     <td>OPT-01</td>
     <td><span class="tag tag-n1">N+1</span> <span class="tag tag-epf">EPF</span></td>
-    <td class="path">ObjectModule.bsl<br><code>БанкXDTO()</code> ~1204<br>вызывается из <code>ПрочитатьОбъекты</code> ~1927-1930</td>
-    <td>Отдельный SQL к <code>Справочник.Банки</code> на каждый БИК плательщика и получателя. При отсутствии банка — создание элемента.</td>
-    <td>Кэш <code>Соответствие(БИК -&gt; Ссылка)</code> до цикла по платежам. Пакетный запрос всех уникальных БИК одним SQL.</td>
-</tr>
-<tr>
-    <td>OPT-02</td>
-    <td><span class="tag tag-n1">N+1</span> <span class="tag tag-epf">EPF</span></td>
-    <td class="path">ObjectModule.bsl<br><code>БанковскийСчетXDTO()</code> ~1177<br><code>ДоговорДУПоСчету()</code> ~1252</td>
-    <td>SQL на каждую выписку; <code>ДоговорДУПоСчету</code> повторно вызывается в ERS-fallback (~2015).</td>
-    <td>Кэш по <code>НомерСчета</code>. Один раз загрузить соответствия счет-&gt;договор для всех счетов отбора.</td>
-</tr>
-<tr>
-    <td>OPT-03</td>
-    <td><span class="tag tag-sql">SQL chain</span> <span class="tag tag-epf">EPF</span></td>
-    <td class="path">ObjectModule.bsl<br>блок ERS в <code>ПрочитатьОбъекты</code> ~1949-2026</td>
-    <td>До 12 последовательных эвристик на платеж; многие с отдельным SQL (<code>ЕРС_...РС1</code>, <code>...РС2</code>, <code>...ПоПлатежномуПоручению</code>, <code>...ПоСчетуИСчетуДепо</code> и др.).</td>
-    <td>Ранний выход после первого найденного договора (частично есть). Пакетная предзагрузка ПП/поступлений/списаний на дату выписки. Кэш <code>ВРег(НазначениеПлатежа)</code> в переменной цикла.</td>
+    <td class="path">ObjectModule.bsl<br><code>БанкXDTO()</code> ~1204</td>
+    <td>Теоретически ~600 SQL; в замере «Прочитать» не в топ-10</td>
+    <td>Кэш БИК — делать после P0 ERS, актуально для не-ЕРС сценариев</td>
 </tr>
 <tr>
     <td>OPT-04</td>
     <td><span class="tag tag-n1">N+1</span> <span class="tag tag-cf">CF</span></td>
-    <td class="path">КлиентБанк/ManagerModule.bsl<br><code>РаспознатьДанныеВСтрокеДокумента</code> ~2014</td>
-    <td>Минимум 5 SQL на строку: документ, контрагент, счет контрагента, 2x аналитический счет.</td>
-    <td>Перед циклом <code>РазобратьДанныеИмпорта</code>: один запрос контрагентов по списку ИНН, один — банковских счетов, один — АС по номерам счетов и договору. В цикле — только lookup в <code>Соответствие</code>.</td>
-</tr>
-<tr>
-    <td>OPT-05</td>
-    <td><span class="tag tag-sql">SQL</span> <span class="tag tag-epf">EPF</span></td>
-    <td class="path">ObjectModule.bsl<br><code>ЕРС_ДоговорДУ_ПоПлатежномуПоручению</code> ~1697</td>
-    <td>Выборка всех ПП за ±5 дней по счету; фильтрация по номеру в коде 1С (<code>Пока Выборка.Следующий</code>).</td>
-    <td>Добавить в SQL условие по номеру/фрагменту назначения. Сузить период. Индекс: дата + счет.</td>
+    <td class="path"><code>РаспознатьДанныеВСтрокеДокумента</code> ~2014</td>
+    <td>Теоретически 5+ SQL; в замере доминирует только поиск документа (12,27%)</td>
+    <td>Пакетный кэш контрагентов/счетов. Доп. замер по <code>ВидДокумента</code></td>
 </tr>
 </tbody>
 </table>
@@ -437,54 +772,61 @@ flowchart LR
 </tr>
 </thead>
 <tbody>
+<tr style="background:#fff3cd;">
+    <td>OPT-18</td>
+    <td>алгоритм <span class="tag tag-epf">EPF</span></td>
+    <td class="path"><code>ЕРС_ДоговорДУ_ПоСчетуИНазначению</code> ~1347, стр. 1355-1359</td>
+    <td>~3M итераций <code>СтрНайти</code>, ~5,7% + нагрузка на CPU</td>
+    <td>Индекс префиксов <code>Соответствие("Ф"+Префикс+"ОТ" -&gt; ДоговорДУ)</code>. Один проход по <code>ГдеИскать</code> вместо цикла по всем договорам.</td>
+</tr>
+<tr style="background:#fff3cd;">
+    <td>OPT-19</td>
+    <td>замер <span class="tag tag-cf">CF</span></td>
+    <td class="path"><code>Выполнить(Правило.Выполнение)</code> ~1985</td>
+    <td>22,73% суммарно, но неизвестно какое правило</td>
+    <td>Добавить замер в разрезе <code>СтрокаДерева.Правило</code> и <code>ВидДокумента</code> перед правкой правил.</td>
+</tr>
+<tr>
+    <td>OPT-10</td>
+    <td><span class="tag tag-cf">CF</span></td>
+    <td class="path"><code>РаспознатьДанныеВСтрокеДокумента</code> ~2071</td>
+    <td><code>ЗапросПоискаДокумента</code> — 12,27%, 314 вызовов</td>
+    <td>Два статических запроса (Списание/Поступление). Пакетный поиск документов по списку ключей до цикла.</td>
+</tr>
+<tr>
+    <td>OPT-13</td>
+    <td><span class="tag tag-epf">EPF</span></td>
+    <td class="path"><code>МассоваяЗагрузкаНаСервере</code> ~636</td>
+    <td>12 выписок = 12 полных циклов КлиентБанк; деревья правил заново</td>
+    <td>Группировка по <code>(БанковскийСчет, ДоговорДУ)</code> + фон (IMDEV-9096). Один <code>Разобрать</code>+<code>Загрузить</code> на группу.</td>
+</tr>
 <tr>
     <td>OPT-06</td>
     <td><span class="tag tag-sql">SQL</span> <span class="tag tag-epf">EPF</span></td>
-    <td class="path"><code>ИдентифицироватьПлатежи</code> ~2063<br>JOIN ~2148-2172</td>
-    <td><code>НАЧАЛОПЕРИОДА(...)</code> в условии JOIN — плохо для индексов. <code>ПОЛНОЕ СОЕДИНЕНИЕ</code> с OR и <code>ПОДОБНО</code>.</td>
-    <td>Заменить на диапазон дат (<code>ДатаВходящегоДокумента &gt;= &amp;Начало</code> и <code>&lt;= &amp;Конец</code>). Упростить JOIN-условия.</td>
+    <td class="path"><code>ИдентифицироватьПлатежи</code> ~2063</td>
+    <td>Не в топ-10 замера «Прочитать»</td>
+    <td>Упростить JOIN; актуально для сценариев с большим числом уже загруженных документов</td>
 </tr>
 <tr>
     <td>OPT-07</td>
     <td>O(n^2) <span class="tag tag-epf">EPF</span></td>
-    <td class="path"><code>ИдентифицироватьПлатежи</code> ~2231-2246<br><code>ЕРС_...РС2</code> ~1545</td>
-    <td><code>НайтиСтроки</code> в циклах по результату запроса / по всей ТЧ платежей.</td>
-    <td>Индекс <code>Соответствие(КлючДокумента -&gt; Строка)</code>, <code>Соответствие(КлючВыписки -&gt; Строка)</code>.</td>
-</tr>
-<tr>
-    <td>OPT-08</td>
-    <td><span class="tag tag-cf">CF</span></td>
-    <td class="path"><code>ЗаписатьОбъект</code> ~2871</td>
-    <td>Для проведенного документа: отмена проведения + запись + проведение (3 транзакции, пересчет движений).</td>
-    <td>Пропуск если данные не изменились (<code>Модифицированность</code> + сравнение ключевых полей). Объединить запись и проведение где возможно.</td>
+    <td class="path"><code>ИдентифицироватьПлатежи</code> ~2231</td>
+    <td>Не в топ-10 замера</td>
+    <td><code>Соответствие</code> вместо <code>НайтиСтроки</code></td>
 </tr>
 <tr>
     <td>OPT-09</td>
     <td><span class="tag tag-cf">CF</span></td>
     <td class="path"><code>РазобратьДанныеИмпорта</code> ~1403</td>
-    <td><code>ДокументыДляИмпорта.Выгрузить().Колонки</code> — полное копирование таблицы ради метаданных колонок.</td>
-    <td>Фиксированный список проверяемых полей или получение колонок без выгрузки строк.</td>
-</tr>
-<tr>
-    <td>OPT-10</td>
-    <td><span class="tag tag-cf">CF</span></td>
-    <td class="path"><code>РаспознатьДанныеВСтрокеДокумента</code> ~2052</td>
-    <td>Динамическая конкатенация <code>"Документ." + ВидДокумента</code> — два разных текста запроса, нет переиспользования плана.</td>
-    <td>Два статических запроса (Списание / Поступление) с параметром типа.</td>
+    <td><code>Выгрузить().Колонки</code> — лишнее копирование</td>
+    <td>Фиксированный список полей</td>
 </tr>
 <tr>
     <td>OPT-11</td>
     <td><span class="tag tag-cf">CF</span></td>
-    <td class="path"><code>Загрузить</code> ~2771-2814</td>
-    <td>После загрузки — UNION-запрос всех документов за период; вызывается на каждую выписку в массовой загрузке.</td>
-    <td>Объединить проверку «лишних» документов для пакета выписок одного счета/дня.</td>
-</tr>
-<tr>
-    <td>OPT-12</td>
-    <td><span class="tag tag-cf">CF</span></td>
-    <td class="path"><code>ВыполнитьПравилаПоДеревуПравил</code> ~1960<br>+ <code>Справочник.ПравилаРазбора</code></td>
-    <td>Исполнение произвольного BSL через <code>Выполн()</code> на каждую строку и 3 раза при загрузке документа. Содержимое «Набор правил ВТБ» может содержать свои запросы.</td>
-    <td>Аудит правил в справочнике. Вынести типовые операции из <code>Выполн()</code> в код. Кэшировать деревья правил на уровне счета (не пересобирать на каждую выписку).</td>
+    <td class="path"><code>Загрузить</code> ~2771</td>
+    <td>UNION на удаление x выписка</td>
+    <td>Один запрос на группу выписок</td>
 </tr>
 </tbody>
 </table>
@@ -502,13 +844,6 @@ flowchart LR
 </tr>
 </thead>
 <tbody>
-<tr>
-    <td>OPT-13</td>
-    <td><span class="tag tag-epf">EPF</span></td>
-    <td class="path"><code>МассоваяЗагрузкаНаСервере</code> ~644</td>
-    <td>На каждую выписку — новый объект <code>КлиентБанк</code>, полный цикл разбор+загрузка. Деревья правил загружаются заново для одного счета.</td>
-    <td>Группировка выписок по <code>(БанковскийСчет, ДоговорДУ)</code>. Один вызов <code>Разобрать</code>+<code>Загрузить</code> на группу.</td>
-</tr>
 <tr>
     <td>OPT-14</td>
     <td><span class="tag tag-epf">EPF</span></td>
@@ -531,17 +866,17 @@ flowchart LR
     <td>Кэш дерева на сеанс по ключу <code>(БанковскийСчет, ИмяРеквизита)</code>.</td>
 </tr>
 <tr>
-    <td>OPT-17</td>
+    <td>OPT-20</td>
     <td><span class="tag tag-epf">EPF</span></td>
-    <td class="path"><code>ЕРС_ДоговорДУ_ПоСчетуИСчетуДепо</code> ~1582</td>
-    <td>Тяжелый JOIN <code>АналитическиеСчета</code> + <code>СчетаДепо</code> на каждый неидентифицированный платеж.</td>
-    <td>Результат <code>ЕРС_ДоговорДУ_Отбор_ПоСчетуИНазначению</code> уже содержит договоры по счету — использовать для фильтрации без повторного JOIN.</td>
+    <td class="path"><code>ВНазначенииПлатежаЕстьНомерАккаунта</code> ~1571</td>
+    <td>1M+ вызовов, 7,74% в замере «Прочитать»</td>
+    <td>Нормализовать <code>НазначениеПлатежа</code> один раз; <code>Соответствие</code> ключевых слов; ранний выход</td>
 </tr>
 </tbody>
 </table>
 
 <!-- ============================================================ -->
-<h2>5. Дерево правил разбора (конфигурация)</h2>
+<h2>6. Дерево правил разбора (конфигурация)</h2>
 
 <div class="mermaid-wrap">
 <pre class="mermaid">
@@ -578,21 +913,40 @@ flowchart TB
 </div>
 
 <!-- ============================================================ -->
-<h2>6. Рекомендуемый порядок работ</h2>
+<h2>7. Рекомендуемый порядок работ (скорректирован по замерам)</h2>
 
 <div class="success">
 <ol>
-    <li><strong>Замеры</strong> — разделить <code>РазборВыписок</code> (EPF) и <code>КлиентБанк.Загрузить</code> (уже заложено в IMDEV-8927: ключи <code>ДУ.ЗагрузкаВыписок.РазборВыписок.*</code>).</li>
-    <li><strong>OPT-04</strong> — пакетный кэш в <code>РаспознатьДанныеВСтрокеДокумента</code> (максимальный эффект при загрузке в БД).</li>
-    <li><strong>OPT-01, OPT-02, OPT-03</strong> — кэши и ERS в <code>ПрочитатьОбъекты</code>.</li>
-    <li><strong>OPT-06, OPT-07</strong> — переписать <code>ИдентифицироватьПлатежи</code>.</li>
-    <li><strong>OPT-08, OPT-12</strong> — <code>ЗаписатьОбъект</code> + аудит правил.</li>
-    <li><strong>OPT-13</strong> — группировка массовой загрузки.</li>
+    <li><strong>Замеры (выполнено)</strong> — базовая линия в разделе 1 (<code>замерОтладчика_было.docx</code>).</li>
+    <li><strong>OPT-19</strong> — детальный замер правил по <code>СтрокаДерева.Правило</code> и запроса документов по <code>ВидДокумента</code> (перед правкой CF).</li>
+    <li><strong>Контур «Прочитать» (EPF, ~323 с):</strong>
+        <ul class="compact">
+            <li>OPT-17 + OPT-02 + OPT-05 — кэши и SQL ЕРС/ДоговорДУ (~85% времени ПрочитатьОбъекты)</li>
+            <li>OPT-03 + OPT-18 + OPT-20 — цепочка ЕРС и in-memory циклы</li>
+            <li>OPT-01 — кэш БИК (для не-ЕРС сценариев)</li>
+        </ul>
+    </li>
+    <li><strong>Контур «Разобрать» (КлиентБанк, ~383 с на 12 выписок):</strong>
+        <ul class="compact">
+            <li>OPT-12 — аудит и оптимизация правил (22,73%)</li>
+            <li>OPT-08 — сокращение перепроведения (26% на запись+проведение)</li>
+            <li>OPT-10 + OPT-04 — поиск документа и пакетные кэши (12,27%+)</li>
+            <li>OPT-13 / IMDEV-9096 — группировка и фоновый пул</li>
+        </ul>
+    </li>
+    <li><strong>OPT-06, OPT-07</strong> — по результатам замеров на сценариях с повторной загрузкой.</li>
 </ol>
 </div>
 
+<div class="info">
+    <strong>Ожидаемый эффект (оценка):</strong> кэш <code>ДоговорДУПоСчету</code> + отключение лишних вызовов
+    <code>ЕРС_ПоСчетуИСчетуДепо</code> могут сократить «Прочитать» с ~323 с до ~100-150 с.
+    Оптимизация топ-3 в КлиентБанк — с ~383 с до ~200-250 с на аналогичном пакете.
+    Точные цифры — только после повторного замера.
+</div>
+
 <!-- ============================================================ -->
-<h2>7. Справочник процедур с номерами строк (EPF dump)</h2>
+<h2>8. Справочник процедур с номерами строк (EPF dump)</h2>
 
 <table>
 <thead>
@@ -611,9 +965,12 @@ flowchart TB
 <tr><td><code>ЕРС_ДоговорДУ_ПоСчетуИПоступлениюНаРС1</code></td><td>1370</td><td>SQL x платеж</td></tr>
 <tr><td><code>ЕРС_ДоговорДУ_ПоСчетуИПоступлениюСписаниюРС2</code></td><td>1416</td><td>SQL + O(n)</td></tr>
 <tr><td><code>ЕРС_ДоговорДУ_ПоПлатежномуПоручению</code></td><td>1697</td><td>широкий SQL + цикл 1С</td></tr>
-<tr><td><code>ЕРС_ДоговорДУ_ПоСчетуИСчетуДепо</code></td><td>1582</td><td>тяжелый JOIN</td></tr>
-<tr><td><code>ИдентифицироватьПлатежи</code></td><td>2063</td><td>тяжелый SQL + O(n^2)</td></tr>
-<tr><td><code>МассоваяЗагрузкаНаСервере</code></td><td>644 (Form)</td><td>нет пакетирования</td></tr>
+<tr><td><code>ЕРС_ДоговорДУ_ПоСчетуИСчетуДепо</code></td><td>1582 / 2173</td><td><strong>P0: 36,64%</strong> замера</td></tr>
+<tr><td><code>ДоговорДУПоСчету</code></td><td>1252 / 1286</td><td><strong>P0: 30,66%</strong> замера</td></tr>
+<tr><td><code>ЕРС_ДоговорДУ_ПоПлатежномуПоручению</code></td><td>1697 / 1725</td><td><strong>P0: 18,37%</strong> замера</td></tr>
+<tr><td><code>ЕРС_ДоговорДУ_ПоСчетуИНазначению</code></td><td>1347</td><td>P1: ~3M итераций</td></tr>
+<tr><td><code>ИдентифицироватьПлатежи</code></td><td>2063</td><td>P2: не в топ замера</td></tr>
+<tr><td><code>МассоваяЗагрузкаНаСервере</code></td><td>636 (Form)</td><td>P1: группировка / фон</td></tr>
 </tbody>
 </table>
 
@@ -627,21 +984,20 @@ flowchart TB
 </thead>
 <tbody>
 <tr><td><code>РазобратьДанныеИмпорта</code></td><td>1399</td><td>корневая HOT-точка KB</td></tr>
-<tr><td><code>РаспознатьДанныеВСтрокеДокумента</code></td><td>2014</td><td>5+ SQL x строка</td></tr>
-<tr><td><code>РеквизитыАСПоНомеруСчета</code></td><td>2449</td><td>SQL x2 x строка</td></tr>
-<tr><td><code>ВыполнитьПравилаПоДеревуПравил</code></td><td>1960</td><td>Выполн() x правила</td></tr>
-<tr><td><code>Загрузить</code></td><td>2663</td><td>3x правила + запись</td></tr>
-<tr><td><code>ЗаписатьОбъект</code></td><td>2871</td><td>до 3 транзакций</td></tr>
+<tr><td><code>ВыполнитьПравилаПоДеревуПравил</code></td><td>1985</td><td><strong>P0: 22,73%</strong> Выполн()</td></tr>
+<tr><td><code>ЗаписатьОбъект / Проведение</code></td><td>2871 / 2922</td><td><strong>P0: 26%</strong> запись+проведение</td></tr>
+<tr><td><code>РаспознатьДанныеВСтрокеДокумента</code></td><td>2014 / 2071</td><td>P1: поиск документа 12,27%</td></tr>
 <tr><td><code>ПослеЗагрузкиВыписки</code></td><td>2819</td><td>правила после пакета</td></tr>
 <tr><td><code>ПолучитьДеревоПравил</code></td><td>Catalog ~11</td><td>рекурсивный SQL</td></tr>
 </tbody>
 </table>
 
 <div class="footer">
-    Проект: <strong>IMDEV-Выписки</strong> / Wim_Du<br>
+    Проект: <strong>IMDEV-9096 Выписки</strong> / Wim_Du<br>
     Документ: statement_loading_optimization.html<br>
-    Дата: 2026-06-20<br>
-    Связанные задачи: IMDEV-8927 (замеры), IMDEV-8471 (автоматизация РДУ)
+    Источник замеров: замерОтладчика_было.docx<br>
+    Дата: 2026-06-25<br>
+    Связанные задачи: IMDEV-8927 (замеры в коде), IMDEV-9096 (фоновая загрузка), IMDEV-8471 (автоматизация РДУ)
 </div>
 
 </div>
