@@ -18,6 +18,17 @@
 Исходники CF: `C:\1c\Cursor_1c\WORK\Wim_Du\SRC\CF\`  
 Замеры: `bases/Wim_Du/projects/IMDEV-9096 Выписки/замерОтладчика_было.docx`
 
+## Сборка EPF
+
+- **База сборки (без авторизации):** `Srvr="localhost";Ref="WIM_Du"`
+- **Не путать с WIM_MO** — это другая конфигурация.
+- Скрипт: `Скрипты/build_epf_zagruzka_vypisok.ps1`
+- Результат Test1: `erf_Оптимизация_Тест1/внЗагрузкаВыписокДУ.epf`
+
+```powershell
+powershell.exe -NoProfile -File "bases/Wim_Du/projects/IMDEV-9096 Выписки/Скрипты/build_epf_zagruzka_vypisok.ps1"
+```
+
 ## Статус реализации (Test1)
 
 | ID | Статус | Описание |
