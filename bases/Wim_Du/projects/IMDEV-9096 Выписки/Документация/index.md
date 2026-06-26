@@ -3,7 +3,8 @@
 | Файл | Описание |
 |------|----------|
 | [optimization_plan.html](optimization_plan.html) | **План работ:** блок 1 (Прочитать: 3 SQL + 1 цикл) + блок 2 (Разобрать: параллельность) |
-| [statement_loading_optimization.html](statement_loading_optimization.html) | Полный анализ и замеры отладчика, статус OPT-* (раздел 0), регрессия MXL (раздел 0.1), приоритеты |
+| [optimization_read_results.html](optimization_read_results.html) | **Результаты оптимизации «Прочитать»:** замеры было/стало (617→237 с) + регресс MXL 1106 |
+| [statement_loading_optimization.html](statement_loading_optimization.html) | Полный анализ и замеры отладчика, статус OPT-* (раздел 0), регрессия MXL (раздел 0.1) |
 | [mass_load_parallel_background_spec.html](mass_load_parallel_background_spec.html) | ТЗ: фоновая массовая загрузка «Разобрать отмеченные» (группы по счёту/договору, пул N), приложение с кодом |
 
 ## Контекст
@@ -26,6 +27,6 @@
 | OPT-05 | Выполнено | Кэш `ЕРС_ДоговорДУ_ПоПлатежномуПоручению` (`ПолучитьПлатежныеПорученияОкна`) |
 | OPT-18 | Выполнено | Индекс префиксов для `ЕРС_ДоговорДУ_ПоСчетуИНазначению` |
 
-**Регрессия Запрос1 (MXL):** 629/629 строк, 0 расхождений по мультимножеству; 7 позиционных diff — перестановка в блоке ЕРС RUR (после OPT-02). См. [statement_loading_optimization.html](statement_loading_optimization.html#regress-zapros1).
+**Регрессия MXL:** Запрос1 — 629/629 (7 позиционных diff, перестановка ЕРС); 1106 — 387/387, 0 diff. См. [optimization_read_results.html](optimization_read_results.html).
 
-**Следующий шаг:** повторный замер «Прочитать» 1 день после OPT-02 + OPT-17 + OPT-05 + OPT-18.
+**Замер «Прочитать» (Test1, v5.90):** 617 с → 237 с (~2.6x). Источник: `ОптимизацияЧтения_БылоСталоРегресс.docx`.
