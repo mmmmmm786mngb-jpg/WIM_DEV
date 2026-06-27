@@ -6,7 +6,8 @@
 | [optimization_plan.html](optimization_plan.html) | **План работ:** блок 1 (Прочитать: 3 SQL + 1 цикл) + блок 2 (Разобрать: параллельность) |
 | [optimization_read_results.html](optimization_read_results.html) | **Результаты оптимизации «Прочитать»:** замеры было/стало (617→237 с) + регресс MXL 1106 |
 | [statement_loading_optimization.html](statement_loading_optimization.html) | Полный анализ и замеры отладчика, статус OPT-* (раздел 0), регрессия MXL (раздел 0.1) |
-| [mass_load_parallel_background_spec.html](mass_load_parallel_background_spec.html) | ТЗ: фоновая массовая загрузка «Разобрать отмеченные» (группы по счёту/договору, пул N), приложение с кодом |
+| [mass_load_parallel_background_spec_v2.html](mass_load_parallel_background_spec_v2.html) | **ТЗ v2.0 (актуальное):** фоновая параллельная загрузка «Разобрать отмеченные» — сверено с кодом+API, упрощено через `ОперацияВыполнена`, КлиентБанк на выписку, примеры кода |
+| [mass_load_parallel_background_spec.html](mass_load_parallel_background_spec.html) | ТЗ 1.0 (исходное): фоновая массовая загрузка (группы по счёту/договору, пул N) |
 
 ## Контекст
 
