@@ -2,6 +2,7 @@
 
 | Файл | Описание |
 |------|----------|
+| [imdev-9096_optimization_regression_report.html](imdev-9096_optimization_regression_report.html) | **Итоговый отчет регрессии (01-05.06):** оригинал vs ispr5, OPT-02/05/17/18, скорость 8.9x, MXL/ПП/лог |
 | [optimization_plan.html](optimization_plan.html) | **План работ:** блок 1 (Прочитать: 3 SQL + 1 цикл) + блок 2 (Разобрать: параллельность) |
 | [optimization_read_results.html](optimization_read_results.html) | **Результаты оптимизации «Прочитать»:** замеры было/стало (617→237 с) + регресс MXL 1106 |
 | [statement_loading_optimization.html](statement_loading_optimization.html) | Полный анализ и замеры отладчика, статус OPT-* (раздел 0), регрессия MXL (раздел 0.1) |

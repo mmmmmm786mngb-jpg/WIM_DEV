@@ -1,0 +1,502 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IMDEV-9096 - Отчет об оптимизации загрузки выписок</title>
+    <style>
+        :root {
+            --success: #28a745;
+            --error: #dc3545;
+            --info: #17a2b8;
+            --warning: #ffc107;
+            --primary: #0056b3;
+            --bg: #f8f9fa;
+            --border: #dee2e6;
+            --text: #212529;
+            --muted: #6c757d;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: var(--text);
+            background: var(--bg);
+            padding: 24px;
+        }
+        .container { max-width: 1100px; margin: 0 auto; }
+        header {
+            background: linear-gradient(135deg, #0056b3 0%, #004085 100%);
+            color: #fff;
+            padding: 32px 40px;
+            border-radius: 12px;
+            margin-bottom: 24px;
+        }
+        header h1 { font-size: 1.8rem; margin-bottom: 8px; }
+        header .subtitle { opacity: 0.9; font-size: 1rem; }
+        header .meta { margin-top: 16px; font-size: 0.9rem; opacity: 0.85; }
+        section {
+            background: #fff;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 28px 32px;
+            margin-bottom: 20px;
+        }
+        h2 {
+            color: var(--primary);
+            font-size: 1.35rem;
+            margin-bottom: 16px;
+            padding-bottom: 8px;
+            border-bottom: 2px solid #e9ecef;
+        }
+        h3 { font-size: 1.05rem; margin: 18px 0 10px; color: #343a40; }
+        p { margin-bottom: 12px; }
+        ul, ol { margin: 0 0 14px 24px; }
+        li { margin-bottom: 6px; }
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+            margin: 20px 0;
+        }
+        .stat-card {
+            background: #f8f9fa;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 18px;
+            text-align: center;
+        }
+        .stat-card .value { font-size: 1.8rem; font-weight: 700; color: var(--primary); }
+        .stat-card .label { font-size: 0.85rem; color: var(--muted); margin-top: 4px; }
+        .stat-card.success .value { color: var(--success); }
+        .stat-card.speed .value { color: #e67e22; }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 16px 0;
+            font-size: 0.92rem;
+        }
+        th, td {
+            border: 1px solid var(--border);
+            padding: 10px 14px;
+            text-align: left;
+        }
+        th { background: #e9ecef; font-weight: 600; }
+        tr:nth-child(even) { background: #f8f9fa; }
+        .ok { color: var(--success); font-weight: 600; }
+        .fail { color: var(--error); font-weight: 600; }
+        .warn { color: #856404; font-weight: 600; }
+        pre {
+            background: #2d2d2d;
+            color: #f8f8f2;
+            padding: 16px;
+            border-radius: 6px;
+            overflow-x: auto;
+            font-size: 0.85rem;
+            line-height: 1.5;
+            margin: 12px 0;
+        }
+        .block-info {
+            background: #d1ecf1;
+            border-left: 4px solid var(--info);
+            padding: 14px 18px;
+            border-radius: 0 6px 6px 0;
+            margin: 14px 0;
+        }
+        .block-success {
+            background: #d4edda;
+            border-left: 4px solid var(--success);
+            padding: 14px 18px;
+            border-radius: 0 6px 6px 0;
+            margin: 14px 0;
+        }
+        .block-warning {
+            background: #fff3cd;
+            border-left: 4px solid var(--warning);
+            padding: 14px 18px;
+            border-radius: 0 6px 6px 0;
+            margin: 14px 0;
+        }
+        .speed-bar-wrap { margin: 20px 0; }
+        .speed-bar {
+            display: flex;
+            align-items: center;
+            margin: 10px 0;
+            gap: 12px;
+        }
+        .speed-bar .name { width: 140px; font-size: 0.88rem; font-weight: 600; }
+        .speed-bar .bar-bg {
+            flex: 1;
+            height: 28px;
+            background: #e9ecef;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        .speed-bar .bar-fill {
+            height: 100%;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            padding-left: 10px;
+            color: #fff;
+            font-size: 0.82rem;
+            font-weight: 600;
+        }
+        .bar-original { background: #dc3545; width: 100%; }
+        .bar-optimized { background: #28a745; width: 11.2%; min-width: 80px; }
+        .opt-card {
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 16px 20px;
+            margin: 12px 0;
+            background: #fafbfc;
+        }
+        .opt-card h4 {
+            color: var(--primary);
+            margin-bottom: 8px;
+            font-size: 1rem;
+        }
+        .opt-card .tag {
+            display: inline-block;
+            background: #0056b3;
+            color: #fff;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 0.78rem;
+            margin-right: 6px;
+        }
+        footer {
+            text-align: center;
+            color: var(--muted);
+            font-size: 0.85rem;
+            padding: 20px;
+        }
+        code {
+            background: #e9ecef;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 0.88rem;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+
+<header>
+    <h1>IMDEV-9096: Оптимизация загрузки выписок ДУ</h1>
+    <div class="subtitle">Отчет о проделанной работе: сравнение оригинальной и оптимизированной обработки</div>
+    <div class="meta">
+        Обработка: внЗагрузкаВыписокДУ &nbsp;|&nbsp;
+        База: Wim_Du &nbsp;|&nbsp;
+        Период регрессии: 01.06.2026 - 05.06.2026 &nbsp;|&nbsp;
+        Дата отчета: 27.06.2026
+    </div>
+</header>
+
+<section id="intro">
+    <h2>1. Введение</h2>
+    <p>
+        В рамках задачи <strong>IMDEV-9096</strong> выполнена оптимизация внешней обработки
+        <code>внЗагрузкаВыписокДУ</code> (загрузка банковских выписок для доверительного управления).
+        Исходная версия при обработке периода 01-05 июня 2026 выполнялась около <strong>23 минут</strong>.
+        Оптимизированная версия (v5.90, ispr5) обрабатывает тот же период за <strong>2,6 минуты</strong>
+        при полном сохранении бизнес-данных.
+    </p>
+    <p>В данном отчете сравниваются только две версии:</p>
+    <ul>
+        <li><strong>Оригинал</strong> - <code>erf_Оптимизация/внЗагрузкаВыписокДУ</code> (версия до доработок)</li>
+        <li><strong>Оптимизированная (ispr5)</strong> - <code>erf_Оптимизация_Тест1/внЗагрузкаВыписокДУ</code> (версия 5.90)</li>
+    </ul>
+</section>
+
+<section id="goals">
+    <h2>2. Цели сравнения</h2>
+    <table>
+        <thead>
+            <tr><th>#</th><th>Цель</th><th>Критерий успеха</th><th>Результат</th></tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>1</td>
+                <td>Сохранение бизнес-данных выписок</td>
+                <td>MXL-экспорт: 0 расхождений по (Дата, Счет, Договор, Банк, Балансы)</td>
+                <td class="ok">OK - 2287/2287 строк, MD5 идентичен</td>
+            </tr>
+            <tr>
+                <td>2</td>
+                <td>Сохранение платежных документов</td>
+                <td>PP-экспорт: 0 расхождений по ключевым полям (Дата, Номер, Сумма, Счета, Назначение)</td>
+                <td class="ok">OK - 487/487 платежей, core_diff = 0</td>
+            </tr>
+            <tr>
+                <td>3</td>
+                <td>Сохранение предупреждений</td>
+                <td>Тот же набор счетов с ошибкой "не определен ДоговорДУ", без лишних</td>
+                <td class="ok">OK - 32 счета, 114 сообщений (идентично оригиналу)</td>
+            </tr>
+            <tr>
+                <td>4</td>
+                <td>Ускорение обработки</td>
+                <td>Значительное снижение времени на том же периоде</td>
+                <td class="ok">OK - ускорение в 8,9 раза (1389,7 сек -> 156,3 сек)</td>
+            </tr>
+            <tr>
+                <td>5</td>
+                <td>Прочие предупреждения (БИК)</td>
+                <td>Без изменений</td>
+                <td class="ok">OK - 71 сообщение БИК 040702788 (в обеих версиях)</td>
+            </tr>
+        </tbody>
+    </table>
+</section>
+
+<section id="optimizations">
+    <h2>3. Виды оптимизации (версия 5.90)</h2>
+    <p>В оптимизированной версии реализованы 4 блока оптимизации, не изменяющие бизнес-логику:</p>
+
+    <div class="opt-card">
+        <h4><span class="tag">OPT-02</span> Пакетный кэш ДоговорДУ по счетам</h4>
+        <p><strong>Было:</strong> для каждого счета в цикле - отдельный SQL-запрос (<code>ДоговорДУПоСчету</code>), ~255 вызовов на период.</p>
+        <p><strong>Стало:</strong> один пакетный SQL перед циклом (<code>ЗаполнитьКэшДоговоровДУПоСчетам</code>), результат в <code>Соответствие</code>, lookup без повторных запросов.</p>
+        <p><strong>Эффект:</strong> ~255 SQL -> 1 SQL на определение договоров.</p>
+    </div>
+
+    <div class="opt-card">
+        <h4><span class="tag">OPT-05</span> Кэш платежных поручений по окну дат</h4>
+        <p><strong>Было:</strong> повторные запросы ПП для каждого платежа в окне [-5; +1] день.</p>
+        <p><strong>Стало:</strong> ленивый кэш <code>КэшПП</code> с ключом (счет + день), один запрос на уникальную пару.</p>
+        <p><strong>Эффект:</strong> исключение повторных запросов ПП в рамках одного дня/счета.</p>
+    </div>
+
+    <div class="opt-card">
+        <h4><span class="tag">OPT-17</span> Ленивый кэш данных депо</h4>
+        <p><strong>Было:</strong> SQL-запрос данных депо при каждом вызове <code>ЕРС_ДоговорДУ_ПоСчетуИСчетуДепо</code>.</p>
+        <p><strong>Стало:</strong> ленивый кэш <code>КэшДепоПоСчету</code>, один запрос на уникальный счет.</p>
+        <p><strong>Эффект:</strong> исключение повторных запросов депо для одного счета.</p>
+    </div>
+
+    <div class="opt-card">
+        <h4><span class="tag">OPT-18</span> Кэш карт префиксов ЕРС</h4>
+        <p><strong>Было:</strong> SQL + построение карты префиксов при каждом вызове <code>ЕРС_ДоговорДУ_ПоСчетуИНазначению</code>.</p>
+        <p><strong>Стало:</strong> кэш <code>КэшКартПрефиксов</code>, одна карта на счет, поиск без SQL.</p>
+        <p><strong>Эффект:</strong> исключение повторных запросов и построения карт для одного счета.</p>
+    </div>
+
+    <div class="block-info">
+        <strong>Дополнительно (ispr5):</strong> исправлена семантика предупреждений "не определен ДоговорДУ".
+        Введено множество <code>СчетаБезДоговораДУ</code> - предупреждение только при 0 строках в БД
+        (как <code>Результат.Пустой()</code> в оригинале), а не при любом пустом договоре в кэше.
+    </div>
+</section>
+
+<section id="speed">
+    <h2>4. Разница в скорости (период 01-05.06.2026)</h2>
+
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="value">1389,7 сек</div>
+            <div class="label">Оригинал (~23 мин 10 сек)</div>
+        </div>
+        <div class="stat-card success">
+            <div class="value">156,3 сек</div>
+            <div class="label">Оптимизированная (~2 мин 36 сек)</div>
+        </div>
+        <div class="stat-card speed">
+            <div class="value">8,9x</div>
+            <div class="label">Ускорение</div>
+        </div>
+        <div class="stat-card speed">
+            <div class="value">-88,7%</div>
+            <div class="label">Экономия времени</div>
+        </div>
+    </div>
+
+    <div class="speed-bar-wrap">
+        <div class="speed-bar">
+            <div class="name">Оригинал</div>
+            <div class="bar-bg"><div class="bar-fill bar-original">1389,7 сек</div></div>
+        </div>
+        <div class="speed-bar">
+            <div class="name">Оптимиз.</div>
+            <div class="bar-bg"><div class="bar-fill bar-optimized">156,3 сек</div></div>
+        </div>
+    </div>
+
+    <p>Источник данных: поле <code>Продолжительность</code> в логах ошибок:</p>
+    <ul>
+        <li>Оригинал: <code>Ошибки_новые_0106_0506_после доработок41_оригинал.txt</code></li>
+        <li>Оптимиз.: <code>Ошибки_новые_0106_0506_после доработок5.txt</code></li>
+    </ul>
+</section>
+
+<section id="regression">
+    <h2>5. Регрессия: оригинал vs оптимизированная (ispr5)</h2>
+
+    <h3>5.1. MXL выписок (Запрос 1)</h3>
+    <table>
+        <thead>
+            <tr><th>Параметр</th><th>Оригинал</th><th>Оптимиз. (ispr5)</th><th>Вердикт</th></tr>
+        </thead>
+        <tbody>
+            <tr><td>Файл</td><td>0106__0506___стало.mxl</td><td>0106__0506___стало_после_испр5.mxl</td><td>-</td></tr>
+            <tr><td>Строк</td><td>2287</td><td>2287</td><td class="ok">OK</td></tr>
+            <tr><td>MD5</td><td colspan="2" style="text-align:center">7348271b07bd455ba07c20395d7c6c69 (идентичны)</td><td class="ok">OK</td></tr>
+            <tr><td>Business multiset diff</td><td>-</td><td>0</td><td class="ok">OK</td></tr>
+            <tr><td>Balance multiset diff</td><td>-</td><td>0</td><td class="ok">OK</td></tr>
+        </tbody>
+    </table>
+
+    <h3>5.2. Платежные поручения (ПП)</h3>
+    <table>
+        <thead>
+            <tr><th>Параметр</th><th>Оригинал ПП</th><th>Оптимиз. ПП (ispr5)</th><th>Вердикт</th></tr>
+        </thead>
+        <tbody>
+            <tr><td>Файл</td><td>0106__0506__ПП_Оригинал4.mxl</td><td>0106__0506__ПП_стало_после_испр5.mxl</td><td>-</td></tr>
+            <tr><td>Строк ПП</td><td>487</td><td>487</td><td class="ok">OK</td></tr>
+            <tr><td>Core fields diff</td><td colspan="2" style="text-align:center">Дата, Номер, Сумма, Счета, Назначение - 0 расхождений</td><td class="ok">OK</td></tr>
+            <tr><td>Bytes (MD5)</td><td colspan="2" style="text-align:center">Различаются (новые UUID документов при повторном прогоне)</td><td class="warn">Не критично</td></tr>
+        </tbody>
+    </table>
+    <div class="block-warning">
+        Различие побайтового содержимого ПП связано с перегенерацией UUID ссылок на документы при повторном запуске.
+        Ключевые платежные поля (дата, номер, сумма, счета, назначение) полностью совпадают.
+    </div>
+
+    <h3>5.3. Лог предупреждений</h3>
+    <table>
+        <thead>
+            <tr><th>Тип сообщения</th><th>Оригинал</th><th>Оптимиз. (ispr5)</th><th>Вердикт</th></tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>"не определен ДоговорДУ" (всего)</td>
+                <td>114</td><td>114</td><td class="ok">OK</td>
+            </tr>
+            <tr>
+                <td>Уникальных счетов с ошибкой</td>
+                <td>32</td><td>32</td><td class="ok">OK</td>
+            </tr>
+            <tr>
+                <td>Набор счетов</td>
+                <td colspan="2" style="text-align:center">Полностью идентичен (0 лишних, 0 пропущенных)</td>
+                <td class="ok">OK</td>
+            </tr>
+            <tr>
+                <td>БИК 040702788</td>
+                <td>71</td><td>71</td><td class="ok">OK</td>
+            </tr>
+            <tr>
+                <td>Время обработки</td>
+                <td>1389,7 сек</td><td>156,3 сек</td><td class="ok">Ускорено</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <h3>5.4. Топ счетов с предупреждением "не определен ДоговорДУ"</h3>
+    <table>
+        <thead>
+            <tr><th>Счет</th><th>Кол-во в оригинале</th><th>Кол-во в оптимиз.</th><th>Статус</th></tr>
+        </thead>
+        <tbody>
+            <tr><td>40911810890970008120</td><td>83</td><td>83</td><td class="ok">OK</td></tr>
+            <tr><td>40701810200030000365</td><td>1</td><td>1</td><td class="ok">OK</td></tr>
+            <tr><td>40701810703801000130</td><td>1</td><td>1</td><td class="ok">OK</td></tr>
+            <tr><td>40701810003805000001</td><td>1</td><td>1</td><td class="ok">OK</td></tr>
+            <tr><td>47416810700000000007</td><td>1</td><td>1</td><td class="ok">OK</td></tr>
+            <tr><td colspan="4" style="text-align:center; color:#6c757d">... еще 27 счетов по 1 сообщению каждый - все идентичны ...</td></tr>
+        </tbody>
+    </table>
+</section>
+
+<section id="warning-fix">
+    <h2>6. Исправление лишних предупреждений (ispr5)</h2>
+    <p>
+        В промежуточной версии (ispr4) в логе появились 5 дополнительных счетов (76 лишних сообщений),
+        которых не было в оригинале. Причина: при использовании кэша предупреждение выводилось при любом
+        пустом договоре, а в оригинале - только при <code>Результат.Пустой()</code> (0 строк в БД).
+    </p>
+
+    <table>
+        <thead>
+            <tr><th>Счет (лишний в ispr4)</th><th>Сообщений</th><th>Причина в ispr4</th><th>Статус в ispr5</th></tr>
+        </thead>
+        <tbody>
+            <tr><td>40701810600030000279</td><td>59</td><td>Неоднозначность (&gt;1 договор), не 0 строк</td><td class="ok">Устранено</td></tr>
+            <tr><td>30302156100800000001</td><td>5</td><td>Запись есть, договор пустой/неоднозначен</td><td class="ok">Устранено</td></tr>
+            <tr><td>30601810100012100828</td><td>5</td><td>Запись есть, договор пустой/неоднозначен</td><td class="ok">Устранено</td></tr>
+            <tr><td>40701810000030000413</td><td>5</td><td>Запись есть, договор пустой/неоднозначен</td><td class="ok">Устранено</td></tr>
+            <tr><td>40701810600001001410</td><td>2</td><td>Запись есть, договор пустой/неоднозначен</td><td class="ok">Устранено</td></tr>
+        </tbody>
+    </table>
+
+    <div class="block-success">
+        Решение: множество <code>СчетаБезДоговораДУ</code> заполняется при предзагрузке кэша
+        (только для счетов с 0 строк). В блоке ЕРС предупреждение выводится только если счет в этом множестве.
+        Семантика полностью соответствует оригиналу.
+    </div>
+</section>
+
+<section id="details">
+    <h2>7. Детали регрессии</h2>
+
+    <h3>7.1. Методология сравнения MXL</h3>
+    <p>Сравнение выполнено скриптом <code>compare_mxl.py</code> с multiset-сравнением по ключу:</p>
+    <pre>(Data, NomerScheta, Dogovor, BankSchet, N) + balances[]</pre>
+
+    <h3>7.2. Методология сравнения ПП</h3>
+    <p>Сравнение выполнено скриптом <code>compare_pp_business.py</code> по ключевым полям платежа:</p>
+    <pre>(Data, Nomer, Summa, Плательщик счет, Получатель счет, Naznachenie platezha)</pre>
+
+    <h3>7.3. Методология сравнения логов</h3>
+    <p>Сравнение выполнено скриптом <code>verify_ispr5_run.py</code>:</p>
+    <ul>
+        <li>Подсчет сообщений "не определен ДоговорДУ" по каждому счету</li>
+        <li>Сравнение уникальных счетов между оригиналом и оптимиз.</li>
+        <li>Проверка идентичности набора счетов и количества повторов</li>
+    </ul>
+
+    <h3>7.4. Исходные файлы регрессии</h3>
+    <table>
+        <thead>
+            <tr><th>Тип</th><th>Оригинал</th><th>Оптимизированная (ispr5)</th></tr>
+        </thead>
+        <tbody>
+            <tr><td>MXL выписок</td><td>0106__0506___стало.mxl</td><td>0106__0506___стало_после_испр5.mxl</td></tr>
+            <tr><td>MXL ПП</td><td>0106__0506__ПП_Оригинал4.mxl</td><td>0106__0506__ПП_стало_после_испр5.mxl</td></tr>
+            <tr><td>Лог ошибок</td><td>Ошибки_...41_оригинал.txt</td><td>Ошибки_...после доработок5.txt</td></tr>
+            <tr><td>JSON отчет</td><td colspan="2">0106_ispr5_verify.json</td></tr>
+        </tbody>
+    </table>
+</section>
+
+<section id="conclusions">
+    <h2>8. Выводы</h2>
+
+    <div class="block-success">
+        <strong>Оптимизация успешна.</strong> На примере периода 01-05.06.2026 оптимизированная обработка
+        (версия 5.90, ispr5) показала:
+        <ul style="margin-top:10px">
+            <li>Ускорение в <strong>8,9 раза</strong> (1389,7 сек -> 156,3 сек)</li>
+            <li><strong>Полное сохранение</strong> бизнес-данных выписок (2287 строк, MD5 идентичен)</li>
+            <li><strong>Полное сохранение</strong> платежных документов (487 ПП, 0 расхождений по ключу)</li>
+            <li><strong>Идентичный</strong> набор предупреждений (32 счета, 114 сообщений ДоговорДУ)</li>
+            <li>Без изменений предупреждений БИК (71 сообщение)</li>
+        </ul>
+    </div>
+
+    <p>Четыре блока оптимизации (OPT-02, OPT-05, OPT-17, OPT-18) сокращают количество SQL-запросов
+    за счет пакетной предзагрузки и ленивых кэшей, не меняя алгоритм определения договоров и не влияя
+    на итоговые данные.</p>
+
+    <p>Исправление семантики предупреждений в ispr5 (<code>СчетаБезДоговораДУ</code>) устранило 5 лишних
+    счетов из лога, вернув поведение к оригиналу.</p>
+</section>
+
+<footer>
+    IMDEV-9096 | Wim_Du | внЗагрузкаВыписокДУ v5.90 | Регрессия 01-05.06.2026 | Отчет сформирован 27.06.2026
+</footer>
+
+</div>
+</body>
+</html>
