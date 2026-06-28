@@ -2,6 +2,7 @@
 
 | Файл | Описание |
 |------|----------|
+| [june_0906_razobrat_regression_report.html](june_0906_razobrat_regression_report.html) | **Регресс «РазобратьОтмеченные» 09.06:** Получить + отметка (кроме без ДУ), 576/1044/1067 = идентично, 3 потока, 23→10 мин |
 | [may_regression_report.html](may_regression_report.html) | **Регресс за май (18-31.05):** XLSX-сверка было/стало, ПП 8835=8835, примеры ЕРС 21.05 / ДУ 9957 / 10076 |
 | [imdev-9096_optimization_regression_report.html](imdev-9096_optimization_regression_report.html) | **Итоговый отчет регрессии (01-05.06):** оригинал vs ispr5, OPT-02/05/17/18, скорость 8.9x, MXL/ПП/лог |
 | [optimization_plan.html](optimization_plan.html) | **План работ:** блок 1 (Прочитать: 3 SQL + 1 цикл) + блок 2 (Разобрать: параллельность) |

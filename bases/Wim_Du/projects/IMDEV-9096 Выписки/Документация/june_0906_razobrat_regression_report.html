@@ -1,0 +1,699 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IMDEV-9096 - Регресс «РазобратьОтмеченные» 09.06.2026</title>
+    <style>
+        :root {
+            --success: #28a745;
+            --error: #dc3545;
+            --info: #17a2b8;
+            --warning: #ffc107;
+            --primary: #0056b3;
+            --bg: #f8f9fa;
+            --border: #dee2e6;
+            --text: #212529;
+            --muted: #6c757d;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.65;
+            color: var(--text);
+            background: var(--bg);
+            padding: 24px;
+        }
+        .container { max-width: 1100px; margin: 0 auto; }
+        header {
+            background: linear-gradient(135deg, #0056b3 0%, #004085 100%);
+            color: #fff;
+            padding: 32px 40px;
+            border-radius: 12px;
+            margin-bottom: 24px;
+        }
+        header h1 { font-size: 1.75rem; margin-bottom: 8px; }
+        header .subtitle { opacity: 0.92; font-size: 1.05rem; }
+        header .meta { margin-top: 16px; font-size: 0.9rem; opacity: 0.85; }
+        .header-summary {
+            margin-top: 20px;
+            padding: 18px 22px;
+            background: rgba(255,255,255,0.12);
+            border-radius: 8px;
+            border: 1px solid rgba(255,255,255,0.2);
+            font-size: 0.95rem;
+            line-height: 1.7;
+        }
+        .header-summary strong { color: #fff; }
+        section {
+            background: #fff;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 28px 32px;
+            margin-bottom: 20px;
+        }
+        h2 {
+            color: var(--primary);
+            font-size: 1.35rem;
+            margin-bottom: 16px;
+            padding-bottom: 8px;
+            border-bottom: 2px solid #e9ecef;
+        }
+        h3 { font-size: 1.05rem; margin: 20px 0 10px; color: #343a40; }
+        p { margin-bottom: 12px; }
+        ul, ol { margin: 0 0 14px 24px; }
+        li { margin-bottom: 6px; }
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 16px;
+            margin: 20px 0;
+        }
+        .stat-card {
+            background: #f8f9fa;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 18px;
+            text-align: center;
+        }
+        .stat-card .value { font-size: 1.7rem; font-weight: 700; color: var(--primary); }
+        .stat-card.success .value { color: var(--success); }
+        .stat-card.speed .value { color: #0069d9; }
+        .stat-card.warn .value { color: #856404; }
+        .stat-card .label { font-size: 0.85rem; color: var(--muted); margin-top: 4px; }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 16px 0;
+            font-size: 0.92rem;
+        }
+        th, td {
+            border: 1px solid var(--border);
+            padding: 10px 14px;
+            text-align: left;
+            vertical-align: top;
+        }
+        th { background: #e9ecef; font-weight: 600; }
+        tr:nth-child(even) { background: #f8f9fa; }
+        .ok { color: var(--success); font-weight: 600; }
+        .fail { color: var(--error); font-weight: 600; }
+        .warn { color: #856404; font-weight: 600; }
+        .block-info {
+            background: #d1ecf1;
+            border-left: 4px solid var(--info);
+            padding: 14px 18px;
+            border-radius: 0 6px 6px 0;
+            margin: 14px 0;
+        }
+        .block-success {
+            background: #d4edda;
+            border-left: 4px solid var(--success);
+            padding: 14px 18px;
+            border-radius: 0 6px 6px 0;
+            margin: 14px 0;
+        }
+        .block-warning {
+            background: #fff3cd;
+            border-left: 4px solid var(--warning);
+            padding: 14px 18px;
+            border-radius: 0 6px 6px 0;
+            margin: 14px 0;
+        }
+        .example-box {
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 18px 20px;
+            margin: 16px 0;
+            background: #fafbfc;
+        }
+        .example-box h4 {
+            color: var(--primary);
+            margin-bottom: 10px;
+            font-size: 1rem;
+        }
+        pre {
+            background: #f1f3f5;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 12px 16px;
+            font-size: 0.85rem;
+            overflow-x: auto;
+            white-space: pre-wrap;
+            word-break: break-word;
+            margin: 10px 0;
+        }
+        .tag {
+            display: inline-block;
+            padding: 3px 10px;
+            border-radius: 12px;
+            font-size: 0.78rem;
+            font-weight: 600;
+            margin-right: 6px;
+        }
+        .tag-ok { background: #d4edda; color: #155724; }
+        .tag-warn { background: #fff3cd; color: #856404; }
+        .tag-info { background: #d1ecf1; color: #0c5460; }
+        .flow {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 10px;
+            margin: 16px 0;
+            font-size: 0.9rem;
+        }
+        .flow-box {
+            background: #e9ecef;
+            border-radius: 6px;
+            padding: 10px 14px;
+            text-align: center;
+            min-width: 120px;
+        }
+        .flow-box.highlight { background: #cce5ff; border: 1px solid #99caff; }
+        .flow-box.success { background: #d4edda; border: 1px solid #a3d9a5; }
+        .flow-arrow { color: var(--muted); font-weight: 700; }
+        .verdict {
+            font-size: 1.15rem;
+            font-weight: 600;
+            color: var(--success);
+            margin: 8px 0 16px;
+        }
+        footer {
+            text-align: center;
+            color: var(--muted);
+            font-size: 0.85rem;
+            padding: 20px 0 8px;
+        }
+        code {
+            background: #f1f3f5;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 0.88em;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+
+<header>
+    <h1>Регрессионная проверка «РазобратьОтмеченные» за 09.06.2026</h1>
+    <p class="subtitle">Сравнение исходной и оптимизированной обработки загрузки выписок (IMDEV-9096)</p>
+    <p class="meta">
+        Дата операций: <strong>09.06.2026</strong> &nbsp;|&nbsp;
+        База: Wim_Du &nbsp;|&nbsp;
+        Обработка: внЗагрузкаВыписокДУ &nbsp;|&nbsp;
+        Параллельность (стало): <strong>3 потока</strong> &nbsp;|&nbsp;
+        Дата отчета: 27.06.2026
+    </p>
+    <div class="header-summary">
+        <strong>Что делали:</strong> на одной базе Wim_Du для даты <strong>09.06.2026</strong> выполнили полный
+        сценарий работы с обработкой: сначала нажали кнопку <strong>«Получить»</strong> (в форме —
+        «Прочитать», запрос к сервису и загрузка выписок в таблицу), затем отметили флажками
+        <strong>все выписки, кроме нескольких строк без заполненного договора ДУ</strong>, и дважды
+        запустили <strong>«РазобратьОтмеченные»</strong> — на исходной EPF (<em>было</em>, последовательно)
+        и на Test1 (<em>стало</em>, 3 параллельных потока). Замер времени относится только к этапу
+        «РазобратьОтмеченные»; лог и окно сообщений сохранены после разбора.<br><br>
+        <strong>Как проверяли:</strong> автоматическое сравнение четырех текстовых файлов -
+        мультимножества выписок, платежных поручений, перезаписанных документов, сработавших правил
+        и итогов сверки остатков. Порядок строк и секунды в отладочных строках не считались регрессией.<br><br>
+        <strong>Результат:</strong> <span style="color:#90ee90;font-weight:700;">регресс пройден</span>.
+        Все бизнес-показатели совпали (576 выписок, 1 044 ПП, 1 067 документов, 535+76 сверок).
+        Время выполнения сократилось с <strong>23 мин</strong> до <strong>10 мин</strong> (ускорение ~2,3×)
+        при <strong>3 параллельных потоках</strong>.
+    </div>
+</header>
+
+<section id="summary">
+    <h2>1. Краткий вывод</h2>
+    <p class="verdict">Оптимизация не меняет результат разбора. Ускорение ~2,3× при полном совпадении данных.</p>
+
+    <div class="stats-grid">
+        <div class="stat-card speed">
+            <div class="value">23 &rarr; 10 мин</div>
+            <div class="label">время команды «РазобратьОтмеченные»</div>
+        </div>
+        <div class="stat-card success">
+            <div class="value">576</div>
+            <div class="label">выписок - идентичный состав в обеих версиях</div>
+        </div>
+        <div class="stat-card success">
+            <div class="value">1 044</div>
+            <div class="label">платежных поручений в логе - без расхождений</div>
+        </div>
+        <div class="stat-card success">
+            <div class="value">0</div>
+            <div class="label">лишних или пропавших документов и правил</div>
+        </div>
+    </div>
+
+    <div class="block-success">
+        <strong>Главное:</strong> после оптимизации создаются те же документы, срабатывают те же правила,
+        сверки остатков дают тот же результат (535 успешных и 76 с расхождениями ERS).
+        Единственное существенное отличие - <em>скорость</em> и <em>порядок вывода</em> в логах
+        (ожидаемо при параллельной обработке).
+    </div>
+</section>
+
+<section id="method">
+    <h2>2. Методика тестирования</h2>
+
+    <h3>2.1. Последовательность действий оператора</h3>
+    <p>Тест выполнялся в два этапа. Сначала подготовка данных (одинаковая для обоих прогонов «было» и «стало»),
+    затем — замер и сравнение команды разбора.</p>
+
+    <div class="flow">
+        <div class="flow-box">Указать период<br>09.06.2026</div>
+        <span class="flow-arrow">&rarr;</span>
+        <div class="flow-box highlight">Получить<br>(«Прочитать»)</div>
+        <span class="flow-arrow">&rarr;</span>
+        <div class="flow-box">Отметить выписки<br>(кроме без Договора ДУ)</div>
+        <span class="flow-arrow">&rarr;</span>
+        <div class="flow-box highlight">Разобрать<br>отмеченные</div>
+        <span class="flow-arrow">&rarr;</span>
+        <div class="flow-box success">Сохранить лог<br>и сообщения</div>
+    </div>
+
+    <table>
+        <thead>
+            <tr><th>Шаг</th><th>Действие</th><th>Назначение</th><th>В замер регресса</th></tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>1</td>
+                <td>Кнопка <strong>«Получить»</strong><br>
+                    <span style="color:var(--muted);font-size:0.88em;">команда формы «Прочитать»,
+                    обработчик <code>ЗапроскСервису</code></span></td>
+                <td>Запрос к сервису и загрузка выписок за выбранную дату в таблицу обработки.
+                    Заполнение строк: счета, платежи, договор ДУ (где определен).</td>
+                <td>Нет<br><span style="color:var(--muted);font-size:0.88em;">этап подготовки, одинаковый для обоих прогонов</span></td>
+            </tr>
+            <tr>
+                <td>2</td>
+                <td><strong>Установить флажки</strong> на выписках</td>
+                <td>Отмечены <strong>все загруженные выписки</strong>, за исключением
+                    <strong>нескольких строк, где не заполнен договор ДУ</strong> (ДоговорДУ пустой —
+                    такие строки сознательно не включали в разбор).</td>
+                <td>Нет</td>
+            </tr>
+            <tr>
+                <td>3</td>
+                <td>Кнопка <strong>«Разобрать отмеченные»</strong><br>
+                    <span style="color:var(--muted);font-size:0.88em;">команда <code>РазобратьОтмеченные</code></span></td>
+                <td>Разбор отмеченных выписок: правила, создание/перезапись документов, сверка остатков.
+                    В прогоне «стало» — параллельно, до 3 групп одновременно.</td>
+                <td class="ok"><strong>Да</strong><br><span style="color:var(--muted);font-size:0.88em;">23 мин (было) / 10 мин (стало)</span></td>
+            </tr>
+            <tr>
+                <td>4</td>
+                <td>Сохранение артефактов</td>
+                <td>Лог загрузки выписок и текст окна сообщений 1С — для попарного сравнения.</td>
+                <td>-</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <div class="block-warning">
+        <strong>Важно для интерпретации замера:</strong> время <strong>23 мин / 10 мин</strong> относится
+        <em>только к шагу 3</em> («Разобрать отмеченные»). Длительность кнопки «Получить» (загрузка из сервиса)
+        в этот замер <strong>не входит</strong> — она выполнялась один раз перед разбором и в обоих прогонах
+        давала одинаковый набор строк в таблице.
+    </div>
+
+    <div class="block-info">
+        <strong>Критерий отбора выписок для разбора:</strong> после «Получить» в таблице появились все выписки
+        за 09.06.2026. Оператор отметил флажками все строки, <em>кроме нескольких без договора ДУ</em> —
+        их нельзя корректно разобрать, поэтому они исключены из массовой обработки. В логе разбора зафиксировано
+        <strong>576 выписок</strong> и <strong>1 044 платежных поручения</strong>.
+    </div>
+
+    <h3>2.2. Сравнение прогонов «было» и «стало»</h3>
+    <p>После одинаковой подготовки (шаги 1–2) команда «Разобрать отмеченные» запускалась дважды —
+    на baseline-EPF и на Test1. Состав отмеченных выписок не менялся между прогонами.</p>
+
+    <table>
+        <thead>
+            <tr><th>Версия</th><th>EPF</th><th>Режим</th><th>Потоков</th><th>Старт</th><th>Финиш</th><th>Длительность</th></tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td><strong>Было</strong></td>
+                <td>erf_Оптимизация (baseline)</td>
+                <td>Последовательный</td>
+                <td>1</td>
+                <td>15:30</td>
+                <td>15:53</td>
+                <td><strong>23 мин</strong></td>
+            </tr>
+            <tr>
+                <td><strong>Стало</strong></td>
+                <td>erf_Оптимизация_Тест1 (параллельность)</td>
+                <td>Параллельный (фоновые задания)</td>
+                <td><strong>3</strong></td>
+                <td>16:02</td>
+                <td>16:12</td>
+                <td><strong>10 мин</strong></td>
+            </tr>
+        </tbody>
+    </table>
+
+    <div class="block-info">
+        <strong>Настройка параллельности:</strong> в форме настроек обработки (<code>ФормаНастроек</code>)
+        реквизит <code>МаксПараллельныхГрупп</code> («Максимум параллельных групп») для прогона «стало»
+        был установлен в <strong>3</strong> - одновременно выполнялось до трех групп выписок в фоновых заданиях БСП.
+        В версии «было» параллельность не использовалась (1 поток, последовательный разбор).
+    </div>
+
+    <h3>2.3. Исходные файлы регресса</h3>
+    <table>
+        <thead>
+            <tr><th>Файл</th><th>Назначение</th></tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td><code>Регресс/ПаралельностьВремя_0906_БылоСтало.txt</code></td>
+                <td>Ручной замер времени выполнения команды</td>
+            </tr>
+            <tr>
+                <td><code>Регресс/ЛогЗагрузкиВыписок_0906_было.txt</code><br>
+                    <code>Регресс/ЛогЗагрузкиВыписок_0906_стало.txt</code></td>
+                <td>Лог обработки: выписки и строки платежных поручений</td>
+            </tr>
+            <tr>
+                <td><code>Регресс/СообщенияЗагрузкиВыписок_0906_было.txt</code><br>
+                    <code>Регресс/СообщенияЗагрузкиВыписок_0906_стало.txt</code></td>
+                <td>Окно сообщений 1С: правила, документы, сверки, предупреждения</td>
+            </tr>
+            <tr>
+                <td><code>Регресс/compare_0906_razobrat.py</code></td>
+                <td>Скрипт автоматического сравнения (Python)</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <div class="block-info">
+        <strong>Критерии «совпало»:</strong>
+        <ul style="margin-top:8px;margin-bottom:0;">
+            <li><strong>Выписки и ПП:</strong> дата, номер ДУ, счет; для ПП - дата, номер, сумма, назначение.</li>
+            <li><strong>Документы:</strong> тип, номер, дата перезаписи.</li>
+            <li><strong>Правила:</strong> номер и наименование правила (агрегированно).</li>
+            <li><strong>Сверки:</strong> количество блоков «успех» и «расхождения» по клиентам.</li>
+        </ul>
+        Порядок строк в логе, номера строк правил (<code>для строки N</code>) и секунды в строках
+        <code>=&gt; время выполнения</code> - <em>не</em> считаются регрессией данных.
+    </div>
+</section>
+
+<section id="performance">
+    <h2>3. Производительность</h2>
+
+    <table>
+        <thead>
+            <tr><th>Показатель</th><th>Было</th><th>Стало</th><th>Изменение</th></tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>Время выполнения</td>
+                <td>23 мин</td>
+                <td>10 мин</td>
+                <td class="ok">-57% (ускорение 2,3×)</td>
+            </tr>
+            <tr>
+                <td>Количество потоков (настройка)</td>
+                <td>1 (последовательно)</td>
+                <td><strong>3</strong> (<code>МаксПараллельныхГрупп</code>)</td>
+                <td>-</td>
+            </tr>
+            <tr>
+                <td>Экономия времени</td>
+                <td colspan="2">-</td>
+                <td><strong>~13 мин</strong> на один прогон за день</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <div class="block-info">
+        Замер выполнен вручную по часам сеанса 1С (см. файл
+        <code>ПаралельностьВремя_0906_БылоСтало.txt</code>) — <strong>только для шага «Разобрать отмеченные»</strong>,
+        без этапа «Получить». Оптимизированная версия (Test1) использовала параллельную обработку с
+        <strong>3 потоками</strong> (настройка «Максимум параллельных групп» = 3 в форме настроек обработки).
+    </div>
+</section>
+
+<section id="load-log">
+    <h2>4. Лог загрузки выписок</h2>
+
+    <table>
+        <thead>
+            <tr><th>Показатель</th><th>Было</th><th>Стало</th><th>Оценка</th></tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>Строк выписок</td>
+                <td>576</td>
+                <td>576</td>
+                <td class="ok">OK</td>
+            </tr>
+            <tr>
+                <td>Уникальных договоров ДУ</td>
+                <td>576</td>
+                <td>576</td>
+                <td class="ok">OK</td>
+            </tr>
+            <tr>
+                <td>Строк платежных поручений</td>
+                <td>1 044</td>
+                <td>1 044</td>
+                <td class="ok">OK</td>
+            </tr>
+            <tr>
+                <td>Уникальных ПП (дата + № + сумма + назначение)</td>
+                <td>1 044</td>
+                <td>1 044</td>
+                <td class="ok">OK</td>
+            </tr>
+            <tr>
+                <td>Мультимножество всех строк лога</td>
+                <td colspan="2">полное совпадение</td>
+                <td class="ok">OK</td>
+            </tr>
+            <tr>
+                <td>Порядок обработки выписок</td>
+                <td>ДУ 7645 первым</td>
+                <td>ДУ 6287 первым</td>
+                <td class="warn">Изменен (параллельность)</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <div class="block-success">
+        Состав выписок и платежей <strong>идентичен</strong>. Отличается только порядок следования
+        строк в файле - это следствие параллельного разбора, а не расхождения данных.
+    </div>
+</section>
+
+<section id="messages">
+    <h2>5. Окно сообщений 1С</h2>
+
+    <p>Файлы по 7 953 строки каждый. Все ключевые счетчики совпадают побайтово по количеству:</p>
+
+    <table>
+        <thead>
+            <tr><th>Показатель</th><th>Было</th><th>Стало</th><th>Оценка</th></tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>Блоков «ИТОГИ ПО КЛИЕНТУ»</td>
+                <td>611</td>
+                <td>611</td>
+                <td class="ok">OK</td>
+            </tr>
+            <tr>
+                <td>Сверка остатков: «пришли к успеху»</td>
+                <td>535</td>
+                <td>535</td>
+                <td class="ok">OK</td>
+            </tr>
+            <tr>
+                <td>Сверка остатков: «обнаружены расхождения»</td>
+                <td>76</td>
+                <td>76</td>
+                <td class="ok">OK</td>
+            </tr>
+            <tr>
+                <td>«Перезаписан документ»</td>
+                <td>1 067</td>
+                <td>1 067</td>
+                <td class="ok">OK</td>
+            </tr>
+            <tr>
+                <td>«Перепроведен документ»</td>
+                <td>1 067</td>
+                <td>1 067</td>
+                <td class="ok">OK</td>
+            </tr>
+            <tr>
+                <td>«Сработало Правило № …»</td>
+                <td>2 173</td>
+                <td>2 173</td>
+                <td class="ok">OK</td>
+            </tr>
+            <tr>
+                <td>Мультимножество типов правил (№ + имя)</td>
+                <td colspan="2">идентично</td>
+                <td class="ok">OK</td>
+            </tr>
+            <tr>
+                <td>Мультимножество перезаписанных документов</td>
+                <td colspan="2">идентично, 0 расхождений</td>
+                <td class="ok">OK</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <h3>5.1. Предупреждения (одинаковы в обеих версиях)</h3>
+    <table>
+        <thead>
+            <tr><th>Тип сообщения</th><th>Количество</th><th>Комментарий</th></tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>Не найдено платежное поручение</td>
+                <td>568</td>
+                <td>Штатное сообщение при разборе начислений/задолженностей</td>
+            </tr>
+            <tr>
+                <td>Начисление (задолженность / вознаграждение)</td>
+                <td>559</td>
+                <td>Ссылка на документ начисления при проводке</td>
+            </tr>
+            <tr>
+                <td>Не найден документ задолженности</td>
+                <td>97</td>
+                <td>Отсутствующий документ в цепочке - как и раньше</td>
+            </tr>
+            <tr>
+                <td>Создание счета RUB по умолчанию</td>
+                <td>6</td>
+                <td>Автосоздание счета при первом обращении</td>
+            </tr>
+        </tbody>
+    </table>
+</section>
+
+<section id="non-functional">
+    <h2>6. Нефункциональные отличия (не регрессия)</h2>
+
+    <p>Тексты файлов сообщений не побайтово равны: 112 типов строк различаются.
+    Все отличия относятся к порядку вывода и отладке, не к бизнес-данным:</p>
+
+    <table>
+        <thead>
+            <tr><th>Тип отличия</th><th>Описание</th><th>Влияние на данные</th></tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>Порядок клиентов в логе</td>
+                <td>Первой обрабатывается другой ДУ (7645 vs 6287)</td>
+                <td class="ok">Нет</td>
+            </tr>
+            <tr>
+                <td>Строки «=&gt; время выполнения …»</td>
+                <td>50 строк с каждой стороны; разные секунды и номера строк правил</td>
+                <td class="ok">Нет</td>
+            </tr>
+            <tr>
+                <td>Номер строки в правиле</td>
+                <td>~16 строк: «для строки 1» vs «для строки 2/3»</td>
+                <td class="ok">Нет</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <div class="example-box">
+        <h4>Пример: порядок вывода (не расхождение данных)</h4>
+        <p><span class="tag tag-info">Было</span> первым в логе - ДУ 7645, правило № 37 (брокерский счет ERS):</p>
+        <pre>Сработало Правило № 37 Поступление с брокерского счета (при разборе) для строки 1
+Перезаписан документ "Поступление на расчетный счет" № 7645-000000003 от 09.06.2026</pre>
+        <p><span class="tag tag-info">Стало</span> первым - ДУ 6287, правило № 14 (брокерский счет СИТИ), сверка успешна:</p>
+        <pre>Сработало Правило № 14 Поступление с брокерского счета (при разборе) - СИТИ для строки 1
+Перезаписан документ "Поступление на расчетный счет" № 6287-000000008 от 09.06.2026
+Остатки по р/с_ф-л Центральный_ДС_RUR_6287 сверены! Вы пришли к успеху!</pre>
+    </div>
+</section>
+
+<section id="ers">
+    <h2>7. Пояснение: 76 расхождений по остаткам ERS</h2>
+
+    <div class="block-warning">
+        <strong>76 блоков «обнаружены расхождения» - одинаково в обеих версиях.</strong>
+        Это не эффект оптимизации, а известное поведение сверки счетов ERS
+        (<code>р/с_ВТБ_ДС_*_ЕРС</code>): в колонке Аванкор часто пусто или одна сумма по договору,
+        а в Банк-Клиент - агрегированные обороты по пулу ERS.
+    </div>
+
+    <table>
+        <thead>
+            <tr><th>Итог сверки</th><th>Количество</th><th>Тип счета</th></tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td class="ok">Успех («пришли к успеху»)</td>
+                <td>535</td>
+                <td>СИТИ, филиальные р/с клиентов</td>
+            </tr>
+            <tr>
+                <td class="warn">Расхождения</td>
+                <td>76</td>
+                <td>ERS (агрегированный пул ВТБ)</td>
+            </tr>
+            <tr>
+                <td><strong>Итого блоков сверки</strong></td>
+                <td><strong>611</strong></td>
+                <td>535 + 76 = 611</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <p>При этом документы по этим клиентам перезаписываются и проводятся штатно
+    (1 067 перезаписей в обеих версиях). Расхождение касается только экранной сверки
+    «Аванкор / Банк-Клиент» по ERS, а не потери платежей.</p>
+</section>
+
+<section id="verdict">
+    <h2>8. Итоговая оценка</h2>
+
+    <table>
+        <thead>
+            <tr><th>Критерий</th><th>Результат</th></tr>
+        </thead>
+        <tbody>
+            <tr><td>Состав выписок и платежных поручений</td><td class="ok">Пройдено</td></tr>
+            <tr><td>Перезаписанные и перепроведенные документы</td><td class="ok">Пройдено</td></tr>
+            <tr><td>Сработавшие правила разбора</td><td class="ok">Пройдено</td></tr>
+            <tr><td>Итоги сверки остатков (535 + 76)</td><td class="ok">Пройдено</td></tr>
+            <tr><td>Предупреждения и информационные сообщения</td><td class="ok">Пройдено</td></tr>
+            <tr><td>Время выполнения команды</td><td class="ok">Улучшение: 23 мин &rarr; 10 мин</td></tr>
+            <tr><td>Порядок строк в логах / отладочные секунды</td><td class="warn">Изменено (ожидаемо)</td></tr>
+        </tbody>
+    </table>
+
+    <div class="block-success">
+        <strong>Заключение:</strong> оптимизация команды «РазобратьОтмеченные» для даты 09.06.2026
+        <strong>не вносит регрессии в бизнес-данные</strong>. Рекомендуется продолжить тестирование
+        на других датах и объемах, зафиксированных в плане IMDEV-9096.
+    </div>
+
+    <p style="margin-top:16px;">
+        <span class="tag tag-ok">Регресс пройден</span>
+        <span class="tag tag-info">Ускорение 2,3× (3 потока)</span>
+        <span class="tag tag-ok">0 расхождений по данным</span>
+    </p>
+</section>
+
+<footer>
+    IMDEV-9096 &nbsp;|&nbsp; Wim_Du &nbsp;|&nbsp; внЗагрузкаВыписокДУ &nbsp;|&nbsp;
+    Автоматический отчет: compare_0906_razobrat.py &nbsp;|&nbsp; 27.06.2026
+</footer>
+
+</div>
+</body>
+</html>
