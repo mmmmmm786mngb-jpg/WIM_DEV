@@ -1,0 +1,721 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IMDEV-9096 - Регрессионная проверка за май 2026</title>
+    <style>
+        :root {
+            --success: #28a745;
+            --error: #dc3545;
+            --info: #17a2b8;
+            --warning: #ffc107;
+            --primary: #0056b3;
+            --bg: #f8f9fa;
+            --border: #dee2e6;
+            --text: #212529;
+            --muted: #6c757d;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.65;
+            color: var(--text);
+            background: var(--bg);
+            padding: 24px;
+        }
+        .container { max-width: 1100px; margin: 0 auto; }
+        header {
+            background: linear-gradient(135deg, #0056b3 0%, #004085 100%);
+            color: #fff;
+            padding: 32px 40px;
+            border-radius: 12px;
+            margin-bottom: 24px;
+        }
+        header h1 { font-size: 1.75rem; margin-bottom: 8px; }
+        header .subtitle { opacity: 0.92; font-size: 1.05rem; }
+        header .meta { margin-top: 16px; font-size: 0.9rem; opacity: 0.85; }
+        section {
+            background: #fff;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 28px 32px;
+            margin-bottom: 20px;
+        }
+        h2 {
+            color: var(--primary);
+            font-size: 1.35rem;
+            margin-bottom: 16px;
+            padding-bottom: 8px;
+            border-bottom: 2px solid #e9ecef;
+        }
+        h3 { font-size: 1.05rem; margin: 20px 0 10px; color: #343a40; }
+        p { margin-bottom: 12px; }
+        ul, ol { margin: 0 0 14px 24px; }
+        li { margin-bottom: 6px; }
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 16px;
+            margin: 20px 0;
+        }
+        .stat-card {
+            background: #f8f9fa;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 18px;
+            text-align: center;
+        }
+        .stat-card .value { font-size: 1.7rem; font-weight: 700; color: var(--primary); }
+        .stat-card.success .value { color: var(--success); }
+        .stat-card.warn .value { color: #856404; }
+        .stat-card .label { font-size: 0.85rem; color: var(--muted); margin-top: 4px; }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 16px 0;
+            font-size: 0.92rem;
+        }
+        th, td {
+            border: 1px solid var(--border);
+            padding: 10px 14px;
+            text-align: left;
+            vertical-align: top;
+        }
+        th { background: #e9ecef; font-weight: 600; }
+        tr:nth-child(even) { background: #f8f9fa; }
+        .ok { color: var(--success); font-weight: 600; }
+        .fail { color: var(--error); font-weight: 600; }
+        .warn { color: #856404; font-weight: 600; }
+        .block-info {
+            background: #d1ecf1;
+            border-left: 4px solid var(--info);
+            padding: 14px 18px;
+            border-radius: 0 6px 6px 0;
+            margin: 14px 0;
+        }
+        .block-success {
+            background: #d4edda;
+            border-left: 4px solid var(--success);
+            padding: 14px 18px;
+            border-radius: 0 6px 6px 0;
+            margin: 14px 0;
+        }
+        .block-warning {
+            background: #fff3cd;
+            border-left: 4px solid var(--warning);
+            padding: 14px 18px;
+            border-radius: 0 6px 6px 0;
+            margin: 14px 0;
+        }
+        .example-box {
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 18px 20px;
+            margin: 16px 0;
+            background: #fafbfc;
+        }
+        .example-box h4 {
+            color: var(--primary);
+            margin-bottom: 10px;
+            font-size: 1rem;
+        }
+        .tag {
+            display: inline-block;
+            padding: 3px 10px;
+            border-radius: 12px;
+            font-size: 0.78rem;
+            font-weight: 600;
+            margin-right: 6px;
+        }
+        .tag-ok { background: #d4edda; color: #155724; }
+        .tag-warn { background: #fff3cd; color: #856404; }
+        .tag-info { background: #d1ecf1; color: #0c5460; }
+        .flow {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 10px;
+            margin: 16px 0;
+            font-size: 0.9rem;
+        }
+        .flow-box {
+            background: #e9ecef;
+            border-radius: 6px;
+            padding: 10px 14px;
+            text-align: center;
+            min-width: 120px;
+        }
+        .flow-box.highlight { background: #cce5ff; border: 1px solid #99caff; }
+        .flow-arrow { color: var(--muted); font-weight: 700; }
+        .verdict {
+            font-size: 1.15rem;
+            font-weight: 600;
+            color: var(--success);
+            margin: 8px 0 16px;
+        }
+        footer {
+            text-align: center;
+            color: var(--muted);
+            font-size: 0.85rem;
+            padding: 20px 0 8px;
+        }
+        code {
+            background: #f1f3f5;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 0.88em;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+
+<header>
+    <h1>Регрессионная проверка загрузки выписок за май 2026</h1>
+    <p class="subtitle">Сравнение работы обработки до и после оптимизации (IMDEV-9096)</p>
+    <p class="meta">
+        Период проверки: <strong>18.05.2026 - 31.05.2026</strong> &nbsp;|&nbsp;
+        База: Wim_Du &nbsp;|&nbsp;
+        Обработка: внЗагрузкаВыписокДУ (ветка оптимизации Test1) &nbsp;|&nbsp;
+        Дата отчета: 27.06.2026
+    </p>
+</header>
+
+<section id="summary">
+    <h2>1. Краткий вывод для бизнеса</h2>
+    <p class="verdict">Платежи за май совпадают полностью. Оптимизация не меняет состав операций.</p>
+
+    <div class="stats-grid">
+        <div class="stat-card success">
+            <div class="value">8 835</div>
+            <div class="label">платежных поручений - идентичны по сумме, счетам и назначению</div>
+        </div>
+        <div class="stat-card success">
+            <div class="value">0</div>
+            <div class="label">пропавших или лишних платежей</div>
+        </div>
+        <div class="stat-card success">
+            <div class="value">232</div>
+            <div class="label">записей в журнале ошибок - без изменений</div>
+        </div>
+        <div class="stat-card warn">
+            <div class="value">-17</div>
+            <div class="label">строк в списке выписок (техн. дубли шапки ЕРС, не платежи)</div>
+        </div>
+    </div>
+
+    <div class="block-success">
+        <strong>Главное:</strong> все платежи за май на месте. Расхождения касаются только того,
+        <em>как строки сгруппированы на экране</em> в таблице «Выписки» - в основном это убранные
+        технические дубликаты. Деньги, договоры и назначения платежей не пострадали.
+    </div>
+
+    <div class="block-info">
+        <strong>Группировка выписок:</strong> по двум договорам (ДУ 9957 и 10076) проверена связка
+        «выписка &harr; платеж» через служебный <code>Ключ выписки</code>. Платежи не терялись:
+        в одном случае выписка разделилась по статусу загрузки (9957), в другом - две одинаковые
+        строки объединились (10076).
+    </div>
+</section>
+
+<section id="method">
+    <h2>2. Что и как сравнивали</h2>
+
+    <p>Два прогона одной и той же загрузки за май:</p>
+    <ul>
+        <li><strong>Было</strong> - исходная версия обработки.</li>
+        <li><strong>Стало</strong> - оптимизированная версия (ускорение чтения выписок, кэши по договорам ЕРС).</li>
+    </ul>
+
+    <p>Источник данных - выгрузки в Excel из обработки после нажатия «Прочитать»:</p>
+    <table>
+        <thead>
+            <tr><th>Файл</th><th>Содержимое</th></tr>
+        </thead>
+        <tbody>
+            <tr><td>1805_3105_ВЫПИСКИ_было / _стало.xlsx</td><td>Таблица выписок по договорам ДУ</td></tr>
+            <tr><td>1805_3105_ПП_было / _стало.xlsx</td><td>Платежные поручения из выписок</td></tr>
+            <tr><td>Ошибки_1805_3105_было / _стало.txt</td><td>Журнал сообщений при загрузке</td></tr>
+        </tbody>
+    </table>
+
+    <div class="block-info">
+        <strong>Критерий «платеж совпал»:</strong> дата, номер, сумма, счета плательщика и получателя,
+        назначение платежа. Порядок строк и служебные идентификаторы (UUID) не учитывались -
+        они меняются при каждом новом прогоне и не относятся к бизнес-данным.
+    </div>
+
+    <div class="block-info">
+        <strong>Дополнительно для спорных случаев:</strong> проверена связка выписка &harr; платеж
+        по полю <code>Ключ выписки</code> (ДУ 9957, 10076, пустая шапка ЕРС 21.05) - все платежи
+        найдены на соответствующих ключах, потерь нет.
+    </div>
+</section>
+
+<section id="payments">
+    <h2>3. Платежные поручения - полное совпадение</h2>
+
+    <table>
+        <thead>
+            <tr><th>Показатель</th><th>Было</th><th>Стало</th><th>Оценка</th></tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>Всего строк в таблице</td>
+                <td>9 189</td>
+                <td>9 189</td>
+                <td class="ok">OK</td>
+            </tr>
+            <tr>
+                <td>Из них «Платежное поручение»</td>
+                <td>8 835</td>
+                <td>8 835</td>
+                <td class="ok">OK</td>
+            </tr>
+            <tr>
+                <td>Уникальных платежей по бизнес-полям</td>
+                <td>8 829 типов</td>
+                <td>8 829 типов</td>
+                <td class="ok">OK</td>
+            </tr>
+            <tr>
+                <td>Только в «было» или только в «стало»</td>
+                <td>0</td>
+                <td>0</td>
+                <td class="ok">OK</td>
+            </tr>
+            <tr>
+                <td>Изменилась отметка «Загружен» при том же платеже</td>
+                <td>-</td>
+                <td>0 случаев</td>
+                <td class="ok">OK</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <div class="block-success">
+        Ни один платеж не пропал и не добавился. Суммы, реквизиты и назначения совпадают на 100%.
+        Различаются только служебные ключи связи с выпиской - это нормально при повторном прогоне.
+    </div>
+</section>
+
+<section id="statements">
+    <h2>4. Выписки - где есть отличия и что они значат</h2>
+
+    <table>
+        <thead>
+            <tr><th>Показатель</th><th>Было</th><th>Стало</th><th>Комментарий</th></tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>Строк в таблице выписок</td>
+                <td>7 035</td>
+                <td>7 018</td>
+                <td>Минус 17 строк</td>
+            </tr>
+            <tr>
+                <td>Строк с привязкой к договору ДУ (21.05, ЕРС RUR)</td>
+                <td>251</td>
+                <td>251</td>
+                <td class="ok">Без изменений</td>
+            </tr>
+            <tr>
+                <td>Уникальных договоров на 21.05</td>
+                <td>222</td>
+                <td>222</td>
+                <td class="ok">Без изменений</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <p>Разница в 17 строк - это не потеря договоров и не потеря платежей. Ниже три конкретных примера.</p>
+</section>
+
+<section id="example-ers">
+    <h2>5. Пример 1: 21 мая, единый расчетный счет ЕРС (RUR)</h2>
+
+    <div class="example-box">
+        <h4><span class="tag tag-info">Техническое улучшение</span> Схлопывание дублей «пустой шапки» ЕРС</h4>
+
+        <p><strong>Ситуация:</strong> на счете ЕРС <code>40701810000030000413</code> за 21.05.2026
+        часть платежей не привязана к конкретному договору ДУ (типичная картина для ЕРС).</p>
+
+        <table>
+            <thead>
+                <tr><th></th><th>Было (старая версия)</th><th>Стало (оптимизация)</th></tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Строк «шапки» без договора в списке выписок</td>
+                    <td><strong>18</strong> одинаковых строк</td>
+                    <td><strong>1</strong> строка</td>
+                </tr>
+                <tr>
+                    <td>Платежей на этих строках</td>
+                    <td>17 (по 1 на строку) + 1 пустая шапка</td>
+                    <td>17 (все на одной строке)</td>
+                </tr>
+                <tr>
+                    <td>Платежей с договором на 21.05</td>
+                    <td>251 строка</td>
+                    <td>251 строка</td>
+                </tr>
+                <tr>
+                    <td>Всего платежей на счете за 21.05</td>
+                    <td>268</td>
+                    <td>268</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <h3>Как это выглядит на схеме</h3>
+        <p><strong>Было:</strong> 17 платежей размазаны по 17 почти одинаковым строкам выписки.</p>
+        <div class="flow">
+            <div class="flow-box">ПП 1</div><div class="flow-arrow">&rarr;</div>
+            <div class="flow-box">Шапка ЕРС #1</div>
+            <div class="flow-box">ПП 2</div><div class="flow-arrow">&rarr;</div>
+            <div class="flow-box">Шапка ЕРС #2</div>
+            <span class="flow-arrow">...</span>
+            <div class="flow-box">ПП 17</div><div class="flow-arrow">&rarr;</div>
+            <div class="flow-box">Шапка ЕРС #17</div>
+        </div>
+
+        <p><strong>Стало:</strong> те же 17 платежей собраны под одной шапкой.</p>
+        <div class="flow">
+            <div class="flow-box">ПП 1</div>
+            <div class="flow-box">ПП 2</div>
+            <span class="flow-arrow">...</span>
+            <div class="flow-box">ПП 17</div>
+            <div class="flow-arrow">&rarr;</div>
+            <div class="flow-box highlight">1 шапка ЕРС<br>(ключ 4d627a05...)</div>
+        </div>
+
+        <p><strong>Остатки по шапке</strong> (одинаковые в обеих версиях):</p>
+        <ul>
+            <li>Начальный: 21 278 001,98 руб.</li>
+            <li>Поступило: 279 146 274,74 руб.</li>
+            <li>Списано: 247 363 795,16 руб.</li>
+            <li>Конечный: 53 060 481,56 руб.</li>
+        </ul>
+
+        <div class="block-success">
+            <strong>Вывод для бизнеса:</strong> платежи те же, договоры те же. Новая версия просто
+            убрала лишние одинаковые строки в интерфейсе. При загрузке <em>только одного дня</em> 21.05
+            обе версии ведут себя одинаково (18 шапок) - эффект проявляется при пакетной загрузке
+            всего периода 18-31 мая.
+        </div>
+    </div>
+</section>
+
+<section id="example-9957">
+    <h2>6. Пример 2: ДУ 9957 (Гольдфарб М.Н.), 18 мая - разделение по статусу загрузки</h2>
+
+    <div class="example-box">
+        <h4><span class="tag tag-info">Проверено по Ключ выписки</span> Два платежа разнесены на две строки с корректными флагами</h4>
+
+        <p><strong>Счет:</strong> CNY ЕРС <code>40701156603801000004</code>. На договоре два платежа
+        с разным статусом в базе: один уже загружен, второй - нет.</p>
+
+        <table>
+            <thead>
+                <tr><th></th><th>Было (старая версия)</th><th>Стало (оптимизация)</th></tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Строк выписки по договору</td>
+                    <td><strong>1</strong></td>
+                    <td><strong>2</strong></td>
+                </tr>
+                <tr>
+                    <td>Ключ выписки (UUID)</td>
+                    <td>1 ключ: <code>40862daf-...</code></td>
+                    <td>2 ключа: <code>56a554c1-...</code> и <code>2fc18ded-...</code></td>
+                </tr>
+                <tr>
+                    <td>Флаги выписки</td>
+                    <td>Загружать=Да, Загружена=<strong>-1</strong> (частично)</td>
+                    <td>Нет/1 и Да/(пусто) - по одной строке на каждый статус</td>
+                </tr>
+                <tr>
+                    <td>Платежи на ключах</td>
+                    <td>Оба ПП на одном ключе</td>
+                    <td>По одному ПП на каждом ключе</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <h3>Детализация по платежам</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>№ ПП</th>
+                    <th>Сумма</th>
+                    <th>Загружен</th>
+                    <th>Было: ключ выписки</th>
+                    <th>Стало: ключ выписки</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>155114</td>
+                    <td>1 100 277,74</td>
+                    <td class="ok">Да</td>
+                    <td><code>40862daf-...</code></td>
+                    <td><code>56a554c1-...</code> (выписка: Не загружать / 1)</td>
+                </tr>
+                <tr>
+                    <td>483527</td>
+                    <td>1 099 277</td>
+                    <td class="warn">Нет</td>
+                    <td><code>40862daf-...</code></td>
+                    <td><code>2fc18ded-...</code> (выписка: Загружать / пусто)</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <h3>Как это выглядит на схеме</h3>
+        <p><strong>Было:</strong> оба платежа на одной выписке, общий статус «частично» (-1).</p>
+        <div class="flow">
+            <div class="flow-box highlight">1 выписка<br>40862daf...<br>Да / -1</div>
+            <div class="flow-arrow">&larr;</div>
+            <div class="flow-box">ПП 155114<br>Загружен: Да</div>
+            <div class="flow-box">ПП 483527<br>Загружен: Нет</div>
+        </div>
+
+        <p><strong>Стало:</strong> платежи разделены - у каждого своя выписка с понятным статусом.</p>
+        <div class="flow">
+            <div class="flow-box">ПП 155114</div>
+            <div class="flow-arrow">&rarr;</div>
+            <div class="flow-box highlight">Выписка 56a554...<br>Нет / 1</div>
+            <div class="flow-box">ПП 483527</div>
+            <div class="flow-arrow">&rarr;</div>
+            <div class="flow-box highlight">Выписка 2fc18ded...<br>Да / (пусто)</div>
+        </div>
+
+        <div class="block-success">
+            <strong>Вывод для бизнеса:</strong> оба платежа на месте, суммы и статусы «Загружен»
+            совпадают. Новая версия не потеряла операции, а <em>разделила одну «смешанную» выписку
+            на две понятные строки</em> - по одной на каждый статус загрузки. Это улучшение
+            отображения, а не регрессия данных.
+        </div>
+    </div>
+</section>
+
+<section id="example-10076">
+    <h2>7. Пример 3: ДУ 10076 (Калашников А.М.), 28 мая - объединение дублей</h2>
+
+    <div class="example-box">
+        <h4><span class="tag tag-ok">Проверено по Ключ выписки</span> Две одинаковые выписки схлопнуты в одну, оба платежа сохранены</h4>
+
+        <p><strong>Счет:</strong> RUR ЕРС <code>40701810000030000413</code>. Оба платежа уже загружены
+        в базу - загружать повторно не нужно.</p>
+
+        <table>
+            <thead>
+                <tr><th></th><th>Было (старая версия)</th><th>Стало (оптимизация)</th></tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Строк выписки по договору</td>
+                    <td><strong>2</strong> (одинаковые дубликаты)</td>
+                    <td><strong>1</strong></td>
+                </tr>
+                <tr>
+                    <td>Ключ выписки (UUID)</td>
+                    <td>2 ключа: <code>eef6de78-...</code> и <code>7d72508a-...</code></td>
+                    <td>1 ключ: <code>429a48bd-...</code></td>
+                </tr>
+                <tr>
+                    <td>Флаги выписки</td>
+                    <td>Обе: Не загружать / 1</td>
+                    <td>Не загружать / 1</td>
+                </tr>
+                <tr>
+                    <td>Платежей по договору</td>
+                    <td>2 (по одному на каждой строке)</td>
+                    <td>2 (оба на одной строке)</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <h3>Детализация по платежам</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>№ ПП</th>
+                    <th>Сумма</th>
+                    <th>Загружен</th>
+                    <th>Было: ключ выписки</th>
+                    <th>Стало: ключ выписки</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>488641</td>
+                    <td>6 999 980</td>
+                    <td class="ok">Да</td>
+                    <td><code>eef6de78-...</code> (отдельная выписка)</td>
+                    <td rowspan="2"><code>429a48bd-...</code> (общая выписка)</td>
+                </tr>
+                <tr>
+                    <td>103870</td>
+                    <td>7 000 000</td>
+                    <td class="ok">Да</td>
+                    <td><code>7d72508a-...</code> (отдельная выписка)</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <h3>Как это выглядит на схеме</h3>
+        <p><strong>Было:</strong> два одинаковых дубликата выписки, каждый с одним платежом.</p>
+        <div class="flow">
+            <div class="flow-box">ПП 488641</div>
+            <div class="flow-arrow">&rarr;</div>
+            <div class="flow-box">Выписка eef6de78...<br>Нет / 1</div>
+            <div class="flow-box">ПП 103870</div>
+            <div class="flow-arrow">&rarr;</div>
+            <div class="flow-box">Выписка 7d72508a...<br>Нет / 1</div>
+        </div>
+
+        <p><strong>Стало:</strong> оба платежа собраны под одной выпиской (аналогично примеру с ЕРС 21.05).</p>
+        <div class="flow">
+            <div class="flow-box">ПП 488641</div>
+            <div class="flow-box">ПП 103870</div>
+            <div class="flow-arrow">&rarr;</div>
+            <div class="flow-box highlight">1 выписка<br>429a48bd...<br>Нет / 1</div>
+        </div>
+
+        <div class="block-success">
+            <strong>Вывод для бизнеса:</strong> оба платежа на месте, суммы и статус «Загружен=Да»
+            совпадают. Новая версия убрала лишний дубликат строки в списке выписок и собрала
+            платежи под одним <code>Ключ выписки</code>. Бизнес-смысл не изменился: всё уже в базе,
+            загружать не нужно.
+        </div>
+    </div>
+</section>
+
+<section id="errors">
+    <h2>8. Журнал ошибок и предупреждений</h2>
+
+    <table>
+        <thead>
+            <tr><th>Показатель</th><th>Было</th><th>Стало</th></tr>
+        </thead>
+        <tbody>
+            <tr><td>Строк в файле ошибок</td><td>232</td><td>232</td></tr>
+            <tr><td>Набор сообщений</td><td colspan="2" class="ok">Полностью идентичен</td></tr>
+        </tbody>
+    </table>
+
+    <p>Новых ошибок оптимизация не добавила. Те же предупреждения, что и в исходной версии.</p>
+</section>
+
+<section id="verdict-table">
+    <h2>9. Итоговая таблица приемки</h2>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Область</th>
+                <th>Результат</th>
+                <th>Критичность для бизнеса</th>
+                <th>Рекомендация</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>Платежные поручения (суммы, реквизиты)</td>
+                <td class="ok">Полное совпадение</td>
+                <td>-</td>
+                <td>Принять</td>
+            </tr>
+            <tr>
+                <td>Журнал ошибок</td>
+                <td class="ok">Без изменений</td>
+                <td>-</td>
+                <td>Принять</td>
+            </tr>
+            <tr>
+                <td>Договоры и остатки на 21.05 (ЕРС)</td>
+                <td class="ok">251 / 251, 222 уник. ДУ</td>
+                <td>-</td>
+                <td>Принять</td>
+            </tr>
+            <tr>
+                <td>Дубли «пустой шапки» ЕРС 21.05</td>
+                <td class="ok">18 &rarr; 1 строка, 17 ПП сохранены</td>
+                <td>Низкая (интерфейс)</td>
+                <td>Принять как улучшение</td>
+            </tr>
+            <tr>
+                <td>ДУ 10076, 28.05 (ключ выписки)</td>
+                <td class="ok">2 выписки &rarr; 1, оба ПП (488641 + 103870) сохранены</td>
+                <td>Низкая (интерфейс)</td>
+                <td>Принять как улучшение</td>
+            </tr>
+            <tr>
+                <td>ДУ 9957, 18.05 (ключ выписки)</td>
+                <td class="ok">1 выписка &rarr; 2, ПП 155114 + 483527 на своих ключах</td>
+                <td>Низкая (интерфейс)</td>
+                <td>Принять как улучшение</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <div class="block-success">
+        <strong>Общий вывод:</strong> оптимизация загрузки выписок за май 2026
+        <strong>не меняет состав платежей и не добавляет ошибок</strong>. Проверка по
+        <code>Ключ выписки</code> подтвердила: платежи не теряются при изменении числа строк
+        в таблице «Выписки» (схлопывание дублей или разделение по статусу загрузки).
+        С точки зрения данных для учета и разбора выписок - <strong>регрессия не выявлена</strong>.
+    </div>
+</section>
+
+<section id="appendix">
+    <h2>10. Приложение: исходные материалы</h2>
+
+    <table>
+        <thead>
+            <tr><th>Материал</th><th>Расположение</th></tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>Выгрузки Excel (было / стало)</td>
+                <td><code>Регресс/Регресс/1805_3105_*.xlsx</code></td>
+            </tr>
+            <tr>
+                <td>Машинный отчет сверки XLSX</td>
+                <td><code>Регресс/Регресс/1805_3105_xlsx_compare_report.json</code></td>
+            </tr>
+            <tr>
+                <td>Детальный разбор выписок</td>
+                <td><code>Регресс/Регресс/1805_3105_vypiski_diff_analysis.json</code></td>
+            </tr>
+            <tr>
+                <td>Разбор ДУ 9957 по ключу выписки</td>
+                <td><code>Регресс/Регресс/du_9957_key_analysis.json</code></td>
+            </tr>
+            <tr>
+                <td>Разбор ДУ 10076 по ключу выписки</td>
+                <td><code>Регресс/Регресс/du_10076_key_analysis.json</code></td>
+            </tr>
+            <tr>
+                <td>Скрипт автоматической сверки</td>
+                <td><code>Регресс/compare_regression_xlsx.py</code></td>
+            </tr>
+            <tr>
+                <td>Контрольный прогон только 21.05</td>
+                <td><code>Регресс/Регресс2105/</code> (обе версии: 782 выписки, ПП идентичны)</td>
+            </tr>
+        </tbody>
+    </table>
+</section>
+
+<footer>
+    IMDEV-9096 &middot; Wim_Du &middot; Отчет подготовлен по результатам регрессионной сверки XLSX
+</footer>
+
+</div>
+</body>
+</html>

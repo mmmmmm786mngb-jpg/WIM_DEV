@@ -2,6 +2,7 @@
 
 | Файл | Описание |
 |------|----------|
+| [may_regression_report.html](may_regression_report.html) | **Регресс за май (18-31.05):** XLSX-сверка было/стало, ПП 8835=8835, примеры ЕРС 21.05 / ДУ 9957 / 10076 |
 | [imdev-9096_optimization_regression_report.html](imdev-9096_optimization_regression_report.html) | **Итоговый отчет регрессии (01-05.06):** оригинал vs ispr5, OPT-02/05/17/18, скорость 8.9x, MXL/ПП/лог |
 | [optimization_plan.html](optimization_plan.html) | **План работ:** блок 1 (Прочитать: 3 SQL + 1 цикл) + блок 2 (Разобрать: параллельность) |
 | [optimization_read_results.html](optimization_read_results.html) | **Результаты оптимизации «Прочитать»:** замеры было/стало (617→237 с) + регресс MXL 1106 |
