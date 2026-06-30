@@ -2,12 +2,13 @@
 
 | Файл | Описание |
 |------|----------|
+| [general_test_2606_report.html](general_test_2606_report.html) | **Генеральный тест 26.06 (T-1 PROD):** Получить 5→0,75 мин, Разобрать 13→7 мин, 452 ПП = OK, 432 док |
 | [june_0906_razobrat_regression_report.html](june_0906_razobrat_regression_report.html) | **Регресс «РазобратьОтмеченные» 09.06:** Получить + отметка (кроме без ДУ), 576/1044/1067 = идентично, 3 потока, 23→10 мин |
 | [may_regression_report.html](may_regression_report.html) | **Регресс за май (18-31.05):** XLSX-сверка было/стало, ПП 8835=8835, примеры ЕРС 21.05 / ДУ 9957 / 10076 |
 | [imdev-9096_optimization_regression_report.html](imdev-9096_optimization_regression_report.html) | **Итоговый отчет регрессии (01-05.06):** оригинал vs ispr5, OPT-02/05/17/18, скорость 8.9x, MXL/ПП/лог |
 | [optimization_plan.html](optimization_plan.html) | **План работ:** блок 1 (Прочитать: 3 SQL + 1 цикл) + блок 2 (Разобрать: параллельность) |
 | [optimization_read_results.html](optimization_read_results.html) | **Результаты оптимизации «Прочитать»:** замеры было/стало (617→237 с) + регресс MXL 1106 |
-| [statement_loading_optimization.html](statement_loading_optimization.html) | Полный анализ и замеры отладчика, статус OPT-* (раздел 0), регрессия MXL (раздел 0.1) |
+| [statement_loading_optimization.html](statement_loading_optimization.html) | **Сводный анализ:** статус OPT, регрессии, замеры отладчика, деревья вызовов, каталог OPT, дорожная карта |
 | [mass_load_parallel_background_spec_v2.html](mass_load_parallel_background_spec_v2.html) | **ТЗ v2.0 (актуальное):** фоновая параллельная загрузка «Разобрать отмеченные» — сверено с кодом+API, упрощено через `ОперацияВыполнена`, КлиентБанк на выписку, примеры кода |
 | [mass_load_parallel_background_spec.html](mass_load_parallel_background_spec.html) | ТЗ 1.0 (исходное): фоновая массовая загрузка (группы по счёту/договору, пул N) |
 

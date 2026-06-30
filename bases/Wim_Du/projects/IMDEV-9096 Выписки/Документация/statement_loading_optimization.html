@@ -2,7 +2,7 @@
 <html lang="ru">
 <head>
 <meta charset="UTF-8">
-<title>IMDEV-Выписки — места оптимизации (без web)</title>
+<title>IMDEV-9096 — анализ оптимизации загрузки выписок</title>
 <style>
 * { box-sizing: border-box; }
 body {
@@ -143,6 +143,22 @@ pre {
 }
 ul.compact { margin: 8px 0; padding-left: 22px; }
 ul.compact li { margin: 4px 0; }
+.toc {
+    background: #fff;
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    padding: 16px 22px;
+    margin: 20px 0;
+    columns: 2;
+    column-gap: 32px;
+    font-size: 13.5px;
+}
+.toc h2 { margin: 0 0 10px; font-size: 1rem; border: none; padding: 0; column-span: all; }
+.toc ol { margin: 0; padding-left: 20px; }
+.toc li { margin: 4px 0; break-inside: avoid; }
+.toc a { color: #1565c0; text-decoration: none; }
+.toc a:hover { text-decoration: underline; }
+@media (max-width: 700px) { .toc { columns: 1; } }
 </style>
 <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
 <script>mermaid.initialize({ startOnLoad: true, theme: "neutral", securityLevel: "loose" });</script>
@@ -150,116 +166,180 @@ ul.compact li { margin: 4px 0; }
 <body>
 <div class="container">
 
-<h1>IMDEV-9096: места оптимизации алгоритмов 1С (загрузка выписок)</h1>
+<h1>IMDEV-9096: анализ и оптимизация загрузки выписок</h1>
 
 <div class="lead">
-    <strong>Область анализа:</strong> загрузка и разбор банковских выписок в Wim_Du <strong>без учета web-service</strong>
-    (исключены <code>GetStatementOfAccount</code>, WSDL, сетевые задержки).<br>
-    <strong>Объекты:</strong> EPF <code>внЗагрузкаВыписокДУ</code>, CF <code>Обработка.КлиентБанк</code>,
-    <code>Справочник.НаборыПравилРазбораБанковскойВыписки</code>.
+    <strong>Назначение документа:</strong> единая точка входа по проекту оптимизации EPF <code>внЗагрузкаВыписокДУ</code> в Wim_Du.
+    Содержит статус OPT-*, результаты регрессий, замеры отладчика (baseline) и карту узких мест в EPF и <code>Обработка.КлиентБанк</code>.<br>
+    <strong>Граница анализа:</strong> серверный 1С/SQL <em>без</em> web-service (<code>GetStatementOfAccount</code>, WSDL).
 </div>
 
 <div class="info">
-    <strong>Источники кода в репозитории:</strong><br>
-    Baseline (замеры «было»): <code>bases/Wim_Du/projects/IMDEV-9096 Выписки/erf_Оптимизация/внЗагрузкаВыписокДУ_epf/</code><br>
-    Рабочая ветка (оптимизации): <code>bases/Wim_Du/projects/IMDEV-9096 Выписки/erf_Оптимизация_Тест1/внЗагрузкаВыписокДУ_epf/</code><br>
-    CF: <code>C:\1c\Cursor_1c\WORK\Wim_Du\SRC\CF\DataProcessors\КлиентБанк\</code>,
-    <code>...\Catalogs\НаборыПравилРазбораБанковскойВыписки\</code><br>
-    <strong>Связанные документы:</strong>
-    <a href="optimization_plan.html">optimization_plan.html</a> (рабочий план блоков 1–2),
-    <a href="imdev-9096_optimization_regression_report.html">imdev-9096_optimization_regression_report.html</a> (итоговый отчёт 01–05.06),
-    <a href="optimization_read_results.html">optimization_read_results.html</a> (замер «Прочитать»),
-    <a href="mass_load_parallel_background_spec_v2.html">mass_load_parallel_background_spec_v2.html</a> (ТЗ фоновой загрузки, v2.0),
-    <a href="mass_load_parallel_background_spec.html">mass_load_parallel_background_spec.html</a> (ТЗ v1.0, архив),
-    <code>../Регресс/compare_mxl.py</code> (сравнение MXL «было/стало»)
+    <strong>Код в репозитории:</strong><br>
+    Baseline: <code>erf_Оптимизация/внЗагрузкаВыписокДУ_epf/</code> &nbsp;|&nbsp;
+    Test1: <code>erf_Оптимизация_Тест1/внЗагрузкаВыписокДУ_epf/</code> (v<strong>6.00</strong>) &nbsp;|&nbsp;
+    CF: <code>WORK/Wim_Du/SRC/CF/DataProcessors/КлиентБанк/</code><br>
+    <strong>Отчёты регрессии и замеров:</strong>
+    <a href="general_test_2606_report.html">генеральный тест 26.06 (T-1)</a>,
+    <a href="june_0906_razobrat_regression_report.html">разбор 09.06</a>,
+    <a href="may_regression_report.html">май 18–31.05</a>,
+    <a href="imdev-9096_optimization_regression_report.html">01–05.06</a>,
+    <a href="optimization_read_results.html">замер «Прочитать»</a>,
+    <a href="optimization_plan.html">план работ</a>,
+    <a href="mass_load_parallel_background_spec_v2.html">ТЗ OPT-13 v2</a>
 </div>
 
-<div class="warn">
-    <strong>Обновлено по факту кода и замеров</strong> (IMDEV-9096, 2026-06-27).
-    Версия EPF Test1: <strong>6.00</strong> (ранее 5.90). Реализованы OPT-02/05/17/18 (блок «Прочитать») и OPT-13 (фоновая параллельная «Разобрать отмеченные»).
-    Теоретические оценки SQL-кратности (разделы 2.1, 3.1) дополнены фактическими % времени из <code>замерОтладчика_было.docx</code>.
-    Приоритеты OPT-* пересмотрены: в EPF доминирует цепочка ЕРС; в КлиентБанк — правила <code>Выполн()</code> и проведение.
-    Рекомендации OPT-17, OPT-05, OPT-18 синхронизированы с <a href="optimization_plan.html">optimization_plan.html</a> (2026-06-26).
+<div class="success">
+    <strong>Итог на 30.06.2026:</strong> блок «Прочитать» (OPT-02/17/05/18) и параллельный «Разобрать» (OPT-13, 3 потока) реализованы и проверены регрессией.
+    «Прочитать»: 617→237 с (Wim_Du), 290→24 с (T-1 PROD). «Разобрать»: 23→10 мин (09.06), 13→7 мин (26.06 T-1). Данные совпадают.
 </div>
+
+<nav class="toc">
+<h2>Содержание</h2>
+<ol>
+    <li><a href="#status">0. Статус OPT и регрессии</a></li>
+    <li><a href="#profiler">1. Замеры отладчика (baseline)</a></li>
+    <li><a href="#architecture">2. Архитектура (2 контура)</a></li>
+    <li><a href="#epf-tree">3. EPF: дерево вызовов и узкие места</a></li>
+    <li><a href="#kb-tree">4. КлиентБанк: дерево и OPT-13</a></li>
+    <li><a href="#opt-catalog">5. Каталог OPT (все пункты)</a></li>
+    <li><a href="#roadmap">6. Дорожная карта</a></li>
+    <li><a href="#appendix">Приложение: строки в коде</a></li>
+</ol>
+</nav>
 
 <!-- ============================================================ -->
-<h2>0. Статус реализации (erf_Оптимизация_Тест1)</h2>
+<h2 id="status">0. Статус OPT и регрессии</h2>
 
-<p>Детальные планы и критерии приёмки — в <a href="optimization_plan.html">optimization_plan.html</a>.
-Здесь — сводка по реализованным OPT в EPF Test1 v6.00: блок «Прочитать» и фоновая «Разобрать отмеченные».</p>
+<p>Реализованные оптимизации в EPF Test1 v6.00. Детали приёмки — в отчётах регрессии (ссылки ниже).</p>
 
 <table>
 <thead>
 <tr>
-    <th>OPT-ID</th>
-    <th>Запрос / объект</th>
-    <th>Baseline</th>
-    <th>Статус в Test1</th>
-    <th>Маркер в коде</th>
-    <th>Замер «стало»</th>
+    <th>OPT</th>
+    <th>Область</th>
+    <th>Baseline (замер)</th>
+    <th>Статус Test1</th>
+    <th>Эффект</th>
 </tr>
 </thead>
 <tbody>
 <tr style="background:#d4edda;">
-    <td>OPT-02</td>
-    <td>Запрос 1: <code>ДоговорДУПоСчету</code></td>
+    <td><strong>OPT-02</strong></td>
+    <td><code>ДоговорДУПоСчету</code> — пакетный кэш</td>
     <td>255 SQL, 30,66%</td>
-    <td><strong>Реализовано</strong> — пакетный кэш, 1 SQL на ответ</td>
-    <td><code>IMDEV-9096 ++ OPT-02</code></td>
-    <td>регрессия OK (см. <a href="#regress-zapros1">0.1</a>)</td>
+    <td>Реализовано</td>
+    <td>1 SQL на ответ; регресс MXL OK</td>
 </tr>
 <tr style="background:#d4edda;">
-    <td>OPT-17</td>
-    <td>Запрос 2: <code>ЕРС_ДоговорДУ_ПоСчетуИСчетуДепо</code></td>
-    <td>118 SQL, 22,43% (стр. 1624)</td>
-    <td><strong>Реализовано</strong> — ленивый кэш по <code>НомерСчета</code></td>
-    <td><code>IMDEV-9096 [OPT-Запрос2]</code></td>
-    <td>617→237 с (см. <a href="#regress-full">0.2</a>)</td>
+    <td><strong>OPT-17</strong></td>
+    <td><code>ЕРС_ДоговорДУ_ПоСчетуИСчетуДепо</code></td>
+    <td>118 SQL, 22,43%</td>
+    <td>Реализовано</td>
+    <td>ленивый кэш по счёту</td>
 </tr>
 <tr style="background:#d4edda;">
-    <td>OPT-05</td>
-    <td>Запрос 3: <code>ЕРС_ДоговорДУ_ПоПлатежномуПоручению</code></td>
+    <td><strong>OPT-05</strong></td>
+    <td><code>ЕРС_ДоговорДУ_ПоПлатежномуПоручению</code></td>
     <td>118 SQL, 18,36%</td>
-    <td><strong>Реализовано</strong> — кэш ПП по (счёт, день)</td>
-    <td><code>IMDEV-9096 [OPT-05]</code></td>
-    <td>617→237 с</td>
+    <td>Реализовано</td>
+    <td>кэш ПП по (счёт, день)</td>
 </tr>
 <tr style="background:#d4edda;">
-    <td>OPT-18</td>
-    <td>Запрос 4: <code>ЕРС_ДоговорДУ_ПоСчетуИНазначению</code></td>
-    <td>~3M итераций, ~7,2%</td>
-    <td><strong>Реализовано</strong> — карта префиксов + извлечение токенов</td>
-    <td><code>IMDEV-9096 [OPT-18]</code></td>
-    <td>617→237 с</td>
+    <td><strong>OPT-18</strong></td>
+    <td><code>ЕРС_ДоговорДУ_ПоСчетуИНазначению</code></td>
+    <td>~3M <code>СтрНайти</code>, ~7,2%</td>
+    <td>Реализовано</td>
+    <td>карта префиксов</td>
+</tr>
+<tr style="background:#d4edda;">
+    <td><strong>OPT-13</strong></td>
+    <td>Фоновая «Разобрать отмеченные» (3 потока)</td>
+    <td>синхрон ~383 с / 12 выписок</td>
+    <td>Реализовано v6.00</td>
+    <td>см. регрессии ниже</td>
 </tr>
 <tr>
     <td>OPT-03</td>
-    <td>Цепочка ERS в <code>ПрочитатьОбъекты</code></td>
-    <td>~60–120 с на 118 платежей</td>
-    <td>не начато</td>
-    <td>—</td>
+    <td>Ранний выход в цепочке ERS</td>
+    <td>~60–120 с / 118 платежей</td>
+    <td>Не начато</td>
     <td>—</td>
 </tr>
-<tr style="background:#d4edda;">
-    <td>OPT-13</td>
-    <td>Фоновая параллельная загрузка («Разобрать отмеченные»)</td>
-    <td>~383 с / 12 выписок (синхрон)</td>
-    <td><strong>Реализовано (v6.00)</strong> — пул фоновых заданий БСП, группы по (счёт, договор)</td>
-    <td><code>IMDEV-9096 OPT-13</code>, область <code>IMDEV_9096_ФоноваяМассоваяЗагрузка</code></td>
-    <td>ожидает замера с N&gt;1; см. <a href="#opt13">0.3</a></td>
+<tr>
+    <td>OPT-12, OPT-08, OPT-10</td>
+    <td>КлиентБанк: правила, проведение, поиск док.</td>
+    <td>22,73% + 20,09% + 12,27%</td>
+    <td>Не начато (CF)</td>
+    <td>требует замера по правилам</td>
 </tr>
 </tbody>
 </table>
 
-<div class="success">
-    <strong>Собранный EPF:</strong> <code>erf_Оптимизация_Тест1/внЗагрузкаВыписокДУ.epf</code> (версия <strong>6.00</strong>, компиляция WIM_DU, без ошибок).<br>
-    <strong>Реализовано:</strong> блок «Прочитать» (OPT-02, OPT-17, OPT-05, OPT-18) + фоновая параллельная «Разобрать отмеченные» (OPT-13).<br>
-    <strong>Замер «Прочитать» 1 день:</strong> 617→237 с (~2,6×). Полный цикл 01–05.06: ~23 мин → ~2,6 мин (~8,9×). См. <a href="#regress-full">0.2</a> и
-    <a href="imdev-9096_optimization_regression_report.html">отчёт регрессии</a>.<br>
-    <strong>Следующий шаг:</strong> замер «Разобрать отмеченные» с <code>МаксПараллельныхГрупп &gt; 1</code> на том же пакете выписок.
-</div>
+<h3 id="regress-summary">0.1. Сводка регрессионных тестов</h3>
 
-<h3 id="regress-zapros1">0.1. Регрессия ТЧ «Выписки» — Запрос 1 (сравнение MXL)</h3>
+<table>
+<thead>
+<tr>
+    <th>Тест</th>
+    <th>База</th>
+    <th>Период</th>
+    <th>Получить</th>
+    <th>Разобрать</th>
+    <th>Данные</th>
+    <th>Отчёт</th>
+</tr>
+</thead>
+<tbody>
+<tr style="background:#d4edda;">
+    <td>MXL / 1 день</td>
+    <td>Wim_Du</td>
+    <td>11.06.2026</td>
+    <td>617→237 с (~2,6×)</td>
+    <td>—</td>
+    <td>1106 строк, multiset=0</td>
+    <td><a href="optimization_read_results.html">read_results</a></td>
+</tr>
+<tr style="background:#d4edda;">
+    <td>Полный цикл</td>
+    <td>Wim_Du</td>
+    <td>01–05.06</td>
+    <td>в составе</td>
+    <td>в составе</td>
+    <td>~23 мин→~2,6 мин (~8,9×)</td>
+    <td><a href="imdev-9096_optimization_regression_report.html">01–05.06</a></td>
+</tr>
+<tr style="background:#d4edda;">
+    <td>XLSX май</td>
+    <td>Wim_Du</td>
+    <td>18–31.05</td>
+    <td>—</td>
+    <td>—</td>
+    <td>8835 ПП идентичны</td>
+    <td><a href="may_regression_report.html">май</a></td>
+</tr>
+<tr style="background:#d4edda;">
+    <td>РазобратьОтмеченные</td>
+    <td>Wim_Du</td>
+    <td>09.06</td>
+    <td>—</td>
+    <td>23→10 мин (3 потока)</td>
+    <td>576/1044/1067 = OK</td>
+    <td><a href="june_0906_razobrat_regression_report.html">09.06</a></td>
+</tr>
+<tr style="background:#d4edda;">
+    <td><strong>Генеральный</strong></td>
+    <td>AVC_PP_DU (T-1)</td>
+    <td>26.06</td>
+    <td>5→0,75 мин (~6×)</td>
+    <td>13→7 мин (3 потока)</td>
+    <td>452 ПП, 432 док = OK</td>
+    <td><a href="general_test_2606_report.html">26.06 T-1</a></td>
+</tr>
+</tbody>
+</table>
+
+<h3 id="regress-zapros1">0.2. Регрессия MXL — Запрос 1 (после OPT-02)</h3>
 
 <p>После OPT-02 выгружены табличные части «Выписки» в MXL и сравнены baseline
 (<code>erf_Оптимизация</code>, «было») с Test1 («стало»). Скрипт:
@@ -314,7 +394,7 @@ ul.compact li { margin: 4px 0; }
     </ul>
 </div>
 
-<h3 id="regress-full">0.2. Замер «Прочитать» и полный цикл 01–05.06.2026</h3>
+<h3 id="regress-full">0.3. Замер «Прочитать» (Wim_Du, 11.06.2026)</h3>
 
 <p>Фактические замеры после OPT-02/17/05/18 (v5.90, затем v6.00 без изменений в «Прочитать») зафиксированы в
 <a href="optimization_read_results.html">optimization_read_results.html</a> и
@@ -348,10 +428,10 @@ ul.compact li { margin: 4px 0; }
 </tbody>
 </table>
 
-<h3 id="opt13">0.3. OPT-13 — фоновая параллельная «Разобрать отмеченные» (v6.00)</h3>
+<h3 id="opt13">0.4. OPT-13 — фоновая параллельная загрузка</h3>
 
-<p>Детальное ТЗ: <a href="mass_load_parallel_background_spec_v2.html">mass_load_parallel_background_spec_v2.html</a>.
-Реализация в EPF Test1 v6.00.</p>
+<p>ТЗ: <a href="mass_load_parallel_background_spec_v2.html">mass_load_parallel_background_spec_v2.html</a>.
+Реализация в EPF Test1 v6.00. Замеры с <code>МаксПараллельныхГрупп = 3</code> подтверждены регрессией 09.06 и генеральным тестом 26.06 (T-1).</p>
 
 <table>
 <thead>
@@ -386,18 +466,20 @@ ul.compact li { margin: 4px 0; }
 </table>
 
 <div class="info">
-    <strong>Условия включения фона:</strong> отдельного флага <code>ИспользоватьФоновуюМассовуюЗагрузку</code> нет —
-    при <code>МаксПараллельныхГрупп &lt;= 1</code> всегда синхронный режим. На файловой ИБ фон отключён
-    (<code>ОбщегоНазначения.ИнформационнаяБазаФайловая()</code>). Бизнес-логика и формат сообщений/лога совпадают с синхроном.
+    <strong>Условия включения фона:</strong> при <code>МаксПараллельныхГрупп &lt;= 1</code> — синхронный режим.
+    На файловой ИБ фон отключён. Обертки замеров IMDEV-8927: <code>НачатьЗамерОперации</code> / <code>ЗакончитьЗамерОперации</code>
+    (динамический вызов <code>ОценкаПроизводительности</code> — безопасно для PROD без релиза CF).
 </div>
 
-<div class="warn">
-    <strong>Замер «Разобрать» с N&gt;1 ещё не выполнен.</strong> Baseline синхронного режима: ~383 с на 12 выписок (раздел 1).
-    Ожидаемый эффект — сокращение wall-clock за счёт параллельных групп на серверной ИБ; точные цифры — после замера.
+<div class="success">
+    <strong>Замеры OPT-13 (3 потока):</strong> Wim_Du 09.06 — 23→10 мин; T-1 PROD 26.06 — 13→7 мин.
+    Данные (ПП, документы, правила, сверки) идентичны baseline. Подробности — в отчётах
+    <a href="june_0906_razobrat_regression_report.html">09.06</a> и
+    <a href="general_test_2606_report.html">26.06</a>.
 </div>
 
 <!-- ============================================================ -->
-<h2>1. Замеры отладчика (базовая линия «было»)</h2>
+<h2 id="profiler">1. Замеры отладчика (базовая линия «было»)</h2>
 
 <p>Источник: <code>bases/Wim_Du/projects/IMDEV-9096 Выписки/замерОтладчика_было.docx</code>.
 Два сценария на тестовой базе Wim_Du.</p>
@@ -645,7 +727,7 @@ Web <code>GetStatementOfAccount</code> — 3,35 с (1,02%), не доминир�
 </div>
 
 <!-- ============================================================ -->
-<h2>2. Общая схема процесса (2 контура)</h2>
+<h2 id="architecture">2. Общая схема процесса (2 контура)</h2>
 
 <div class="mermaid-wrap">
 <pre class="mermaid">
@@ -690,12 +772,11 @@ flowchart TB
 </div>
 
 <!-- ============================================================ -->
-<h2>3. Дерево вызовов — контур EPF (РазборВыписок)</h2>
+<h2 id="epf-tree">3. Дерево вызовов — контур EPF (РазборВыписок)</h2>
 
 <div class="info">
-    Два варианта дерева: <strong>3.1</strong> — baseline (<code>erf_Оптимизация</code>, замер «было»),
-    <strong>3.2</strong> — рабочая ветка Test1 с кэшами OPT-02/17/05/18.
-    Таблица <strong>3.3</strong> — факт baseline и ожидаемая кратность после оптимизаций.
+    Два варианта дерева: <strong>3.1</strong> — baseline; <strong>3.2</strong> — Test1 с кэшами OPT-02/17/05/18.
+    Таблица <strong>3.3</strong> — факт baseline и результат после оптимизаций.
 </div>
 
 <h3>3.1. Baseline — до OPT (замер «было»)</h3>
@@ -853,13 +934,12 @@ flowchart TB
 </table>
 
 <p style="color:#6c757d;font-size:13px;">
-    Колонка «Факт» — только baseline (<code>замерОтладчика_было.docx</code>).
-    Колонка «Test1: ожид. SQL» — оценка кратности после кэшей; точные цифры — после замера «стало».
-    * Строка 2173 (119,83 с / 36,64%) — время всей функции депо включая цикл; для OPT-17 целевая метрика — SQL на стр. 1624.
+    Колонка «Факт» — baseline (<code>замерОтладчика_было.docx</code>).
+    Колонка «Test1» — после OPT-02/17/05/18; замер 617→237 с подтверждён регрессией.
 </p>
 
 <!-- ============================================================ -->
-<h2>4. Дерево вызовов — контур КлиентБанк (загрузка в БД)</h2>
+<h2 id="kb-tree">4. Дерево вызовов — контур КлиентБанк (загрузка в БД)</h2>
 
 <p>Точка входа: <code>МассоваяЗагрузкаНаСервере</code>. При OPT-13 (v6.00) возможны два режима — синхронный цикл или пул фоновых групп (раздел <a href="#opt13">0.3</a>).</p>
 
@@ -985,350 +1065,112 @@ flowchart LR
     <td>1 выписка = 1 цикл</td>
     <td>12 выписок</td>
     <td>—</td>
-    <td><span class="tag tag-p1">P1</span> OPT-13 — <strong>реализовано</strong> (v6.00, замер N&gt;1 ожидает)</td>
+    <td><span class="tag tag-p1">P1</span> OPT-13 — <strong>реализовано</strong>, замер 3 потока: 09.06 и 26.06 T-1</td>
 </tr>
 </tbody>
 </table>
 
 <!-- ============================================================ -->
-<h2>5. Детальный перечень мест оптимизации</h2>
+<h2 id="opt-catalog">5. Каталог OPT (все пункты)</h2>
 
-<h3><span class="tag tag-p0">P0</span> Критичные (по замерам отладчика)</h3>
-
-<table>
-<thead>
-<tr>
-    <th>ID</th>
-    <th>Место</th>
-    <th>Файл / процедура</th>
-    <th>Замер</th>
-    <th>Рекомендация</th>
-</tr>
-</thead>
-<tbody>
-<tr style="background:#d4edda;">
-    <td>OPT-17</td>
-    <td><span class="tag tag-sql">SQL</span> <span class="tag tag-epf">EPF</span></td>
-    <td class="path"><code>ЕРС_ДоговорДУ_ПоСчетуИСчетуДепо</code> ~1582, вызов ~2173</td>
-    <td>118 вызовов, SQL стр. 1624 — <strong>22,43%</strong> (docx)</td>
-    <td><strong>Реализовано (Test1):</strong> разделение на <code>ПолучитьДанныеДепоПоСчету</code> + <code>НайтиДоговорВДанныхДепо</code>; ленивый кэш <code>КэшДепоПоСчету</code> по <code>НомерСчета</code> (1 SQL на уникальный счёт). См. <a href="optimization_plan.html">п. 1.2</a>.</td>
-</tr>
-<tr style="background:#d4edda;">
-    <td>OPT-02</td>
-    <td><span class="tag tag-n1">N+1</span> <span class="tag tag-epf">EPF</span></td>
-    <td class="path"><code>ДоговорДУПоСчету</code> ~1252, стр. 1286</td>
-    <td><strong>30,66%</strong>, 255 SQL (137 выписк + 118 fallback)</td>
-    <td><strong>Реализовано (Test1):</strong> пакетный кэш <code>ЗаполнитьКэшДоговоровДУПоСчетам</code>, 1 SQL на ответ. См. <a href="optimization_plan.html">п. 1.1</a>.</td>
-</tr>
-<tr style="background:#d4edda;">
-    <td>OPT-05</td>
-    <td><span class="tag tag-sql">SQL</span> <span class="tag tag-epf">EPF</span></td>
-    <td class="path"><code>ЕРС_ДоговорДУ_ПоПлатежномуПоручению</code> ~1697, стр. 1725</td>
-    <td><strong>18,36%</strong>, 118 вызовов; окно [−5; +1] день</td>
-    <td><strong>Реализовано (Test1):</strong> <code>ПолучитьПлатежныеПорученияОкна</code>, кэш <code>КэшПП</code> по <code>(БанковскийСчет, НачалоДня(Дата))</code>; диапазон дат через <code>НачалоДня ± N×86400</code>. См. <a href="optimization_plan.html">п. 1.3</a>.</td>
-</tr>
-<tr style="background:#fff8e1;">
-    <td>OPT-03</td>
-    <td><span class="tag tag-sql">SQL chain</span> <span class="tag tag-epf">EPF</span></td>
-    <td class="path">блок ERS в <code>ПрочитатьОбъекты</code> ~2140-2202</td>
-    <td>цепочка ~60-120 с на 118 платежей</td>
-    <td>Строгий ранний выход после первого найденного договора. Не вызывать fallback <code>ДоговорДУПоСчету</code> если уже есть результат отбора ЕРС.</td>
-</tr>
-<tr style="background:#fff8e1;">
-    <td>OPT-12</td>
-    <td><span class="tag tag-cf">CF</span></td>
-    <td class="path"><code>ВыполнитьПравилаПоДеревуПравил</code> ~1985</td>
-    <td><strong>22,73%</strong>, 1 105 вызовов <code>Выполн()</code></td>
-    <td><strong>Сначала</strong> замер в разрезе <code>СтрокаДерева.Правило</code>. Аудит «Набор правил ВТБ». Вынести тяжелые правила в код. Кэш дерева на <code>(Счет, Событие)</code>.</td>
-</tr>
-<tr style="background:#fff8e1;">
-    <td>OPT-08</td>
-    <td><span class="tag tag-cf">CF</span></td>
-    <td class="path"><code>ЗаписатьОбъект</code> ~2871, проведение стр. 2922</td>
-    <td><strong>20,09%</strong> проведение + 5,91% запись</td>
-    <td>Пропуск перепроведения если данные не изменились. Минимизировать <code>ОтменаПроведения</code> + <code>Запись</code> + <code>Проведение</code>.</td>
-</tr>
-</tbody>
-</table>
-
-<h3><span class="tag tag-p0">P0</span> Бывшие критичные (теория; снижены по замеру)</h3>
+<p>Единая таблица всех идентификаторов оптимизации. Реализованные пункты отмечены зелёным.
+Детальные деревья вызовов — в разделах <a href="#epf-tree">3</a> и <a href="#kb-tree">4</a>.</p>
 
 <table>
 <thead>
 <tr>
     <th>ID</th>
-    <th>Место</th>
-    <th>Файл / процедура</th>
-    <th>Проблема</th>
-    <th>Рекомендация</th>
+    <th>Приор.</th>
+    <th>Область</th>
+    <th>Процедура / место</th>
+    <th>Замер baseline</th>
+    <th>Статус</th>
 </tr>
 </thead>
 <tbody>
-<tr>
-    <td>OPT-01</td>
-    <td><span class="tag tag-n1">N+1</span> <span class="tag tag-epf">EPF</span></td>
-    <td class="path">ObjectModule.bsl<br><code>БанкXDTO()</code> ~1204</td>
-    <td>Теоретически ~600 SQL; в замере «Прочитать» не в топ-10</td>
-    <td>Кэш БИК — делать после P0 ERS, актуально для не-ЕРС сценариев</td>
-</tr>
-<tr>
-    <td>OPT-04</td>
-    <td><span class="tag tag-n1">N+1</span> <span class="tag tag-cf">CF</span></td>
-    <td class="path"><code>РаспознатьДанныеВСтрокеДокумента</code> ~2014</td>
-    <td>Теоретически 5+ SQL; в замере доминирует только поиск документа (12,27%)</td>
-    <td>Пакетный кэш контрагентов/счетов. Доп. замер по <code>ВидДокумента</code></td>
-</tr>
+<tr style="background:#d4edda;"><td>OPT-02</td><td>P0</td><td>EPF</td><td><code>ДоговорДУПоСчету</code></td><td>30,66%, 255 SQL</td><td><strong>Готово</strong></td></tr>
+<tr style="background:#d4edda;"><td>OPT-17</td><td>P0</td><td>EPF</td><td><code>ЕРС_ДоговорДУ_ПоСчетуИСчетуДепо</code></td><td>22,43%</td><td><strong>Готово</strong></td></tr>
+<tr style="background:#d4edda;"><td>OPT-05</td><td>P0</td><td>EPF</td><td><code>ЕРС_ДоговорДУ_ПоПлатежномуПоручению</code></td><td>18,36%</td><td><strong>Готово</strong></td></tr>
+<tr style="background:#d4edda;"><td>OPT-18</td><td>P1</td><td>EPF</td><td><code>ЕРС_ДоговорДУ_ПоСчетуИНазначению</code></td><td>~7,2%, ~3M итераций</td><td><strong>Готово</strong></td></tr>
+<tr style="background:#d4edda;"><td>OPT-13</td><td>P1</td><td>EPF</td><td><code>МассоваяЗагрузкаПуломГруппНаСервере</code></td><td>синхрон 383 с / 12 выписок</td><td><strong>Готово</strong> (3 потока)</td></tr>
+<tr><td>OPT-03</td><td>P0</td><td>EPF</td><td>цепочка ERS в <code>ПрочитатьОбъекты</code></td><td>~60–120 с</td><td>План: ранний выход</td></tr>
+<tr><td>OPT-12</td><td>P0</td><td>CF</td><td><code>Выполнить(Правило.Выполнение)</code></td><td>22,73%</td><td>План: аудит правил ВТБ</td></tr>
+<tr><td>OPT-08</td><td>P0</td><td>CF</td><td><code>Записать(Проведение)</code></td><td>20,09% + 5,91%</td><td>План: без лишнего перепроведения</td></tr>
+<tr><td>OPT-19</td><td>P1</td><td>CF</td><td>замер по <code>СтрокаДерева.Правило</code></td><td>—</td><td>Перед OPT-12</td></tr>
+<tr><td>OPT-10</td><td>P1</td><td>CF</td><td><code>ЗапросПоискаДокумента</code></td><td>12,27%</td><td>План</td></tr>
+<tr><td>OPT-04</td><td>P1</td><td>CF</td><td><code>РаспознатьДанныеВСтрокеДокумента</code></td><td>&lt;10% (не в топ)</td><td>План</td></tr>
+<tr><td>OPT-01</td><td>P1</td><td>EPF</td><td><code>БанкXDTO</code></td><td>не в топ-10</td><td>Для не-ЕРС</td></tr>
+<tr><td>OPT-06</td><td>P2</td><td>EPF</td><td><code>ИдентифицироватьПлатежи</code></td><td>не в топ-10</td><td>По замеру</td></tr>
+<tr><td>OPT-07</td><td>P2</td><td>EPF</td><td><code>НайтиСтроки</code> в идентификации</td><td>не в топ-10</td><td>По замеру</td></tr>
+<tr><td>OPT-09</td><td>P2</td><td>CF</td><td><code>Выгрузить().Колонки</code></td><td>—</td><td>План</td></tr>
+<tr><td>OPT-11</td><td>P2</td><td>CF</td><td>UNION удаления в <code>Загрузить</code></td><td>—</td><td>План</td></tr>
+<tr><td>OPT-14</td><td>P2</td><td>EPF</td><td><code>НайтиСтроки</code> пустой выписки</td><td>—</td><td>План</td></tr>
+<tr><td>OPT-15</td><td>P2</td><td>CF</td><td>цикл по колонкам импорта</td><td>—</td><td>План</td></tr>
+<tr><td>OPT-16</td><td>P2</td><td>CF</td><td><code>ПолучитьДеревоПравил</code></td><td>—</td><td>Кэш дерева</td></tr>
+<tr><td>OPT-20</td><td>P2</td><td>EPF</td><td><code>ВНазначенииПлатежаЕстьНомерАккаунта</code></td><td>7,74%</td><td>План</td></tr>
 </tbody>
 </table>
-
-<h3><span class="tag tag-p1">P1</span> Высокий приоритет</h3>
-
-<table>
-<thead>
-<tr>
-    <th>ID</th>
-    <th>Место</th>
-    <th>Файл / процедура</th>
-    <th>Проблема</th>
-    <th>Рекомендация</th>
-</tr>
-</thead>
-<tbody>
-<tr style="background:#d4edda;">
-    <td>OPT-18</td>
-    <td>алгоритм <span class="tag tag-epf">EPF</span></td>
-    <td class="path"><code>ЕРС_ДоговорДУ_ПоСчетуИНазначению</code> ~1347, стр. 1355-1359</td>
-    <td>~3M итераций <code>СтрНайти</code>, ~24,9 с / ~7,2%</td>
-    <td><strong>Реализовано (Test1):</strong> <code>ПостроитьКартуПрефиксовЕРС</code>, <code>НайтиДоговорПоКартеПрефиксов</code>, кэш <code>КэшКартПрефиксов</code> (1 карта на счёт). См. <a href="optimization_plan.html">п. 1.4</a>.</td>
-</tr>
-<tr style="background:#fff3cd;">
-    <td>OPT-19</td>
-    <td>замер <span class="tag tag-cf">CF</span></td>
-    <td class="path"><code>Выполнить(Правило.Выполнение)</code> ~1985</td>
-    <td>22,73% суммарно, но неизвестно какое правило</td>
-    <td>Добавить замер в разрезе <code>СтрокаДерева.Правило</code> и <code>ВидДокумента</code> перед правкой правил.</td>
-</tr>
-<tr>
-    <td>OPT-10</td>
-    <td><span class="tag tag-cf">CF</span></td>
-    <td class="path"><code>РаспознатьДанныеВСтрокеДокумента</code> ~2071</td>
-    <td><code>ЗапросПоискаДокумента</code> — 12,27%, 314 вызовов</td>
-    <td>Два статических запроса (Списание/Поступление). Пакетный поиск документов по списку ключей до цикла.</td>
-</tr>
-<tr style="background:#d4edda;">
-    <td>OPT-13</td>
-    <td><span class="tag tag-epf">EPF</span></td>
-    <td class="path"><code>МассоваяЗагрузкаНаСервере</code> ~644,
-        <code>МассоваяЗагрузкаПуломГруппНаСервере</code> ~2241,
-        <code>ЗагрузитьГруппуВыписокВФоне</code> ~5599</td>
-    <td>12 выписок = 12 полных циклов КлиентБанк (синхрон); деревья правил заново</td>
-    <td><strong>Реализовано (Test1 v6.00):</strong> группировка по <code>(БанковскийСчет, ДоговорДУ)</code> + пул фоновых заданий БСП (N = <code>МаксПараллельныхГрупп</code>). См. <a href="#opt13">0.3</a>, <a href="mass_load_parallel_background_spec_v2.html">ТЗ v2</a>.</td>
-</tr>
-<tr>
-    <td>OPT-06</td>
-    <td><span class="tag tag-sql">SQL</span> <span class="tag tag-epf">EPF</span></td>
-    <td class="path"><code>ИдентифицироватьПлатежи</code> ~2063</td>
-    <td>Не в топ-10 замера «Прочитать»</td>
-    <td>Упростить JOIN; актуально для сценариев с большим числом уже загруженных документов</td>
-</tr>
-<tr>
-    <td>OPT-07</td>
-    <td>O(n^2) <span class="tag tag-epf">EPF</span></td>
-    <td class="path"><code>ИдентифицироватьПлатежи</code> ~2231</td>
-    <td>Не в топ-10 замера</td>
-    <td><code>Соответствие</code> вместо <code>НайтиСтроки</code></td>
-</tr>
-<tr>
-    <td>OPT-09</td>
-    <td><span class="tag tag-cf">CF</span></td>
-    <td class="path"><code>РазобратьДанныеИмпорта</code> ~1403</td>
-    <td><code>Выгрузить().Колонки</code> — лишнее копирование</td>
-    <td>Фиксированный список полей</td>
-</tr>
-<tr>
-    <td>OPT-11</td>
-    <td><span class="tag tag-cf">CF</span></td>
-    <td class="path"><code>Загрузить</code> ~2771</td>
-    <td>UNION на удаление x выписка</td>
-    <td>Один запрос на группу выписок</td>
-</tr>
-</tbody>
-</table>
-
-<h3><span class="tag tag-p2">P2</span> Средний приоритет</h3>
-
-<table>
-<thead>
-<tr>
-    <th>ID</th>
-    <th>Место</th>
-    <th>Файл / процедура</th>
-    <th>Проблема</th>
-    <th>Рекомендация</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-    <td>OPT-14</td>
-    <td><span class="tag tag-epf">EPF</span></td>
-    <td class="path"><code>ПрочитатьОбъекты</code> ~2049</td>
-    <td><code>ПлатежныеДокументы.НайтиСтроки</code> для проверки пустой выписки — линейный поиск на каждую выписку.</td>
-    <td>Счетчик платежей по <code>КлючВыписки</code> в <code>Соответствие</code> при добавлении строк.</td>
-</tr>
-<tr>
-    <td>OPT-15</td>
-    <td><span class="tag tag-cf">CF</span></td>
-    <td class="path"><code>РазобратьДанныеИмпорта</code> ~1423</td>
-    <td>Цикл по всем колонкам таблицы на каждой строке (~50 колонок x N строк).</td>
-    <td>Проверять только обязательные для импорта поля.</td>
-</tr>
-<tr>
-    <td>OPT-16</td>
-    <td><span class="tag tag-cf">CF</span></td>
-    <td class="path"><code>ПолучитьДеревоПравил</code> / <code>СформироватьДеревоПравил</code><br>Catalog Manager ~11</td>
-    <td>Рекурсивные SQL при построении дерева правил для групп.</td>
-    <td>Кэш дерева на сеанс по ключу <code>(БанковскийСчет, ИмяРеквизита)</code>.</td>
-</tr>
-<tr>
-    <td>OPT-20</td>
-    <td><span class="tag tag-epf">EPF</span></td>
-    <td class="path"><code>ВНазначенииПлатежаЕстьНомерАккаунта</code> ~1571</td>
-    <td>1M+ вызовов, 7,74% в замере «Прочитать»</td>
-    <td>Нормализовать <code>НазначениеПлатежа</code> один раз; <code>Соответствие</code> ключевых слов; ранний выход</td>
-</tr>
-</tbody>
-</table>
-
-<!-- ============================================================ -->
-<h2>6. Дерево правил разбора (конфигурация)</h2>
 
 <div class="mermaid-wrap">
 <pre class="mermaid">
 flowchart TB
-    BS["БанковскиеСчета.ПравилаРазбораБанковскойВыписки"]
+    BS["БанковскиеСчета.ПравилаРазбора"]
     NP["НаборыПравилРазбораБанковскойВыписки"]
-    PR["Справочник.ПравилаРазбора<br/>(BSL в реквизитах Условие/Выполнение)"]
-
-    BS --> NP
-    NP --> E1["ПриРазбореСтрокиВыписки"]
-    NP --> E2["ПослеЧтенияВыписки"]
-    NP --> E3["ПередЗагрузкойДокумента"]
-    NP --> E4["ПриЗагрузкеДокумента"]
-    NP --> E5["ПослеЗагрузкиДокумента"]
-    NP --> E6["ПослеЗагрузкиВыписки"]
-
-    E1 --> PR
-    E2 --> PR
-    E3 --> PR
-    E4 --> PR
-    E5 --> PR
-    E6 --> PR
-
-    E1 -.->|"x N платежей"| V["Выполн()"]
-    E3 -.->|"x N документов"| V
-    E4 -.->|"x N документов"| V
-    E5 -.->|"x N документов"| V
+    PR["ПравилаРазбора: Условие / Выполнение"]
+    BS --> NP --> E1["ПриРазбореСтрокиВыписки"] --> PR
+    NP --> E3["Перед/При/ПослеЗагрузкиДокумента"] --> PR
+    E1 -.->|"x N"| V["Выполн() — OPT-12, 22,73%"]
 </pre>
 </div>
 
-<div class="danger">
-    <strong>OPT-12 (правила):</strong> события <code>ПриРазбореСтрокиВыписки</code>, <code>Перед/При/ПослеЗагрузкиДокумента</code>
-    умножают стоимость обработки на число платежей. Аудит содержимого «Набор правил ВТБ» обязателен перед оптимизацией кода EPF/КлиентБанк.
-</div>
+<p style="color:#6c757d;font-size:13px;">События правил разбора умножают стоимость на число платежей. Аудит «Набор правил ВТБ» — обязателен перед правками CF.</p>
 
 <!-- ============================================================ -->
-<h2>7. Рекомендуемый порядок работ (скорректирован по замерам)</h2>
+<h2 id="roadmap">6. Дорожная карта</h2>
 
 <div class="success">
 <ol>
-    <li><strong>Замеры «было» (выполнено)</strong> — базовая линия в разделе 1 (<code>замерОтладчика_было.docx</code>).</li>
-    <li><strong>OPT-02 + OPT-17 + OPT-05 + OPT-18 (выполнено в Test1)</strong> — все четыре OPT блока «Прочитать».
-        Регрессия Запрос1 после OPT-02: <a href="#regress-zapros1">0 расхождений по мультимножеству</a>.
-        Замер «Прочитать»: <a href="#regress-full">617→237 с (~2,6×)</a>; полный цикл 01–05.06: ~23 мин → ~2,6 мин.</li>
-    <li><strong>OPT-13 (выполнено в Test1 v6.00)</strong> — фоновая параллельная «Разобрать отмеченные».
-        <strong>Следующий шаг:</strong> замер «Разобрать» с <code>МаксПараллельныхГрупп &gt; 1</code> на пакете 12 выписок; регрессия данных и сообщений vs синхрон.</li>
-    <li><strong>OPT-19</strong> — детальный замер правил по <code>СтрокаДерева.Правило</code> и запроса документов по <code>ВидДокумента</code> (перед правкой CF).</li>
-    <li><strong>Контур «Прочитать» (EPF, ~323 с) — оставшиеся пункты:</strong>
-        <ul class="compact">
-            <li>OPT-03 + OPT-20 — цепочка ЕРС (ранний выход, порядок эвристик)</li>
-            <li>OPT-01 — кэш БИК (для не-ЕРС сценариев)</li>
-        </ul>
-    </li>
-    <li><strong>Контур «Разобрать» (КлиентБанк, ~383 с на 12 выписок):</strong>
-        <ul class="compact">
-            <li>OPT-12 — аудит и оптимизация правил (22,73%)</li>
-            <li>OPT-08 — сокращение перепроведения (26% на запись+проведение)</li>
-            <li>OPT-10 + OPT-04 — поиск документа и пакетные кэши (12,27%+)</li>
-        </ul>
-    </li>
-    <li><strong>OPT-06, OPT-07</strong> — по результатам замеров на сценариях с повторной загрузкой.</li>
+    <li><strong>Выполнено:</strong> замеры baseline (раздел <a href="#profiler">1</a>); OPT-02/17/05/18; OPT-13 (3 потока);
+        регрессии MXL, 01–05.06, май, 09.06, генеральный 26.06 T-1 — см. <a href="#regress-summary">0.1</a>.</li>
+    <li><strong>Готово к выкладке EPF Test1 v6.00</strong> на PROD после согласования. Обертки IMDEV-8927 в коде — без жёсткой зависимости от CF.</li>
+    <li><strong>Следующий этап (CF, не EPF):</strong> OPT-19 (замер по правилам) → OPT-12 / OPT-08 / OPT-10.</li>
+    <li><strong>EPF (низкий приоритет):</strong> OPT-03 (ранний выход ERS), OPT-20, OPT-01.</li>
+    <li><strong>Фоновая загрузка в прод:</strong> настроить <code>МаксПараллельныхГрупп</code> (рекомендуется 3), мониторинг фоновых заданий на серверной ИБ.</li>
 </ol>
 </div>
 
 <div class="info">
-    <strong>Фактический эффект «Прочитать» (замер):</strong> OPT-02 + OPT-17 + OPT-05 + OPT-18 сократили сценарий с 617 с до 237 с (~2,6×).
-    Полный цикл 01–05.06 — с ~23 мин до ~2,6 мин (~8,9×). См. <a href="optimization_read_results.html">optimization_read_results.html</a>.<br>
-    <strong>Оценка по КлиентБанк (до замера OPT-13):</strong> оптимизация топ-3 (OPT-12, OPT-08, OPT-10) может сократить синхронный «Разобрать» с ~383 с до ~200–250 с.
-    Параллельный режим OPT-13 — дополнительное ускорение wall-clock; точные цифры — после замера с N&gt;1.
+    <strong>Эффект реализованного:</strong> «Прочитать» 617→237 с (Wim_Du), до ~6× на T-1 PROD.
+    «Разобрать» 23→10 мин (09.06), 13→7 мин (26.06). Дальнейший выигрыш в CF — оценочно до ~40% синхронного времени (OPT-12+08+10).
 </div>
 
 <!-- ============================================================ -->
-<h2>8. Справочник процедур с номерами строк (EPF dump)</h2>
+<h2 id="appendix">Приложение: ключевые процедуры (номера строк)</h2>
 
 <table>
 <thead>
-<tr>
-    <th>Процедура / функция</th>
-    <th>Строка (approx)</th>
-    <th>Тип проблемы</th>
-</tr>
+<tr><th>Модуль</th><th>Процедура</th><th>Строка</th><th>OPT / заметка</th></tr>
 </thead>
 <tbody>
-<tr><td><code>ПрочитатьОбъекты</code></td><td>1852</td><td>корневая HOT-точка EPF</td></tr>
-<tr><td><code>БанковскийСчетXDTO</code></td><td>1177</td><td>N+1 SQL</td></tr>
-<tr><td><code>БанкXDTO</code></td><td>1204</td><td>N+1 SQL</td></tr>
-<tr><td><code>ДоговорДУПоСчету</code></td><td>1252 / 1286</td><td><strong>P0: реализовано</strong> (OPT-02, Test1)</td></tr>
-<tr><td><code>ЕРС_ДоговорДУ_Отбор_ПоСчетуИНазначению</code></td><td>1306</td><td>OK: 1 раз на ЕРС-выписку</td></tr>
-<tr><td><code>ЕРС_ДоговорДУ_ПоСчетуИПоступлениюНаРС1</code></td><td>1370</td><td>SQL x платеж</td></tr>
-<tr><td><code>ЕРС_ДоговорДУ_ПоСчетуИПоступлениюСписаниюРС2</code></td><td>1416</td><td>SQL + O(n)</td></tr>
-<tr><td><code>ЕРС_ДоговорДУ_ПоСчетуИСчетуДепо</code></td><td>1582 / 2173</td><td><strong>P0: реализовано</strong> (OPT-17, Test1)</td></tr>
-<tr><td><code>ЕРС_ДоговорДУ_ПоПлатежномуПоручению</code></td><td>1697 / 1725</td><td><strong>P0: реализовано</strong> (OPT-05, Test1)</td></tr>
-<tr><td><code>ПолучитьПлатежныеПорученияОкна</code></td><td>~2120</td><td>OPT-05: кэш ПП по (счёт, день)</td></tr>
-<tr><td><code>ЕРС_ДоговорДУ_ПоСчетуИНазначению</code></td><td>1347</td><td><strong>P1: реализовано</strong> (OPT-18, Test1)</td></tr>
-<tr><td><code>ПостроитьКартуПрефиксовЕРС</code> / <code>НайтиДоговорПоКартеПрефиксов</code></td><td>~1607 / ~1689</td><td>OPT-18: индекс префиксов</td></tr>
-<tr><td><code>ИдентифицироватьПлатежи</code></td><td>2063</td><td>P2: не в топ замера</td></tr>
-<tr><td><code>МассоваяЗагрузкаНаСервере</code></td><td>644 (Form)</td><td>маршрутизация синхрон / OPT-13</td></tr>
-<tr><td><code>МассоваяЗагрузкаПуломГруппНаСервере</code></td><td>2241 (Form)</td><td><strong>OPT-13: реализовано</strong> — оркестратор пула</td></tr>
-<tr><td><code>ЗагрузитьГруппуВыписокВФоне</code></td><td>5599 (Object)</td><td><strong>OPT-13: реализовано</strong> — исполнитель в фоне</td></tr>
-</tbody>
-</table>
-
-<table>
-<thead>
-<tr>
-    <th>Процедура / функция (CF КлиентБанк)</th>
-    <th>Строка (approx)</th>
-    <th>Тип проблемы</th>
-</tr>
-</thead>
-<tbody>
-<tr><td><code>РазобратьДанныеИмпорта</code></td><td>1399</td><td>корневая HOT-точка KB</td></tr>
-<tr><td><code>ВыполнитьПравилаПоДеревуПравил</code></td><td>1985</td><td><strong>P0: 22,73%</strong> Выполн()</td></tr>
-<tr><td><code>ЗаписатьОбъект / Проведение</code></td><td>2871 / 2922</td><td><strong>P0: 26%</strong> запись+проведение</td></tr>
-<tr><td><code>РаспознатьДанныеВСтрокеДокумента</code></td><td>2014 / 2071</td><td>P1: поиск документа 12,27%</td></tr>
-<tr><td><code>ПослеЗагрузкиВыписки</code></td><td>2819</td><td>правила после пакета</td></tr>
-<tr><td><code>ПолучитьДеревоПравил</code></td><td>Catalog ~11</td><td>рекурсивный SQL</td></tr>
+<tr><td>EPF Object</td><td><code>ПрочитатьОбъекты</code></td><td>~2501</td><td>HOT-точка «Прочитать»</td></tr>
+<tr><td>EPF Object</td><td><code>ДоговорДУПоСчету</code></td><td>~1252</td><td>OPT-02</td></tr>
+<tr><td>EPF Object</td><td><code>ЕРС_ДоговорДУ_ПоСчетуИСчетуДепо</code></td><td>~1582</td><td>OPT-17</td></tr>
+<tr><td>EPF Object</td><td><code>ЕРС_ДоговорДУ_ПоПлатежномуПоручению</code></td><td>~1697</td><td>OPT-05</td></tr>
+<tr><td>EPF Object</td><td><code>ЕРС_ДоговорДУ_ПоСчетуИНазначению</code></td><td>~1347</td><td>OPT-18</td></tr>
+<tr><td>EPF Object</td><td><code>ЗагрузитьГруппуВыписокВФоне</code></td><td>~5599</td><td>OPT-13</td></tr>
+<tr><td>EPF Form</td><td><code>МассоваяЗагрузкаПуломГруппНаСервере</code></td><td>~2241</td><td>OPT-13 оркестратор</td></tr>
+<tr><td>CF КлиентБанк</td><td><code>РазобратьДанныеИмпорта</code></td><td>~1399</td><td>HOT-точка «Разобрать»</td></tr>
+<tr><td>CF КлиентБанк</td><td><code>ВыполнитьПравилаПоДеревуПравил</code></td><td>~1985</td><td>OPT-12, 22,73%</td></tr>
+<tr><td>CF КлиентБанк</td><td><code>ЗаписатьОбъект</code></td><td>~2871</td><td>OPT-08, 26%</td></tr>
+<tr><td>CF КлиентБанк</td><td><code>РаспознатьДанныеВСтрокеДокумента</code></td><td>~2014</td><td>OPT-10, 12,27%</td></tr>
 </tbody>
 </table>
 
 <div class="footer">
-    Проект: <strong>IMDEV-9096 Выписки</strong> / Wim_Du<br>
-    Документ: statement_loading_optimization.html (анализ и замеры; план работ — <a href="optimization_plan.html">optimization_plan.html</a>)<br>
-    Источник замеров baseline: замерОтладчика_было.docx | замеры «стало»: optimization_read_results.html, imdev-9096_optimization_regression_report.html<br>
-    Baseline EPF: erf_Оптимизация | Рабочая ветка: erf_Оптимизация_Тест1 (v6.00)<br>
-    Дата обновления: 2026-06-27<br>
-    Регресс MXL: <code>Регресс/compare_mxl.py</code>, Запрос1 — 629/629, multiset=0; полный «Прочитать» — 1106/1106<br>
-    Связанные задачи: IMDEV-8927 (замеры в коде), IMDEV-9096 (оптимизация + фоновая загрузка OPT-13), IMDEV-8471 (автоматизация РДУ)
+    IMDEV-9096 / Wim_Du &nbsp;|&nbsp; statement_loading_optimization.html &nbsp;|&nbsp; обновлено: 30.06.2026<br>
+    Baseline: erf_Оптимизация &nbsp;|&nbsp; Test1 v6.00: erf_Оптимизация_Тест1 &nbsp;|&nbsp;
+    Регресс: <code>Регресс/compare_mxl.py</code>, <code>compare_2606_general_test.py</code><br>
+    Связанные задачи: IMDEV-8927 (замеры), IMDEV-9096 (оптимизация), IMDEV-8471 (РДУ)
 </div>
 
 </div>

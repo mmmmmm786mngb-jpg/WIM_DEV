@@ -1,0 +1,760 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IMDEV-9096 - Генеральный тест 26.06.2026 (T-1 PROD)</title>
+    <style>
+        :root {
+            --success: #28a745;
+            --error: #dc3545;
+            --info: #17a2b8;
+            --warning: #ffc107;
+            --primary: #0056b3;
+            --bg: #f8f9fa;
+            --border: #dee2e6;
+            --text: #212529;
+            --muted: #6c757d;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.65;
+            color: var(--text);
+            background: var(--bg);
+            padding: 24px;
+        }
+        .container { max-width: 1100px; margin: 0 auto; }
+        header {
+            background: linear-gradient(135deg, #1a5276 0%, #154360 100%);
+            color: #fff;
+            padding: 32px 40px;
+            border-radius: 12px;
+            margin-bottom: 24px;
+        }
+        header h1 { font-size: 1.75rem; margin-bottom: 8px; }
+        header .subtitle { opacity: 0.92; font-size: 1.05rem; }
+        header .meta { margin-top: 16px; font-size: 0.9rem; opacity: 0.85; }
+        .header-summary {
+            margin-top: 20px;
+            padding: 18px 22px;
+            background: rgba(255,255,255,0.12);
+            border-radius: 8px;
+            border: 1px solid rgba(255,255,255,0.2);
+            font-size: 0.95rem;
+            line-height: 1.7;
+        }
+        .header-summary strong { color: #fff; }
+        section {
+            background: #fff;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 28px 32px;
+            margin-bottom: 20px;
+        }
+        h2 {
+            color: var(--primary);
+            font-size: 1.35rem;
+            margin-bottom: 16px;
+            padding-bottom: 8px;
+            border-bottom: 2px solid #e9ecef;
+        }
+        h3 { font-size: 1.05rem; margin: 20px 0 10px; color: #343a40; }
+        p { margin-bottom: 12px; }
+        ul, ol { margin: 0 0 14px 24px; }
+        li { margin-bottom: 6px; }
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+            gap: 16px;
+            margin: 20px 0;
+        }
+        .stat-card {
+            background: #f8f9fa;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 18px;
+            text-align: center;
+        }
+        .stat-card .value { font-size: 1.5rem; font-weight: 700; color: var(--primary); }
+        .stat-card.success .value { color: var(--success); }
+        .stat-card.speed .value { color: #0069d9; }
+        .stat-card.warn .value { color: #856404; }
+        .stat-card .label { font-size: 0.82rem; color: var(--muted); margin-top: 4px; }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 16px 0;
+            font-size: 0.92rem;
+        }
+        th, td {
+            border: 1px solid var(--border);
+            padding: 10px 14px;
+            text-align: left;
+            vertical-align: top;
+        }
+        th { background: #e9ecef; font-weight: 600; }
+        tr:nth-child(even) { background: #f8f9fa; }
+        .ok { color: var(--success); font-weight: 600; }
+        .warn { color: #856404; font-weight: 600; }
+        .block-info {
+            background: #d1ecf1;
+            border-left: 4px solid var(--info);
+            padding: 14px 18px;
+            border-radius: 0 6px 6px 0;
+            margin: 14px 0;
+        }
+        .block-success {
+            background: #d4edda;
+            border-left: 4px solid var(--success);
+            padding: 14px 18px;
+            border-radius: 0 6px 6px 0;
+            margin: 14px 0;
+        }
+        .block-warning {
+            background: #fff3cd;
+            border-left: 4px solid var(--warning);
+            padding: 14px 18px;
+            border-radius: 0 6px 6px 0;
+            margin: 14px 0;
+        }
+        .example-box {
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 18px 20px;
+            margin: 16px 0;
+            background: #fafbfc;
+        }
+        .example-box h4 { color: var(--primary); margin-bottom: 10px; font-size: 1rem; }
+        pre {
+            background: #f1f3f5;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 12px 16px;
+            font-size: 0.85rem;
+            overflow-x: auto;
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+        .tag {
+            display: inline-block;
+            padding: 3px 10px;
+            border-radius: 12px;
+            font-size: 0.78rem;
+            font-weight: 600;
+            margin-right: 6px;
+        }
+        .tag-ok { background: #d4edda; color: #155724; }
+        .tag-warn { background: #fff3cd; color: #856404; }
+        .tag-info { background: #d1ecf1; color: #0c5460; }
+        .verdict { font-size: 1.15rem; font-weight: 600; color: var(--success); margin: 8px 0 16px; }
+        footer { text-align: center; color: var(--muted); font-size: 0.85rem; padding: 20px 0 8px; }
+        code { background: #f1f3f5; padding: 2px 6px; border-radius: 4px; font-size: 0.88em; }
+        .charts-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 24px;
+            margin: 24px 0 8px;
+        }
+        .chart-card {
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 18px 20px 14px;
+            background: #fafbfc;
+        }
+        .chart-card.wide { grid-column: 1 / -1; }
+        .chart-card h3 {
+            margin: 0 0 14px;
+            font-size: 0.98rem;
+            color: var(--primary);
+        }
+        .chart-card .chart-caption {
+            font-size: 0.8rem;
+            color: var(--muted);
+            margin-top: 10px;
+            line-height: 1.45;
+        }
+        .chart-legend {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 14px;
+            margin-top: 12px;
+            font-size: 0.82rem;
+        }
+        .chart-legend span { display: inline-flex; align-items: center; gap: 6px; }
+        .swatch {
+            display: inline-block;
+            width: 14px;
+            height: 14px;
+            border-radius: 3px;
+            flex-shrink: 0;
+        }
+        .swatch-bylo { background: #6c757d; }
+        .swatch-stalo { background: #28a745; }
+        .swatch-ok { background: #28a745; }
+        .swatch-warn { background: #ffc107; }
+        .swatch-info { background: #17a2b8; }
+        .swatch-primary { background: #0056b3; }
+        svg.chart { width: 100%; height: auto; display: block; }
+        .chart-axis { font-size: 11px; fill: #6c757d; font-family: "Segoe UI", sans-serif; }
+        .chart-value { font-size: 11px; fill: #212529; font-weight: 600; font-family: "Segoe UI", sans-serif; }
+        .chart-label { font-size: 12px; fill: #343a40; font-family: "Segoe UI", sans-serif; }
+        .flow-svg { max-width: 900px; margin: 0 auto; }
+    </style>
+</head>
+<body>
+<div class="container">
+
+<header>
+    <h1>Генеральный тест загрузки выписок за 26.06.2026</h1>
+    <p class="subtitle">IMDEV-9096: сравнение baseline и оптимизированной EPF Test1 на копии PROD (T-1)</p>
+    <p class="meta">
+        База: <strong>AVC_PP_DU</strong> на SMSK02MG138U &nbsp;|&nbsp;
+        Период загрузки: <strong>26.06.2026</strong> &nbsp;|&nbsp;
+        Параллельность (стало): <strong>3 потока</strong> &nbsp;|&nbsp;
+        Дата отчета: 30.06.2026
+    </p>
+    <div class="header-summary">
+        <strong>Что делали:</strong> на копии PROD (T-1) дважды выполнили полный цикл за 26.06.2026:
+        <strong>«Получить»</strong> (загрузка из web-service) и <strong>«Разобрать отмеченные»</strong>
+        (с отметкой выписок, кроме строк без договора ДУ). Сначала baseline EPF (<em>было</em>),
+        затем Test1 с оптимизациями OPT-02/05/13/17/18 (<em>стало</em>, 3 потока).<br><br>
+        <strong>Как проверяли:</strong> сравнение XLSX после «Прочитать» (выписки + ПП), текстов сообщений,
+        лога разбора и окна сообщений разбора — по бизнес-мультимножествам (дата, суммы, назначения, документы).
+        UUID-ключи и порядок строк не считаются регрессией.<br><br>
+        <strong>Результат:</strong> <span style="color:#90ee90;font-weight:700;">генеральный регресс пройден</span>.
+        452 платежных поручения идентичны; разбор 181 выписки / 443 ПП / 432 документа — без расхождений.
+        Ускорение: <strong>Получить ~6×</strong> (5 мин → 45 с), <strong>Разобрать ~1,9×</strong> (13 мин → 7 мин).
+    </div>
+</header>
+
+<section id="summary">
+    <h2>1. Краткий вывод</h2>
+    <p class="verdict">Генеральный тест на PROD-копии пройден. Данные и документы совпадают, время сократилось существенно.</p>
+
+    <div class="stats-grid">
+        <div class="stat-card speed">
+            <div class="value">5 &rarr; 0,75 мин</div>
+            <div class="label">Получить (Прочитать)</div>
+        </div>
+        <div class="stat-card speed">
+            <div class="value">13 &rarr; 7 мин</div>
+            <div class="label">Разобрать (3 потока)</div>
+        </div>
+        <div class="stat-card success">
+            <div class="value">452</div>
+            <div class="label">ПП — идентичный core-multiset</div>
+        </div>
+        <div class="stat-card success">
+            <div class="value">432</div>
+            <div class="label">документов при разборе — совпали</div>
+        </div>
+    </div>
+
+    <div class="block-success">
+        <strong>Главное для бизнеса:</strong> все платежи за 26.06 совпадают по дате, номеру, сумме, счетам и назначению.
+        При разборе отмеченных выписок созданы те же документы, сработали те же правила, сверки дали тот же результат
+        (170 успешных + 210 расхождений ERS — одинаково в обеих версиях).
+    </div>
+</section>
+
+<section id="charts">
+    <h2>2. Диаграммы по данным теста</h2>
+    <p>Визуализация замеров времени, объемов данных и результатов сверки по артефактам регресса 26.06.2026.</p>
+
+    <div class="charts-grid">
+
+        <div class="chart-card">
+            <h3>Время выполнения: было vs стало (мин)</h3>
+            <svg class="chart" viewBox="0 0 420 170" role="img" aria-label="Сравнение времени Получить и Разобрать">
+                <text class="chart-label" x="8" y="38">Получить</text>
+                <rect x="100" y="22" width="280" height="22" rx="4" fill="#6c757d"/>
+                <text class="chart-value" x="386" y="38">5,0</text>
+                <rect x="100" y="50" width="42" height="22" rx="4" fill="#28a745"/>
+                <text class="chart-value" x="148" y="66">0,75</text>
+
+                <text class="chart-label" x="8" y="108">Разобрать</text>
+                <rect x="100" y="92" width="280" height="22" rx="4" fill="#6c757d"/>
+                <text class="chart-value" x="386" y="108">13</text>
+                <rect x="100" y="120" width="151" height="22" rx="4" fill="#28a745"/>
+                <text class="chart-value" x="257" y="136">7</text>
+
+                <line x1="100" y1="158" x2="380" y2="158" stroke="#dee2e6" stroke-width="1"/>
+                <text class="chart-axis" x="100" y="168">0</text>
+                <text class="chart-axis" x="248" y="168">6,5</text>
+                <text class="chart-axis" x="372" y="168">13 мин</text>
+            </svg>
+            <div class="chart-legend">
+                <span><i class="swatch swatch-bylo"></i> Было (baseline)</span>
+                <span><i class="swatch swatch-stalo"></i> Стало (Test1)</span>
+            </div>
+            <p class="chart-caption">Шкала общая для обеих операций. Получить: ускорение ~6,4×; Разобрать (3 потока): ~1,9×.</p>
+        </div>
+
+        <div class="chart-card">
+            <h3>Коэффициент ускорения</h3>
+            <svg class="chart" viewBox="0 0 420 170" role="img" aria-label="Коэффициенты ускорения">
+                <text class="chart-label" x="8" y="58">Получить</text>
+                <rect x="100" y="40" width="256" height="28" rx="4" fill="#0056b3"/>
+                <text class="chart-value" x="364" y="60" fill="#fff">6,4×</text>
+
+                <text class="chart-label" x="8" y="118">Разобрать</text>
+                <rect x="100" y="100" width="76" height="28" rx="4" fill="#17a2b8"/>
+                <text class="chart-value" x="184" y="120">1,9×</text>
+
+                <line x1="100" y1="148" x2="360" y2="148" stroke="#dee2e6"/>
+                <text class="chart-axis" x="100" y="162">0</text>
+                <text class="chart-axis" x="228" y="162">3,2×</text>
+                <text class="chart-axis" x="348" y="162">6,4×</text>
+            </svg>
+            <p class="chart-caption">Расчет: 290/45 с (Получить) и 13/7 мин (Разобрать). Основной выигрыш — этап OPT-02/05/17/18.</p>
+        </div>
+
+        <div class="chart-card">
+            <h3>Длительность «Прочитать» по логу (сек)</h3>
+            <svg class="chart" viewBox="0 0 420 150" role="img" aria-label="Продолжительность Прочитать в секундах">
+                <text class="chart-label" x="8" y="48">Было</text>
+                <rect x="80" y="30" width="300" height="26" rx="4" fill="#6c757d"/>
+                <text class="chart-value" x="388" y="48">290,1</text>
+
+                <text class="chart-label" x="8" y="98">Стало</text>
+                <rect x="80" y="80" width="25" height="26" rx="4" fill="#28a745"/>
+                <text class="chart-value" x="112" y="98">23,7</text>
+
+                <line x1="80" y1="128" x2="380" y2="128" stroke="#dee2e6"/>
+                <text class="chart-axis" x="80" y="142">0</text>
+                <text class="chart-axis" x="230" y="142">145</text>
+                <text class="chart-axis" x="368" y="142">290 с</text>
+            </svg>
+            <p class="chart-caption">Строка «Продолжительность» из <code>Сообщения_2606_PP_*.txt</code>. Сокращение на 266,4 с (~92%).</p>
+        </div>
+
+        <div class="chart-card">
+            <h3>Объемы на этапе «Получить» (строки XLSX)</h3>
+            <svg class="chart" viewBox="0 0 420 190" role="img" aria-label="Объемы данных Прочитать">
+                <text class="chart-label" x="8" y="42">Выписки</text>
+                <rect x="110" y="26" width="200" height="22" rx="4" fill="#0056b3"/>
+                <text class="chart-value" x="318" y="42">401</text>
+
+                <text class="chart-label" x="8" y="82">ПП (платежки)</text>
+                <rect x="110" y="66" width="225" height="22" rx="4" fill="#17a2b8"/>
+                <text class="chart-value" x="343" y="82">452</text>
+
+                <text class="chart-label" x="8" y="122">Всего строк ПП-листа</text>
+                <rect x="110" y="106" width="237" height="22" rx="4" fill="#6c757d"/>
+                <text class="chart-value" x="355" y="122">477</text>
+
+                <text class="chart-label" x="8" y="162">Без ДоговорДУ (warn)</text>
+                <rect x="110" y="146" width="17" height="22" rx="4" fill="#ffc107"/>
+                <text class="chart-value" x="134" y="162">17</text>
+
+                <line x1="110" y1="178" x2="350" y2="178" stroke="#dee2e6"/>
+                <text class="chart-axis" x="110" y="186">0</text>
+                <text class="chart-axis" x="340" y="186">477</text>
+            </svg>
+            <p class="chart-caption">Было = стало по всем показателям. 322 уникальных комбинации (дата + банк + договор).</p>
+        </div>
+
+        <div class="chart-card">
+            <h3>Объемы на этапе «Разобрать отмеченные»</h3>
+            <svg class="chart" viewBox="0 0 420 235" role="img" aria-label="Объемы данных Разобрать">
+                <text class="chart-label" x="8" y="42">Выписки в логе</text>
+                <rect x="130" y="26" width="55" height="22" rx="4" fill="#0056b3"/>
+                <text class="chart-value" x="193" y="42">181</text>
+
+                <text class="chart-label" x="8" y="82">Уникальных ДУ</text>
+                <rect x="130" y="66" width="55" height="22" rx="4" fill="#6c757d"/>
+                <text class="chart-value" x="193" y="82">180</text>
+
+                <text class="chart-label" x="8" y="122">Строк ПП в логе</text>
+                <rect x="130" y="106" width="135" height="22" rx="4" fill="#17a2b8"/>
+                <text class="chart-value" x="273" y="122">443</text>
+
+                <text class="chart-label" x="8" y="162">Перезаписано документов</text>
+                <rect x="130" y="146" width="131" height="22" rx="4" fill="#28a745"/>
+                <text class="chart-value" x="269" y="162">432</text>
+
+                <text class="chart-label" x="8" y="202">Сработало правил</text>
+                <rect x="130" y="186" width="250" height="22" rx="4" fill="#ffc107"/>
+                <text class="chart-value" x="388" y="202" fill="#212529">823</text>
+
+                <line x1="130" y1="222" x2="380" y2="222" stroke="#dee2e6"/>
+                <text class="chart-axis" x="130" y="232">0</text>
+                <text class="chart-axis" x="368" y="232">823</text>
+            </svg>
+            <p class="chart-caption">Все значения идентичны в baseline и Test1. Отмечено 181 из 401 загруженных выписок.</p>
+        </div>
+
+        <div class="chart-card">
+            <h3>Результаты сверки остатков (обе версии)</h3>
+            <svg class="chart" viewBox="0 0 260 220" role="img" aria-label="Круговая диаграмма сверок">
+                <circle cx="110" cy="110" r="70" fill="none" stroke="#e9ecef" stroke-width="28"/>
+                <circle cx="110" cy="110" r="70" fill="none" stroke="#28a745" stroke-width="28"
+                    stroke-dasharray="197 440" stroke-dashoffset="0" transform="rotate(-90 110 110)"/>
+                <circle cx="110" cy="110" r="70" fill="none" stroke="#ffc107" stroke-width="28"
+                    stroke-dasharray="243 440" stroke-dashoffset="-197" transform="rotate(-90 110 110)"/>
+                <text class="chart-value" x="88" y="108" font-size="22">380</text>
+                <text class="chart-axis" x="78" y="124">сверок</text>
+                <text class="chart-label" x="168" y="72">170 OK</text>
+                <text class="chart-axis" x="168" y="88">44,7%</text>
+                <rect x="168" y="96" width="12" height="12" rx="2" fill="#28a745"/>
+                <text class="chart-label" x="168" y="128">210 ERS</text>
+                <text class="chart-axis" x="168" y="144">расхожд.</text>
+                <rect x="168" y="152" width="12" height="12" rx="2" fill="#ffc107"/>
+            </svg>
+            <p class="chart-caption">170 успешных + 210 расхождений ERS — одинаково в было и стало (известное поведение агрегированных счетов).</p>
+        </div>
+
+        <div class="chart-card wide">
+            <h3>Критерии регресса: совпадение было / стало</h3>
+            <svg class="chart" viewBox="0 0 700 200" role="img" aria-label="Критерии регресса">
+                <text class="chart-label" x="8" y="28">ПП core-multiset (452)</text>
+                <rect x="220" y="12" width="460" height="18" rx="3" fill="#28a745"/>
+                <text class="chart-value" x="688" y="26" text-anchor="end">100%</text>
+
+                <text class="chart-label" x="8" y="58">Выписки: строки (401)</text>
+                <rect x="220" y="42" width="460" height="18" rx="3" fill="#28a745"/>
+                <text class="chart-value" x="688" y="56" text-anchor="end">100%</text>
+
+                <text class="chart-label" x="8" y="88">Выписки: остатки+договор (322)</text>
+                <rect x="220" y="72" width="460" height="18" rx="3" fill="#28a745"/>
+                <text class="chart-value" x="688" y="86" text-anchor="end">100%</text>
+
+                <text class="chart-label" x="8" y="118">Лог разбора: ПП (443)</text>
+                <rect x="220" y="102" width="460" height="18" rx="3" fill="#28a745"/>
+                <text class="chart-value" x="688" y="116" text-anchor="end">100%</text>
+
+                <text class="chart-label" x="8" y="148">Документы + правила</text>
+                <rect x="220" y="132" width="460" height="18" rx="3" fill="#28a745"/>
+                <text class="chart-value" x="688" y="146" text-anchor="end">432 / 823</text>
+
+                <text class="chart-label" x="8" y="178">Техн. отличия (не регрессия)</text>
+                <rect x="220" y="162" width="2" height="18" rx="3" fill="#ffc107"/>
+                <text class="chart-axis" x="230" y="176">1 флаг ДУ 10089 + UUID-ключи</text>
+            </svg>
+            <div class="chart-legend">
+                <span><i class="swatch swatch-ok"></i> Полное совпадение</span>
+                <span><i class="swatch swatch-warn"></i> Техническое отличие, не влияет на платежи</span>
+            </div>
+        </div>
+
+        <div class="chart-card wide">
+            <h3>Схема генерального теста</h3>
+            <svg class="chart flow-svg" viewBox="0 0 860 200" role="img" aria-label="Схема этапов теста">
+                <defs>
+                    <marker id="arrow" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+                        <path d="M0,0 L6,3 L0,6 Z" fill="#6c757d"/>
+                    </marker>
+                </defs>
+                <rect x="10" y="70" width="120" height="60" rx="8" fill="#e9ecef" stroke="#adb5bd"/>
+                <text class="chart-label" x="70" y="96" text-anchor="middle">PROD T-1</text>
+                <text class="chart-axis" x="70" y="114" text-anchor="middle">AVC_PP_DU</text>
+
+                <line x1="130" y1="100" x2="158" y2="100" stroke="#6c757d" marker-end="url(#arrow)"/>
+
+                <rect x="160" y="70" width="130" height="60" rx="8" fill="#cce5ff" stroke="#0056b3"/>
+                <text class="chart-label" x="225" y="96" text-anchor="middle">Получить</text>
+                <text class="chart-axis" x="225" y="114" text-anchor="middle">26.06.2026</text>
+
+                <line x1="290" y1="100" x2="318" y2="100" stroke="#6c757d" marker-end="url(#arrow)"/>
+
+                <rect x="320" y="70" width="130" height="60" rx="8" fill="#d4edda" stroke="#28a745"/>
+                <text class="chart-label" x="385" y="96" text-anchor="middle">XLSX + лог</text>
+                <text class="chart-axis" x="385" y="114" text-anchor="middle">401 / 452 ПП</text>
+
+                <line x1="450" y1="100" x2="478" y2="100" stroke="#6c757d" marker-end="url(#arrow)"/>
+
+                <rect x="480" y="70" width="130" height="60" rx="8" fill="#fff3cd" stroke="#ffc107"/>
+                <text class="chart-label" x="545" y="96" text-anchor="middle">Отметить</text>
+                <text class="chart-axis" x="545" y="114" text-anchor="middle">кроме без ДУ</text>
+
+                <line x1="610" y1="100" x2="638" y2="100" stroke="#6c757d" marker-end="url(#arrow)"/>
+
+                <rect x="640" y="55" width="200" height="90" rx="8" fill="#cce5ff" stroke="#0056b3"/>
+                <text class="chart-label" x="740" y="82" text-anchor="middle">Разобрать отмеченные</text>
+                <text class="chart-axis" x="740" y="100" text-anchor="middle">было: 13 мин</text>
+                <text class="chart-axis" x="740" y="118" text-anchor="middle">стало: 7 мин (3 потока)</text>
+                <text class="chart-axis" x="740" y="136" text-anchor="middle">432 док / 823 правил</text>
+
+                <rect x="160" y="155" width="290" height="32" rx="6" fill="#f8f9fa" stroke="#dee2e6"/>
+                <text class="chart-axis" x="305" y="176" text-anchor="middle">Сравнение: baseline EPF vs Test1 (мультимножества)</text>
+            </svg>
+            <p class="chart-caption">Два полных прогона на одной базе. Замеры времени — отдельно для «Получить» и «Разобрать».</p>
+        </div>
+
+    </div>
+</section>
+
+<section id="method">
+    <h2>3. Методика генерального теста</h2>
+
+    <table>
+        <thead>
+            <tr><th>Этап</th><th>Действие</th><th>Артефакты сравнения</th></tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>1. Получить</td>
+                <td>Загрузка выписок за 26.06.2026 из web-service ВТБ</td>
+                <td><code>2606_PP_Выписки_*.xlsx</code>, <code>2606_PP_ПП_*.xlsx</code>, <code>Сообщения_2606_PP_*.txt</code></td>
+            </tr>
+            <tr>
+                <td>2. Отметить</td>
+                <td>Флажки на всех выписках, кроме строк без договора ДУ</td>
+                <td>—</td>
+            </tr>
+            <tr>
+                <td>3. Разобрать</td>
+                <td>«Разобрать отмеченные» (стало: 3 потока)</td>
+                <td><code>ЛогЗагрузкиВыписок_2606_*.txt</code>, <code>СообщенияРАЗБОР_2606_PP_*.txt</code></td>
+            </tr>
+        </tbody>
+    </table>
+
+    <div class="block-info">
+        Скрипт автоматического сравнения: <code>Регресс/compare_2606_general_test.py</code>,
+        JSON-отчет: <code>Регресс/2606_general_test_report.json</code>.
+    </div>
+</section>
+
+<section id="timing">
+    <h2>4. Производительность</h2>
+
+    <table>
+        <thead>
+            <tr><th>Операция</th><th>Было</th><th>Стало</th><th>Изменение</th><th>Источник замера</th></tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td><strong>Получить</strong> (Прочитать)</td>
+                <td>8:14 – 8:19 (~5 мин, ~290 с)</td>
+                <td>8:54:00 – 8:54:45 (~45 с)</td>
+                <td class="ok">~6,4× быстрее</td>
+                <td>Часы + строка «Продолжительность» в сообщениях (290,1 / 23,7 с)</td>
+            </tr>
+            <tr>
+                <td><strong>Разобрать отмеченные</strong></td>
+                <td>8:35 – 8:48 (13 мин)</td>
+                <td>9:04 – 9:11 (7 мин)</td>
+                <td class="ok">~1,9× быстрее</td>
+                <td>Ручной замер по часам; стало: 3 потока</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <div class="block-info">
+        Оптимизация «Прочитать» (OPT-02, OPT-17, OPT-05, OPT-18) дает основной выигрыш на этапе загрузки.
+        OPT-13 (параллельный разбор) ускоряет «Разобрать отмеченные» при сохранении идентичного результата.
+    </div>
+</section>
+
+<section id="prochitat">
+    <h2>5. Этап «Получить» — данные в таблице</h2>
+
+    <h3>5.1. Выписки (XLSX)</h3>
+    <table>
+        <thead>
+            <tr><th>Показатель</th><th>Было</th><th>Стало</th><th>Оценка</th></tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>Строк в таблице</td>
+                <td>401</td>
+                <td>401</td>
+                <td class="ok">OK</td>
+            </tr>
+            <tr>
+                <td>Уникальных комбинаций (дата + банк + договор)</td>
+                <td>322</td>
+                <td>322</td>
+                <td class="ok">OK</td>
+            </tr>
+            <tr>
+                <td>Бизнес-мультимножество (остатки + флаги)</td>
+                <td colspan="2">2 типа строк различаются только флагами «Загружать»/«Загружена»</td>
+                <td class="warn">Техн.</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <div class="example-box">
+        <h4>Единственное отличие в выписках: ДУ 10089 (Швелидзе Г.Л.), 26.06.2026, счет CNY ERS</h4>
+        <p>Одна и та же строка с одинаковыми остатками:</p>
+        <ul>
+            <li><strong>Было:</strong> Загружать = Да, Загружена = пусто</li>
+            <li><strong>Стало:</strong> Загружать = Нет, Загружена = 1</li>
+        </ul>
+        <p>Это перестановка служебных флагов отметки/статуса, не изменение платежей или остатков банка.</p>
+    </div>
+
+    <h3>5.2. Платежные поручения (XLSX)</h3>
+    <table>
+        <thead>
+            <tr><th>Показатель</th><th>Было</th><th>Стало</th><th>Оценка</th></tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>Всего строк в выгрузке</td>
+                <td>477</td>
+                <td>477</td>
+                <td class="ok">OK</td>
+            </tr>
+            <tr>
+                <td>Строк «Платежное поручение»</td>
+                <td>452</td>
+                <td>452</td>
+                <td class="ok">OK</td>
+            </tr>
+            <tr>
+                <td>Core-multiset (дата + № + сумма + счета + назначение)</td>
+                <td colspan="2">полное совпадение</td>
+                <td class="ok">OK</td>
+            </tr>
+            <tr>
+                <td>Только в BYLO / только в STALO (по дате+№)</td>
+                <td>0 / 0</td>
+                <td>0 / 0</td>
+                <td class="ok">OK</td>
+            </tr>
+            <tr>
+                <td>Отличие флага «Загружен» при том же ПП</td>
+                <td colspan="2">1 шт.: ПП 422122 от 26.06 — Нет &rarr; Да (связано с ДУ 10089)</td>
+                <td class="warn">Техн.</td>
+            </tr>
+            <tr>
+                <td>UUID «Ключ выписки» / «Ключ документа»</td>
+                <td colspan="2">различаются на каждом прогоне (ожидаемо)</td>
+                <td class="warn">Не регрессия</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <h3>5.3. Сообщения при «Прочитать»</h3>
+    <table>
+        <thead>
+            <tr><th>Показатель</th><th>Было</th><th>Стало</th></tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>«Для счета … не определен ДоговорДУ»</td>
+                <td>17</td>
+                <td>17</td>
+            </tr>
+            <tr>
+                <td>«Продолжительность» (сек)</td>
+                <td>290,1</td>
+                <td>23,7</td>
+            </tr>
+        </tbody>
+    </table>
+</section>
+
+<section id="razobrat">
+    <h2>6. Этап «Разобрать отмеченные»</h2>
+
+    <table>
+        <thead>
+            <tr><th>Показатель</th><th>Было</th><th>Стало</th><th>Оценка</th></tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>Строк выписок в логе</td>
+                <td>181</td>
+                <td>181</td>
+                <td class="ok">OK</td>
+            </tr>
+            <tr>
+                <td>Уникальных ДУ</td>
+                <td>180</td>
+                <td>180</td>
+                <td class="ok">OK</td>
+            </tr>
+            <tr>
+                <td>Строк ПП в логе</td>
+                <td>443</td>
+                <td>443</td>
+                <td class="ok">OK</td>
+            </tr>
+            <tr>
+                <td>Мультимножество ПП (дата + № + сумма + назначение)</td>
+                <td colspan="2">идентично</td>
+                <td class="ok">OK</td>
+            </tr>
+            <tr>
+                <td>Мультимножество всех строк лога</td>
+                <td colspan="2">идентично</td>
+                <td class="ok">OK</td>
+            </tr>
+            <tr>
+                <td>«Перезаписан документ»</td>
+                <td>432</td>
+                <td>432</td>
+                <td class="ok">OK</td>
+            </tr>
+            <tr>
+                <td>«Сработало Правило № …»</td>
+                <td>823</td>
+                <td>823</td>
+                <td class="ok">OK</td>
+            </tr>
+            <tr>
+                <td>Сверка: успех / расхождения ERS</td>
+                <td>170 / 210</td>
+                <td>170 / 210</td>
+                <td class="ok">OK</td>
+            </tr>
+            <tr>
+                <td>Порядок строк в окне сообщений</td>
+                <td colspan="2">238 типов строк различаются (порядок параллельного вывода)</td>
+                <td class="warn">Не регрессия</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <div class="block-warning">
+        <strong>210 расхождений ERS</strong> — одинаково в baseline и Test1. Это известное поведение сверки
+        агрегированных счетов ERS (Аванкор vs Банк-Клиент), не эффект оптимизации. Документы при этом
+        перезаписываются штатно (432 в обеих версиях).
+    </div>
+</section>
+
+<section id="verdict">
+    <h2>7. Итоговая оценка</h2>
+
+    <table>
+        <thead>
+            <tr><th>Критерий</th><th>Результат</th></tr>
+        </thead>
+        <tbody>
+            <tr><td>Платежные поручения (core-multiset)</td><td class="ok">Пройдено</td></tr>
+            <tr><td>Выписки: состав строк и остатки</td><td class="ok">Пройдено (1 техн. отличие флагов ДУ 10089)</td></tr>
+            <tr><td>Лог разбора: выписки и ПП</td><td class="ok">Пройдено</td></tr>
+            <tr><td>Документы и правила при разборе</td><td class="ok">Пройдено</td></tr>
+            <tr><td>Сверки остатков (170 + 210)</td><td class="ok">Пройдено</td></tr>
+            <tr><td>Время «Получить»</td><td class="ok">Улучшение ~6×</td></tr>
+            <tr><td>Время «Разобрать» (3 потока)</td><td class="ok">Улучшение ~1,9×</td></tr>
+        </tbody>
+    </table>
+
+    <div class="block-success">
+        <strong>Заключение:</strong> генеральный тест на копии PROD (T-1) за 26.06.2026 подтверждает готовность
+        оптимизированной EPF Test1 к выкладке: бизнес-данные и документы не пострадали, производительность
+        выросла на обоих этапах. Рекомендуется выкладка вместе с учетом зависимости замеров IMDEV-8927
+        (обертка через динамический вызов модуля).
+    </div>
+
+    <p style="margin-top:16px;">
+        <span class="tag tag-ok">Генеральный регресс пройден</span>
+        <span class="tag tag-info">PROD T-1 / AVC_PP_DU</span>
+        <span class="tag tag-info">Получить ~6× / Разобрать ~1,9×</span>
+    </p>
+</section>
+
+<footer>
+    IMDEV-9096 &nbsp;|&nbsp; Генеральный тест 26.06.2026 &nbsp;|&nbsp;
+    compare_2606_general_test.py &nbsp;|&nbsp; 30.06.2026
+</footer>
+
+</div>
+</body>
+</html>
