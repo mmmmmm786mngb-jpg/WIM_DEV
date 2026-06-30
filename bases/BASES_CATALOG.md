@@ -17,6 +17,7 @@
 | **Wim_Pif**    | `C:\1c\Cursor_1c\WORK\Wim_PIF\SRC` | example |
 | **WIM_FIn**    | `C:\1c\Cursor_1c\WORK\WIM_FIn`    | example |
 | **Wim_Mo**     | `C:\1c\Cursor_1c\WORK\Wim_Mo`     | example |
+| **Wim_Fo**     | `C:\1c\Cursor_1c\WORK\WIM_Fo`     | example |
 
 Исходники баз в репозиторий не копируются; путь всегда берётся из **source-path.txt** в папке базы.
 
@@ -75,5 +76,6 @@ bases/<база>/
 - Wim_Pif  
 - WIM_FIn  
 - Wim_Mo  
+- Wim_Fo  
 
-Регистр важен (WIM_FIn, не Wim_Fin).
+Регистр важен (WIM_FIn, не Wim_Fin; в WORK каталог ФО — **WIM_Fo**, в репо — **Wim_Fo**).

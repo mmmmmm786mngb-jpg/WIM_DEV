@@ -12,6 +12,7 @@
 | Wim_Pif | C:\1c\Cursor_1c\WORK\Wim_PIF\SRC |
 | WIM_FIn | C:\1c\Cursor_1c\WORK\WIM_FIn |
 | Wim_Mo | C:\1c\Cursor_1c\WORK\Wim_Mo |
+| Wim_Fo | C:\1c\Cursor_1c\WORK\WIM_Fo |
 
 ## Структура каждой базы
 
