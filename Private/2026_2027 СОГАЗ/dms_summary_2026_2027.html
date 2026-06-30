@@ -1,0 +1,625 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ДМС 2026-2027 - Сводка по полису (программа 1Л)</title>
+    <style>
+        :root {
+            --success: #28a745;
+            --danger: #dc3545;
+            --info: #17a2b8;
+            --primary: #0066b3;
+            --primary-dark: #004d8c;
+            --bg: #f4f7fb;
+            --card: #ffffff;
+            --text: #2c3e50;
+            --muted: #6c757d;
+            --border: #dee2e6;
+            --yellow: #fff3cd;
+            --yellow-border: #ffc107;
+            --blue-light: #e8f4fc;
+            --purple-light: #f0e6ff;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.55;
+        }
+
+        .header {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            color: white;
+            padding: 28px 24px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 26px;
+            font-weight: 600;
+            margin-bottom: 6px;
+        }
+
+        .header .subtitle {
+            font-size: 15px;
+            opacity: 0.9;
+        }
+
+        .container {
+            max-width: 1100px;
+            margin: 0 auto;
+            padding: 24px 16px 40px;
+        }
+
+        .section {
+            background: var(--card);
+            border-radius: 10px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.07);
+            margin-bottom: 20px;
+            overflow: hidden;
+        }
+
+        .section-title {
+            background: var(--primary);
+            color: white;
+            padding: 12px 20px;
+            font-size: 17px;
+            font-weight: 600;
+        }
+
+        .section-body { padding: 18px 20px; }
+
+        .cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 14px;
+            margin-bottom: 4px;
+        }
+
+        .card {
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 14px 16px;
+            background: #fafbfc;
+        }
+
+        .card .label {
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.4px;
+            color: var(--muted);
+            margin-bottom: 4px;
+        }
+
+        .card .value {
+            font-size: 16px;
+            font-weight: 600;
+            color: var(--primary-dark);
+        }
+
+        .card .value.small { font-size: 14px; font-weight: 500; }
+
+        .phone-block {
+            background: var(--blue-light);
+            border: 2px solid var(--info);
+            border-radius: 10px;
+            padding: 18px 20px;
+            text-align: center;
+            margin: 10px 0;
+        }
+
+        .phone-block .phone {
+            font-size: 28px;
+            font-weight: 700;
+            color: var(--primary-dark);
+            letter-spacing: 1px;
+        }
+
+        .phone-block .hint {
+            margin-top: 8px;
+            font-size: 14px;
+            color: var(--muted);
+        }
+
+        .steps {
+            counter-reset: step;
+            list-style: none;
+            padding: 0;
+        }
+
+        .steps li {
+            counter-increment: step;
+            padding: 10px 0 10px 44px;
+            position: relative;
+            border-bottom: 1px solid #eee;
+        }
+
+        .steps li:last-child { border-bottom: none; }
+
+        .steps li::before {
+            content: counter(step);
+            position: absolute;
+            left: 0;
+            top: 10px;
+            width: 30px;
+            height: 30px;
+            background: var(--success);
+            color: white;
+            border-radius: 50%;
+            text-align: center;
+            line-height: 30px;
+            font-weight: 700;
+            font-size: 14px;
+        }
+
+        .grid-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+        }
+
+        @media (max-width: 700px) {
+            .grid-2 { grid-template-columns: 1fr; }
+        }
+
+        ul.check-list { list-style: none; padding: 0; }
+
+        ul.check-list li {
+            padding: 5px 0 5px 24px;
+            position: relative;
+        }
+
+        ul.check-list li::before {
+            content: "OK";
+            position: absolute;
+            left: 0;
+            color: var(--success);
+            font-weight: 700;
+            font-size: 11px;
+            top: 7px;
+        }
+
+        ul.cross-list { list-style: none; padding: 0; }
+
+        ul.cross-list li {
+            padding: 5px 0 5px 24px;
+            position: relative;
+            font-size: 14px;
+        }
+
+        ul.cross-list li::before {
+            content: "X";
+            position: absolute;
+            left: 0;
+            color: var(--danger);
+            font-weight: 700;
+            font-size: 12px;
+            top: 6px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 14px;
+            margin-top: 8px;
+        }
+
+        th {
+            background: var(--primary);
+            color: white;
+            padding: 9px 10px;
+            text-align: left;
+            font-weight: 600;
+        }
+
+        td {
+            padding: 8px 10px;
+            border-bottom: 1px solid var(--border);
+            vertical-align: top;
+        }
+
+        tr:nth-child(even) td { background: #f8f9fa; }
+
+        .badge {
+            display: inline-block;
+            padding: 3px 10px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .badge-success { background: #d4edda; color: #155724; }
+        .badge-info { background: #d1ecf1; color: #0c5460; }
+        .badge-warning { background: #fff3cd; color: #856404; }
+
+        .alert {
+            border-radius: 8px;
+            padding: 14px 16px;
+            margin: 12px 0;
+            font-size: 14px;
+        }
+
+        .alert-info {
+            background: var(--blue-light);
+            border-left: 4px solid var(--info);
+        }
+
+        .alert-warning {
+            background: var(--yellow);
+            border-left: 4px solid var(--yellow-border);
+        }
+
+        .alert-danger {
+            background: #f8d7da;
+            border-left: 4px solid var(--danger);
+        }
+
+        .scenario {
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 12px 14px;
+            margin-bottom: 10px;
+            background: #fafbfc;
+        }
+
+        .scenario strong {
+            color: var(--primary-dark);
+            display: block;
+            margin-bottom: 4px;
+        }
+
+        .scenario p { font-size: 14px; color: #444; }
+
+        .specialists {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 6px 12px;
+            font-size: 14px;
+        }
+
+        .specialists span {
+            padding: 4px 8px;
+            background: #f0f4f8;
+            border-radius: 4px;
+        }
+
+        .footer {
+            text-align: center;
+            padding: 16px;
+            color: var(--muted);
+            font-size: 12px;
+        }
+
+        .tag-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 10px;
+        }
+
+        .tag {
+            background: var(--purple-light);
+            color: #4a2c7a;
+            padding: 5px 12px;
+            border-radius: 16px;
+            font-size: 13px;
+            font-weight: 500;
+        }
+    </style>
+</head>
+<body>
+
+<div class="header">
+    <h1>ДМС 2026-2027: сводка по полису</h1>
+    <div class="subtitle">ООО СК «Газпром страхование» / АО «СОГАЗ» | Программа 1Л | Чмыхалов Алексей Анатольевич</div>
+</div>
+
+<div class="container">
+
+    <!-- 1. Основные данные -->
+    <div class="section">
+        <div class="section-title">Основные данные полиса</div>
+        <div class="section-body">
+            <div class="cards">
+                <div class="card">
+                    <div class="label">Номер полиса</div>
+                    <div class="value">26LMGI0211/000317</div>
+                </div>
+                <div class="card">
+                    <div class="label">Договор страхования</div>
+                    <div class="value small">26 LMGI 0211</div>
+                </div>
+                <div class="card">
+                    <div class="label">Период действия</div>
+                    <div class="value small">01.07.2026 - 30.06.2027</div>
+                </div>
+                <div class="card">
+                    <div class="label">Программа</div>
+                    <div class="value">1Л <span class="badge badge-info">Москва</span></div>
+                </div>
+                <div class="card">
+                    <div class="label">Страхователь</div>
+                    <div class="value small">АО «ВИМ Инвестиции»</div>
+                </div>
+                <div class="card">
+                    <div class="label">Врач-куратор</div>
+                    <div class="value small">Воробьева Виктория Петровна</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 2. Контакты -->
+    <div class="section">
+        <div class="section-title">Контакты и экстренная помощь</div>
+        <div class="section-body">
+            <div class="phone-block">
+                <div class="phone">8-800-333-44-19</div>
+                <div class="hint">Круглосуточный диспетчерский пульт (звонок бесплатный)</div>
+            </div>
+            <table>
+                <tr>
+                    <th style="width:35%">Действие</th>
+                    <th>Как вызвать</th>
+                </tr>
+                <tr>
+                    <td><strong>Скорая помощь</strong></td>
+                    <td>8-800-333-44-19, нажать <strong>«1»</strong>. При угрозе жизни возможен вызов «03»/«103»/«112» до прибытия коммерческой СМП.</td>
+                </tr>
+                <tr>
+                    <td><strong>Врач на дом</strong></td>
+                    <td>8-800-333-44-19, нажать <strong>«2»</strong>. Зона: МКАД + 30 км, для МО - в границах города.</td>
+                </tr>
+                <tr>
+                    <td><strong>Врач-куратор</strong></td>
+                    <td>Личный кабинет или 8-800-333-44-19. Пн-Чт 09:00-18:00, Пт 09:00-16:45 (МСК).</td>
+                </tr>
+                <tr>
+                    <td><strong>Запись к врачу / гарантийное письмо</strong></td>
+                    <td>8-800-333-44-19, дождаться ответа оператора.</td>
+                </tr>
+                <tr>
+                    <td><strong>Анализы (Инвитро)</strong></td>
+                    <td>8-800-333-44-19 + обращение в ближайший офис «Инвитро».</td>
+                </tr>
+                <tr>
+                    <td><strong>Претензии / благодарности</strong></td>
+                    <td>info@gazpromins.ru</td>
+                </tr>
+            </table>
+        </div>
+    </div>
+
+    <!-- 3. Старт -->
+    <div class="section">
+        <div class="section-title">Как начать пользоваться полисом</div>
+        <div class="section-body">
+            <ol class="steps">
+                <li>Скачать мобильное приложение Страховщика (ссылка в полисе / письме).</li>
+                <li>Зарегистрироваться в приложении.</li>
+                <li>Добавить полис по номеру <strong>26LMGI0211/000317</strong>.</li>
+                <li>Ознакомиться со списком ЛПУ, телефонами и адресами в Личном кабинете.</li>
+            </ol>
+            <div class="alert alert-info" style="margin-top:14px">
+                Перечень медицинских организаций и детали программы - только в Личном кабинете (мобильное приложение).
+            </div>
+        </div>
+    </div>
+
+    <!-- 4. Что входит -->
+    <div class="section">
+        <div class="section-title">Что входит в программу 1Л</div>
+        <div class="section-body">
+            <div class="tag-row">
+                <span class="tag">Амбулатория + телемедицина</span>
+                <span class="tag">Помощь на дому</span>
+                <span class="tag">Стоматология</span>
+                <span class="tag">Скорая помощь</span>
+                <span class="tag">Стационар (экстренный + плановый)</span>
+                <span class="tag">Экстренная помощь в РФ</span>
+                <span class="tag">Экстренная помощь за рубежом</span>
+                <span class="tag">Диспансеризация</span>
+                <span class="tag">Чек-ап Телемед + Инвитро</span>
+            </div>
+
+            <h3 style="margin:18px 0 10px; color:var(--primary-dark); font-size:15px;">Территория обслуживания (программа 1Л, Москва)</h3>
+            <table>
+                <tr><th>Услуга</th><th>Зона</th></tr>
+                <tr><td>Вызов врача на дом</td><td>МКАД + адм. границы города + 30 км за МКАД; для ЛПУ в МО - в границах города</td></tr>
+                <tr><td>Скорая мед. помощь (СМП)</td><td>В пределах 50 км от МКАД</td></tr>
+                <tr><td>Амбулаторное обслуживание</td><td>По месту постоянного проживания; экстренная помощь - по всей РФ и за рубежом</td></tr>
+                <tr><td>Палата в стационаре</td><td>Одно- или двухместная (для программы 1Л)</td></tr>
+            </table>
+
+            <h3 style="margin:18px 0 10px; color:var(--primary-dark); font-size:15px;">24 специальности амбулаторного обслуживания</h3>
+            <div class="specialists">
+                <span>Терапия</span><span>Кардиология</span><span>Гастроэнтерология</span>
+                <span>Пульмонология</span><span>Нефрология</span><span>Гематология</span>
+                <span>Эндокринология</span><span>Аллергология</span><span>Ревматология</span>
+                <span>Неврология</span><span>Иммунология</span><span>Инфекционные болезни</span>
+                <span>Дерматология</span><span>Хирургия</span><span>Травматология</span>
+                <span>Проктология</span><span>Ангиология</span><span>Гинекология</span>
+                <span>Онкология (первичная диагностика)</span><span>Урология</span><span>Офтальмология</span>
+                <span>Отоларингология</span><span>Маммология</span><span>Гомеопат (1 раз/год)</span>
+            </div>
+
+            <div class="grid-2" style="margin-top:16px">
+                <div>
+                    <h3 style="margin-bottom:8px; color:var(--primary-dark); font-size:15px;">Диагностика и лечение</h3>
+                    <ul class="check-list">
+                        <li>Лабораторные исследования (в т.ч. ПЦР, онкомаркеры)</li>
+                        <li>УЗИ, КТ, МРТ, эндоскопия, ЭКГ, Холтер</li>
+                        <li>Инъекции, малые операции в амбулатории</li>
+                        <li>Физиотерапия, массаж, ЛФК, мануальная терапия</li>
+                        <li>Консультации в НИИ (по согласованию)</li>
+                        <li>Иммунопрофилактика гриппа (1 раз/год)</li>
+                        <li>Наблюдение по хроническим заболеваниям (вне обострения)</li>
+                    </ul>
+                </div>
+                <div>
+                    <h3 style="margin-bottom:8px; color:var(--primary-dark); font-size:15px;">Телемедицина</h3>
+                    <ul class="check-list">
+                        <li>Онлайн-консультации: терапевт, кардиолог, гастроэнтеролог, эндокринолог, психиатр</li>
+                        <li>Срочные и плановые консультации с письменным заключением</li>
+                        <li>Второе медицинское мнение (в т.ч. Covid-19)</li>
+                        <li>Линия психологической поддержки</li>
+                    </ul>
+                    <h3 style="margin:14px 0 8px; color:var(--primary-dark); font-size:15px;">Стоматология</h3>
+                    <ul class="check-list">
+                        <li>Лечение кариеса, пульпита, периодонтита</li>
+                        <li>Удаление зубов (в т.ч. сложное)</li>
+                        <li>Профгигиена (Air-Flow, ультразвук) по показаниям</li>
+                        <li>КТ зубов, лечение под микроскопом (по согласованию)</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="alert alert-warning" style="margin-top:14px">
+                <strong>Ограничения стоматологии:</strong> лечение при разрушении коронки не более 50% (без анкерного штифта); протезирование - только 1 зуб при несчастном случае; ортодонтия, имплантация, отбеливание - не входят.
+            </div>
+        </div>
+    </div>
+
+    <!-- 5. Диспансеризация -->
+    <div class="section">
+        <div class="section-title">Диспансеризация (1 раз за период полиса)</div>
+        <div class="section-body">
+            <div class="alert alert-info">
+                Доступна сотрудникам компании на базе <strong>Поликлиника.Ру</strong>. Согласование работодателя не требуется.
+                Для мужчин старше 40 лет (ваш случай: 14.09.1974).
+            </div>
+            <table>
+                <tr><th>Специалист / исследование</th><th>Включено</th></tr>
+                <tr><td>Терапевт с заключением</td><td><span class="badge badge-success">Да</span></td></tr>
+                <tr><td>Невролог, уролог, хирург, офтальмолог, ЛОР, эндокринолог</td><td><span class="badge badge-success">Да</span></td></tr>
+                <tr><td>Клинический анализ крови и мочи</td><td><span class="badge badge-success">Да</span></td></tr>
+                <tr><td>Холестерин, сахар, билирубин, белок, амилаза, креатинин, мочевая кислота, ЛПНП, триглицериды</td><td><span class="badge badge-success">Да</span></td></tr>
+                <tr><td>Онкомаркер PSA (мужчины 40+)</td><td><span class="badge badge-success">Да</span></td></tr>
+                <tr><td>ЭКГ, флюорография</td><td><span class="badge badge-success">Да</span></td></tr>
+            </table>
+        </div>
+    </div>
+
+    <!-- 6. Чек-ап -->
+    <div class="section">
+        <div class="section-title">Программа «Чек-ап Телемед + Инвитро» (1 раз за период)</div>
+        <div class="section-body">
+            <ol class="steps">
+                <li>Первичная телемед-консультация терапевта + индивидуальный план обследования.</li>
+                <li>Сдача анализов в «Инвитро» в течение 2 недель (по плану).</li>
+                <li>Повторная телемед-консультация для расшифровки результатов.</li>
+            </ol>
+            <p style="margin-top:12px; font-size:14px; color:var(--muted)">
+                Перечень анализов включает: ОАК, СРБ, АЛТ/АСТ/ГГТП, билирубин, мочевая кислота, липидный профиль, глюкоза, HbA1c, белок, креатинин, мочевина, протромбин/МНО, железо/ферритин, ТТГ, фолиевая кислота, ОАМ и др.
+            </p>
+        </div>
+    </div>
+
+    <!-- 7. За рубежом -->
+    <div class="section">
+        <div class="section-title">Экстренная помощь за рубежом</div>
+        <div class="section-body">
+            <ul class="check-list">
+                <li>Неограниченное число поездок, каждая до <strong>90 дней</strong></li>
+                <li>Амбулаторная экстренная помощь при внезапном заболевании / несчастном случае</li>
+                <li>Стоматология при острой боли или несчастном случае</li>
+                <li>Скорая помощь и медицинская эвакуация</li>
+                <li>Экстренная госпитализация</li>
+                <li>Репатриация тела при смерти</li>
+                <li>Покрытие: горнолыжный спорт и дайвинг (любительский уровень), Covid-19 / эпидемии в стране поездки</li>
+            </ul>
+            <div class="alert alert-info" style="margin-top:12px">
+                Международный полис - скачать в Личном кабинете (если предусмотрен договором).
+            </div>
+        </div>
+    </div>
+
+    <!-- 8. Памятка -->
+    <div class="section">
+        <div class="section-title">Памятка: что делать в типичных ситуациях</div>
+        <div class="section-body">
+            <div class="scenario">
+                <strong>Ухудшилось самочувствие (плановое)</strong>
+                <p>Обратиться в ЛПУ по программе (список в ЛК). Услуги - в режиме работы клиники.</p>
+            </div>
+            <div class="scenario">
+                <strong>Направили на анализы / исследования</strong>
+                <p>8-800-333-44-19 + офис «Инвитро» (для лаборатории) или ЛПУ по программе.</p>
+            </div>
+            <div class="scenario">
+                <strong>Клиника требует оплату или отказывает</strong>
+                <p>Не выходя из клиники - звонить 8-800-333-44-19 для консультации.</p>
+            </div>
+            <div class="scenario">
+                <strong>Плановая госпитализация / операция</strong>
+                <p>Связаться с врачом-куратором через ЛК или по телефону (рабочие часы).</p>
+            </div>
+            <div class="scenario">
+                <strong>Исследование недоступно в вашей клинике</strong>
+                <p>8-800-333-44-19 - страховая организует в другом ЛПУ.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- 9. Исключения -->
+    <div class="section">
+        <div class="section-title">Основные исключения из покрытия</div>
+        <div class="section-body">
+            <div class="grid-2">
+                <div>
+                    <h3 style="margin-bottom:8px; color:var(--danger); font-size:15px;">Заболевания (после диагноза)</h3>
+                    <ul class="cross-list">
+                        <li>Онкология (кроме первичной диагностики и случаев по программе)</li>
+                        <li>ВИЧ, венерические заболевания</li>
+                        <li>Туберкулез</li>
+                        <li>Психические расстройства, алкоголизм, наркомания</li>
+                        <li>Хроническая почечная / печеночная недостаточность</li>
+                        <li>Врожденные и наследственные заболевания</li>
+                        <li>Гепатиты C, D, E (гепатиты A, B - частично по программе)</li>
+                    </ul>
+                </div>
+                <div>
+                    <h3 style="margin-bottom:8px; color:var(--danger); font-size:15px;">Услуги</h3>
+                    <ul class="cross-list">
+                        <li>Протезирование зубов, имплантация, ортодонтия</li>
+                        <li>Косметология, удаление родинок (кроме травм/воспаления)</li>
+                        <li>Лазерная коррекция зрения (кроме случаев по программе)</li>
+                        <li>Экстракорпоральные методы (гемодиализ и пр.)</li>
+                        <li>Льготные рецепты</li>
+                        <li>Планирование семьи, ЭКО, ВМС</li>
+                        <li>Профилактические приемы (кроме предусмотренных программой)</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="alert alert-danger" style="margin-top:12px">
+                <strong>Расширенное медицинское обслуживание</strong> (онкология, трансплантация, эндопротезирование, кардиохирургия, диабет и др.) - только после согласования со Страховщиком и дополнительного взноса.
+            </div>
+        </div>
+    </div>
+
+    <!-- 10. Источники -->
+    <div class="section">
+        <div class="section-title">Источники документов</div>
+        <div class="section-body" style="font-size:14px; color:var(--muted)">
+            <table>
+                <tr><th>Файл</th><th>Содержание</th></tr>
+                <tr><td>Полис_Чмыхалов Алексей Анатольевич.pdf</td><td>Страховой полис, памятка застрахованному</td></tr>
+                <tr><td>ОписаниеПолисаДМС_26_27гг.txt</td><td>Уведомление о страховании, номер полиса, инструкция по приложению</td></tr>
+                <tr><td>ЛК_Объем услуг ГПС Взрослые.docx</td><td>Полный объем услуг по программам ДМС (Правила от 02.11.2024)</td></tr>
+            </table>
+        </div>
+    </div>
+
+</div>
+
+<div class="footer">
+    Сводка сформирована 30.06.2026 на основе документов из папки Private/2026_2027 СОГАЗ.<br>
+    Актуальный список ЛПУ и детали - в мобильном приложении / Личном кабинете.
+</div>
+
+</body>
+</html>
