@@ -10,3 +10,4 @@
 
 - [fo_connection_params_pp_retail.html](Документация/fo_connection_params_pp_retail.html) — параметры подключения к ФО и настройка при запуске как внешней обработки в базе PP Retail
 - [Инструкция по тестированию T-1 с отладчиком](Документация/fo_connection_params_pp_retail.html#debug-instruction) — пошаговый запуск и точки замера времени
+- [Запуск из регламентов](Документация/fo_connection_params_pp_retail.html#reglement-launch) — команда `ФоноваяВыгрузка`, цепочка обмена, отличия от формы
