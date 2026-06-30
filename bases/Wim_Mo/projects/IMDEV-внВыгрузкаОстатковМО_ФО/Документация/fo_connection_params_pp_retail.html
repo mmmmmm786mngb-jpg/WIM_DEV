@@ -1,0 +1,804 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>внВыгрузкаОстатковМО_ФО: подключение к ФО (PP Retail)</title>
+    <style>
+        :root {
+            --ok: #28a745;
+            --err: #dc3545;
+            --info: #17a2b8;
+            --warn-bg: #fff3cd;
+            --warn-border: #ffc107;
+            --blue-bg: #e7f3ff;
+            --blue-border: #17a2b8;
+            --purple-bg: #f3e8ff;
+            --purple-border: #6f42c1;
+            --text: #212529;
+            --muted: #6c757d;
+            --border: #dee2e6;
+        }
+        * { box-sizing: border-box; }
+        body {
+            font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.55;
+            color: var(--text);
+            max-width: 980px;
+            margin: 0 auto;
+            padding: 24px 20px 48px;
+            background: #f8f9fa;
+        }
+        h1 { font-size: 1.65rem; margin-bottom: 0.35rem; }
+        h2 {
+            font-size: 1.25rem;
+            margin-top: 2rem;
+            padding-bottom: 0.35rem;
+            border-bottom: 2px solid var(--info);
+        }
+        h3 { font-size: 1.05rem; margin-top: 1.25rem; color: #343a40; }
+        .meta { color: var(--muted); font-size: 0.95rem; margin-bottom: 1.5rem; }
+        .lead {
+            background: #fff;
+            border-left: 4px solid var(--info);
+            padding: 1rem 1.25rem;
+            margin: 1.25rem 0;
+            border-radius: 0 6px 6px 0;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+        }
+        .box-warn {
+            background: var(--warn-bg);
+            border: 1px solid var(--warn-border);
+            padding: 0.85rem 1rem;
+            border-radius: 6px;
+            margin: 1rem 0;
+        }
+        .box-info {
+            background: var(--blue-bg);
+            border: 1px solid var(--blue-border);
+            padding: 0.85rem 1rem;
+            border-radius: 6px;
+            margin: 1rem 0;
+        }
+        .box-purple {
+            background: var(--purple-bg);
+            border: 1px solid var(--purple-border);
+            padding: 0.85rem 1rem;
+            border-radius: 6px;
+            margin: 1rem 0;
+        }
+        .box-bug {
+            background: var(--warn-bg);
+            border-left: 4px solid var(--warn-border);
+            padding: 0.85rem 1rem;
+            border-radius: 0 6px 6px 0;
+            margin: 1rem 0;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: #fff;
+            margin: 1rem 0;
+            font-size: 0.92rem;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+        }
+        th, td {
+            border: 1px solid var(--border);
+            padding: 0.55rem 0.65rem;
+            text-align: left;
+            vertical-align: top;
+        }
+        th { background: #e9ecef; font-weight: 600; }
+        code, pre {
+            font-family: Consolas, "Courier New", monospace;
+            font-size: 0.88rem;
+        }
+        pre {
+            background: #272822;
+            color: #f8f8f2;
+            padding: 1rem;
+            overflow-x: auto;
+            border-radius: 6px;
+            margin: 0.75rem 0;
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+        .flow {
+            background: #fff;
+            padding: 1rem 1.25rem;
+            border-radius: 6px;
+            border: 1px solid var(--border);
+            margin: 1rem 0;
+        }
+        .flow ol { margin: 0; padding-left: 1.35rem; }
+        .flow li { margin: 0.4rem 0; }
+        .tag {
+            display: inline-block;
+            padding: 0.15rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+        .tag-ok { background: #d4edda; color: #155724; }
+        .tag-err { background: #f8d7da; color: #721c24; }
+        .tag-info { background: #d1ecf1; color: #0c5460; }
+        ul.compact li { margin: 0.3rem 0; }
+        .stat-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 12px;
+            margin: 1rem 0;
+        }
+        .stat-card {
+            background: #fff;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 0.85rem 1rem;
+            text-align: center;
+        }
+        .stat-card .num { font-size: 1.4rem; font-weight: 700; color: var(--info); }
+        .stat-card .lbl { font-size: 0.85rem; color: var(--muted); }
+        footer {
+            margin-top: 2.5rem;
+            padding-top: 1rem;
+            border-top: 1px solid var(--border);
+            font-size: 0.85rem;
+            color: var(--muted);
+        }
+        .instruction-highlight {
+            background: #fff;
+            border: 3px solid var(--ok);
+            border-radius: 8px;
+            padding: 1.25rem 1.5rem 1.5rem;
+            margin: 2rem 0;
+            box-shadow: 0 2px 10px rgba(40, 167, 69, 0.12);
+        }
+        .instruction-highlight > h2 {
+            border-bottom-color: var(--ok);
+            margin-top: 0;
+            color: #155724;
+        }
+        .step-num {
+            display: inline-block;
+            background: var(--ok);
+            color: #fff;
+            width: 1.6rem;
+            height: 1.6rem;
+            line-height: 1.6rem;
+            text-align: center;
+            border-radius: 50%;
+            font-size: 0.85rem;
+            font-weight: 700;
+            margin-right: 0.35rem;
+        }
+        .phase {
+            background: #f1f8f4;
+            border-left: 4px solid var(--ok);
+            padding: 0.75rem 1rem;
+            margin: 0.75rem 0;
+            border-radius: 0 6px 6px 0;
+        }
+        a.nav-link { color: var(--info); font-weight: 600; }
+    </style>
+</head>
+<body>
+
+<h1>внВыгрузкаОстатковМО_ФО</h1>
+<p class="meta">
+    Проект: <code>bases/Wim_Mo/projects/IMDEV-внВыгрузкаОстатковМО_ФО</code><br>
+    База-источник (МО): Wim_Mo, запуск как внешняя обработка (EPF) в контуре <strong>PP Retail</strong><br>
+    База-приемник (ФО): Аванкор ФО Retail через веб-сервис <code>avancore_ws</code>
+</p>
+
+<div class="lead">
+    Обработка выгружает остатки (ЦБ, ДС, СЧА и связанные данные) из Middle Office в Front Office
+    по SOAP. Единственный параметр, определяющий <em>куда</em> уходит выгрузка, — реквизит
+    <strong>АдресWS</strong> (URL WSDL). Для PP Retail нужно указать WSDL розничного ФО, а не
+    стандартный PROD DU (<code>PROD_AVC_FO-DL</code>), который подставляется по умолчанию.
+</div>
+
+<div class="box-info">
+    <strong>Быстрый переход:</strong>
+    <a class="nav-link" href="#debug-instruction">Инструкция по тестированию в MO PP (T-1) Retail с отладчиком</a>
+</div>
+
+<h2>1. Введение и схема обмена</h2>
+
+<div class="stat-grid">
+    <div class="stat-card">
+        <div class="num">WS</div>
+        <div class="lbl">Протокол: SOAP 1.1, WSDL</div>
+    </div>
+    <div class="stat-card">
+        <div class="num">30 сек</div>
+        <div class="lbl">Таймаут WSОпределения</div>
+    </div>
+    <div class="stat-card">
+        <div class="num">50</div>
+        <div class="lbl">Портфелей в пакете (по умолчанию)</div>
+    </div>
+</div>
+
+<div class="box-info">
+    <strong>Цепочка вызова:</strong>
+    МО (EPF) &rarr; <code>WSОпределения(АдресWS)</code> &rarr; <code>WSПрокси</code> &rarr;
+    метод <code>DownloadPosition</code> (и др.) &rarr; ФО (<code>ОбменДаннымиБэкОфис.ЗагрузитьПакет</code>).
+</div>
+
+<h3>Ключевые методы веб-сервиса ФО</h3>
+<table>
+    <thead>
+        <tr><th>Метод</th><th>Назначение в обработке</th></tr>
+    </thead>
+    <tbody>
+        <tr><td><code>DownloadPosition</code></td><td>Основная выгрузка позиций (пакетами по мандатам)</td></tr>
+        <tr><td><code>DownloadOrders</code></td><td>Выгрузка заявок / поручений</td></tr>
+        <tr><td><code>GetDataOnRequest</code></td><td>Запрос данных по идентификатору</td></tr>
+        <tr><td><code>GetPosition</code></td><td>Получение позиции</td></tr>
+        <tr><td><code>GetListOfDeals</code></td><td>Список сделок</td></tr>
+    </tbody>
+</table>
+<p>Пространство имен XDTO пакетов: <code>http://avancore.ru/xsd</code> (константа <code>ПространствоИменСервиса</code> в модуле объекта).</p>
+
+<h2>2. Параметры подключения к ФО</h2>
+
+<h3>2.1. Главный параметр — АдресWS</h3>
+<table>
+    <thead>
+        <tr><th>Свойство</th><th>Значение</th></tr>
+    </thead>
+    <tbody>
+        <tr>
+            <td>Реквизит обработки</td>
+            <td><code>АдресWS</code> (Строка, до 250 символов)</td>
+        </tr>
+        <tr>
+            <td>Формат</td>
+            <td>Полный URL WSDL, обязательно с суффиксом <code>?wsdl</code></td>
+        </tr>
+        <tr>
+            <td>Шаблон пути IIS</td>
+            <td><code>http://&lt;хост&gt;/&lt;имя_публикации&gt;/ws/avancore_ws.1cws?wsdl</code></td>
+        </tr>
+        <tr>
+            <td>Значение по умолчанию в коде</td>
+            <td><code>http://amapfront/PROD_AVC_FO-DL/ws/avancore_ws.1cws?wsdl</code> (PROD DU, не Retail)</td>
+        </tr>
+        <tr>
+            <td>Где задается</td>
+            <td>Поле «Адрес WS» на форме обработки или форме настроек; сохраняется в настройках БСП / DevOps</td>
+        </tr>
+    </tbody>
+</table>
+
+<h3>2.2. Адреса WSDL для контура PP Retail</h3>
+<table>
+    <thead>
+        <tr>
+            <th>Контур</th>
+            <th>URL WSDL</th>
+            <th>Есть в списке выбора формы</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr>
+            <td><span class="tag tag-ok">PP Retail ФО</span></td>
+            <td><code>http://smsk02mg138u/AVC_PP_RETAIL_FO/ws/avancore_ws.1cws?wsdl</code></td>
+            <td><span class="tag tag-err">Нет</span> — ввод вручную (см. другие обработки Retail, напр. внРасторжениеДоговоровРозничногоДУ)</td>
+        </tr>
+        <tr>
+            <td>PP ФО (корп. DU, не Retail)</td>
+            <td><code>http://smsk02mg138u/AVC_PP_FO/ws/avancore_ws.1cws?wsdl</code></td>
+            <td><span class="tag tag-ok">Да</span></td>
+        </tr>
+        <tr>
+            <td>UAT ФО</td>
+            <td><code>http://smsk02mg138u/AVC_UAT_FO/ws/avancore_ws.1cws?wsdl</code></td>
+            <td><span class="tag tag-ok">Да</span></td>
+        </tr>
+        <tr>
+            <td>PROD Retail ФО</td>
+            <td><code>http://ammgavancore/PROD_AVC_RETAIL_FO-DL/ws/avancore_ws.1cws?wsdl</code></td>
+            <td><span class="tag tag-err">Нет</span></td>
+        </tr>
+        <tr>
+            <td>PROD DU ФО (ВИМ)</td>
+            <td><code>http://amapfront/PROD_AVC_FO-DL/ws/avancore_ws.1cws?wsdl</code></td>
+            <td>Да (prod, по умолчанию)</td>
+        </tr>
+        <tr>
+            <td>PROD BFAM ФО</td>
+            <td><code>http://AMAPFRONT/PROD_BFAM_FO-DL/ws/avancore_ws.1cws?wsdl</code></td>
+            <td>Да (prod)</td>
+        </tr>
+    </tbody>
+</table>
+
+<div class="box-warn">
+    <strong>Для PP Retail МО</strong> в поле <code>АдресWS</code> укажите WSDL розничного ФО:
+    <pre>http://smsk02mg138u/AVC_PP_RETAIL_FO/ws/avancore_ws.1cws?wsdl</pre>
+    Не используйте значение по умолчанию <code>PROD_AVC_FO-DL</code> — это другая база ФО (корпоративное DU).
+</div>
+
+<h3>2.3. Аутентификация HTTP</h3>
+<p>В модуле объекта логин и пароль передаются в конструктор <code>WSОпределения</code> только для одного жестко заданного URL:</p>
+
+<pre>Если ЭтотОбъект.АдресWS = "http://smsk02mg138u/AVC_PP_FO/ws/avancore_ws.1cws?wsdl" Тогда
+    СтруктураВозврата.ОпределениеWS = Новый WSОпределения(ЭтотОбъект.АдресWS, "admin", "адм232882", , 30);
+Иначе
+    СтруктураВозврата.ОпределениеWS = Новый WSОпределения(ЭтотОбъект.АдресWS, , , , 30);
+КонецЕсли;</pre>
+
+<table>
+    <thead>
+        <tr><th>АдресWS</th><th>Логин / пароль в EPF</th><th>Примечание</th></tr>
+    </thead>
+    <tbody>
+        <tr>
+            <td><code>.../AVC_PP_FO/...</code> (smsk02mg138u)</td>
+            <td><code>admin</code> / <code>адм232882</code></td>
+            <td>Зашито в коде; также проставляется на <code>WSПрокси</code></td>
+        </tr>
+        <tr>
+            <td><code>.../AVC_PP_RETAIL_FO/...</code></td>
+            <td>Пустые (передача учетных данных Windows / IIS)</td>
+            <td>URL Retail <strong>не совпадает</strong> с условием в коде — используется ветка «без логина»</td>
+        </tr>
+        <tr>
+            <td>PROD (<code>amapfront</code>, <code>ammgavancore</code>)</td>
+            <td>Пустые</td>
+            <td>Обычно Kerberos / Windows-аутентификация на IIS</td>
+        </tr>
+    </tbody>
+</table>
+
+<div class="box-bug">
+    <strong>Расхождение URL в коде (важно для PP):</strong> в разных процедурах проверяется
+    <code>smsk02mg138u</code> (создание WS) и <code>smsk02mg31u</code> (отдельные ветки логики).
+    Для Retail используйте хост <code>smsk02mg138u</code>, как в формах и в других Retail-обработках.
+    Если понадобится хост <code>smsk02mg31u</code>, потребуется правка условий в ObjectModule.bsl.
+</div>
+
+<h3>2.4. Прочие параметры, влияющие на обмен с ФО</h3>
+<table>
+    <thead>
+        <tr><th>Реквизит</th><th>Назначение</th><th>Рекомендация для PP</th></tr>
+    </thead>
+    <tbody>
+        <tr>
+            <td><code>КоличествоПортфелейВПакете</code></td>
+            <td>Размер пакета при вызове <code>DownloadPosition</code></td>
+            <td>По умолчанию 50; уменьшить при HTTP 413 (Payload Too Large)</td>
+        </tr>
+        <tr>
+            <td><code>ДатаПоз</code></td>
+            <td>Дата позиции для выгрузки</td>
+            <td>Рабочая дата регламента</td>
+        </tr>
+        <tr>
+            <td><code>ОтборМандат</code>, <code>СписМандатОтбор</code></td>
+            <td>Ограничение списка мандатов</td>
+            <td>Для теста — один мандат; для регламента — по настройкам УК</td>
+        </tr>
+        <tr>
+            <td><code>МандатДляТеста</code></td>
+            <td>Тестовый мандат</td>
+            <td>Заполнить при отладке на PP</td>
+        </tr>
+        <tr>
+            <td><code>УзелОбменаДляРегистрацииНенайденных</code></td>
+            <td>Узел плана обмена для ненайденных объектов</td>
+            <td>Настроить под PP Retail МО</td>
+        </tr>
+        <tr>
+            <td><code>УзелОбменаДляРегистрацииНенайденныхСчетовМандатов</code></td>
+            <td>Узел для ненайденных счетов мандатов</td>
+            <td>Настроить под PP Retail МО</td>
+        </tr>
+        <tr>
+            <td><code>УК</code></td>
+            <td>Управляющая компания</td>
+            <td>Согласно данным PP-базы</td>
+        </tr>
+        <tr>
+            <td><code>КоличестовДнейПроверкиИсполненияСделок</code></td>
+            <td>Глубина проверки исполнения</td>
+            <td>Из сохраненных настроек регламента</td>
+        </tr>
+        <tr>
+            <td><code>ИсполнениеПоСуммеМО</code></td>
+            <td>Флаг учета исполнения по сумме МО</td>
+            <td>Как в продуктиве Retail</td>
+        </tr>
+    </tbody>
+</table>
+
+<div class="instruction-highlight" id="debug-instruction">
+<h2>3. Инструкция по запуску для тестирования в базе MO PP (T-1) Retail</h2>
+
+<p>
+    Цель: запустить <code>внВыгрузкаОстатковМО_ФО.epf</code> в PP Retail МО на дату <strong>T-1</strong>
+    (предыдущий рабочий день), сузить объем до одного мандата и пошагово замерить в отладчике,
+    сколько времени занимает каждый этап и каждая тяжелая строка кода.
+</p>
+
+<h3>3.0. Подготовка отладчика (один раз)</h3>
+<div class="flow">
+    <ol>
+        <li>Запустите <strong>толстый клиент</strong> 1С с возможностью отладки (не тонкий клиент без отладки).</li>
+        <li>Подключитесь к базе <strong>PP Retail MO</strong> (контур pre-production).</li>
+        <li>Откройте конфигуратор или EDT и подключите отладчик к сеансу пользователя.</li>
+        <li>Откройте модуль объекта EPF:
+            <code>C:\1c\Cursor_1c\WORK\Wim_Mo\SRC\epf\внВыгрузкаОстатковМО_ФО_epf\внВыгрузкаОстатковМО_ФО\Ext\ObjectModule.bsl</code>
+        </li>
+        <li>Дополнительно откройте модуль формы:
+            <code>...\Forms\Форма\Ext\Form\Module.bsl</code> — точки входа <code>Заполнить</code> и <code>Опубликовать</code>.
+        </li>
+        <li>В окне «Точки останова» включите остановку на всех исключениях (по желанию).</li>
+    </ol>
+</div>
+
+<h3>3.1. Параметры на форме обработки (что заполнить)</h3>
+
+<div class="box-warn">
+    <strong>T-1:</strong> в поле <code>ДатаПоз</code> укажите дату позиции «вчера» относительно даты теста.
+    Например, если тест 30.06.2026, то <code>ДатаПоз = 29.06.2026</code> (или последний рабочий день по календарю УК).
+    Именно эта дата передается в <code>Заполнить(Отбор, ДатаПоз)</code> и в <code>Опубликовать(..., ДатаПоз)</code>.
+</div>
+
+<table>
+    <thead>
+        <tr>
+            <th>Поле на форме</th>
+            <th>Значение для теста / отладки</th>
+            <th>Зачем</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr>
+            <td><code>ДатаПоз</code></td>
+            <td><strong>T-1</strong> (предыдущий день)</td>
+            <td>Дата расчета остатков; все запросы «НаДату» используют ее</td>
+        </tr>
+        <tr>
+            <td><code>Адрес WS</code></td>
+            <td><code>http://smsk02mg138u/AVC_PP_RETAIL_FO/ws/avancore_ws.1cws?wsdl</code></td>
+            <td>ФО Retail PP; нужен для этапа «Опубликовать»</td>
+        </tr>
+        <tr>
+            <td><code>Количество портфелей в пакете</code></td>
+            <td><strong>1</strong></td>
+            <td>Один пакет = один мандат; проще пройти цикл и замерить WS-вызовы</td>
+        </tr>
+        <tr>
+            <td><code>Отладка</code> (флаг формы)</td>
+            <td><strong>Включить</strong></td>
+            <td>Пишет XML пакетов и ответы в <code>ТекстовыйЛог</code>; после «Опубликовать» откроется лог</td>
+        </tr>
+        <tr>
+            <td>Отбор мандатов (СКД)</td>
+            <td>Один конкретный мандат Retail</td>
+            <td>Минимальный объем данных; без отбора выгрузка займет часы</td>
+        </tr>
+        <tr>
+            <td><code>Отбор по счетам</code></td>
+            <td>Выключен (по умолчанию)</td>
+            <td>Отбор через «Отбор мандатов»; включайте только если тестируете конкретный счет мандата</td>
+        </tr>
+        <tr>
+            <td><code>Отбор мандат</code> + <code>УК</code></td>
+            <td>Выключен, если отбор задан в СКД</td>
+            <td>Если включен «Отбор мандат» — обязательно заполнить УК, иначе «Заполнить» не выполнится</td>
+        </tr>
+        <tr>
+            <td><code>Пересчитать рыночную стоимость</code></td>
+            <td>Выключен на первом прогоне</td>
+            <td>Ускоряет «Опубликовать»; включите отдельным прогоном для замера пересчета MV</td>
+        </tr>
+        <tr>
+            <td><code>Пересчитать комплианс</code></td>
+            <td>Выключен на первом прогоне</td>
+            <td>Аналогично — отдельный замер при необходимости</td>
+        </tr>
+        <tr>
+            <td><code>Узел обмена...</code> (оба поля)</td>
+            <td>Как в регламенте PP или пусто для «чистого» замера WS</td>
+            <td>Нужны при обработке ненайденных объектов на ФО; на время замеров можно не трогать</td>
+        </tr>
+        <tr>
+            <td><code>Количество дней проверки исполнения сделок</code></td>
+            <td>Значение из prod-настроек PP (часто 1–3)</td>
+            <td>Влияет на <code>ИсполнениеСделок</code> внутри «Заполнить»</td>
+        </tr>
+        <tr>
+            <td><code>Исполнение по сумме МО</code></td>
+            <td>Как в prod PP Retail</td>
+            <td>Влияет на логику исполнений</td>
+        </tr>
+    </tbody>
+</table>
+
+<h3>3.2. Настройка отбора по одному мандату</h3>
+<div class="flow">
+    <ol>
+        <li>Убедитесь, что <code>Отбор по счетам</code> <strong>выключен</strong>.</li>
+        <li>В блоке <strong>«Отбор мандатов»</strong> (компоновщик СКД) добавьте условие, например:
+            <ul class="compact">
+                <li><code>Мандат.Код</code> Равно «&lt;код тестового мандата Retail&gt;»</li>
+                <li>или <code>Мандат</code> Равно «&lt;конкретная ссылка&gt;»</li>
+            </ul>
+        </li>
+        <li>Включите использование условия (галочка в строке отбора СКД).</li>
+        <li>Проверьте, что мандат активен на дату T-1 и имеет заполненный <code>КодМандата</code> (иначе «Опубликовать» пропустит его с ошибкой).</li>
+    </ol>
+</div>
+
+<h3>3.3. Пошаговый запуск (два этапа замера)</h3>
+
+<div class="phase">
+    <strong>Этап A — только МО, без вызова ФО («Заполнить»)</strong><br>
+    Кнопка <strong>Заполнить</strong> &rarr; <code>Form\Module.bsl</code> &rarr; <code>ЗаполнитьНаСервере</code> &rarr;
+    <code>ObjectModule.Заполнить</code>. На этом этапе выполняются тяжелые запросы к базе МО, WS не вызывается.
+</div>
+<div class="phase">
+    <strong>Этап B — выгрузка в ФО («Опубликовать»)</strong><br>
+    Сначала обязательно выполните «Заполнить» (табличные части должны быть заполнены).
+    Кнопка <strong>Опубликовать</strong> &rarr; <code>ОпубликоватьНаСервере</code> &rarr; <code>ObjectModule.Опубликовать</code>.
+    Здесь создается WS-прокси, формируются XDTO-пакеты и идут вызовы <code>DownloadPosition</code> / <code>DownloadOrders</code>.
+</div>
+
+<div class="flow">
+    <ol>
+        <li><span class="step-num">1</span> Файл &rarr; Открыть &rarr; <code>внВыгрузкаОстатковМО_ФО.epf</code>.</li>
+        <li><span class="step-num">2</span> Заполните параметры из таблицы выше (T-1, WSDL Retail, пакет = 1, отбор = 1 мандат, Отладка = Да).</li>
+        <li><span class="step-num">3</span> Поставьте точки останова (см. таблицу 3.4) в <code>ObjectModule.bsl</code>.</li>
+        <li><span class="step-num">4</span> Нажмите <strong>Заполнить</strong>. Отладчик остановится на каждой точке — фиксируйте время (см. 3.5).</li>
+        <li><span class="step-num">5</span> Убедитесь, что на вкладках ТЧ появились строки (ЦБ, ДС, СЧА/РСА и т.д.).</li>
+        <li><span class="step-num">6</span> Нажмите <strong>Опубликовать</strong>. Замеряйте отдельно: создание WS, цикл пакетов, каждый <code>DownloadPosition</code>.</li>
+        <li><span class="step-num">7</span> При включенной «Отладке» откроется «Лог работы сервиса» — сохраните для анализа ошибок ФО.</li>
+    </ol>
+</div>
+
+<h3>3.4. Точки останова для замера времени по операциям</h3>
+<p>Ставьте breakpoint на <strong>начало строки</strong> (до вызова). После выполнения строки смотрите дельту времени до следующей остановки.</p>
+
+<h4>Этап «Заполнить» — ObjectModule.bsl, процедура Заполнить</h4>
+<table>
+    <thead>
+        <tr><th>Строка (ориентир)</th><th>Операция</th><th>Что замеряем</th></tr>
+    </thead>
+    <tbody>
+        <tr><td>~344</td><td><code>ПолучитьМассивМандатовДляОтбора</code></td><td>Формирование списка мандатов по отбору</td></tr>
+        <tr><td>~351</td><td><code>ИсполнениеСделок(Дата, Отбор)</code></td><td>Запрос исполнений сделок</td></tr>
+        <tr><td>~353</td><td><code>РЕПОДенежныеСредстваНаДату</code></td><td>РЕПО по денежным средствам</td></tr>
+        <tr><td>~357</td><td><code>ЦенныеБумагиНаДату</code></td><td>Остатки ЦБ — обычно один из самых тяжелых запросов</td></tr>
+        <tr><td>~358</td><td><code>ДенежныеСредстваНаДату</code></td><td>Остатки ДС</td></tr>
+        <tr><td>~359</td><td><code>СЧА_РСА_НаДату</code></td><td>СЧА и РСА</td></tr>
+        <tr><td>~360</td><td><code>БлокировкиНаДату</code></td><td>Блокировки</td></tr>
+        <tr><td>~362–366</td><td><code>Загрузить(...)</code> в ТЧ</td><td>Запись в табличные части обработки (обычно быстро)</td></tr>
+    </tbody>
+</table>
+
+<h4>Этап «Опубликовать» — ObjectModule.bsl, процедура Опубликовать</h4>
+<table>
+    <thead>
+        <tr><th>Строка (ориентир)</th><th>Операция</th><th>Что замеряем</th></tr>
+    </thead>
+    <tbody>
+        <tr><td>~616</td><td><code>ПолучитьОпределениеСервиса()</code></td><td>Загрузка WSDL, создание WSОпределения (сеть + парсинг)</td></tr>
+        <tr><td>~630</td><td><code>Новый WSПрокси(...)</code></td><td>Создание прокси</td></tr>
+        <tr><td>~637</td><td><code>ПроверитьИСоздатьВиртуальныеСубпортфели</code></td><td>WS на ФО до основной выгрузки</td></tr>
+        <tr><td>~652</td><td><code>ОпубликоватьСделкиРЕПОМО</code></td><td>Выгрузка сделок РЕПО МО</td></tr>
+        <tr><td>~665–671</td><td>Запрос <code>ПолучитьТекстЗапросаДляВыгрузкиДСиЦБ</code></td><td>Группировка ЦБ+ДС+РЕПО по мандатам</td></tr>
+        <tr><td>~718</td><td><code>ДобавитьВПакетМандат</code></td><td>Формирование XDTO одного мандата (в цикле)</td></tr>
+        <tr><td>~751</td><td><code>Прокси.DownloadPosition</code> (флаг «не выгружена»)</td><td>1-й WS-вызов пакета</td></tr>
+        <tr><td>~765</td><td><code>Прокси.DownloadPosition</code> (основной пакет)</td><td>2-й WS-вызов — основная загрузка позиции на ФО</td></tr>
+        <tr><td>~822</td><td><code>Прокси.DownloadOrders</code></td><td>Выгрузка блокировок (если есть)</td></tr>
+        <tr><td>~845</td><td><code>ПроверитьИУдалитьБлокировкиФО</code></td><td>WS удаления блокировок</td></tr>
+        <tr><td>~870</td><td><code>DownloadPosition</code> (флаг «выгружена»)</td><td>Финальный флаг пакета</td></tr>
+        <tr><td>~877</td><td><code>ВыполнитьПерерасчетРСА</code></td><td>Запрос пересчета РСА на ФО</td></tr>
+        <tr><td>~896</td><td><code>ОпубликоватьИсполнениеСделок</code></td><td>Выгрузка исполнений</td></tr>
+        <tr><td>~910</td><td><code>ВыполнитьРассылкуПоПерерасчетуРСА</code></td><td>Завершение, рассылка</td></tr>
+    </tbody>
+</table>
+
+<div class="box-info">
+    <strong>Совет:</strong> для первого прогона поставьте breakpoint только на строках ~351, ~357, ~358, ~359, ~616, ~765, ~877 —
+    это даст «карту» узких мест за 5–10 минут. Затем углубляйтесь внутрь функций
+    <code>ЦенныеБумагиНаДату</code>, <code>ДенежныеСредстваНаДату</code> и т.д. (F11 — шаг с заходом).
+</div>
+
+<h3>3.5. Как фиксировать время в отладчике</h3>
+
+<p><strong>Способ 1 — вручную по часам отладчика:</strong></p>
+<pre>// В начале процедуры Заполнить (временно для замера):
+ВремяНачала = ТекущаяДатаСеанса();
+
+// Перед каждой тяжелой строкой — в окне «Выражение»:
+(ТекущаяДатаСеанса() - ВремяНачала) * 86400  // секунды
+
+// После строки обновите ВремяНачала для следующего замера</pre>
+
+<p><strong>Способ 2 — точки останова с условием:</strong> на breakpoint включите действие «Выражение»:
+    <code>Сообщить("ЦБ: " + (ТекущаяДатаСеанса() - ВремяНачала) * 86400);</code></p>
+
+<p><strong>Способ 3 — замер производительности платформы:</strong> если в базе доступен
+    «Замер производительности» (БСП / администрирование), включите его перед «Заполнить» и «Опубликовать» —
+    получите дерево вызовов с временем без правки кода.</p>
+
+<h3>3.6. Рекомендуемая последовательность прогонов</h3>
+<table>
+    <thead>
+        <tr><th>Прогон</th><th>Действие</th><th>Цель замера</th></tr>
+    </thead>
+    <tbody>
+        <tr><td>1</td><td>Только «Заполнить», 1 мандат, T-1</td><td>Время запросов МО (без сети ФО)</td></tr>
+        <tr><td>2</td><td>«Заполнить» + «Опубликовать», пакет=1</td><td>WS + время ответа PP Retail ФО</td></tr>
+        <tr><td>3</td><td>То же, пакет=50</td><td>Сравнение: один большой пакет vs много малых</td></tr>
+        <tr><td>4</td><td>С флагами MV / Compliance</td><td>Дополнительная нагрузка на ФО после позиции</td></tr>
+    </tbody>
+</table>
+
+<h3>3.7. Частые проблемы при тесте на PP</h3>
+<ul class="compact">
+    <li><strong>«Заполнить» долго</strong> — сузьте отбор; проверьте тяжесть <code>ЦенныеБумагиНаДату</code> / <code>ДенежныеСредстваНаДату</code>.</li>
+    <li><strong>«Опубликовать» падает на WSDL</strong> — проверьте VPN и URL Retail FO; откройте WSDL в браузере с рабочей станции.</li>
+    <li><strong>Мандат пропущен</strong> — не заполнен <code>КодМандата</code> у мандата (сообщение в логе).</li>
+    <li><strong>HTTP 413</strong> — уменьшите <code>Количество портфелей в пакете</code> до 1 (для теста уже так).</li>
+    <li><strong>Отладчик не останавливается</strong> — EPF выполняется на сервере: подключайте отладку к <strong>серверному</strong> сеансу (ragent), не только клиенту.</li>
+</ul>
+
+</div>
+
+<h2>4. Как настроить подключение при запуске как внешней обработки (PP Retail МО)</h2>
+
+<div class="flow">
+    <ol>
+        <li>
+            <strong>Подготовить файл EPF.</strong><br>
+            Путь к исходникам в репозитории на диске:
+            <code>C:\1c\Cursor_1c\WORK\Wim_Mo\SRC\epf\внВыгрузкаОстатковМО_ФО_epf\</code><br>
+            Собрать <code>внВыгрузкаОстатковМО_ФО.epf</code> или взять готовый из каталога обработок PP.
+        </li>
+        <li>
+            <strong>Открыть базу PP Retail MO</strong> в клиенте 1С:Enterprise (тонкий или толстый клиент)
+            под учетной записью с правами на внешние обработки и выгрузку в ФО.
+        </li>
+        <li>
+            <strong>Запустить внешнюю обработку:</strong>
+            меню «Файл» &rarr; «Открыть» &rarr; выбрать <code>внВыгрузкаОстатковМО_ФО.epf</code>
+            (либо через «Дополнительные отчеты и обработки», если обработка уже зарегистрирована в БСП).
+        </li>
+        <li>
+            <strong>Указать адрес WSDL ФО Retail PP</strong> в поле «Адрес WS»:
+            <pre>http://smsk02mg138u/AVC_PP_RETAIL_FO/ws/avancore_ws.1cws?wsdl</pre>
+            Скопировать URL целиком, включая <code>?wsdl</code>. Сохранить настройки (кнопка на форме настроек или через регистрацию в БСП).
+        </li>
+        <li>
+            <strong>Проверить доступность WSDL</strong> с рабочей станции (браузер или PowerShell):
+            <pre>Invoke-WebRequest -Uri "http://smsk02mg138u/AVC_PP_RETAIL_FO/ws/avancore_ws.1cws?wsdl" -UseDefaultCredentials</pre>
+            Ожидается XML с описанием сервиса <code>avancore_ws</code>. Ошибка 401/403 — проблема прав IIS / домена.
+        </li>
+        <li>
+            <strong>Заполнить служебные реквизиты МО:</strong> узлы обмена, УК, дату позиции, при необходимости отбор по мандату.
+            Для первого прогона — <code>МандатДляТеста</code> и один мандат в отборе.
+        </li>
+        <li>
+            <strong>Нажать «Заполнить»</strong> — формирование табличных частей (ЦБ, ДС и др.) в обработке без вызова ФО.
+        </li>
+        <li>
+            <strong>Нажать «Опубликовать»</strong> — пакетная отправка через <code>DownloadPosition</code> на ФО Retail PP.
+            В сообщении пользователю будет указан использованный <code>АдресWS</code>.
+        </li>
+    </ol>
+</div>
+
+<h3>4.1. Сохранение настроек (БСП / регламент DevOps)</h3>
+<p>Параметры, сохраняемые для повторного запуска (функция <code>УстановитьПараметры</code>):</p>
+<ul class="compact">
+    <li><code>АдресWS</code></li>
+    <li><code>УзелОбменаДляРегистрацииНенайденных</code>, <code>УзелОбменаДляРегистрацииНенайденныхСчетовМандатов</code></li>
+    <li><code>ОтборМандат</code>, <code>УК</code>, <code>КоличествоПортфелейВПакете</code>, <code>МандатДляТеста</code></li>
+    <li><code>КоличестовДнейПроверкиИсполненияСделок</code>, <code>ИсполнениеПоСуммеМО</code>, <code>ДатаНачалоВыгрузкиРЕПО</code></li>
+    <li><code>УчетнаяЗаписьПочты</code>, <code>СписокРассылки</code></li>
+</ul>
+<p>При регистрации в «Дополнительные обработки» настройки хранятся в <code>ХранилищеНастроек</code> ссылки обработки. Для регламентного задания DevOps передает структуру с ключом <code>Значения</code> в процедуру <code>УстановитьПользовательскиеНастройки</code>.</p>
+
+<h3>4.2. Пример фрагмента настроек DevOps (текстовый формат)</h3>
+<pre>Реквизит=АдресWS#!#Строка#!#http://smsk02mg138u/AVC_PP_RETAIL_FO/ws/avancore_ws.1cws?wsdl
+Реквизит=КоличествоПортфелейВПакете#!#Число#!#50
+Реквизит=ОтборМандат#!#Булево#!#Ложь</pre>
+
+<h2>5. Техническая реализация подключения в коде 1С</h2>
+
+<h3>5.1. Создание WS-прокси</h3>
+<pre>Функция ПолучитьОпределениеСервиса()
+    СтруктураВозврата = Новый Структура("ОпределениеWS, ПроксиWS");
+
+    Если ЭтотОбъект.АдресWS = "http://smsk02mg138u/AVC_PP_FO/ws/avancore_ws.1cws?wsdl" Тогда
+        СтруктураВозврата.ОпределениеWS = Новый WSОпределения(ЭтотОбъект.АдресWS, "admin", "адм232882", , 30);
+    Иначе
+        СтруктураВозврата.ОпределениеWS = Новый WSОпределения(ЭтотОбъект.АдресWS, , , , 30);
+    КонецЕсли;
+
+    // Далее: URI, имя сервиса avancore_ws, первая точка подключения из WSDL
+    // СтруктураВозврата.ПроксиWS = Новый WSПрокси(...);
+    Возврат СтруктураВозврата;
+КонецФункции</pre>
+<p>Источник: <code>ObjectModule.bsl</code>, процедуры <code>ПолучитьОпределениеСервиса</code>, <code>НастройкиПоУмолчанию</code>.</p>
+
+<h3>5.2. Настройки по умолчанию (при первом открытии)</h3>
+<pre>Процедура НастройкиПоУмолчанию()
+    Объект.АдресWS = "http://amapfront/PROD_AVC_FO-DL/ws/avancore_ws.1cws?wsdl";
+    // ...
+КонецПроцедуры</pre>
+<p>После открытия EPF в PP Retail обязательно замените <code>АдресWS</code> на Retail PP WSDL.</p>
+
+<h2>6. Проверка подключения и типичные ошибки</h2>
+
+<table>
+    <thead>
+        <tr><th>Симптом</th><th>Вероятная причина</th><th>Действие</th></tr>
+    </thead>
+    <tbody>
+        <tr>
+            <td>Данные уходят не в ту базу ФО</td>
+            <td>Оставлен PROD DU WSDL по умолчанию</td>
+            <td>Установить <code>AVC_PP_RETAIL_FO</code> WSDL</td>
+        </tr>
+        <tr>
+            <td>HTTP 401 / 403</td>
+            <td>Нет прав на публикацию IIS</td>
+            <td>Проверить доменную учетную запись, настройки Anonymous / Windows Auth на IIS</td>
+        </tr>
+        <tr>
+            <td>HTTP 413</td>
+            <td>Слишком большой SOAP-пакет</td>
+            <td>Уменьшить <code>КоличествоПортфелейВПакете</code> (например до 10–25)</td>
+        </tr>
+        <tr>
+            <td>Таймаут 30 сек</td>
+            <td>Долгая обработка на стороне ФО</td>
+            <td>Уменьшить пакет; проверить нагрузку на PP ФО; при необходимости доработать таймаут в коде</td>
+        </tr>
+        <tr>
+            <td>Ошибка разбора WSDL</td>
+            <td>Неверный URL, нет <code>?wsdl</code>, хост недоступен</td>
+            <td>Проверить URL в браузере, DNS, VPN, firewall</td>
+        </tr>
+        <tr>
+            <td>На PP Retail не срабатывает admin-пароль</td>
+            <td>URL Retail не равен <code>AVC_PP_FO</code></td>
+            <td>Ожидаемо: для Retail используется Windows-аутентификация без логина в EPF</td>
+        </tr>
+    </tbody>
+</table>
+
+<h3>6.1. Пересчет РСА на стороне ФО</h3>
+<p>При необходимости пересчета РСА обработка отправляет пустой <code>DownloadPosition</code> с JSON в поле комментария заголовка (<code>ТребуетсяПерерасчетРСА</code>, коды портфелей). На ФО выполняется цепочка после обмена (константа <code>ОперацииПослеОбмена</code>). Убедитесь, что на PP Retail ФО настроена та же логика, что и на целевом контуре.</p>
+
+<h2>7. Связанные материалы</h2>
+<ul class="compact">
+    <li>Исходники EPF: <code>C:\1c\Cursor_1c\WORK\Wim_Mo\SRC\epf\внВыгрузкаОстатковМО_ФО_epf\</code></li>
+    <li>База ФО (WIM_Fo): <code>C:\1c\Cursor_1c\WORK\WIM_Fo\SRC\CF</code> — приемник <code>avancore_ws</code></li>
+    <li>Retail WSDL в других обработках: <code>bases/Wim_Du/projects/IMDEV-8927/</code> (внРасторжениеДоговоровРозничногоДУ)</li>
+    <li>Контекст утренней выгрузки Retail: <code>bases/Wim_Mo/projects/IMDEV-8829_Retail_DU_Avancore_FO/</code></li>
+</ul>
+
+<h2>8. Выводы</h2>
+<div class="box-purple">
+    <ol class="compact">
+        <li>Для PP Retail МО в поле <strong>АдресWS</strong> указывается WSDL <code>AVC_PP_RETAIL_FO</code> на <code>smsk02mg138u</code>, а не PROD DU по умолчанию.</li>
+        <li>Аутентификация для Retail PP — через пустые учетные данные в <code>WSОпределения</code> (Windows/IIS), не через admin из ветки <code>AVC_PP_FO</code>.</li>
+        <li>Размер пакета и отбор мандатов настраиваются на форме; сохраняются для регламента через БСП или DevOps.</li>
+        <li>Перед массовой выгрузкой: проверка WSDL в браузере, тест на одном мандате («Заполнить» &rarr; «Опубликовать»).</li>
+    </ol>
+</div>
+
+<footer>
+    Документ создан для проекта IMDEV-внВыгрузкаОстатковМО_ФО.
+    Дата: 30.06.2026. Источник кода: ObjectModule.bsl, Form/Module.bsl (Форма, ФормаНастроек).
+</footer>
+
+</body>
+</html>
