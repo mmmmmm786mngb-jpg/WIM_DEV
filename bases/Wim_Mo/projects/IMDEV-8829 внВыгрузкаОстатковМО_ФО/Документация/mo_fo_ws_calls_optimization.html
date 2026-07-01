@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Оптимизация WS-вызовов 754, 768, 872 (МО-ФО)</title>
+    <style>
+        :root {
+            --ok: #28a745;
+            --err: #dc3545;
+            --info: #17a2b8;
+            --warn-bg: #fff3cd;
+            --warn-border: #ffc107;
+            --blue-bg: #e7f3ff;
+            --blue-border: #17a2b8;
+            --purple-bg: #f3e8ff;
+            --purple-border: #6f42c1;
+            --text: #212529;
+            --muted: #6c757d;
+            --border: #dee2e6;
+        }
+        * { box-sizing: border-box; }
+        body {
+            font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.55;
+            color: var(--text);
+            max-width: 1020px;
+            margin: 0 auto;
+            padding: 24px 20px 48px;
+            background: #f8f9fa;
+        }
+        h1 { font-size: 1.65rem; margin-bottom: 0.35rem; }
+        h2 {
+            font-size: 1.25rem;
+            margin-top: 2rem;
+            padding-bottom: 0.35rem;
+            border-bottom: 2px solid var(--info);
+        }
+        h3 { font-size: 1.05rem; margin-top: 1.25rem; color: #343a40; }
+        .meta { color: var(--muted); font-size: 0.95rem; margin-bottom: 1.5rem; }
+        .lead {
+            background: #fff;
+            border-left: 4px solid var(--info);
+            padding: 1rem 1.25rem;
+            margin: 1.25rem 0;
+            border-radius: 0 6px 6px 0;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+        }
+        .box-warn {
+            background: var(--warn-bg);
+            border: 1px solid var(--warn-border);
+            padding: 0.85rem 1rem;
+            border-radius: 6px;
+            margin: 1rem 0;
+        }
+        .box-info {
+            background: var(--blue-bg);
+            border: 1px solid var(--blue-border);
+            padding: 0.85rem 1rem;
+            border-radius: 6px;
+            margin: 1rem 0;
+        }
+        .box-purple {
+            background: var(--purple-bg);
+            border: 1px solid var(--purple-border);
+            padding: 0.85rem 1rem;
+            border-radius: 6px;
+            margin: 1rem 0;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: #fff;
+            margin: 1rem 0;
+            font-size: 0.92rem;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+        }
+        th, td {
+            border: 1px solid var(--border);
+            padding: 0.55rem 0.75rem;
+            text-align: left;
+            vertical-align: top;
+        }
+        th { background: #e9ecef; font-weight: 600; }
+        tr:nth-child(even) { background: #f8f9fa; }
+        .num { text-align: right; font-variant-numeric: tabular-nums; }
+        .ok { color: var(--ok); font-weight: 600; }
+        .err { color: var(--err); font-weight: 600; }
+        .info { color: var(--info); font-weight: 600; }
+        pre {
+            background: #272822;
+            color: #f8f8f2;
+            padding: 1rem;
+            border-radius: 6px;
+            overflow-x: auto;
+            font-size: 0.82rem;
+            line-height: 1.45;
+        }
+        code {
+            background: #e9ecef;
+            padding: 0.1rem 0.35rem;
+            border-radius: 3px;
+            font-size: 0.88em;
+        }
+        pre code { background: transparent; padding: 0; }
+        .chart {
+            background: #fff;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 1rem;
+            margin: 1.25rem 0;
+            text-align: center;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+        }
+        .chart img { max-width: 100%; height: auto; }
+        .chart-caption {
+            font-size: 0.88rem;
+            color: var(--muted);
+            margin-top: 0.5rem;
+        }
+        .grid-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+        }
+        @media (max-width: 768px) { .grid-2 { grid-template-columns: 1fr; } }
+        .badge {
+            display: inline-block;
+            padding: 0.15rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: #fff;
+        }
+        .badge-754 { background: #ffc107; color: #212529; }
+        .badge-768 { background: #17a2b8; }
+        .badge-872 { background: #dc3545; }
+        .flow {
+            background: #fff;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 1rem 1.25rem;
+            margin: 1rem 0;
+            font-family: Consolas, monospace;
+            font-size: 0.85rem;
+            line-height: 1.7;
+        }
+        .nav { margin: 1rem 0; font-size: 0.95rem; }
+        .nav a { color: var(--info); }
+</style>
+</head>
+<body>
+    <h1>Оптимизация трех WS-блоков обмена МО &rarr; ФО</h1>
+    <p class="meta">
+        Строки МО <span class="badge badge-754">754</span>
+        <span class="badge badge-768">768</span>
+        <span class="badge badge-872">872</span> &bull;
+        93,7% времени <code>Опубликовать</code> &bull;
+        <a href="mo_fo_profiling_45_packets_report.html">замеры</a>
+    </p>
+
+    <div class="lead">
+        Три вызова <code>DownloadPosition</code> на каждый пакет из 45 мандатов дают
+        <strong>16 300 с</strong> из <strong>17 357 с</strong> (~93,7%).
+        На стороне ФО это <strong>один и тот же веб-сервис</strong>; различие &mdash; только в <strong>содержимом XDTO-пакета</strong>.
+    </div>
+
+    <h2>1. Что оптимизировать (приоритет)</h2>
+
+    <table>
+        <tr>
+            <th>Приор.</th>
+            <th>Строка</th>
+            <th class="num">Среднее</th>
+            <th class="num">Суммарно</th>
+            <th class="num">%</th>
+            <th>Направление оптимизации</th>
+        </tr>
+        <tr>
+            <td class="err">P1</td>
+            <td><span class="badge badge-872">872</span></td>
+            <td class="num">~22,0 с</td>
+            <td class="num">10 349 с</td>
+            <td class="num">59,5%</td>
+            <td>
+                Сократить работу <code>ОбработатьДополнительныеСведения</code> на ФО:
+                3 свойства на портфель ДУ, пакетная запись, кеш ПВХ «Лимиты …».
+                Снизить конкуренцию с фоновыми перерасчетами РСА предыдущих пакетов.
+            </td>
+        </tr>
+        <tr>
+            <td>P2</td>
+            <td><span class="badge badge-754">754</span></td>
+            <td class="num">~7,6 с</td>
+            <td class="num">3 586 с</td>
+            <td class="num">20,6%</td>
+            <td>
+                Тот же механизм доп. сведений, но 1 свойство на портфель.
+                Рассмотреть отказ от предварительного флага или объединение с 872.
+            </td>
+        </tr>
+        <tr>
+            <td>P3</td>
+            <td><span class="badge badge-768">768</span></td>
+            <td class="num">~5,0 с</td>
+            <td class="num">2 365 с</td>
+            <td class="num">13,6%</td>
+            <td>
+                Оптимизация записи <code>ФактическаяПозиция</code> и <code>РегистрРСА_СЧА</code>:
+                индексы, транзакции, объем передаваемых строк на пакет.
+            </td>
+        </tr>
+    </table>
+
+    <div class="box-info">
+        <p>Цифры и скриншоты профилировщика 1С:
+        <a href="mo_fo_profiling_45_packets_report.html#screenshot-4">скриншот 4</a>,
+        <a href="mo_fo_profiling_45_packets_report.html#screenshot-5">скриншот 5</a>.</p>
+    </div>
+
+    <h2>2. Как ФО понимает, что вызовы разные</h2>
+
+    <div class="box-warn">
+        <strong>Важно:</strong> на ФО нет отдельных методов WS и нет поля «тип вызова».
+        Все три обращения идут в <code>WebServices.Avancore.DownloadPosition</code> &rarr;
+        <code>ОбменДаннымиБэкОфис.ЗагрузитьПакет</code>.
+        Тип обработки определяется <strong>составом XDTO</strong> после разбора пакета.
+    </div>
+
+    <table>
+        <tr>
+            <th>Строка МО</th>
+            <th>Переменная пакета</th>
+            <th>Что в XDTO</th>
+            <th>Как ФО маршрутизирует</th>
+        </tr>
+        <tr>
+            <td><span class="badge badge-754">754</span></td>
+            <td><code>ПакетХДТОФлагПозицииНеВыгружена</code></td>
+            <td>
+                <code>Справочники.Портфели[]</code> с <code>НеполноеОбновление=Истина</code><br>
+                1 доп. сведение: <code>Лимиты позиция_выгружена = Ложь</code>
+            </td>
+            <td>
+                <code>ЗагрузитьДанные</code> &rarr; <code>ОбработатьДанные_Портфель</code> (без полной перезаписи)
+                &rarr; <code>ОбработатьДополнительныеСведения</code>
+            </td>
+        </tr>
+        <tr>
+            <td><span class="badge badge-768">768</span></td>
+            <td><code>ПакетХДТО</code></td>
+            <td>
+                <code>РегистрыСведений.ФактическаяПозиция[]</code> (ДС, ЦБ)<br>
+                <code>РегистрыСведений.СтоимостьЧистыхАктивов[]</code> (СЧА/РСА)<br>
+                Справочники при необходимости
+            </td>
+            <td>
+                <code>ЗагрузитьДанные</code> &rarr; <code>ОбработатьДанные_ФактическаяПозиция</code>
+                &rarr; <code>ОбработатьДанные_СтоимостьЧистыхАктивов</code>
+            </td>
+        </tr>
+        <tr>
+            <td><span class="badge badge-872">872</span></td>
+            <td><code>ПакетХДТОФлагПозиции</code></td>
+            <td>
+                Тот же путь, что 754, но до 3 свойств на портфель ДУ:<br>
+                <code>позиция_выгружена</code>, <code>требуется_перерасчет_РСА</code>, <code>есть_ошибки_выгрузки_позиции</code><br>
+                + отдельные записи для портфелей с ошибкой
+            </td>
+            <td>
+                <code>ОбработатьДанные_Портфель</code> + <code>ОбработатьДополнительныеСведения</code>
+                (в 3 раза больше свойств, чем на 754)
+            </td>
+        </tr>
+    </table>
+
+    <h3>2.1. Общий конвейер ФО (для всех трех)</h3>
+    <pre><code>WebServices.Avancore.DownloadPosition(ОбъектЗапрос)
+  |
+  +-- ОбменДаннымиБэкОфис.ЗагрузитьПакет(ОбъектЗапрос)
+        |
+        +-- ЗагрузитьДанные(ОбъектЗапрос)          // разбор XDTO по секциям пакета
+        +-- ОбработатьКэшНенайденныхЭлементов()
+        +-- ВыполнитьОперацииПослеОбмена()         // внОперацииПослеОбмена
+              |
+              +-- если Заголовок.Комментарий пуст -> ВЫХОД (для 754/768/872)
+              +-- если JSON с ТребуетсяПерерасчетРСА -> фон (это 4-й вызов, не 872)</code></pre>
+
+    <h2>3. Цепочки вызовов по каждому блоку</h2>
+
+    <h3><span class="badge badge-754">754</span> Предварительные флаги «позиция НЕ выгружена»</h3>
+    <p><strong>МО</strong> (<code>СформироватьПакетФлагПозицияНеВыгружена</code>, строка ~1246):</p>
+    <div class="flow">
+MO: для каждого из 45 мандатов -> Портфель.ВнешнийКод + ДопСведения[1]<br>
+MO: Прокси.DownloadPosition(ПакетХДТОФлагПозицииНеВыгружена)  // строка 751
+    </div>
+    <p><strong>ФО</strong>:</p>
+    <div class="flow">
+Avancore.DownloadPosition<br>
+  -> ОбменДаннымиБэкОфис.ЗагрузитьПакет<br>
+       -> для каждого Портфель XDTO:<br>
+            ОбработатьДанные_Портфель (НеполноеОбновление)<br>
+            ОбработатьДополнительныеСведения:<br>
+              НаборЗаписей.ДополнительныеСведения.Прочитать()<br>
+              НайтиПоНаименованию("Лимиты позиция_выгружена")<br>
+              НаборЗаписей.Записать()  // x45 портфелей<br>
+       -> внОперацииПослеОбмена: Комментарий пуст -> return
+    </div>
+    <div class="box-info">
+        <strong>Назначение:</strong> заблокировать на ФО операции, зависящие от флага «позиция выгружена»,
+        пока идет загрузка пакета (лимиты, проверки ордеров).
+    </div>
+
+    <h3><span class="badge badge-768">768</span> Основная позиция</h3>
+    <p><strong>МО</strong> (накопление в <code>ПакетХДТО</code> в цикле по мандатам, отправка строка 765):</p>
+    <div class="flow">
+MO: ДС + ЦБ -> РегистрыСведений.ФактическаяПозиция<br>
+MO: СЧА/РСА -> РегистрыСведений.СтоимостьЧистыхАктивов<br>
+MO: Прокси.DownloadPosition(ПакетХДТО)  // строка 765
+    </div>
+    <p><strong>ФО</strong>:</p>
+    <div class="flow">
+Avancore.DownloadPosition<br>
+  -> ЗагрузитьДанные<br>
+       -> ОбработатьДанные_ФактическаяПозиция:<br>
+            НаборЗаписей.ФактическаяПозиция (полная замена по Портфель+Дата)<br>
+       -> ОбработатьДанные_СтоимостьЧистыхАктивов:<br>
+            РегистрРСА_СЧА + ДатаАктуальностиФактическойПозиции<br>
+       -> внОперацииПослеОбмена: return (нет Комментария)
+    </div>
+    <div class="box-info">
+        <strong>Назначение:</strong> загрузить фактическую позицию и переданные СЧА/РСА с МО.
+        Самый «тяжелый» по объему данных, но быстрее 872 из-за оптимизированной записи регистров.
+    </div>
+
+    <h3><span class="badge badge-872">872</span> Пост-флаги «выгружена / ошибка»</h3>
+    <p><strong>МО</strong> (строки 856-870):</p>
+    <div class="flow">
+MO: СформироватьПакетФлагПозицияВыгружена (успех: 3 свойства для ДУ)<br>
+MO: СформироватьПакетФлагПозицияВыгруженаСОшибкой (ошибка: 3 свойства)<br>
+MO: Прокси.DownloadPosition(ПакетХДТОФлагПозиции)  // строка 870<br>
+MO: ВыполнитьПерерасчетРСА(...)  // строка 877 -> отдельный 4-й WS, не входит в 872
+    </div>
+    <p><strong>ФО</strong>:</p>
+    <div class="flow">
+Avancore.DownloadPosition<br>
+  -> для каждого Портфель XDTO (успех + ошибка):<br>
+       ОбработатьДанные_Портфель<br>
+       ОбработатьДополнительныеСведения (до 3 ключей):<br>
+         "Лимиты позиция_выгружена"<br>
+         "Лимиты требуется_перерасчет_РСА"<br>
+         "Лимиты есть_ошибки_выгрузки_позиции"<br>
+       -> внОперацииПослеОбмена: return
+    </div>
+    <div class="box-warn">
+        <strong>Ложный след:</strong> флаг <code>требуется_перерасчет_РСА</code> в пакете 872
+        <em>не запускает</em> перерасчет синхронно. Перерасчет стартует только из 4-го вызова
+        (JSON <code>ТребуетсяПерерасчетРСА</code> в <code>Заголовок.Комментарий</code>)
+        через <code>внОперацииПослеОбмена</code> &rarr; <code>внПерерасчетСтоимостиФактическойПозицииИ_РСА_СЧА</code> в фоне.
+        Медленность 872 &mdash; это запись доп. сведений + нагрузка СУБД после 768.
+    </div>
+
+    <h2>4. Сводная схема различий</h2>
+    <table>
+        <tr>
+            <th>Критерий</th>
+            <th>754</th>
+            <th>768</th>
+            <th>872</th>
+        </tr>
+        <tr>
+            <td>Момент в цикле</td>
+            <td>До позиции</td>
+            <td>Загрузка позиции</td>
+            <td>После позиции</td>
+        </tr>
+        <tr>
+            <td>Секция XDTO</td>
+            <td>Справочники.Портфели</td>
+            <td>РегистрыСведений</td>
+            <td>Справочники.Портфели</td>
+        </tr>
+        <tr>
+            <td>Свойств на портфель ДУ</td>
+            <td class="num">1</td>
+            <td class="num">0 (регистры)</td>
+            <td class="num">до 3</td>
+        </tr>
+        <tr>
+            <td>Главная процедура ФО</td>
+            <td>ОбработатьДополнительныеСведения</td>
+            <td>ОбработатьДанные_ФактическаяПозиция</td>
+            <td>ОбработатьДополнительныеСведения</td>
+        </tr>
+        <tr>
+            <td>внОперацииПослеОбмена</td>
+            <td>выход (нет JSON)</td>
+            <td>выход</td>
+            <td>выход</td>
+        </tr>
+        <tr>
+            <td>Среднее время</td>
+            <td class="num">7,6 с</td>
+            <td class="num">5,0 с</td>
+            <td class="num err">22,0 с</td>
+        </tr>
+    </table>
+
+    <h2>5. Рекомендации по оптимизации</h2>
+
+    <h3>5.1. ФО (максимальный эффект)</h3>
+    <ul>
+        <li><strong>872 / 754:</strong> переписать <code>ОбработатьДополнительныеСведения</code> &mdash;
+            кешировать ссылки ПВХ «Лимиты …», не читать полный набор на каждое свойство,
+            рассмотреть пакетную запись по массиву портфелей.</li>
+        <li><strong>872:</strong> убрать дублирование флагов или сократить число свойств
+            (если бизнес-логика лимитов это допускает).</li>
+        <li><strong>768:</strong> профилировать запись <code>ФактическаяПозиция</code> на 45 портфелей;
+            проверить блокировки и индексы СУБД.</li>
+    </ul>
+
+    <h3>5.2. МО (архитектура обмена)</h3>
+    <ul>
+        <li>Объединить 754 и 872 в один WS-вызов (если ФО согласует семантику).</li>
+        <li>Увеличить размер пакета (например 50&ndash;100) при стабильном IIS &mdash; меньше циклов,
+            но больше риск 413; всегда задавать <code>КоличествоПакет &gt; 0</code>.</li>
+        <li>Батчить <code>ВыполнитьПерерасчетРСА</code> реже (не 470 раз), чтобы снизить фоновую нагрузку на ФО
+            во время 872.</li>
+    </ul>
+
+    <h3>5.3. Что не трогать в первую очередь</h3>
+    <ul>
+        <li>4-й вызов (1526) &mdash; ~1 с/пакет, перерасчет уже в фоне.</li>
+        <li>Локальные проверки МО (строка 683) &mdash; &lt; 1% времени.</li>
+    </ul>
+
+    <p class="nav">
+        <a href="mo_fo_ws_754_768_872_processing.html">Цепочки обработки 754/768/872 на ФО</a>
+        &bull; <a href="mo_fo_profiling_45_packets_report.html">Отчет со скриншотами замеров</a>
+        &bull; <a href="fo_connection_params_pp_retail.html">Параметры подключения и разбор HTTP 413</a>
+    </p>
+</body>
+</html>

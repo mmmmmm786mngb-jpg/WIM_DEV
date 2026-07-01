@@ -173,4 +173,4 @@
 
 ---
 
-*Файл подготовлен для проекта `IMDEV-8829_Retail_DU_Avancore_FO`. Связанные материалы: `imdev_8829_retail_du_avancore_fo_task.html`, обследование IMDEV-8883 (`obsledovanie_zamery_klyuchevyh_operaciy_mo.html`, раздел 5.8).*
+*Архив: перенесено из `IMDEV-8829_Retail_DU_Avancore_FO` в `IMDEV-8829 внВыгрузкаОстатковМО_ФО/СтарыеАрхивы`. Связанные материалы: `imdev_8829_retail_du_avancore_fo_task.html`, обследование IMDEV-8883 (`obsledovanie_zamery_klyuchevyh_operaciy_mo.html`, раздел 5.8).*
