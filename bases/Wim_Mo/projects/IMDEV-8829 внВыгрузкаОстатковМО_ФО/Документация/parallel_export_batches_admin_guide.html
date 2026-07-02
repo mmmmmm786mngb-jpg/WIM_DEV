@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>IMDEV-8829: инструкция по внедрению параллельной выгрузки</title>
+<style>
+:root{--ok:#28a745;--err:#dc3545;--info:#17a2b8;--warn-bg:#fff3cd;--warn-border:#ffc107;--blue-bg:#e7f3ff;--blue-border:#17a2b8;--green-bg:#e8f5e9;--green-border:#28a745;--orange-bg:#fff4e6;--orange-border:#fd7e14;--text:#212529;--muted:#6c757d;--border:#dee2e6;}
+*{box-sizing:border-box;}
+body{font-family:"Segoe UI",Tahoma,Geneva,Verdana,sans-serif;line-height:1.55;color:var(--text);max-width:1140px;margin:0 auto;padding:24px 20px 48px;background:#f8f9fa;}
+h1{font-size:1.7rem;margin-bottom:.35rem;}
+h2{font-size:1.28rem;margin-top:2rem;padding-bottom:.35rem;border-bottom:2px solid var(--info);}
+h3{font-size:1.05rem;margin-top:1.35rem;color:#343a40;}
+.meta{color:var(--muted);font-size:.95rem;margin-bottom:1rem;}
+.nav{margin:1rem 0;font-size:.93rem;}
+.nav a{color:var(--info);}
+.lead{background:#fff;border-left:4px solid var(--info);padding:1rem 1.25rem;margin:1.25rem 0;border-radius:0 6px 6px 0;box-shadow:0 1px 3px rgba(0,0,0,.06);}
+.box-info{background:var(--blue-bg);border:1px solid var(--blue-border);padding:.85rem 1rem;border-radius:6px;margin:1rem 0;}
+.box-warn{background:var(--warn-bg);border:1px solid var(--warn-border);padding:.85rem 1rem;border-radius:6px;margin:1rem 0;}
+.box-ok{background:var(--green-bg);border:1px solid var(--green-border);padding:.85rem 1rem;border-radius:6px;margin:1rem 0;}
+.box-err{background:#fde8ea;border:1px solid var(--err);padding:.85rem 1rem;border-radius:6px;margin:1rem 0;}
+table{width:100%;border-collapse:collapse;background:#fff;margin:1rem 0;font-size:.9rem;box-shadow:0 1px 3px rgba(0,0,0,.06);}
+th,td{border:1px solid var(--border);padding:.5rem .7rem;text-align:left;vertical-align:top;}
+th{background:#e9ecef;font-weight:600;}
+tr:nth-child(even){background:#f8f9fa;}
+code{background:#e9ecef;padding:.1rem .35rem;border-radius:3px;font-size:.88em;}
+pre{background:#272822;color:#f8f8f2;padding:1rem;border-radius:6px;overflow-x:auto;font-size:.82rem;line-height:1.5;}
+pre.light{background:#fff;color:#212529;border:1px solid var(--border);}
+ol.steps{counter-reset:step;list-style:none;padding-left:0;}
+ol.steps li{counter-increment:step;margin:.75rem 0;padding-left:2.5rem;position:relative;}
+ol.steps li::before{content:counter(step);position:absolute;left:0;top:0;width:1.75rem;height:1.75rem;background:var(--info);color:#fff;border-radius:50%;text-align:center;line-height:1.75rem;font-size:.85rem;font-weight:600;}
+.tag{display:inline-block;padding:.12rem .5rem;border-radius:4px;font-size:.75rem;font-weight:600;color:#fff;margin-right:.25rem;}
+.tag-req{background:var(--err);}
+.tag-rec{background:var(--orange-border);}
+.tag-opt{background:var(--muted);}
+.tag-new{background:var(--ok);}
+.flow{background:#fff;border:1px solid var(--border);border-radius:8px;padding:1rem;margin:1rem 0;}
+</style>
+</head>
+<body>
+
+<h1>Инструкция: внедрение параллельной выгрузки МО &rarr; ФО</h1>
+<p class="meta">
+IMDEV-8829 &bull; EPF <code>внВыгрузкаОстатковМО_ФО</code> &bull;
+файл сборки: <code>ВыгрОстМО_ФО.epf</code> &bull; база Wim_Mo
+</p>
+
+<p class="nav">
+<a href="parallel_export_batches_tz.html">ТЗ на доработку</a> &bull;
+<a href="parallel_mandate_batches_architecture.html">Архитектура</a> &bull;
+<a href="fo_connection_params_pp_retail.html#reglement-launch">Запуск из регламентов (было)</a> &bull;
+<a href="index.md">Оглавление</a>
+</p>
+
+<div class="lead">
+<strong>Цель:</strong> включить параллельную выгрузку остатков на ФО Retail через новую команду
+<code>ФоноваяВыгрузкаПачками</code>. Регламентное задание <code>ОбменыПодсистемыТранспорт</code>
+<strong>не меняется</strong> &mdash; меняются только обработка в справочнике, настройки и команда на узле обмена.
+</div>
+
+<h2>1. Что меняется и что остаётся</h2>
+
+<table>
+<tr><th>Объект</th><th>Было</th><th>Стало</th></tr>
+<tr><td>EPF в справочнике</td><td>старая версия без пачек</td><td><code>ВыгрОстМО_ФО.epf</code> (IMDEV-8829)</td></tr>
+<tr><td>Команда узла обмена</td><td><code>ФоноваяВыгрузка</code></td><td><code>ФоноваяВыгрузкаПачками</code></td></tr>
+<tr><td>Регламент <code>ОбменыПодсистемыТранспорт</code></td><td>без изменений</td><td>без изменений</td></tr>
+<tr><td>Настройки узла</td><td><code>АдресWS</code>, <code>КоличествоПортфелейВПакете</code> и др.</td><td>+ <code>КоличествоПачекМандатов</code></td></tr>
+</table>
+
+<div class="box-info">
+<strong>Как работает новая команда:</strong> координатор делит мандаты на N пачек, запускает N фоновых заданий
+(каждое &mdash; штатная <code>ФоноваяВыгрузка</code> по своей пачке), ждёт завершения всех и один раз
+выполняет финальную рассылку РСА.
+</div>
+
+<!-- SECTION 2 -->
+<h2>2. Замена обработки в справочнике «Дополнительные отчёты и обработки»</h2>
+
+<h3>2.1. Подготовка</h3>
+<ul>
+<li>Файл: <code>bases/Wim_Mo/projects/IMDEV-8829 внВыгрузкаОстатковМО_ФО/ВыгрОстМО_ФО.epf</code></li>
+<li>Резервная копия старой обработки: <code>ВыгрОстМО_ФО_БезПаралели_Retail.rar</code> (в каталоге проекта)</li>
+<li>Права: администратор / право на загрузку доп. обработок</li>
+</ul>
+
+<h3>2.2. Пошагово в интерфейсе 1С (Wim_Mo)</h3>
+
+<ol class="steps">
+<li>
+<strong>Открыть справочник</strong> «Дополнительные отчёты и обработки».<br>
+Найти элемент с именем объекта <code>внВыгрузкаОстатковМО_ФО</code>
+(наименование: «Выгрузка остатков МО ФО», вид: <strong>Обмены</strong>).
+</li>
+<li>
+<strong>Загрузить новый EPF</strong> поверх существующего элемента.<br>
+Способ зависит от вашего процесса:
+<ul>
+<li>через форму элемента справочника (команда загрузки / обновления файла);</li>
+<li>или через DevOps-процедуру деплоя EPF (если используется).</li>
+</ul>
+<div class="box-warn">
+Не создавайте второй элемент справочника с тем же назначением &mdash; узел обмена ссылается на
+<strong>конкретную ссылку</strong> доп. обработки. Нужно обновить существующий элемент.
+</div>
+</li>
+<li>
+<strong>Проверить список команд</strong> после загрузки. Должны быть:
+<table>
+<tr><th>Идентификатор</th><th>Представление</th><th>Назначение</th></tr>
+<tr><td><code>ЗагрузкаFront_MID</code></td><td>Выгрузка остатков МО ФО</td><td>Ручной запуск (форма)</td></tr>
+<tr><td><code>ФоноваяВыгрузка</code></td><td>Выгрузка остатков МО ФО (в фоне)</td><td>Воркер / откат</td></tr>
+<tr><td><span class="tag tag-new">NEW</span><code>ФоноваяВыгрузкаПачками</code></td><td>Выгрузка остатков МО ФО (пачками, в фоне)</td><td><strong>Координатор для регламента</strong></td></tr>
+</table>
+</li>
+<li>
+<strong>Открыть форму настроек</strong> обработки (гиперссылка «Установить настройки» или аналог в карточке элемента / узла).
+</li>
+<li>
+<strong>Заполнить настройки</strong> (раздел 3) и нажать <strong>«Установить»</strong>.
+Настройки сохранятся в <code>ХранилищеНастроек</code> элемента справочника.
+</li>
+</ol>
+
+<div class="box-info">
+Если настройки раньше задавались только на <strong>узле обмена</strong> (DevOps-текстом в
+<code>ХранилищеНастроек</code> узла), а не через форму &mdash; это нормально.
+После замены EPF проверьте, что на узле по-прежнему есть <code>АдресWS</code> и
+<code>КоличествоПортфелейВПакете</code>, и добавьте <code>КоличествоПачекМандатов</code>.
+</div>
+
+<!-- SECTION 3 -->
+<h2>3. Обязательные и рекомендуемые настройки</h2>
+
+<h3>3.1. Таблица параметров (Retail PP)</h3>
+
+<table>
+<tr><th>Параметр</th><th>Обяз.</th><th>Значение для PP Retail</th><th>Комментарий</th></tr>
+<tr>
+<td><code>АдресWS</code></td>
+<td><span class="tag tag-req">ДА</span></td>
+<td><pre style="margin:0;background:transparent;color:inherit;padding:0;border:none;font-size:.82rem;">http://smsk02mg138u/AVC_PP_RETAIL_FO/ws/avancore_ws.1cws?wsdl</pre></td>
+<td>Без адреса WS выгрузка не начнётся. PROD: другой URL.</td>
+</tr>
+<tr>
+<td><code>КоличествоПортфелейВПакете</code></td>
+<td><span class="tag tag-req">ДА</span></td>
+<td class="num">45 &mdash; 50</td>
+<td>Размер одного WS-пакета внутри пачки. <strong>Не ставить 0</strong> (риск HTTP 413).</td>
+</tr>
+<tr>
+<td><code>КоличествоПачекМандатов</code></td>
+<td><span class="tag tag-rec">РЕК.</span></td>
+<td class="num">2 (пилот), 3 (рабочий), до 5</td>
+<td><span class="tag tag-new">NEW</span> Число параллельных фоновых пачек. Если 0 или пусто &rarr; <strong>3</strong>.</td>
+</tr>
+<tr>
+<td><code>УзелОбменаДляРегистрацииНенайденных</code></td>
+<td><span class="tag tag-req">ДА</span></td>
+<td>узел плана обмена (как было)</td>
+<td>Регистрация ненайденных объектов при ошибках ФО.</td>
+</tr>
+<tr>
+<td><code>УзелОбменаДляРегистрацииНенайденныхСчетовМандатов</code></td>
+<td><span class="tag tag-req">ДА</span></td>
+<td>узел плана обмена (как было)</td>
+<td>Аналогично для счетов мандатов.</td>
+</tr>
+<tr>
+<td><code>ОтборМандат</code></td>
+<td><span class="tag tag-opt">НЕТ</span></td>
+<td>Ложь (все мандаты)</td>
+<td>Истина + <code>УК</code> &mdash; для ограниченного прогона на пилоте.</td>
+</tr>
+<tr>
+<td><code>УК</code></td>
+<td><span class="tag tag-opt">НЕТ</span></td>
+<td>по необходимости</td>
+<td>Только при <code>ОтборМандат = Истина</code>.</td>
+</tr>
+<tr>
+<td><code>МандатДляТеста</code></td>
+<td><span class="tag tag-opt">НЕТ</span></td>
+<td>пусто / один мандат</td>
+<td>Для ручного теста одного мандата.</td>
+</tr>
+<tr>
+<td><code>КоличестовДнейПроверкиИсполненияСделок</code></td>
+<td><span class="tag tag-opt">НЕТ</span></td>
+<td>-35 (как было)</td>
+<td>Не менять без согласования.</td>
+</tr>
+<tr>
+<td><code>УчетнаяЗаписьПочты</code>, <code>СписокРассылки</code></td>
+<td><span class="tag tag-opt">НЕТ</span></td>
+<td>как было</td>
+<td>Для рассылки по ошибкам и РСА.</td>
+</tr>
+</table>
+
+<h3>3.2. Заполнение через форму настроек</h3>
+
+<ol class="steps">
+<li>Открыть форму настроек обработки (из справочника или из узла обмена).</li>
+<li>Указать <strong>Адрес WS</strong> &mdash; URL Retail PP (см. таблицу выше).</li>
+<li>Указать <strong>Количество портфелей в пакете</strong> = 45 или 50.</li>
+<li>Указать <strong>Количество пачек мандатов</strong> = 2 (пилот) или 3 (рабочий режим).</li>
+<li>Узлы для регистрации ненайденных &mdash; оставить как были.</li>
+<li>Нажать <strong>«Установить»</strong>.</li>
+</ol>
+
+<h3>3.3. Заполнение через DevOps (текстовый формат настроек узла)</h3>
+
+<p>Если настройки задаются текстом в <code>ХранилищеНастроек</code> узла обмена, добавьте строку для нового параметра:</p>
+
+<pre class="light">Реквизит=АдресWS#!#Строка#!#http://smsk02mg138u/AVC_PP_RETAIL_FO/ws/avancore_ws.1cws?wsdl
+Реквизит=КоличествоПортфелейВПакете#!#Число#!#45
+Реквизит=КоличествоПачекМандатов#!#Число#!#3
+Реквизит=ОтборМандат#!#Булево#!#Ложь</pre>
+
+<div class="box-warn">
+<strong>Важно:</strong> настройки могут храниться <em>и</em> в справочнике доп. обработок,
+<em>и</em> на узле обмена. При регламентном запуске приоритет у настроек <strong>узла</strong>
+(они передаются в <code>ПараметрыДополнительнойОбработки</code>).
+Убедитесь, что <code>КоличествоПачекМандатов</code> прописан там, откуда реально читает ваш узел.
+</div>
+
+<!-- SECTION 4 -->
+<h2>4. Переключение команды на узле обмена (регламент)</h2>
+
+<p>
+Регламентное задание <code>ОбменыПодсистемыТранспорт</code> обходит узлы плана обмена
+<code>ПланОбмена.ИсточникиОбмена</code> и для каждого узла вызывает команду, указанную
+в реквизите <strong>«Имя метода»</strong> (<code>ИмяМетода</code>).
+</p>
+
+<h3>4.1. Какие узлы затронуты</h3>
+
+<table>
+<tr><th>Контур</th><th>Типичное имя узла</th><th>Расписание (ориентир)</th></tr>
+<tr><td>Retail PP</td><td><code>ВыгрузкаОстатков_ФОРозн</code></td><td>~06:00</td></tr>
+<tr><td>Корп. DU</td><td><code>ВыгрузкаОстатков_ФО</code></td><td>~05:30</td></tr>
+</table>
+
+<h3>4.2. Что изменить на узле</h3>
+
+<ol class="steps">
+<li>
+<strong>Открыть план обмена</strong> «Источники обмена» &rarr; найти узел выгрузки остатков
+(например <code>ВыгрузкаОстатков_ФОРозн</code> для Retail PP).
+</li>
+<li>
+<strong>Проверить ссылку</strong> на внешнюю обработку: должна указывать на
+<code>внВыгрузкаОстатковМО_ФО</code> (обновлённый элемент справочника).
+</li>
+<li>
+<strong>Изменить поле «Имя метода»</strong> (<code>ИмяМетода</code>):
+<table>
+<tr><th>Было</th><th>Стало</th></tr>
+<tr><td><code>ФоноваяВыгрузка</code></td><td><code>ФоноваяВыгрузкаПачками</code></td></tr>
+</table>
+<div class="box-warn">
+Вводить <strong>точно</strong> идентификатор команды, без пробелов:
+<code>ФоноваяВыгрузкаПачками</code> (не «пачками в фоне» и не представление из списка).
+</div>
+</li>
+<li>
+<strong>Проверить <code>ХранилищеНастроек</code></strong> узла: должны быть
+<code>АдресWS</code>, <code>КоличествоПортфелейВПакете</code>, <code>КоличествоПачекМандатов</code>.
+</li>
+<li>
+<strong>Записать узел.</strong> Регламентное задание и его расписание <strong>не трогать</strong>.
+</li>
+</ol>
+
+<h3>4.3. Цепочка после переключения</h3>
+
+<div class="flow">
+<pre>Регламент: ОбменыПодсистемыТранспорт  (без изменений)
+  |
+  +-- Узел: ВыгрузкаОстатков_ФОРозн
+        |
+        +-- ИмяМетода = "ФоноваяВыгрузкаПачками"   &lt;-- ИЗМЕНИЛИ
+              |
+              +-- Координатор: ФоноваяВыгрузкаПачками
+              |     1) общий ИдентификаторСеансаОбмена
+              |     2) разбить мандаты на N пачек
+              |     3) N x ФоновыеЗадания.Выполнить("...ВыполнитьКоманду", ...)
+              |          каждый воркер: ФоноваяВыгрузка + своя пачка мандатов
+              |     4) барьер: дождаться всех воркеров
+              |     5) одна финальная рассылка РСА
+              |
+              +-- (раньше было: один вызов ФоноваяВыгрузка последовательно)</pre>
+</div>
+
+<!-- SECTION 5 -->
+<h2>5. Проверка после внедрения</h2>
+
+<h3>5.1. Ручной прогон (до регламента)</h3>
+
+<ol class="steps">
+<li>На тестовом/PP узле установить <code>КоличествоПачекМандатов = 2</code>.</li>
+<li>Запустить обмен по узлу вручную (команда «Выполнить обмен» / аналог в подсистеме обменов).</li>
+<li>В <strong>«Регламентные и фоновые задания»</strong> должны появиться задания:
+<ul>
+<li>1 координатор (текущий сеанс);</li>
+<li>N воркеров с именем «IMDEV-8829 Выгрузка остатков МО-ФО, пачка 1..N».</li>
+</ul>
+</li>
+<li>Проверить бизнес-процессы выгрузки по узлу &mdash; по одному на каждую пачку.</li>
+<li>Сверить позиции на ФО с последовательной выгрузкой (на том же наборе мандатов).</li>
+<li>Убедиться, что финальная рассылка РСА пришла <strong>один раз</strong>, не N раз.</li>
+</ol>
+
+<h3>5.2. Что смотреть при ошибке</h3>
+
+<table>
+<tr><th>Симптом</th><th>Действие</th></tr>
+<tr>
+<td><code>Метод объекта не обнаружен (ВыполнитьЗадание)</code></td>
+<td>Загрузить актуальный EPF (исправлено: используется <code>ФоновыеЗадания.Выполнить</code>)</td>
+</tr>
+<tr>
+<td><code>Команда ... не обнаружена</code></td>
+<td>Проверить <code>ИмяМетода</code> на узле: точно <code>ФоноваяВыгрузкаПачками</code></td>
+</tr>
+<tr>
+<td>HTTP 413</td>
+<td><code>КоличествоПортфелейВПакете</code> не должно быть 0; держать 45-50</td>
+</tr>
+<tr>
+<td>Упал 1 из N воркеров</td>
+<td>Смотреть протокол обмена / лог конкретной пачки; координатор зафиксирует аварийное задание</td>
+</tr>
+</table>
+
+<!-- SECTION 6 -->
+<h2>6. Откат</h2>
+
+<table>
+<tr><th>Уровень</th><th>Действие</th><th>Эффект</th></tr>
+<tr>
+<td>Быстрый</td>
+<td>На узле вернуть <code>ИмяМетода = ФоноваяВыгрузка</code></td>
+<td>Снова последовательная выгрузка (даже с новым EPF)</td>
+</tr>
+<tr>
+<td>Полный</td>
+<td>Загрузить старый EPF из <code>ВыгрОстМО_ФО_БезПаралели_Retail.rar</code></td>
+<td>Откат кода до IMDEV-8829</td>
+</tr>
+</table>
+
+<!-- SECTION 7 -->
+<h2>7. Чек-лист внедрения (кратко)</h2>
+
+<div class="box-ok">
+<ol style="margin:.5rem 0;padding-left:1.25rem;">
+<li>Загрузить <code>ВыгрОстМО_ФО.epf</code> в существующий элемент справочника <code>внВыгрузкаОстатковМО_ФО</code>.</li>
+<li>Убедиться, что появилась команда <code>ФоноваяВыгрузкаПачками</code>.</li>
+<li>Прописать настройки: <code>АдресWS</code> (Retail), <code>КоличествоПортфелейВПакете</code> (45-50), <code>КоличествоПачекМандатов</code> (2-3).</li>
+<li>На узле обмена сменить <code>ИмяМетода</code>: <code>ФоноваяВыгрузка</code> &rarr; <code>ФоноваяВыгрузкаПачками</code>.</li>
+<li>Ручной прогон на PP, проверка N фоновых заданий и позиций на ФО.</li>
+<li>После стабилизации &mdash; включить в PROD регламент (расписание не менять).</li>
+</ol>
+</div>
+
+<p class="meta" style="margin-top:2rem;">
+Документ: IMDEV-8829, инструкция для администратора.
+Связанные материалы:
+<a href="parallel_export_batches_tz.html">ТЗ</a>,
+<a href="parallel_mandate_batches_architecture.html">архитектура</a>,
+<a href="fo_connection_params_pp_retail.html">параметры PP Retail</a>.
+</p>
+
+</body>
+</html>

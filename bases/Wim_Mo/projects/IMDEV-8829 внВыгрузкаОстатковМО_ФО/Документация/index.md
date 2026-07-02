@@ -2,6 +2,7 @@
 
 | Документ | Назначение |
 |----------|------------|
+| [parallel_export_batches_admin_guide.html](parallel_export_batches_admin_guide.html) | **Инструкция администратора**: замена EPF, настройки Retail, переключение команды на узле |
 | [parallel_export_batches_tz.html](parallel_export_batches_tz.html) | **ТЗ на доработку**: параллельный запуск `Опубликовать` пачками (реквизит, 4 процедуры, 5 правок, комментарии IMDEV-8829) |
 | [parallel_mandate_batches_architecture.html](parallel_mandate_batches_architecture.html) | **Параллелизм по пачкам мандатов**: архитектура, схема, параметры (проектирование) |
 | [mo_fo_ws_754_768_872_processing.html](mo_fo_ws_754_768_872_processing.html) | **Цепочки 754/768/872**: МО &rarr; ФО, состав XDTO, модули и процедуры |
