@@ -7,6 +7,7 @@
 | [imdev-9005_measurements_may2026.html](imdev-9005_measurements_may2026.html) | **Замеры** оригинальной обработки, среда т-1 (`AVC_PP_DU`), период май 2026 (1 ч 54 мин) |
 | [imdev-9005_measurements_t1_profiler.html](imdev-9005_measurements_t1_profiler.html) | **Замеры т-1 (docx)** — профилировщик + журнал, старый алгоритм, узкие места TWR/НайтиСтроки |
 | [imdev-9005_measurements_before_after.html](imdev-9005_measurements_before_after.html) | **БЫЛО / СТАЛО** — сравнение замеров, МО retail, финальный прогон ДУ, регрессия 0420431 |
+| [imdev-9005_mo_index_section11_benchmark.html](imdev-9005_mo_index_section11_benchmark.html) | **Бизнес-отчет** — исправление индекса MV в МО, связь с разделом 1.1, замеры БЫЛО/СТАЛО |
 | [imdev-9005_final_development_report.html](imdev-9005_final_development_report.html) | **Итоговая разработка** — ДУ: стр. 801/2470/2471; МО: индекс MV по Разделитель |
 | [imdev-9005_optimizations_v120.html](imdev-9005_optimizations_v120.html) | **v1.20** — две оптимизации (TWR/MANDATE_STRATEGY + раздел 1.2), теория и практика |
 | [imdev-9005_optimizations.html](imdev-9005_optimizations.html) | Краткая документация по трем оптимизациям и обоснованию замерами |
