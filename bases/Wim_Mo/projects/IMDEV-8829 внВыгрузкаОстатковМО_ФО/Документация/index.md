@@ -2,6 +2,7 @@
 
 | Документ | Назначение |
 |----------|------------|
+| [parallel_export_batches_tz.html](parallel_export_batches_tz.html) | **ТЗ на доработку**: параллельный запуск `Опубликовать` пачками (реквизит, 4 процедуры, 5 правок, комментарии IMDEV-8829) |
 | [parallel_mandate_batches_architecture.html](parallel_mandate_batches_architecture.html) | **Параллелизм по пачкам мандатов**: архитектура, схема, параметры (проектирование) |
 | [mo_fo_ws_754_768_872_processing.html](mo_fo_ws_754_768_872_processing.html) | **Цепочки 754/768/872**: МО &rarr; ФО, состав XDTO, модули и процедуры |
 | [mo_fo_profiling_45_packets_report.html](mo_fo_profiling_45_packets_report.html) | **Замеры профилировщика** (пакет 45): скриншоты из DOCX, встроенные в HTML |
