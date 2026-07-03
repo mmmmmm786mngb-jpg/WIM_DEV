@@ -1,0 +1,602 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="utf-8">
+    <title>IMAPPS-37889 - Блокировки в воркбенче ФО</title>
+    <style>
+        :root {
+            --success: #28a745;
+            --error: #dc3545;
+            --info: #17a2b8;
+            --warning-bg: #fff3cd;
+            --warning-border: #ffc107;
+            --info-bg: #d1ecf1;
+            --info-border: #17a2b8;
+            --bug-bg: #fff8e1;
+            --bug-border: #f0ad4e;
+            --dev-bg: #f8f9fa;
+            --dev-border: #6c757d;
+            --text: #212529;
+            --muted: #6c757d;
+            --border: #dee2e6;
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.55;
+            color: var(--text);
+            max-width: 980px;
+            margin: 0 auto;
+            padding: 24px 20px 48px;
+            background: #fafafa;
+        }
+
+        h1 {
+            font-size: 1.65rem;
+            margin: 0 0 8px;
+            color: #1a3a5c;
+        }
+
+        h2 {
+            font-size: 1.25rem;
+            margin: 32px 0 12px;
+            padding-bottom: 6px;
+            border-bottom: 2px solid var(--info);
+            color: #1a3a5c;
+        }
+
+        h3 {
+            font-size: 1.05rem;
+            margin: 20px 0 8px;
+            color: #333;
+        }
+
+        .meta {
+            color: var(--muted);
+            font-size: 0.92rem;
+            margin-bottom: 24px;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 2px 10px;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            margin-right: 6px;
+        }
+
+        .badge-open { background: #ffe0e0; color: #a71d2a; }
+        .badge-fo { background: #e7f1ff; color: #004085; }
+
+        .card {
+            background: #fff;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 18px 20px;
+            margin: 16px 0;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        }
+
+        .card-business { border-left: 4px solid var(--info); }
+        .card-bug { border-left: 4px solid var(--bug-border); background: var(--bug-bg); }
+        .card-ok { border-left: 4px solid var(--success); }
+        .card-dev { border-left: 4px solid var(--dev-border); background: var(--dev-bg); }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 12px 0;
+            font-size: 0.95rem;
+        }
+
+        th, td {
+            border: 1px solid var(--border);
+            padding: 10px 12px;
+            text-align: left;
+        }
+
+        th { background: #eef2f6; font-weight: 600; }
+
+        .num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+        .ok { color: var(--success); font-weight: 600; }
+        .err { color: var(--error); font-weight: 600; }
+        .info { color: var(--info); font-weight: 600; }
+
+        .formula {
+            background: #fff;
+            border: 1px dashed var(--border);
+            border-radius: 6px;
+            padding: 14px 16px;
+            margin: 12px 0;
+            font-size: 1rem;
+        }
+
+        .formula-line { margin: 6px 0; }
+
+        .arrow { color: var(--muted); margin: 0 6px; }
+
+        pre {
+            background: #2d2d2d;
+            color: #f8f8f2;
+            padding: 14px 16px;
+            border-radius: 6px;
+            overflow-x: auto;
+            font-size: 0.85rem;
+            line-height: 1.45;
+        }
+
+        code {
+            font-family: Consolas, "Courier New", monospace;
+            font-size: 0.88em;
+            background: #eef2f6;
+            padding: 1px 5px;
+            border-radius: 3px;
+        }
+
+        pre code { background: none; padding: 0; }
+
+        ul, ol { margin: 8px 0; padding-left: 22px; }
+        li { margin: 4px 0; }
+
+        .toc a { color: var(--info); text-decoration: none; }
+        .toc a:hover { text-decoration: underline; }
+
+        .divider {
+            border: 0;
+            height: 2px;
+            background: linear-gradient(to right, var(--info), transparent);
+            margin: 40px 0 24px;
+        }
+
+        .section-label {
+            display: inline-block;
+            background: #1a3a5c;
+            color: #fff;
+            padding: 4px 12px;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            letter-spacing: 0.03em;
+            margin-bottom: 12px;
+        }
+
+        .section-label-dev { background: #495057; }
+
+        .compare-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+            margin: 16px 0;
+        }
+
+        @media (max-width: 700px) {
+            .compare-grid { grid-template-columns: 1fr; }
+        }
+
+        .scenario-box {
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 14px;
+            background: #fff;
+        }
+
+        .scenario-box h4 {
+            margin: 0 0 10px;
+            font-size: 0.95rem;
+        }
+
+        .scenario-with { border-top: 3px solid var(--error); }
+        .scenario-without { border-top: 3px solid var(--success); }
+
+        .footnote {
+            font-size: 0.88rem;
+            color: var(--muted);
+            margin-top: 8px;
+        }
+    </style>
+</head>
+<body>
+
+<h1>Блокировки занижают стоимость портфеля в воркбенче</h1>
+<p class="meta">
+    <span class="badge badge-open">IMAPPS-37889</span>
+    <span class="badge badge-fo">ФО</span>
+    Дата анализа: 03.07.2026 | База: ФО | Инструмент: Воркбенч
+</p>
+
+<nav class="card toc">
+    <strong>Содержание</strong>
+    <ol>
+        <li><a href="#business">Для бизнес-пользователя: что произошло и почему цифры неверные</a></li>
+        <li><a href="#expected">Какие цифры должны быть</a></li>
+        <li><a href="#cause">Предположительная причина (кратко)</a></li>
+        <li><a href="#developer">Для разработчика: код, формулы, варианты исправления</a></li>
+        <li><a href="#verify">План проверки после исправления</a></li>
+    </ol>
+</nav>
+
+<!-- ==================== BUSINESS SECTION ==================== -->
+
+<p class="section-label" id="business">ДЛЯ БИЗНЕС-ПОЛЬЗОВАТЕЛЯ</p>
+
+<h2>1. Ситуация по обращению</h2>
+
+<div class="card card-business">
+    <p>Управляющий выгрузил <strong>блокировку 20 000 000 руб.</strong> по клиенту <strong>A62021</strong> (профиль RUB).
+    После этого в воркбенче в колонке <strong>«Стоимость, общая по владельцу»</strong> вместо ожидаемого уменьшения портфеля
+    на 20 млн появилось <strong>отрицательное значение</strong>.</p>
+    <p>Аналогичная ситуация наблюдалась <strong>28.06.2026</strong> по другому клиенту.</p>
+</div>
+
+<h2>2. Цифры из обращения</h2>
+
+<div class="compare-grid">
+    <div class="scenario-box scenario-with">
+        <h4>С блокировкой 20 000 000 руб.</h4>
+        <table>
+            <tr><th>Показатель</th><th class="num">Значение, руб.</th></tr>
+            <tr><td>Сумма факт.</td><td class="num">30 512 322,63</td></tr>
+            <tr><td>Стоимость, блокировка</td><td class="num err">-20 000 000,00</td></tr>
+            <tr><td>Стоимость, общая по владельцу</td><td class="num err">-9 489 323,91</td></tr>
+        </table>
+    </div>
+    <div class="scenario-box scenario-without">
+        <h4>После удаления блокировки</h4>
+        <table>
+            <tr><th>Показатель</th><th class="num">Значение, руб.</th></tr>
+            <tr><td>Стоимость, общая по владельцу</td><td class="num ok">~30 359 550 - 30 359 602</td></tr>
+            <tr><td>Стоимость, блокировка</td><td class="num">пусто / 0</td></tr>
+        </table>
+        <p class="footnote">Без блокировки портфель отображается корректно.</p>
+    </div>
+</div>
+
+<h2>3. Почему пользователь видит «неправильные» цифры</h2>
+
+<div class="card card-bug">
+    <p><strong>Краткий ответ:</strong> система, по всей видимости, <strong>дважды вычитает одну и ту же блокировку</strong>
+    при расчете итоговой стоимости портфеля. Поэтому минус получается сильнее, чем должен быть.</p>
+</div>
+
+<h3>Ожидаемый расчет (один раз)</h3>
+
+<div class="formula">
+    <div class="formula-line">Фактическая сумма по деньгам (RUB): <strong>30 512 322,63</strong></div>
+    <div class="formula-line">Минус блокировка: <strong>- 20 000 000,00</strong></div>
+    <div class="formula-line">
+        <span class="arrow">=</span>
+        <strong class="ok">10 512 322,63 руб.</strong> (доступная стоимость портфеля)
+    </div>
+</div>
+
+<p>Если отталкиваться от общей стоимости без блокировки (~30,36 млн), ожидаемый результат после блокировки:
+<strong>~10,36 млн руб.</strong></p>
+
+<h3>Фактический расчет в воркбенче (два раза)</h3>
+
+<div class="formula">
+    <div class="formula-line">30 512 322,63</div>
+    <div class="formula-line">- 20 000 000,00 <span class="footnote">(первый раз)</span></div>
+    <div class="formula-line">- 20 000 000,00 <span class="footnote">(второй раз)</span></div>
+    <div class="formula-line">
+        <span class="arrow">=</span>
+        <strong class="err">-9 487 677,37 руб.</strong>
+    </div>
+</div>
+
+<p>Это почти совпадает с тем, что видит пользователь: <strong>-9 489 323,91 руб.</strong>
+Небольшая разница (~1 646 руб.) может быть из-за округлений, НКД, задолженности или других активов в том же портфеле.</p>
+
+<h3>Схема для понимания</h3>
+
+<table>
+    <thead>
+        <tr>
+            <th>Шаг</th>
+            <th>Что делает система</th>
+            <th>Результат для примера</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr>
+            <td>1</td>
+            <td>Показывает фактическую сумму по RUB</td>
+            <td class="num">30 512 322,63</td>
+        </tr>
+        <tr>
+            <td>2</td>
+            <td>Отдельно показывает блокировку в колонке «Стоимость, блокировка»</td>
+            <td class="num err">-20 000 000,00</td>
+        </tr>
+        <tr>
+            <td>3</td>
+            <td>При расчете «общей по владельцу» уменьшает доступные деньги на сумму блокировки</td>
+            <td class="num">-20 000 000 (скрыто в формуле)</td>
+        </tr>
+        <tr>
+            <td>4</td>
+            <td>И еще раз учитывает ту же блокировку во внутренней сумме «блокировка в стоимости»</td>
+            <td class="num">-20 000 000 (повторно)</td>
+        </tr>
+        <tr>
+            <td><strong>Итог</strong></td>
+            <td><strong>Пользователь видит отрицательную «общую по владельцу»</strong></td>
+            <td class="num err"><strong>-9 489 323,91</strong></td>
+        </tr>
+    </tbody>
+</table>
+
+<p class="footnote">Важно: сама выгрузка блокировки на 20 млн, скорее всего, корректна. Ошибка в том,
+<strong>как воркбенч складывает факт, блокировку и итоговую стоимость</strong>.</p>
+
+<h2 id="expected">4. Какие цифры должны быть после исправления</h2>
+
+<div class="card card-ok">
+    <table>
+        <thead>
+            <tr>
+                <th>Показатель</th>
+                <th>Сейчас (ошибка)</th>
+                <th>Должно быть (ориентир)</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>Сумма факт.</td>
+                <td class="num">30 512 322,63</td>
+                <td class="num ok">без изменений</td>
+            </tr>
+            <tr>
+                <td>Стоимость, блокировка</td>
+                <td class="num">-20 000 000,00</td>
+                <td class="num ok">-20 000 000,00 (информативно)</td>
+            </tr>
+            <tr>
+                <td>Стоимость, общая по владельцу</td>
+                <td class="num err">-9 489 323,91</td>
+                <td class="num ok">~10 360 000 - 10 512 000</td>
+            </tr>
+        </tbody>
+    </table>
+    <p>После исправления блокировка по-прежнему должна отображаться отдельной колонкой,
+    но <strong>итоговая стоимость уменьшается только один раз</strong>.</p>
+</div>
+
+<h2 id="cause">5. Предположительная причина (для бизнеса)</h2>
+
+<div class="card card-business">
+    <ul>
+        <li>Блокировка попадает в расчет позиции портфеля <strong>и как уменьшение количества денег</strong>,
+        и <strong>как отдельная сумма блокировки</strong>.</li>
+        <li>Воркбенч при подсчете «общей стоимости по владельцу» использует обе эти составляющие одновременно.</li>
+        <li>Для денег (RUB) это особенно заметно: цена = 1, поэтому двойное вычитание 20 млн сразу дает минус ~9,5 млн.</li>
+        <li>Проблема системная: повторяется на разных клиентах, не связана с конкретной суммой 20 млн.</li>
+    </ul>
+</div>
+
+<hr class="divider">
+
+<!-- ==================== DEVELOPER SECTION ==================== -->
+
+<p class="section-label section-label-dev" id="developer">ДЛЯ РАЗРАБОТЧИКА</p>
+
+<h2>6. Технический контекст</h2>
+
+<div class="card card-dev">
+    <table>
+        <tr><th>Тикет</th><td>IMAPPS-37889</td></tr>
+        <tr><th>Конфигурация</th><td>ФО</td></tr>
+        <tr><th>UI</th><td>Обработка <code>Воркбенч</code>, макет СКД <code>DataProcessor.Воркбенч.Templates.Макет</code></td></tr>
+        <tr><th>Расчет портфеля</th><td><code>CommonModule.ВоркбенчПолныеПрава</code> - функция <code>ТекстЗапросаСтоимостиПортфелей()</code></td></tr>
+        <tr><th>Позиция / блокировки</th><td><code>CommonModule.РасчетПозицииПортфелей</code>, регистры <code>ПрогнозПоПоручению</code>, <code>ПлановаяПозиция</code></td></tr>
+        <tr><th>Кэш</th><td><code>InformationRegister.КэшСеансовПортфели</code>, <code>КэшСеансов</code>, <code>КэшСеансовИерархия</code></td></tr>
+    </table>
+</div>
+
+<h2>7. Цепочка расчета и место ошибки</h2>
+
+<h3>7.1. Отображение колонки «Стоимость, общая по владельцу»</h3>
+
+<p>Поле <code>ОбщаяСтоимостьПозиций</code> в макете воркбенча маппится на синоним
+«Стоимость, общая по владельцу» (<code>ВоркбенчКлиентСерверПовтИсп</code>).
+На уровне группировки портфеля итог берется из <code>ПортфельОбщаяСтоимость</code>,
+который заполняется из <code>КэшСеансовПортфели.ОбщаяСтоимость</code> (не из <code>ОбщаяСтоимостьБезБлокировок</code>).</p>
+
+<pre><code>// CommonModule.ВоркбенчПолныеПрава, запрос объединенных данных (~стр. 3679-3684)
+ЕСТЬNULL(СтоимостиПортфелей.ОбщаяСтоимость, 0) КАК ПортфельОбщаяСтоимость,
+...
+ЕСТЬNULL(КэшПортфелиСубпортфели.ОбщаяСтоимость, 0) КАК ОбщаяСтоимостьПозиций,</code></pre>
+
+<h3>7.2. Формула ОбщаяСтоимость в кэше портфелей</h3>
+
+<pre><code>// CommonModule.ВоркбенчПолныеПрава, ТекстЗапросаСтоимостиПортфелей (~стр. 2351-2391)
+
+// Количество УЖЕ уменьшено на блокировку через поля *_бр:
+Количество = (КолФакт - КолФакт_бр) + (КолПлан - КолПлан_бр) + (КолПрогноз - КолПрогноз_бр)
+
+// Стоимость_бр СОДЕРЖИТ суммы блокировок:
+Стоимость_бр = ФактическаяПозиция_бр + ПлановаяПозиция_бр + ПрогнознаяПозиция_бр + СуммаРЕПО
+
+// Итоговая стоимость:
+ОбщаяСтоимость = СУММА(Цена * Количество + Стоимость_бр)
+
+// Отдельная метрика (тоже подозрительна - тройное вычитание при наличии _бр):
+ОбщаяСтоимостьБезБлокировок = СУММА(Цена * (Количество - КоличествоБлокировка) + Стоимость_бр)</code></pre>
+
+<h3>7.3. Откуда в позиции берется блокировка</h3>
+
+<p>При <code>Параметры.Воркбенч = Истина</code> вызывается <code>МодифицироватьПрогнозВоркбенч()</code>:</p>
+
+<pre><code>// CommonModule.РасчетПозицииПортфелей, МодифицироватьПрогнозВоркбенч (~стр. 1501-1515)
+КОГДА Т.СуммаБлокировкаОстаток &lt;&gt; 0
+    ТОГДА Т.КоличествоБлокировкаОстаток   -- в КоличествоПрогнознаяПозицияОтправленные
+...
+КОГДА Т.СуммаБлокировкаОстаток &lt;&gt; 0
+    ТОГДА Т.СуммаБлокировкаОстаток       -- в ПрогнознаяПозиция_бр</code></pre>
+
+<p>Блокировка в регистре <code>ПрогнозПоПоручению</code> записывается отрицательной
+(<code>Documents.Поручение</code>: <code>СуммаБлокировка = -1 * Сумма</code>).
+При загрузке в кэш воркбенча <code>КоличествоБлокировка</code> дополнительно инвертируется (<code>-Т.КоличествоБлокировка</code>).</p>
+
+<h3>7.4. Колонка «Стоимость, блокировка» в СКД</h3>
+
+<pre><code>// DataProcessor.Воркбенч.Templates.Макет, calculatedField
+СтоимостьБлокировка = Окр(КоличествоБлокировка * Цена, 2)</code></pre>
+
+<p>Для RUB (Цена = 1) это дает -20 000 000 - корректно как <strong>информативный</strong> столбец.
+Ошибка не в этой колонке, а в том, что та же блокировка повторно влияет на <code>ОбщаяСтоимость</code>.</p>
+
+<h2>8. Проверка гипотезы на цифрах тикета</h2>
+
+<table>
+    <thead>
+        <tr>
+            <th>Формула</th>
+            <th class="num">Результат</th>
+            <th>Совпадение с тикетом</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr>
+            <td>30 512 322,63 - 20 000 000 (один раз)</td>
+            <td class="num">10 512 322,63</td>
+            <td>Ожидаемое поведение - НЕ совпадает с экраном</td>
+        </tr>
+        <tr>
+            <td>30 512 322,63 - 20 000 000 - 20 000 000 (два раза)</td>
+            <td class="num">-9 487 677,37</td>
+            <td class="ok">Совпадает с -9 489 323,91 с точностью до ~1 646 руб.</td>
+        </tr>
+        <tr>
+            <td>~30 359 601 - 20 000 000 (от стоимости без блокировки)</td>
+            <td class="num">~10 359 601</td>
+            <td>Бизнес-ориентир после исправления</td>
+        </tr>
+    </tbody>
+</table>
+
+<h2>9. Варианты исправления</h2>
+
+<h3>Вариант A (рекомендуемый): исправить формулу ОбщаяСтоимость</h3>
+
+<div class="card card-dev">
+    <p><strong>Файл:</strong> <code>CommonModule.ВоркбенчПолныеПрава</code>, <code>ТекстЗапросаСтоимостиПортфелей()</code></p>
+    <p><strong>Суть:</strong> блокировка должна учитываться <strong>один раз</strong> - либо через уменьшение <code>Количество</code> (поля <code>*_бр</code>),
+    либо через <code>Стоимость_бр</code>, но не через оба механизма одновременно.</p>
+    <p><strong>Направление правки:</strong></p>
+    <ul>
+        <li>Для валютных активов: <code>ОбщаяСтоимость = Цена * (КоличествоФакт + КолПлан + КолПрогноз)</code> без добавления блокировочной части в <code>Стоимость_бр</code>, если она уже вычтена из <code>Количество</code>;</li>
+        <li>или: не уменьшать <code>Количество</code> на <code>*_бр</code> для чистых блокировок, а оставить учет только в <code>Стоимость_бр</code>.</li>
+    </ul>
+    <p><strong>Риск:</strong> средний - затрагивает все портфели в воркбенче; нужна регрессия по ЦБ, RUB, РЕПО, плановым и прогнозным позициям.</p>
+</div>
+
+<h3>Вариант B: исправить формирование позиции для блокировок</h3>
+
+<div class="card card-dev">
+    <p><strong>Файл:</strong> <code>CommonModule.РасчетПозицииПортфелей</code>, <code>МодифицироватьПрогнозВоркбенч()</code></p>
+    <p><strong>Суть:</strong> для записей с <code>СуммаБлокировкаОстаток &lt;&gt; 0</code> заполнять <strong>только один</strong> канал учета:</p>
+    <ul>
+        <li>либо <code>ПрогнознаяПозиция_бр</code> (сумма),</li>
+        <li>либо <code>КоличествоПрогнознаяПозиция_бр</code> / <code>КоличествоПрогнознаяПозицияОтправленные</code> (количество),</li>
+        <li>но не оба одновременно в цепочке, которая потом суммируется в <code>ТекстЗапросаСтоимостиПортфелей</code>.</li>
+    </ul>
+    <p><strong>Риск:</strong> средний - влияет на все блокировки из прогноза/плана, в т.ч. выгруженные из МО (LOCK).</p>
+</div>
+
+<h3>Вариант C: исправить только отображение итога</h3>
+
+<div class="card card-dev">
+    <p><strong>Файлы:</strong> макет СКД <code>Воркбенч.Макет</code>, запрос <code>ОбъединенныеДанные</code></p>
+    <p><strong>Суть:</strong> для колонки «Стоимость, общая по владельцу» использовать метрику, где блокировка учтена один раз, например:</p>
+    <ul>
+        <li><code>ОбщаяСтоимость + Сумма(СтоимостьБлокировка)</code> (аналогично <code>РаботаСЛимитами</code>: <code>ОбщаяСтоимость + СуммаБлокировка</code>),</li>
+        <li>или явно <code>ПортфельОбщаяСтоимостьБезБлокировок</code> с корректной формулой (после исправления п. 7.2).</li>
+    </ul>
+    <p><strong>Риск:</strong> низкий для UI, но <strong>высокий</strong> для согласованности: доли, лимиты и распределение могут продолжить использовать неверную <code>ОбщаяСтоимость</code> из кэша.</p>
+    <p><strong>Вывод:</strong> вариант C - как временный workaround; предпочтительны A или B.</p>
+</div>
+
+<h3>Вариант D: пересмотреть ОбщаяСтоимостьБезБлокировок</h3>
+
+<div class="card card-dev">
+    <p>Сейчас: <code>Цена * (Количество - КоличествоБлокировка) + Стоимость_бр</code>,
+    при том что <code>Количество</code> уже net-of-<code>*_бр</code>.
+    Это потенциально <strong>тройное</strong> вычитание блокировки в метриках долей (<code>ДоляПозиции</code> в макете использует <code>ОбщаяСтоимостьБезБлокировок</code>).</p>
+    <p>Исправлять вместе с вариантом A.</p>
+</div>
+
+<h2>10. Что проверить на данных A62021</h2>
+
+<div class="card card-dev">
+    <ol>
+        <li>Остатки <code>ПрогнозПоПоручению</code> / <code>ПлановаяПозиция</code> на дату инцидента:
+            <code>СуммаБлокировкаОстаток</code>, <code>КоличествоБлокировкаОстаток</code> по RUB-активу портфеля A62021.</li>
+        <li>Документ поручения / выгрузка LOCK из МО - тип позиции: <code>ПлановаяБлокировка</code> или <code>ПрогнознаяБлокировка</code>.</li>
+        <li>Кэш сеанса воркбенча: <code>КэшСеансов</code> - поля <code>ПрогнознаяПозиция_бр</code>, <code>КоличествоПрогнознаяПозиция_бр</code>, <code>КоличествоБлокировка</code>.</li>
+        <li><code>КэшСеансовПортфели</code> - сравнить <code>ОбщаяСтоимость</code> и <code>ОбщаяСтоимостьБезБлокировок</code> до и после удаления блокировки.</li>
+    </ol>
+
+    <h3>Пример запроса (ФО, сеанс воркбенча)</h3>
+    <pre><code>ВЫБРАТЬ
+    Кэш.Портфель,
+    Кэш.Актив,
+    Кэш.КоличествоБлокировка,
+    Кэш.ПрогнознаяПозиция_бр,
+    Кэш.КоличествоПрогнознаяПозиция_бр,
+    Кэш.КоличествоФактическаяПозиция,
+    Кэш.КоличествоФактическаяПозиция_бр
+ИЗ
+    РегистрСведений.КэшСеансов КАК Кэш
+ГДЕ
+    Кэш.ИдентификаторСеанса = &amp;ИдентификаторСеанса
+    И Кэш.Портфель.Код ПОДОБНО "A62021%"</code></pre>
+</div>
+
+<h2 id="verify">11. Критерии приемки после исправления</h2>
+
+<table>
+    <thead>
+        <tr>
+            <th>Сценарий</th>
+            <th>Ожидание</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr>
+            <td>Блокировка 20 млн на RUB, факт ~30,5 млн</td>
+            <td class="ok">Общая по владельцу ~10,5 млн (не отрицательная)</td>
+        </tr>
+        <tr>
+            <td>Удаление блокировки</td>
+            <td class="ok">Общая по владельцу возвращается к ~30,36 млн</td>
+        </tr>
+        <tr>
+            <td>Колонка «Стоимость, блокировка»</td>
+            <td class="ok">-20 000 000 (без изменения логики отображения)</td>
+        </tr>
+        <tr>
+            <td>Портфель с ЦБ + блокировка по бумаге</td>
+            <td class="ok">Нет двойного вычитания по количеству и сумме</td>
+        </tr>
+        <tr>
+            <td>Доли / лимиты в воркбенче</td>
+            <td class="ok">Согласованы с исправленной ОбщаяСтоимость / ОбщаяСтоимостьБезБлокировок</td>
+        </tr>
+    </tbody>
+</table>
+
+<hr class="divider">
+
+<p class="footnote">
+    Документ подготовлен по тикету IMAPPS-37889 на основании скриншота обращения и анализа исходников ФО
+    (модули <code>ВоркбенчПолныеПрава</code>, <code>РасчетПозицииПортфелей</code>, макет <code>Воркбенч.Макет</code>).
+    Путь: <code>imapps_37889_workbench_blocks_analysis.html</code>
+</p>
+
+</body>
+</html>
