@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Generates PDF resume for Alexey Chmykhalov (Russian, HH.ru, ТК РФ).
-Output: Private/Резюме HH/Chmykhalov_Alexey_Resume_2026.pdf
+Generates HH.ru TOP-pattern PDF resume for Alexey Chmykhalov.
+Structure: Summary -> Metrics -> Flagship results -> Skills -> Experience (STAR) -> Education/Certs.
+Output: Private/Resume HH/Chmykhalov_Alexey_Resume_2026.pdf
 """
 
 from __future__ import annotations
@@ -38,8 +39,75 @@ ACCENT_SOFT = colors.HexColor("#E8D5A3")
 TEXT = colors.HexColor("#1E1E1E")
 TEXT_MUTED = colors.HexColor("#5A6472")
 RULE = colors.HexColor("#D8DEE6")
-BG_SIDEBAR = colors.HexColor("#F4F6F9")
+BG_LIGHT = colors.HexColor("#F4F6F9")
+BG_SKILLS = colors.HexColor("#EEF2F7")
+CURSOR_BG = colors.HexColor("#E8F4FD")
+CURSOR_BORDER = colors.HexColor("#1A73E8")
 WHITE = colors.white
+
+CONTENT_WIDTH = 17 * cm
+
+FLAGSHIP_RESULTS = [
+    (
+        "<b>ДУ 1.5 — вечерние регламенты:</b> оптимизировал массовые регламенты на портфеле "
+        "до 100 000 договоров — 4 ч 25 мин -> 2 ч 43 мин (-38%); окно закрытия дня выдерживается."
+    ),
+    (
+        "<b>ДУ 1.5 — отчет 431 и сделки:</b> ускорил регл. отчет 431 с 1 ч 42 мин до 12 мин "
+        "(~x8,6, регрессия идентична); исполнение 100 000 сделок уложил в SLA 2 ч."
+    ),
+    (
+        "<b>Мидл-офис — MV/WAP:</b> сократил ночной пересчет розницы с ~4 ч до ~30 мин (~x8, "
+        "~3 000 мандатов); регресс MXL «файлы идентичны»."
+    ),
+    (
+        "<b>Финконтур — закрытие периода:</b> ускорил закрытие ~x3 за счет фильтрации плана "
+        "регламентов РДУ; параллельный НДФЛ и перепроведение до 30 000 сделок."
+    ),
+    (
+        "<b>Карьера ВТБ/БКС:</b> интеграции Kafka/HTTP с биржей и НРД — ежедневные операции "
+        "без остановки торгового дня; запуск брокерского бэк-офиса ОАЭ."
+    ),
+]
+
+SKILL_ROWS = [
+    (
+        "Cursor + ИИ",
+        "<b>100% цикл в IDE Cursor</b> (с 2026): аналитика, ТЗ, код 1С, ревью, автотесты, "
+        "документация, замеры «было/стало»",
+    ),
+    (
+        "Платформа 1С",
+        "1С:Предприятие 8.3 (20+ лет), расширения, БСП, длительные операции, СКД, "
+        "управляемые формы, сложные запросы",
+    ),
+    (
+        "Конфигурации",
+        "УПП, УТ, ЗУП, ERP; финтех: брокер, депозитарий, доверительное управление (ДУ 1.5)",
+    ),
+    (
+        "Интеграции",
+        "Kafka, HTTP/REST, SOAP, HTTP-сервисы, JSON/XML, НРД, RuData, биржа — 15+ лет",
+    ),
+    (
+        "СУБД",
+        "MS SQL Server (15+ лет): профилирование, индексы, оптимизация запросов и регламентов, "
+        "сверки 1С и SQL",
+    ),
+    (
+        "High-load",
+        "Параллельные конвейеры БСП, пакетная обработка, нагрузочные испытания, "
+        "стабилизация кластера 1С",
+    ),
+    (
+        "Качество",
+        "Vanessa Automation, SonarQube, Git, code review, регрессия на копии ПРОД",
+    ),
+    (
+        "Сертификаты",
+        "1С: ERP (Проф + Спец-консультант), УПП, Платформа 8, Руководитель проекта, 7.7",
+    ),
+]
 
 
 def register_fonts() -> tuple[str, str, str]:
@@ -61,60 +129,68 @@ def build_styles(regular: str, bold: str, italic: str) -> dict[str, ParagraphSty
     base = getSampleStyleSheet()
     return {
         "name": ParagraphStyle(
-            "Name", parent=base["Normal"], fontName=bold, fontSize=20, leading=24,
-            textColor=WHITE, spaceAfter=2,
+            "Name", parent=base["Normal"], fontName=bold, fontSize=19, leading=23,
+            textColor=WHITE, spaceAfter=1,
         ),
         "title": ParagraphStyle(
-            "Title", parent=base["Normal"], fontName=regular, fontSize=10, leading=12.5,
+            "Title", parent=base["Normal"], fontName=regular, fontSize=9.5, leading=12,
             textColor=ACCENT_SOFT, spaceAfter=0,
         ),
         "contact": ParagraphStyle(
-            "Contact", parent=base["Normal"], fontName=regular, fontSize=8.5, leading=12,
+            "Contact", parent=base["Normal"], fontName=regular, fontSize=8.3, leading=11,
             textColor=WHITE,
         ),
         "section": ParagraphStyle(
-            "Section", parent=base["Normal"], fontName=bold, fontSize=10, leading=12,
-            textColor=NAVY, spaceBefore=6, spaceAfter=3,
+            "Section", parent=base["Normal"], fontName=bold, fontSize=9.5, leading=11,
+            textColor=NAVY, spaceBefore=5, spaceAfter=2,
         ),
         "summary": ParagraphStyle(
-            "Summary", parent=base["Normal"], fontName=regular, fontSize=9.2, leading=13,
-            textColor=TEXT, spaceAfter=3,
-        ),
-        "body": ParagraphStyle(
-            "Body", parent=base["Normal"], fontName=regular, fontSize=9, leading=12.5,
-            textColor=TEXT, spaceAfter=4,
+            "Summary", parent=base["Normal"], fontName=regular, fontSize=9, leading=12.5,
+            textColor=TEXT, spaceAfter=2,
         ),
         "body_small": ParagraphStyle(
-            "BodySmall", parent=base["Normal"], fontName=regular, fontSize=8.5, leading=11,
-            textColor=TEXT_MUTED, spaceAfter=3,
+            "BodySmall", parent=base["Normal"], fontName=regular, fontSize=8.2, leading=10.5,
+            textColor=TEXT_MUTED, spaceAfter=2,
         ),
         "bullet": ParagraphStyle(
-            "Bullet", parent=base["Normal"], fontName=regular, fontSize=8.7, leading=11.5,
-            textColor=TEXT, leftIndent=10, bulletIndent=0, spaceAfter=2,
+            "Bullet", parent=base["Normal"], fontName=regular, fontSize=8.4, leading=11,
+            textColor=TEXT, leftIndent=9, bulletIndent=0, spaceAfter=1.5,
         ),
         "job_title": ParagraphStyle(
-            "JobTitle", parent=base["Normal"], fontName=bold, fontSize=9.8, leading=12,
-            textColor=NAVY, spaceAfter=1,
+            "JobTitle", parent=base["Normal"], fontName=bold, fontSize=9.4, leading=11.5,
+            textColor=NAVY, spaceAfter=0,
         ),
         "job_meta": ParagraphStyle(
-            "JobMeta", parent=base["Normal"], fontName=italic, fontSize=8.3, leading=10.5,
-            textColor=TEXT_MUTED, spaceAfter=3,
+            "JobMeta", parent=base["Normal"], fontName=italic, fontSize=8.1, leading=10,
+            textColor=TEXT_MUTED, spaceAfter=2,
         ),
         "metric_value": ParagraphStyle(
-            "MetricValue", parent=base["Normal"], fontName=bold, fontSize=15, leading=17,
+            "MetricValue", parent=base["Normal"], fontName=bold, fontSize=13, leading=15,
             textColor=NAVY, alignment=TA_LEFT,
         ),
         "metric_label": ParagraphStyle(
-            "MetricLabel", parent=base["Normal"], fontName=regular, fontSize=7.3, leading=9,
+            "MetricLabel", parent=base["Normal"], fontName=regular, fontSize=6.8, leading=8.5,
             textColor=TEXT_MUTED, alignment=TA_LEFT,
         ),
         "stack_cat": ParagraphStyle(
-            "StackCat", parent=base["Normal"], fontName=bold, fontSize=8.2, leading=10,
+            "StackCat", parent=base["Normal"], fontName=bold, fontSize=8, leading=9.5,
             textColor=NAVY,
         ),
         "stack_val": ParagraphStyle(
-            "StackVal", parent=base["Normal"], fontName=regular, fontSize=8.2, leading=10.5,
+            "StackVal", parent=base["Normal"], fontName=regular, fontSize=8, leading=10,
             textColor=TEXT,
+        ),
+        "highlight_title": ParagraphStyle(
+            "HighlightTitle", parent=base["Normal"], fontName=bold, fontSize=10, leading=12,
+            textColor=NAVY, spaceAfter=1,
+        ),
+        "highlight_body": ParagraphStyle(
+            "HighlightBody", parent=base["Normal"], fontName=regular, fontSize=8.8, leading=12,
+            textColor=TEXT, spaceAfter=0,
+        ),
+        "footer_body": ParagraphStyle(
+            "FooterBody", parent=base["Normal"], fontName=regular, fontSize=8.3, leading=11,
+            textColor=TEXT, spaceAfter=2,
         ),
     }
 
@@ -122,7 +198,7 @@ def build_styles(regular: str, bold: str, italic: str) -> dict[str, ParagraphSty
 def draw_header(canvas, doc) -> None:
     canvas.saveState()
     width, height = A4
-    header_h = 3.0 * cm
+    header_h = 2.85 * cm
     canvas.setFillColor(NAVY)
     canvas.rect(0, height - header_h, width, header_h, fill=1, stroke=0)
     canvas.setFillColor(ACCENT)
@@ -134,8 +210,8 @@ def draw_footer(canvas, doc) -> None:
     canvas.saveState()
     canvas.setFont("Arial", 7)
     canvas.setFillColor(TEXT_MUTED)
-    canvas.drawString(1.5 * cm, 1.0 * cm, "Chmykhalov A.A. | Vedushchiy programmist 1S | Moskva")
-    canvas.drawRightString(A4[0] - 1.5 * cm, 1.0 * cm, f"стр. {doc.page}")
+    canvas.drawString(1.5 * cm, 0.9 * cm, "Chmykhalov A.A. | Vedushchiy programmist 1S | Moskva | ot 650 000 rub.")
+    canvas.drawRightString(A4[0] - 1.5 * cm, 0.9 * cm, f"стр. {doc.page}")
     canvas.restoreState()
 
 
@@ -145,189 +221,130 @@ def metric_card(styles, value: str, label: str, width: float) -> Table:
         colWidths=[width],
     )
     t.setStyle(TableStyle([
-        ("BACKGROUND", (0, 0), (-1, -1), BG_SIDEBAR),
+        ("BACKGROUND", (0, 0), (-1, -1), BG_LIGHT),
         ("BOX", (0, 0), (-1, -1), 0.5, RULE),
+        ("LEFTPADDING", (0, 0), (-1, -1), 6),
+        ("RIGHTPADDING", (0, 0), (-1, -1), 6),
+        ("TOPPADDING", (0, 0), (-1, 0), 5),
+        ("BOTTOMPADDING", (0, -1), (-1, -1), 5),
+    ]))
+    return t
+
+
+def panel_box(content: list, bg: colors.Color, border: colors.Color, border_w: float = 1) -> Table:
+    t = Table([[item] for item in content], colWidths=[CONTENT_WIDTH], hAlign="LEFT")
+    t.setStyle(TableStyle([
+        ("BACKGROUND", (0, 0), (-1, -1), bg),
+        ("BOX", (0, 0), (-1, -1), border_w, border),
         ("LEFTPADDING", (0, 0), (-1, -1), 8),
         ("RIGHTPADDING", (0, 0), (-1, -1), 8),
-        ("TOPPADDING", (0, 0), (-1, 0), 7),
-        ("BOTTOMPADDING", (0, -1), (-1, -1), 7),
+        ("TOPPADDING", (0, 0), (-1, 0), 6),
+        ("BOTTOMPADDING", (0, -1), (-1, -1), 6),
     ]))
     return t
 
 
 def skill_matrix(styles, rows: list[tuple[str, str]]) -> Table:
     data = [[Paragraph(cat, styles["stack_cat"]), Paragraph(val, styles["stack_val"])] for cat, val in rows]
-    t = Table(data, colWidths=[3.2 * cm, 13.8 * cm], hAlign="LEFT")
+    t = Table(data, colWidths=[3.0 * cm, 14.0 * cm], hAlign="LEFT")
     t.setStyle(TableStyle([
-        ("BACKGROUND", (0, 0), (-1, -1), colors.HexColor("#EEF2F7")),
+        ("BACKGROUND", (0, 0), (-1, -1), BG_SKILLS),
         ("BOX", (0, 0), (-1, -1), 0.25, RULE),
         ("INNERGRID", (0, 0), (-1, -1), 0.25, RULE),
         ("VALIGN", (0, 0), (-1, -1), "TOP"),
-        ("LEFTPADDING", (0, 0), (-1, -1), 6),
-        ("RIGHTPADDING", (0, 0), (-1, -1), 6),
-        ("TOPPADDING", (0, 0), (-1, -1), 4),
-        ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
+        ("LEFTPADDING", (0, 0), (-1, -1), 5),
+        ("RIGHTPADDING", (0, 0), (-1, -1), 5),
+        ("TOPPADDING", (0, 0), (-1, -1), 3),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 3),
     ]))
     return t
 
 
-def hooks_panel(styles, hooks: list[str]) -> Table:
-    rows = [[Paragraph(f"<bullet>&bull;</bullet> {text}", styles["bullet"])] for text in hooks]
-    t = Table(rows, colWidths=[17 * cm], hAlign="LEFT")
-    t.setStyle(TableStyle([
-        ("BACKGROUND", (0, 0), (-1, -1), colors.HexColor("#FFF9E6")),
-        ("BOX", (0, 0), (-1, -1), 1, ACCENT),
-        ("LEFTPADDING", (0, 0), (-1, -1), 8),
-        ("RIGHTPADDING", (0, 0), (-1, -1), 8),
-        ("TOPPADDING", (0, 0), (-1, -1), 5),
-        ("BOTTOMPADDING", (0, 0), (-1, -1), 5),
-    ]))
-    return t
+def bullets_block(styles, items: list[str]) -> list:
+    return [Paragraph(f"<bullet>&bull;</bullet> {text}", styles["bullet"]) for text in items]
 
 
-def job_block(styles, company, role, period, context, bullets, results=None, tech_stack=None):
+def job_block(styles, company, role, period, context, bullets, tech_stack=None):
     items = [
         Paragraph(company, styles["job_title"]),
         Paragraph(f"{role}  |  {period}", styles["job_meta"]),
         Paragraph(context, styles["body_small"]),
-        Spacer(1, 1),
     ]
-    if bullets:
-        items.append(Paragraph("<b>Ключевые достижения:</b>", styles["body_small"]))
-        for b in bullets:
-            items.append(Paragraph(f"<bullet>&bull;</bullet> {b}", styles["bullet"]))
-    if results:
-        items.append(Spacer(1, 2))
-        items.append(Paragraph("<b>Результат:</b>", styles["body_small"]))
-        for r in results:
-            items.append(Paragraph(f"<bullet>&bull;</bullet> {r}", styles["bullet"]))
+    items.extend(bullets_block(styles, bullets))
     if tech_stack:
-        items.append(Spacer(1, 2))
-        items.append(Paragraph(f"<b>Технологии:</b> {tech_stack}", styles["body_small"]))
-    items.append(Spacer(1, 3))
+        items.append(Spacer(1, 1))
+        items.append(Paragraph(f"<b>Стек:</b> {tech_stack}", styles["body_small"]))
+    items.append(Spacer(1, 4))
     return items
 
 
 def build_story(styles) -> list:
     story = [
-        Spacer(1, 0.12 * cm),
+        Spacer(1, 0.08 * cm),
         Paragraph("Чмыхалов Алексей Анатольевич", styles["name"]),
         Paragraph(
-            "Ведущий программист 1С  |  Высоконагруженные системы  |  FinTech, Kafka, MS SQL",
+            "Ведущий программист 1С  |  FinTech  |  High-load  |  MS SQL  |  Kafka",
             styles["title"],
         ),
         Paragraph(
-            "Профессия HH: Программист, разработчик  |  Cursor  |  Финтех · Высоконагруженные системы",
+            "Cursor + ИИ  |  1С:Предприятие 8.3  |  БСП  |  ДУ  |  брокер  |  депозитарий",
             styles["contact"],
         ),
         Paragraph(
-            "+7 (915) 015-74-44  |  a.chmihalov@yandex.ru  |  Москва  |  Гибрид / Удаленка",
+            "+7 (915) 015-74-44  |  a.chmihalov@yandex.ru  |  Москва  |  гибрид / удаленка",
             styles["contact"],
         ),
-        Spacer(1, 0.45 * cm),
+        Spacer(1, 0.3 * cm),
     ]
 
-    story.append(Paragraph("КЛЮЧЕВЫЕ ПРЕИМУЩЕСТВА", styles["section"]))
-    story.append(Paragraph(
-        "<i>Совпадение с тем, что HR и ATS ищут в первые 7 секунд (hh.ru, форумы 1С, 2026)</i>",
-        styles["body_small"],
-    ))
-    story.append(hooks_panel(styles, [
-        "<b>25+ лет, 20+ на 1С 8.3</b> — уровень Senior/Lead; стабильная карьера в 1С без смены профессии",
-        "<b>Сертификаты 1С:</b> ERP (Профессионал + Спец-консультант), УПП, Платформа 8, "
-        "Руководитель проекта — ключевой маркер для HR и автоматического отбора",
-        "<b>Конфигурации:</b> УПП, УТ, ЗУП, ERP + финтех (брокер, депозитарий, ДУ) — "
-        "закрывает большинство фильтров вакансий",
-        "<b>Интеграции 15+ лет:</b> Kafka, HTTP/REST, НРД, обмены — топ-требование "
-        "Senior-вакансий в банках и финтехе",
-        "<b>Оптимизация high-load:</b> MS SQL, профилирование, ×3 ускорение критичного пути, "
-        "портфель 100 000 договоров — редкий масштаб для 1С",
-        "<b>Работодатели:</b> ВТБ (системно значимый банк), БКС, ВИМ — финтех, не «общий IT»",
-        "<b>Современный процесс:</b> Vanessa Automation, Git, SonarQube, БСП, расширения; "
-        "с 2026 — полный цикл в <b>Cursor</b> (ИИ-ассистенты)",
-        "<b>Руководитель команды до 10 чел.</b> — готов к ведущей и Lead-позиции",
-    ]))
-    story.append(Spacer(1, 0.15 * cm))
+    story.append(panel_box([
+        Paragraph("CURSOR + ИИ — ОСНОВНОЙ РЕЖИМ РАБОТЫ", styles["highlight_title"]),
+        Paragraph(
+            "<b>100% разработки и аналитики</b> в IDE Cursor с ИИ: постановки, ТЗ, код 1С, "
+            "ревью, автотесты, документация, замеры «было/стало» — полный цикл с 2026 года.",
+            styles["highlight_body"],
+        ),
+    ], CURSOR_BG, CURSOR_BORDER, 2))
+    story.append(Spacer(1, 0.1 * cm))
 
-    story.append(Paragraph("О СЕБЕ", styles["section"]))
+    story.append(Paragraph("ПРОФЕССИОНАЛЬНОЕ РЕЗЮМЕ", styles["section"]))
     story.extend([
         Paragraph(
-            "<b>С 2026 года вся аналитика и разработка ведутся в среде Cursor:</b> разбор задач, "
-            "проектирование, код, ревью, автотесты и замеры «было/стало» с ИИ-ассистентами "
-            "при соблюдении SonarQube.",
+            "<b>Ведущий программист 1С, 25+ лет (20+ на платформе 8.3).</b> "
+            "Специализация — high-load FinTech: доверительное управление, брокер, депозитарий. "
+            "Уникальная модель: <b>весь цикл в Cursor + ИИ</b> — от постановки до промышленного "
+            "кода с регрессией на копии ПРОД.",
             styles["summary"],
         ),
         Paragraph(
-            "<b>Ведущий программист 1С и архитектор решений, 25+ лет (20+ на 8.x).</b> "
-            "Всю карьеру — проектирование и развитие учетных систем: корпоративные внедрения "
-            "УПП/УТ/ЗУП, брокер и депозитарий (ВТБ, БКС), интеграции Kafka/HTTP/НРД. "
-            "<b>Сейчас (ВИМ):</b> оптимизация высоконагруженного ландшафта доверительного "
-            "управления на портфеле до 100 000 договоров — массовые регламенты, "
-            "параллельные конвейеры расчетов, ускорение критичного пути закрытия дня "
-            "примерно <b>в 3 раза</b>.",
-            styles["summary"],
-        ),
-        Paragraph(
-            "Сильные стороны: архитектура интеграций, оптимизация запросов и регламентов "
-            "в MS SQL, нагрузочные испытания, замеры «было/стало», постановки вендору. "
-            "Руководил командой до 10 чел. Стек: 8.3, БСП, Kafka, HTTP, MS SQL, "
-            "Vanessa, Git, <b>Cursor</b>.",
+            "<b>Главный результат (ВИМ, 2025-н.в.):</b> оптимизация сквозного контура розницы "
+            "(ДУ, мидл-офис, финконтур) на портфеле до 100 000 договоров — MV/WAP ~x8, "
+            "отчет 431 ~x8,6, закрытие периода ~x3, 100 000 сделок в SLA 2 ч. "
+            "Карьера: интеграции ВТБ/БКС (Kafka, HTTP, НРД), корпоративные УПП/УТ/ЗУП. "
+            "Сертификаты ERP, УПП, Платформа 8, РП. Руководил командой до 10 чел.",
             styles["summary"],
         ),
     ])
-    story.append(Spacer(1, 0.12 * cm))
 
-    mw = 3.9 * cm
+    mw = 3.35 * cm
+    story.append(Spacer(1, 0.08 * cm))
     story.append(Paragraph("КЛЮЧЕВЫЕ ПОКАЗАТЕЛИ", styles["section"]))
     story.append(Table([[
-        metric_card(styles, "25+", "лет: архитектура и интеграции", mw),
-        metric_card(styles, "100 000", "договоров — текущий масштаб", mw),
-        metric_card(styles, "×3", "ускорение критичного пути", mw),
-        metric_card(styles, "2 500", "сотр. — внедрение ЗУП", mw),
-    ]], colWidths=[mw] * 4))
-    story.append(Spacer(1, 0.15 * cm))
+        metric_card(styles, "25+", "лет в 1С, Senior/Lead", mw),
+        metric_card(styles, "100%", "Cursor + ИИ: полный цикл", mw),
+        metric_card(styles, "x8", "MV/WAP и отчет 431", mw),
+        metric_card(styles, "100 000", "сделок в SLA 2 ч", mw),
+        metric_card(styles, "x3", "закрытие периода", mw),
+    ]], colWidths=[mw] * 5))
+    story.append(Spacer(1, 0.08 * cm))
 
-    story.append(Paragraph("КЛЮЧЕВЫЕ ДОСТИЖЕНИЯ ДЛЯ БИЗНЕСА", styles["section"]))
+    story.append(Paragraph("ФЛАГМАНСКИЕ РЕЗУЛЬТАТЫ (STAR)", styles["section"]))
+    story.extend(bullets_block(styles, FLAGSHIP_RESULTS))
+    story.append(Spacer(1, 0.08 * cm))
 
-    project_blocks = [
-        (
-            "<b>Сейчас — оптимизация высоконагруженных систем (ВИМ):</b> ускорил массовые "
-            "регламенты и расчеты на критичном пути закрытия дня при портфеле до 100 000 "
-            "договоров; внедрил параллельные конвейеры тяжелых операций; операционное окно "
-            "и закрытие периода укладываются в регламент."
-        ),
-        (
-            "<b>Карьера — интеграции и архитектура (ВТБ, БКС):</b> построил контур брокера "
-            "и депозитария с биржей, НРД и поставщиками данных; ежедневные операции "
-            "без остановки торгового дня; запуск брокерского бэк-офиса ОАЭ."
-        ),
-        (
-            "<b>Карьера — корпоративные системы (2000–2016):</b> внедрения УПП/УТ/ЗУП "
-            "на производстве и в рознице: 2 500 сотрудников, 5–7 филиалов, 80–140 "
-            "пользователей; опубликованное решение на 1c.ru."
-        ),
-        (
-            "<b>Надежность и масштаб:</b> нагрузочные испытания, стабилизация вечерних "
-            "регламентов, согласованный обмен между контурами ландшафта; приемка "
-            "доработок у вендора с регрессией на копии ПРОД."
-        ),
-    ]
-    for block in project_blocks:
-        story.append(Paragraph(f"<bullet>&bull;</bullet> {block}", styles["bullet"]))
-    story.append(Spacer(1, 0.12 * cm))
-
-    story.append(Paragraph("ПРОФЕССИОНАЛЬНЫЕ НАВЫКИ", styles["section"]))
-    story.append(skill_matrix(styles, [
-        ("Оптимизация", "высоконагруженные системы, массовые регламенты, параллельные "
-         "конвейеры, профилирование, нагрузочные испытания, замеры «было/стало»"),
-        ("Платформа 1С", "8.3 (20+ лет), расширения, БСП, длительные операции, СКД, запросы"),
-        ("Интеграции", "Kafka, HTTP/REST, SOAP, НРД, RuData, биржа, обмены — 15+ лет"),
-        ("СУБД", "MS SQL (15+ лет): оптимизация запросов и регламентов, сверки 1С и SQL"),
-        ("Корпоративный опыт", "УПП, УТ, ЗУП, ERP, внедрения на производстве и в рознице"),
-        ("Качество", "Vanessa, SonarQube, Git, ревью кода, регрессия на копии ПРОД, Cursor"),
-        ("Сертификаты", "1С: ERP (Проф + Спец-консультант), УПП, Платформа 8, РП, 7.7"),
-    ]))
-    story.append(Spacer(1, 0.15 * cm))
+    story.append(Paragraph("КЛЮЧЕВЫЕ НАВЫКИ", styles["section"]))
+    story.append(skill_matrix(styles, SKILL_ROWS))
+    story.append(Spacer(1, 0.08 * cm))
 
     story.append(Paragraph("ОПЫТ РАБОТЫ", styles["section"]))
     story.extend(job_block(
@@ -335,20 +352,18 @@ def build_story(styles) -> list:
         "АО ВИМ Инвестиции  |  Москва",
         "Ведущий программист 1С",
         "июль 2025 — настоящее время",
-        "Оптимизация высоконагруженного ландшафта доверительного управления "
-        "(4 конфигурации, портфель до 100 000 договоров розницы).",
+        "High-load ландшафт ДУ 1.5, мидл-офис и финконтур; портфель до 100 000 договоров розницы.",
         [
-            "Провел профилирование и оптимизацию массовых регламентов на критичном пути "
-            "закрытия дня. <b>Результат:</b> ускорение ключевых операций примерно в 3 раза, "
-            "операционное окно выдерживается при росте портфеля.",
-            "Спроектировал параллельные конвейеры для тяжелых массовых расчетов. "
-            "<b>Результат:</b> длительные операции не блокируют закрытие дня и периода.",
-            "Организовал нагрузочные испытания и стабилизацию вечерних регламентов. "
-            "<b>Результат:</b> ландшафт готов к дальнейшему росту нагрузки.",
-            "Веду постановки, ревью и приемку доработок вендора; разработка в среде "
-            "<b>Cursor</b>.",
+            "Веду <b>100% аналитики и разработки в Cursor + ИИ</b>: постановки, код, ревью, "
+            "тесты, документация, замеры производительности.",
+            "Оптимизировал вечерние регламенты ДУ: 4 ч 25 мин -> 2 ч 43 мин (-38%). "
+            "<b>Результат:</b> окно закрытия дня выдерживается при росте портфеля.",
+            "Ускорил регл. отчет 431 (1 ч 42 мин -> 12 мин, ~x8,6) и исполнение 100 000 сделок "
+            "(SLA 2 ч). Стабилизировал кластер: пакеты по 3 000 дог., пик памяти ~x5,7 ниже.",
+            "Сократил пересчет MV/WAP розницы ~4 ч -> ~30 мин (~x8); ускорил закрытие периода "
+            "ФИН ~x3; параллельный НДФЛ и перепроведение до 30 000 сделок.",
         ],
-        tech_stack="1С 8.3, БСП, MS SQL, Kafka, HTTP, профилировщик, Vanessa, Git, Cursor",
+        tech_stack="Cursor + ИИ, 1С:Предприятие 8.3, БСП, MS SQL, Kafka, HTTP, Vanessa, Git",
     ))
 
     story.extend(job_block(
@@ -356,26 +371,25 @@ def build_story(styles) -> list:
         "ООО СБ-Брокер / НРБ банк (группа ВТБ)  |  Москва",
         "Ведущий программист 1С",
         "октябрь 2021 — апрель 2026",
-        "Бэк-офис брокера и депозитарий в системно значимой финансовой организации.",
+        "Бэк-офис брокера и депозитарий, системно значимая финансовая организация.",
         [
-            "Спроектировал интеграционный контур с биржей, НРД и поставщиками рыночных "
-            "данных (Kafka, HTTP). <b>Результат:</b> ежедневные операции без остановки "
-            "торгового дня.",
-            "Разработал сверки 1С с MS SQL, оптимизировал тяжелые запросы отчетности. "
+            "Спроектировал интеграции с биржей, НРД и поставщиками данных (Kafka, HTTP). "
+            "<b>Результат:</b> ежедневные операции без остановки торгового дня.",
+            "Оптимизировал тяжелые запросы отчетности, сверки 1С с MS SQL. "
             "<b>Результат:</b> стабильная работа при пиковых нагрузках бэк-офиса.",
-            "Внедрил деперсонализацию данных и Vanessa/SonarQube в процесс команды.",
+            "Внедрил Vanessa Automation, SonarQube и деперсонализацию данных в процесс команды.",
         ],
-        tech_stack="1С 8.3, Kafka, HTTP, НРД, RuData, MS SQL, Vanessa, SonarQube",
+        tech_stack="1С:Предприятие 8.3, Kafka, HTTP, НРД, RuData, MS SQL, Vanessa, SonarQube",
     ))
 
     story.extend(job_block(
         styles,
         "БКС-технологии  |  Москва",
-        "Ведущий программист 1С / Руководитель группы (брокер ОАЭ)",
+        "Ведущий программист 1С / Руководитель группы",
         "ноябрь 2016 — сентябрь 2021",
-        "Бэк-офис брокера 8.2/8.3, мультиюрисдикционный контур.",
+        "Бэк-офис брокера 8.2/8.3, мультиюрисдикционный контур (ОАЭ).",
         [
-            "Руководил командой брокера ОАЭ: постановка, ревью, координация с бизнесом.",
+            "Руководил командой брокера ОАЭ (постановка, ревью, координация с бизнесом).",
             "Спроектировал архитектуру доработок для выхода на рынок ОАЭ. "
             "<b>Результат:</b> запуск брокерского бэк-офиса на 1С в согласованные сроки.",
         ],
@@ -384,73 +398,124 @@ def build_story(styles) -> list:
 
     story.extend(job_block(
         styles,
-        "Корпоративные внедрения: торговля и производство  |  2000 — 2016",
+        "Корпоративные внедрения  |  2000 — 2016",
         "Ведущий специалист / РП / техдиректор",
         "ИнфоСофт, Ольвия ТПК, Суматра, ВИКОР, Баядера",
-        "Корпоративные внедрения УПП, УТ, ЗУП на производстве и в дистрибуции.",
+        "УПП, УТ, ЗУП на производстве и в дистрибуции; команда до 10 чел.",
         [
-            "Внедрил ЗУП на 2 500 сотрудников и УПП в 5–7 филиалах (80–140 пользователей). "
+            "Внедрил ЗУП на 2 500 сотрудников и УПП в 5-7 филиалах (80-140 пользователей). "
             "<b>Результат:</b> единый учет на предприятиях с филиальной сетью.",
             "Разработал KPI-зарплату «Обувь России»; ввел УПП на стрелочном заводе. "
             "<b>Результат:</b> опубликованное отраслевое решение на 1c.ru.",
-            "Как техдиректор франчайзи управлял командой до 10 чел.",
         ],
-        tech_stack="УПП, УТ, ЗУП, 7.7/8.x",
+        tech_stack="УПП, УТ, ЗУП, 1С 7.7/8.x",
     ))
 
     bottom = Table([[
+
         Paragraph(
+
             "<b>ОБРАЗОВАНИЕ</b><br/><br/>"
+
             "Высшее, 1999<br/>"
+
             "ДНУЖТ им. В. Лазаряна<br/>"
+
             "ПО ВТ и АС (тех. кибернетика)",
-            styles["body"],
+
+            styles["footer_body"],
+
         ),
+
         Paragraph(
+
             "<b>ПОРТФОЛИО</b><br/><br/>"
+
             "v8.1c.ru/news/newsAbout.jsp?id=1910<br/>"
+
             "1c.ru/.../solution.jsp?SolutionID=99734<br/><br/>"
+
             "<b>ЯЗЫКИ</b><br/>"
+
             "RU — родной | UA — C2 | EN — техдокументация<br/><br/>"
-            "<b>ЖЕЛАЕМАЯ ДОЛЖНОСТЬ</b><br/>"
-            "Ведущий программист 1С<br/>"
-            "Высоконагруженные системы · FinTech<br/>"
-            "Профессия HH: Программист, разработчик<br/>"
-            "финтех · банк · доверительное управление<br/>"
-            "от <b>650 000</b> руб. на руки, гибрид / удаленка, Москва",
-            styles["body"],
+
+            "<b>HH.RU</b><br/>"
+
+            "Должность: Ведущий программист 1С<br/>"
+
+            "Профессия: Программист, разработчик<br/>"
+
+            "от <b>650 000</b> руб. на руки, гибрид / удаленка",
+
+            styles["footer_body"],
+
         ),
+
     ]], colWidths=[8.5 * cm, 8.5 * cm])
+
     bottom.setStyle(TableStyle([
+
         ("VALIGN", (0, 0), (-1, -1), "TOP"),
+
         ("LEFTPADDING", (0, 0), (-1, -1), 0),
+
         ("RIGHTPADDING", (0, 0), (-1, -1), 8),
+
     ]))
+
     story.append(Spacer(1, 2))
+
     story.append(bottom)
+
     return story
 
 
+
+
+
 def main() -> None:
+
     regular, bold, italic = register_fonts()
+
     styles = build_styles(regular, bold, italic)
 
+
+
     doc = BaseDocTemplate(
+
         str(OUTPUT_FILE),
+
         pagesize=A4,
+
         leftMargin=1.5 * cm,
+
         rightMargin=1.5 * cm,
-        topMargin=3.3 * cm,
-        bottomMargin=1.6 * cm,
+
+        topMargin=3.15 * cm,
+
+        bottomMargin=1.5 * cm,
+
         title="Chmykhalov Alexey - Resume 2026",
+
         author="Alexey Chmykhalov",
+
     )
+
     frame = Frame(doc.leftMargin, doc.bottomMargin, doc.width, doc.height, id="main")
+
     doc.addPageTemplates([PageTemplate(id="resume", frames=[frame], onPage=draw_header, onPageEnd=draw_footer)])
 
+
+
     doc.build(build_story(styles))
+
     print(f"OK: {OUTPUT_FILE}")
 
 
+
+
+
 if __name__ == "__main__":
+
     main()
+
