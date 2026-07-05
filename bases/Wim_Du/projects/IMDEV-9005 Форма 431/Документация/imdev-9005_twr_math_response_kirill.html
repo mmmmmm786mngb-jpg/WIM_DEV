@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>IMDEV-9005 — ответ по математике TWR</title>
+<style>
+  * { box-sizing: border-box; }
+  body { font-family: 'Segoe UI', Arial, sans-serif; line-height: 1.65; color: #2c3e50;
+         max-width: 960px; margin: 0 auto; padding: 24px; background: #f5f7fa; }
+  h1 { color: #1a2b48; font-size: 24px; border-bottom: 3px solid #17a2b8; padding-bottom: 10px; }
+  h2 { color: #17a2b8; font-size: 18px; margin-top: 28px; border-left: 4px solid #17a2b8; padding-left: 12px; }
+  h3 { color: #1a2b48; font-size: 15px; margin-top: 18px; }
+  .card { background: #fff; border-radius: 8px; padding: 18px 22px; margin: 14px 0;
+          box-shadow: 0 1px 4px rgba(0,0,0,0.08); }
+  .muted { color: #6b7785; font-size: 13px; }
+  .quote { background: #f0f4f8; border-left: 4px solid #6c757d; padding: 14px 18px;
+            font-style: italic; color: #495057; margin: 12px 0; border-radius: 0 6px 6px 0; }
+  .quote-meta { font-style: normal; font-size: 12px; color: #868e96; margin-top: 8px; }
+  code { background: #eef1f4; padding: 2px 6px; border-radius: 4px; font-family: Consolas, monospace; font-size: 13px; }
+  pre { margin: 0; padding: 14px 16px; border-radius: 6px; overflow-x: auto;
+        font-family: Consolas, 'Courier New', monospace; font-size: 12.5px; line-height: 1.5;
+        white-space: pre-wrap; word-break: break-word; }
+  .code-bilo { background: #ffe8cc; border: 2px solid #ff9800; }
+  .code-bilo-label { background: #ff9800; color: #fff; font-weight: 700; font-size: 12px;
+                     display: inline-block; padding: 4px 12px; border-radius: 6px 6px 0 0; margin-bottom: -2px; }
+  .code-stalo { background: #e8f5e9; border: 2px solid #66bb6a; }
+  .code-stalo-label { background: #43a047; color: #fff; font-weight: 700; font-size: 12px;
+                      display: inline-block; padding: 4px 12px; border-radius: 6px 6px 0 0; margin-bottom: -2px; }
+  .ok { background: #eafaf1; border-left: 4px solid #28a745; }
+  .info { background: #eaf6f8; border-left: 4px solid #17a2b8; }
+  table { width: 100%; border-collapse: collapse; margin: 10px 0; font-size: 13px; }
+  th, td { border: 1px solid #dfe3e8; padding: 7px 10px; text-align: left; vertical-align: top; }
+  th { background: #1a2b48; color: #fff; }
+  tr:nth-child(even) { background: #f7f9fb; }
+  .verdict-ok { background: #d4edda; color: #155724; padding: 10px 14px; border-radius: 6px;
+                font-weight: 600; border: 1px solid #c3e6cb; }
+  .verdict-warn { background: #fff3cd; color: #856404; padding: 10px 14px; border-radius: 6px;
+                  font-weight: 600; border: 1px solid #ffeeba; }
+  .proposal-hero { background: linear-gradient(135deg, #e3f2fd 0%, #e8f5e9 100%);
+                   border: 2px solid #17a2b8; border-radius: 12px; padding: 28px 32px;
+                   margin: 18px 0 28px; box-shadow: 0 4px 14px rgba(23,162,184,0.15); }
+  .proposal-hero .essence { font-size: 20px; line-height: 1.5; color: #1a2b48; font-weight: 700;
+                            margin: 0 0 14px; }
+  .proposal-hero .detail { font-size: 15px; line-height: 1.6; color: #37474f; margin: 0; }
+  ul { margin: 8px 0; } li { margin: 5px 0; }
+</style>
+</head>
+<body>
+
+<h1>IMDEV-9005: математика TWR и хронологический порядок нарастающего итога</h1>
+<p class="muted">
+  Задача: IMDEV-9005 &nbsp;|&nbsp;
+  Отчет MO: <code>VTBAM_MWR_TWR</code>, функция <code>РасчетTWR</code> &nbsp;|&nbsp;
+  Ответ на замечание по математике TWR &nbsp;|&nbsp; 05.07.2026
+</p>
+
+<h2>Исходное замечание в Jira (IMDEV-9005)</h2>
+<div class="quote">
+  «Перепроверь, пожалуйста, результаты тестирования в части математики. Логика алгоритма TWR такая,
+  что доходность и бенч считаются нарастающим итогом в хронологическом порядке.
+  После твоих правок в массиве <code>СтрокиРазделителя</code> могут быть неупорядоченные записи
+  (индекс эту проблему должен был закрывать). И эта проблема неупорядоченных данных может проявляться
+  рандомно. На каких-то кейсах все ок, а на каких-то будут выбросы доходности (не гладкая функция).»
+  <div class="quote-meta">K. Ikonnikov, Jira, 03.07.2026 19:06</div>
+</div>
+
+<h2>Позиция по сути замечания</h2>
+<div class="card ok">
+  <p><b>Замечание по хронологии нарастающего итога подтверждается анализом алгоритма.</b> TWR по определению — цепочка перемножения периодных
+  коэффициентов <code>Rn</code>; накопленная доходность и бенчмарк должны строиться строго
+  <b>в хронологическом порядке периодов</b> внутри каждого разделителя. Любое нарушение порядка
+  обработки строк дает математически неверный нарастающий итог — в том числе «выбросы» и
+  негладкую кривую доходности.</p>
+</div>
+
+<div class="card info">
+  <h3 style="margin-top:0;">Почему текущий код MO уязвим</h3>
+  <ul>
+    <li>После расчета <code>Rn</code> накопление TWR выполняется циклом по
+      <code>СтрокиРазделителя = MV.НайтиСтроки(...)</code>.</li>
+    <li>Согласно документации платформы 1С, метод <code>НайтиСтроки</code> <b>не гарантирует</b>
+      порядок возвращаемых строк — он зависит от внутренней реализации и может меняться.</li>
+    <li>Попытка «закрыть» порядок через <code>MV.Индексы.Добавить(...)</code> — недокументированная
+      и хрупкая: в конфигурации уже меняли состав индекса (<code>Разделитель, Период</code>
+      &rarr; только <code>Разделитель</code>), без явной гарантии хронологии по периоду.</li>
+    <li>Отсюда поведение «на одних кейсах ок, на других — выбросы»: порядок строк может
+      совпадать с хронологией случайно, а не по контракту алгоритма.</li>
+  </ul>
+  <p><b>Вывод:</b> полагаться на индекс + <code>НайтиСтроки</code> для математики нарастающего итога
+  рискованно. Надежнее явно задать порядок в самом алгоритме.</p>
+</div>
+
+<h2>Предлагаемое решение</h2>
+<div class="proposal-hero">
+  <p class="essence">Перед накоплением TWR явно отсортировать таблицу по разделителю и периоду
+    и пройти по ней один раз — накапливая доходность и бенчмарк в хронологическом порядке.</p>
+  <p class="detail">Порядок периодов задается в коде сортировкой, а не индексом и
+    <code>НайтиСтроки</code>. Расчет вводов/выводов и периодных коэффициентов <code>Rn</code>
+    на каждую дату остается прежним; меняется только способ накопления нарастающего итога.</p>
+</div>
+
+<h3>Накопление TWR — БЫЛО (текущая MO)</h3>
+<div class="code-bilo-label">БЫЛО</div>
+<pre class="code-bilo">//MV.Сортировать("Разделитель, Период");  // закомментировано
+//MV.Индексы.Добавить("Разделитель, Период");
+MV.Индексы.Добавить("Разделитель");
+
+//Расчет TWR
+Для Каждого ТекРазделитель Из Разделители Цикл
+
+    ПараметрыПоискаСтрок = Новый Структура("Разделитель", ТекРазделитель.Ключ);
+    СтрокиРазделителя = MV.НайтиСтроки(ПараметрыПоискаСтрок);
+    // ^ порядок строк НЕ гарантирован платформой
+
+    Rn_Накопленный = 1;
+    Rn_НакопленныйБенчмарк = 1;
+
+    Для Каждого ТекСтрока Из СтрокиРазделителя Цикл
+        Rn_Накопленный = Rn_Накопленный * ТекСтрока.Rn;
+        Rn_НакопленныйБенчмарк = Rn_НакопленныйБенчмарк * ТекСтрока.Rn;
+        ТекСтрока.Доходность = Rn_Накопленный - 1;
+        ТекСтрока.TWR_Бенчмарк = Rn_НакопленныйБенчмарк - 1;
+    КонецЦикла;
+
+КонецЦикла;</pre>
+
+<h3>Накопление TWR — СТАЛО (предлагаемый вариант)</h3>
+<div class="code-stalo-label">СТАЛО</div>
+<pre class="code-stalo">MV.Сортировать("Разделитель, Период");  // явный хронологический порядок
+
+ТекущийРазделитель = "#IMDEV9005_NO_DIVIDER#";  // sentinel, не совпадает с реальным разделителем
+Rn_Накопленный = 1;
+Rn_НакопленныйБенчмарк = 1;
+
+Для Каждого ТекСтрока Из MV Цикл
+    // при смене разделителя сбрасываем накопление — новая цепочка TWR
+
+    Если ТекСтрока.Разделитель &lt;&gt; ТекущийРазделитель Тогда
+        ТекущийРазделитель = ТекСтрока.Разделитель;
+        Rn_Накопленный = 1;
+        Rn_НакопленныйБенчмарк = 1;
+    КонецЕсли;
+
+    Rn_Накопленный = Rn_Накопленный * ТекСтрока.Rn;
+    Rn_НакопленныйБенчмарк = Rn_НакопленныйБенчмарк * ТекСтрока.Rn;
+
+    ТекСтрока.Доходность = Rn_Накопленный - 1;
+    ТекСтрока.TWR_Бенчмарк = Rn_НакопленныйБенчмарк - 1;
+КонецЦикла;</pre>
+
+<div class="card info">
+  <p><b>Что это дает математически:</b> порядок обработки строк = порядок после
+  <code>Сортировать("Разделитель, Период")</code>, то есть хронология по периоду внутри
+  каждого разделителя зафиксирована в коде, а не «надеемся на индекс».</p>
+  <p><b>Что это дает технически:</b> убирается вложенный цикл <code>Разделители</code> +
+  <code>НайтиСтроки</code> (~77% времени узкого места TWR по профилю).</p>
+</div>
+
+<h2>Регрессионное тестирование математики</h2>
+<div class="card">
+  <p>Для проверки эквивалентности (и выявления расхождений из-за порядка) создан внешний отчет:</p>
+  <p><b><code>внСверкиМатематикиРасчетаTWR.erf</code></b></p>
+  <p class="muted">Путь: <code>bases/Wim_Du/projects/IMDEV-9005 Форма 431/Отчеты/</code></p>
+
+  <h3>Как работает</h3>
+  <ol>
+    <li>Пользователь задает период, группировку и список мандатов (как в отчете TWR для формы 431).</li>
+    <li>Отчет получает исходные данные MV через штатный пайплайн MO (<code>VTBAM_MWR_TWR.TWR()</code>).</li>
+    <li>На одних и тех же данных независимо выполняются два алгоритма <code>РасчетTWR</code>:
+      <ul>
+        <li><b>БЫЛО</b> — текущий MO: индекс <code>Разделитель</code> + <code>НайтиСтроки</code>;</li>
+        <li><b>СТАЛО</b> — сортировка по периоду и один проход (код перенесен в отчет);</li>
+      </ul>
+    </li>
+    <li>Сравниваются все строки и все колонки таблицы TWR (10 колонок: Период, Разделитель,
+      MVn, MVn_1, IO, SUM_IO, Rn, Rn_Бенчмарк, Доходность, TWR_Бенчмарк).</li>
+    <li>Формируется компактный табличный документ: <b>сводка</b> + <b>только расхождения</b> (если есть).</li>
+  </ol>
+</div>
+
+<h2>Как выглядит результат для пользователя</h2>
+
+<h3>Сценарий 1 — все совпадает (ожидаемо, если порядок НайтиСтроки случайно верный)</h3>
+<div class="card">
+  <p><b>Заголовок:</b> Сверка математики РасчетTWR (IMDEV-9005)</p>
+  <table>
+    <tr><th>Показатель</th><th>Значение</th></tr>
+    <tr><td>Период</td><td>01.01.2025 - 31.03.2025</td></tr>
+    <tr><td>Группировка</td><td>MANDATE_STRATEGY</td></tr>
+    <tr><td>Мандатов в отборе</td><td>85</td></tr>
+    <tr><td>Разделителей</td><td>210</td></tr>
+    <tr><td>Строк TWR (БЫЛО / СТАЛО)</td><td>1 240 / 1 240</td></tr>
+    <tr><td>Колонок в таблице TWR</td><td>10</td></tr>
+    <tr><td>Ячеек проверено</td><td>12 400</td></tr>
+    <tr><td>Строк совпало полностью</td><td>1 240</td></tr>
+    <tr><td>Расхождений ячеек</td><td>0</td></tr>
+    <tr><td>Время выполнения, сек</td><td>12,450</td></tr>
+  </table>
+  <div class="verdict-ok" style="margin-top:12px;">
+    ИТОГ: все строки и все колонки совпадают (БЫЛО = СТАЛО)
+  </div>
+  <p class="muted" style="margin-top:10px;">Блок «Расхождения» не выводится.</p>
+</div>
+
+<h3>Сценарий 2 — есть расхождения (типично при неверном порядке периодов в БЫЛО)</h3>
+<div class="card">
+  <table>
+    <tr><th>Показатель</th><th>Значение</th></tr>
+    <tr><td>Строк с расхождениями</td><td>2</td></tr>
+    <tr><td>Расхождений ячеек</td><td>3</td></tr>
+    <tr><td>Колонок с расхождениями</td><td>1 (обычно Доходность или TWR_Бенчмарк)</td></tr>
+  </table>
+  <div class="verdict-warn" style="margin-top:12px;">
+    ИТОГ: обнаружены расхождения между алгоритмами БЫЛО и СТАЛО
+  </div>
+  <p style="margin-top:14px;"><b>Таблица «Расхождения»:</b></p>
+  <table>
+    <tr>
+      <th>Разделитель</th>
+      <th>Период</th>
+      <th>Колонка</th>
+      <th>ЗначениеБыло</th>
+      <th>ЗначениеСтало</th>
+    </tr>
+    <tr>
+      <td>М-042 | IS-003</td>
+      <td>20.02.2025</td>
+      <td>Доходность</td>
+      <td>0.0512000000</td>
+      <td>0.0487000000</td>
+    </tr>
+    <tr>
+      <td>М-042 | IS-003</td>
+      <td>21.02.2025</td>
+      <td>TWR_Бенчмарк</td>
+      <td>0.0621000000</td>
+      <td>0.0598000000</td>
+    </tr>
+  </table>
+  <p class="muted">При этом IO, SUM_IO и Rn часто совпадают (расчет периодных коэффициентов не менялся);
+  расходятся накопленные показатели — следствие другого порядка перемножения Rn.</p>
+</div>
+
+<h2>Итог для обсуждения</h2>
+<div class="card ok">
+  <ul>
+    <li>Риск нарушения хронологии при накоплении TWR подтверждается текущей реализацией MO.</li>
+    <li>Индекс + <code>НайтиСтроки</code> не является надежным способом обеспечить этот порядок.</li>
+    <li>Предлагаемый вариант явно сортирует MV и считает TWR в одном проходе — порядок
+      зафиксирован в алгоритме, индекс не нужен.</li>
+    <li>Отчет <code>внСверкиМатематикиРасчетаTWR</code> позволяет на реальных данных MO
+      прогнать регрессию и увидеть, есть ли расхождения между «как сейчас» и «как должно быть
+      по хронологии».</li>
+  </ul>
+</div>
+
+<p class="muted" style="margin-top:24px;">
+  Файлы: патч <code>IMDEV-9005_RaschetTWR_patch_VTBAM_MWR_TWR_block23.bsl</code>;
+  отчет сверки — <code>внСверкиМатематикиРасчетаTWR.erf</code>
+</p>
+
+</body>
+</html>
