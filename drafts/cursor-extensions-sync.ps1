@@ -4,25 +4,12 @@
 .SYNOPSIS
     Eksport i ustanovka rasshirenij Cursor.
 
-.DESCRIPTION
-    Na tekushchem PK:  .\cursor-extensions-sync.ps1 -Export
-    Na novom PK:       .\cursor-extensions-sync.ps1 -Install
-    Posle ustanovki russkogo paketa: perezapustit Cursor
-    (Ctrl+Shift+P -> Configure Display Language -> ru)
-
-.PARAMETER Export
-    Sohranit spisok rasshirenij v cursor-extensions.txt
-
-.PARAMETER Install
-    Ustanovit rasshireniya iz cursor-extensions.txt (po umolchaniyu)
-
-.PARAMETER ListFile
-    Put k fajlu so spiskom (po umolchaniyu: cursor-extensions.txt ryadom so skriptom)
-
 .EXAMPLE
     .\cursor-extensions-sync.ps1 -Export
     .\cursor-extensions-sync.ps1 -Install
     .\cursor-extensions-sync.ps1 -Install -SkipInstalled
+
+    Ili dvoynoy klik: install-cursor-extensions.cmd
 #>
 
 param(
@@ -41,33 +28,82 @@ if (-not $ListFile) {
     $ListFile = Join-Path $ScriptDir "cursor-extensions.txt"
 }
 
-function Get-CursorCli {
-    $cursor = Get-Command cursor -ErrorAction SilentlyContinue
-    if ($cursor) {
-        return @{ Name = "cursor"; Path = $cursor.Source }
+function Find-CursorCli {
+    $candidates = @()
+
+    $cursorCmd = Get-Command cursor -ErrorAction SilentlyContinue
+    if ($cursorCmd) {
+        $candidates += $cursorCmd.Source
     }
 
-    $code = Get-Command code -ErrorAction SilentlyContinue
-    if ($code) {
-        Write-Host "WARN: cursor ne najden, ispolzuetsya code" -ForegroundColor Yellow
-        return @{ Name = "code"; Path = $code.Source }
+    $codeCmd = Get-Command code -ErrorAction SilentlyContinue
+    if ($codeCmd) {
+        $candidates += $codeCmd.Source
     }
 
-    return $null
+    $knownPaths = @(
+        "${env:ProgramFiles}\cursor\resources\app\bin\cursor.cmd",
+        "${env:LocalAppData}\Programs\cursor\resources\app\bin\cursor.cmd",
+        "${env:ProgramFiles}\Cursor\resources\app\bin\cursor.cmd",
+        "${env:LocalAppData}\Programs\Cursor\resources\app\bin\cursor.cmd"
+    )
+
+    foreach ($path in $knownPaths) {
+        if (Test-Path $path) {
+            $candidates += $path
+        }
+    }
+
+    $unique = $candidates | Select-Object -Unique
+    if ($unique.Count -eq 0) {
+        return $null
+    }
+
+    $path = [string]$unique[0]
+    $name = if ($path -match "cursor\.cmd$") { "cursor" } else { "code" }
+    return @{ Name = $name; Path = $path }
 }
 
 function Get-ExtensionLines {
     param([string]$Path)
 
     if (-not (Test-Path $Path)) {
-        throw "Fajl ne najden: $Path"
+        throw "Ne najden fajl so spiskom rasshirenij: $Path"
     }
 
+    $result = New-Object System.Collections.Generic.List[string]
     Get-Content $Path -Encoding UTF8 | ForEach-Object {
         $line = $_.Trim()
         if ($line -and -not $line.StartsWith("#")) {
-            $line
+            $result.Add($line)
         }
+    }
+    return $result
+}
+
+function Invoke-CursorCli {
+    param(
+        [hashtable]$Cli,
+        [string[]]$Args
+    )
+
+    $psi = New-Object System.Diagnostics.ProcessStartInfo
+    $psi.FileName = $Cli.Path
+    $psi.Arguments = ($Args -join " ")
+    $psi.UseShellExecute = $false
+    $psi.RedirectStandardOutput = $true
+    $psi.RedirectStandardError = $true
+    $psi.CreateNoWindow = $true
+
+    $process = [System.Diagnostics.Process]::Start($psi)
+    $stdout = $process.StandardOutput.ReadToEnd()
+    $stderr = $process.StandardError.ReadToEnd()
+    $process.WaitForExit()
+
+    return @{
+        ExitCode = $process.ExitCode
+        StdOut = $stdout
+        StdErr = $stderr
     }
 }
 
@@ -76,29 +112,33 @@ function Export-Extensions {
 
     Write-Host "Eksport rasshirenij v: $Path" -ForegroundColor Cyan
 
-    $output = @(& $Cli.Path --list-extensions --show-versions 2>$null | ForEach-Object { [string]$_ })
-    if ($output.Count -eq 0) {
-        throw "Ne udalos poluchit spisok rasshirenij (pustoj otvet)"
+    $result = Invoke-CursorCli -Cli $Cli -Args @("--list-extensions", "--show-versions")
+    if ($result.ExitCode -ne 0) {
+        throw "Ne udalos poluchit spisok rasshirenij. Oshibka: $($result.StdErr)"
     }
 
-    $lines = @(
-        "# Cursor extensions snapshot"
-        "# Format: publisher.extension@version"
-        "# Updated: $(Get-Date -Format 'yyyy-MM-dd HH:mm')"
-        "# Export: .\cursor-extensions-sync.ps1 -Export"
-        ""
-    )
+    $output = @($result.StdOut -split "`r?`n" | Where-Object { $_.Trim() })
+    if ($output.Count -eq 0) {
+        throw "Spisok rasshirenij pust. Zapustite Cursor i povtorite."
+    }
+
+    $lines = New-Object System.Collections.Generic.List[string]
+    $lines.Add("# Cursor extensions snapshot")
+    $lines.Add("# Format: publisher.extension@version")
+    $lines.Add("# Updated: $(Get-Date -Format 'yyyy-MM-dd HH:mm')")
+    $lines.Add("# Export: .\cursor-extensions-sync.ps1 -Export")
+    $lines.Add("")
 
     foreach ($ext in $output) {
         $ext = $ext.Trim()
         if ($ext) {
-            $lines += $ext
+            $lines.Add($ext)
         }
     }
 
-    $lines += ""
-    [System.IO.File]::WriteAllLines($Path, $lines, [System.Text.UTF8Encoding]::new($false))
-    Write-Host "OK: sohraneno $($lines.Count - 5) rasshirenij" -ForegroundColor Green
+    $lines.Add("")
+    [System.IO.File]::WriteAllLines($Path, $lines.ToArray(), [System.Text.UTF8Encoding]::new($false))
+    Write-Host "OK: sohraneno $($output.Count) rasshirenij" -ForegroundColor Green
 }
 
 function Install-Extensions {
@@ -112,13 +152,15 @@ function Install-Extensions {
 
     $installed = @{}
     if ($OnlyMissing) {
-        $current = & $Cli.Path --list-extensions --show-versions 2>$null
-        foreach ($item in @($current)) {
-            $item = [string]$item
-            $item = $item.Trim()
-            if ($item) {
-                $id = ($item -split "@")[0]
-                $installed[$id] = $true
+        $result = Invoke-CursorCli -Cli $Cli -Args @("--list-extensions", "--show-versions")
+        if ($result.ExitCode -eq 0) {
+            $current = @($result.StdOut -split "`r?`n" | Where-Object { $_.Trim() })
+            foreach ($item in $current) {
+                $item = $item.Trim()
+                if ($item) {
+                    $id = ($item -split "@")[0]
+                    $installed[$id] = $true
+                }
             }
         }
     }
@@ -128,6 +170,7 @@ function Install-Extensions {
     $skip = 0
 
     Write-Host "Ustanovka $($extensions.Count) rasshirenij iz: $Path" -ForegroundColor Cyan
+    Write-Host "CLI: $($Cli.Path)" -ForegroundColor DarkGray
     Write-Host ""
 
     foreach ($ext in $extensions) {
@@ -140,15 +183,20 @@ function Install-Extensions {
         }
 
         Write-Host "  INSTALL: $ext" -ForegroundColor White
-        $null = & $Cli.Path --install-extension $ext --force 2>&1
-        $exitCode = $LASTEXITCODE
+        $result = Invoke-CursorCli -Cli $Cli -Args @("--install-extension", $ext, "--force")
 
-        if ($exitCode -eq 0) {
+        if ($result.ExitCode -eq 0) {
             Write-Host "    OK" -ForegroundColor Green
             $ok++
         }
         else {
-            Write-Host "    FAIL (exit $exitCode)" -ForegroundColor Red
+            $err = ($result.StdErr + " " + $result.StdOut).Trim()
+            if ($err) {
+                Write-Host "    FAIL: $err" -ForegroundColor Red
+            }
+            else {
+                Write-Host "    FAIL (kod $($result.ExitCode))" -ForegroundColor Red
+            }
             $fail++
         }
     }
@@ -160,35 +208,53 @@ function Install-Extensions {
 
     if ($fail -gt 0) {
         Write-Host ""
-        Write-Host "Esli cweijan.vscode-office ne ustanovilsya - on mog byt iz .vsix." -ForegroundColor Yellow
-        Write-Host "Ustanovite vruchnuyu: Extensions -> vscode-office" -ForegroundColor Yellow
+        Write-Host "Chastye prichiny oshibok:" -ForegroundColor Yellow
+        Write-Host "  - net dostupa k internetu / blokirovka marketplejsa na rabochem PK"
+        Write-Host "  - cweijan.vscode-office - ustanovite vruchnuyu cherez Extensions"
+        Write-Host "  - zapustite skript iz terminala Cursor (Terminal -> New Terminal)"
     }
 
     Write-Host ""
     Write-Host "Russkij yazyk menyu:" -ForegroundColor Green
-    Write-Host "  1. Ctrl+Shift+P -> Configure Display Language -> ru"
-    Write-Host "  2. Perezapustit Cursor"
+    Write-Host "  Ctrl+Shift+P -> Configure Display Language -> ru -> Restart"
 }
 
-# --- main ---
+try {
+    $cli = Find-CursorCli
+    if (-not $cli) {
+        Write-Host ""
+        Write-Host "OSHIBKA: Ne najden Cursor CLI." -ForegroundColor Red
+        Write-Host ""
+        Write-Host "Reshenie 1 (luchshe):" -ForegroundColor Yellow
+        Write-Host "  Otkrojte Cursor -> Terminal -> New Terminal"
+        Write-Host "  cd put_k_papke_drafts"
+        Write-Host "  powershell -ExecutionPolicy Bypass -File .\cursor-extensions-sync.ps1 -Install"
+        Write-Host ""
+        Write-Host "Reshenie 2:" -ForegroundColor Yellow
+        Write-Host "  Dvoynoy klik po fajlu install-cursor-extensions.cmd"
+        Write-Host ""
+        exit 1
+    }
 
-$cli = Get-CursorCli
-if (-not $cli) {
-    Write-Host "ERROR: Ne najden cursor ili code v PATH." -ForegroundColor Red
-    Write-Host "Ustanovite Cursor i dobavte v PATH, ili zapustite iz terminala Cursor." -ForegroundColor Red
-    exit 1
-}
+    if ($Export) {
+        Export-Extensions -Cli $cli -Path $ListFile
+        exit 0
+    }
 
-Write-Host "CLI: $($cli.Path)" -ForegroundColor DarkGray
+    if (-not $Install) {
+        $Install = $true
+    }
 
-if ($Export) {
-    Export-Extensions -Cli $cli -Path $ListFile
+    Install-Extensions -Cli $cli -Path $ListFile -OnlyMissing:$SkipInstalled
     exit 0
 }
-
-if (-not $Install) {
-    $Install = $true
+catch {
+    Write-Host ""
+    Write-Host "OSHIBKA: $($_.Exception.Message)" -ForegroundColor Red
+    Write-Host ""
+    Write-Host "Esli v tekste est 'running scripts is disabled':" -ForegroundColor Yellow
+    Write-Host "  Zapuskajte cherez install-cursor-extensions.cmd"
+    Write-Host "  ili: powershell -ExecutionPolicy Bypass -File .\cursor-extensions-sync.ps1 -Install"
+    Write-Host ""
+    exit 1
 }
-
-Install-Extensions -Cli $cli -Path $ListFile -OnlyMissing:$SkipInstalled
-exit 0
