@@ -15,6 +15,16 @@
             --border: #dee2e6;
             --text: #212529;
             --muted: #6c757d;
+            --p1-color: #e67e22;
+            --p1-bg: #fff3e0;
+            --p3-color: #17a2b8;
+            --p3-bg: #d1ecf1;
+            --epf-color: #c0392b;
+            --epf-bg: #fdecea;
+            --platform-color: #6f42c1;
+            --platform-bg: #f3eff8;
+            --cond-color: #868e96;
+            --cond-bg: #f1f3f5;
         }
         * { box-sizing: border-box; }
         body {
@@ -119,6 +129,95 @@
             white-space: pre;
         }
         ul { padding-left: 22px; }
+        /* Дерево вызовов при проведении */
+        .calltree-section { margin: 28px 0; }
+        .calltree-legend {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            margin-bottom: 16px;
+            font-size: 0.88em;
+        }
+        .calltree-legend span {
+            padding: 4px 12px;
+            border-radius: 4px;
+            font-weight: 600;
+        }
+        .leg-p1 { background: var(--p1-bg); color: #b35c00; border: 1px solid var(--p1-color); }
+        .leg-p3 { background: var(--p3-bg); color: #0c6b7a; border: 1px solid var(--p3-color); }
+        .leg-epf { background: var(--epf-bg); color: #922b21; border: 1px solid var(--epf-color); }
+        .leg-platform { background: var(--platform-bg); color: #4a2c7a; border: 1px solid var(--platform-color); }
+        .leg-cond { background: var(--cond-bg); color: var(--cond-color); border: 1px solid #ced4da; }
+        .calltree {
+            font-family: Consolas, "Courier New", monospace;
+            font-size: 0.84em;
+            line-height: 1.65;
+            background: #fff;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 20px 20px 20px 12px;
+            overflow-x: auto;
+        }
+        .ct-line {
+            display: block;
+            padding: 2px 8px 2px 0;
+            border-radius: 4px;
+            margin: 1px 0;
+        }
+        .ct-indent-0 { padding-left: 0; }
+        .ct-indent-1 { padding-left: 20px; border-left: 2px solid #dee2e6; margin-left: 8px; }
+        .ct-indent-2 { padding-left: 40px; border-left: 2px solid #dee2e6; margin-left: 28px; }
+        .ct-indent-3 { padding-left: 60px; border-left: 2px solid #dee2e6; margin-left: 48px; }
+        .ct-indent-4 { padding-left: 80px; border-left: 2px solid #dee2e6; margin-left: 68px; }
+        .ct-indent-5 { padding-left: 100px; border-left: 2px solid #dee2e6; margin-left: 88px; }
+        .ct-indent-6 { padding-left: 120px; border-left: 2px solid #dee2e6; margin-left: 108px; }
+        .ct-indent-7 { padding-left: 140px; border-left: 2px solid #dee2e6; margin-left: 128px; }
+        .ct-epf {
+            background: var(--epf-bg);
+            color: #7b241c;
+            border-left: 4px solid var(--epf-color);
+            font-weight: 600;
+        }
+        .ct-platform {
+            background: var(--platform-bg);
+            color: #4a2c7a;
+            border-left: 4px solid var(--platform-color);
+            font-weight: 600;
+            font-style: italic;
+        }
+        .ct-cond {
+            background: var(--cond-bg);
+            color: #495057;
+            border-left: 3px dashed var(--cond-color);
+        }
+        .ct-p1 {
+            background: var(--p1-bg);
+            color: #7d4e00;
+            border-left: 4px solid var(--p1-color);
+            font-weight: 700;
+        }
+        .ct-p1-query {
+            background: #ff9800;
+            color: #fff;
+            border-left: 4px solid #e65100;
+            font-weight: 700;
+            box-shadow: 0 1px 4px rgba(230, 126, 34, 0.4);
+        }
+        .ct-p3 {
+            background: var(--p3-bg);
+            color: #0a5f6b;
+            border-left: 4px solid var(--p3-color);
+            font-weight: 700;
+        }
+        .ct-p3-query {
+            background: #17a2b8;
+            color: #fff;
+            border-left: 4px solid #0c5460;
+            font-weight: 700;
+            box-shadow: 0 1px 4px rgba(23, 162, 184, 0.4);
+        }
+        .ct-normal { color: #343a40; }
+        .ct-metric { color: var(--muted); font-size: 0.92em; }
     </style>
 </head>
 <body>
@@ -198,14 +297,58 @@
 </table>
 <p class="meta">* Для строки 258 доля 23,1% — чистое время; общее время 500 с (~93% внутри процедуры НКД).</p>
 
-<div class="flow">EPF: Записать(Проведение)  [стр. 258, 754x]
-    |
-    +-- ОбщегоНазначенияДУ.ФормированиеДокументаОтражениеОперацийВРегистрахВУ
-    |       +-- Запрос.Выполнить()  [стр. 2447, 793x, 172 с]
-    |
-    +-- УчетДоходовРасходовСервер.ПодготовитьТаблицуВалютныхОстатковПоДокументу
-            +-- цикл по строкам переоценки
-                    +-- Запрос.Выполнить()  [стр. 1219, 795x, 95 с]</div>
+<h2>Дерево вызовов при проведении одного документа</h2>
+<div class="calltree-section">
+    <div class="calltree-legend">
+        <span class="leg-epf">EPF (без изменений, п.2)</span>
+        <span class="leg-platform">Платформа 1С</span>
+        <span class="leg-cond">Условие</span>
+        <span class="leg-p1">П.1 — медленный запрос, стр. 2447</span>
+        <span class="leg-p3">П.3 — медленный запрос, стр. 1219</span>
+    </div>
+    <div class="calltree">
+        <span class="ct-line ct-indent-0 ct-epf">EPF: внРаспределениеДоходовПоЦеннымБумагам.ObjectModule.СоздатьОперацииПоНКД() [стр. 204]</span>
+        <span class="ct-line ct-indent-1 ct-normal">Для Каждого Стр Из Купон Цикл</span>
+        <span class="ct-line ct-indent-2 ct-epf">ОбОперация.Записать(РежимЗаписиДокумента.Проведение) [стр. 258, п.2]</span>
+
+        <span class="ct-line ct-indent-2 ct-platform">--- ПЛАТФОРМА: проведение документа ОперацияПоСчетуБрокера ---</span>
+
+        <span class="ct-line ct-indent-3 ct-normal">ОперацияПоСчетуБрокера.ObjectModule.ОбработкаПроведения() [стр. 1554]</span>
+        <span class="ct-line ct-indent-4 ct-normal">ПроведениеСервер.ПодготовитьНаборыЗаписейКПроведению()</span>
+        <span class="ct-line ct-indent-4 ct-normal">СформироватьДвиженияЗачисление() [ВидОперации = Зачисление, НКД]</span>
+        <span class="ct-line ct-indent-4 ct-normal">... СформироватьДвиженияЗачислениеУУ, плановые позиции ...</span>
+
+        <span class="ct-line ct-indent-4 ct-cond">ЕСЛИ ПроводитьПереоценку() [стр. 1609]</span>
+        <span class="ct-line ct-indent-5 ct-cond">  (ВалютаРегл &lt;&gt; ВалютаДокумента ИЛИ ВалютаРегл &lt;&gt; ВалютаКорреспондента)</span>
+        <span class="ct-line ct-indent-4 ct-normal">СформироватьПереоценку(Отказ) [стр. 1056]</span>
+        <span class="ct-line ct-indent-5 ct-cond">ЕСЛИ БУ ИЛИ ВУ [стр. 1069]</span>
+        <span class="ct-line ct-indent-5 ct-p3">УчетДоходовРасходовСервер.ПодготовитьТаблицуПереоценкаВалютныхОстатковПоПроводкамДокумента() [стр. 1008]</span>
+        <span class="ct-line ct-indent-6 ct-p3">ПодготовитьТаблицуВалютныхОстатковПоДокументу() [стр. 1026, внутр.]</span>
+        <span class="ct-line ct-indent-7 ct-normal">МоментВремени = Новый МоментВремени(Дата, Ссылка) [стр. 1046]</span>
+        <span class="ct-line ct-indent-7 ct-normal">цикл: Проводки -&gt; ТаблицаДляПереоценки [стр. 1073-1131]</span>
+        <span class="ct-line ct-indent-7 ct-normal">ТаблицаДляПереоценки.Свернуть() [стр. 1137]</span>
+        <span class="ct-line ct-indent-7 ct-normal">цикл: По СтрокаДляПереоценки [стр. 1176]</span>
+        <span class="ct-line ct-indent-7 ct-p3-query">Запрос.Выполнить() *** П.3 МЕДЛЕННО *** [стр. 1219] <span class="ct-metric">~120 мс, Хозрасчетный.Остатки, ДЛЯ ИЗМЕНЕНИЯ</span></span>
+        <span class="ct-line ct-indent-6 ct-normal">ПодготовитьТаблицуПереоценкаВалютныхОстатков() [стр. 1013]</span>
+        <span class="ct-line ct-indent-5 ct-normal">СформироватьДвиженияПереоценкаВалютныхОстатков() [стр. 1072]</span>
+
+        <span class="ct-line ct-indent-4 ct-cond">ЕСЛИ ВУ И Отказ = Ложь [стр. 1613]</span>
+        <span class="ct-line ct-indent-4 ct-p1">ОбщегоНазначенияДУ.ФормированиеДокументаОтражениеОперацийВРегистрахВУ(Ссылка) [стр. 2322]</span>
+        <span class="ct-line ct-indent-5 ct-normal">... расчет НКД, количества, курсов [стр. 2342-2428]</span>
+        <span class="ct-line ct-indent-5 ct-normal">Запрос: Документ.ОтражениеОперацийВРегистрахВУ ГДЕ ДокументОснование = &amp;ДокументОснование [стр. 2437-2445]</span>
+        <span class="ct-line ct-indent-5 ct-p1-query">Запрос.Выполнить() *** П.1 МЕДЛЕННО *** [стр. 2447] <span class="ct-metric">~217 мс, 793x за сессию</span></span>
+        <span class="ct-line ct-indent-5 ct-normal">создание/перезаполнение ОтражениеОперацийВРегистрахВУ [стр. 2451+]</span>
+
+        <span class="ct-line ct-indent-3 ct-platform">--- конец проведения, запись движений в БД ---</span>
+    </div>
+    <p class="meta" style="margin-top:12px;">
+        Порядок внутри одного проведения: сначала <strong style="color:#17a2b8;">п.3</strong> (переоценка, середина обработки),
+        затем <strong style="color:#e67e22;">п.1</strong> (отражение в ВУ, в конце).
+        Оба вызываются <strong>754 раза</strong> — по разу на каждое проведение из EPF.
+    </p>
+</div>
+
+<!-- старое краткое дерево удалено, см. цветное выше -->
 
 <!-- ===== HOTSPOT 1 ===== -->
 <div class="hotspot">
