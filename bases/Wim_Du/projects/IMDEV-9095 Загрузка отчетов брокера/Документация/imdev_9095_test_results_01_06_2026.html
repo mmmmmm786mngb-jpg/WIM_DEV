@@ -1,0 +1,518 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IMDEV-9095 - Результаты тестирования 01.06.2026</title>
+    <style>
+        :root {
+            --success: #28a745;
+            --error: #dc3545;
+            --info: #17a2b8;
+            --warning: #ffc107;
+            --warning-bg: #fff3cd;
+            --info-bg: #d1ecf1;
+            --blue-bg: #e7f3ff;
+            --purple-bg: #f3eff8;
+            --border: #dee2e6;
+            --text: #212529;
+            --muted: #6c757d;
+        }
+        * { box-sizing: border-box; }
+        body {
+            font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.55;
+            color: var(--text);
+            max-width: 1140px;
+            margin: 0 auto;
+            padding: 24px 28px 56px;
+            background: #f8f9fa;
+        }
+        h1, h2, h3 { color: #1a365d; }
+        h1 {
+            border-bottom: 3px solid var(--info);
+            padding-bottom: 10px;
+            font-size: 1.65em;
+        }
+        h2 {
+            margin-top: 36px;
+            border-left: 4px solid var(--info);
+            padding-left: 12px;
+        }
+        h3 { color: #2c5282; margin-top: 20px; }
+        .meta { color: var(--muted); font-size: 0.95em; margin-bottom: 24px; }
+        .card {
+            background: #fff;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 18px 20px;
+            margin: 16px 0;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+        }
+        .card.info { background: var(--info-bg); border-color: #bee5eb; }
+        .card.warn { background: var(--warning-bg); border-color: #ffeeba; }
+        .card.success { background: #d4edda; border-color: #c3e6cb; }
+        .card.error { background: #f8d7da; border-color: #f5c6cb; }
+        .hero-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+            margin: 24px 0;
+        }
+        .stat-box {
+            background: #fff;
+            border-radius: 10px;
+            padding: 20px;
+            text-align: center;
+            border: 1px solid var(--border);
+            box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+        }
+        .stat-box .value {
+            font-size: 2em;
+            font-weight: 700;
+            line-height: 1.2;
+        }
+        .stat-box .label {
+            color: var(--muted);
+            font-size: 0.88em;
+            margin-top: 6px;
+        }
+        .stat-box.before .value { color: var(--error); }
+        .stat-box.after .value { color: var(--success); }
+        .stat-box.delta .value { color: var(--info); }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 12px 0;
+            background: #fff;
+            font-size: 0.9em;
+        }
+        th, td {
+            border: 1px solid var(--border);
+            padding: 9px 11px;
+            text-align: left;
+            vertical-align: top;
+        }
+        th { background: #e9ecef; }
+        tr:nth-child(even) { background: #fafbfc; }
+        .num { text-align: right; font-variant-numeric: tabular-nums; }
+        .good { color: var(--success); font-weight: 600; }
+        .bad { color: var(--error); font-weight: 600; }
+        .neutral { color: var(--muted); }
+        pre {
+            background: #2d3748;
+            color: #e2e8f0;
+            padding: 14px 16px;
+            border-radius: 6px;
+            overflow-x: auto;
+            font-size: 0.82em;
+            line-height: 1.45;
+            white-space: pre-wrap;
+        }
+        code {
+            background: #edf2f7;
+            padding: 1px 5px;
+            border-radius: 3px;
+            font-size: 0.9em;
+        }
+        .tag {
+            display: inline-block;
+            padding: 2px 9px;
+            border-radius: 12px;
+            font-size: 0.76em;
+            font-weight: 600;
+            color: #fff;
+        }
+        .tag-win { background: var(--success); }
+        .tag-loss { background: var(--error); }
+        .tag-neutral { background: var(--muted); }
+        .tag-info { background: var(--info); }
+        .bar-wrap {
+            background: #e9ecef;
+            border-radius: 6px;
+            height: 22px;
+            overflow: hidden;
+            margin: 4px 0;
+        }
+        .bar {
+            height: 100%;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            padding: 0 8px;
+            font-size: 0.75em;
+            font-weight: 600;
+            color: #fff;
+            min-width: 40px;
+        }
+        .bar-before { background: #e74c3c; width: 100%; }
+        .bar-after { background: #27ae60; }
+        .flow {
+            background: var(--blue-bg);
+            border: 1px solid #b8daff;
+            border-radius: 8px;
+            padding: 16px 20px;
+            font-family: Consolas, monospace;
+            font-size: 0.85em;
+            line-height: 1.7;
+        }
+        .verdict {
+            border-left: 5px solid var(--success);
+            background: #fff;
+            padding: 20px 24px;
+            margin: 28px 0;
+            border-radius: 0 8px 8px 0;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.07);
+        }
+        .verdict h2 { margin-top: 0; border: none; padding: 0; color: var(--success); }
+        ul.tight li { margin: 6px 0; }
+        footer {
+            margin-top: 48px;
+            padding-top: 16px;
+            border-top: 1px solid var(--border);
+            color: var(--muted);
+            font-size: 0.85em;
+        }
+    </style>
+</head>
+<body>
+
+<h1>IMDEV-9095: результаты тестирования и замеров производительности</h1>
+<p class="meta">
+    Дата теста: 01.06.2026 |
+    База: <code>AVC_REGR_CLEAN_DU</code> |
+    Сценарий: EPF <code>внРаспределениеДоходовПоЦеннымБумагам</code>, команда «Создать всё» |
+    Источники: <code>Выберем.docx</code>, PFF <code>Замеры_01_06_2026_БЫЛО.pff</code> / <code>СТАЛО.pff</code>
+</p>
+
+<!-- ===== ВВЕДЕНИЕ ===== -->
+<h2>Введение</h2>
+<div class="card info">
+    <p>Задача IMDEV-9095 — ускорить массовое создание операций по счету брокера при распределении доходов по ценным бумагам.
+    Проведено сравнительное тестирование двух конфигураций:</p>
+    <ul class="tight">
+        <li><strong>БЫЛО</strong> — базовая конфигурация без индексации и без расширения <code>zob</code>.</li>
+        <li><strong>СТАЛО</strong> — включена индексация реквизита <code>ДокументОснование</code> документа <code>ОтражениеОперацийВРегистрахВУ</code>
+            (<code>DontIndex</code> &rarr; <code>Index</code>) и подключено расширение <code>zob</code> с блоком <code>ВЫРАЗИТЬ</code> в запросах остатков.</li>
+    </ul>
+    <p>По материалам <code>Выберем.docx</code> отдельно подтверждено: только индексация даёт сокращение времени запроса
+    с ~219 с до ~2 с на том же участке кода (стр. 2447 <code>ОбщегоНазначенияДУ</code>).</p>
+</div>
+
+<!-- ===== ТЕХНОЛОГИЯ ===== -->
+<h2>Технология замеров</h2>
+<div class="card">
+    <h3>1. Платформа и профилировщик</h3>
+    <p>Замеры выполнены встроенным замером производительности 1С (файлы <code>.pff</code>).
+    Каждая строка профиля содержит: модуль, номер строки, код, число вызовов, суммарное и чистое время (с), долю от сессии.</p>
+
+    <h3>2. Параметры тестовой среды</h3>
+    <table>
+        <tr><th>Параметр</th><th>Значение</th></tr>
+        <tr><td>Информационная база</td><td><code>AVC_REGR_CLEAN_DU</code></td></tr>
+        <tr><td>Хост (из PFF)</td><td><code>DMSK6058</code></td></tr>
+        <tr><td>Пользователь</td><td><code>Admin</code></td></tr>
+        <tr><td>Обработка</td><td><code>внРаспределениеДоходовПоЦеннымБумагам.epf</code></td></tr>
+        <tr><td>Операция</td><td>«Создать всё» &rarr; <code>СоздатьВсёНаСервере()</code></td></tr>
+    </table>
+
+    <h3>3. Что менялось между прогонами</h3>
+    <table>
+        <tr><th>Мера</th><th>БЫЛО</th><th>СТАЛО</th><th>Точка в коде</th></tr>
+        <tr>
+            <td>П.1 Индексация</td>
+            <td class="neutral">DontIndex</td>
+            <td class="good">Index</td>
+            <td><code>Документ.ОтражениеОперацийВРегистрахВУ.ДокументОснование</code></td>
+        </tr>
+        <tr>
+            <td>П.3 Расширение zob</td>
+            <td class="neutral">нет</td>
+            <td class="bad">да</td>
+            <td><code>zob_ПодготовитьТаблицуВалютныхОстатковПоДокументу</code>, <code>ВЫРАЗИТЬ</code> в условиях <code>Остатки</code></td>
+        </tr>
+        <tr>
+            <td>П.2 Запись документа</td>
+            <td colspan="3" class="neutral">без изменений (контрольная точка)</td>
+        </tr>
+    </table>
+
+    <h3>4. Ограничения интерпретации</h3>
+    <p>Число проведённых документов НКД в прогонах немного различается (919 vs 963) — сравнение корректно по времени на операцию,
+    но абсолютные секунды могут отличаться на несколько процентов из-за объёма данных.</p>
+</div>
+
+<!-- ===== СТАТИСТИКА ===== -->
+<h2>Сводная статистика</h2>
+
+<div class="hero-stats">
+    <div class="stat-box before">
+        <div class="value">918,5 с</div>
+        <div class="label">БЫЛО: «Создать всё»</div>
+        <div class="label">~15,3 мин</div>
+    </div>
+    <div class="stat-box after">
+        <div class="value">627,7 с</div>
+        <div class="label">СТАЛО: «Создать всё»</div>
+        <div class="label">~10,5 мин</div>
+    </div>
+    <div class="stat-box delta">
+        <div class="value">-31,7%</div>
+        <div class="label">Ускорение</div>
+        <div class="label">-290,8 с (~4,8 мин)</div>
+    </div>
+    <div class="stat-box">
+        <div class="value">~0,65 с</div>
+        <div class="label">СТАЛО: на 1 проведение НКД</div>
+        <div class="label">было ~1,00 с</div>
+    </div>
+</div>
+
+<div class="card">
+    <p><strong>Визуально: время сценария «Создать всё»</strong></p>
+    <p class="neutral" style="font-size:0.85em;margin:4px 0;">БЫЛО (100%)</p>
+    <div class="bar-wrap"><div class="bar bar-before">918,5 с</div></div>
+    <p class="neutral" style="font-size:0.85em;margin:12px 0 4px;">СТАЛО (68,3%)</p>
+    <div class="bar-wrap"><div class="bar bar-after" style="width:68.3%;">627,7 с</div></div>
+</div>
+
+<!-- ===== ДЕТАЛИ ===== -->
+<h2>Детали тестов: ключевые горячие точки</h2>
+
+<table>
+    <thead>
+        <tr>
+            <th>#</th>
+            <th>Участок</th>
+            <th>Модуль / строка</th>
+            <th class="num">Вызовы<br>БЫЛО</th>
+            <th class="num">Время, с<br>БЫЛО</th>
+            <th class="num">Вызовы<br>СТАЛО</th>
+            <th class="num">Время, с<br>СТАЛО</th>
+            <th class="num">Дельта</th>
+            <th>Вердикт</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr>
+            <td>—</td>
+            <td><strong>СоздатьВсёНаСервере</strong></td>
+            <td>EPF, стр. 122</td>
+            <td class="num">1</td>
+            <td class="num">918,5</td>
+            <td class="num">1</td>
+            <td class="num">627,7</td>
+            <td class="num good">-290,8 с (-31,7%)</td>
+            <td><span class="tag tag-win">Итог теста</span></td>
+        </tr>
+        <tr>
+            <td>П.2</td>
+            <td><code>ОбОперация.Записать(Проведение)</code> НКД</td>
+            <td>EPF, стр. 258</td>
+            <td class="num">919</td>
+            <td class="num">845,5</td>
+            <td class="num">963</td>
+            <td class="num">563,1</td>
+            <td class="num good">-282,4 с (-33,4%)</td>
+            <td><span class="tag tag-neutral">Контроль</span></td>
+        </tr>
+        <tr style="background:#d4edda;">
+            <td><strong>П.1</strong></td>
+            <td><code>Запрос.Выполнить()</code> по <code>ДокументОснование</code></td>
+            <td><code>ОбщегоНазначенияДУ</code>, стр. 2447</td>
+            <td class="num">980</td>
+            <td class="num"><strong>249,9</strong></td>
+            <td class="num">1024</td>
+            <td class="num"><strong>2,9</strong></td>
+            <td class="num good"><strong>-247,0 с (-98,8%)</strong></td>
+            <td><span class="tag tag-win">Внедрять</span></td>
+        </tr>
+        <tr>
+            <td>—</td>
+            <td><code>ФормированиеДокументаОтражениеОперацийВРегистрахВУ</code></td>
+            <td><code>ОперацияПоСчетуБрокера</code>, стр. 1614</td>
+            <td class="num">988</td>
+            <td class="num">317,4</td>
+            <td class="num">1032</td>
+            <td class="num">68,6</td>
+            <td class="num good">-248,8 с (-78,4%)</td>
+            <td><span class="tag tag-win">Эффект П.1</span></td>
+        </tr>
+        <tr style="background:#f8d7da;">
+            <td><strong>П.3</strong></td>
+            <td><code>Запрос.Выполнить()</code> к <code>Хозрасчетный.Остатки</code></td>
+            <td>БЫЛО: <code>УчетДоходовРасходовСервер</code> стр. 1219<br>
+                СТАЛО: <code>zob</code> стр. 221</td>
+            <td class="num">789</td>
+            <td class="num">162,1</td>
+            <td class="num">789</td>
+            <td class="num"><strong>186,0</strong></td>
+            <td class="num bad"><strong>+23,8 с (+14,7%)</strong></td>
+            <td><span class="tag tag-loss">Не внедрять</span></td>
+        </tr>
+        <tr>
+            <td>П.3</td>
+            <td>Накладные расходы <code>zob</code> (хелперы)</td>
+            <td><code>zob</code> стр. 211, 215</td>
+            <td class="num">—</td>
+            <td class="num">—</td>
+            <td class="num">1811</td>
+            <td class="num">0,19</td>
+            <td class="num neutral">+0,2 с</td>
+            <td><span class="tag tag-neutral">Пренебрежимо</span></td>
+        </tr>
+        <tr>
+            <td>—</td>
+            <td>Модуль <code>УчетДоходовРасходовСервер</code> (суммарно)</td>
+            <td>все строки PFF</td>
+            <td class="num">111 154</td>
+            <td class="num">394,3</td>
+            <td class="num">157 444</td>
+            <td class="num">440,1</td>
+            <td class="num bad">+45,9 с (+11,6%)</td>
+            <td><span class="tag tag-loss">Регрессия zob</span></td>
+        </tr>
+        <tr>
+            <td>—</td>
+            <td>Модуль <code>ОбщегоНазначенияДУ</code> (суммарно)</td>
+            <td>все строки PFF</td>
+            <td class="num">109 210</td>
+            <td class="num">354,4</td>
+            <td class="num">113 184</td>
+            <td class="num">106,4</td>
+            <td class="num good">-248,1 с (-70,0%)</td>
+            <td><span class="tag tag-win">Индексация</span></td>
+        </tr>
+    </tbody>
+</table>
+
+<h3>П.1: запрос в формировании отражения ВУ (стр. 2447)</h3>
+<div class="card success">
+    <p>Главный подтверждённый выигрыш. Время чистого выполнения запроса:</p>
+    <pre>БЫЛО:  249,91 с  (980 вызовов, 27,2% чистого времени сессии)
+СТАЛО:   2,94 с  (1024 вызова,  0,5% чистого времени сессии)</pre>
+    <p>Отдельный эксперимент из <code>Выберем.docx</code>: <strong>~219 с &rarr; ~2 с</strong> только за счёт индексации
+    <code>ДокументОснование</code> без прочих изменений.</p>
+</div>
+
+<h3>П.3: запрос остатков для переоценки (стр. 1219 / zob 221)</h3>
+<div class="card error">
+    <p>Расширение <code>zob</code> с подстановкой <code>ВЫРАЗИТЬ(...)</code> в условия виртуальной таблицы
+    <code>РегистрБухгалтерии.Хозрасчетный.Остатки</code> <strong>не дало ускорения</strong>:</p>
+    <pre>БЫЛО  (база, стр. 1219): 162,15 с  (789 вызовов)
+СТАЛО (zob,  стр. 221):  185,96 с  (789 вызовов)  -- хуже на 23,8 с</pre>
+    <p>Дополнительные вызовы хелперов <code>zob_ПолучитьТипДляВыразитьСубконто</code> и
+    <code>zob_УстановитьВыразитьДляСубконтоВУсловии</code> составили всего ~0,19 с — узкое место именно в SQL-выполнении,
+    а не в подготовке текста запроса.</p>
+</div>
+
+<h3>Дерево влияния на проведение документа</h3>
+<div class="flow">
+EPF.СоздатьОперацииПоНКД()
+  └─ ОбОперация.Записать(Проведение)                    [П.2: без изменений, -33% за счёт дочерних узлов]
+       └─ ОперацияПоСчетуБрокера.ОбработкаПроведения()
+            ├─ СформироватьПереоценку()
+            │    └─ ПодготовитьТаблицуВалютныхОстатковПоДокументу()
+            │         └─ Запрос.Выполнить()  [П.3: +14,7% ХУЖЕ с zob/ВЫРАЗИТЬ]
+            └─ ФормированиеДокументаОтражениеОперацийВРегистрахВУ()
+                 └─ Запрос.Выполнить() стр.2447  [П.1: -98,8% с индексацией]
+</div>
+
+<!-- ===== ФУНКЦИОНАЛ ===== -->
+<h2>Функциональное тестирование</h2>
+<div class="card info">
+    <p>По документу <code>Выберем.docx</code> проверялись этапы:</p>
+    <ol>
+        <li>Базовый прогон (СТАРАЯ конфигурация).</li>
+        <li>Подключение расширения <code>zob</code>.</li>
+        <li>Отдельно — только индексация <code>ДокументОснование</code> (подтверждён кратный выигрыш на запросе).</li>
+        <li>Сводный тест 01.06.2026: БЫЛО vs СТАЛО.</li>
+    </ol>
+    <p>Функциональных расхождений в данных при сравнении БЫЛО/СТАЛО в отчёте не зафиксировано;
+    критерий успеха замера — время полного сценария при корректном создании операций.</p>
+</div>
+
+<!-- ===== ВОЗМОЖНОСТИ ===== -->
+<h2>Разбор по мерам оптимизации TOP-3</h2>
+
+<table>
+    <thead>
+        <tr>
+            <th>Мера</th>
+            <th>Изменение кода</th>
+            <th>Эффект по PFF</th>
+            <th>Рекомендация</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr style="background:#d4edda;">
+            <td><strong>П.1 Индексация</strong></td>
+            <td>Метаданные: <code>ДокументОснование</code> &rarr; <code>Index</code></td>
+            <td class="good">-247 с на стр. 2447; -70% по модулю <code>ОбщегоНазначенияДУ</code></td>
+            <td><strong>Внедрять в продуктив</strong></td>
+        </tr>
+        <tr>
+            <td>П.2 Проведение EPF</td>
+            <td>Без изменений</td>
+            <td class="neutral">Косвенно быстрее (-33% на <code>Записать</code>)</td>
+            <td>Не трогать</td>
+        </tr>
+        <tr style="background:#f8d7da;">
+            <td><strong>П.3 zob + ВЫРАЗИТЬ</strong></td>
+            <td>Расширение <code>zob</code></td>
+            <td class="bad">+24 с на горячем запросе; +46 с по модулю</td>
+            <td><strong>Не внедрять</strong>; отключить расширение или убрать перехват</td>
+        </tr>
+        <tr>
+            <td>П.3 (перспектива) Кеш остатков</td>
+            <td>Не тестировалось</td>
+            <td class="neutral">Потенциал ~162 с (базовая стр. 1219)</td>
+            <td>Отдельная задача, если нужно дальнейшее ускорение</td>
+        </tr>
+    </tbody>
+</table>
+
+<div class="card warn">
+    <h3 style="margin-top:0;">Декомпозиция выигрыша 290,8 с</h3>
+    <ul class="tight">
+        <li><span class="good">~247 с</span> — индексация <code>ДокументОснование</code> (П.1).</li>
+        <li><span class="bad">~24 с</span> — потери от <code>ВЫРАЗИТЬ</code> в zob (П.3), частично нивелирующие эффект.</li>
+        <li><span class="neutral">Остаток</span> — прочие узлы проведения, обмен данными, курсы валют (в пределах шума прогона).</li>
+    </ul>
+    <p><strong>Гипотеза:</strong> при внедрении только индексации (без zob) ожидаемое время ближе к <strong>~604 с</strong>
+    (~10,0 мин), т.е. ещё ~24 с быстрее текущего СТАЛО.</p>
+</div>
+
+<!-- ===== ВЫВОДЫ ===== -->
+<div class="verdict">
+    <h2>Выводы и рекомендации</h2>
+    <ol>
+        <li><strong>Внедрять только индексацию</strong> реквизита <code>ДокументОснование</code> документа
+            <code>ОтражениеОперацийВРегистрахВУ</code> — подтверждённый и доминирующий эффект (-98,8% на горячем запросе, -31,7% на всём сценарии).</li>
+        <li><strong>Не внедрять расширение zob</strong> с блоком <code>ВЫРАЗИТЬ</code>: горячий запрос к остаткам стал медленнее на 14,7%,
+            суммарно модуль переоценки — на 11,6%.</li>
+        <li>Ускорение с 918 с до 628 с в тесте СТАЛО достигается <strong>преимущественно за счёт индексации</strong>,
+            что совпадает с выводом в <code>Выберем.docx</code>.</li>
+        <li>Для дальнейшей оптимизации П.3 имеет смысл рассматривать <strong>кеш остатков</strong> (бегущий кеш по моменту времени),
+            а не модификацию условий <code>ВЫРАЗИТЬ</code> в тексте запроса.</li>
+        <li>Расширение <code>zob</code> в базе теста следует <strong>отключить</strong> перед продуктивным релизом,
+            если принято решение о внедрении только индексации.</li>
+    </ol>
+</div>
+
+<h2>Файлы и артефакты</h2>
+<table>
+    <tr><th>Файл</th><th>Назначение</th></tr>
+    <tr><td><code>Тестирование/Выберем.docx</code></td><td>Протокол поэтапного тестирования</td></tr>
+    <tr><td><code>Тестирование/Замеры_01_06_2026_БЫЛО.pff</code></td><td>Профиль базовой конфигурации</td></tr>
+    <tr><td><code>Тестирование/Замеры_01_06_2026_СТАЛО.pff</code></td><td>Профиль с индексацией + zob</td></tr>
+    <tr><td><code>Тестирование/reports/zamery_01_06_2026_comparison.json</code></td><td>Машиночитаемое сравнение</td></tr>
+    <tr><td><code>Скрипты/compare_pff_before_after.py</code></td><td>Скрипт повторного анализа</td></tr>
+</table>
+
+<footer>
+    Отчёт сформирован автоматически по результатам анализа PFF 01.06.2026. Проект IMDEV-9095, база Wim_Du.
+</footer>
+
+</body>
+</html>
