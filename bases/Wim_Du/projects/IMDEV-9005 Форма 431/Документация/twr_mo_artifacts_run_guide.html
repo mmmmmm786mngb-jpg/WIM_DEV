@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>IMDEV-9005 — Внешние отчеты и обработки МО с вызовом TWR</title>
+<style>
+  * { box-sizing: border-box; }
+  body { font-family: 'Segoe UI', Arial, sans-serif; line-height: 1.55; color: #2c3e50;
+         max-width: 1200px; margin: 0 auto; padding: 24px; background: #f0f4f8; }
+  h1 { color: #1a2b48; font-size: 26px; border-bottom: 3px solid #17a2b8; padding-bottom: 10px; }
+  h2 { color: #17a2b8; font-size: 20px; margin-top: 32px; border-left: 4px solid #17a2b8; padding-left: 12px; }
+  .intro { background: #eaf6f8; border-left: 4px solid #17a2b8; padding: 14px 18px; margin: 16px 0; border-radius: 6px; }
+  .warn { background: #fff8e1; border-left: 4px solid #f0ad4e; padding: 12px 16px; margin: 16px 0; border-radius: 6px; font-size: 14px; }
+  table { width: 100%; border-collapse: collapse; margin: 14px 0 24px; font-size: 13.5px; background: #fff;
+          box-shadow: 0 1px 4px rgba(0,0,0,0.08); border-radius: 6px; overflow: hidden; }
+  th, td { border: 1px solid #dfe3e8; padding: 10px 12px; text-align: left; vertical-align: top; }
+  th { background: #1a2b48; color: #fff; font-weight: 600; }
+  tr:nth-child(even) { background: #f7f9fb; }
+  code { background: #eef1f4; padding: 1px 5px; border-radius: 3px; font-family: Consolas, monospace; font-size: 12px; }
+  .name { font-weight: 600; color: #1a2b48; white-space: nowrap; }
+  .syn { color: #42526e; }
+  .note { color: #6b7785; font-size: 12px; margin-top: 4px; }
+  .tag-auto { display: inline-block; background: #6554c0; color: #fff; font-size: 10px; padding: 2px 6px; border-radius: 8px; }
+  .tag-manual { display: inline-block; background: #00875a; color: #fff; font-size: 10px; padding: 2px 6px; border-radius: 8px; }
+  .muted { color: #6b7785; font-size: 13px; }
+</style>
+</head>
+<body>
+
+<h1>Внешние отчеты и обработки Wim_Mo с вызовом TWR</h1>
+
+<div class="intro">
+  <p>Список артефактов из <code>C:\1c\Cursor_1c\WORK\Wim_Mo\SRC</code>, в которых TWR реально вызывается
+  через UI ( <code>ВТБ_РасчетДоходностиСервер.TWR()</code> / <code>Отчет.VTBAM_MWR_TWR.TWR()</code>
+  и оптимизируемый <code>РасчетTWR()</code> ). Артефакты с TWR только в мертвом коде исключены.</p>
+  <p class="muted">База: Wim_Mo. Подключение: Дополнительные отчеты и обработки (БСП) или прямое открытие EPF/ERF.</p>
+</div>
+
+<h2>Внешние отчеты (ERF) — 4 шт.</h2>
+
+<table>
+  <thead>
+    <tr>
+      <th style="width:36px">№</th>
+      <th style="width:22%">Имя</th>
+      <th style="width:18%">Синоним</th>
+      <th>Как запустить TWR: что заполнить и что нажать</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>1</td>
+      <td class="name">внОтчетПоДоходности</td>
+      <td class="syn">Отчет по доходности (Шахматка)</td>
+      <td>
+        <span class="tag-manual">выбор TWR</span><br>
+        Открыть отчет через БСП. Заполнить <b>Начало периода</b>, <b>Конец периода</b>, <b>Валюта</b>,
+        списки <b>Мандаты</b> и <b>Стратегии</b>, при необходимости бенчмарк и <b>Тип учета</b>.
+        В поле <b>Тип доходности</b> выбрать <code>TWR</code> (не MWR).
+        Нажать <b>Сформировать</b>.
+      </td>
+    </tr>
+    <tr>
+      <td>2</td>
+      <td class="name">внПриростСтратегийЗаПериодИндекс</td>
+      <td class="syn">Прирост стратегий за период + индекс</td>
+      <td>
+        <span class="tag-manual">флаг TWR</span><br>
+        Указать <b>ДатаОтчетаС</b>, <b>ДатаОтчетаПо</b>, <b>Валюта</b>, <b>Стратегия</b>,
+        списки мандатов (включить/исключить), <b>Тип учета</b>, флаги пассивов.
+        Включить флаг <b>TWR</b> (можно вместе с MWR).
+        Нажать <b>Сформировать</b>.
+      </td>
+    </tr>
+    <tr>
+      <td>3</td>
+      <td class="name">ОтчетПоКорпоративнымКлиентам</td>
+      <td class="syn">Отчет по корпоративным клиентам</td>
+      <td>
+        <span class="tag-auto">TWR по умолчанию</span><br>
+        Заполнить <b>Дата отчета</b>, <b>Валюта</b>, <b>Стратегия</b>, <b>Период</b>,
+        <b>Мандаты</b>, <b>Тип учета</b>, бенчмарк, пассивы, путь сохранения XLS.
+        Отдельного переключателя TWR на форме нет — TWR задается в коде формы автоматически.
+        Нажать <b>Сформировать</b>.
+      </td>
+    </tr>
+    <tr>
+      <td>4</td>
+      <td class="name">внИтогиДоверительногоУправления</td>
+      <td class="syn">Итоги доверительного управления</td>
+      <td>
+        <span class="tag-manual">переключатель TWR</span><br>
+        Заполнить <b>На дату</b>, <b>Валюта</b>, <b>Портфель</b> (или список мандатов),
+        <b>Вариант периода</b>, опции бенчмарка и учета (факт/план).
+        В группе <b>Считать доходность</b> выбрать <code>TWR</code> (варианты: Нет / MWR / TWR).
+        Нажать <b>Сформировать отчет</b>.
+      </td>
+    </tr>
+  </tbody>
+</table>
+
+<h2>Внешние обработки (EPF) — 6 шт.</h2>
+
+<table>
+  <thead>
+    <tr>
+      <th style="width:36px">№</th>
+      <th style="width:22%">Имя</th>
+      <th style="width:18%">Синоним</th>
+      <th>Как запустить TWR: что заполнить и что нажать</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>1</td>
+      <td class="name">внИнформацияОСостоянииПортфеляHNWI</td>
+      <td class="syn">Информация о состоянии портфеля</td>
+      <td>
+        <span class="tag-manual">выбор TWR</span><br>
+        Заполнить <b>Дата отчета</b>, <b>Период формирования</b>, <b>Валюта</b>, <b>Тип учета</b>,
+        флаги пассивов, бенчмарк; выбрать мандаты или клиентов (<b>По бенефициарам</b>).
+        В <b>Тип доходности</b> выбрать <code>TWR</code>.
+        Нажать <b>Сформировать</b>.
+      </td>
+    </tr>
+    <tr>
+      <td>2</td>
+      <td class="name">внКонтрольОтчетаСтатусПортфеляДУ</td>
+      <td class="syn">Контроль отчета Статус портфеля ДУ</td>
+      <td>
+        <span class="tag-auto">TWR при контроле</span><br>
+        На <b>Форме настроек</b> задать пороги, стратегии, мандаты контроля/рассылки.
+        TWR не выбирается вручную — пересчитывается при сверке доходности с отчетом.
+        Нажать <b>Выполнить команду контроль</b> или <b>Сформировать отчет о контролях</b>.
+      </td>
+    </tr>
+    <tr>
+      <td>3</td>
+      <td class="name">внОтчетСтатусПортфеляДУ</td>
+      <td class="syn">Отчет статус портфеля ДУ</td>
+      <td>
+        <span class="tag-manual">выбор TWR</span><br>
+        На <b>Форме клиент</b> (или серверной форме): <b>Дата отчета</b>, <b>Период формирования</b>,
+        <b>Валюта</b>, <b>Тип учета</b>, пассивы, бенчмарк, мандаты/клиенты.
+        В <b>Тип доходности</b> выбрать <code>TWR</code>.
+        Нажать <b>Сформировать</b>.
+        <p class="note">Каталог SRC: <code>внОтчетСтатусПортфеляДУ_epf</code>
+        (вторая копия <code>ОтчетСтатусПортфеляДУ_epf</code> — тот же объект, тот же UUID).</p>
+      </td>
+    </tr>
+    <tr>
+      <td>4</td>
+      <td class="name">внРассылкаКонтрольОтчетаПоКорпКлиентам</td>
+      <td class="syn">Рассылка и контроль отчета по корпоративным клиентам</td>
+      <td>
+        <span class="tag-auto">TWR при контроле</span><br>
+        На <b>Форме настроек</b>: пороги, стратегии, мандаты, e-mail.
+        TWR считается автоматически при контроле расхождений.
+        Нажать <b>Выполнить команду контроль</b>;
+        отчеты — <b>Сформировать отчет о контролях</b> / <b>о рассылке</b>;
+        рассылка — <b>Выполнить команду рассылка</b>.
+      </td>
+    </tr>
+    <tr>
+      <td>5</td>
+      <td class="name">внСводныйОтчетПоДоходностиHNWI</td>
+      <td class="syn">Сводный отчет по доходности HNWI-клиентов</td>
+      <td>
+        <span class="tag-auto">TWR всегда</span><br>
+        Заполнить <b>На дату</b>, <b>Уровень отсечки (руб)</b>, списки <b>Мандаты</b> и <b>Стратегии</b>,
+        опции печати ФИО и бенчмарка.
+        Нажать <b>Сформировать</b> — TWR (gross, за период и с начала года) считается автоматически.
+      </td>
+    </tr>
+    <tr>
+      <td>6</td>
+      <td class="name">ИнформацияОСостоянииПортфеля</td>
+      <td class="syn">Информация о состоянии портфеля</td>
+      <td>
+        <span class="tag-manual">выбор TWR</span><br>
+        Версия HNWI v3. Заполнить дату, период, валюту, мандаты/клиентов, пассивы, бенчмарк.
+        В <b>Тип доходности</b> — <code>TWR</code>. Нажать <b>Сформировать</b>.
+        <p class="note">Каталог: <code>ИнформацияОСостоянииПортфеля(HNWI)_Обр_v3_epf</code></p>
+      </td>
+    </tr>
+  </tbody>
+</table>
+
+<div class="warn">
+  <b>Условные обозначения:</b>
+  <span class="tag-manual">выбор TWR</span> — пользователь явно выбирает TWR на форме;
+  <span class="tag-auto">авто</span> — TWR вызывается без переключателя.
+</div>
+
+<p class="muted" style="margin-top:24px;">
+  Источник: <code>Wim_Mo\SRC\epf</code>, <code>Wim_Mo\SRC\erf</code> &nbsp;|&nbsp;
+  Проект: IMDEV-9005 &nbsp;|&nbsp; 10.07.2026
+</p>
+
+</body>
+</html>

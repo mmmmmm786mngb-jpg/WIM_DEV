@@ -9,6 +9,7 @@
 | [imdev-9005_measurements_before_after.html](imdev-9005_measurements_before_after.html) | **БЫЛО / СТАЛО** — сравнение замеров, МО retail, финальный прогон ДУ, регрессия 0420431 |
 | [imdev-9005_mo_index_section11_benchmark.html](imdev-9005_mo_index_section11_benchmark.html) | **Бизнес-отчет** — исправление индекса MV в МО, связь с разделом 1.1, замеры БЫЛО/СТАЛО |
 | [imdev-9005_final_development_report.html](imdev-9005_final_development_report.html) | **Итоговая разработка** — ДУ: стр. 801/2470/2471; МО: индекс MV по Разделитель |
+| [twr_mo_artifacts_run_guide.html](twr_mo_artifacts_run_guide.html) | **10 EPF/ERF МО с TWR** — синонимы и инструкции запуска на форме |
 | [imdev-9005_optimizations_v120.html](imdev-9005_optimizations_v120.html) | **v1.20** — две оптимизации (TWR/MANDATE_STRATEGY + раздел 1.2), теория и практика |
 | [imdev-9005_optimizations.html](imdev-9005_optimizations.html) | Краткая документация по трем оптимизациям и обоснованию замерами |
 | [mo_twr_benchmark_ui_visibility.html](mo_twr_benchmark_ui_visibility.html) | **TWR_Бенчмарк** — расчет есть, колонки на экране VTBAM нет (UI vs API) |
