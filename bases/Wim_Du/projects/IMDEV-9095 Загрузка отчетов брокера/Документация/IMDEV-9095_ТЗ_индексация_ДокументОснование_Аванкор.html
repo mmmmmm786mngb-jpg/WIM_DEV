@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IMDEV-9095 - ТЗ на индексацию</title>
+    <style>
+        :root {
+            --ok: #28a745;
+            --bad: #dc3545;
+            --info: #17a2b8;
+            --border: #dee2e6;
+            --muted: #6c757d;
+            --bg: #f8f9fa;
+        }
+        * { box-sizing: border-box; }
+        body {
+            font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.5;
+            color: #212529;
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 28px 32px 48px;
+            background: var(--bg);
+        }
+        h1 { font-size: 1.35em; color: #1a365d; border-bottom: 3px solid var(--info); padding-bottom: 10px; }
+        h2 { font-size: 1.1em; color: #1a365d; margin-top: 28px; border-left: 4px solid var(--info); padding-left: 10px; }
+        .header-box {
+            background: #fff;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 18px 22px;
+            margin: 16px 0;
+        }
+        .header-box table { width: 100%; border-collapse: collapse; }
+        .header-box td { padding: 6px 10px 6px 0; vertical-align: top; }
+        .header-box td:first-child { width: 160px; color: var(--muted); font-weight: 600; }
+        .card {
+            background: #fff;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 16px 20px;
+            margin: 12px 0;
+        }
+        .card.ok { background: #d4edda; border-color: #c3e6cb; }
+        table.data {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.92em;
+            margin: 10px 0;
+        }
+        table.data th, table.data td {
+            border: 1px solid var(--border);
+            padding: 8px 10px;
+            text-align: left;
+        }
+        table.data th { background: #e9ecef; }
+        .num { text-align: right; font-variant-numeric: tabular-nums; }
+        pre {
+            background: #2d3748;
+            color: #e2e8f0;
+            padding: 12px 14px;
+            border-radius: 6px;
+            font-size: 0.82em;
+            overflow-x: auto;
+            white-space: pre-wrap;
+        }
+        code { background: #edf2f7; padding: 1px 5px; border-radius: 3px; font-size: 0.9em; }
+        .chart-block {
+            background: #fff;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 16px;
+            margin: 16px 0;
+        }
+        .chart-title { font-weight: 600; margin-bottom: 12px; color: #2c5282; }
+        .chart-img { width: 100%; max-width: 820px; display: block; margin: 0 auto; }
+        ul, ol { margin: 8px 0; padding-left: 22px; }
+        li { margin: 4px 0; }
+        .good { color: var(--ok); font-weight: 600; }
+        footer { margin-top: 32px; font-size: 0.85em; color: var(--muted); border-top: 1px solid var(--border); padding-top: 12px; }
+    </style>
+</head>
+<body>
+
+<h1>Техническое задание</h1>
+
+<div class="header-box">
+    <table>
+        <tr>
+            <td>Тема задачи</td>
+            <td><strong>Включить индексацию реквизита ДокументОснование документа ОтражениеОперацийВРегистрахВУ (ускорение массового проведения операций по счету брокера)</strong></td>
+        </tr>
+        <tr>
+            <td>Номер задачи</td>
+            <td><strong>IMDEV-9095</strong></td>
+        </tr>
+        <tr>
+            <td>Конфигурация</td>
+            <td>1С:Доверительное управление</td>
+        </tr>
+        <tr>
+            <td>Тип изменения</td>
+            <td>Метаданные (без изменения программного кода)</td>
+        </tr>
+        <tr>
+            <td>Основание</td>
+            <td>Замеры производительности (PFF), 01.06.2026</td>
+        </tr>
+    </table>
+</div>
+
+<h2>1. Суть задачи</h2>
+<div class="card">
+    <p>При массовом создании документов <code>ОперацияПоСчетуБрокера</code> (обработка распределения доходов по ценным бумагам, команда «Создать всё») на каждое проведение выполняется поиск существующего документа <code>ОтражениеОперацийВРегистрахВУ</code> по реквизиту <code>ДокументОснование</code>.</p>
+    <p>Реквизит <code>ДокументОснование</code> сейчас <strong>не индексируется</strong> (<code>DontIndex</code>), из-за чего запрос при проведении выполняется медленно. Требуется включить индексацию.</p>
+</div>
+
+<h2>2. Куда вносить изменение</h2>
+<table class="data">
+    <tr><th>Параметр</th><th>Значение</th></tr>
+    <tr><td>Объект метаданных</td><td><code>Документ.ОтражениеОперацийВРегистрахВУ</code></td></tr>
+    <tr><td>Реквизит</td><td><code>ДокументОснование</code> (синоним: «Документ основание»)</td></tr>
+    <tr><td>Файл конфигурации (XML)</td><td><code>Documents/ОтражениеОперацийВРегистрахВУ.xml</code></td></tr>
+    <tr><td>Текущее значение</td><td><code>&lt;Indexing&gt;DontIndex&lt;/Indexing&gt;</code></td></tr>
+    <tr><td>Требуемое значение</td><td><code>&lt;Indexing&gt;Index&lt;/Indexing&gt;</code></td></tr>
+    <tr><td>Затрагиваемый код (не менять)</td><td><code>ОбщийМодуль.ОбщегоНазначенияДУ</code>, процедура <code>ФормированиеДокументаОтражениеОперацийВРегистрахВУ</code>, строка <strong>2447</strong></td></tr>
+</table>
+
+<pre>ВЫБРАТЬ
+    ОтражениеОперацийВРегистрахВУ.Ссылка
+ИЗ
+    Документ.ОтражениеОперацийВРегистрахВУ КАК ОтражениеОперацийВРегистрахВУ
+ГДЕ
+    ОтражениеОперацийВРегистрахВУ.ДокументОснование = &amp;ДокументОснование
+
+Результат = Запрос.Выполнить();  // стр. 2447</pre>
+
+<h2>3. Почему нужно изменение</h2>
+<ul>
+    <li>Запрос вызывается при <strong>каждом проведении</strong> операции по счету брокера с формированием отражения ВУ (~980-1000 раз за один массовый прогон).</li>
+    <li>Без индекса СУБД выполняет полный перебор таблицы документов <code>ОтражениеОперацийВРегистрахВУ</code>.</li>
+    <li>По замерам PFF эта строка занимала <strong>27,2% времени</strong> всего сценария (249,9 с из 918,5 с).</li>
+    <li>После включения индексации в тестовой базе время той же строки сократилось до <strong>2,9 с (0,5% сессии)</strong> — ускорение <strong>в 86 раз (-98,8%)</strong>.</li>
+    <li>Общее время массового сценария сократилось с <strong>15,3 мин до 10,5 мин (-31,7%)</strong>.</li>
+</ul>
+
+<h2>4. Что сделать (объём работ)</h2>
+<ol>
+    <li>Для реквизита <code>Документ.ОтражениеОперацийВРегистрахВУ.ДокументОснование</code> установить индексирование: <code>Index</code>.</li>
+    <li>Программный код <strong>не изменять</strong>.</li>
+    <li>Выполнить обновление конфигурации базы данных (реструктуризация индекса).</li>
+    <li>Передать патч/релиз с описанием изменения в метаданных.</li>
+</ol>
+
+<h2>5. Критерии приемки</h2>
+<ul>
+    <li>В метаданных: <code>ДокументОснование.Indexing = Index</code>.</li>
+    <li>Функциональность формирования <code>ОтражениеОперацийВРегистрахВУ</code> не нарушена.</li>
+    <li>На тестовой базе время выполнения <code>Запрос.Выполнить()</code> (стр. 2447) при массовом проведении — порядка <strong>секунд</strong>, а не сотен секунд.</li>
+</ul>
+
+<h2>6. Результаты замеров</h2>
+<p>Сценарий тестирования: массовое создание операций по счету брокера («Создать всё»). Сравнение до и после включения индексации.</p>
+
+<div class="chart-block">
+    <div class="chart-title">Рис. 1. Время запроса стр. 2447 — до и после индексации</div>
+    <svg class="chart-img" viewBox="0 0 820 260" xmlns="http://www.w3.org/2000/svg">
+        <rect width="820" height="260" fill="#fafbfc"/>
+        <text x="410" y="28" text-anchor="middle" font-size="14" font-weight="600" fill="#1a365d">Запрос.Выполнить() — поиск по ДокументОснование</text>
+        <text x="120" y="58" font-size="12" fill="#6c757d">До (без индекса)</text>
+        <rect x="120" y="68" width="640" height="44" rx="6" fill="#dc3545"/>
+        <text x="130" y="96" font-size="15" font-weight="700" fill="#fff">249,9 с  |  27,2% сессии  |  980 вызовов</text>
+        <text x="120" y="138" font-size="12" fill="#6c757d">После (с индексацией)</text>
+        <rect x="120" y="148" width="8" height="44" rx="2" fill="#28a745"/>
+        <text x="140" y="176" font-size="15" font-weight="700" fill="#28a745">2,9 с  |  0,5% сессии  |  1024 вызова</text>
+        <text x="410" y="220" text-anchor="middle" font-size="18" font-weight="700" fill="#28a745">-98,8%  (ускорение в 86 раз)</text>
+        <text x="410" y="248" text-anchor="middle" font-size="13" fill="#6c757d">Контрольный замер только индексации: ~219 с -&gt; ~2 с</text>
+    </svg>
+</div>
+
+<div class="chart-block">
+    <div class="chart-title">Рис. 2. Время массового сценария «Создать всё»</div>
+    <svg class="chart-img" viewBox="0 0 820 220" xmlns="http://www.w3.org/2000/svg">
+        <rect width="820" height="220" fill="#fafbfc"/>
+        <text x="200" y="100" text-anchor="middle" font-size="13" fill="#fff" font-weight="600">918,5 с</text>
+        <text x="200" y="118" text-anchor="middle" font-size="11" fill="#fff">15,3 мин</text>
+        <text x="200" y="134" text-anchor="middle" font-size="11" fill="#fff">100%</text>
+        <rect x="40" y="50" width="320" height="90" rx="8" fill="#dc3545"/>
+        <text x="200" y="38" text-anchor="middle" font-size="13" font-weight="600" fill="#1a365d">До</text>
+        <text x="580" y="100" text-anchor="middle" font-size="13" fill="#fff" font-weight="600">627,7 с</text>
+        <text x="580" y="118" text-anchor="middle" font-size="11" fill="#fff">10,5 мин</text>
+        <text x="580" y="134" text-anchor="middle" font-size="11" fill="#fff">68,3%</text>
+        <rect x="420" y="50" width="320" height="90" rx="8" fill="#28a745"/>
+        <text x="580" y="38" text-anchor="middle" font-size="13" font-weight="600" fill="#1a365d">После</text>
+        <path d="M 370 95 L 410 95" stroke="#17a2b8" stroke-width="3" marker-end="url(#arrow)"/>
+        <defs><marker id="arrow" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3 z" fill="#17a2b8"/></marker></defs>
+        <text x="410" y="175" text-anchor="middle" font-size="16" font-weight="700" fill="#17a2b8">-31,7%  (-290,8 с)</text>
+        <text x="410" y="198" text-anchor="middle" font-size="12" fill="#6c757d">На одно проведение: 1,00 с -&gt; 0,65 с (-35%)</text>
+    </svg>
+</div>
+
+<div class="chart-block">
+    <div class="chart-title">Рис. 3. Доля горячей строки 2447 в общем времени сценария</div>
+    <svg class="chart-img" viewBox="0 0 820 200" xmlns="http://www.w3.org/2000/svg">
+        <rect width="820" height="200" fill="#fafbfc"/>
+        <text x="30" y="55" font-size="12" fill="#495057">До: стр. 2447</text>
+        <rect x="180" y="38" width="540" height="28" rx="4" fill="#e9ecef"/>
+        <rect x="180" y="38" width="147" height="28" rx="4" fill="#e67e22"/>
+        <text x="730" y="57" font-size="12" font-weight="600" fill="#e67e22">27,2%</text>
+        <text x="30" y="105" font-size="12" fill="#495057">После: стр. 2447</text>
+        <rect x="180" y="88" width="540" height="28" rx="4" fill="#e9ecef"/>
+        <rect x="180" y="88" width="3" height="28" rx="1" fill="#28a745"/>
+        <text x="730" y="105" font-size="12" font-weight="600" fill="#28a745">0,5%</text>
+        <text x="30" y="155" font-size="12" fill="#495057">Формирование отражения ВУ (стр. 1614)</text>
+        <rect x="180" y="138" width="540" height="28" rx="4" fill="#e9ecef"/>
+        <rect x="180" y="138" width="186" height="28" rx="4" fill="#dc3545" opacity="0.7"/>
+        <text x="375" y="157" font-size="11" fill="#fff">317 с (34,6%)</text>
+        <rect x="180" y="138" width="40" height="28" rx="4" fill="#28a745"/>
+        <text x="230" y="157" font-size="11" fill="#28a745">69 с (10,9%)</text>
+    </svg>
+</div>
+
+<div class="chart-block">
+    <div class="chart-title">Рис. 4. Сводная таблица замеров</div>
+    <table class="data">
+        <thead>
+            <tr>
+                <th>Показатель</th>
+                <th class="num">До</th>
+                <th class="num">После</th>
+                <th class="num">Изменение</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>Массовый сценарий «Создать всё»</td>
+                <td class="num">918,5 с (100%)</td>
+                <td class="num">627,7 с (68,3%)</td>
+                <td class="num good">-31,7%</td>
+            </tr>
+            <tr style="background:#d4edda;">
+                <td><strong>Стр. 2447 Запрос.Выполнить()</strong></td>
+                <td class="num">249,9 с (27,2%)</td>
+                <td class="num">2,9 с (0,5%)</td>
+                <td class="num good"><strong>-98,8%</strong></td>
+            </tr>
+            <tr>
+                <td>Формирование отражения ВУ (стр. 1614)</td>
+                <td class="num">317,4 с (34,6%)</td>
+                <td class="num">68,6 с (10,9%)</td>
+                <td class="num good">-78,4%</td>
+            </tr>
+            <tr>
+                <td>Проведение операций по счету брокера</td>
+                <td class="num">845,5 с / ~920 док.</td>
+                <td class="num">563,1 с / ~960 док.</td>
+                <td class="num good">-33,4%</td>
+            </tr>
+        </tbody>
+    </table>
+</div>
+
+<h2>7. Ограничения</h2>
+<ul>
+    <li>Изменяются <strong>только метаданные</strong> указанного реквизита.</li>
+    <li>Программный код модулей конфигурации и внешние обработки <strong>не затрагиваются</strong>.</li>
+</ul>
+
+<div class="card ok">
+    <strong>Резюме:</strong> одно изменение в метаданных — <code>ДокументОснование</code>:
+    <code>DontIndex</code> &rarr; <code>Index</code>. Подтверждённый эффект: ускорение критичного запроса в <strong>86 раз</strong>,
+    сокращение времени массового сценария на <strong>32%</strong>.
+</div>
+
+<footer>
+    IMDEV-9095 | Замеры производительности, 01.06.2026
+</footer>
+
+</body>
+</html>
