@@ -25,7 +25,7 @@ allowed-tools:
 ## Параметры подключения
 
 Прочитай `.v8-project.json` из корня проекта для `v8path` (путь к платформе).
-Если `v8path` не задан — автоопределение: `Get-ChildItem "C:\Program Files\1cv8\*\bin\1cv8.exe" | Sort -Desc | Select -First 1`
+Если `v8path` не задан — скрипт сам попытается определить платформу (`.v8-project.json` → Program Files).
 После создания базы предложи зарегистрировать через `/db-list add`.
 
 ## Команда
@@ -38,7 +38,7 @@ powershell.exe -NoProfile -File ".cursor/skills/db-create/scripts/db-create.ps1"
 
 | Параметр | Обязательный | Описание |
 |----------|:------------:|----------|
-| `-V8Path <путь>` | нет | Каталог bin платформы (или полный путь к 1cv8.exe) |
+| `-V8Path <путь>` | нет | Каталог bin платформы, или полный путь к `1cv8.exe` / `ibcmd.exe` |
 | `-InfoBasePath <путь>` | * | Путь к файловой базе |
 | `-InfoBaseServer <сервер>` | * | Сервер 1С (для серверной базы) |
 | `-InfoBaseRef <имя>` | * | Имя базы на сервере |

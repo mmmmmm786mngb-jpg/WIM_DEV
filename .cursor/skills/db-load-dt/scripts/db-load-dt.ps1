@@ -1,5 +1,6 @@
-﻿# db-load-dt v1.1 — Load 1C information base from DT file
+﻿# db-load-dt v1.5 — Load 1C information base from DT file
 # Source: https://github.com/Nikolay-Shirokov/cc-1c-skills
+# NB: *nix-раскладку платформы (/opt/1cv8/<ver>/1cv8, без .exe) знает только .py-порт — PS на *nix не исполняется.
 <#
 .SYNOPSIS
     Загрузка информационной базы 1С из DT-файла
@@ -102,7 +103,7 @@ if (-not $V8Path) {
         $V8Path = $found.FullName
         Write-Host "Auto-selected platform $($found.Directory.Parent.Name): $V8Path" -ForegroundColor Yellow
     } else {
-        Write-Host "Error: 1cv8.exe not found. Specify -V8Path" -ForegroundColor Red
+        Write-Host "Error: 1C executable not found. Specify -V8Path" -ForegroundColor Red
         exit 1
     }
 }
@@ -111,12 +112,47 @@ if (Test-Path $V8Path -PathType Container) {
 }
 
 if (-not (Test-Path $V8Path)) {
-    Write-Host "Error: 1cv8.exe not found at $V8Path" -ForegroundColor Red
+    Write-Host "Error: 1C executable not found at $V8Path" -ForegroundColor Red
     exit 1
 }
 
+# --- Detect engine (ibcmd vs 1cv8) by exe name ---
+function Invoke-IbcmdProcess {
+    # Run ibcmd non-interactively: a closed stdin pipe (EOF) makes ibcmd's auth prompt
+    # fast-fail instead of hanging. Returns @{ Output; ExitCode }. cp866 decodes ibcmd's
+    # native OEM output. The 1cv8/DESIGNER branch keeps using Start-Process.
+    param([string]$Exe, [string[]]$IbArgs)
+    $psi = New-Object System.Diagnostics.ProcessStartInfo
+    $psi.FileName = $Exe
+    $psi.Arguments = ($IbArgs | ForEach-Object { if ($_ -match '[\s"]') { '"' + ($_ -replace '"', '\"') + '"' } else { $_ } }) -join ' '
+    $psi.UseShellExecute = $false
+    $psi.CreateNoWindow = $true
+    $psi.RedirectStandardInput = $true
+    $psi.RedirectStandardOutput = $true
+    $psi.RedirectStandardError = $true
+    try {
+        $psi.StandardOutputEncoding = [System.Text.Encoding]::GetEncoding(866)
+        $psi.StandardErrorEncoding = [System.Text.Encoding]::GetEncoding(866)
+    } catch {}
+    $p = [System.Diagnostics.Process]::Start($psi)
+    $p.StandardInput.Close()
+    $out = $p.StandardOutput.ReadToEnd()
+    $err = $p.StandardError.ReadToEnd()
+    $p.WaitForExit()
+    if ($err) { $out += $err }
+    return [pscustomobject]@{ Output = $out; ExitCode = $p.ExitCode }
+}
+
+
+$engine = if ((Split-Path $V8Path -Leaf) -match '^ibcmd') { "ibcmd" } else { "1cv8" }
+
 # --- Validate connection ---
-if (-not $InfoBasePath -and (-not $InfoBaseServer -or -not $InfoBaseRef)) {
+if ($engine -eq "ibcmd") {
+    if (-not $InfoBasePath) {
+        Write-Host "Error: ibcmd supports file infobases only (use -InfoBasePath)" -ForegroundColor Red
+        exit 1
+    }
+} elseif (-not $InfoBasePath -and (-not $InfoBaseServer -or -not $InfoBaseRef)) {
     Write-Host "Error: specify -InfoBasePath or -InfoBaseServer + -InfoBaseRef" -ForegroundColor Red
     exit 1
 }
@@ -132,6 +168,29 @@ $tempDir = Join-Path $env:TEMP "db_load_dt_$(Get-Random)"
 New-Item -ItemType Directory -Path $tempDir -Force | Out-Null
 
 try {
+    if ($engine -eq "ibcmd") {
+        # --- ibcmd branch (file infobase only) ---
+        $arguments = @("infobase", "restore", "--db-path=$InfoBasePath")
+        if (-not (Test-Path (Join-Path $InfoBasePath "1Cv8.1CD"))) { $arguments += "--create-database" }
+        if ($UserName) { $arguments += "--user=$UserName" }
+        if ($Password) { $arguments += "--password=$Password" }
+        $arguments += "$InputFile"
+
+        $arguments += "--data=$tempDir"
+        Write-Host "Running: ibcmd $($arguments -join ' ')"
+        $__ib = Invoke-IbcmdProcess $V8Path $arguments
+        $output = $__ib.Output
+        $exitCode = $__ib.ExitCode
+        if ($exitCode -eq 0) {
+            Write-Host "Information base restored successfully from: $InputFile" -ForegroundColor Green
+        } else {
+            Write-Host "Error restoring information base (code: $exitCode)" -ForegroundColor Red
+        }
+        if ($output) { Write-Host ($output | Out-String) }
+        exit $exitCode
+    }
+
+    # --- 1cv8 branch ---
     # --- Build arguments ---
     $arguments = @("DESIGNER")
 

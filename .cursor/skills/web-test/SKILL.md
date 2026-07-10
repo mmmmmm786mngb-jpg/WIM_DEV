@@ -340,6 +340,15 @@ await selectValue('Документ', '0000-000601', { type: 'Реализаци
 
 Also supports DCS labels — auto-enables the paired checkbox.
 
+**Multi-select** — pass an **array** to select several values at once; the field is set to exactly
+that set (replace). Returns `selected: { field, values, notSelected? }` — `values` are the ones
+actually selected; any value the field doesn't offer goes to `notSelected: [{ value, reason }]`
+(the call doesn't throw). Elements take the same forms as `search` (string, or `{ col: value }`).
+```js
+await selectValue('Наименование компании', ['Альфа ООО', 'Бета АО']);
+// selected: { field: 'Наименование компании', values: ['Альфа ООО', 'Бета АО'] }
+```
+
 #### `fillTableRow(fields, opts)` → form state with `filled` (+ optional `notFilled`)
 Fill table row cells via Tab navigation. Value is a plain string, `{ value, type }` for composite-type cells, or `''`/`null` to clear (Shift+F4).
 

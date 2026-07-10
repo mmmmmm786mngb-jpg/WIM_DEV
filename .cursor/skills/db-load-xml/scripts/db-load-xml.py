@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
-# db-load-xml v1.5 — Load 1C configuration from XML files
+# db-load-xml v1.12 — Load 1C configuration from XML files
 # Source: https://github.com/Nikolay-Shirokov/cc-1c-skills
 
 import argparse
+import atexit
 import glob
 import json
 import os
@@ -35,34 +36,67 @@ def _find_project_v8path():
         d = parent
 
 
+def _version_dir(p):
+    """Version dir for both Windows (.../1cv8/<ver>/bin/1cv8.exe) and *nix (.../1cv8/<ver>/1cv8)."""
+    parent = os.path.dirname(p)
+    if os.path.basename(parent).lower() == "bin":
+        parent = os.path.dirname(parent)
+    return os.path.basename(parent)
+
+
 def _version_key(p):
-    """Numeric sort key from version dir name (.../1cv8/<ver>/bin/1cv8.exe)."""
-    ver = os.path.basename(os.path.dirname(os.path.dirname(p)))
-    return [int(x) for x in re.findall(r"\d+", ver)]
+    """Numeric sort key from version dir name."""
+    return [int(x) for x in re.findall(r"\d+", _version_dir(p))]
 
 
 def resolve_v8path(v8path):
-    """Resolve path to 1cv8.exe."""
+    """Resolve path to a 1C executable (1cv8; ibcmd only when given explicitly)."""
     if not v8path:
         v8path = _find_project_v8path()
     if not v8path:
-        candidates = (
-            glob.glob(r"C:\Program Files\1cv8\*\bin\1cv8.exe")
-            + glob.glob(r"C:\Program Files (x86)\1cv8\*\bin\1cv8.exe")
-        )
+        if os.name == "nt":
+            candidates = (
+                glob.glob(r"C:\Program Files\1cv8\*\bin\1cv8.exe")
+                + glob.glob(r"C:\Program Files (x86)\1cv8\*\bin\1cv8.exe")
+            )
+        else:
+            # PY-only: PS-порт на *nix не исполняется, поэтому *nix-раскладки нет в .ps1.
+            candidates = glob.glob("/opt/1cv8/*/1cv8")
         if candidates:
             v8path = max(candidates, key=_version_key)
-            ver = os.path.basename(os.path.dirname(os.path.dirname(v8path)))
-            print(f"Auto-selected platform {ver}: {v8path}")
+            print(f"Auto-selected platform {_version_dir(v8path)}: {v8path}")
         else:
-            print("Error: 1cv8.exe not found. Specify -V8Path", file=sys.stderr)
+            print("Error: 1C executable not found. Specify -V8Path", file=sys.stderr)
             sys.exit(1)
     if os.path.isdir(v8path):
-        v8path = os.path.join(v8path, "1cv8.exe")
+        # PY-only: на *nix исполняемый называется "1cv8" (без .exe); ibcmd — только явным путём.
+        exe = "1cv8.exe" if os.name == "nt" else "1cv8"
+        v8path = os.path.join(v8path, exe)
     if not os.path.isfile(v8path):
-        print(f"Error: 1cv8.exe not found at {v8path}", file=sys.stderr)
+        print(f"Error: 1C executable not found at {v8path}", file=sys.stderr)
         sys.exit(1)
     return v8path
+
+
+IBCMD_NOUSER_HINT = (
+    "[ibcmd] No -UserName/-Password given; the infobase may require authentication. "
+    "On Windows ibcmd reads credentials from the console (stdin is ignored), so this "
+    "call may block instead of failing. If it does not return promptly, abort and "
+    "re-run with -UserName and -Password.\n"
+)
+
+
+def run_ibcmd(cmd, has_username=False, warn_no_user=True):
+    """Run an ibcmd command non-interactively.
+
+    input="" closes stdin (EOF) so ibcmd's auth prompt fast-fails instead of hanging.
+    On Windows without -UserName ibcmd reads the console directly and may still block —
+    that residual case is flagged via IBCMD_NOUSER_HINT (model-facing).
+    """
+    if warn_no_user and os.name == "nt" and not has_username:
+        sys.stderr.write(IBCMD_NOUSER_HINT)
+        sys.stderr.flush()
+    return subprocess.run(cmd, input="", capture_output=True, encoding="utf-8", errors="replace")
 
 
 def main():
@@ -106,8 +140,14 @@ def main():
     # --- Resolve V8Path ---
     v8path = resolve_v8path(args.V8Path)
 
+    engine = "ibcmd" if os.path.basename(v8path).lower().startswith("ibcmd") else "1cv8"
+
     # --- Validate connection ---
-    if not args.InfoBasePath and (not args.InfoBaseServer or not args.InfoBaseRef):
+    if engine == "ibcmd":
+        if not args.InfoBasePath:
+            print("Error: ibcmd supports file infobases only (use -InfoBasePath)", file=sys.stderr)
+            sys.exit(1)
+    elif not args.InfoBasePath and (not args.InfoBaseServer or not args.InfoBaseRef):
         print("Error: specify -InfoBasePath or -InfoBaseServer + -InfoBaseRef", file=sys.stderr)
         sys.exit(1)
 
@@ -120,6 +160,77 @@ def main():
     if args.Mode == "Partial" and not args.Files and not args.ListFile:
         print("Error: -Files or -ListFile required for Partial mode", file=sys.stderr)
         sys.exit(1)
+
+    # --- ibcmd branch (file infobase only; hierarchical full-directory import) ---
+    if engine == "ibcmd":
+        if args.Format == "Plain":
+            print("Error: ibcmd config import supports hierarchical format only (use -Format Hierarchical or 1cv8)", file=sys.stderr)
+            sys.exit(1)
+        if args.AllExtensions:
+            arguments = ["infobase", "config", "import", "all-extensions", args.ConfigDir, f"--db-path={args.InfoBasePath}"]
+        elif args.Mode == "Partial" or args.Files or args.ListFile:
+            # partial: import specific files (relative to ConfigDir)
+            if args.ListFile:
+                if not os.path.isfile(args.ListFile):
+                    print(f"Error: list file not found: {args.ListFile}", file=sys.stderr)
+                    sys.exit(1)
+                with open(args.ListFile, encoding="utf-8-sig") as f:
+                    file_list = [ln.strip() for ln in f if ln.strip()]
+            elif args.Files:
+                file_list = [p.strip() for p in args.Files.split(",") if p.strip()]
+            else:
+                file_list = []
+            if not file_list:
+                print("Error: -Files or -ListFile required for partial import", file=sys.stderr)
+                sys.exit(1)
+            arguments = ["infobase", "config", "import", "files"] + file_list
+            arguments += [f"--base-dir={args.ConfigDir}", f"--db-path={args.InfoBasePath}"]
+            if args.Extension:
+                arguments.append(f"--extension={args.Extension}")
+        else:
+            arguments = ["infobase", "config", "import", f"--db-path={args.InfoBasePath}"]
+            if args.Extension:
+                arguments.append(f"--extension={args.Extension}")
+            arguments.append(args.ConfigDir)
+        ib_data = tempfile.mkdtemp(prefix="ibcmd_data_")
+        atexit.register(shutil.rmtree, ib_data, ignore_errors=True)
+        if args.UserName:
+            arguments.append(f"--user={args.UserName}")
+        if args.Password:
+            arguments.append(f"--password={args.Password}")
+        arguments.append(f"--data={ib_data}")
+        print(f"Running: ibcmd {' '.join(arguments)}")
+        result = run_ibcmd([v8path] + arguments, bool(args.UserName))
+        if result.returncode != 0:
+            print(f"Error loading configuration from files (code: {result.returncode})", file=sys.stderr)
+            if result.stdout:
+                print(result.stdout)
+            if result.stderr:
+                print(result.stderr, file=sys.stderr)
+            sys.exit(result.returncode)
+        print(f"Configuration loaded successfully from: {args.ConfigDir}")
+        if result.stdout:
+            print(result.stdout)
+        exit_code = 0
+        if args.UpdateDB:
+            apply_args = ["infobase", "config", "apply", f"--db-path={args.InfoBasePath}", "--force"]
+            if args.UserName:
+                apply_args.append(f"--user={args.UserName}")
+            if args.Password:
+                apply_args.append(f"--password={args.Password}")
+            apply_args.append(f"--data={ib_data}")
+            print(f"Running: ibcmd {' '.join(apply_args)}")
+            ar = run_ibcmd([v8path] + apply_args, bool(args.UserName))
+            exit_code = ar.returncode
+            if exit_code == 0:
+                print("Database configuration updated successfully")
+            else:
+                print(f"Error updating database configuration (code: {exit_code})", file=sys.stderr)
+            if ar.stdout:
+                print(ar.stdout)
+            if ar.stderr:
+                print(ar.stderr, file=sys.stderr)
+        sys.exit(exit_code)
 
     # --- Temp dir ---
     temp_dir = os.path.join(tempfile.gettempdir(), f"db_load_xml_{random.randint(0, 999999)}")
