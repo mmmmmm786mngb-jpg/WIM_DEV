@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>IMDEV-9101: инструкция по тестовому отчету внТестППРозничногоДУ</title>
+<style>
+* { box-sizing: border-box; }
+body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    line-height: 1.55;
+    color: #212529;
+    background: linear-gradient(160deg, #eef1f5 0%, #f8f9fb 45%, #eceff4 100%);
+    margin: 0;
+    padding: 24px;
+}
+.container { max-width: 1000px; margin: 0 auto; }
+.hero {
+    background: linear-gradient(135deg, #1a5276 0%, #2471a3 55%, #3498db 100%);
+    color: #fff;
+    border-radius: 12px;
+    padding: 28px 32px;
+    margin-bottom: 24px;
+    box-shadow: 0 8px 24px rgba(26, 82, 118, 0.25);
+}
+.hero h1 { margin: 0 0 8px 0; font-size: 1.65rem; font-weight: 700; color: #fff; }
+.hero .subtitle { opacity: 0.92; font-size: 1rem; max-width: 900px; }
+.meta-row { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 16px; }
+.badge {
+    display: inline-block;
+    background: rgba(255,255,255,0.18);
+    border: 1px solid rgba(255,255,255,0.35);
+    border-radius: 20px;
+    padding: 4px 12px;
+    font-size: 0.82rem;
+}
+h2 {
+    color: #2c3e50;
+    margin-top: 32px;
+    border-bottom: 2px solid #dee2e6;
+    padding-bottom: 6px;
+    font-size: 1.25rem;
+}
+.card {
+    background: #fff;
+    border-radius: 10px;
+    padding: 20px 24px;
+    margin-bottom: 16px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+    border: 1px solid #e9ecef;
+}
+.card h3 { margin-top: 0; color: #34495e; font-size: 1.05rem; }
+table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.92rem;
+    margin: 12px 0;
+}
+th, td {
+    border: 1px solid #dee2e6;
+    padding: 10px 12px;
+    text-align: left;
+    vertical-align: top;
+}
+th { background: #f1f3f5; font-weight: 600; color: #495057; }
+tr:nth-child(even) { background: #fafbfc; }
+code, pre {
+    font-family: Consolas, "Courier New", monospace;
+    font-size: 0.88rem;
+}
+pre {
+    background: #f4f6f8;
+    border: 1px solid #dee2e6;
+    border-radius: 6px;
+    padding: 12px 14px;
+    overflow-x: auto;
+    line-height: 1.45;
+}
+.note-info {
+    background: #e8f4f8;
+    border-left: 4px solid #17a2b8;
+    padding: 12px 16px;
+    border-radius: 0 6px 6px 0;
+    margin: 12px 0;
+}
+.note-warn {
+    background: #fff8e6;
+    border-left: 4px solid #f0ad4e;
+    padding: 12px 16px;
+    border-radius: 0 6px 6px 0;
+    margin: 12px 0;
+}
+.note-danger {
+    background: #fdecea;
+    border-left: 4px solid #dc3545;
+    padding: 12px 16px;
+    border-radius: 0 6px 6px 0;
+    margin: 12px 0;
+}
+.ok { color: #28a745; font-weight: 600; }
+.err { color: #dc3545; font-weight: 600; }
+.info { color: #17a2b8; font-weight: 600; }
+ol.steps { padding-left: 22px; }
+ol.steps li { margin-bottom: 8px; }
+ul.compact { margin: 8px 0; padding-left: 22px; }
+ul.compact li { margin-bottom: 4px; }
+.path { word-break: break-all; color: #495057; }
+.footer { margin-top: 32px; font-size: 0.85rem; color: #6c757d; text-align: center; }
+</style>
+</head>
+<body>
+<div class="container">
+
+<div class="hero">
+    <h1>Тестовый отчет внТестППРозничногоДУ</h1>
+    <p class="subtitle">
+        Инструкция по запуску, заполнению параметров и отладке замеров процедуры
+        <strong>ПлатежныеПорученияРозничногоДУ</strong> (IMDEV-9101).
+        Отчет автономный: <strong>не требует</strong> внСинхронизацияНСИ.epf и не подключается к ДО.
+    </p>
+    <div class="meta-row">
+        <span class="badge">База: WIM_DU (тестовая)</span>
+        <span class="badge">Файл: Тестирование/внТестППРозничногоДУ.erf</span>
+        <span class="badge">Задача: IMDEV-9101</span>
+    </div>
+</div>
+
+<h2>1. Как открыть отчет</h2>
+<div class="card">
+    <ol class="steps">
+        <li>Откройте тестовую базу <strong>WIM_DU</strong> в режиме <em>Предприятие</em> (желательно толстый клиент для отладки).</li>
+        <li>Меню <strong>Файл -> Открыть</strong>.</li>
+        <li>Укажите файл:
+            <pre class="path">bases/Wim_Du/projects/IMDEV-9101 Перевод ДС на биржу/Тестирование/внТестППРозничногоДУ.erf</pre>
+        </li>
+        <li>На форме отчета задайте параметры (см. раздел 2) и нажмите <strong>Выполнить тест</strong>.</li>
+    </ol>
+    <div class="note-info">
+        <span class="info">Источники отчета</span> (для правки кода и отладки в конфигураторе):
+        <pre class="path">Тестирование/erf_test_pp_rdu_erf/внТестППРозничногоДУ/Ext/ObjectModule.bsl</pre>
+    </div>
+</div>
+
+<h2>2. Параметры формы отчета</h2>
+<div class="card">
+    <table>
+        <thead>
+            <tr>
+                <th>Параметр</th>
+                <th>По умолчанию</th>
+                <th>Назначение</th>
+                <th>Рекомендация для отладки</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td><strong>Дата расчета</strong></td>
+                <td>Сегодня</td>
+                <td>Дата, передаваемая в <code>СоздатьПлатежноеПоручение</code> (расчет рабочего дня и времени документа).</td>
+                <td>Оставьте текущую дату или укажите дату, на которую есть поручения в тестовой базе.</td>
+            </tr>
+            <tr>
+                <td><strong>Дата начала периода</strong></td>
+                <td>Пусто</td>
+                <td>Нижняя граница отбора договоров по <code>ДатаВводаСредствВДУ</code>.</td>
+                <td>В режиме отладки <span class="ok">не используется</span> (см. флаг ниже). Заполняйте только при снятом флаге «Режим теста производительности».</td>
+            </tr>
+            <tr>
+                <td><strong>Дата окончания периода</strong></td>
+                <td>Пусто</td>
+                <td>Верхняя граница отбора договоров по <code>ДатаВводаСредствВДУ</code>.</td>
+                <td>Аналогично дате начала — только для режима «как в бою».</td>
+            </tr>
+            <tr>
+                <td><strong>Пул розничное ДУ</strong></td>
+                <td>Пул РДУ (GUID IMAPPS-34301)</td>
+                <td>Отбор договоров и поручений по пулу.</td>
+                <td>Проверьте, что в тестовой базе в этом пуле есть документы <code>Поручение</code> с видом операции <em>Перевод</em>.</td>
+            </tr>
+            <tr>
+                <td><strong>Ограничение количества</strong></td>
+                <td>0 (без лимита)</td>
+                <td>Максимум поручений для обработки в одном прогоне.</td>
+                <td>Для первой отладки поставьте <strong>5-10</strong>, чтобы быстрее дойти до точки останова в цикле.</td>
+            </tr>
+            <tr>
+                <td><strong>Режим теста производительности</strong></td>
+                <td>Включен</td>
+                <td>
+                    <strong>Вкл:</strong> все поручения пула (в т.ч. с уже существующими ПП);
+                    перед созданием старые ПП удаляются.<br>
+                    <strong>Выкл:</strong> отбор как в бою — только поручения без ПП, с фильтром по периоду договоров.
+                </td>
+                <td>Для поиска узкого места в <code>СоздатьПлатежноеПоручение</code> держите <span class="ok">включенным</span>.</td>
+            </tr>
+            <tr>
+                <td><strong>Создавать платежные поручения</strong></td>
+                <td>Включен</td>
+                <td>Если выкл. — только запрос и замер без записи документов.</td>
+                <td>Для полного замера цикла создания — <span class="ok">включено</span>. Для проверки только запроса — выключите.</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <h3>Типовые пресеты</h3>
+    <table>
+        <thead>
+            <tr>
+                <th>Сценарий</th>
+                <th>Режим теста</th>
+                <th>Создавать ПП</th>
+                <th>Ограничение</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>Отладка медленного кода (рекомендуется)</td>
+                <td>Вкл</td>
+                <td>Вкл</td>
+                <td>5-10</td>
+            </tr>
+            <tr>
+                <td>Проверить, сколько поручений попадет в выборку</td>
+                <td>Вкл</td>
+                <td>Выкл</td>
+                <td>0</td>
+            </tr>
+            <tr>
+                <td>Сравнение с боевой логикой отбора</td>
+                <td>Выкл</td>
+                <td>Выкл или Вкл</td>
+                <td>по необходимости</td>
+            </tr>
+            <tr>
+                <td>Полный прогон на объеме</td>
+                <td>Вкл</td>
+                <td>Вкл</td>
+                <td>0</td>
+            </tr>
+        </tbody>
+    </table>
+</div>
+
+<h2>3. Что делает отчет (блоки замеров)</h2>
+<div class="card">
+    <p>После выполнения в окне сообщений и в табличном документе выводятся замеры:</p>
+    <table>
+        <thead>
+            <tr><th>Блок</th><th>Содержание</th></tr>
+        </thead>
+        <tbody>
+            <tr><td>1. Расчет рабочих дат</td><td>Подготовка дат (в режиме отладки период договоров не применяется).</td></tr>
+            <tr><td>2. Запрос отбора поручений</td><td>SQL-запрос к <code>Документ.Поручение</code> и <code>Справочник.ДоговорДУ</code>.</td></tr>
+            <tr><td>3. Удаление существующих ПП</td><td>Только при включенном режиме теста + создании ПП. Отмена проведения и удаление старых ПП.</td></tr>
+            <tr><td>4. Создание платежных поручений</td><td>Цикл вызовов <code>СоздатьПлатежноеПоручение</code> — <strong>главный блок для оптимизации</strong>.</td></tr>
+            <tr><td>ИТОГО</td><td>Сводка: найдено / удалено / создано / ошибок / время.</td></tr>
+        </tbody>
+    </table>
+    <p>В детализации по строкам — отдельно <strong>Удал., мс</strong> и <strong>Созд., мс</strong> на каждое поручение.</p>
+</div>
+
+<h2>4. Где ставить точки останова (отладка)</h2>
+<div class="card">
+    <div class="note-warn">
+        Отчет автономный. Точки останова ставятся в модуле объекта <strong>внешнего отчета</strong>
+        <code>внТестППРозничногоДУ</code>, а не в внСинхронизацияНСИ.
+    </div>
+
+    <h3>4.1. Подготовка отладчика</h3>
+    <ol class="steps">
+        <li>Откройте исходники отчета в конфигураторе (файл <code>.erf</code> или каталог <code>erf_test_pp_rdu_erf</code>).</li>
+        <li>Модуль объекта: <code>внТестППРозничногоДУ -> Модуль объекта</code>.</li>
+        <li>Запустите предприятие в режиме отладки (F5) и откройте отчет.</li>
+        <li>Установите <strong>Ограничение количества = 5</strong> для быстрого входа в цикл.</li>
+    </ol>
+
+    <h3>4.2. Основные точки останова (по приоритету)</h3>
+    <table>
+        <thead>
+            <tr>
+                <th>Приоритет</th>
+                <th>Процедура / функция</th>
+                <th>Строка (ориентир)</th>
+                <th>Зачем</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td><span class="err">1 - главная</span></td>
+                <td><code>СоздатьПлатежноеПоручение</code></td>
+                <td>~271</td>
+                <td>Узкое место: <code>Заполнить</code>, <code>Записать(Проведение)</code>. Сравнивайте время внутри построчно.</td>
+            </tr>
+            <tr>
+                <td>2</td>
+                <td><code>ВыполнитьТестПлатежныеПорученияРозничногоДУ</code> — цикл <code>Пока Выборка.Следующий()</code></td>
+                <td>~150-220</td>
+                <td>Проверить данные выборки, счетчик итераций, переход к следующему поручению.</td>
+            </tr>
+            <tr>
+                <td>3</td>
+                <td><code>УдалитьПлатежныеПорученияПоОснованию</code></td>
+                <td>~326</td>
+                <td>Если блок «Удаление» занимает заметное время.</td>
+            </tr>
+            <tr>
+                <td>4</td>
+                <td><code>ВыполнитьТестПлатежныеПорученияРозничногоДУ</code> — после <code>Запрос.Выполнить()</code></td>
+                <td>~130</td>
+                <td>Проверить количество найденных поручений до цикла.</td>
+            </tr>
+            <tr>
+                <td>5</td>
+                <td><code>БлижайшийРабочийДень</code></td>
+                <td>~290</td>
+                <td>Редко, но можно проверить запрос к регистру <code>КалендарныеГрафики</code>.</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <h3>4.3. Пошаговая отладка внутри СоздатьПлатежноеПоручение</h3>
+    <pre>Функция СоздатьПлатежноеПоручение(ПоручениеПоДС, ДатаВводаСредствВДУ)
+
+    // [ТО1] вход: проверить ПоручениеПоДС, ДатаВводаСредствВДУ
+
+    ПлатежноеПоручениеОбъект = Документы.ПлатежноеПоручение.СоздатьДокумент();
+    ПлатежноеПоручениеОбъект.Дата = БлижайшийРабочийДень(...) + ВремяТекущее();
+
+    // [ТО2] перед Заполнить - замерить отдельно
+
+    ПлатежноеПоручениеОбъект.Заполнить(ПоручениеПоДС);
+
+    // [ТО3] перед Записать - часто самое медленное место
+
+    ПлатежноеПоручениеОбъект.Записать(РежимЗаписиДокумента.Проведение);
+
+    // [ТО4] выход: ссылка на созданный документ
+
+КонецФункции</pre>
+    <p>Рекомендуется поставить точки останова на метках [ТО1]-[ТО4] и сравнить длительность шагов с колонкой <strong>Созд., мс</strong> в отчете.</p>
+
+    <h3>4.4. Сверка с боевым кодом (опционально)</h3>
+    <p>Логика в отчете скопирована из обработки. Для сравнения после оптимизации смотрите оригинал:</p>
+    <pre class="path">Обработка/внСинхронизацияНСИ_epf/внСинхронизацияНСИ/Ext/ObjectModule.bsl
+  - Процедура ПлатежныеПорученияРозничногоДУ
+  - Функция СоздатьПлатежноеПоручение</pre>
+    <p>Изменения сначала отлаживайте в отчете, затем переносите в EPF.</p>
+</div>
+
+<h2>5. Интерпретация результатов</h2>
+<div class="card">
+    <ul class="compact">
+        <li><span class="ok">Найдено = 0</span> — в пуле нет подходящих поручений. Проверьте пул, вид операции «Перевод», пометку удаления.</li>
+        <li><span class="ok">Найдено &gt; 0, создано = 0</span> — смотрите колонку «Ошибка» в детализации; типично ошибка проведения ПП.</li>
+        <li>Блок <strong>4. Создание</strong> занимает &gt; 80% ИТОГО — оптимизировать <code>СоздатьПлатежноеПоручение</code> и обработчики документа ПлатежноеПоручение.</li>
+        <li>Блок <strong>2. Запрос</strong> медленный — смотреть план запроса, индексы по ДоговорДУ / Поручение.</li>
+        <li>Блок <strong>3. Удаление</strong> заметен — возможно много старых ПП на одно поручение; проверить лишние связи.</li>
+    </ul>
+</div>
+
+<h2>6. Безопасность и ограничения</h2>
+<div class="card">
+    <div class="note-danger">
+        <span class="err">ВНИМАНИЕ</span>: отчет <strong>изменяет данные в ДУ</strong> (удаляет и создает платежные поручения).
+        Запускайте только на <strong>тестовой</strong> базе WIM_DU.
+    </div>
+    <ul class="compact">
+        <li>К ДО отчет <strong>не подключается</strong> — синхронизация с ДО не выполняется.</li>
+        <li>Внешняя обработка <code>внСинхронизацияНСИ.epf</code> <strong>не нужна</strong>.</li>
+        <li>Режим «как в бою» не пересоздает ПП, если они уже есть (отбор только без ПП).</li>
+        <li>Режим отладки пересоздает ПП — повторные прогоны на одних и тех же поручениях допустимы.</li>
+    </ul>
+</div>
+
+<h2>7. Пересборка ERF после правок</h2>
+<div class="card">
+    <p>Если меняли исходники в <code>erf_test_pp_rdu_erf</code>, пересоберите отчет:</p>
+    <pre>powershell.exe -NoProfile -File ".cursor/skills/epf-build/scripts/epf-build.ps1" `
+  -InfoBaseServer "localhost" -InfoBaseRef "WIM_DU" `
+  -SourceFile "...\Тестирование\erf_test_pp_rdu_erf\внТестППРозничногоДУ.xml" `
+  -OutputFile "...\Тестирование\внТестППРозничногоДУ.erf"</pre>
+</div>
+
+<p class="footer">IMDEV-9101 | Тестирование/внТестППРозничногоДУ.erf | test_pp_rdu_report_guide.html</p>
+
+</div>
+</body>
+</html>
