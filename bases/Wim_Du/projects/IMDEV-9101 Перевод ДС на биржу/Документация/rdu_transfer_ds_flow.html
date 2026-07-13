@@ -1,0 +1,503 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>IMDEV-9101: схема перевода ДС на биржу (РДУ)</title>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<style>
+* { box-sizing: border-box; }
+body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    line-height: 1.55;
+    color: #212529;
+    background: linear-gradient(160deg, #eef1f5 0%, #f8f9fb 45%, #eceff4 100%);
+    margin: 0;
+    padding: 24px;
+}
+.container { max-width: 1100px; margin: 0 auto; }
+.hero {
+    background: linear-gradient(135deg, #1a5276 0%, #2471a3 55%, #3498db 100%);
+    color: #fff;
+    border-radius: 12px;
+    padding: 28px 32px;
+    margin-bottom: 24px;
+    box-shadow: 0 8px 24px rgba(26, 82, 118, 0.25);
+}
+.hero h1 {
+    margin: 0 0 8px 0;
+    font-size: 1.75rem;
+    font-weight: 700;
+    color: #fff;
+}
+.hero .subtitle { opacity: 0.92; font-size: 1rem; max-width: 900px; }
+.meta-row { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 16px; }
+.badge {
+    display: inline-block;
+    background: rgba(255,255,255,0.18);
+    border: 1px solid rgba(255,255,255,0.35);
+    border-radius: 20px;
+    padding: 4px 12px;
+    font-size: 0.82rem;
+}
+h2 {
+    color: #2c3e50;
+    margin-top: 32px;
+    border-bottom: 2px solid #dee2e6;
+    padding-bottom: 6px;
+    font-size: 1.25rem;
+}
+.card {
+    background: #fff;
+    border-radius: 10px;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+    padding: 20px 24px;
+    margin: 16px 0;
+}
+.info {
+    background: #d1ecf1;
+    border-left: 4px solid #17a2b8;
+    padding: 12px 16px;
+    border-radius: 4px;
+    margin: 12px 0;
+}
+.warn {
+    background: #fff3cd;
+    border-left: 4px solid #ffc107;
+    padding: 12px 16px;
+    border-radius: 4px;
+    margin: 12px 0;
+}
+.success {
+    background: #d4edda;
+    border-left: 4px solid #28a745;
+    padding: 12px 16px;
+    border-radius: 4px;
+    margin: 12px 0;
+}
+.danger-main {
+    background: #fdf6f6;
+    color: #343a40;
+    border-radius: 8px;
+    padding: 20px 24px;
+    margin: 0 0 28px 0;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+    border: 1px solid #e8c4c4;
+    border-left: 4px solid #c0392b;
+}
+.danger-main h2 {
+    color: #7b241c;
+    border-bottom: 1px solid #e8c4c4;
+    margin-top: 0;
+    font-size: 1.2rem;
+}
+.danger-main h3 {
+    color: #922b21;
+    margin: 20px 0 8px 0;
+    font-size: 1.05rem;
+}
+.danger-main p, .danger-main li { color: #343a40; }
+.danger-main code {
+    background: #f1f3f5;
+    color: #212529;
+    padding: 2px 6px;
+    border-radius: 4px;
+}
+.danger-main table {
+    background: #fff;
+    color: #212529;
+    border-radius: 6px;
+    overflow: hidden;
+}
+.danger-main th { background: #f5e6e6; color: #7b241c; }
+.danger-main td { background: #fff; }
+.danger-main ol { margin: 8px 0 0 0; padding-left: 22px; }
+.danger-main ol li { margin-bottom: 8px; }
+.danger-main .note-box {
+    background: #fff;
+    border: 1px solid #e8c4c4;
+    border-radius: 6px;
+    padding: 14px 16px;
+    margin-top: 16px;
+}
+.mermaid-wrap {
+    background: #fff;
+    border-radius: 10px;
+    padding: 24px;
+    margin: 16px 0;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+    overflow-x: auto;
+}
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 12px 0;
+    font-size: 0.95rem;
+}
+th, td {
+    border: 1px solid #dee2e6;
+    padding: 10px 12px;
+    text-align: left;
+    vertical-align: top;
+}
+th { background: #e9ecef; font-weight: 600; }
+code {
+    background: #f1f3f5;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 0.9em;
+}
+.footer {
+    margin-top: 32px;
+    font-size: 0.85rem;
+    color: #6c757d;
+    text-align: center;
+}
+</style>
+</head>
+<body>
+<div class="container">
+
+<div class="hero">
+    <h1>IMDEV-9101: перевод ДС на биржу (формирование п/п)</h1>
+    <p class="subtitle">
+        Схема контуров создания поручения и платежного поручения для розничного ДУ.
+        EPF: <code>внСинхронизацияНСИ</code>, команда <code>ФоновоеВыполнение</code> (РЗ 07:02 / 120 с).
+    </p>
+    <div class="meta-row">
+        <span class="badge">AvancoreDU</span>
+        <span class="badge">РДУ</span>
+        <span class="badge">ДУ.СинхронизацияНСИ.ФоновоеВыполнение</span>
+    </div>
+</div>
+
+<div class="danger-main">
+    <h2>ГЛАВНОЕ: отладка без записи в ДО (только чтение)</h2>
+    <p>
+        Обработка <code>внСинхронизацияНСИ</code> при полном запуске <code>ФоновоеВыполнение</code>
+        <strong>не только читает</strong> из 1С:ДО. Часть процедур пишет обратно в ДО и вызывает веб-сервис ДО.
+        На тестовой базе ДУ при подключении к <em>боевому</em> ДО можно закрыть задачи, изменить договоры и отправить отметки в прод.
+    </p>
+
+    <h3>Куда модуль пишет в ДО (опасные точки)</h3>
+    <table>
+        <thead>
+            <tr>
+                <th>Процедура</th>
+                <th>Что делает в ДО</th>
+                <th>Когда вызывается</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td><code>ИсполнитьЗадачиДО</code><br><code>ЗавершитьЗадачиПоУспешнымДоговорамДУ</code></td>
+                <td><code>Задача.ExecuteTask()</code> - закрывает задачи; <code>ДополнительныеРеквизитыДО</code> - пишет доп. реквизиты на внутренние документы ДО</td>
+                <td>После <code>СоздатьНСИ</code>, если синхронизация без отказа</td>
+            </tr>
+            <tr>
+                <td><code>СоздатьНСИ</code> (блок контрагентов)</td>
+                <td><code>ВнешОбъект.Записать()</code> - дата синхронизации, КДУ_ИД у контрагента в ДО</td>
+                <td>При создании нового контрагента из ДО</td>
+            </tr>
+            <tr>
+                <td><code>СинхронизацияДатыРасторженияДоговоров_в_ДО</code></td>
+                <td><code>ВнешОбъект.Записать()</code> - дата окончания, признак НеДействует, порядок продления договора в ДО</td>
+                <td>В конце <code>ВыполнитьСинхронизациюНСИ</code></td>
+            </tr>
+            <tr>
+                <td><code>СоздатьОповещениеАдмина</code></td>
+                <td>Создает и запускает БП <code>Ознакомление</code> в ДО</td>
+                <td>При ошибках синхронизации договоров</td>
+            </tr>
+            <tr>
+                <td><code>УстановкаПризнакаОтправкиНаБрокерскийСчет</code></td>
+                <td>Веб-сервис ДО <code>SetRetailSentToBroker</code> (настройки <code>АдресВебДО</code>, <code>ПользовательДО</code>, <code>ПарольДО</code>)</td>
+                <td>После <code>ФоновоеВыполнение</code>, если созданы п/п</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <h3>Что пишется только в ДУ (это нормально для отладки п/п)</h3>
+    <p>
+        <code>СоздатьПоручение</code>, <code>СоздатьПлатежноеПоручение</code>, <code>ПлатежныеПорученияРозничногоДУ</code>,
+        <code>ДобавитьСвязь</code> (регистр интеграции в ДУ) - работают в <strong>тестовой базе ДУ</strong>, в ДО не пишут.
+    </p>
+
+    <h3>Что сделать перед отладкой IMDEV-9101</h3>
+    <ol>
+        <li>
+            <strong>Настройки доп. обработки</strong> (Справочник доп. отчетов и обработок -&gt; Синхронизация НСИ с ДО):
+            поле <code>БазаДО</code> укажите на <strong>тестовую копию ДО</strong>, не на прод.
+            Аналогично <code>АдресВебДО</code> / <code>ПользовательДО</code> / <code>ПарольДО</code> - только тестовый контур.
+        </li>
+        <li>
+            <strong>Отключите РЗ</strong> «Синхронизация НСИ с ДО (фоновое выполнение)» на тестовой базе
+            или убедитесь, что в настройках РЗ стоит тестовая <code>БазаДО</code>.
+            Иначе фон каждые 120 с снова дернет ДО.
+        </li>
+        <li>
+            <strong>Для доработки кода (рекомендуется):</strong> добавить в EPF флаг
+            <code>РежимТолькоЧтениеДО</code> (реквизит обработки или константа отладки) и в
+            <code>ВыполнитьСинхронизациюНСИ</code> / <code>ВыполнитьКоманду</code> оборачивать вызовы:
+            <ul style="margin-top:6px;">
+                <li>не вызывать <code>ИсполнитьЗадачиДО()</code></li>
+                <li>не вызывать <code>СинхронизацияДатыРасторженияДоговоров_в_ДО()</code></li>
+                <li>в <code>СоздатьНСИ</code> пропускать блок <code>ВнешОбъект.Записать()</code> для контрагентов ДО</li>
+                <li>не вызывать <code>УстановкаПризнакаОтправкиНаБрокерскийСчет()</code></li>
+            </ul>
+            Чтение через <code>ПрочитатьДанныеДО</code>, <code>СписокОбъектовИзОткрытыхЗадач</code>, <code>ПолучитьУведомления</code> при этом сохраняется.
+        </li>
+        <li>
+            <strong>Узкий сценарий теста п/п без полной синхронизации:</strong> на тестовой ДУ с уже созданными
+            <code>Поручение</code> (Перевод) без <code>ПлатежноеПоручение</code> вызывать только
+            <code>ПлатежныеПорученияРозничногоДУ</code> (интерактивно из формы или через отладчик) -
+            ДО не затрагивается, если не запускать остальной контур.
+        </li>
+        <li>
+            <strong>Проверка после запуска:</strong> в журнале регистрации ДО не должно быть новых закрытых задач,
+            измененных внутренних документов и вызовов <code>SetRetailSentToBroker</code> по вашим тестовым договорам.
+        </li>
+    </ol>
+
+    <div class="note-box">
+        <strong>Минимум для безопасности без правки кода:</strong> тестовая ДУ + тестовая <code>БазаДО</code> + выключенный РЗ на прод-ДО.
+        <strong>Надежный вариант для разработки:</strong> флаг <code>РежимТолькоЧтениеДО</code> в EPF (версия 0.69 IMDEV-9101).
+    </div>
+</div>
+
+<h2>Общая схема процесса</h2>
+<div class="mermaid-wrap">
+<pre class="mermaid">
+flowchart TD
+    A["ДО: открытая задача на договор<br/>(СписокОбъектовИзОткрытыхЗадач)"] --> B["НайтиДоговорДУ"]
+    B --> C{Уже есть в ДУ?}
+    C -->|Да| D["Пропуск<br/>поручение НЕ создается"]
+    C -->|Нет, новый| E["СоздатьНСИ"]
+    E --> F{ТипДУ = Розничное?}
+    F -->|Нет| G["Другой контур НСИ"]
+    F -->|Да| H["ЗаполнитьАналитикуПоДоговоруДУ"]
+    H --> I["СоздатьПоручение<br/>(ВидОперации = Перевод)<br/>один раз"]
+    I --> J{ТекущееВремяРабочее?}
+    J -->|Да| K["СоздатьПлатежноеПоручение<br/>(сразу при новом договоре)"]
+    J -->|Нет| L["П/п откладывается"]
+
+    M["Каждый запуск ФоновоеВыполнение<br/>(рабочее время)"] --> N["ПлатежныеПорученияРозничногоДУ"]
+    N --> O["Отбор: Поручение Перевод<br/>без ПлатежноеПоручение"]
+    O --> P["+ пул РДУ"]
+    P --> Q["+ ДатаВводаСредствВДУ >=<br/>начало предыдущего раб. дня"]
+    Q --> R["СоздатьПлатежноеПоручение<br/>(догон хвоста)"]
+
+    I -.->|если п/п не создано| N
+    L -.-> N
+
+    style D fill:#f8d7da,stroke:#dc3545
+    style I fill:#d4edda,stroke:#28a745
+    style K fill:#cce5ff,stroke:#007bff
+    style R fill:#cce5ff,stroke:#007bff
+    style N fill:#fff3cd,stroke:#ffc107
+</pre>
+</div>
+
+<h2>Два контура создания п/п</h2>
+<div class="card">
+<table>
+    <thead>
+        <tr>
+            <th>Контур</th>
+            <th>Когда</th>
+            <th>Условие</th>
+            <th>Процедура</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr>
+            <td><strong>A. При новом договоре</strong></td>
+            <td>Однократно при первой синхронизации РДУ-договора из ДО</td>
+            <td>
+                <code>ДоговорДУ</code> пустой в ТЧ;<br>
+                <code>ТипДУ = "Розничное"</code>;<br>
+                заполнена <code>ДатаВводаСредствВДУ</code>;<br>
+                <code>ТекущееВремяРабочее() = Истина</code>
+            </td>
+            <td>
+                <code>ЗаполнитьАналитикуПоДоговоруДУ</code><br>
+                -&gt; <code>СоздатьПоручение</code><br>
+                -&gt; <code>СоздатьПлатежноеПоручение</code>
+            </td>
+        </tr>
+        <tr>
+            <td><strong>B. Догон «хвоста»</strong></td>
+            <td>Каждый запуск <code>ФоновоеВыполнение</code> в рабочее время (РЗ / 120 с)</td>
+            <td>
+                есть <code>Поручение</code> (Перевод) без <code>ПлатежноеПоручение</code>;<br>
+                <code>Пул = ПулРозничноеДУ</code>;<br>
+                <code>ДатаВводаСредствВДУ &gt;=</code> начало предыдущего рабочего дня;<br>
+                договор не расторгнут
+            </td>
+            <td>
+                <code>ПлатежныеПорученияРозничногоДУ</code><br>
+                -&gt; <code>СоздатьПлатежноеПоручение</code>
+            </td>
+        </tr>
+    </tbody>
+</table>
+</div>
+
+<h2>Период и триггеры</h2>
+<div class="card">
+<table>
+    <thead>
+        <tr>
+            <th>Объект метаданных (1С:ДУ)</th>
+            <th>Триггер создания</th>
+            <th>Период / дата (реквизиты и логика)</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr>
+            <td>
+                <strong>Документ.Поручение</strong><br>
+                <code>ВидОперации</code> = <code>Перечисление.ВидыОперацийПоручение.Перевод</code><br>
+                <code>ДоговорДУ</code> -&gt; <code>Справочник.ДоговорДУ</code><br>
+                <code>Дата</code>, <code>СуммаДС</code>
+            </td>
+            <td>
+                Один раз при первой синхронизации <strong>нового</strong>
+                <code>Справочник.ДоговорДУ</code> (в ТЧ обработки <code>ДоговорДУ</code> был пустой,
+                <code>НайтиДоговорДУ</code> не нашел ссылку).<br>
+                Цепочка: <code>СоздатьНСИ</code> -&gt; <code>ЗаполнитьАналитикуПоДоговоруДУ</code> -&gt; <code>СоздатьПоручение</code>.<br>
+                Условие РДУ: строка ТЧ <code>ТипДУ = "Розничное"</code> (значение из ДО, не реквизит справочника ДУ).
+            </td>
+            <td>
+                <code>Документ.Поручение.Дата</code> =
+                <code>БлижайшийРабочийДень(Справочник.ДоговорДУ.ДатаВводаСредствВДУ)</code>
+                + время (см. <code>ВремяТекущее()</code>).<br>
+                Календарь: <code>РегистрСведений.КалендарныеГрафики</code>,
+                <code>Справочник.Календари.РегламентированныйКалендарь</code>.<br>
+                Повторно для существующих <code>Справочник.ДоговорДУ</code> не создается.
+            </td>
+        </tr>
+        <tr>
+            <td>
+                <strong>Документ.ПлатежноеПоручение</strong><br>
+                <code>ДокументОснование</code> -&gt; <code>Документ.Поручение</code><br>
+                <code>Дата</code>
+            </td>
+            <td>
+                <strong>Контур A:</strong> сразу после <code>Документ.Поручение</code> (Перевод),
+                если <code>ТекущееВремяРабочее()</code> = Истина
+                (реквизиты обработки <code>РабочееВремяНачало</code>, <code>РабочееВремяОкончание</code>).<br>
+                <strong>Контур B:</strong> <code>ПлатежныеПорученияРозничногоДУ</code> - нет связанного
+                <code>Документ.ПлатежноеПоручение</code> по
+                <code>ПлатежноеПоручение.ДокументОснование = Поручение.Ссылка</code>
+                (<code>ПлатежноеПоручение.Ссылка ЕСТЬ NULL</code> в запросе).
+            </td>
+            <td>
+                Отбор договоров: <code>Справочник.ДоговорДУ.Пул</code> =
+                настройка обработки <code>ПулРозничноеДУ</code> (<code>Справочник.Пул</code>)<br>
+                и <code>НАЧАЛОПЕРИОДА(ДатаВводаСредствВДУ, ДЕНЬ) &gt;=
+                НАЧАЛОПЕРИОДА(&amp;ПредыдущийРабочийДень, ДЕНЬ)</code><br>
+                и <code>ДатаПолученияУведомленияОРасторженииДоговораДУ = ДАТАВРЕМЯ(1, 1, 1)</code>.<br>
+                <code>Документ.ПлатежноеПоручение.Дата</code> =
+                <code>БлижайшийРабочийДень(ДатаВводаСредствВДУ)</code> + <code>ВремяТекущее()</code>.<br>
+                Доп. фильтр: <code>Поручение.Комментарий &lt;&gt; "Перевод ДС при расторжении"</code>.
+            </td>
+        </tr>
+        <tr>
+            <td>
+                <strong>Справочник.ДоговорДУ</strong><br>
+                (создание / отбор для п/п)
+            </td>
+            <td>
+                Создается в <code>СоздатьНСИ</code> при синхронизации из ДО, если
+                <code>Договоры.ДоговорДУ</code> пустой.<br>
+                Для п/п участвует, если уже есть <code>Документ.Поручение</code> (Перевод)
+                и выполнены условия пула/даты/расторжения.
+            </td>
+            <td>
+                Ключевой реквизит периода: <code>Справочник.ДоговорДУ.ДатаВводаСредствВДУ</code>.<br>
+                При чтении из ДО для РДУ отсекаются пустые даты
+                (<code>ДАТАВРЕМЯ(1, 1, 1)</code>, <code>ДАТАВРЕМЯ(1900, 1, 1)</code>) и <code>СуммаДоговора = 0</code>.
+            </td>
+        </tr>
+        <tr>
+            <td>
+                <strong>Источник в ДО</strong> (внешняя ИБ, <code>БазаДО</code>)<br>
+                <code>Задача.ЗадачаИсполнителя</code><br>
+                <code>БизнесПроцесс.Исполнение</code><br>
+                <code>Справочник.ВнутренниеДокументы</code>
+            </td>
+            <td>
+                <code>СписокОбъектовИзОткрытыхЗадач</code>: задачи исполнителя-синхронизатора
+                (<code>ЗадачаИсполнителя.Исполнитель = &amp;Исполнитель</code>),
+                <code>БизнесПроцесс.Состояние = Перечисление.СостоянияБизнесПроцессов.Активен</code>,
+                <code>ЗадачаИсполнителя.Выполнена = Ложь</code>,
+                предмет - <code>Справочник.ВнутренниеДокументы</code> (договор ДО).
+            </td>
+            <td>
+                Не скользящий календарный период, а <strong>множество открытых задач</strong> на момент запуска
+                <code>ФоновоеВыполнение</code> (РЗ 07:02 / 120 с).
+            </td>
+        </tr>
+        <tr>
+            <td>
+                <strong>РегистрСведений.ОбъектыИнтегрированныеС1СДокументооборотом</strong>
+            </td>
+            <td>
+                После создания <code>Документ.Поручение</code> - запись связи ДУ&lt;-&gt;ДО
+                (<code>ДобавитьСвязь</code>, тип <code>DMInternalDocument</code>).
+            </td>
+            <td>
+                Используется при проверке «договор уже есть в ДУ» через
+                <code>ИдентификаторОбъектаДокументооборота</code> / <code>Объект</code>.
+            </td>
+        </tr>
+    </tbody>
+</table>
+</div>
+
+<h2>Цепочка вызовов в коде</h2>
+<div class="card">
+<pre style="margin:0; white-space:pre-wrap; font-family:Consolas,monospace; font-size:0.9rem;">
+РЗ «Синхронизация НСИ с ДО (фоновое выполнение)»
+  -> ВыполнитьКоманду("ФоновоеВыполнение")
+    -> ВыполнитьСинхронизациюНСИ
+      -> СписокОбъектовИзОткрытыхЗадач / ПрочитатьДанныеДО
+      -> СоздатьНСИ
+        -> [ТипДУ = "Розничное"] ЗаполнитьАналитикуПоДоговоруДУ
+          -> СоздатьПоручение (Перевод)
+          -> СоздатьПлатежноеПоручение [рабочее время]
+      -> [рабочее время] ПлатежныеПорученияРозничногоДУ
+        -> СоздатьПлатежноеПоручение
+</pre>
+</div>
+
+<h2>Вывод для IMDEV-9101</h2>
+<div class="success">
+    <strong>Узкое место при росте объема</strong> - не пересоздание поручений для старых договоров (его нет),
+    а массовое создание и проведение п/п в <code>ПлатежныеПорученияРозничногоДУ</code> и
+    <code>СоздатьПлатежноеПоручение</code> по договорам с недавней <code>ДатаВводаСредствВДУ</code>.
+</div>
+<div class="info">
+    <strong>Поручение</strong> создается <em>один раз</em> при появлении нового РДУ-договора из ДО.
+    Для уже существующих договоров при синхронизации выполняется только догон п/п (контур B), если поручение есть, а п/п еще нет.
+</div>
+<div class="warn">
+    <strong>Вне scope:</strong> команда <code>ФоновоеВыполнениеПоручения</code> («Загрузка поручений из ДО», РЗ 09:30)
+    создает <code>Поручение</code> с <code>ВыводИзДУ</code> и не формирует п/п на биржу.
+</div>
+
+<p class="footer">
+    IMDEV-9101 | внСинхронизацияНСИ | ObjectModule.bsl
+</p>
+
+</div>
+<script>
+mermaid.initialize({
+    startOnLoad: true,
+    theme: "neutral",
+    flowchart: { curve: "basis", padding: 16 }
+});
+</script>
+</body>
+</html>
