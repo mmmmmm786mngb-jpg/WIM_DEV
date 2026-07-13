@@ -1,0 +1,882 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>IMDEV-9101: сводный отчет по тестированию скорости ПП розничного ДУ</title>
+<style>
+* { box-sizing: border-box; }
+body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    line-height: 1.55;
+    color: #212529;
+    background: linear-gradient(160deg, #eef1f5 0%, #f8f9fb 45%, #eceff4 100%);
+    margin: 0;
+    padding: 24px;
+}
+.container { max-width: 1100px; margin: 0 auto; }
+.hero {
+    background: linear-gradient(135deg, #1a5276 0%, #2471a3 55%, #3498db 100%);
+    color: #fff;
+    border-radius: 12px;
+    padding: 28px 32px;
+    margin-bottom: 24px;
+    box-shadow: 0 8px 24px rgba(26, 82, 118, 0.25);
+}
+.hero h1 { margin: 0 0 8px 0; font-size: 1.65rem; font-weight: 700; color: #fff; }
+.hero .subtitle { opacity: 0.92; font-size: 1rem; max-width: 960px; }
+.meta-row { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 16px; }
+.badge {
+    display: inline-block;
+    background: rgba(255,255,255,0.18);
+    border: 1px solid rgba(255,255,255,0.35);
+    border-radius: 20px;
+    padding: 4px 12px;
+    font-size: 0.82rem;
+}
+h2 {
+    color: #2c3e50;
+    margin-top: 32px;
+    border-bottom: 2px solid #dee2e6;
+    padding-bottom: 6px;
+    font-size: 1.25rem;
+}
+h3 { color: #34495e; font-size: 1.05rem; margin-top: 20px; }
+.card {
+    background: #fff;
+    border-radius: 10px;
+    padding: 20px 24px;
+    margin-bottom: 16px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+    border: 1px solid #e9ecef;
+}
+table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.92rem;
+    margin: 12px 0;
+}
+th, td {
+    border: 1px solid #dee2e6;
+    padding: 10px 12px;
+    text-align: left;
+    vertical-align: top;
+}
+th { background: #f1f3f5; font-weight: 600; color: #495057; }
+tr:nth-child(even) { background: #fafbfc; }
+.num { text-align: right; font-variant-numeric: tabular-nums; }
+pre {
+    font-family: Consolas, "Courier New", monospace;
+    font-size: 0.84rem;
+    background: #f4f6f8;
+    border: 1px solid #dee2e6;
+    border-radius: 6px;
+    padding: 12px 14px;
+    overflow-x: auto;
+    line-height: 1.45;
+}
+.note-info {
+    background: #e8f4f8;
+    border-left: 4px solid #17a2b8;
+    padding: 12px 16px;
+    border-radius: 0 6px 6px 0;
+    margin: 12px 0;
+}
+.note-warn {
+    background: #fff8e6;
+    border-left: 4px solid #f0ad4e;
+    padding: 12px 16px;
+    border-radius: 0 6px 6px 0;
+    margin: 12px 0;
+}
+.note-danger {
+    background: #fdecea;
+    border-left: 4px solid #dc3545;
+    padding: 12px 16px;
+    border-radius: 0 6px 6px 0;
+    margin: 12px 0;
+}
+.note-success {
+    background: #eaf7ee;
+    border-left: 4px solid #28a745;
+    padding: 12px 16px;
+    border-radius: 0 6px 6px 0;
+    margin: 12px 0;
+}
+.ok { color: #28a745; font-weight: 600; }
+.err { color: #dc3545; font-weight: 600; }
+.info { color: #17a2b8; font-weight: 600; }
+.warn { color: #e67e22; font-weight: 600; }
+.bar-wrap { background: #e9ecef; border-radius: 4px; height: 18px; overflow: hidden; margin: 4px 0; }
+.bar { height: 100%; border-radius: 4px; }
+.bar-q { background: #17a2b8; }
+.bar-del { background: #dc3545; }
+.bar-cr { background: #f0ad4e; }
+.bar-st { background: #6f42c1; }
+.bar-csv { background: #20c997; }
+.bar-fill { background: #fd7e14; }
+.priority-1 { background: #fdecea; }
+.priority-2 { background: #fff8e6; }
+.priority-3 { background: #eaf7ee; }
+.flow {
+    background: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    padding: 16px;
+    font-family: Consolas, "Courier New", monospace;
+    font-size: 0.82rem;
+    line-height: 1.6;
+    white-space: pre-wrap;
+}
+.screenshot-wrap {
+    margin: 16px 0;
+    text-align: center;
+    background: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    padding: 12px;
+}
+.screenshot-wrap img {
+    max-width: 100%;
+    height: auto;
+    border: 1px solid #ced4da;
+    border-radius: 4px;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+}
+.screenshot-caption {
+    font-size: 0.85rem;
+    color: #6c757d;
+    margin-top: 10px;
+}
+.annot-table td:first-child { width: 28%; font-weight: 600; background: #f8f9fa; }
+.footer { margin-top: 32px; font-size: 0.85rem; color: #6c757d; text-align: center; }
+</style>
+</head>
+<body>
+<div class="container">
+
+<div class="hero">
+    <h1>Сводный отчет: тестирование скорости создания ПП розничного ДУ</h1>
+    <p class="subtitle">
+        IMDEV-9101. Замеры автономного отчета <strong>внТестППРозничногоДУ</strong> на базе WIM_DU.
+        Тестируется этап <strong>ПлатежныеПорученияРозничногоДУ</strong> (создание и проведение платежных поручений
+        по уже существующим документам <em>Поручение</em>). Создание поручений и синхронизация с ДО в отчет не входят.
+    </p>
+    <div class="meta-row">
+        <span class="badge">База: WIM_DU (тест)</span>
+        <span class="badge">Дата отчета: 13.07.2026</span>
+        <span class="badge">ERF: внТестППРозничногоДУ v4</span>
+        <span class="badge">Источники: Замеры3.xls, Новый3_Замеры_0107_1307.pff</span>
+        <span class="badge"><a href="#screenshot-run2" style="color:#fff;">Скриншот прогона</a></span>
+    </div>
+</div>
+
+<!-- 1. Введение -->
+<div class="card">
+    <h2 style="margin-top:0;border:none;padding:0;">1. Введение</h2>
+    <p>
+        Цель тестирования - оценить производительность массового создания платежных поручений (ПП)
+        для пула <strong>Розничное ДУ</strong> при переводе ДС на биржу и определить узкие места
+        для оптимизации в регламенте <code>внСинхронизацияНСИ</code>.
+    </p>
+    <p><strong>Что измерялось:</strong></p>
+    <ul>
+        <li>Запрос отбора поручений без ПП (или всех поручений в режиме стресс-теста)</li>
+        <li>Удаление существующих ПП (только режим теста производительности, в бою отсутствует)</li>
+        <li>Создание и проведение ПП через <code>СоздатьПлатежноеПоручение</code></li>
+    </ul>
+    <p><strong>Что НЕ измерялось:</strong></p>
+    <ul>
+        <li>Подключение к Документообороту</li>
+        <li><code>ЗаполнитьАналитикуПоДоговоруДУ</code> и <code>СоздатьПоручение</code> (контур A синхронизации)</li>
+        <li>Прочие этапы регламента (менеджеры, задачи ДО и т.д.)</li>
+    </ul>
+
+    <div class="flow">Полный процесс в бою:
+  Синхронизация ДО -&gt; [Контур A] ЗаполнитьАналитику + СоздатьПоручение + (опц.) СоздатьПП
+                    -&gt; [Контур B] ПлатежныеПорученияРозничногоДУ -&gt; СоздатьПП
+
+Тестовый отчет покрывает только:  [Контур B] + СоздатьПлатежноеПоручение</div>
+</div>
+
+<!-- 2. Технология -->
+<div class="card">
+    <h2 style="margin-top:0;border:none;padding:0;">2. Технология тестирования</h2>
+
+    <h3>2.1. Инструмент</h3>
+    <p>
+        Внешний отчет <strong>внТестППРозничногоДУ.erf</strong> - автономная копия логики
+        <code>ПлатежныеПорученияРозничногоДУ</code> из обработки <code>внСинхронизацияНСИ</code>.
+        Не вызывает EPF и не подключается к ДО.
+    </p>
+
+    <h3>2.2. Параметры прогонов</h3>
+    <table>
+        <tr><th>Параметр</th><th>Прогон 1</th><th>Прогон 2 (основной)</th></tr>
+        <tr><td>Дата расчета</td><td>09.07.2026</td><td>13.07.2026</td></tr>
+        <tr><td>Период отбора</td><td>08.07 - 09.07.2026</td><td>01.07 - 13.07.2026</td></tr>
+        <tr><td>Пул</td><td colspan="2">Розничное ДУ (IMAPPS-34301)</td></tr>
+        <tr><td>Режим теста производительности</td><td colspan="2">Включен (пересоздание ПП)</td></tr>
+        <tr><td>Ограничение количества</td><td>200 (факт: 153)</td><td>200 (факт: 649, лимит не сработал на полном наборе)</td></tr>
+        <tr><td>Создавать ПП</td><td colspan="2">Да</td></tr>
+    </table>
+
+    <h3>2.3. Блоки замера</h3>
+    <ol>
+        <li>Расчет рабочих дат периода</li>
+        <li>Запрос отбора поручений</li>
+        <li>Удаление существующих ПП (только тест)</li>
+        <li>Создание ПП: <code>Заполнить</code> + <code>Записать(Проведение)</code></li>
+    </ol>
+
+    <h3>2.4. Профилировщик (PFF)</h3>
+    <p>
+        Файл <code>Новый3_Замеры_0107_1307.pff</code> - серверный профиль прогона 2 (649 документов).
+        Агрегация по модулям подтвердила распределение времени внутри <code>СоздатьПлатежноеПоручение</code>
+        и обработчиков документа <code>ПлатежноеПоручение</code>.
+    </p>
+
+    <h3>2.5. Ключевая формула для боя</h3>
+    <div class="note-info">
+        <strong>Метрика боя:</strong> время без удаления ПП и среднее <strong>мс/ПП</strong> по блоку создания.
+        ИТОГО с удалением - только для сравнения прогонов в тестовом режиме пересоздания.
+    </div>
+</div>
+
+<!-- 3. Статистика -->
+<div class="card">
+    <h2 style="margin-top:0;border:none;padding:0;">3. Статистика замеров</h2>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Показатель</th>
+                <th class="num">Прогон 1<br>153 ПП</th>
+                <th class="num">Прогон 2<br>649 ПП</th>
+                <th>Комментарий</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>Запрос отбора</td>
+                <td class="num">98 мс</td>
+                <td class="num">431 мс</td>
+                <td><span class="ok">0,2%</span> от общего времени - не узкое место</td>
+            </tr>
+            <tr>
+                <td>Удаление ПП (тест)</td>
+                <td class="num">28 588 мс</td>
+                <td class="num">123 644 мс</td>
+                <td><span class="err">58%</span>, ~190 мс/ПП. В бою отсутствует</td>
+            </tr>
+            <tr>
+                <td>Создание ПП</td>
+                <td class="num">20 798 мс</td>
+                <td class="num">87 749 мс</td>
+                <td><span class="warn">41-42%</span>, стабильно ~135 мс/ПП</td>
+            </tr>
+            <tr>
+                <td><strong>ИТОГО</strong></td>
+                <td class="num"><strong>49 546 мс</strong></td>
+                <td class="num"><strong>212 030 мс</strong></td>
+                <td>С удалением (тест)</td>
+            </tr>
+            <tr style="background:#eaf7ee;">
+                <td><strong>Итог для боя (без удаления)</strong></td>
+                <td class="num"><strong>~21,0 сек</strong></td>
+                <td class="num"><strong>~88,4 сек</strong></td>
+                <td>Основная метрика</td>
+            </tr>
+            <tr style="background:#eaf7ee;">
+                <td><strong>Среднее на 1 ПП (создание)</strong></td>
+                <td class="num"><strong>135,9 мс</strong></td>
+                <td class="num"><strong>135,2 мс</strong></td>
+                <td>Стабильно на разных объемах</td>
+            </tr>
+            <tr>
+                <td>Ошибок</td>
+                <td class="num ok">0</td>
+                <td class="num ok">0</td>
+                <td>-</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <h3>Распределение времени прогона 2 (649 ПП)</h3>
+    <table>
+        <tr>
+            <th>Блок</th>
+            <th class="num">мс</th>
+            <th class="num">%</th>
+            <th>Визуализация (тест)</th>
+        </tr>
+        <tr>
+            <td>Запрос</td>
+            <td class="num">431</td>
+            <td class="num">0,2%</td>
+            <td><div class="bar-wrap"><div class="bar bar-q" style="width:0.2%"></div></div></td>
+        </tr>
+        <tr>
+            <td>Удаление (тест)</td>
+            <td class="num">123 644</td>
+            <td class="num">58,3%</td>
+            <td><div class="bar-wrap"><div class="bar bar-del" style="width:58%"></div></div></td>
+        </tr>
+        <tr>
+            <td>Создание ПП (бой)</td>
+            <td class="num">87 749</td>
+            <td class="num">41,4%</td>
+            <td><div class="bar-wrap"><div class="bar bar-cr" style="width:41%"></div></div></td>
+        </tr>
+    </table>
+
+    <h3>Распределение внутри создания 1 ПП (PFF, прогон 2)</h3>
+    <table>
+        <tr>
+            <th>Операция / модуль</th>
+            <th class="num">Суммарно, сек</th>
+            <th class="num">~мс/ПП</th>
+            <th class="num">Доля</th>
+        </tr>
+        <tr>
+            <td><code>Записать(Проведение)</code> - всего</td>
+            <td class="num">56,3</td>
+            <td class="num">87</td>
+            <td class="num">64%</td>
+        </tr>
+        <tr class="priority-1">
+            <td>&nbsp;&nbsp;Регистр <code>ИсторияСтатусовОбъектов</code></td>
+            <td class="num">~68</td>
+            <td class="num">~105</td>
+            <td class="num">~77% проведения</td>
+        </tr>
+        <tr class="priority-1">
+            <td>&nbsp;&nbsp;<code>ОбработкаСобытийВыгрузкаCSVВоВнешнюСистему</code></td>
+            <td class="num">~20</td>
+            <td class="num">~31</td>
+            <td class="num">~23% проведения</td>
+        </tr>
+        <tr>
+            <td><code>Заполнить(Поручение)</code></td>
+            <td class="num">26,2</td>
+            <td class="num">40</td>
+            <td class="num">30%</td>
+        </tr>
+        <tr>
+            <td>Шаблоны ПП + автозначения реквизитов</td>
+            <td class="num">~12</td>
+            <td class="num">~19</td>
+            <td class="num">14%</td>
+        </tr>
+        <tr>
+            <td>Прочее (даты, проверки)</td>
+            <td class="num">~3</td>
+            <td class="num">~5</td>
+            <td class="num">4%</td>
+        </tr>
+    </table>
+    <p style="font-size:0.88rem;color:#6c757d;">
+        Примечание: доли внутри проведения перекрываются (вложенные вызовы). Сумма по строкам PFF больше 100% -
+        это нормально для вложенной профилировки.
+    </p>
+</div>
+
+<!-- 3.5 Скриншот прогона 2 -->
+<div class="card" id="screenshot-run2">
+    <h2 style="margin-top:0;border:none;padding:0;">3.5. Скриншот прогона 2 (01.07 - 13.07.2026)</h2>
+
+    <p>
+        Ниже — фактический результат работы отчета <code>внТестППРозничногоДУ</code> v4 на базе WIM_DU.
+        Файл: <code>Тестирование/Тест_Июль2026_созданиеПП_РозницаДУ.png</code>.
+    </p>
+
+    <div class="screenshot-wrap">
+        <a href="../Тест_Июль2026_созданиеПП_РозницаДУ.png" target="_blank" title="Открыть в полном размере">
+            <img src="../Тест_Июль2026_созданиеПП_РозницаДУ.png"
+                 alt="Скриншот отчета внТестППРозничногоДУ: 649 ПП, замеры блоков, детализация"
+                 width="1050">
+        </a>
+        <div class="screenshot-caption">
+            Рис. 1. Окно 1С после формирования отчета. Слева — табличный документ, справа — панель «Сообщения».
+            Клик по картинке открывает PNG в полном размере.
+        </div>
+    </div>
+
+    <h3>Расшифровка элементов на скриншоте</h3>
+
+    <h4>А. Заголовок и шапка отчета (верх табличного документа)</h4>
+    <table class="annot-table">
+        <tr>
+            <td>Заголовок</td>
+            <td><strong>«Тест ПП розничного ДУ (IMDEV-9101, v4)»</strong> — версия ERF для контроля загрузки актуальной сборки</td>
+        </tr>
+        <tr>
+            <td>Дата расчета</td>
+            <td><strong>13.07.2026</strong> — передается в <code>СоздатьПлатежноеПоручение</code> (дата ПП = ближайший рабочий день + время)</td>
+        </tr>
+        <tr>
+            <td>Период отбора</td>
+            <td><strong>01.07.2026 - 13.07.2026</strong> — широкий стресс-период (в бою EPF отбирает уже по «предыдущий рабочий день»)</td>
+        </tr>
+        <tr>
+            <td>Найдено / обработано</td>
+            <td><strong>649</strong> поручений — все прошли цикл удаления (тест) + создания ПП</td>
+        </tr>
+        <tr>
+            <td>Режим</td>
+            <td>«Режим теста производительности» + «Создавать платежные поручения» — включено пересоздание ПП</td>
+        </tr>
+        <tr>
+            <td>Ограничение</td>
+            <td>На скриншоте <strong>20 000</strong> — лимит не ограничил выборку (факт 649 &lt; 20 000)</td>
+        </tr>
+    </table>
+
+    <h4>Б. Таблица «Замер времени (блоки)» — центральная сводка</h4>
+    <table>
+        <thead>
+            <tr>
+                <th>Блок на скриншоте</th>
+                <th class="num">Время</th>
+                <th class="num">Доля</th>
+                <th>Что означает</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>1. Расчет рабочих дат</td>
+                <td class="num">~0 мс</td>
+                <td class="num">0%</td>
+                <td>Вычисление <code>ДатаНачалаПериода</code> / <code>ДатаОкончанияПериода</code> — пренебрежимо мало</td>
+            </tr>
+            <tr>
+                <td>2. Запрос отбора поручений</td>
+                <td class="num">431 мс</td>
+                <td class="num">0,2%</td>
+                <td>SQL-запрос к <code>Документ.Поручение</code> + договоры пула Розничное ДУ. <span class="ok">Не узкое место</span></td>
+            </tr>
+            <tr>
+                <td>3. Удаление существующих ПП</td>
+                <td class="num">123 644 мс</td>
+                <td class="num">58,3%</td>
+                <td>
+                    <span class="err">Только тест.</span> Перед каждым созданием: отмена проведения + удаление старого ПП.
+                    Среднее <strong>190,5 мс/ПП</strong>. В бою этого блока нет.
+                </td>
+            </tr>
+            <tr>
+                <td>4. Создание платежных поручений</td>
+                <td class="num">87 749 мс</td>
+                <td class="num">41,4%</td>
+                <td>
+                    <span class="warn">Метрика боя.</span> <code>СоздатьПлатежноеПоручение</code> + проведение.
+                    Среднее <strong>135,2 мс/ПП</strong>, 649 док., 0 ошибок.
+                </td>
+            </tr>
+            <tr style="background:#eaf7ee;">
+                <td><strong>ИТОГО</strong></td>
+                <td class="num"><strong>212 030 мс</strong></td>
+                <td class="num">100%</td>
+                <td>Полное время прогона с пересозданием (тестовый режим)</td>
+            </tr>
+            <tr style="background:#eaf7ee;">
+                <td><strong>Итог без удаления (для боя)</strong></td>
+                <td class="num"><strong>88 186 мс</strong></td>
+                <td class="num">~42%</td>
+                <td>431 + 87 749 мс — «чистая» скорость создания без тестового удаления</td>
+            </tr>
+            <tr style="background:#eaf7ee;">
+                <td><strong>Скорость без удаления</strong></td>
+                <td class="num"><strong>135,2 мс/ПП</strong></td>
+                <td class="num">-</td>
+                <td>Главный KPI для оценки регламента и прогноза на 10 000 ПП/день</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <h4>В. Таблица «Детализация по поручениям» (нижняя часть скриншота)</h4>
+    <table class="annot-table">
+        <tr>
+            <td>Колонка «Договор / поручение»</td>
+            <td>Представление договора ДУ и ссылка на документ <code>Поручение</code> (основание ПП)</td>
+        </tr>
+        <tr>
+            <td>Колонка «Сумма»</td>
+            <td><code>Поручение.СуммаДС</code> (на скриншоте в основном 100 000 и 1 000 000)</td>
+        </tr>
+        <tr>
+            <td>Колонка «Удал., мс»</td>
+            <td>Время удаления существующего ПП по этой строке. Разброс <strong>~150-500 мс</strong> (выбросы на отмене проведения)</td>
+        </tr>
+        <tr>
+            <td>Колонка «Созд., мс»</td>
+            <td>Время <code>СоздатьПлатежноеПоручение</code> + проведение. Разброс <strong>~110-340 мс</strong>; типично ~130-160 мс</td>
+        </tr>
+        <tr>
+            <td>Колонка «Платежное поручение»</td>
+            <td>Ссылка на созданный документ ПП (дата на скриншоте — 13.07.2026, время близко к моменту теста)</td>
+        </tr>
+        <tr>
+            <td>Колонка «Ошибка»</td>
+            <td>Пусто на всех 649 строках — ошибок записи/проведения не было</td>
+        </tr>
+    </table>
+
+    <h4>Г. Панель «Сообщения» (правая часть скриншота)</h4>
+    <p>Дублирует итоги замеров в текстовом виде (удобно для копирования в Excel / журнал). Ключевые строки:</p>
+    <ul>
+        <li>Повтор блоков 1-4 с временем и долями (совпадает с таблицей отчета)</li>
+        <li><strong>«Итог скорости без удаления ПП (для оценки боя)»</strong> — ~88,2 сек, 135,2 мс/ПП</li>
+        <li>Пояснение: для оценки боевой скорости смотреть строки <em>без удаления</em>, а не ИТОГО с удалением</li>
+        <li>Запись в журнал регистрации: событие <code>IMDEV9101.ТестППРозничногоДУ</code></li>
+    </ul>
+
+    <div class="note-warn">
+        <strong>Как читать скриншот для IMDEV-9101:</strong>
+        <ul style="margin:8px 0 0 0;">
+            <li>Красный блок (58%) — <em>артефакт теста</em>, в оптимизацию P1 не входит.</li>
+            <li>Оранжевый блок (41%) — целевой участок: <code>Записать(Проведение)</code>, статусы, CSV.</li>
+            <li>Строка «135,2 мс/ПП» — baseline до доработки расширения CFE + EPF.</li>
+        </ul>
+    </div>
+
+    <div class="note-success">
+        <strong>Вывод по скриншоту:</strong> прогон подтверждает линейное масштабирование (649 ПП без ошибок),
+        стабильное среднее создания <strong>135,2 мс/ПП</strong> и доминирование тестового удаления в ИТОГО.
+        Для регламента ориентир — <strong>~88 сек на 649 ПП</strong> (только создание).
+    </div>
+</div>
+
+<!-- 4. Детали тестов -->
+<div class="card">
+    <h2 style="margin-top:0;border:none;padding:0;">4. Детали тестов</h2>
+
+    <h3>4.1. Текст запроса отбора (режим боя, фрагмент)</h3>
+    <pre>ВЫБРАТЬ
+    ДоговорыДУ.Ссылка КАК ДоговорДУ
+ПОМЕСТИТЬ ВТ_ДоговорыДУ
+ИЗ
+    Справочник.ДоговорДУ КАК ДоговорыДУ
+ГДЕ
+    ДоговорыДУ.Пул = &amp;Пул
+    И НАЧАЛОПЕРИОДА(ДоговорыДУ.ДатаВводаСредствВДУ, ДЕНЬ) &gt;= НАЧАЛОПЕРИОДА(&amp;ДатаНачалаПериода, ДЕНЬ)
+    И НАЧАЛОПЕРИОДА(ДоговорыДУ.ДатаВводаСредствВДУ, ДЕНЬ) &lt;= НАЧАЛОПЕРИОДА(&amp;ДатаОкончанияПериода, ДЕНЬ)
+    И ДоговорыДУ.ДатаПолученияУведомленияОРасторженииДоговораДУ = ДАТАВРЕМЯ(1, 1, 1)
+;
+
+ВЫБРАТЬ
+    Поручение.Ссылка КАК ПоручениеПоДС,
+    ...
+ИЗ
+    Документ.Поручение КАК Поручение
+        ЛЕВОЕ СОЕДИНЕНИЕ Документ.ПлатежноеПоручение КАК ПлатежноеПоручение
+        ПО (ПлатежноеПоручение.ДокументОснование = Поручение.Ссылка)
+            И (НЕ ПлатежноеПоручение.ПометкаУдаления)
+ГДЕ
+    ПлатежноеПоручение.Ссылка ЕСТЬ NULL
+    И Поручение.ДоговорДУ В (ВЫБРАТЬ ДоговорДУ ИЗ ВТ_ДоговорыДУ)
+    И Поручение.ВидОперации = ЗНАЧЕНИЕ(Перечисление.ВидыОперацийПоручение.Перевод)
+    И Поручение.Комментарий &lt;&gt; "Перевод ДС при расторжении"
+    И НЕ Поручение.ПометкаУдаления</pre>
+    <p>Параметры прогона 2: <code>Пул</code> = Розничное ДУ, <code>ДатаНачалаПериода</code> = 01.07.2026,
+    <code>ДатаОкончанияПериода</code> = 13.07.2026, <code>ДатаРасчета</code> = 13.07.2026.</p>
+
+    <h3>4.2. Алгоритм создания одного ПП</h3>
+    <pre>Функция СоздатьПлатежноеПоручение(ПоручениеПоДС, ДатаВводаСредствВДУ)
+    ПлатежноеПоручениеОбъект = Документы.ПлатежноеПоручение.СоздатьДокумент();
+    ПлатежноеПоручениеОбъект.Дата = БлижайшийРабочийДень(ДатаВводаСредствВДУ) + ВремяТекущее();
+    ПлатежноеПоручениеОбъект.Заполнить(ПоручениеПоДС);
+    ПлатежноеПоручениеОбъект.Записать(РежимЗаписиДокумента.Проведение);
+    ...
+КонецФункции</pre>
+
+    <h3>4.3. Подтверждение Excel (Замеры3.xls)</h3>
+    <p class="ok">Данные Excel полностью совпадают с сообщениями отчета по прогону 2: 649 ПП, 212 030 мс ИТОГО,
+    87 749 мс создание, 135,2 мс/ПП, 0 ошибок.</p>
+
+    <h3>4.4. Наблюдения</h3>
+    <ul>
+        <li>Среднее <strong>135 мс/ПП</strong> стабильно на 153 и 649 документах - линейное масштабирование.</li>
+        <li>Время создания к концу пакета слегка растет (конкуренция за БД, рост регистра статусов).</li>
+        <li>Запрос отбора масштабируется хорошо: 431 мс на 649 строк.</li>
+        <li>Удаление ПП в тесте (~190 мс/ПП) дороже создания - в оптимизацию боя не входит.</li>
+    </ul>
+</div>
+
+<!-- 5. Прогноз 10 000 -->
+<div class="card">
+    <h2 style="margin-top:0;border:none;padding:0;">5. Прогноз на 10 000 платежей в день</h2>
+
+    <div class="note-warn">
+        <strong>Допущения:</strong> последовательная обработка в одном сеансе 1С (как в текущем регламенте),
+        без параллельных потоков. Учитывается только создание ПП (контур B). Накладные расходы синхронизации и ДО не включены.
+        Базовая скорость: <strong>135,2 мс/ПП</strong> (факт прогона 2).
+    </div>
+
+    <h3>5.1. Чистое время создания (без удаления)</h3>
+    <table>
+        <thead>
+            <tr>
+                <th>Сценарий</th>
+                <th class="num">мс/ПП</th>
+                <th class="num">10 000 ПП, сек</th>
+                <th class="num">10 000 ПП, мин</th>
+                <th class="num">10 000 ПП, часы</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td><strong>Текущая скорость (факт)</strong></td>
+                <td class="num">135,2</td>
+                <td class="num">1 352</td>
+                <td class="num">22,5</td>
+                <td class="num">0,38</td>
+            </tr>
+            <tr>
+                <td>После оптимизации статусов + CSV</td>
+                <td class="num">~95</td>
+                <td class="num">950</td>
+                <td class="num">15,8</td>
+                <td class="num">0,26</td>
+            </tr>
+            <tr>
+                <td>Целевая скорость (полный пакет оптимизаций)</td>
+                <td class="num">~70-85</td>
+                <td class="num">700-850</td>
+                <td class="num">11,7-14,2</td>
+                <td class="num">0,19-0,24</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <h3>5.2. Вместимость одного запуска регламента</h3>
+    <p>Если на один вызов <code>ПлатежныеПорученияРозничногоДУ</code> отводится условно <strong>120 секунд</strong>:</p>
+    <table>
+        <tr>
+            <th>мс/ПП</th>
+            <th class="num">Макс. ПП за 120 сек</th>
+            <th class="num">Запусков в день для 10 000 ПП</th>
+        </tr>
+        <tr>
+            <td>135 (сейчас)</td>
+            <td class="num">~888</td>
+            <td class="num">~12</td>
+        </tr>
+        <tr>
+            <td>95 (после 1-й волны)</td>
+            <td class="num">~1 263</td>
+            <td class="num">~8</td>
+        </tr>
+        <tr>
+            <td>75 (цель)</td>
+            <td class="num">~1 600</td>
+            <td class="num">~7</td>
+        </tr>
+    </table>
+
+    <h3>5.3. Суточные сценарии нагрузки</h3>
+    <table>
+        <tr>
+            <th>Сценарий</th>
+            <th>Описание</th>
+            <th class="num">Время (текущ.)</th>
+            <th>Оценка</th>
+        </tr>
+        <tr>
+            <td>Равномерно 24 часа</td>
+            <td>~417 ПП/час, пакетами раз в час</td>
+            <td class="num">~56 сек/час</td>
+            <td class="ok">Укладывается</td>
+        </tr>
+        <tr>
+            <td>Пик: 2 часа утром</td>
+            <td>10 000 ПП за 2 часа подряд</td>
+            <td class="num">~22,5 мин чистого CPU</td>
+            <td class="ok">Теоретически OK, риск блокировок</td>
+        </tr>
+        <tr>
+            <td>Один запуск регламента</td>
+            <td>Все 10 000 за один вызов</td>
+            <td class="num">~22,5 мин</td>
+            <td class="warn">Нужен длинный таймаут сеанса; риск таймаута регламента</td>
+        </tr>
+        <tr>
+            <td>Лимит 120 сек/запуск</td>
+            <td>Текущая скорость без доработок</td>
+            <td class="num">max ~888 ПП</td>
+            <td class="err">10 000/день потребует ~12 запусков или оптимизации</td>
+        </tr>
+    </table>
+
+    <h3>5.4. Вывод по прогнозу</h3>
+    <div class="note-danger">
+        При <strong>10 000 ПП/день</strong> и лимите <strong>120 сек</strong> на один проход регламента
+        текущая скорость <strong>не позволяет</strong> обработать весь объем за один запуск (~888 ПП максимум).
+        Нужна либо <strong>оптимизация до ~75-95 мс/ПП</strong>, либо <strong>несколько запусков</strong> в течение дня,
+        либо увеличение допустимого времени регламентного задания.
+    </div>
+    <div class="note-success">
+        Чистое процессорное время на 10 000 ПП при текущей скорости - около <strong>22,5 минут</strong>.
+        Проблема не в абсолютной длительности суток, а в <strong>пиковой вместимости одного запуска</strong>
+        и накладных расходах проведения (статусы, CSV, блокировки).
+    </div>
+</div>
+
+<!-- 6. Что оптимизировать -->
+<div class="card">
+    <h2 style="margin-top:0;border:none;padding:0;">6. Приоритеты оптимизации</h2>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Приор.</th>
+                <th>Область</th>
+                <th class="num">Потенциал</th>
+                <th>Риск</th>
+                <th>Действие</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr class="priority-1">
+                <td><strong>P1</strong></td>
+                <td>
+                    <strong>Регистр <code>ИсторияСтатусовОбъектов</code></strong><br>
+                    <small>ПередЗаписью/ПриЗаписи ПП: 4-6 запросов и 2 записи на каждое ПП + смена статуса поручения</small>
+                </td>
+                <td class="num">-25..35 сек<br>на 649 ПП<br>(~30-40 мс/ПП)</td>
+                <td>Средний</td>
+                <td>
+                    Флаг массового режима регламента; пропуск повторного чтения статуса основания (известен "Новый");
+                    передача предыдущего статуса в <code>СохранитьТекущийСтатусОбъекта</code> без лишнего запроса
+                </td>
+            </tr>
+            <tr class="priority-1">
+                <td><strong>P1</strong></td>
+                <td>
+                    <strong><code>ОбработкаСобытийВыгрузкаCSVВоВнешнюСистему</code></strong><br>
+                    <small>Запись в <code>ОбъектыДляВыгрузкиВоВнешнюСистему</code> на каждое ПриЗаписи ПП</small>
+                </td>
+                <td class="num">-15..20 сек<br>на 649 ПП<br>(~25-30 мс/ПП)</td>
+                <td>Низкий-средний</td>
+                <td>
+                    Отложенная пакетная регистрация в массовом режиме;
+                    или пропуск при <code>ДополнительныеСвойства.МассовоеСозданиеПП</code>
+                </td>
+            </tr>
+            <tr class="priority-2">
+                <td><strong>P2</strong></td>
+                <td>
+                    <strong>Заполнение ПП</strong> (<code>ЗаполнитьПоДокументуОснованию</code>)<br>
+                    <small>Точечные <code>ЗначениеРеквизитаОбъекта</code>, шаблоны назначения платежа</small>
+                </td>
+                <td class="num">-8..15 сек<br>на 649 ПП<br>(~12-23 мс/ПП)</td>
+                <td>Низкий</td>
+                <td>
+                    Кэш шаблонов по ключу (банк, тип клиента, валюта);
+                    обогащение запроса отбора реквизитами счетов
+                </td>
+            </tr>
+            <tr class="priority-2">
+                <td><strong>P2</strong></td>
+                <td>
+                    <strong><code>БлижайшийРабочийДень</code></strong><br>
+                    <small>Отдельный запрос к календарю на каждое ПП при одной дате расчета</small>
+                </td>
+                <td class="num">-1..2 сек</td>
+                <td>Низкий</td>
+                <td>Кэш результата на дату расчета в цикле регламента</td>
+            </tr>
+            <tr class="priority-3">
+                <td><strong>P3</strong></td>
+                <td>
+                    <strong>Запрос отбора поручений</strong>
+                </td>
+                <td class="num">431 мс</td>
+                <td>-</td>
+                <td class="info">Не оптимизировать - доля 0,2%</td>
+            </tr>
+            <tr class="priority-3">
+                <td><strong>-</strong></td>
+                <td>
+                    <strong>Удаление ПП в тесте</strong>
+                </td>
+                <td class="num">-</td>
+                <td>-</td>
+                <td>Не переносить в бой; не является узким местом продакшена</td>
+            </tr>
+            <tr class="priority-3">
+                <td><strong>-</strong></td>
+                <td>
+                    <strong><code>СоздатьПоручение</code> / аналитика</strong> (контур A)
+                </td>
+                <td class="num">не замерялось</td>
+                <td>-</td>
+                <td>Отдельная задача; в текущем отчете вне scope</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <h3>Рекомендуемый порядок работ</h3>
+    <ol>
+        <li>Добавить в <code>СоздатьПлатежноеПоручение</code> флаг массового режима (тест в ERF, затем EPF).</li>
+        <li>Оптимизировать цепочку статусов в <code>ПлатежноеПоручение</code> + <code>ИсторияСтатусовОбъектов</code>.</li>
+        <li>Отложить регистрацию CSV-выгрузки при массовом создании.</li>
+        <li>Кэш шаблонов и обогащение запроса отбора.</li>
+        <li>Повторный замер на том же периоде 01.07-13.07.2026, сравнение мс/ПП.</li>
+        <li>Перенос проверенных изменений в <code>внСинхронизацияНСИ</code>.</li>
+    </ol>
+
+    <h3>Целевые KPI после оптимизации</h3>
+    <table>
+        <tr><th>Метрика</th><th class="num">Сейчас</th><th class="num">Цель</th></tr>
+        <tr><td>мс/ПП (создание)</td><td class="num">135</td><td class="num">70-85</td></tr>
+        <tr><td>ПП за 120 сек</td><td class="num">~888</td><td class="num">~1 400-1 600</td></tr>
+        <tr><td>10 000 ПП, чистое время</td><td class="num">~22,5 мин</td><td class="num">~12-14 мин</td></tr>
+        <tr><td>Запусков/день при лимите 120 сек</td><td class="num">~12</td><td class="num">~7-8</td></tr>
+    </table>
+</div>
+
+<!-- 7. Возможности и выводы -->
+<div class="card">
+    <h2 style="margin-top:0;border:none;padding:0;">7. Возможности инструментария</h2>
+    <ul>
+        <li>Отчет <code>внТестППРозничногоДУ</code> - быстрые итерации без EPF и без ДО.</li>
+        <li>Режим «как в бой» (без пересоздания) - отключить <em>Режим теста производительности</em>.</li>
+        <li>Журнал регистрации: событие <code>IMDEV9101.ТестППРозничногоДУ</code> с итогом скорости без удаления.</li>
+        <li>PFF-профилировщик - детализация по модулям и строкам BSL.</li>
+        <li>Экспорт детализации в Excel для анализа выбросов по строкам.</li>
+    </ul>
+
+    <h2>8. Выводы</h2>
+    <ol>
+        <li>
+            <span class="ok">Тест успешен:</span> 649 ПП созданы без ошибок; метрика боя стабильна -
+            <strong>135 мс/ПП</strong>, <strong>~88 сек</strong> на пакет без удаления.
+        </li>
+        <li>
+            <span class="err">Узкое место - проведение ПП,</span> а не запрос отбора.
+            Основные потребители: <strong>ИсторияСтатусовОбъектов</strong> и <strong>регистрация CSV-выгрузки</strong>.
+        </li>
+        <li>
+            Отчет тестирует <strong>только создание ПП по готовым поручениям</strong> (контур B).
+            Создание поручений при синхронизации - отдельный контур, не входящий в замеры.
+        </li>
+        <li>
+            При целевой нагрузке <strong>10 000 ПП/день</strong> текущая скорость дает ~22,5 мин чистого времени,
+            но при лимите <strong>120 сек/запуск</strong> - только ~888 ПП. Требуется оптимизация или несколько запусков.
+        </li>
+        <li>
+            Первоочередная оптимизация: <strong>P1 - статусы и CSV</strong>, ожидаемое ускорение ~35-45%
+            (до ~75-95 мс/ПП).
+        </li>
+    </ol>
+</div>
+
+<div class="footer">
+    IMDEV-9101 | WIM_DU | Проект: bases/Wim_Du/projects/IMDEV-9101 Перевод ДС на биржу<br>
+    Файл: Тестирование/reports/speed_test_summary_report.html | 13.07.2026
+</div>
+
+</div>
+</body>
+</html>
