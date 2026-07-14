@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>IMDEV-9105: замер загрузки 100 договоров РДУ</title>
+<style>
+* { box-sizing: border-box; }
+body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+    line-height: 1.55; color: #1a202c; background: #f0f2f5; margin: 0; padding: 24px;
+}
+.container { max-width: 820px; margin: 0 auto; }
+.hero {
+    background: #1a365d; color: #fff; border-radius: 10px;
+    padding: 22px 26px; margin-bottom: 16px;
+}
+.hero h1 { margin: 0 0 6px; font-size: 1.3rem; font-weight: 600; }
+.hero p { margin: 0; opacity: 0.9; font-size: 0.95rem; }
+.meta { margin-top: 10px; font-size: 0.82rem; opacity: 0.85; }
+.card {
+    background: #fff; border-radius: 10px; padding: 18px 22px; margin-bottom: 14px;
+    border: 1px solid #e2e8f0;
+}
+h2 {
+    color: #1a365d; font-size: 1.05rem; margin: 0 0 12px;
+    padding-bottom: 8px; border-bottom: 2px solid #e2e8f0;
+}
+.verdict {
+    background: #f0fff4; border-left: 4px solid #28a745;
+    padding: 12px 14px; border-radius: 0 8px 8px 0; margin-bottom: 12px;
+}
+.problem {
+    background: #fff5f5; border-left: 4px solid #e53e3e;
+    padding: 12px 14px; border-radius: 0 8px 8px 0; margin-bottom: 12px;
+}
+.solution {
+    background: #ebf8ff; border-left: 4px solid #3182ce;
+    padding: 12px 14px; border-radius: 0 8px 8px 0; margin-bottom: 12px;
+}
+table { width: 100%; border-collapse: collapse; font-size: 0.9rem; margin: 10px 0; }
+th, td { border: 1px solid #e2e8f0; padding: 8px 10px; vertical-align: top; }
+th { background: #f7fafc; text-align: left; font-weight: 600; }
+.num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.hot { background: #fff5f5; }
+.muted { color: #718096; font-size: 0.85rem; }
+code { background: #edf2f7; padding: 1px 5px; border-radius: 3px; font-size: 0.86em; }
+pre {
+    background: #2d3748; color: #e2e8f0; padding: 12px 14px;
+    border-radius: 8px; overflow-x: auto; font-size: 0.82rem; line-height: 1.45;
+}
+ol, ul { margin: 8px 0 4px 18px; padding: 0; }
+li { margin: 6px 0; }
+.steps { counter-reset: s; list-style: none; margin-left: 0; }
+.steps li {
+    position: relative; padding: 10px 12px 10px 48px;
+    margin: 8px 0; background: #f7fafc; border: 1px solid #e2e8f0; border-radius: 8px;
+}
+.steps li::before {
+    counter-increment: s; content: counter(s);
+    position: absolute; left: 12px; top: 10px;
+    width: 26px; height: 26px; line-height: 26px; text-align: center;
+    background: #2b6cb0; color: #fff; border-radius: 50%; font-size: 0.85rem; font-weight: 700;
+}
+.footer { text-align: center; color: #718096; font-size: 0.82rem; margin-top: 18px; }
+</style>
+</head>
+<body>
+<div class="container">
+
+<div class="hero">
+    <h1>IMDEV-9105: замер загрузки 100 договоров РДУ</h1>
+    <p>Что тестировали, в чём узкое место, как предлагаем ускорить</p>
+    <div class="meta">14.07.2026 · обработка <code style="background:rgba(255,255,255,.15);color:#fff">внТестЗагрузкаДоговоровРДУ</code> · база WIM_DU</div>
+</div>
+
+<!-- ========== 1. ЧТО ТЕСТИРОВАЛИ ========== -->
+<div class="card">
+    <h2>1. Что тестировали</h2>
+    <div class="verdict">
+        Прогон <strong>успешен</strong> (Успех=Да). В ДО ничего не отправлялось.
+        Созданные в ДУ объекты <strong>откатили</strong> транзакцией — замер чистый.
+    </div>
+    <p>
+        Имитировали боевую загрузку розничных договоров ДУ
+        <strong>без внешнего Документооборота</strong> и <strong>без платёжных поручений</strong>:
+    </p>
+    <ol>
+        <li>Взяли 100 существующих РДУ из пула «Розничное ДУ» и заполнили ТЧ, как будто данные пришли из ДО.</li>
+        <li>Прогнали тот же путь, что в <code>СинхронизацияНСИ</code>:
+            создание договора / НСИ → аналитика → поручение на перевод ДС.</li>
+        <li>Замерили время блоков в обработке и профиль отладчика (.pff).</li>
+    </ol>
+    <table>
+        <tr><th>Параметр</th><th>Значение</th></tr>
+        <tr><td>Количество образцов</td><td>100</td></tr>
+        <tr><td>Префикс</td><td>T9105</td></tr>
+        <tr><td>Пул</td><td>Розничное ДУ</td></tr>
+        <tr><td>Создание ПП</td><td>Отключено</td></tr>
+        <tr><td>Откат транзакции</td><td>Да</td></tr>
+        <tr><td>Связь с ДО</td><td>Нет (только локальная база ДУ)</td></tr>
+    </table>
+    <table>
+        <thead>
+            <tr>
+                <th>Блок</th>
+                <th class="num">Время</th>
+                <th class="num">Доля</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>1. Генерация ТЧ из существующих РДУ</td>
+                <td class="num">6.5 с</td>
+                <td class="num">2%</td>
+            </tr>
+            <tr class="hot">
+                <td><strong>2. СоздатьНСИ + аналитика + поручение</strong></td>
+                <td class="num"><strong>303 с</strong></td>
+                <td class="num"><strong>97%</strong></td>
+            </tr>
+            <tr>
+                <td>ИТОГО</td>
+                <td class="num">311.5 с (~5 мин)</td>
+                <td class="num">100%</td>
+            </tr>
+        </tbody>
+    </table>
+    <p class="muted">~3 с на один договор. Узкое место — блок 2, не генерация ТЧ.</p>
+</div>
+
+<!-- ========== 2. В ЧЁМ ПРОБЛЕМА ========== -->
+<div class="card">
+    <h2>2. В чём проблема</h2>
+    <div class="problem">
+        <strong>~56% всего времени</strong> уходит на один и тот же запрос к
+        <code>Справочник.ДоговорыКонтрагентов</code>: отбор по
+        <code>ДоговорДУ</code> и <code>РольДоговора</code>, у которых в конфигурации
+        <strong>нет индекса</strong> (<code>DontIndex</code>).
+        Запрос вызывается из двух мест кода сотни раз на 100 договоров,
+        почти всегда возвращает пусто (объекты ещё не созданы) — и всё равно стоит дорого.
+    </div>
+
+    <p><strong>Топ-2 строки отладчика (self-время):</strong></p>
+    <table>
+        <thead>
+            <tr>
+                <th>#</th>
+                <th>Где вызывается</th>
+                <th class="num">Время</th>
+                <th class="num">Вызовов</th>
+                <th class="num">Доля*</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr class="hot">
+                <td>1</td>
+                <td>Функция <code>ДоговорКонтрагента</code> (поиск по роли)</td>
+                <td class="num">128.4 с</td>
+                <td class="num">400</td>
+                <td class="num"><strong>41.6%</strong></td>
+            </tr>
+            <tr class="hot">
+                <td>2</td>
+                <td>Создание торгового кода / ЕБС (тот же SELECT)</td>
+                <td class="num">43.6 с</td>
+                <td class="num">100</td>
+                <td class="num"><strong>14.1%</strong></td>
+            </tr>
+            <tr>
+                <td></td>
+                <td><strong>Сумма двух call-site одного запроса</strong></td>
+                <td class="num"><strong>172 с</strong></td>
+                <td class="num">500</td>
+                <td class="num"><strong>55.7%</strong></td>
+            </tr>
+        </tbody>
+    </table>
+    <p class="muted">* Доля от полного прогона (~308.7 с по отладчику). ~0.3–0.4 с на один пустой поиск.</p>
+
+    <p><strong>Один текст запроса в обоих местах:</strong></p>
+<pre>ВЫБРАТЬ
+    ДоговорыКонтрагентов.Ссылка
+ИЗ
+    Справочник.ДоговорыКонтрагентов
+ГДЕ
+    Владелец = &amp;Владелец
+    И ДоговорДУ = &amp;ДоговорДУ
+    И РольДоговора = &amp;РольДоговора</pre>
+
+    <table>
+        <thead>
+            <tr><th>Поле отбора</th><th>Индекс в CF</th></tr>
+        </thead>
+        <tbody>
+            <tr><td><code>Владелец</code></td><td>стандартный реквизит владельца</td></tr>
+            <tr class="hot"><td><code>ДоговорДУ</code></td><td><strong>DontIndex</strong></td></tr>
+            <tr class="hot"><td><code>РольДоговора</code></td><td><strong>DontIndex</strong></td></tr>
+        </tbody>
+    </table>
+
+    <p class="muted" style="margin-top:12px">
+        Остальное (проведение УП/поручений, версионирование, подписки обмена/CSV) —
+        ещё ~30–40% вместе, но вторично: сначала имеет смысл убрать эти SELECT.
+    </p>
+</div>
+
+<!-- ========== 3. КАК РЕШАТЬ ========== -->
+<div class="card">
+    <h2>3. Как предлагаем решать</h2>
+    <div class="solution">
+        Цель: снять ~172 с (чуть больше половины прогона) на холостых поисках
+        по <code>ДоговорыКонтрагентов</code>, затем уже заниматься проведениями и подписками.
+        После фикса — повторный прогон на 100 и сравнение с этим отчётом.
+    </div>
+
+    <ol class="steps">
+        <li>
+            <strong>Индекс в конфигурации (основной рычаг для боя)</strong><br>
+            Включить индексирование у <code>ДоговорДУ</code> и/или <code>РольДоговора</code>
+            в справочнике <code>ДоговорыКонтрагентов</code>
+            (предпочтительно составной индекс под WHERE:
+            <code>ДоговорДУ + РольДоговора</code>, при возможности с учётом <code>Владелец</code>).
+            Обновить структуру БД и повторить замер.
+        </li>
+        <li>
+            <strong>Логика пакетной загрузки (дополнительно)</strong><br>
+            В цикле создания нового ДУ: не искать объект, который только что гарантированно отсутствует —
+            кэш ключа <code>(Владелец, ДоговорДУ, Роль)</code> или параметр «создаём с нуля» без SELECT.
+            Объединить два call-site в одну функцию с кэшем, чтобы не дублировать запрос.
+        </li>
+        <li>
+            <strong>Второй эшелон (после индекса)</strong><br>
+            Если всё ещё мало: уменьшить число проведений, ослабить тяжёлые подписки
+            на время массовой загрузки; разбить замер блока 2 на подблоки
+            (договор / аналитика / поручение) в самой тестовой обработке.
+        </li>
+    </ol>
+
+    <p><strong>Ожидаемый эффект от п.1–2:</strong> блок 2 с ~303 с ориентировочно
+    до порядка <strong>120–180 с</strong> на 100 договоров (нужна проверка повторным прогоном).
+    Цель «&lt;1 с на договор» потребует уже пакетной архитектуры, не только индекса.</p>
+</div>
+
+<!-- ========== СПРАВОЧНО ========== -->
+<div class="card">
+    <h2>Справочно: артефакты прогона</h2>
+    <table>
+        <tr><th>Файл</th><th>Содержание</th></tr>
+        <tr><td><code>Тест_100ДоговоровДУ.png</code></td><td>Скриншот формы с замерами</td></tr>
+        <tr><td><code>Сообщения_100.txt</code></td><td>Лог сообщений + макет отчёта</td></tr>
+        <tr><td><code>Отладчик_100.pff</code></td><td>Профиль производительности 1С</td></tr>
+        <tr><td><code>reports/pff_hotspots_100.json</code></td><td>Разобранный TOP из .pff</td></tr>
+    </table>
+</div>
+
+<div class="footer">
+    IMDEV-9105 · отчёт по прогону 100 договоров · 14.07.2026
+</div>
+
+</div>
+</body>
+</html>
