@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IMDEV-9105 - ТЗ на индексацию</title>
+    <style>
+        :root {
+            --ok: #28a745;
+            --bad: #dc3545;
+            --info: #17a2b8;
+            --border: #dee2e6;
+            --muted: #6c757d;
+            --bg: #f8f9fa;
+        }
+        * { box-sizing: border-box; }
+        body {
+            font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.5;
+            color: #212529;
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 28px 32px 48px;
+            background: var(--bg);
+        }
+        h1 { font-size: 1.35em; color: #1a365d; border-bottom: 3px solid var(--info); padding-bottom: 10px; }
+        h2 { font-size: 1.1em; color: #1a365d; margin-top: 28px; border-left: 4px solid var(--info); padding-left: 10px; }
+        .header-box {
+            background: #fff;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 18px 22px;
+            margin: 16px 0;
+        }
+        .header-box table { width: 100%; border-collapse: collapse; }
+        .header-box td { padding: 6px 10px 6px 0; vertical-align: top; }
+        .header-box td:first-child { width: 160px; color: var(--muted); font-weight: 600; }
+        .card {
+            background: #fff;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 16px 20px;
+            margin: 12px 0;
+        }
+        .card.ok { background: #d4edda; border-color: #c3e6cb; }
+        table.data {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.92em;
+            margin: 10px 0;
+        }
+        table.data th, table.data td {
+            border: 1px solid var(--border);
+            padding: 8px 10px;
+            text-align: left;
+        }
+        table.data th { background: #e9ecef; }
+        .num { text-align: right; font-variant-numeric: tabular-nums; }
+        pre {
+            background: #2d3748;
+            color: #e2e8f0;
+            padding: 12px 14px;
+            border-radius: 6px;
+            font-size: 0.82em;
+            overflow-x: auto;
+            white-space: pre-wrap;
+        }
+        code { background: #edf2f7; padding: 1px 5px; border-radius: 3px; font-size: 0.9em; }
+        .chart-block {
+            background: #fff;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 16px;
+            margin: 16px 0;
+        }
+        .chart-title { font-weight: 600; margin-bottom: 12px; color: #2c5282; }
+        .chart-img { width: 100%; max-width: 820px; display: block; margin: 0 auto; }
+        ul, ol { margin: 8px 0; padding-left: 22px; }
+        li { margin: 4px 0; }
+        .good { color: var(--ok); font-weight: 600; }
+        footer { margin-top: 32px; font-size: 0.85em; color: var(--muted); border-top: 1px solid var(--border); padding-top: 12px; }
+    </style>
+</head>
+<body>
+
+<h1>Техническое задание</h1>
+
+<div class="header-box">
+    <table>
+        <tr>
+            <td>Тема задачи</td>
+            <td><strong>Включить индексацию реквизитов ДоговорДУ и РольДоговора справочника ДоговорыКонтрагентов (ускорение загрузки договоров РДУ)</strong></td>
+        </tr>
+        <tr>
+            <td>Номер задачи</td>
+            <td><strong>IMDEV-9105</strong></td>
+        </tr>
+        <tr>
+            <td>Конфигурация</td>
+            <td>1С:Доверительное управление</td>
+        </tr>
+        <tr>
+            <td>Тип изменения</td>
+            <td>Метаданные (без изменения программного кода)</td>
+        </tr>
+        <tr>
+            <td>Основание</td>
+            <td>Замеры производительности (PFF), 14.07.2026</td>
+        </tr>
+    </table>
+</div>
+
+<h2>1. Суть задачи</h2>
+<div class="card">
+    <p>При загрузке/синхронизации договоров РДУ (путь как в обработке <code>СинхронизацияНСИ</code>: создание договора ДУ, аналитика, связанные договоры контрагентов, поручение на перевод) на каждый договор многократно выполняется поиск существующих элементов справочника <code>ДоговорыКонтрагентов</code> по комбинации <code>Владелец + ДоговорДУ + РольДоговора</code>.</p>
+    <p>Реквизиты <code>ДоговорДУ</code> и <code>РольДоговора</code> сейчас <strong>не индексируются</strong> (<code>DontIndex</code>), из-за чего запрос при массовой загрузке выполняется медленно. Требуется включить индексацию.</p>
+</div>
+
+<h2>2. Куда вносить изменение</h2>
+<table class="data">
+    <tr><th>Параметр</th><th>Значение</th></tr>
+    <tr><td>Объект метаданных</td><td><code>Справочник.ДоговорыКонтрагентов</code></td></tr>
+    <tr><td>Владелец справочника</td><td><code>Справочник.Контрагенты</code></td></tr>
+    <tr><td>Реквизит</td><td><code>ДоговорДУ</code> (тип: <code>CatalogRef.ДоговорДУ</code>)</td></tr>
+    <tr><td>Реквизит</td><td><code>РольДоговора</code> (тип: <code>EnumRef.РолиДоговоровКонтрагента</code>)</td></tr>
+    <tr><td>Файл конфигурации (XML)</td><td><code>Catalogs/ДоговорыКонтрагентов.xml</code></td></tr>
+    <tr><td>Текущее значение</td><td><code>&lt;Indexing&gt;DontIndex&lt;/Indexing&gt;</code> (оба реквизита)</td></tr>
+    <tr><td>Требуемое значение</td><td><code>&lt;Indexing&gt;Index&lt;/Indexing&gt;</code></td></tr>
+    <tr><td>Затрагиваемый код (не менять)</td><td>типовой путь создания связанных договоров контрагентов при загрузке РДУ (поиск перед созданием)</td></tr>
+</table>
+
+<pre>ВЫБРАТЬ
+    ДоговорыКонтрагентов.Ссылка
+ИЗ
+    Справочник.ДоговорыКонтрагентов КАК ДоговорыКонтрагентов
+ГДЕ
+    ДоговорыКонтрагентов.Владелец = &amp;Владелец
+    И ДоговорыКонтрагентов.ДоговорДУ = &amp;ДоговорДУ
+    И ДоговорыКонтрагентов.РольДоговора = &amp;РольДоговора
+
+РезультатЗапроса = Запрос.Выполнить();</pre>
+
+<h2>3. Почему нужно изменение</h2>
+<ul>
+    <li>Один и тот же запрос вызывается из <strong>двух мест</strong> кода при создании связанных договоров контрагентов (~500 раз на пакет 100 договоров РДУ).</li>
+    <li>Без индекса СУБД выполняет дорогой поиск по таблице <code>ДоговорыКонтрагентов</code> (отбор по неидентифицированным реквизитам <code>ДоговорДУ</code> / <code>РольДоговора</code>).</li>
+    <li>По замерам PFF две call-site этого запроса занимали <strong>55,7% времени</strong> всего сценария (172 с из ~309 с).</li>
+    <li>После включения индексации в тестовой базе время тех же строк сократилось до <strong>1,2 с</strong> — ускорение порядка <strong>&times;140 (&minus;99%)</strong>.</li>
+    <li>Общее время сценария загрузки 100 договоров сократилось с <strong>311,5 с до 132,4 с (&minus;58%, &times;2,35)</strong>.</li>
+</ul>
+
+<h2>4. Что сделать (объём работ)</h2>
+<ol>
+    <li>Для реквизита <code>Справочник.ДоговорыКонтрагентов.ДоговорДУ</code> установить индексирование: <code>Index</code>.</li>
+    <li>Для реквизита <code>Справочник.ДоговорыКонтрагентов.РольДоговора</code> установить индексирование: <code>Index</code>.</li>
+    <li>Программный код <strong>не изменять</strong>.</li>
+    <li>Выполнить обновление конфигурации базы данных (реструктуризация индекса).</li>
+    <li>Передать патч/релиз с описанием изменения в метаданных.</li>
+</ol>
+
+<h2>5. Критерии приемки</h2>
+<ul>
+    <li>В метаданных: <code>ДоговорДУ.Indexing = Index</code> и <code>РольДоговора.Indexing = Index</code>.</li>
+    <li>Функциональность создания/поиска договоров контрагентов при загрузке РДУ не нарушена.</li>
+    <li>На тестовой базе время выполнения горячего <code>Запрос.Выполнить()</code> по <code>ДоговорыКонтрагентов</code> при загрузке 100 договоров — порядка <strong>секунд</strong>, а не сотен секунд.</li>
+</ul>
+
+<h2>6. Результаты замеров</h2>
+<p>Сценарий тестирования: загрузка 100 договоров РДУ (без ДО, без ПП, с откатом транзакции). Сравнение до и после включения индексации.</p>
+
+<div class="chart-block">
+    <div class="chart-title">Рис. 1. Время горячего SELECT к ДоговорыКонтрагентов — до и после индексации</div>
+    <svg class="chart-img" viewBox="0 0 820 260" xmlns="http://www.w3.org/2000/svg">
+        <rect width="820" height="260" fill="#fafbfc"/>
+        <text x="410" y="28" text-anchor="middle" font-size="14" font-weight="600" fill="#1a365d">Запрос.Выполнить() — поиск по ДоговорДУ + РольДоговора</text>
+        <text x="120" y="58" font-size="12" fill="#6c757d">До (без индекса)</text>
+        <rect x="120" y="68" width="640" height="44" rx="6" fill="#dc3545"/>
+        <text x="130" y="96" font-size="15" font-weight="700" fill="#fff">172,0 с  |  55,7% сессии  |  500 вызовов</text>
+        <text x="120" y="138" font-size="12" fill="#6c757d">После (с индексацией)</text>
+        <rect x="120" y="148" width="5" height="44" rx="2" fill="#28a745"/>
+        <text x="140" y="176" font-size="15" font-weight="700" fill="#28a745">1,2 с  |  ~0,4% сессии  |  500 вызовов</text>
+        <text x="410" y="220" text-anchor="middle" font-size="18" font-weight="700" fill="#28a745">-99%  (ускорение порядка x140)</text>
+        <text x="410" y="248" text-anchor="middle" font-size="13" fill="#6c757d">L3335: 128,4 с -&gt; 0,96 с;  L3199: 43,6 с -&gt; 0,24 с</text>
+    </svg>
+</div>
+
+<div class="chart-block">
+    <div class="chart-title">Рис. 2. Время сценария загрузки 100 договоров РДУ</div>
+    <svg class="chart-img" viewBox="0 0 820 220" xmlns="http://www.w3.org/2000/svg">
+        <rect width="820" height="220" fill="#fafbfc"/>
+        <text x="200" y="38" text-anchor="middle" font-size="13" font-weight="600" fill="#1a365d">До</text>
+        <rect x="40" y="50" width="320" height="90" rx="8" fill="#dc3545"/>
+        <text x="200" y="90" text-anchor="middle" font-size="15" fill="#fff" font-weight="600">311,5 с</text>
+        <text x="200" y="110" text-anchor="middle" font-size="12" fill="#fff">~5,2 мин</text>
+        <text x="200" y="128" text-anchor="middle" font-size="11" fill="#fff">100%</text>
+        <text x="580" y="38" text-anchor="middle" font-size="13" font-weight="600" fill="#1a365d">После</text>
+        <rect x="420" y="50" width="320" height="90" rx="8" fill="#28a745"/>
+        <text x="580" y="90" text-anchor="middle" font-size="15" fill="#fff" font-weight="600">132,4 с</text>
+        <text x="580" y="110" text-anchor="middle" font-size="12" fill="#fff">~2,2 мин</text>
+        <text x="580" y="128" text-anchor="middle" font-size="11" fill="#fff">42,5%</text>
+        <path d="M 370 95 L 410 95" stroke="#17a2b8" stroke-width="3" marker-end="url(#arrow)"/>
+        <defs><marker id="arrow" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3 z" fill="#17a2b8"/></marker></defs>
+        <text x="410" y="175" text-anchor="middle" font-size="16" font-weight="700" fill="#17a2b8">-58%  (-179 с), x2,35</text>
+        <text x="410" y="198" text-anchor="middle" font-size="12" fill="#6c757d">На один договор: 3,03 с -&gt; 1,24 с (-59%)</text>
+    </svg>
+</div>
+
+<div class="chart-block">
+    <div class="chart-title">Рис. 3. Доля горячего SELECT в общем времени сценария</div>
+    <svg class="chart-img" viewBox="0 0 820 200" xmlns="http://www.w3.org/2000/svg">
+        <rect width="820" height="200" fill="#fafbfc"/>
+        <text x="30" y="55" font-size="12" fill="#495057">До: SELECT ДоговорыКонтрагентов</text>
+        <rect x="260" y="38" width="460" height="28" rx="4" fill="#e9ecef"/>
+        <rect x="260" y="38" width="256" height="28" rx="4" fill="#e67e22"/>
+        <text x="740" y="57" font-size="12" font-weight="600" fill="#e67e22">55,7%</text>
+        <text x="30" y="105" font-size="12" fill="#495057">После: SELECT ДоговорыКонтрагентов</text>
+        <rect x="260" y="88" width="460" height="28" rx="4" fill="#e9ecef"/>
+        <rect x="260" y="88" width="2" height="28" rx="1" fill="#28a745"/>
+        <text x="740" y="105" font-size="12" font-weight="600" fill="#28a745">~0,4%</text>
+        <text x="30" y="155" font-size="12" fill="#495057">Блок СоздатьНСИ + аналитика</text>
+        <rect x="260" y="138" width="460" height="28" rx="4" fill="#e9ecef"/>
+        <rect x="260" y="138" width="448" height="28" rx="4" fill="#dc3545" opacity="0.7"/>
+        <text x="300" y="157" font-size="11" fill="#fff">303 с (97%)</text>
+        <rect x="260" y="138" width="183" height="28" rx="4" fill="#28a745"/>
+        <text x="280" y="157" font-size="11" fill="#fff">124 с (94%)</text>
+    </svg>
+</div>
+
+<div class="chart-block">
+    <div class="chart-title">Рис. 4. Сводная таблица замеров</div>
+    <table class="data">
+        <thead>
+            <tr>
+                <th>Показатель</th>
+                <th class="num">До</th>
+                <th class="num">После</th>
+                <th class="num">Изменение</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>Загрузка 100 договоров РДУ (ИТОГО)</td>
+                <td class="num">311,5 с (100%)</td>
+                <td class="num">132,4 с (42,5%)</td>
+                <td class="num good">-58%</td>
+            </tr>
+            <tr style="background:#d4edda;">
+                <td><strong>SELECT ДоговорыКонтрагентов (два call-site)</strong></td>
+                <td class="num">172,0 с (55,7%)</td>
+                <td class="num">1,2 с (~0,4%)</td>
+                <td class="num good"><strong>-99%</strong></td>
+            </tr>
+            <tr>
+                <td>в т.ч. L3335 ДоговорКонтрагента (N=400)</td>
+                <td class="num">128,4 с (41,6%)</td>
+                <td class="num">0,96 с</td>
+                <td class="num good">x133</td>
+            </tr>
+            <tr>
+                <td>в т.ч. L3199 торговый код / ЕБС (N=100)</td>
+                <td class="num">43,6 с (14,1%)</td>
+                <td class="num">0,24 с</td>
+                <td class="num good">x184</td>
+            </tr>
+            <tr>
+                <td>Блок СоздатьНСИ + аналитика + поручение</td>
+                <td class="num">303,3 с (97%)</td>
+                <td class="num">123,9 с (94%)</td>
+                <td class="num good">-59%</td>
+            </tr>
+            <tr>
+                <td>На один договор</td>
+                <td class="num">3,03 с</td>
+                <td class="num">1,24 с</td>
+                <td class="num good">-59%</td>
+            </tr>
+        </tbody>
+    </table>
+</div>
+
+<h2>7. Ограничения</h2>
+<ul>
+    <li>Изменяются <strong>только метаданные</strong> указанных реквизитов.</li>
+    <li>Программный код модулей конфигурации и внешние обработки <strong>не затрагиваются</strong>.</li>
+</ul>
+
+<div class="card ok">
+    <strong>Резюме:</strong> изменение в метаданных — реквизиты <code>ДоговорДУ</code> и <code>РольДоговора</code>:
+    <code>DontIndex</code> &rarr; <code>Index</code>. Подтверждённый эффект: ускорение критичного запроса порядка <strong>x140</strong>,
+    сокращение времени загрузки 100 договоров РДУ на <strong>58%</strong>.
+</div>
+
+<footer>
+    IMDEV-9105 | Замеры производительности, 14.07.2026
+</footer>
+
+</body>
+</html>
