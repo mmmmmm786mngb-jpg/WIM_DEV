@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>IMDEV-9101 P1-A: краткий вердикт по скорости</title>
+<style>
+* { box-sizing: border-box; }
+body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+    line-height: 1.55; color: #212529; background: #f0f2f5; margin: 0; padding: 24px;
+}
+.container { max-width: 880px; margin: 0 auto; }
+.hero {
+    background: linear-gradient(135deg, #744210 0%, #b7791f 55%, #d69e2e 100%);
+    color: #fff; border-radius: 12px; padding: 24px 28px; margin-bottom: 18px;
+}
+.hero h1 { margin: 0 0 8px 0; font-size: 1.35rem; }
+.hero p { margin: 0; opacity: 0.95; }
+.badge {
+    display: inline-block; background: rgba(255,255,255,0.22);
+    border: 1px solid rgba(255,255,255,0.4); border-radius: 16px;
+    padding: 3px 11px; font-size: 0.8rem; margin: 10px 6px 0 0;
+}
+.card {
+    background: #fff; border-radius: 10px; padding: 18px 22px; margin-bottom: 14px;
+    border: 1px solid #e2e8f0; box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+}
+h2 { color: #2d3748; font-size: 1.1rem; margin: 0 0 12px 0; padding-bottom: 8px; border-bottom: 2px solid #e2e8f0; }
+table { width: 100%; border-collapse: collapse; font-size: 0.9rem; margin: 8px 0; }
+th, td { border: 1px solid #e2e8f0; padding: 8px 10px; vertical-align: top; }
+th { background: #f7fafc; font-weight: 600; text-align: left; }
+tr:nth-child(even) { background: #fafbfc; }
+.num { font-variant-numeric: tabular-nums; text-align: right; white-space: nowrap; }
+.kpi { display: flex; flex-wrap: wrap; gap: 12px; margin: 8px 0 4px; }
+.kpi div { flex: 1 1 180px; background: #f7fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px 14px; }
+.kpi .v { font-size: 1.25rem; font-weight: 700; color: #2c5282; }
+.kpi .l { font-size: 0.82rem; color: #718096; }
+.was { color: #718096; }
+.became { color: #2b6cb0; font-weight: 600; }
+.note-warn {
+    background: #fffaf0; border-left: 4px solid #ed8936;
+    padding: 14px 16px; border-radius: 0 8px 8px 0; margin: 0;
+}
+.note-info {
+    background: #ebf8ff; border-left: 4px solid #17a2b8;
+    padding: 12px 16px; border-radius: 0 8px 8px 0; margin: 12px 0 0;
+}
+.verdict {
+    background: #fff5f5; border: 2px solid #fc8181; border-radius: 10px;
+    padding: 16px 18px; margin-top: 4px;
+}
+.verdict strong { color: #c53030; font-size: 1.05rem; }
+.muted { color: #718096; font-size: 0.86rem; }
+.footer { text-align: center; color: #718096; font-size: 0.85rem; margin-top: 20px; }
+code { background: #edf2f7; padding: 1px 5px; border-radius: 4px; font-size: 0.85em; }
+</style>
+</head>
+<body>
+<div class="container">
+
+<div class="hero">
+    <h1>IMDEV-9101 P1-A: было / стало и оценка целесообразности</h1>
+    <p>Сравнительный прогон <code>внТестППРозничногоДУ</code> v5, WIM_DU, 14.07.2026</p>
+    <span class="badge">649 ПП, пул Розничное ДУ</span>
+    <span class="badge">01.07.2026 - 13.07.2026</span>
+    <span class="badge">блок создания (без удаления)</span>
+</div>
+
+<div class="card">
+    <h2>1. Было / стало (замер на 649 ПП)</h2>
+    <table>
+        <tr>
+            <th>Показатель</th>
+            <th class="num">Было (A, без флагов)</th>
+            <th class="num">Стало (B, флаги + CFE)</th>
+            <th class="num">Экономия</th>
+        </tr>
+        <tr>
+            <td>Время создания всего пакета</td>
+            <td class="num was">68,8 с (68 759 мс)</td>
+            <td class="num became">61,2 с (61 151 мс)</td>
+            <td class="num">7,6 с</td>
+        </tr>
+        <tr>
+            <td>Среднее на 1 платежное поручение</td>
+            <td class="num was">105,9 мс</td>
+            <td class="num became">94,2 мс</td>
+            <td class="num">11,7 мс (~11%)</td>
+        </tr>
+        <tr>
+            <td>Создано / ошибок / расхождений статусов</td>
+            <td class="num">649 / 0 / -</td>
+            <td class="num">649 / 0 / 0</td>
+            <td class="num">регресс нет</td>
+        </tr>
+    </table>
+    <p class="muted">
+        Источник: <code>Тестирование/Результаты_1407_сравнения.txt</code>,
+        скрин <code>Тест_Июль2026_созданиеПП_РозницаДУ_СРАВНЕНИЕ.png</code>.
+        Сравнивается только создание ПП; блоки тестового удаления в расчёт не входят.
+    </p>
+</div>
+
+<div class="card">
+    <h2>2. Сколько это на 10 000 платежек</h2>
+    <p>Линейная экстраполяция по среднему мс/ПП из прогона (только создание и проведение ПП).</p>
+    <div class="kpi">
+        <div>
+            <div class="v was">~17,7 мин</div>
+            <div class="l">Сейчас (без оптимизации)<br>10 000 x 105,9 мс = 1 059 с</div>
+        </div>
+        <div>
+            <div class="v became">~15,7 мин</div>
+            <div class="l">С оптимизацией P1-A<br>10 000 x 94,2 мс = 942 с</div>
+        </div>
+        <div>
+            <div class="v" style="color:#c05621;">~2,0 мин</div>
+            <div class="l">Выигрыш на 10 000 ПП<br>~117 с (~11%)</div>
+        </div>
+    </div>
+    <table>
+        <tr>
+            <th>Объём</th>
+            <th class="num">Без оптимизации</th>
+            <th class="num">С оптимизацией P1-A</th>
+            <th class="num">Экономия</th>
+        </tr>
+        <tr>
+            <td>649 ПП (факт теста)</td>
+            <td class="num">~1 мин 9 с</td>
+            <td class="num">~1 мин 1 с</td>
+            <td class="num">~8 с</td>
+        </tr>
+        <tr>
+            <td>1 000 ПП</td>
+            <td class="num">~1 мин 46 с</td>
+            <td class="num">~1 мин 34 с</td>
+            <td class="num">~12 с</td>
+        </tr>
+        <tr>
+            <td><strong>10 000 ПП</strong></td>
+            <td class="num"><strong>~17 мин 39 с</strong></td>
+            <td class="num"><strong>~15 мин 42 с</strong></td>
+            <td class="num"><strong>~1 мин 57 с</strong></td>
+        </tr>
+    </table>
+    <div class="note-info">
+        Оценка показывает порядок величины для массового создания ПП розничного ДУ.
+        На проде время ещё зависит от нагрузки СУБД, блокировок и прочих шагов синхронизации
+        (не только статусы). Направление эффекта (+/- 11%) сохраняется.
+    </div>
+</div>
+
+<div class="card">
+    <h2>3. Вывод по целесообразности</h2>
+    <div class="verdict">
+        <strong>Не рекомендуется выкатывать оптимизацию P1-A в прод.</strong>
+        <p style="margin:10px 0 0;">
+            Технически прогон успешен (статусы совпали, ошибок нет, создание чуть быстрее),
+            но практической пользы мало: текущая скорость уже приемлемая
+            (~1 минута на ~650 ПП, порядка 15-18 минут на 10 тыс.),
+            а выигрыш от CFE составляет всего ~11% (~2 минуты на 10 тыс. платежек).
+        </p>
+    </div>
+    <div class="note-warn" style="margin-top:14px;">
+        <strong>Почему не стоит вносить:</strong>
+        <ul style="margin:8px 0 0; padding-left:20px;">
+            <li>Экономия непропорциональна риску и стоимости сопровождения расширения
+                (патч модуля объекта <code>ПлатежноеПоручение</code>, флаги в EPF, регрессионные прогоны).</li>
+            <li>Узкое место проведения ПП после снятия дублирующих чтений статусов почти не меняется:
+                ~94 мс/ПП всё ещё уходит в обязательную запись документа и статусов.</li>
+            <li>Ориентир ТЗ (~30-40 мс/ПП) не достигнут: факт ~12 мс/ПП.</li>
+            <li>Для типовых объёмов розничного ДУ «сейчас» уже быстро; два минуты на 10 тыс. ПП
+                не окупают внедрение.</li>
+        </ul>
+    </div>
+</div>
+
+<div class="card">
+    <h2>4. Краткая сводка</h2>
+    <table>
+        <tr><th>Вопрос</th><th>Ответ</th></tr>
+        <tr>
+            <td>Работает ли оптимизация?</td>
+            <td>Да: статусы корректны, создание быстрее на ~11%.</td>
+        </tr>
+        <tr>
+            <td>Насколько быстрее на 10 тыс. ПП?</td>
+            <td>С ~17,7 мин до ~15,7 мин (экономия ~2 мин).</td>
+        </tr>
+        <tr>
+            <td>Имеет ли смысл внедрять?</td>
+            <td><strong>Нет.</strong> Уже достаточно быстро; эффект слишком мал для CFE.</td>
+        </tr>
+        <tr>
+            <td>Что делать дальше?</td>
+            <td>Закрыть P1-A как «измерено, эффекта мало»; CFE в прод не выкатывать.
+                Искать узкие места вне контура статусов, если появится реальная боль по SLA.</td>
+        </tr>
+    </table>
+</div>
+
+<div class="footer">
+    IMDEV-9101 | WIM_DU | Документация/p1a_speed_verdict_brief.html | 14.07.2026<br>
+    Базовый замер: 649 ПП, A=105,9 мс/ПП, B=94,2 мс/ПП
+</div>
+
+</div>
+</body>
+</html>
