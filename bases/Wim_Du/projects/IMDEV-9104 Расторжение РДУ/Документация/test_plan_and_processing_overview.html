@@ -1,0 +1,507 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>IMDEV-9104: план тестирования и описание тестовой обработки</title>
+<style>
+:root {
+  --ok: #28a745;
+  --err: #dc3545;
+  --info: #17a2b8;
+  --warn-bg: #fff3cd;
+  --info-bg: #d1ecf1;
+  --blue-bg: #cce5ff;
+  --violet-bg: #e2d5f1;
+  --green-bg: #d4edda;
+  --text: #212529;
+  --muted: #6c757d;
+  --border: #dee2e6;
+  --head: #1a365d;
+}
+* { box-sizing: border-box; }
+body {
+  font-family: "Segoe UI", Tahoma, Arial, sans-serif;
+  color: var(--text);
+  line-height: 1.5;
+  max-width: none;
+  width: 100%;
+  margin: 0;
+  padding: 24px 32px 48px;
+  background: #f8f9fa;
+}
+h1 {
+  color: var(--head);
+  font-size: 1.55rem;
+  margin: 0 0 8px;
+  border-bottom: 3px solid var(--info);
+  padding-bottom: 10px;
+}
+h2 {
+  color: var(--head);
+  font-size: 1.2rem;
+  margin: 28px 0 12px;
+  padding-left: 10px;
+  border-left: 4px solid var(--info);
+}
+h3 {
+  font-size: 1.05rem;
+  margin: 18px 0 8px;
+  color: #2c5282;
+}
+.meta {
+  color: var(--muted);
+  font-size: 0.95rem;
+  margin-bottom: 20px;
+}
+.intro {
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 14px 16px;
+  margin-bottom: 8px;
+}
+.box {
+  border-radius: 6px;
+  padding: 12px 14px;
+  margin: 12px 0;
+  border: 1px solid transparent;
+}
+.box-yellow { background: var(--warn-bg); border-color: #ffeeba; }
+.box-blue { background: var(--blue-bg); border-color: #b8daff; }
+.box-cyan { background: var(--info-bg); border-color: #bee5eb; }
+.box-violet { background: var(--violet-bg); border-color: #d0b3e8; }
+.box-green { background: var(--green-bg); border-color: #c3e6cb; }
+.box strong.label { display: inline-block; margin-bottom: 4px; }
+table {
+  width: 100%;
+  border-collapse: collapse;
+  background: #fff;
+  margin: 10px 0 16px;
+  font-size: 0.92rem;
+}
+th, td {
+  border: 1px solid var(--border);
+  padding: 8px 10px;
+  text-align: left;
+  vertical-align: top;
+}
+th {
+  background: #e9ecef;
+  font-weight: 600;
+}
+tr:nth-child(even) td { background: #fafbfc; }
+.tag {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 3px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.tag-imit { background: #fff3cd; color: #856404; }
+.tag-exact { background: #d4edda; color: #155724; }
+.tag-skip { background: #f8d7da; color: #721c24; }
+.tag-part { background: #cce5ff; color: #004085; }
+.tag-meas { background: #e2d5f1; color: #4a2870; }
+ol.plan li { margin: 6px 0; }
+pre {
+  background: #2d3748;
+  color: #e2e8f0;
+  padding: 12px 14px;
+  border-radius: 6px;
+  overflow-x: auto;
+  font-size: 0.85rem;
+  line-height: 1.4;
+}
+code { font-family: Consolas, "Courier New", monospace; font-size: 0.9em; }
+.footer {
+  margin-top: 32px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+ul.compact li { margin: 4px 0; }
+</style>
+</head>
+<body>
+
+<h1>IMDEV-9104: план тестирования и описание тестовой обработки</h1>
+<p class="meta">
+  Обработка: <code>внТестРасторжениеДоговоровРДУ.epf</code><br>
+  Боевая обработка: <code>внРасторжениеДоговоровРозничногоДУ</code> (контур РЗ «ФоновоеДоговорыИзДОКРасторжению»)<br>
+  База: Wim_Du | Задача: оптимизация расторжения РДУ
+</p>
+
+<!-- ========== 1. Введение ========== -->
+<h2>1. Введение</h2>
+<div class="intro">
+  <p>
+    Документ описывает <strong>план тестирования производительности</strong> процесса расторжения
+    договоров розничного ДУ и то, как тестовая обработка относится к боевому коду:
+    какие шаги она <span class="tag tag-imit">имитирует</span>,
+    какие выполняет <span class="tag tag-exact">в точности</span>
+    (те же типы операций / вызовы API базы ДУ),
+    а какие <span class="tag tag-skip">намеренно не запускает</span>.
+  </p>
+  <p>
+    Цель прогона: на N существующих договоров пула «Розничное ДУ» получить замеры времени
+    основных блоков и понять, что является узким местом, <strong>без вызовов внешних систем</strong>
+    (1С:ДО, Finance, FO, почта).
+  </p>
+</div>
+
+<div class="box box-yellow">
+  <strong class="label">Важно</strong><br>
+  Тест не является полной копией боевой EPF «один в один». Это управляемый прогон
+  горячих участков контура с подменой входа из ДО и отключением внешних интеграций.
+  Запись в ДУ по умолчанию выполняется и затем <strong>откатывается транзакцией</strong>.
+</div>
+
+<!-- ========== 2. Боевые контуры ========== -->
+<h2>2. Боевые контуры (для справки)</h2>
+
+<h3>2.1. Регламентное задание (целевой контур IMDEV-9104 / замер №14)</h3>
+<pre>ВыполнитьКоманду("ФоновоеДоговорыИзДОКРасторжению")
+  |- ДОДоговорыДУКРасторжению()          &lt;-- APDEX / ключевая операция
+  |    |- GetClosingRetailAgreements()  (чтение WS 1С:ДО)
+  |    |- цикл: ДоговорПоНомеру, аналитика, счет, дата, поручение на вывод
+  |- СформироватьИОтправитьПисьмо("Перевод"|"Вывод"|"Ввод"|"МатВыгода")
+       (после замера; может вызвать FO при рассылке «Перевод»)</pre>
+
+<h3>2.2. Интерактив / кнопка «Выполнить расторжение» (не РЗ)</h3>
+<pre>ВыполнитьРасторжениеНаСервере()
+  |- ДОДоговорыДУКРасторжению()
+  |- ОбработкаДоговоровКРасторжению()
+       |- ДанныеНДФЛИзФИН()              (Finance)
+       |- ДанныеПоРасторжению()
+       |- цикл: СЧА, платежки, вознаграждение...
+       |- ЗакрытьДоговор() -&gt; SetRetailAgreementClosed()  (запись в ДО, письмо r287)</pre>
+
+<div class="box box-cyan">
+  <strong class="label">Фокус тестовой обработки</strong><br>
+  Основной измеряемый контур — <strong>тело РЗ</strong> (<code>ДОДоговорыДУКРасторжению</code>).
+  Дополнительно (флаги по умолчанию включены) меряются два тяжёлых read-only куска
+  из контура полного закрытия: укороченный <code>ДанныеПоРасторжению</code> и
+  <code>ПолучитьСуммыРСА_СЧА</code>. Это помогает заранее оценить стоимость шагов кнопки,
+  но <strong>не является полным</strong> <code>ОбработкаДоговоровКРасторжению</code>.
+</div>
+
+<!-- ========== 3. Имитация vs точное ========== -->
+<h2>3. Что имитируется, что используется в точности</h2>
+
+<table>
+  <thead>
+    <tr>
+      <th>Шаг / операция</th>
+      <th>В боевой обработке</th>
+      <th>В тестовой обработке</th>
+      <th>Тип</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>GetClosingRetailAgreements</code></td>
+      <td>WS 1С:ДО, чтение списка к расторжению</td>
+      <td>Запрос к <code>Справочник.ДоговорДУ</code> пула «Розничное ДУ», N штук; поля собираются «как из ДО» (номер, дата, БИК, счет)</td>
+      <td><span class="tag tag-imit">имитация входа</span></td>
+    </tr>
+    <tr>
+      <td><code>ДоговорПоНомеру</code></td>
+      <td><code>Справочники.ДоговорДУ.НайтиПоКоду</code></td>
+      <td>Тот же поиск по коду</td>
+      <td><span class="tag tag-exact">в точности</span></td>
+    </tr>
+    <tr>
+      <td><code>АналитическийСчет</code></td>
+      <td>Запрос к <code>ТорговыеКоды</code></td>
+      <td>Тот же запрос (ПЕРВЫЕ 1)</td>
+      <td><span class="tag tag-exact">в точности</span></td>
+    </tr>
+    <tr>
+      <td><code>БанковскийСчетКлиента</code></td>
+      <td>Поиск + при отсутствии создание элемента</td>
+      <td>Только поиск (без создания счета)</td>
+      <td><span class="tag tag-part">частично</span></td>
+    </tr>
+    <tr>
+      <td><code>ДоговорКонтрагента</code> (брокерский)</td>
+      <td>Запрос к <code>ДоговорыКонтрагентов</code></td>
+      <td>Тот же смысл запроса (роль Брокерский)</td>
+      <td><span class="tag tag-exact">в точности</span></td>
+    </tr>
+    <tr>
+      <td><code>УстановитьДатуРасторжения</code></td>
+      <td>Запись реквизита договора ДУ</td>
+      <td>Та же запись объекта (при ТолькоЧтение = Нет), затем откат транзакции</td>
+      <td><span class="tag tag-exact">в точности*</span></td>
+    </tr>
+    <tr>
+      <td><code>ПорученияДС</code> (вывод)</td>
+      <td>Создание/проведение поручения на вывод</td>
+      <td>Создание поручения (запись без проведения «как боевое» упрощена до Запись), откат</td>
+      <td><span class="tag tag-part">частично</span></td>
+    </tr>
+    <tr>
+      <td><code>ДанныеПоРасторжению</code></td>
+      <td>Большой пакетный запрос по всем к расторжению</td>
+      <td>Укороченный аналог по списку отобранных N договоров</td>
+      <td><span class="tag tag-part">частично / упрощённо</span></td>
+    </tr>
+    <tr>
+      <td><code>ПолучитьСуммыРСА_СЧА</code></td>
+      <td>Вызов документа <code>РасчетСЧА_РСА</code> в цикле закрытия</td>
+      <td>Тот же вызов по каждому из N договоров</td>
+      <td><span class="tag tag-exact">в точности</span></td>
+    </tr>
+    <tr>
+      <td>WS ДО / <code>SetRetailAgreementClosed</code></td>
+      <td>Есть в полном закрытии</td>
+      <td>Не вызывается</td>
+      <td><span class="tag tag-skip">не используется</span></td>
+    </tr>
+    <tr>
+      <td><code>ДанныеНДФЛИзФИН</code> / Finance</td>
+      <td>В <code>ОбработкаДоговоровКРасторжению</code></td>
+      <td>Не вызывается (не входит в РЗ)</td>
+      <td><span class="tag tag-skip">не используется</span></td>
+    </tr>
+    <tr>
+      <td>FO / почта r289.x</td>
+      <td>После цикла РЗ (и в рассылках)</td>
+      <td>Не вызывается</td>
+      <td><span class="tag tag-skip">не используется</span></td>
+    </tr>
+  </tbody>
+</table>
+
+<p style="font-size:0.9rem;color:var(--muted)">
+  * «в точности» по смыслу операции записи в ДУ; результат в базе не сохраняется из-за отката транзакции.
+</p>
+
+<!-- ========== 4. Порядок блоков ========== -->
+<h2>4. Порядок выполнения и замеры (по умолчанию)</h2>
+
+<div class="box box-green">
+  <strong class="label">Флажки по умолчанию при открытии формы</strong><br>
+  Только чтение = <strong>Нет</strong> |
+  Откатывать транзакцию = <strong>Да</strong> |
+  Мерить ДанныеПоРасторжению = <strong>Да</strong> |
+  Мерить РасчетСЧА_РСА = <strong>Да</strong>
+</div>
+
+<table>
+  <thead>
+    <tr>
+      <th>Порядок</th>
+      <th>Блок в отчёте</th>
+      <th>Действие</th>
+      <th>Замер</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>1</td>
+      <td>1. Имитация GetClosingRetailAgreements</td>
+      <td>Отбор N договоров «Розничное ДУ»</td>
+      <td><span class="tag tag-meas">да</span></td>
+    </tr>
+    <tr>
+      <td>2</td>
+      <td>2. Цикл РЗ (...)</td>
+      <td>Общее время цикла по всем договорам</td>
+      <td><span class="tag tag-meas">да</span></td>
+    </tr>
+    <tr>
+      <td>2.1</td>
+      <td>2.1 ДоговорПоНомеру</td>
+      <td>Сумма времени поиска по коду</td>
+      <td><span class="tag tag-meas">да</span></td>
+    </tr>
+    <tr>
+      <td>2.2</td>
+      <td>2.2 АналитическийСчет</td>
+      <td>Сумма времени запросов аналитики</td>
+      <td><span class="tag tag-meas">да</span></td>
+    </tr>
+    <tr>
+      <td>2.3</td>
+      <td>2.3 БанковскийСчетКлиента (поиск)</td>
+      <td>Сумма времени поиска счетов</td>
+      <td><span class="tag tag-meas">да</span></td>
+    </tr>
+    <tr>
+      <td>2.4</td>
+      <td>2.4 ДоговорКонтрагента</td>
+      <td>Сумма времени поиска брокерского договора</td>
+      <td><span class="tag tag-meas">да</span></td>
+    </tr>
+    <tr>
+      <td>2.5</td>
+      <td>2.5 УстановитьДатуРасторжения</td>
+      <td>Запись даты уведомления (потом откат)</td>
+      <td><span class="tag tag-meas">да</span></td>
+    </tr>
+    <tr>
+      <td>2.6</td>
+      <td>2.6 ПорученияДС (вывод)</td>
+      <td>Создание поручения на вывод (потом откат)</td>
+      <td><span class="tag tag-meas">да</span></td>
+    </tr>
+    <tr>
+      <td>3</td>
+      <td>3. ДанныеПоРасторжению (запрос)</td>
+      <td>Укороченный пакетный запрос по списку</td>
+      <td><span class="tag tag-meas">да</span></td>
+    </tr>
+    <tr>
+      <td>4</td>
+      <td>4. РасчетСЧА_РСА.ПолучитьСуммыРСА_СЧА</td>
+      <td>Расчёт СЧА/РСА по каждому договору</td>
+      <td><span class="tag tag-meas">да</span></td>
+    </tr>
+    <tr>
+      <td>—</td>
+      <td>Откат транзакции</td>
+      <td>Все записи 2.5/2.6 отменяются</td>
+      <td>нет</td>
+    </tr>
+    <tr>
+      <td>0</td>
+      <td>0. ИТОГО</td>
+      <td>Полное время прогона</td>
+      <td><span class="tag tag-meas">да</span></td>
+    </tr>
+  </tbody>
+</table>
+
+<div class="box box-violet">
+  <strong class="label">Куда смотреть результат</strong><br>
+  Табличный документ на форме (блоки отсортированы по времени убыванием) и
+  журнал регистрации: событие <code>IMDEV-9104.Замер</code>.
+</div>
+
+<!-- ========== 5. План тестирования ========== -->
+<h2>5. План тестирования</h2>
+
+<h3>5.1. Подготовка</h3>
+<ol class="plan">
+  <li>Использовать <strong>тестовую / копию</strong> базы ДУ (не PROD).</li>
+  <li>Убедиться, что в пуле «Розничное ДУ» есть достаточное число действующих договоров.</li>
+  <li>Открыть файл <code>внТестРасторжениеДоговоровРДУ.epf</code> в 1С:Предприятие.</li>
+  <li>Проверить значения флажков по умолчанию (см. раздел 4).</li>
+</ol>
+
+<h3>5.2. Сценарии</h3>
+<table>
+  <thead>
+    <tr>
+      <th>Сценарий</th>
+      <th>Параметры</th>
+      <th>Ожидаемый результат</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>S1. Базовый (50 договоров)</td>
+      <td>N=50, флаги по умолчанию</td>
+      <td>Успех; заполнены блоки 1–4 и ИТОГО; данные в ДУ не изменились (откат)</td>
+    </tr>
+    <tr>
+      <td>S2. Нагрузка (100 / 200 / 500)</td>
+      <td>N увеличивать ступенчато</td>
+      <td>Рост времени; выявить блок с максимальной долей %</td>
+    </tr>
+    <tr>
+      <td>S3. Только чтение</td>
+      <td>ТолькоЧтение = Да</td>
+      <td>Нет блоков 2.5/2.6; нет записи/создания документов</td>
+    </tr>
+    <tr>
+      <td>S4. Без СЧА / без ДанныеПоРасторжению</td>
+      <td>Снять соответствующий флаг</td>
+      <td>В отчёте нет блока 3 и/или 4; время ИТОГО меньше</td>
+    </tr>
+  </tbody>
+</table>
+
+<h3>5.3. Чек-лист после прогона</h3>
+<ul class="compact">
+  <li>В шапке отчёта: Успех = Да, количество договоров = N (или меньше, если в пуле мало).</li>
+  <li>Внешние вызовы: в отчёте указано «НЕТ (ДО / ФИН / FO / почта)».</li>
+  <li>Откат транзакции = Да — договоры не остались с тестовой датой расторжения / тестовыми поручениями.</li>
+  <li>Зафиксировать топ-3 самых долгих блока (время мс и доля %).</li>
+  <li>При ошибке — текст в отчёте и событие в журнале <code>IMDEV-9104.Замер</code>.</li>
+</ul>
+
+<h3>5.4. Критерии успеха тестирования (для задачи оптимизации)</h3>
+<div class="box box-blue">
+  <ul class="compact" style="margin:0">
+    <li>Получен воспроизводимый отчёт замеров на выбранном N.</li>
+    <li>Понятны кандидаты на оптимизацию (блоки с наибольшей долей %).</li>
+    <li>Подтверждено отсутствие побочных эффектов во внешних системах и (при откате) в данных ДУ.</li>
+  </ul>
+</div>
+
+<!-- ========== 6. Инструкция оператора ========== -->
+<h2>6. Что сделать после открытия обработки</h2>
+<ol class="plan">
+  <li>Проверить <strong>Пул</strong> = «Розничное ДУ».</li>
+  <li>Задать <strong>Количество договоров</strong>.</li>
+  <li>Оставить флажки по умолчанию (все блоки включены, откат включён).</li>
+  <li>Нажать <strong>«Запустить тест (замеры)»</strong>.</li>
+  <li>Проанализировать табличный документ и при необходимости журнал регистрации.</li>
+</ol>
+
+<!-- ========== 7. Ограничения ========== -->
+<h2>7. Ограничения и риски</h2>
+<div class="box box-yellow">
+  <ul class="compact" style="margin:0">
+    <li>Не запускать на PROD без крайней необходимости; даже с откатом создаётся нагрузка на СУБД.</li>
+    <li>Имитация входа из ДО не воспроизводит сетевую задержку и объём реального ответа WS.</li>
+    <li>Боевое проведение поручения и создание отсутствующего банковского счёта упрощены.</li>
+    <li>Полный путь кнопки (НДФЛ из ФИН, закрытие в ДО, рассылки) тестом не покрыт.</li>
+    <li>Если снять «Откатывать транзакцию» при ТолькоЧтение = Нет — возможна порча тестовых данных (в коде защитный откат всё равно выполняется; полагаться на это не стоит при будущих правках).</li>
+  </ul>
+</div>
+
+<!-- ========== 8. Файлы ========== -->
+<h2>8. Состав артефактов</h2>
+<table>
+  <thead>
+    <tr>
+      <th>Путь</th>
+      <th>Назначение</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>Тестирование/внТестРасторжениеДоговоровРДУ.epf</code></td>
+      <td>Собранная тестовая обработка</td>
+    </tr>
+    <tr>
+      <td><code>Тестирование/внТестРасторжениеДоговоровРДУ_epf/</code></td>
+      <td>Исходники XML/BSL</td>
+    </tr>
+    <tr>
+      <td><code>Тестирование/index.md</code></td>
+      <td>Краткая инструкция запуска</td>
+    </tr>
+    <tr>
+      <td><code>Документация/test_plan_and_processing_overview.html</code></td>
+      <td>Этот документ</td>
+    </tr>
+    <tr>
+      <td><code>IMDEV-9104_процедуры_закрытие_договоров.txt</code></td>
+      <td>Дерево боевых процедур и внешних систем</td>
+    </tr>
+  </tbody>
+</table>
+
+<div class="footer">
+  IMDEV-9104 | Wim_Du | Документ сформирован для тестовой обработки внТестРасторжениеДоговоровРДУ
+</div>
+
+</body>
+</html>
