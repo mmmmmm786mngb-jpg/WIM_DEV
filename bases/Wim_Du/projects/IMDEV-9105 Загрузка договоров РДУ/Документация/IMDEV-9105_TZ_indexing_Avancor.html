@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IMDEV-9105 - ТЗ на индексацию (Аванкор)</title>
+    <style>
+        :root {
+            --ok: #28a745;
+            --info: #17a2b8;
+            --border: #dee2e6;
+            --muted: #6c757d;
+            --bg: #f8f9fa;
+        }
+        * { box-sizing: border-box; }
+        body {
+            font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.5;
+            color: #212529;
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 28px 32px 48px;
+            background: var(--bg);
+        }
+        h1 {
+            font-size: 1.35em;
+            color: #1a365d;
+            border-bottom: 3px solid var(--info);
+            padding-bottom: 10px;
+        }
+        h2 {
+            font-size: 1.1em;
+            color: #1a365d;
+            margin-top: 28px;
+            border-left: 4px solid var(--info);
+            padding-left: 10px;
+        }
+        .header-box {
+            background: #fff;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 18px 22px;
+            margin: 16px 0;
+        }
+        .header-box table { width: 100%; border-collapse: collapse; }
+        .header-box td { padding: 6px 10px 6px 0; vertical-align: top; }
+        .header-box td:first-child { width: 160px; color: var(--muted); font-weight: 600; }
+        .card {
+            background: #fff;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 16px 20px;
+            margin: 12px 0;
+        }
+        .card.ok { background: #d4edda; border-color: #c3e6cb; }
+        table.data {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.92em;
+            margin: 10px 0;
+        }
+        table.data th, table.data td {
+            border: 1px solid var(--border);
+            padding: 8px 10px;
+            text-align: left;
+        }
+        table.data th { background: #e9ecef; }
+        .num { text-align: right; font-variant-numeric: tabular-nums; }
+        pre {
+            background: #2d3748;
+            color: #e2e8f0;
+            padding: 12px 14px;
+            border-radius: 6px;
+            font-size: 0.82em;
+            overflow-x: auto;
+            white-space: pre-wrap;
+        }
+        code { background: #edf2f7; padding: 1px 5px; border-radius: 3px; font-size: 0.9em; }
+        ul, ol { margin: 8px 0; padding-left: 22px; }
+        li { margin: 4px 0; }
+        .good { color: var(--ok); font-weight: 600; }
+        footer {
+            margin-top: 32px;
+            font-size: 0.85em;
+            color: var(--muted);
+            border-top: 1px solid var(--border);
+            padding-top: 12px;
+        }
+    </style>
+</head>
+<body>
+
+<h1>Техническое задание для Аванкор</h1>
+
+<div class="header-box">
+    <table>
+        <tr>
+            <td>Тема</td>
+            <td><strong>Включить индексацию реквизитов ДоговорДУ и РольДоговора справочника ДоговорыКонтрагентов</strong></td>
+        </tr>
+        <tr>
+            <td>Заявка</td>
+            <td><strong>IMDEV-9105</strong></td>
+        </tr>
+        <tr>
+            <td>Конфигурация</td>
+            <td>1С:Доверительное управление</td>
+        </tr>
+        <tr>
+            <td>Тип изменения</td>
+            <td>Только метаданные (код не менять)</td>
+        </tr>
+        <tr>
+            <td>Основание</td>
+            <td>Замеры производительности (PFF), 14.07.2026</td>
+        </tr>
+    </table>
+</div>
+
+<h2>1. Суть</h2>
+<div class="card">
+    <p>При загрузке договоров РДУ многократно выполняется поиск в <code>Справочник.ДоговорыКонтрагентов</code>
+    по связке <code>Владелец + ДоговорДУ + РольДоговора</code>.</p>
+    <p>У реквизитов <code>ДоговорДУ</code> и <code>РольДоговора</code> индексирование выключено
+    (<code>DontIndex</code>) — поиск медленный. Нужно включить индекс.</p>
+</div>
+
+<h2>2. Что сделать</h2>
+<table class="data">
+    <tr>
+        <th>Параметр</th>
+        <th>Значение</th>
+    </tr>
+    <tr>
+        <td>Объект метаданных</td>
+        <td><code>Справочник.ДоговорыКонтрагентов</code></td>
+    </tr>
+    <tr>
+        <td>Реквизиты</td>
+        <td><code>ДоговорДУ</code>, <code>РольДоговора</code></td>
+    </tr>
+    <tr>
+        <td>Файл XML</td>
+        <td><code>Catalogs/ДоговорыКонтрагентов.xml</code></td>
+    </tr>
+    <tr>
+        <td>Сейчас</td>
+        <td><code>&lt;Indexing&gt;DontIndex&lt;/Indexing&gt;</code></td>
+    </tr>
+    <tr>
+        <td>Нужно</td>
+        <td><code>&lt;Indexing&gt;Index&lt;/Indexing&gt;</code></td>
+    </tr>
+</table>
+
+<ol>
+    <li>Для <code>ДоговорДУ</code> и <code>РольДоговора</code> установить индексирование: <strong>Индексировать</strong> (<code>Index</code>).</li>
+    <li>Программный код <strong>не изменять</strong>.</li>
+    <li>Обновить конфигурацию БД (реструктуризация индексов).</li>
+    <li>Передать изменение в релизе/патче.</li>
+</ol>
+
+<h2>3. Запрос, который должен ускориться</h2>
+<pre>ВЫБРАТЬ
+    ДоговорыКонтрагентов.Ссылка
+ИЗ
+    Справочник.ДоговорыКонтрагентов КАК ДоговорыКонтрагентов
+ГДЕ
+    ДоговорыКонтрагентов.Владелец = &Владелец
+    И ДоговорыКонтрагентов.ДоговорДУ = &ДоговорДУ
+    И ДоговорыКонтрагентов.РольДоговора = &РольДоговора</pre>
+<p>Контекст: создание связанных договоров контрагентов при загрузке РДУ (поиск перед созданием).</p>
+
+<h2>4. Эффект (подтверждено на тест-базе)</h2>
+<p>Сценарий: загрузка 100 договоров РДУ.</p>
+<table class="data">
+    <thead>
+        <tr>
+            <th>Показатель</th>
+            <th class="num">До</th>
+            <th class="num">После</th>
+            <th class="num">Изменение</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr>
+            <td>SELECT по ДоговорыКонтрагентов (~500 вызовов)</td>
+            <td class="num">172 с (55,7%)</td>
+            <td class="num">1,2 с (~0,4%)</td>
+            <td class="num good">-99%</td>
+        </tr>
+        <tr>
+            <td>Итого загрузка 100 договоров</td>
+            <td class="num">311,5 с</td>
+            <td class="num">132,4 с</td>
+            <td class="num good">-58%</td>
+        </tr>
+    </tbody>
+</table>
+
+<h2>5. Критерии приемки</h2>
+<ul>
+    <li>У <code>ДоговорДУ</code> и <code>РольДоговора</code> установлено индексирование <code>Index</code>.</li>
+    <li>Поиск/создание договоров контрагентов при загрузке РДУ работает без регресса.</li>
+    <li>Код конфигурации не изменен.</li>
+</ul>
+
+<div class="card ok">
+    <strong>Резюме:</strong> <code>ДоговорДУ</code> и <code>РольДоговора</code> —
+    <code>DontIndex</code> → <code>Index</code>. Код не трогать.
+    Эффект: критичный SELECT ×140 быстрее, загрузка 100 договоров −58%.
+</div>
+
+<footer>
+    IMDEV-9105 | ТЗ для Аванкор | 15.07.2026
+</footer>
+
+</body>
+</html>
