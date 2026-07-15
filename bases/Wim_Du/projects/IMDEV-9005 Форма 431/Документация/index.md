@@ -26,5 +26,6 @@
 | [jira/jira_comment_opt2_section12_findrows.txt](jira/jira_comment_opt2_section12_findrows.txt) | Опт. 2: НайтиСтроки раздел 1.2 |
 | [jira/jira_comment_opt3_parallel_sections.txt](jira/jira_comment_opt3_parallel_sections.txt) | Опт. 3: параллель разделов 2–7 |
 | [jira/jira_comment_compare_0420431.txt](jira/jira_comment_compare_0420431.txt) | Обработка {{внСравнение0420431}} — сравнение двух документов 0420431 |
+| [jira/jira_comment_export_0420431_xlsx.txt](jira/jira_comment_export_0420431_xlsx.txt) | Обработка {{внВыгрузка0420431ВXLSX}} — один XLSX со всеми листами разделов |
 | [jira/jira_comment_imdev9005_final.txt](jira/jira_comment_imdev9005_final.txt) | **Итоговая разработка** — Jira 8.13: замеры, доработки, регрессия |
 | [twr_erf_compare_modes.md](twr_erf_compare_modes.md) | Два ERF для сравнения TWR: MANDATE_STRATEGY vs MANDATE (per-strategy) |
