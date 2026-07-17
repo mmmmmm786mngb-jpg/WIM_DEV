@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>IMDEV-8829: проверка доработок по CR (17.07.2026)</title>
+<style>
+body { font-family: Arial, sans-serif; margin: 24px; color: #222; background: #f7f9fc; line-height: 1.5; }
+h1, h2, h3 { margin-top: 0; }
+.card { background: #fff; border: 1px solid #d9e2ef; border-radius: 10px; padding: 16px; margin-bottom: 18px; }
+.meta { font-size: 14px; color: #555; }
+table.summary { width: 100%; border-collapse: collapse; margin-top: 10px; }
+table.summary th, table.summary td { border: 1px solid #d9e2ef; padding: 10px; vertical-align: top; text-align: left; }
+table.summary th { background: #eef3fb; }
+.loc { background: #eef3fb; border: 1px solid #d9e2ef; border-radius: 8px; padding: 10px 12px; margin: 10px 0; }
+.loc table { width: 100%; border-collapse: collapse; }
+.loc td { padding: 4px 8px; vertical-align: top; }
+.loc td:first-child { width: 180px; color: #555; font-weight: bold; }
+.badge { color: #fff; border-radius: 6px; padding: 2px 8px; font-size: 12px; display: inline-block; }
+.badge-high { background: #dc3545; }
+.badge-medium { background: #17a2b8; }
+.badge-low { background: #6f42c1; }
+.badge-ok { background: #28a745; }
+.badge-partial { background: #e67e22; }
+.badge-skip { background: #6c757d; }
+.was { background: #fff3cd; border-left: 4px solid #f0ad4e; padding: 10px; margin: 10px 0; }
+.done { background: #e8f8ee; border-left: 4px solid #28a745; padding: 10px; margin: 10px 0; }
+.partial { background: #fff4e5; border-left: 4px solid #e67e22; padding: 10px; margin: 10px 0; }
+.note { background: #e7f5ff; border-left: 4px solid #17a2b8; padding: 10px; margin: 10px 0; }
+.verdict { font-size: 18px; font-weight: bold; }
+pre, code { font-family: Consolas, "Courier New", monospace; font-size: 13px; }
+pre { background: #f4f6fa; border: 1px solid #dde3ef; border-radius: 6px; padding: 12px; overflow-x: auto; white-space: pre-wrap; }
+code { background: #f4f6fa; border: 1px solid #dde3ef; border-radius: 4px; padding: 1px 5px; }
+.toc a { color: #0b5ed7; text-decoration: none; }
+.toc li { margin: 4px 0; }
+.issue-ok { border-left: 5px solid #28a745; }
+.issue-partial { border-left: 5px solid #e67e22; }
+.issue-skip { border-left: 5px solid #6c757d; }
+</style>
+</head>
+<body>
+
+<div class="card">
+  <h1>IMDEV-8829: проверка доработок по Code Review</h1>
+  <p class="meta">
+    Дата проверки: 17.07.2026<br>
+    Исходные замечания: <code>code-review/code_review_IMDEV_8829_findings_detailed.html</code><br>
+    Описание автора: <code>ФЕДОР/ДоработкиПоCR_17072026/ОписаниеДоработок.txt</code><br>
+    Проверенный код: <code>ФЕДОР/ДоработкиПоCR_17072026/внВыгрузкаОстатковМО_ФО_epf/внВыгрузкаОстатковМО_ФО</code><br>
+    Версия обработки: 1.38 &nbsp;|&nbsp; Модуль объекта: <code>Ext/ObjectModule.bsl</code>
+  </p>
+  <p class="verdict">Итог: <span class="badge badge-ok">Принимаемо</span>
+    &nbsp; C1/C3/M1/M2/M3/L1/L3 закрыты;
+    <span class="badge badge-partial">C2 частично</span>;
+    L2 осознанно не меняли; L4 частично.
+  </p>
+</div>
+
+<div class="card">
+  <h2>Сводная таблица</h2>
+  <table class="summary">
+    <tr>
+      <th>Пункт</th>
+      <th>Было в CR</th>
+      <th>Что сделал Федор</th>
+      <th>Результат проверки</th>
+    </tr>
+    <tr>
+      <td><b>C1</b> HIGH</td>
+      <td>Сброс <code>ЕстьОшибка = Ложь</code> перед письмом</td>
+      <td>Убрал повторный сброс</td>
+      <td><span class="badge badge-ok">Исправлено</span></td>
+    </tr>
+    <tr>
+      <td><b>C2</b> HIGH</td>
+      <td>Temp storage между сеансами ФЗ ненадёжен</td>
+      <td>Если нет <code>КоличествоПортфелей</code> в хранилище - ошибка + исключение</td>
+      <td><span class="badge badge-partial">Частично</span> (workaround, не файлы)</td>
+    </tr>
+    <tr>
+      <td><b>C3</b> HIGH</td>
+      <td>Лог воркера требовал <code>вклОтладка</code></td>
+      <td>Пишет по наличию <code>КаталогЛогов</code></td>
+      <td><span class="badge badge-ok">Исправлено</span></td>
+    </tr>
+    <tr>
+      <td><b>M1</b> MEDIUM</td>
+      <td>Воркер с ID <code>ФоноваяВыгрузкаПачками</code>, гард снят</td>
+      <td>Воркер: ID <code>ФоноваяВыгрузка</code> + <code>КоличествоПотоков=1</code>; гард вернули; команду пачками убрали</td>
+      <td><span class="badge badge-ok">Исправлено</span></td>
+    </tr>
+    <tr>
+      <td><b>M2</b> MEDIUM</td>
+      <td>Авария пачки без исключения для БП</td>
+      <td><code>ВызватьИсключение</code> после почты</td>
+      <td><span class="badge badge-ok">Исправлено</span></td>
+    </tr>
+    <tr>
+      <td><b>M3</b> MEDIUM</td>
+      <td>Поле формы без DataPath</td>
+      <td>Удалил <code>КоличествоПачекМандатов</code> с формы</td>
+      <td><span class="badge badge-ok">Исправлено</span></td>
+    </tr>
+    <tr>
+      <td><b>L1</b> LOW</td>
+      <td>Дубль <code>КоличествоПотоков = 1</code></td>
+      <td>Одна строка</td>
+      <td><span class="badge badge-ok">Исправлено</span></td>
+    </tr>
+    <tr>
+      <td><b>L2</b> LOW</td>
+      <td>Вес до <code>Свернуть</code></td>
+      <td>Оставил: нужен несвернутый вес для замеров потоков</td>
+      <td><span class="badge badge-skip">Принято как есть</span></td>
+    </tr>
+    <tr>
+      <td><b>L3</b> LOW</td>
+      <td>Кривые отступы замера</td>
+      <td>Отформатировал</td>
+      <td><span class="badge badge-ok">Исправлено</span></td>
+    </tr>
+    <tr>
+      <td><b>L4</b> LOW</td>
+      <td>Закомментированный код / метки</td>
+      <td>Частично почистил</td>
+      <td><span class="badge badge-partial">Частично</span></td>
+    </tr>
+  </table>
+</div>
+
+<div class="card toc">
+  <h2>Содержание по пунктам</h2>
+  <ol>
+    <li><a href="#c1">C1 - ЕстьОшибка</a></li>
+    <li><a href="#c2">C2 - Временное хранилище</a></li>
+    <li><a href="#c3">C3 - Логи воркеров</a></li>
+    <li><a href="#m1">M1 - ID команды и гард</a></li>
+    <li><a href="#m2">M2 - Исключение для БП</a></li>
+    <li><a href="#m3">M3 - Поле формы</a></li>
+    <li><a href="#l1">L1 - Дубль</a></li>
+    <li><a href="#l2">L2 - Вес</a></li>
+    <li><a href="#l3">L3 - Отступы</a></li>
+    <li><a href="#l4">L4 - Комментарии</a></li>
+    <li><a href="#tests">Тесты автора</a></li>
+    <li><a href="#deploy">Перед продом</a></li>
+  </ol>
+</div>
+
+<!-- C1 -->
+<div class="card issue-ok" id="c1">
+  <h2>C1. <span class="badge badge-high">HIGH</span> Сброс флага ЕстьОшибка
+    &rarr; <span class="badge badge-ok">Исправлено</span></h2>
+
+  <div class="loc">
+    <table>
+      <tr><td>Объект / модуль</td><td><code>внВыгрузкаОстатковМО_ФО</code> / ObjectModule.bsl</td></tr>
+      <tr><td>Процедура</td><td><code>ФоноваяВыгрузкаПачками</code></td></tr>
+      <tr><td>Сейчас</td><td>стр. 529-540 (установка), 584-588 (использование без сброса)</td></tr>
+    </table>
+  </div>
+
+  <div class="was">
+    <b>Было в CR:</b> после проверки аварийных заданий флаг снова обнулялся (<code>ЕстьОшибка = Ложь</code>),
+    текст про аварию в письме не попадал.
+  </div>
+  <div class="done">
+    <b>Сделано:</b> повторный сброс удалён. Флаг, выставленный после барьера, доходит до
+    <code>ТекстОповещения</code> / <code>РассылкаСообщения</code> / <code>ВызватьИсключение</code>.
+  </div>
+  <pre>ЕстьОшибка = Ложь;
+ТекстАварии = "";
+Для Каждого Задание Из МассивЗаданий Цикл
+    Если Задание.Состояние = СостояниеФоновогоЗадания.ЗавершеноАварийно Тогда
+        ЕстьОшибка = Истина;
+        ...
+    КонецЕсли;
+КонецЦикла;
+// ... без повторного ЕстьОшибка = Ложь ...
+ТекстОповещения = ?(ЕстьОшибка, "Одна или несколько пачек завершились аварийно...", "");
+РассылкаСообщения(...);
+Если ЕстьОшибка Тогда
+    ВызватьИсключение СокрЛП(ТекстАварии);
+КонецЕсли;</pre>
+</div>
+
+<!-- C2 -->
+<div class="card issue-partial" id="c2">
+  <h2>C2. <span class="badge badge-high">HIGH</span> Временное хранилище между сеансами
+    &rarr; <span class="badge badge-partial">Частично</span></h2>
+
+  <div class="loc">
+    <table>
+      <tr><td>Объект / модуль</td><td><code>внВыгрузкаОстатковМО_ФО</code> / ObjectModule.bsl</td></tr>
+      <tr><td>Процедуры</td><td><code>ФоноваяВыгрузкаПачками</code> (создание/чтение), <code>ВыполнитьКоманду</code> (запись воркером)</td></tr>
+      <tr><td>Сейчас</td><td>стр. 491-494, 132-134, 566-581</td></tr>
+    </table>
+  </div>
+
+  <div class="was">
+    <b>Было в CR:</b> координатор создаёт адрес temp storage, воркер пишет, координатор читает.
+    Между сеансами ФЗ это ненадёжно; рекомендовались файлы.
+  </div>
+  <div class="partial">
+    <b>Сделано (по ОписаниеДоработок.txt):</b> если из хранилища не пришла структура с
+    <code>КоличествоПортфелей</code> - считаем ошибкой, дописываем <code>ТекстАварии</code>, затем исключение.
+    Корневую замену на файлы не делали.
+  </div>
+  <pre>ДанныеПачки = ПолучитьИзВременногоХранилища(Адрес);
+Если ТипЗнч(ДанныеПачки) = Тип("Структура")
+    И ДанныеПачки.Свойство("КоличествоПортфелей") Тогда
+    // агрегация статистики
+Иначе
+    ЕстьОшибка = Истина;
+    ТекстАварии = ТекстАварии + "При формировании почтовой рассылки произошли ошибки!" + Символы.ПС;
+КонецЕсли;</pre>
+  <div class="note">
+    <b>Оценка:</b> fail-safe лучше, чем молчаливая пустая сводка. Но:
+    <ul>
+      <li>механизм по-прежнему temp storage;</li>
+      <li>проверка выполняется только при заполненной почте/списке рассылки;</li>
+      <li>на стенде стоит убедиться, что в письме сводка реально ненулевая (агрегация работает), а не только что «нет исключения».</li>
+    </ul>
+  </div>
+</div>
+
+<!-- C3 -->
+<div class="card issue-ok" id="c3">
+  <h2>C3. <span class="badge badge-high">HIGH</span> Логи воркеров и вклОтладка
+    &rarr; <span class="badge badge-ok">Исправлено</span></h2>
+
+  <div class="loc">
+    <table>
+      <tr><td>Объект / модуль</td><td><code>внВыгрузкаОстатковМО_ФО</code> / ObjectModule.bsl</td></tr>
+      <tr><td>Процедура</td><td><code>ВыполнитьКоманду</code> (воркер), стр. 149-162</td></tr>
+      <tr><td>Координатор</td><td><code>ФоноваяВыгрузкаПачками</code> создаёт каталог при <code>вклОтладка</code> (стр. 454-465)</td></tr>
+    </table>
+  </div>
+
+  <div class="was">
+    <b>Было:</b> воркер писал файл только если <code>вклОтладка</code>, а в новом сеансе ФЗ флаг = Ложь.
+  </div>
+  <div class="done">
+    <b>Сделано:</b> запись по наличию <code>КаталогЛогов</code> (и непустому пути), без проверки <code>вклОтладка</code>.
+  </div>
+  <pre>Если ПараметрыВыполненияКоманды.Свойство("ПараметрыДополнительнойОбработки")
+    И ПараметрыВыполненияКоманды.ПараметрыДополнительнойОбработки.Свойство("КаталогЛогов") Тогда
+    КаталогЛогов = ...;
+    Если КаталогЛогов &lt;&gt; "" Тогда
+        ТекстовыйЛог.Записать(КаталогЛогов + "\пачка_" + НомерПачки + ".txt");
+    КонецЕсли;
+КонецЕсли;</pre>
+</div>
+
+<!-- M1 -->
+<div class="card issue-ok" id="m1">
+  <h2>M1. <span class="badge badge-medium">MEDIUM</span> ID воркера + прод-защита
+    &rarr; <span class="badge badge-ok">Исправлено</span></h2>
+
+  <div class="loc">
+    <table>
+      <tr><td>Объект / модуль</td><td><code>внВыгрузкаОстатковМО_ФО</code> / ObjectModule.bsl</td></tr>
+      <tr><td>Места</td><td>
+        <code>ВыполнитьКоманду</code> стр. 90-113;<br>
+        <code>ФоноваяВыгрузкаПачками</code> стр. 483, 499;<br>
+        <code>СведенияОВнешнейОбработке</code> - команда пачками удалена из регистрации
+      </td></tr>
+    </table>
+  </div>
+
+  <div class="was">
+    <b>Было:</b> воркеры шли с ID <code>ФоноваяВыгрузкаПачками</code>; гард
+    <code>Если ИдентификаторКоманды &lt;&gt; "ФоноваяВыгрузка" Тогда Возврат</code> был снят.
+    Единый вход регламента через <code>КоличествоПотоков</code> при этом был правильной идеей.
+  </div>
+  <div class="done">
+    <b>Сделано (как рекомендовал CR):</b>
+    <ul>
+      <li>гард вернули: чужие команды не идут в обмен;</li>
+      <li>регламент по-прежнему зовёт только <code>ФоноваяВыгрузка</code>; при <code>КоличествоПотоков &gt; 1</code> - координатор;</li>
+      <li>воркерам: <code>КоличествоПотоков = 1</code> + ID <code>ФоноваяВыгрузка</code> (анти-рекурсия без подмены ID);</li>
+      <li>отдельная команда «пачками / не использовать» убрана из <code>СведенияОВнешнейОбработке</code>.</li>
+    </ul>
+  </div>
+  <pre>// Вход (прод-гард + единый вход)
+Если ИдентификаторКоманды &lt;&gt; "ФоноваяВыгрузка" Тогда
+    Возврат;
+КонецЕсли;
+...
+Если КоличествоПотоков > 1 Тогда
+    ФоноваяВыгрузкаПачками(...);
+    Возврат;
+КонецЕсли;
+
+// Воркеру в пачке:
+НастройкиПачки.Значения.Вставить("КоличествоПотоков", 1);
+ПараметрыКоманды.Вставить("ИдентификаторКоманды", "ФоноваяВыгрузка");</pre>
+</div>
+
+<!-- M2 -->
+<div class="card issue-ok" id="m2">
+  <h2>M2. <span class="badge badge-medium">MEDIUM</span> Барьер без исключения
+    &rarr; <span class="badge badge-ok">Исправлено</span></h2>
+
+  <div class="loc">
+    <table>
+      <tr><td>Объект / модуль</td><td><code>внВыгрузкаОстатковМО_ФО</code> / ObjectModule.bsl</td></tr>
+      <tr><td>Процедура</td><td><code>ФоноваяВыгрузкаПачками</code>, стр. 528-540, 586-588</td></tr>
+    </table>
+  </div>
+
+  <div class="was">
+    <b>Было:</b> авария ФЗ только в лог, без <code>ВызватьИсключение</code> - БП узла мог считаться успешным.
+  </div>
+  <div class="done">
+    <b>Сделано:</b> собирается <code>ТекстАварии</code> (в т.ч. краткое представление ошибки задания),
+    после РСА и почты - <code>ВызватьИсключение</code>. Порядок правильный: сначала оповещение, потом FAIL для БП.
+  </div>
+  <pre>Если ЕстьОшибка Тогда
+    ВызватьИсключение СокрЛП(ТекстАварии);
+КонецЕсли;</pre>
+  <div class="note">Запись аварии в <code>ТекстовыйЛог</code> в цикле проверки заданий закомментирована - детали уходят в текст исключения; на диагностику в логе координатора это чуть слабее, но для БП достаточно.</div>
+</div>
+
+<!-- M3 -->
+<div class="card issue-ok" id="m3">
+  <h2>M3. <span class="badge badge-medium">MEDIUM</span> Мёртвое поле формы
+    &rarr; <span class="badge badge-ok">Исправлено</span></h2>
+
+  <div class="loc">
+    <table>
+      <tr><td>Объект / форма</td><td><code>внВыгрузкаОстатковМО_ФО</code> / Forms/Форма / Ext/Form.xml</td></tr>
+      <tr><td>Элемент</td><td>Остался только <code>КоличествоПотоков</code> (id 515) с DataPath</td></tr>
+    </table>
+  </div>
+
+  <div class="was">
+    <b>Было:</b> рядом с рабочим полем висел <code>КоличествоПачекМандатов</code> без DataPath.
+  </div>
+  <div class="done">
+    <b>Сделано:</b> мёртвое поле удалено. На форме только <code>Объект.КоличествоПотоков</code>.
+  </div>
+</div>
+
+<!-- L1 -->
+<div class="card issue-ok" id="l1">
+  <h2>L1. <span class="badge badge-low">LOW</span> Дубль присваивания
+    &rarr; <span class="badge badge-ok">Исправлено</span></h2>
+
+  <div class="loc">
+    <table>
+      <tr><td>Процедура</td><td><code>НастройкиПоУмолчанию</code>, стр. 198</td></tr>
+    </table>
+  </div>
+  <div class="done">
+    Было две строки <code>Объект.КоличествоПотоков = 1</code>. Осталась одна.
+  </div>
+</div>
+
+<!-- L2 -->
+<div class="card issue-skip" id="l2">
+  <h2>L2. <span class="badge badge-low">LOW</span> ВесКоличествоМандатов до Свернуть
+    &rarr; <span class="badge badge-skip">Принято как есть</span></h2>
+
+  <div class="loc">
+    <table>
+      <tr><td>Функция</td><td><code>ПолучитьМассивВсехМандатовДляВыгрузки</code>, стр. 603-606</td></tr>
+    </table>
+  </div>
+  <div class="was">
+    <b>Замечание CR:</b> вес брался до <code>Свернуть("Мандат")</code> - число строк, не уникальных мандатов.
+  </div>
+  <div class="note">
+    <b>Ответ автора:</b> «Для веса в потоках нужно не свернутое значение. Чтобы потом итоговый вес правильно посчитался.»<br>
+    <b>Оценка:</b> для метрик производительности это осознанный выбор, не баг бизнес-логики. Можно оставить.
+    Если понадобится вес именно «число мандатов» - считать после Свернуть отдельной переменной.
+  </div>
+</div>
+
+<!-- L3 -->
+<div class="card issue-ok" id="l3">
+  <h2>L3. <span class="badge badge-low">LOW</span> Отступы в ОпубликоватьИсполнениеСделок
+    &rarr; <span class="badge badge-ok">Исправлено</span></h2>
+
+  <div class="loc">
+    <table>
+      <tr><td>Процедура</td><td><code>ОпубликоватьИсполнениеСделок</code>, стр. 1518-1523</td></tr>
+    </table>
+  </div>
+  <div class="done">
+    Замер производительности после цикла выровнен по уровню тела процедуры.
+  </div>
+</div>
+
+<!-- L4 -->
+<div class="card issue-partial" id="l4">
+  <h2>L4. <span class="badge badge-low">LOW</span> Закомментированный код
+    &rarr; <span class="badge badge-partial">Частично</span></h2>
+
+  <div class="done">
+    Часть мусора убрана, метки задач аккуратнее.
+  </div>
+  <div class="partial">
+    Остались закомментированные строки (например старые ветки ID / условия в <code>ВыполнитьКоманду</code>,
+    стр. 110, 500). На работу не влияют; можно дочистить при следующем касании модуля.
+  </div>
+</div>
+
+<!-- Tests -->
+<div class="card" id="tests">
+  <h2>Тесты автора (План тестирования IMDEV-8829_3.docx)</h2>
+  <p class="meta">Документ в основном со скриншотами. Извлечённый текст:</p>
+  <ul>
+    <li>5 потоков, с логами, сервис отключён (dry-run) - успешно</li>
+    <li>с включённым сервисом (<code>РежимОтладкиСервиса = Ложь</code>) - успешно</li>
+    <li>регламент, 1 поток - успешно</li>
+    <li>регламент, 5 потоков - выполнено</li>
+  </ul>
+  <div class="note">
+    Smoke по параллели/регламенту закрыт. Для C2 желательно отдельно зафиксировать:
+    письмо со сводкой содержит ненулевые счётчики / ошибки позиций при искусственной ошибке в одной пачке.
+  </div>
+</div>
+
+<!-- Deploy -->
+<div class="card" id="deploy">
+  <h2>Перед продом</h2>
+  <ol>
+    <li>Выкладывать именно <code>ФЕДОР/ДоработкиПоCR_17072026/...</code>, не старый каталог <code>ФЕДОР/внВыгрузкаОстатковМО_ФО_epf</code> (там правки CR ещё не применены).</li>
+    <li>Проверить на стенде с почтой: сводка в письме заполняется.</li>
+    <li>По желанию: поднять номер версии обработки (сейчас остаётся 1.38).</li>
+    <li>По желанию (не блокер): заменить C2 на файловый обмен результатами пачек.</li>
+  </ol>
+  <p class="verdict" style="margin-top:16px;">
+    Вердикт повторного CR: <span class="badge badge-ok">Принимаемо к выкладке</span>
+    с остаточным контролем C2 на стенде с почтой.
+  </p>
+</div>
+
+<div class="card">
+  <p class="meta">
+    Связанные отчёты:<br>
+    <code>code_review_IMDEV_8829_findings_detailed.html</code> - исходные замечания<br>
+    <code>code_review_IMDEV_8829_fedor_vs_alexey.html</code> - сравнение Алексей vs Федор (первая итерация)
+  </p>
+</div>
+
+</body>
+</html>
