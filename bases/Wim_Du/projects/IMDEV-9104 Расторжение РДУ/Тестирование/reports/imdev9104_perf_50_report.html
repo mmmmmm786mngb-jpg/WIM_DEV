@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>IMDEV-9104: анализ замера 50 договоров РДУ</title>
+<style>
+* { box-sizing: border-box; }
+body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+    line-height: 1.55; color: #1a202c; background: #f0f2f5; margin: 0; padding: 24px 12px;
+}
+.container { max-width: 920px; margin: 0 auto; }
+.hero {
+    background: #1a365d; color: #fff; border-radius: 10px;
+    padding: 22px 26px; margin-bottom: 16px;
+}
+.hero h1 { margin: 0 0 6px; font-size: 1.28rem; font-weight: 600; }
+.hero p { margin: 0; opacity: 0.9; font-size: 0.95rem; }
+.meta { margin-top: 10px; font-size: 0.82rem; opacity: 0.85; }
+.card {
+    background: #fff; border-radius: 10px; padding: 18px 22px; margin-bottom: 14px;
+    border: 1px solid #e2e8f0;
+}
+h2 {
+    color: #1a365d; font-size: 1.05rem; margin: 0 0 12px;
+    padding-bottom: 8px; border-bottom: 2px solid #e2e8f0;
+}
+h3 { color: #2d3748; font-size: 0.95rem; margin: 16px 0 8px; }
+.verdict {
+    background: #ebf8ff; border-left: 4px solid #3182ce;
+    padding: 12px 14px; border-radius: 0 8px 8px 0; margin-bottom: 12px;
+}
+.problem {
+    background: #fff5f5; border-left: 4px solid #e53e3e;
+    padding: 12px 14px; border-radius: 0 8px 8px 0; margin-bottom: 12px;
+}
+.ok-box {
+    background: #f0fff4; border-left: 4px solid #28a745;
+    padding: 12px 14px; border-radius: 0 8px 8px 0; margin-bottom: 12px;
+}
+.kpi { display: flex; flex-wrap: wrap; gap: 10px; margin: 10px 0; }
+.kpi div {
+    flex: 1 1 130px; background: #f7fafc; border: 1px solid #e2e8f0;
+    border-radius: 8px; padding: 10px 12px;
+}
+.kpi .v { font-size: 1.2rem; font-weight: 700; color: #2c5282; }
+.kpi .v.hot { color: #c53030; }
+.kpi .l { font-size: 0.8rem; color: #718096; }
+table { width: 100%; border-collapse: collapse; font-size: 0.9rem; margin: 10px 0; }
+th, td { border: 1px solid #e2e8f0; padding: 8px 10px; vertical-align: top; }
+th { background: #f7fafc; text-align: left; font-weight: 600; }
+.num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.hot { background: #fff5f5; }
+.warm { background: #fffaf0; }
+.ok-row { background: #f0fff4; }
+.muted { color: #718096; font-size: 0.85rem; }
+code { background: #edf2f7; padding: 1px 5px; border-radius: 3px; font-size: 0.86em; }
+pre {
+    background: #2d3748; color: #e2e8f0; padding: 12px 14px;
+    border-radius: 8px; overflow-x: auto; font-size: 0.82rem; line-height: 1.45;
+}
+ol, ul { margin: 8px 0 4px 18px; padding: 0; }
+li { margin: 6px 0; }
+.shot {
+    border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden; background: #f7fafc;
+    margin: 12px 0;
+}
+.shot .cap {
+    padding: 8px 10px; font-size: 0.85rem; font-weight: 600;
+    border-bottom: 1px solid #e2e8f0; background: #edf2f7;
+}
+.shot img { display: block; width: 100%; height: auto; }
+.shot-wide {
+    max-width: 1180px;
+    margin: 0 auto 14px;
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    overflow: hidden;
+}
+.shot-wide .cap {
+    padding: 10px 14px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    border-bottom: 1px solid #e2e8f0;
+    background: #edf2f7;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 16px;
+    align-items: baseline;
+    justify-content: space-between;
+}
+.shot-wide .cap a { color: #2b6cb0; font-size: 0.82rem; font-weight: 500; }
+.shot-scroll {
+    overflow: auto;
+    max-height: 78vh;
+    background: #cbd5e0;
+    padding: 10px;
+}
+.shot-scroll img {
+    display: block;
+    width: 1452px;
+    max-width: none;
+    height: auto;
+    margin: 0 auto;
+    background: #fff;
+    box-shadow: 0 2px 10px rgba(0,0,0,.12);
+}
+.footer { text-align: center; color: #718096; font-size: 0.82rem; margin-top: 18px; }
+.prio { display: inline-block; padding: 1px 7px; border-radius: 4px; font-size: 0.75rem; font-weight: 700; }
+.p1 { background: #fed7d7; color: #9b2c2c; }
+.p2 { background: #feebc8; color: #9c4221; }
+.p3 { background: #e2e8f0; color: #4a5568; }
+</style>
+</head>
+<body>
+<div class="container">
+
+<div class="hero">
+    <h1>IMDEV-9104: замер расторжения 50 договоров РДУ</h1>
+    <p>Главный рычаг — цикл СЧА/РСА × N; запись документов вне scope оптимизации</p>
+    <div class="meta">
+        19.07.2026 05:58 · <code style="background:rgba(255,255,255,.15);color:#fff">внТестРасторжениеДоговоровРДУ</code> v1.0 ·
+        пул «Розничное ДУ» · откат транзакции · без ДО / ФИН / FO / почты
+    </div>
+</div>
+
+<div class="card">
+    <h2>Вывод</h2>
+    <div class="verdict">
+        На 50 договорах прогон успешен за <strong>19,9 с</strong> (~398 мс/договор).
+        Главный рычаг оптимизации — <strong>цикл РасчетСЧА_РСА по каждому договору:
+        8,7 с (44% ИТОГО)</strong>, два тяжёлых SELECT × N.
+        Блок поручений выглядит крупным (7,4 с / 37%), но внутри:
+        SELECT поиска ~<strong>11%</strong> ИТОГО, <code>Записать()</code> ~<strong>22%</strong> —
+        запись документов не ускоряем, значит по поручениям остаётся лишь пакетный поиск (~2,2 с).
+        Пакетный <code>ДанныеПоРасторжению</code> по списку дешёвый (0,3 с).
+    </div>
+    <div class="kpi">
+        <div>
+            <div class="v">19,9 с</div>
+            <div class="l">ИТОГО / 50 дог.</div>
+        </div>
+        <div>
+            <div class="v hot">8,7 с / 44%</div>
+            <div class="l">СЧА_РСА × N — P1</div>
+        </div>
+        <div>
+            <div class="v">~2,2 с / 11%</div>
+            <div class="l">SELECT поиска поручений</div>
+        </div>
+        <div>
+            <div class="v">~4,3 с / 22%</div>
+            <div class="l">Запись поручений (не трогаем)</div>
+        </div>
+        <div>
+            <div class="v">~398 мс</div>
+            <div class="l">на 1 договор</div>
+        </div>
+    </div>
+</div>
+
+</div><!-- /container: hero + вывод -->
+
+<!-- скрин шире основного текста, файл рядом с HTML -->
+<div class="shot-wide">
+    <div class="cap">
+        <span>Скриншот макрозамеров · 19.07.2026 05:58 · ИТОГО 19931 мс · 50 договоров</span>
+        <a href="screenshot_macro_50.png" target="_blank" rel="noopener">открыть оригинал</a>
+    </div>
+    <div class="shot-scroll">
+        <img src="screenshot_macro_50.png"
+             alt="Скриншот замеров блоков IMDEV-9104: ИТОГО 19931 мс, СЧА 8704 мс, поручения 7421 мс"
+             width="1452" height="555">
+    </div>
+</div>
+
+<div class="container">
+
+<div class="card">
+    <h2>1. Условия прогона</h2>
+    <table>
+        <tr><th>Параметр</th><th>Значение</th></tr>
+        <tr><td>Обработка</td><td><code>внТестРасторжениеДоговоровРДУ</code> v1.0</td></tr>
+        <tr><td>Количество</td><td>50 существующих договоров пула «Розничное ДУ»</td></tr>
+        <tr><td>Только чтение</td><td>Нет (запись даты + поручений с откатом)</td></tr>
+        <tr><td>Откат транзакции</td><td>Да</td></tr>
+        <tr><td>Внешние системы</td><td>Нет (ДО / ФИН / FO / почта отключены)</td></tr>
+        <tr><td>Мерить ДанныеПоРасторжению</td><td>Да</td></tr>
+        <tr><td>Мерить РасчетСЧА_РСА</td><td>Да</td></tr>
+        <tr><td>Успех</td><td>Да; ошибок в цикле нет; поручений записано 47 из 50 (3 уже существовали)</td></tr>
+        <tr><td>Источники</td><td>
+            <code>screenshot_macro_50.png</code>,
+            <code>Замер_50_Договоров.pff</code>
+        </td></tr>
+    </table>
+</div>
+
+<div class="card">
+    <h2>2. Макрозамеры по блокам</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>Блок</th>
+                <th class="num">мс</th>
+                <th class="num">Доля</th>
+                <th class="num">мс/дог.</th>
+                <th>Комментарий</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td><strong>0. ИТОГО</strong></td>
+                <td class="num"><strong>19931</strong></td>
+                <td class="num">100%</td>
+                <td class="num">399</td>
+                <td>полный тест с блоками 3 и 4</td>
+            </tr>
+            <tr class="hot">
+                <td><strong>4. РасчетСЧА_РСА</strong></td>
+                <td class="num"><strong>8704</strong></td>
+                <td class="num">43,7%</td>
+                <td class="num">174</td>
+                <td>P1: цикл по каждому договору</td>
+            </tr>
+            <tr>
+                <td><strong>2. Цикл РЗ</strong></td>
+                <td class="num">10710</td>
+                <td class="num">53,7%</td>
+                <td class="num">214</td>
+                <td>из них запись поручений ~22% ИТОГО — не ускоряем</td>
+            </tr>
+            <tr class="warm">
+                <td>  2.6 Поручения на вывод</td>
+                <td class="num">7421</td>
+                <td class="num">37,2%</td>
+                <td class="num">148</td>
+                <td>SELECT ~11% + Записать ~22% ИТОГО</td>
+            </tr>
+            <tr>
+                <td>  2.5 Запись даты расторжения</td>
+                <td class="num">2506</td>
+                <td class="num">12,6%</td>
+                <td class="num">50</td>
+                <td>N× Записать() ДоговорДУ (запись — не трогаем)</td>
+            </tr>
+            <tr>
+                <td>  2.2 Аналитический счет</td>
+                <td class="num">446</td>
+                <td class="num">2,2%</td>
+                <td class="num">9</td>
+                <td>приемлемо</td>
+            </tr>
+            <tr>
+                <td>  2.4 / 2.3 / 2.1</td>
+                <td class="num">323</td>
+                <td class="num">1,6%</td>
+                <td class="num">6</td>
+                <td>брокер / банк / НайтиПоКоду — не узкие</td>
+            </tr>
+            <tr class="ok-row">
+                <td>3. ДанныеПоРасторжению</td>
+                <td class="num">300</td>
+                <td class="num">1,5%</td>
+                <td class="num">6</td>
+                <td>48 строк; пакетный запрос лёгкий</td>
+            </tr>
+            <tr class="ok-row">
+                <td>1. Имитация GetClosing…</td>
+                <td class="num">12</td>
+                <td class="num">0,1%</td>
+                <td class="num">0,2</td>
+                <td>не узкое место</td>
+            </tr>
+        </tbody>
+    </table>
+    <p class="muted">
+        Цикл РЗ без подблоков 3/4 ≈ 10,7 с. Сумма 2.1–2.6 внутри цикла совпадает с детализацией в комментарии строки 2.
+    </p>
+</div>
+
+<div class="card">
+    <h2>3. Профиль PFF — что внутри горячих блоков</h2>
+    <p class="muted">Файл <code>Замер_50_Договоров.pff</code>, 1025 строк профиля. t1 = с детьми, t2 = собственное время.</p>
+
+    <h3>3.1. РасчетСЧА_РСА (блок 4) — главный кандидат</h3>
+    <div class="problem">
+        <code>ПолучитьСуммыРСА_СЧА</code>: <strong>8,64 с</strong> / 50 = ~173 мс на договор (<strong>44% ИТОГО</strong>).
+        Вызов в цикле по каждому договору. Два тяжёлых SELECT в менеджере:
+        L218 <strong>5,62 с (~28% ИТОГО)</strong> + L507 УУ <strong>2,17 с (~11% ИТОГО)</strong>.
+        Модуль <code>Документ.РасчетСЧА_РСА.МодульМенеджера</code> — лидер по собственному времени (t2 ≈ 7,8 с).
+    </div>
+    <table>
+        <thead>
+            <tr><th>Участок (PFF)</th><th class="num">t1, с</th><th class="num">t2, с</th><th class="num">N</th><th>Доля ИТОГО</th></tr>
+        </thead>
+        <tbody>
+            <tr class="hot">
+                <td><code>ПолучитьСуммыРСА_СЧА</code> (вызов из теста)</td>
+                <td class="num">8,64</td>
+                <td class="num">0,06</td>
+                <td class="num">50</td>
+                <td class="num">~43%</td>
+            </tr>
+            <tr class="hot">
+                <td>РасчетСЧА_РСА.МодульМенеджера L218 <code>Запрос.Выполнить</code></td>
+                <td class="num">5,62</td>
+                <td class="num">5,62</td>
+                <td class="num">50</td>
+                <td class="num">~28%</td>
+            </tr>
+            <tr class="hot">
+                <td>РасчетСЧА_РСА.МодульМенеджера L507 <code>ЗапросУУ.Выполнить</code></td>
+                <td class="num">2,17</td>
+                <td class="num">2,17</td>
+                <td class="num">50</td>
+                <td class="num">~11%</td>
+            </tr>
+        </tbody>
+    </table>
+    <p>Направление: пакетный расчёт / кэш по массиву договоров вместо N независимых вызовов.</p>
+
+    <h3>3.2. Поручения на вывод (блок 2.6) — что ускоряемо</h3>
+    <div class="verdict">
+        Макроблок 7,4 с (37%) обманчив: запись документов (~4,3 с / <strong>22% ИТОГО</strong>)
+        <strong>не оптимизируем</strong>. Ускоряемый кусок — только N× SELECT поиска
+        существующего поручения (~2,2 с / <strong>11% ИТОГО</strong>).
+    </div>
+    <table>
+        <thead>
+            <tr><th>Участок (PFF)</th><th class="num">t1, с</th><th class="num">Доля ИТОГО</th><th>Действие</th></tr>
+        </thead>
+        <tbody>
+            <tr class="warm">
+                <td>L576 SELECT поиска Поручение</td>
+                <td class="num">2,22</td>
+                <td class="num">~11%</td>
+                <td>можно: пакетный запрос по массиву</td>
+            </tr>
+            <tr>
+                <td>L602 <code>Поручение.Записать</code> + подписки</td>
+                <td class="num">4,33</td>
+                <td class="num">~22%</td>
+                <td>не трогаем</td>
+            </tr>
+        </tbody>
+    </table>
+<pre>ВЫБРАТЬ ПЕРВЫЕ 1 Поручение.Ссылка
+ИЗ Документ.Поручение
+ГДЕ ДоговорДУ = &amp;ДоговорДУ
+  И ВидОперации = ВыводИзДУ
+  И Комментарий = &amp;Комментарий
+  И НЕ ПометкаУдаления</pre>
+
+    <h3>3.3. Запись даты расторжения (блок 2.5)</h3>
+    <p>
+        <code>ДоговорДУОбъект.Записать()</code> ≈ 2,3 с (~12% ИТОГО) — тоже путь записи.
+        Имеет смысл только skip, если дата уже равна (без лишнего Записать), не «ускорение записи».
+    </p>
+
+    <h3>3.4. Что оказалось быстрым</h3>
+    <div class="ok-box">
+        <ul>
+            <li><code>ДанныеПоРасторжению</code> по списку — <strong>0,30 с</strong> (1 вызов, 48 строк).</li>
+            <li>Поиски 2.1–2.4 суммарно &lt; 0,8 с.</li>
+            <li>Имитация входа из ДО — 12 мс.</li>
+        </ul>
+    </div>
+</div>
+
+<div class="card">
+    <h2>4. Приоритеты оптимизации (по факту замера)</h2>
+    <table>
+        <thead>
+            <tr><th></th><th>Действие</th><th>Ожидаемый эффект</th><th>Контур</th></tr>
+        </thead>
+        <tbody>
+            <tr class="hot">
+                <td><span class="prio p1">P1</span></td>
+                <td>
+                    Убрать цикл «СЧА/РСА на каждый договор»: пакетный
+                    <code>ПолучитьСуммыРСА_СЧА</code> / кэш / один проход по массиву
+                    (сейчас 2 тяжёлых запроса × N)
+                </td>
+                <td>до −8,7 с на 50 (~−44% ИТОГО)</td>
+                <td>форма / полное закрытие</td>
+            </tr>
+            <tr class="warm">
+                <td><span class="prio p2">P2</span></td>
+                <td>
+                    Пакетный поиск существующих поручений
+                    (один SELECT по массиву вместо N× L576).
+                    <strong>Запись поручений не трогаем</strong> (~22% ИТОГО)
+                </td>
+                <td>до −2,2 с (~−11% ИТОГО)</td>
+                <td>РЗ</td>
+            </tr>
+            <tr>
+                <td><span class="prio p3">P3</span></td>
+                <td>
+                    Skip <code>УстановитьДатуРасторжения</code>, если дата уже равна
+                    (избежать лишнего Записать, не «ускорять запись»)
+                </td>
+                <td>до −2,5 с на повторных прогонах</td>
+                <td>РЗ</td>
+            </tr>
+            <tr>
+                <td><span class="prio p3">P3</span></td>
+                <td>Мелкие поиски 2.1–2.4, полный <code>ДанныеПоРасторжению</code></td>
+                <td>низкий ROI / укороченная версия уже 0,3 с</td>
+                <td>—</td>
+            </tr>
+        </tbody>
+    </table>
+    <p class="muted">
+        Правило: доли «Записать()» в профиле — стоимость платформы/подписок,
+        в план оптимизации не входят. Считаем только чтение/алгоритм/N+1 запросов.
+    </p>
+</div>
+
+<div class="card">
+    <h2>5. Сопоставление с деревом процедур</h2>
+    <table>
+        <thead>
+            <tr><th>Гипотеза до замера</th><th>Факт</th></tr>
+        </thead>
+        <tbody>
+            <tr class="ok-row">
+                <td>СЧА в цикле формы тяжёлый</td>
+                <td><strong>Главный:</strong> 8,7 с / 44% ИТОГО — P1</td>
+            </tr>
+            <tr>
+                <td>ПорученияДС — главный кандидат РЗ</td>
+                <td>Макроблок 37%, но ускоряемо только SELECT (~11%); запись (~22%) вне scope</td>
+            </tr>
+            <tr>
+                <td>Убрать N+1 на ДоговорПоНомеру / банк</td>
+                <td>Сами поиски дёшевы (&lt; 1 с суммарно)</td>
+            </tr>
+            <tr>
+                <td>Не писать дату повторно</td>
+                <td>Имеет смысл как skip Записать (P3), не как ускорение записи</td>
+            </tr>
+            <tr>
+                <td>ДанныеПоРасторжению — основной кандидат уровня 3</td>
+                <td><strong>Не подтверждено</strong> для укороченного запроса по списку (0,3 с)</td>
+            </tr>
+        </tbody>
+    </table>
+</div>
+
+<div class="card">
+    <h2>6. Дальше</h2>
+    <ol>
+        <li>Разобрать <code>ПолучитьСуммыРСА_СЧА</code> (L218 / L507) — можно ли пакетно по массиву договоров.</li>
+        <li>Опционально: пакетный поиск поручений (только SELECT, без изменения записи).</li>
+        <li>Повторный замер на 50 / 200 после P1 — сравнить мс/договор блока 4 и ИТОГО.</li>
+        <li>Контрольный прогон с выключенным «Мерить РасчетСЧА_РСА» — чистый контур РЗ.</li>
+    </ol>
+</div>
+
+<div class="footer">
+    IMDEV-9104 · Wim_Du · отчёт по замеру 19.07.2026 ·
+    JSON профиля: <code>reports/pff_hotspots_50.json</code>
+</div>
+
+</div>
+</body>
+</html>
