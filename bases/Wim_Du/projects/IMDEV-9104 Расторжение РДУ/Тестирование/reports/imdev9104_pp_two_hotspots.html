@@ -1,0 +1,462 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>IMDEV-9104: три точки оптимизации (ПП + алгоритм MF)</title>
+<style>
+* { box-sizing: border-box; }
+body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+    line-height: 1.55; color: #1a202c; background: #f0f2f5; margin: 0; padding: 24px 12px;
+}
+.container { max-width: 960px; margin: 0 auto; }
+.hero {
+    background: #1a365d; color: #fff; border-radius: 10px;
+    padding: 22px 26px; margin-bottom: 16px;
+}
+.hero h1 { margin: 0 0 6px; font-size: 1.28rem; font-weight: 600; }
+.hero p { margin: 0; opacity: 0.9; font-size: 0.95rem; }
+.meta { margin-top: 10px; font-size: 0.82rem; opacity: 0.85; }
+.card {
+    background: #fff; border-radius: 10px; padding: 18px 22px; margin-bottom: 14px;
+    border: 1px solid #e2e8f0;
+}
+h2 {
+    color: #1a365d; font-size: 1.05rem; margin: 0 0 12px;
+    padding-bottom: 8px; border-bottom: 2px solid #e2e8f0;
+}
+h3 { color: #2d3748; font-size: 0.98rem; margin: 0 0 10px; }
+.verdict {
+    background: #ebf8ff; border-left: 4px solid #3182ce;
+    padding: 12px 14px; border-radius: 0 8px 8px 0; margin-bottom: 12px;
+}
+.hotspot {
+    border: 1px solid #feb2b2; border-radius: 10px; overflow: hidden; margin-bottom: 16px;
+}
+.hotspot-h {
+    background: #fff5f5; border-bottom: 1px solid #feb2b2;
+    padding: 12px 16px; display: flex; flex-wrap: wrap; gap: 10px; align-items: baseline;
+}
+.hotspot-h .badge {
+    background: #c53030; color: #fff; font-weight: 700; font-size: 0.78rem;
+    padding: 3px 8px; border-radius: 4px; letter-spacing: 0.02em;
+}
+.hotspot-h .title { font-weight: 700; color: #742a2a; font-size: 1rem; }
+.hotspot-b { padding: 14px 16px; }
+.kpi { display: flex; flex-wrap: wrap; gap: 10px; margin: 10px 0; }
+.kpi div {
+    flex: 1 1 140px; background: #f7fafc; border: 1px solid #e2e8f0;
+    border-radius: 8px; padding: 10px 12px;
+}
+.kpi .v { font-size: 1.15rem; font-weight: 700; color: #c53030; }
+.kpi .l { font-size: 0.8rem; color: #718096; }
+table { width: 100%; border-collapse: collapse; font-size: 0.9rem; margin: 10px 0; }
+th, td { border: 1px solid #e2e8f0; padding: 8px 10px; vertical-align: top; }
+th { background: #f7fafc; text-align: left; font-weight: 600; }
+.num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.hot { background: #fff5f5; }
+.muted { color: #718096; font-size: 0.85rem; }
+code { background: #edf2f7; padding: 1px 5px; border-radius: 3px; font-size: 0.86em; }
+pre {
+    background: #2d3748; color: #e2e8f0; padding: 12px 14px;
+    border-radius: 8px; overflow-x: auto; font-size: 0.8rem; line-height: 1.45;
+    white-space: pre; margin: 8px 0 0;
+}
+.tree {
+    background: #f7fafc; border: 1px solid #e2e8f0; border-radius: 8px;
+    padding: 12px 14px; font-family: Consolas, "Courier New", monospace;
+    font-size: 0.82rem; line-height: 1.5; overflow-x: auto; white-space: pre;
+}
+ol, ul { margin: 8px 0 4px 18px; padding: 0; }
+li { margin: 6px 0; }
+.note {
+    background: #fffaf0; border-left: 4px solid #dd6b20;
+    padding: 12px 14px; border-radius: 0 8px 8px 0; margin-top: 12px;
+}
+</style>
+</head>
+<body>
+<div class="container">
+
+<div class="hero">
+    <h1>IMDEV-9104: три точки оптимизации (ПП + алгоритм MF)</h1>
+    <p>Где в контуре расторжения РДУ уходим во внешние модули и что именно тормозит.</p>
+    <div class="meta">
+        Полный контур EPF v2.2 + замер производительности:
+        <code>Замер_50_Договоров_2_2.pff</code> (19.07.2026).
+        Итого по отладчику ~1291 с. Корзина EPF: <code>2.6</code> (~93% / ~1204 с).
+    </div>
+</div>
+
+<div class="card">
+    <h2>Замер полного контура 19.07.2026 7:53 + pff 2.2</h2>
+    <div class="verdict">
+        Итого <strong>~1291 с (~21.5 мин)</strong> на N=50 (EPF-таблица: 1296 с).
+        Три точки оптимизации суммарно <strong>~1048 с (~81%)</strong>:
+        точка 2 ~515 с (40%), точка 1 ~329 с (25%), точка 3 ~205 с (16%).
+        СЧА: ~74 с (~5.8%).
+    </div>
+    <div class="kpi">
+        <div><div class="v">1291 с</div><div class="l">0. ИТОГО (pff)</div></div>
+        <div><div class="v">515 с</div><div class="l">точка 2 / L1388 (~40%)</div></div>
+        <div><div class="v">329 с</div><div class="l">точка 1 / L1835 (~25%)</div></div>
+        <div><div class="v">205 с</div><div class="l">точка 3 / MF L197 (~16%)</div></div>
+    </div>
+    <table>
+        <thead>
+            <tr>
+                <th>Источник</th>
+                <th>Блок / место</th>
+                <th class="num">с</th>
+                <th class="num">Доля %</th>
+                <th class="num">Вызовов</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>EPF / pff</td>
+                <td>0. ИТОГО</td>
+                <td class="num">1291 / 1296</td>
+                <td class="num">100</td>
+                <td class="num">50</td>
+            </tr>
+            <tr>
+                <td>EPF</td>
+                <td>2.6 прочая логика (корзина)</td>
+                <td class="num">1204</td>
+                <td class="num">92.9</td>
+                <td class="num">202</td>
+            </tr>
+            <tr class="hot">
+                <td>pff</td>
+                <td><strong>Точка 2</strong> ПлатежныеПозицииПоСчетамДС L1388</td>
+                <td class="num"><strong>514.8</strong></td>
+                <td class="num"><strong>39.9</strong></td>
+                <td class="num">104</td>
+            </tr>
+            <tr class="hot">
+                <td>pff</td>
+                <td><strong>Точка 1</strong> ПервыйЭтапПроверкиДостаточностиДС L1835</td>
+                <td class="num"><strong>328.6</strong></td>
+                <td class="num"><strong>25.5</strong></td>
+                <td class="num">56</td>
+            </tr>
+            <tr class="hot">
+                <td>pff</td>
+                <td><strong>Точка 3</strong> MF_РасчетВознаграждения_РозничноеДУ L197</td>
+                <td class="num"><strong>205.1</strong></td>
+                <td class="num"><strong>15.9</strong></td>
+                <td class="num">43</td>
+            </tr>
+            <tr>
+                <td>EPF / pff</td>
+                <td>2.3 ПолучитьСуммыРСА_СЧА</td>
+                <td class="num">74.3</td>
+                <td class="num">5.8</td>
+                <td class="num">202</td>
+            </tr>
+            <tr>
+                <td>EPF</td>
+                <td>1. РЗ целиком</td>
+                <td class="num">13.0</td>
+                <td class="num">1.0</td>
+                <td class="num">50</td>
+            </tr>
+        </tbody>
+    </table>
+    <p class="muted">
+        JSON разбора: <code>reports/pff_hotspots_50_full_2_2.json</code>.
+        Скрин/таблица EPF: 19.07.2026 7:53.
+    </p>
+</div>
+
+<div class="card">
+    <h2>Итог: три точки оптимизации внутри 2.6</h2>
+    <div class="verdict">
+        Есть <strong>3 места</strong> для оптимизации в первую очередь (суммарно ~81% прогона):
+        две SELECT платёжной позиции в модуле ПП и один запрос алгоритма MF Розничное ДУ.
+        Цифры — из <code>Замер_50_Договоров_2_2.pff</code>.
+    </div>
+    <table>
+        <thead>
+            <tr>
+                <th>#</th>
+                <th>Точка входа</th>
+                <th>Где исполняется</th>
+                <th>Строка запроса</th>
+                <th class="num">Вызовов</th>
+                <th class="num">Время, с</th>
+                <th class="num">Доля</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr class="hot">
+                <td>1</td>
+                <td><code>ДостаточноДенегНаСчету</code> стр. 2010</td>
+                <td><code>ПервыйЭтапПроверкиДостаточностиДС</code> (ПП)</td>
+                <td class="num">1835</td>
+                <td class="num">56</td>
+                <td class="num">328.6</td>
+                <td class="num">25.5%</td>
+            </tr>
+            <tr class="hot">
+                <td>2</td>
+                <td><code>БанковскийСчетПоПлатежнойПозиции</code> стр. 2062<br>
+                    (из <code>ПлатежноеПоручение</code> стр. 1973)</td>
+                <td><code>ПлатежныеПозицииПоСчетамДС</code> (ПП)</td>
+                <td class="num">1388</td>
+                <td class="num">104</td>
+                <td class="num">514.8</td>
+                <td class="num">39.9%</td>
+            </tr>
+            <tr class="hot">
+                <td>3</td>
+                <td><code>ИнициироватьВознаграждение</code> -&gt; проведение<br>
+                    <code>НачислениеВознаграждения</code></td>
+                <td><code>MF_РасчетВознаграждения_РозничноеДУ</code><br>
+                    <code>РазмерВознагражденияПриРасторжении</code></td>
+                <td class="num">197</td>
+                <td class="num">43</td>
+                <td class="num">205.1</td>
+                <td class="num">15.9%</td>
+            </tr>
+        </tbody>
+    </table>
+    <p class="muted">
+        Вызовы точки 1: стр. 894 (18) + стр. 913 (38) = 56.
+        Точка 2: 104 раза при ПП по НДФЛ/вознаграждению/комиссии.
+        Точка 3: в pff модуль виден как <code>e1cib/tempstorage/...d9bbdfb8c2...</code> (внешняя обработка из справочника доп. обработок).
+    </p>
+</div>
+
+<!-- HOTSPOT 1 -->
+<div class="card">
+    <h2>Точка 1: проверка достаточности ДС перед ПП на вывод</h2>
+    <div class="hotspot">
+        <div class="hotspot-h">
+            <span class="badge">HOTSPOT 1</span>
+            <span class="title">ДостаточноДенегНаСчету -&gt; ПервыйЭтапПроверкиДостаточностиДС</span>
+        </div>
+        <div class="hotspot-b">
+            <div class="kpi">
+                <div><div class="v">328.6 с</div><div class="l">Запрос.Выполнить L1835</div></div>
+                <div><div class="v">56</div><div class="l">вызовов (894x18 + 913x38)</div></div>
+                <div><div class="v">25.5%</div><div class="l">доля от итога ~1291 с</div></div>
+            </div>
+
+            <h3>Зачем вызывается</h3>
+            <p>
+                Перед созданием платежного поручения на <strong>вывод ДС клиенту</strong>
+                нужно убедиться, что на счёте хватает денег (платёжная позиция &gt;= сумме поручения).
+            </p>
+
+            <h3>Дерево вызовов</h3>
+            <div class="tree">ОбработкаДоговоровКРасторжению
+  цикл по ДанныеПоРасторжению
+    если СтатусПорученияНаВывод = Новый
+      ДостаточноДенегНаСчету(ПоручениеПоДСНаВывод)     // вызовы: 894, 913, 963
+        Документы.ПлатежноеПоручение.ПервыйЭтапПроверкиДостаточностиДС(...)  // стр. 2010
+          Запрос.Выполнить()   // МодульМенеджера ~1835  &lt;-- МЕДЛЕННО</div>
+
+            <h3>Строка перехода в другой модуль (обработка)</h3>
+<pre>// Ext/ObjectModule.bsl, функция ДостаточноДенегНаСчету, строка ~2010
+СтруктураПлатежнойПозиции = Документы.ПлатежноеПоручение.ПервыйЭтапПроверкиДостаточностиДС(
+    МестоХранения, ДоговорДУ, ПоручениеПоДСНаВывод, НаДату);</pre>
+
+            <h3>Где в конфигурации тяжёлый запрос</h3>
+            <p>
+                <code>Documents/ПлатежноеПоручение/Ext/ManagerModule.bsl</code>,
+                функция <code>ПервыйЭтапПроверкиДостаточностиДС</code>,
+                <code>РезультатЗапроса = Запрос.Выполнить();</code> около строки <strong>1835</strong>.
+            </p>
+
+            <h3>Что оптимизировать</h3>
+            <ul>
+                <li>Сам запрос платёжной позиции (остатки/обороты Хозрасчетный, статусы ПП, депозиты).</li>
+                <li>Либо кэш/батч по договорам: сейчас на каждый договор — отдельный полный пересчёт.</li>
+                <li>Не путать с <code>Записать</code> ПП: узкое место здесь — SELECT до записи.</li>
+            </ul>
+        </div>
+    </div>
+</div>
+
+<!-- HOTSPOT 2 -->
+<div class="card">
+    <h2>Точка 2: подбор счёта УК по платёжной позиции (НДФЛ / вознаграждение)</h2>
+    <div class="hotspot">
+        <div class="hotspot-h">
+            <span class="badge">HOTSPOT 2</span>
+            <span class="title">БанковскийСчетПоПлатежнойПозиции -&gt; ПлатежныеПозицииПоСчетамДС</span>
+        </div>
+        <div class="hotspot-b">
+            <div class="kpi">
+                <div><div class="v">514.8 с</div><div class="l">Запрос.Выполнить L1388</div></div>
+                <div><div class="v">104</div><div class="l">вызовов (через L1973/L2062)</div></div>
+                <div><div class="v">39.9%</div><div class="l">доля от итога ~1291 с</div></div>
+            </div>
+
+            <h3>Зачем вызывается</h3>
+            <p>
+                При создании ПП по основаниям <code>НачислениеЗадолженности</code> (НДФЛ)
+                и <code>НачислениеВознаграждения</code> (вознаграждение / комиссия / регулярное)
+                нужно подобрать банковский счёт УК с достаточной платёжной позицией.
+            </p>
+            <p class="muted">
+                Для ПП на вывод клиенту (основание = Поручение) этот путь <strong>не используется</strong>.
+            </p>
+
+            <h3>Дерево вызовов</h3>
+            <div class="tree">ОбработкаДоговоровКРасторжению
+  цикл по ДанныеПоРасторжению
+    ПлатежноеПоручение(Начисление..., "НДФЛ"|"Вознаграждение"|"Комиссия")
+      // вызовы: 904, 923, 932, 940, 948
+      если основание = НачислениеЗадолженности ИЛИ НачислениеВознаграждения
+        БанковскийСчетПоПлатежнойПозиции(ДоговорДУ, Валюта, Сумма)   // стр. 1973
+          Документы.ПлатежноеПоручение.ПлатежныеПозицииПоСчетамДС(...)  // стр. 2062
+            Запрос.Выполнить()   // МодульМенеджера ~1388  &lt;-- МЕДЛЕННО</div>
+
+            <h3>Строка перехода в другой модуль (обработка)</h3>
+<pre>// Ext/ObjectModule.bsl, функция БанковскийСчетПоПлатежнойПозиции, строка ~2062
+ТЗ_ПлатежныхПозицийПоПодходящимСчетам =
+    Документы.ПлатежноеПоручение.ПлатежныеПозицииПоСчетамДС(ДоговорДУ, Валюта);</pre>
+
+            <p class="muted">Вызов из <code>ПлатежноеПоручение</code> (~1973):</p>
+<pre>СтруктураПлатежнойПозиции = БанковскийСчетПоПлатежнойПозиции(
+    ПлатежноПоручение.ДоговорДУ, ПлатежноПоручение.ВалютаДокумента, СуммаПП);</pre>
+
+            <h3>Где в конфигурации тяжёлый запрос</h3>
+            <p>
+                <code>Documents/ПлатежноеПоручение/Ext/ManagerModule.bsl</code>,
+                функция <code>ПлатежныеПозицииПоСчетамДС</code>,
+                <code>РезультатЗапроса = Запрос.Выполнить();</code> около строки <strong>1388</strong>.
+            </p>
+
+            <h3>Что оптимизировать</h3>
+            <ul>
+                <li>Запрос <code>ПлатежныеПозицииПоСчетамДС</code> (самый тяжёлый в снимке).</li>
+                <li>Снижение числа вызовов: до 104 на прогон из-за нескольких типов ПП на договор.</li>
+                <li>Кэш позиций по ДоговорДУ+Валюта внутри одного прогона расторжения.</li>
+            </ul>
+        </div>
+    </div>
+</div>
+
+<!-- HOTSPOT 3 -->
+<div class="card">
+    <h2>Точка 3: алгоритм MF вознаграждения Розничное ДУ (при расторжении)</h2>
+    <div class="hotspot">
+        <div class="hotspot-h">
+            <span class="badge">HOTSPOT 3</span>
+            <span class="title">MF_РасчетВознаграждения_РозничноеДУ -&gt; L197 ЗапросДатаВсехВознаграждений</span>
+        </div>
+        <div class="hotspot-b">
+            <div class="kpi">
+                <div><div class="v">205.1 с</div><div class="l">Запрос.Выполнить L197</div></div>
+                <div><div class="v">43</div><div class="l">вызовов</div></div>
+                <div><div class="v">15.9%</div><div class="l">доля от итога ~1291 с</div></div>
+            </div>
+
+            <h3>Зачем вызывается</h3>
+            <p>
+                При <code>ИнициироватьВознаграждение</code> создаётся/проводится
+                <code>НачислениеВознаграждения</code>. В проведении вызывается алгоритм договора контрагента
+                (<code>АлгоритмДоговора</code> из справочника доп. обработок) —
+                внешняя обработка <strong>MF_РасчетВознаграждения_РозничноеДУ</strong>.
+                Для договоров с датой уведомления о расторжении идёт ветка
+                <code>РазмерВознагражденияПриРасторжении</code>.
+            </p>
+            <p class="muted">
+                В отладчике модуль без имени: <code>e1cib/tempstorage/...d9bbdfb8c2?seanceId=...</code>
+                (обработка подгружена во временное хранилище сеанса).
+            </p>
+
+            <h3>Дерево вызовов</h3>
+            <div class="tree">ОбработкаДоговоровКРасторжению
+  цикл (после охлаждения)
+    ИнициироватьВознаграждение(...)                         // стр. ~841
+      НачислениеВознаграждения(...) / Записать(Проведение)  // стр. ~2320
+        РасчетСуммыДокумента
+          ДоговорыКонтрагентов.РезультатАлгоритма
+            ВнешнийОбъект.РезультатРасчета                  // MF_РасчетВознаграждения_РозничноеДУ
+              ПолучитьРазмерВознаграждения                  // L68 (~277 с с детьми)
+                РазмерВознагражденияПриРасторжении          // L112
+                  ЗапросДатаВсехВознаграждений.Выполнить()  // L197  &lt;-- МЕДЛЕННО (~205 с)</div>
+
+            <h3>Строка перехода из обработки расторжения</h3>
+<pre>// Ext/ObjectModule.bsl (~841)
+ИнициироватьВознаграждение(ДоговорКРасторжению, ВыборкаДетальныеЗаписи.СуммаВводаДС);
+
+// далее конфигурация:
+Справочники.ДоговорыКонтрагентов.РезультатАлгоритма(...)
+  ВнешнийОбъект = ПолучитьОбъектВнешнейОбработки(АлгоритмДоговора);
+  ВнешнийОбъект.РезультатРасчета(Настройки, Параметры);</pre>
+
+            <h3>Где тяжёлый запрос (внешняя EPF)</h3>
+            <p>
+                <code>WORK/Wim_Du/SRC/epf/MF_РасчетВознаграждения_РозничноеДУ_epf/.../Ext/ObjectModule.bsl</code>,
+                функция <code>РазмерВознагражденияПриРасторжении</code>, строка <strong>197</strong>:
+            </p>
+<pre>РезультатЗапроса = ЗапросДатаВсехВознаграждений.Выполнить();
+// Запрос: МАКСИМУМ(Период) из РегистрНакопления.ОбязательстваПоДС
+// по ДоговорДУ, Приход, Основание.Ссылка ЕСТЬ NULL</pre>
+
+            <h3>Что оптимизировать</h3>
+            <ul>
+                <li>Запрос к <code>ОбязательстваПоДС</code> (условие по <code>Основание.Ссылка</code> часто дорогое).</li>
+                <li>Кэш даты/суммы вознаграждения по договору внутри одного прогона.</li>
+                <li>Не смешивать с точками 1–2 (ПП): это отдельная внешняя обработка алгоритма MF.</li>
+            </ul>
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <h2>Связь со строкой замера обработки</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>Строка в таблице замеров EPF</th>
+                <th>Что внутри</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td><code>2. ОбработкаДоговоровКРасторжению</code></td>
+                <td>родитель всего блока формы/закрытия</td>
+            </tr>
+            <tr class="hot">
+                <td><code>2.6 Цикл: прочая логика (вознагр./поручения/ПП)</code></td>
+                <td>
+                    корзина точек <strong>1 + 2 + 3</strong> (и прочее тело цикла без СЧА / удаления / закрытия).
+                    Отдельных листьев 2.6.1 / 2.6.2 / 2.6.3 пока нет.
+                </td>
+            </tr>
+            <tr>
+                <td><code>2.3 ПолучитьСуммыРСА_СЧА</code></td>
+                <td>другая ветка; ~5.8%, меньше каждой из трёх точек</td>
+            </tr>
+        </tbody>
+    </table>
+    <div class="note">
+        Если нужно видеть точки раздельно в таблице замеров EPF —
+        разрезать <code>2.6</code> на листья:
+        <code>ДостаточноДенегНаСчету</code>,
+        <code>БанковскийСчетПоПлатежнойПозиции</code>,
+        <code>ИнициироватьВознаграждение</code> (MF).
+    </div>
+</div>
+
+<div class="card">
+    <h2>Файлы</h2>
+    <ul>
+        <li>Обработка (тест): <code>Тестирование/внТестРасторжениеРДУ_ПолныйКонтур_epf/.../Ext/ObjectModule.bsl</code></li>
+        <li>ПП (точки 1–2): <code>WORK/Wim_Du/SRC/CF/Documents/ПлатежноеПоручение/Ext/ManagerModule.bsl</code></li>
+        <li>MF (точка 3): <code>WORK/Wim_Du/SRC/epf/MF_РасчетВознаграждения_РозничноеДУ_epf/.../Ext/ObjectModule.bsl</code></li>
+        <li>Замер: <code>Замер_50_Договоров_2_2.pff</code>, JSON: <code>pff_hotspots_50_full_2_2.json</code></li>
+    </ul>
+</div>
+
+</div>
+</body>
+</html>

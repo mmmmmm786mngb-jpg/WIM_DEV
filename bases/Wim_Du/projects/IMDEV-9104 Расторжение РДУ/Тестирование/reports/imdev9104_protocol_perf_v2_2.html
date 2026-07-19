@@ -1,0 +1,541 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Протокол тестирования замеров IMDEV-9104 v2.2</title>
+<style>
+* { box-sizing: border-box; }
+body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+    line-height: 1.55; color: #1a202c; background: #f0f2f5; margin: 0; padding: 24px 12px;
+}
+.container { max-width: 980px; margin: 0 auto; }
+.hero {
+    background: #1a365d; color: #fff; border-radius: 10px;
+    padding: 22px 26px; margin-bottom: 16px;
+}
+.hero h1 { margin: 0 0 8px; font-size: 1.35rem; font-weight: 600; }
+.hero p { margin: 0; opacity: 0.92; font-size: 0.95rem; }
+.meta { margin-top: 12px; font-size: 0.84rem; opacity: 0.88; }
+.card {
+    background: #fff; border-radius: 10px; padding: 18px 22px; margin-bottom: 14px;
+    border: 1px solid #e2e8f0;
+}
+h2 {
+    color: #1a365d; font-size: 1.08rem; margin: 0 0 12px;
+    padding-bottom: 8px; border-bottom: 2px solid #e2e8f0;
+}
+h3 { color: #2d3748; font-size: 0.98rem; margin: 14px 0 8px; }
+.verdict {
+    background: #ebf8ff; border-left: 4px solid #3182ce;
+    padding: 12px 14px; border-radius: 0 8px 8px 0; margin-bottom: 12px;
+}
+.problem-box {
+    background: #fff5f5; border-left: 4px solid #e53e3e;
+    padding: 12px 14px; border-radius: 0 8px 8px 0; margin-bottom: 10px;
+}
+.ok-box {
+    background: #f0fff4; border-left: 4px solid #28a745;
+    padding: 12px 14px; border-radius: 0 8px 8px 0; margin-bottom: 10px;
+}
+.appendix {
+    background: #fffaf0; border-left: 4px solid #dd6b20;
+    padding: 12px 14px; border-radius: 0 8px 8px 0; margin: 10px 0;
+}
+.kpi { display: flex; flex-wrap: wrap; gap: 10px; margin: 10px 0; }
+.kpi div {
+    flex: 1 1 140px; background: #f7fafc; border: 1px solid #e2e8f0;
+    border-radius: 8px; padding: 10px 12px;
+}
+.kpi .v { font-size: 1.15rem; font-weight: 700; color: #2c5282; }
+.kpi .v.hot { color: #c53030; }
+.kpi .l { font-size: 0.8rem; color: #718096; }
+table { width: 100%; border-collapse: collapse; font-size: 0.88rem; margin: 10px 0; }
+th, td { border: 1px solid #e2e8f0; padding: 7px 9px; vertical-align: top; }
+th { background: #f7fafc; text-align: left; font-weight: 600; }
+.num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.hot { background: #fff5f5; }
+.warm { background: #fffaf0; }
+.muted { color: #718096; font-size: 0.85rem; }
+code { background: #edf2f7; padding: 1px 5px; border-radius: 3px; font-size: 0.86em; }
+pre {
+    background: #2d3748; color: #e2e8f0; padding: 12px 14px;
+    border-radius: 8px; overflow-x: auto; font-size: 0.78rem; line-height: 1.45;
+    white-space: pre; margin: 8px 0;
+}
+.tree {
+    background: #f7fafc; border: 1px solid #e2e8f0; border-radius: 8px;
+    padding: 12px 14px; font-family: Consolas, "Courier New", monospace;
+    font-size: 0.8rem; line-height: 1.5; overflow-x: auto; white-space: pre;
+}
+.shot {
+    border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden;
+    background: #f7fafc; margin: 12px 0;
+}
+.shot .cap {
+    padding: 8px 10px; font-size: 0.85rem; font-weight: 600;
+    border-bottom: 1px solid #e2e8f0; background: #edf2f7;
+}
+.shot img { display: block; width: 100%; height: auto; }
+.hotspot {
+    border: 1px solid #feb2b2; border-radius: 10px; overflow: hidden; margin-bottom: 16px;
+}
+.hotspot-h {
+    background: #fff5f5; border-bottom: 1px solid #feb2b2;
+    padding: 12px 16px; display: flex; flex-wrap: wrap; gap: 10px; align-items: baseline;
+}
+.hotspot-h .badge {
+    background: #c53030; color: #fff; font-weight: 700; font-size: 0.75rem;
+    padding: 3px 8px; border-radius: 4px;
+}
+.hotspot-h .title { font-weight: 700; color: #742a2a; font-size: 0.98rem; }
+.hotspot-b { padding: 14px 16px; }
+.toc a { color: #2b6cb0; text-decoration: none; }
+.toc li { margin: 4px 0; }
+ol.fix { margin: 8px 0 4px 20px; }
+ol.fix li { margin: 8px 0; }
+.fix-id {
+    display: inline-block; background: #ed8936; color: #fff;
+    font-size: 0.75rem; font-weight: 700; padding: 2px 7px; border-radius: 4px;
+    margin-right: 6px;
+}
+</style>
+</head>
+<body>
+<div class="container">
+
+<div class="hero">
+    <h1>Протокол тестирования замеров производительности</h1>
+    <p>IMDEV-9104 — полный контур расторжения РДУ. Только версия теста <strong>v. 2.2</strong>.</p>
+    <div class="meta">
+        Дата прогона: 19.07.2026 7:53:00 |
+        EPF: внТестРасторжениеРДУ_ПолныйКонтур.epf v2.2 |
+        База: AVC_REGR_CLEAN_DU |
+        N=50, пул «Розничное ДУ», откат транзакции=Да, внешние системы ОТКЛ
+    </div>
+</div>
+
+<div class="card">
+    <h2>Содержание</h2>
+    <ol class="toc">
+        <li><a href="#s1">1. Цель и объект тестирования</a></li>
+        <li><a href="#s2">2. Условия и методика</a></li>
+        <li><a href="#s3">3. Результаты: таблица замеров EPF (скрин)</a></li>
+        <li><a href="#s4">4. Результаты: замер производительности (.pff)</a></li>
+        <li><a href="#s5">5. Три проблемы (вызов / место / эффект)</a></li>
+        <li><a href="#s6">Приложение А. Варианты исправления</a></li>
+        <li><a href="#s7">Приложение Б. Артефакты</a></li>
+    </ol>
+</div>
+
+<!-- 1 -->
+<div class="card" id="s1">
+    <h2>1. Цель и объект тестирования</h2>
+    <div class="verdict">
+        Зафиксировать baseline полного боевого контура расторжения РДУ (без внешних систем)
+        на N=50 и выделить узкие места SELECT/расчётов для IMDEV-9104.
+    </div>
+    <table>
+        <tr><th>Параметр</th><th>Значение</th></tr>
+        <tr><td>Объект</td><td><code>внТестРасторжениеРДУ_ПолныйКонтур.epf</code>, версия регистрации <strong>2.2</strong></td></tr>
+        <tr><td>Контур</td><td>РЗ <code>ДОДоговорыДУКРасторжению</code> + <code>ОбработкаДоговоровКРасторжению</code> + <code>ДанныеДляРассылки</code> x4</td></tr>
+        <tr><td>Внешние системы</td><td>ДО / ФИН / FO / почта — отключены (заглушки)</td></tr>
+        <tr><td>Запись в БД</td><td>Выполняется; в конце транзакция отката</td></tr>
+        <tr><td>Не входит в scope</td><td>Оптимизация «просто Записать» как цель; сравнение с коротким тестом v1.x</td></tr>
+    </table>
+</div>
+
+<!-- 2 -->
+<div class="card" id="s2">
+    <h2>2. Условия и методика</h2>
+    <ol class="fix">
+        <li>Открыта обработка v2.2, N=50, пул «Розничное ДУ», флаг отката включён.</li>
+        <li>Параллельно включён замер производительности платформы 1С (результат — <code>Замер_50_Договоров_2_2.pff</code>).</li>
+        <li>Запущен тест; получен табличный документ с деревом блоков 0 / 1.x / 2.x / 3.x.</li>
+        <li>Сохранён скриншот формы с отчётом; разобран .pff на hotspots (self-time запросов).</li>
+        <li>По .pff сопоставлены вызовы обработки с модулями конфигурации / внешней EPF алгоритма.</li>
+    </ol>
+    <div class="ok-box">
+        Успех прогона EPF: <strong>Да</strong>. Итоговое время по таблице: <strong>1 295 969 мс (~21.6 мин)</strong>.
+        По .pff корневой вызов формы: <strong>~1290.7 с</strong> (сходимость с EPF в пределах погрешности).
+    </div>
+</div>
+
+<!-- 3 -->
+<div class="card" id="s3">
+    <h2>3. Результаты: таблица замеров EPF (скрин)</h2>
+    <div class="shot">
+        <div class="cap">Скрин: IMDEV-9104 тест ПОЛНЫЙ контур РДУ | v. 2.2 — 19.07.2026 7:53</div>
+        <img src="screenshot_full_contour_v2_2.png" alt="Скрин отчёта замеров v2.2">
+    </div>
+    <h3>Сводка по дереву EPF</h3>
+    <table>
+        <thead>
+            <tr>
+                <th>Блок</th>
+                <th class="num">мс</th>
+                <th class="num">Доля %</th>
+                <th class="num">Строк</th>
+                <th>Комментарий</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>0. ИТОГО</td>
+                <td class="num">1 295 969</td>
+                <td class="num">100.00</td>
+                <td class="num">50</td>
+                <td>Откат=Да; внешние ОТКЛ</td>
+            </tr>
+            <tr>
+                <td>1. ДОДоговорыДУКРасторжению (РЗ)</td>
+                <td class="num">13 020</td>
+                <td class="num">1.00</td>
+                <td class="num">50</td>
+                <td>из них 1.6 ПорученияДС ~9.8 с</td>
+            </tr>
+            <tr>
+                <td>2. ОбработкаДоговоровКРасторжению</td>
+                <td class="num">1 281 976</td>
+                <td class="num">98.92</td>
+                <td class="num">202</td>
+                <td>охл=4; матвыгода=32; после=166</td>
+            </tr>
+            <tr>
+                <td>2.3 ПолучитьСуммыРСА_СЧА</td>
+                <td class="num">74 607</td>
+                <td class="num">5.76</td>
+                <td class="num">202</td>
+                <td>~370 мс/вызов</td>
+            </tr>
+            <tr class="hot">
+                <td><strong>2.6 прочая логика (вознагр./поручения/ПП)</strong></td>
+                <td class="num"><strong>1 204 426</strong></td>
+                <td class="num"><strong>92.94</strong></td>
+                <td class="num">202</td>
+                <td>корзина проблем P1–P3</td>
+            </tr>
+            <tr>
+                <td>3. ДанныеДляРассылки x4</td>
+                <td class="num">961</td>
+                <td class="num">0.07</td>
+                <td class="num">59</td>
+                <td>без почты/FO</td>
+            </tr>
+        </tbody>
+    </table>
+    <p class="muted">
+        Вывод по EPF: узкое место не РЗ и не СЧА, а лист <code>2.6</code>.
+        Детализация внутри 2.6 — только через .pff (ниже).
+    </p>
+</div>
+
+<!-- 4 -->
+<div class="card" id="s4">
+    <h2>4. Результаты: замер производительности (.pff)</h2>
+    <p>
+        Файл: <code>Тестирование/Замер_50_Договоров_2_2.pff</code><br>
+        Разбор: <code>Тестирование/reports/pff_hotspots_50_full_2_2.json</code>
+    </p>
+    <div class="kpi">
+        <div><div class="v">1291 с</div><div class="l">корень теста (форма)</div></div>
+        <div><div class="v hot">515 с</div><div class="l">P2 L1388 (~40%)</div></div>
+        <div><div class="v hot">329 с</div><div class="l">P1 L1835 (~25%)</div></div>
+        <div><div class="v hot">205 с</div><div class="l">P3 MF L197 (~16%)</div></div>
+    </div>
+    <table>
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Модуль / строка</th>
+                <th>Код (суть)</th>
+                <th class="num">Вызовов</th>
+                <th class="num">Self, с</th>
+                <th class="num">Доля %</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr class="hot">
+                <td>P2</td>
+                <td>Документ.ПлатежноеПоручение.МодульМенеджера <strong>1388</strong></td>
+                <td><code>РезультатЗапроса = Запрос.Выполнить();</code><br>ПлатежныеПозицииПоСчетамДС</td>
+                <td class="num">104</td>
+                <td class="num">514.76</td>
+                <td class="num">39.88</td>
+            </tr>
+            <tr class="hot">
+                <td>P1</td>
+                <td>Документ.ПлатежноеПоручение.МодульМенеджера <strong>1835</strong></td>
+                <td><code>РезультатЗапроса = Запрос.Выполнить();</code><br>ПервыйЭтапПроверкиДостаточностиДС</td>
+                <td class="num">56</td>
+                <td class="num">328.63</td>
+                <td class="num">25.46</td>
+            </tr>
+            <tr class="hot">
+                <td>P3</td>
+                <td>MF_РасчетВознаграждения_РозничноеДУ <strong>197</strong><br>
+                    <span class="muted">(в pff: e1cib/tempstorage/...d9bbdfb8c2)</span></td>
+                <td><code>ЗапросДатаВсехВознаграждений.Выполнить();</code></td>
+                <td class="num">43</td>
+                <td class="num">205.08</td>
+                <td class="num">15.89</td>
+            </tr>
+            <tr>
+                <td>—</td>
+                <td>РасчетСЧА_РСА.МодульМенеджера 218</td>
+                <td>запрос СЧА</td>
+                <td class="num">202</td>
+                <td class="num">50.47</td>
+                <td class="num">~3.9</td>
+            </tr>
+        </tbody>
+    </table>
+    <div class="problem-box">
+        Сумма P1+P2+P3: <strong>~1048.5 с (~81% прогона)</strong>.
+        Все три попадают в корзину EPF <code>2.6</code>. Это целевые проблемы протокола.
+    </div>
+</div>
+
+<!-- 5 -->
+<div class="card" id="s5">
+    <h2>5. Три проблемы: откуда вызываются и где происходит</h2>
+
+    <!-- P1 -->
+    <div class="hotspot">
+        <div class="hotspot-h">
+            <span class="badge">P1</span>
+            <span class="title">Проверка достаточности ДС перед ПП на вывод — 328.6 с (25.5%)</span>
+        </div>
+        <div class="hotspot-b">
+            <h3>Суть</h3>
+            <p>
+                Перед созданием платежного поручения на вывод клиенту вызывается проверка платёжной позиции.
+                Почти всё время — один тяжёлый SELECT в модуле менеджера ПП.
+            </p>
+            <h3>Откуда вызывается (обработка расторжения)</h3>
+            <div class="tree">ОбработкаДоговоровКРасторжению  (блок EPF 2 / корзина 2.6)
+  цикл по ДанныеПоРасторжению
+    если СтатусПорученияНаВывод = Новый
+      ДостаточноДенегНаСчету(ПоручениеПоДСНаВывод)
+        // вызовы: ObjectModule стр. 894 (18 раз), 913 (38 раз) = 56
+        Документы.ПлатежноеПоручение.ПервыйЭтапПроверкиДостаточностиДС(...)  // стр. 2010
+          Запрос.Выполнить()  // ManagerModule стр. 1835  &lt;-- ПРОБЛЕМА</div>
+            <h3>Где происходит проблема</h3>
+            <ul>
+                <li>Файл: <code>CF/Documents/ПлатежноеПоручение/Ext/ManagerModule.bsl</code></li>
+                <li>Функция: <code>ПервыйЭтапПроверкиДостаточностиДС</code></li>
+                <li>Строка: <strong>1835</strong> — <code>РезультатЗапроса = Запрос.Выполнить();</code></li>
+                <li>Содержимое запроса: остатки/обороты Хозрасчетный, статусы ПП, депозиты, обязательства — на <strong>один</strong> договор/счёт за вызов.</li>
+            </ul>
+<pre>// ObjectModule.bsl ~2010
+СтруктураПлатежнойПозиции = Документы.ПлатежноеПоручение.ПервыйЭтапПроверкиДостаточностиДС(
+    МестоХранения, ДоговорДУ, ПоручениеПоДСНаВывод, НаДату);</pre>
+        </div>
+    </div>
+
+    <!-- P2 -->
+    <div class="hotspot">
+        <div class="hotspot-h">
+            <span class="badge">P2</span>
+            <span class="title">Подбор счёта УК по платёжной позиции — 514.8 с (39.9%)</span>
+        </div>
+        <div class="hotspot-b">
+            <h3>Суть</h3>
+            <p>
+                При создании ПП по НДФЛ / вознаграждению / комиссии для нового документа
+                подбирается банковский счёт УК с достаточной позицией.
+                Самый тяжёлый self-time в прогоне.
+            </p>
+            <h3>Откуда вызывается</h3>
+            <div class="tree">ОбработкаДоговоровКРасторжению  (2.6)
+  цикл
+    ПлатежноеПоручение(Начисление..., "НДФЛ"|"Вознаграждение"|"Комиссия")
+      // вызовы: 904, 923, 932, 940, 948
+      если основание = НачислениеЗадолженности ИЛИ НачислениеВознаграждения
+        БанковскийСчетПоПлатежнойПозиции(ДоговорДУ, Валюта, Сумма)  // стр. 1973
+          Документы.ПлатежноеПоручение.ПлатежныеПозицииПоСчетамДС(ДоговорДУ, Валюта)  // стр. 2062
+            Запрос.Выполнить()  // ManagerModule стр. 1388  &lt;-- ПРОБЛЕМА</div>
+            <h3>Где происходит проблема</h3>
+            <ul>
+                <li>Файл: <code>CF/Documents/ПлатежноеПоручение/Ext/ManagerModule.bsl</code></li>
+                <li>Функция: <code>ПлатежныеПозицииПоСчетамДС</code> (API уже принимает <code>СписокДоговоровДУ</code>)</li>
+                <li>Строка: <strong>1388</strong> — <code>РезультатЗапроса = Запрос.Выполнить();</code></li>
+                <li>Факт вызова из обработки: передаётся <strong>один</strong> договор, 104 раза за прогон.</li>
+            </ul>
+<pre>// ObjectModule.bsl ~2062
+ТЗ_ПлатежныхПозицийПоПодходящимСчетам =
+    Документы.ПлатежноеПоручение.ПлатежныеПозицииПоСчетамДС(ДоговорДУ, Валюта);</pre>
+            <p class="muted">
+                Важно: сигнатура функции уже пакетная (<code>СписокДоговоровДУ</code>), но контур расторжения
+                вызывает её поштучно — прямой кандидат на batch без смены API менеджера.
+            </p>
+        </div>
+    </div>
+
+    <!-- P3 -->
+    <div class="hotspot">
+        <div class="hotspot-h">
+            <span class="badge">P3</span>
+            <span class="title">Алгоритм MF вознаграждения Розничное ДУ — 205.1 с (15.9%)</span>
+        </div>
+        <div class="hotspot-b">
+            <h3>Суть</h3>
+            <p>
+                При инициации начисления вознаграждения проводится документ
+                <code>НачислениеВознаграждения</code>, который через
+                <code>ДоговорыКонтрагентов.РезультатАлгоритма</code> вызывает внешнюю обработку
+                <strong>MF_РасчетВознаграждения_РозничноеДУ</strong>.
+                В ветке расторжения медленный запрос к регистру <code>ОбязательстваПоДС</code>.
+            </p>
+            <h3>Откуда вызывается</h3>
+            <div class="tree">ОбработкаДоговоровКРасторжению  (2.6)
+  цикл (после охлаждения)
+    ИнициироватьВознаграждение(...)                    // ~841
+      НачислениеВознаграждения / Записать(Проведение) // ~2320
+        РасчетСуммыДокумента
+          ДоговорыКонтрагентов.РезультатАлгоритма
+            ВнешнийОбъект.РезультатРасчета             // MF_РасчетВознаграждения_РозничноеДУ
+              ПолучитьРазмерВознаграждения             // L68
+                РазмерВознагражденияПриРасторжении     // L112
+                  ЗапросДатаВсехВознаграждений.Выполнить()  // L197  &lt;-- ПРОБЛЕМА</div>
+            <h3>Где происходит проблема</h3>
+            <ul>
+                <li>Файл: <code>SRC/epf/MF_РасчетВознаграждения_РозничноеДУ_epf/.../Ext/ObjectModule.bsl</code></li>
+                <li>Функция: <code>РазмерВознагражденияПриРасторжении</code></li>
+                <li>Строка: <strong>197</strong></li>
+                <li>В .pff модуль без имени (tempstorage), 43 вызова, self 205 с.</li>
+            </ul>
+<pre>// MF ObjectModule.bsl ~186-197
+ВЫБРАТЬ МАКСИМУМ(ОбязательстваПоДС.Период) КАК ДатаВсехВознаграждений
+ИЗ РегистрНакопления.ОбязательстваПоДС КАК ОбязательстваПоДС
+ГДЕ ОбязательстваПоДС.ДоговорДУ = &ДоговорДУ
+  И ОбязательстваПоДС.Основание.Ссылка ЕСТЬ NULL
+  И ОбязательстваПоДС.ВидДвижения = ЗНАЧЕНИЕ(ВидДвиженияНакопления.Приход)
+
+РезультатЗапроса = ЗапросДатаВсехВознаграждений.Выполнить();</pre>
+            <p class="muted">
+                Условие <code>Основание.Ссылка ЕСТЬ NULL</code> часто мешает индексному отбору
+                и тянет разыменование составного типа — типичный кандидат на переписывание + индекс.
+            </p>
+        </div>
+    </div>
+</div>
+
+<!-- APPENDIX A -->
+<div class="card" id="s6">
+    <h2>Приложение А. Варианты исправления</h2>
+    <p class="muted">
+        По каждой проблеме: формулировка и описание решения.
+        Решения не реализованы в рамках данного протокола. Порядок по доле времени: P2 → P1 → P3.
+    </p>
+
+    <h3><span class="fix-id">P2</span> ~40% — ПлатежныеПозицииПоСчетамДС (L1388)</h3>
+    <div class="problem-box">
+        <strong>Проблема.</strong>
+        При создании ПП по НДФЛ / вознаграждению / комиссии обработка для каждого договора
+        вызывает <code>ПлатежныеПозицииПоСчетамДС(одинДоговор, Валюта)</code>.
+        За прогон — 104 полных пересчёта платёжной позиции (~515 с).
+        При этом API функции уже принимает список договоров, но контур расторжения
+        использует его поштучно.
+    </div>
+    <div class="ok-box">
+        <strong>Решение.</strong>
+        Перед циклом создания ПП собрать список договоров, которым нужны ПП по начислениям,
+        и один раз вызвать <code>ПлатежныеПозицииПоСчетамДС(СписокДоговоровДУ, Валюта)</code>.
+        Результат разложить в соответствие ДоговорДУ → счета/позиции в памяти;
+        при создании документов брать данные из кэша, без повторного SELECT.
+        Дополнительно: снять план запроса L1388 и при необходимости поправить индексы /
+        отборы (ДоговорДУ, банковский счёт, периоды остатков), чтобы пакетный вызов
+        не деградировал на большом списке.
+    </div>
+
+    <h3><span class="fix-id">P1</span> ~25% — ПервыйЭтапПроверкиДостаточностиДС (L1835)</h3>
+    <div class="problem-box">
+        <strong>Проблема.</strong>
+        Перед ПП на вывод для каждого договора вызывается
+        <code>ДостаточноДенегНаСчету</code> → <code>ПервыйЭтапПроверкиДостаточностиДС</code>
+        (56 раз, ~329 с). Каждый вызов заново считает позицию по остаткам/оборотам
+        Хозрасчетный, статусам ПП и депозитам для одного договора/счёта.
+    </div>
+    <div class="ok-box">
+        <strong>Решение.</strong>
+        Перейти на пакетную проверку: собрать таблицу кандидатов
+        (ДоговорДУ, АналитическийСчет, БанковскийСчет) и использовать
+        <code>ПервыйЭтапПроверкиДостаточностиДСПоСпискуСчетов</code>
+        (или эквивалентный один запрос на набор).
+        Если пакет сразу недоступен — кэш позиции по ключу
+        (ДоговорДУ, Счёт, Дата) на время одного прогона расторжения,
+        чтобы не считать одно и то же повторно.
+        Параллельно: анализ плана запроса L1835 и индексы под используемые отборы.
+    </div>
+
+    <h3><span class="fix-id">P3</span> ~16% — MF_РасчетВознаграждения_РозничноеДУ (L197)</h3>
+    <div class="problem-box">
+        <strong>Проблема.</strong>
+        При проведении <code>НачислениеВознаграждения</code> алгоритм
+        <code>MF_РасчетВознаграждения_РозничноеДУ</code> в ветке расторжения
+        выполняет запрос к <code>ОбязательстваПоДС</code>
+        (<code>МАКСИМУМ(Период)</code> с условием <code>Основание.Ссылка ЕСТЬ NULL</code>).
+        43 вызова дают ~205 с. Разыменование составного типа в ГДЕ мешает
+        эффективному использованию индекса и удорожает каждый вызов.
+    </div>
+    <div class="ok-box">
+        <strong>Решение.</strong>
+        1) Переписать условие без <code>Основание.Ссылка</code> (явная проверка пустого основания /
+        тип через ВТ регистраторов), чтобы запрос шёл по индексу
+        <code>ДоговорДУ + ВидДвижения + Период</code>.
+        2) При необходимости добавить/уточнить индекс регистра под этот отбор.
+        3) Для массового расторжения — предзагрузка дат/сумм по списку договоров
+        одним запросом (или пакетный режим в MF) до цикла начислений,
+        либо кэш результата алгоритма по ДоговорДУ+ДатаРасчета внутри прогона.
+    </div>
+
+    <p class="muted" style="margin-top:12px">
+        Записи документов (<code>Записать</code> / проведение) как цель оптимизации
+        в IMDEV-9104 не рассматриваются: фокус — SELECT и повторные расчёты.
+    </p>
+</div>
+
+<!-- APPENDIX B -->
+<div class="card" id="s7">
+    <h2>Приложение Б. Артефакты</h2>
+    <table>
+        <tr><th>Артефакт</th><th>Путь</th></tr>
+        <tr>
+            <td>EPF теста v2.2</td>
+            <td><code>Тестирование/внТестРасторжениеРДУ_ПолныйКонтур.epf</code></td>
+        </tr>
+        <tr>
+            <td>Скрин отчёта замеров</td>
+            <td><code>Тестирование/reports/screenshot_full_contour_v2_2.png</code><br>
+                оригинал: <code>Тестирование/2026_07_19_07_57_18_...v._2.2.png</code></td>
+        </tr>
+        <tr>
+            <td>Замер производительности</td>
+            <td><code>Тестирование/Замер_50_Договоров_2_2.pff</code></td>
+        </tr>
+        <tr>
+            <td>JSON hotspots</td>
+            <td><code>Тестирование/reports/pff_hotspots_50_full_2_2.json</code></td>
+        </tr>
+        <tr>
+            <td>Разбор 3 точек (черновик)</td>
+            <td><code>Тестирование/reports/imdev9104_pp_two_hotspots.html</code></td>
+        </tr>
+        <tr>
+            <td>Настоящий протокол</td>
+            <td><code>Тестирование/reports/imdev9104_protocol_perf_v2_2.html</code></td>
+        </tr>
+    </table>
+    <div class="verdict" style="margin-top:14px">
+        <strong>Заключение протокола:</strong> на полном контуре v2.2 при N=50
+        ~81% времени дают три SELECT/алгоритма вне «листьев» EPF-дерева, но внутри корзины 2.6.
+        Рекомендуемый порядок работ: пакетный вызов <code>ПлатежныеПозицииПоСчетамДС</code> (P2),
+        затем пакет/кэш проверки достаточности (P1), затем индекс/перепись запроса MF (P3).
+    </div>
+</div>
+
+</div>
+</body>
+</html>
