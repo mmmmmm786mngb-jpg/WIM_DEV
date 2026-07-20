@@ -3,6 +3,7 @@
 """Parse Замер_Р2.pff and summarize P2 (payment position) impact."""
 
 import re
+import sys
 from collections import defaultdict
 from pathlib import Path
 
@@ -35,8 +36,9 @@ def parse_pff(path: Path):
 
 
 def main() -> None:
-    rows = parse_pff(PFF)
-    print("file", PFF.name, "size", PFF.stat().st_size)
+    pff = Path(sys.argv[1]) if len(sys.argv) > 1 else PFF
+    rows = parse_pff(pff)
+    print("file", pff.name, "size", pff.stat().st_size)
     print("parsed_rows", len(rows))
 
     top = sorted(rows, key=lambda x: x["t1"], reverse=True)[:20]
@@ -76,7 +78,6 @@ def main() -> None:
                 f"L{r['line']:5d} {r['code'][:120]}"
             )
 
-    # Specific baseline lines L1388 / L1835
     print("\n=== Manager L1388 / L1835 (baseline P2/P1 query lines) ===")
     for want in (1388, 1835):
         for r in rows:
@@ -86,12 +87,11 @@ def main() -> None:
                     f"{r['code'][:140]}"
                 )
 
-    # Compare to baseline JSON if present
     if BASELINE.exists():
         import json
         base = json.loads(BASELINE.read_text(encoding="utf-8"))
         print("\n=== vs baseline full_2_2 (from JSON) ===")
-        print(f"baseline root ~1290s; P2 L1388 was ~514.8s n=104")
+        print("baseline root ~1290s; P2 L1388 was ~514.8s n=104")
         for r in base.get("top_t1", [])[:8]:
             if "Платежн" in r.get("code", "") or r.get("line") in (1388, 2062, 1973, 1835):
                 print(
@@ -99,7 +99,6 @@ def main() -> None:
                     f"{r['code'][:100]}"
                 )
 
-    # Estimate: sum of ПлатежныеПозицииПоСчетамДС call site
     pp_sum = sum(r["t1"] for r in hits if "ПлатежныеПозицииПоСчетамДС" in r["code"])
     bank_sum = sum(r["t1"] for r in hits if "БанковскийСчетПоПлатежной" in r["code"])
     cache_sum = sum(
@@ -116,4 +115,5 @@ def main() -> None:
 
 
 if __name__ == "__main__":
+    import sys
     main()
