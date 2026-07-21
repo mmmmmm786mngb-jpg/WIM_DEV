@@ -166,7 +166,11 @@ python "bases/Wim_Du/projects/IMDEV-9104 Расторжение РДУ/Тест�
 
 | Прогон | Файл | Отчёт |
 |--------|------|-------|
+| **Итог P2+P3 (21.07.2026)** | План ИТ Тестирования 9104.docx | [`../Документация/imdev9104_final_report.html`](../Документация/imdev9104_final_report.html) |
+| **ИТ-тест со скринами** | тот же DOCX + скрины | [`../Документация/imdev9104_it_testing_report.html`](../Документация/imdev9104_it_testing_report.html) |
+
 | 50 дог., 19.07.2026 05:58 (укороченный) | `Замер_50_Договоров.pff`, скрин `2026_07_19_06_11_32_...png` | [`reports/imdev9104_perf_50_report.html`](reports/imdev9104_perf_50_report.html) |
+
 
 Краткий комментарий для Jira: [`reports/jira_comment_baseline_50.txt`](reports/jira_comment_baseline_50.txt).
 

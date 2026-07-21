@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>IMDEV-9104 — План ИТ Тестирования (результаты)</title>
+<style>
+:root {
+    --ink: #1a202c;
+    --muted: #718096;
+    --line: #e2e8f0;
+    --bg: #eef2f7;
+    --card: #ffffff;
+    --navy: #1a365d;
+    --blue: #2b6cb0;
+    --green: #276749;
+    --green-bg: #f0fff4;
+    --green-line: #38a169;
+    --orange: #c05621;
+    --purple: #553c9a;
+}
+* { box-sizing: border-box; }
+body {
+    margin: 0;
+    padding: 28px 16px 48px;
+    font-family: "Segoe UI", system-ui, -apple-system, Arial, sans-serif;
+    color: var(--ink);
+    background:
+        radial-gradient(1200px 500px at 10% -10%, #dbeafe 0%, transparent 55%),
+        radial-gradient(900px 400px at 100% 0%, #fce7f3 0%, transparent 50%),
+        var(--bg);
+    line-height: 1.55;
+}
+.wrap { max-width: 1080px; margin: 0 auto; }
+.hero {
+    position: relative; overflow: hidden; border-radius: 18px;
+    padding: 28px 30px 24px; color: #fff;
+    background: linear-gradient(135deg, #0f2744 0%, #1a365d 45%, #2a4365 100%);
+    box-shadow: 0 16px 40px rgba(26, 54, 93, 0.28); margin-bottom: 18px;
+}
+.hero h1 { margin: 0 0 8px; font-size: 1.55rem; font-weight: 700; }
+.hero p { margin: 0; opacity: 0.92; max-width: 760px; }
+.hero .meta { margin-top: 14px; display: flex; flex-wrap: wrap; gap: 8px; }
+.pill {
+    display: inline-flex; align-items: center;
+    background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.18);
+    border-radius: 999px; padding: 5px 12px; font-size: 0.82rem;
+}
+.pill a { color: #bee3f8; text-decoration: none; }
+.grid-kpi {
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 18px;
+}
+@media (max-width: 860px) { .grid-kpi { grid-template-columns: 1fr 1fr; } }
+.kpi {
+    background: var(--card); border: 1px solid var(--line); border-radius: 14px;
+    padding: 14px 16px; box-shadow: 0 4px 14px rgba(15, 23, 42, 0.04);
+}
+.kpi .l { font-size: 0.78rem; color: var(--muted); margin-bottom: 4px; }
+.kpi .v { font-size: 1.35rem; font-weight: 750; color: var(--navy); }
+.kpi .v.ok { color: var(--green); }
+.kpi .s { font-size: 0.8rem; color: var(--muted); margin-top: 2px; }
+.card {
+    background: var(--card); border: 1px solid var(--line); border-radius: 16px;
+    padding: 20px 22px 22px; margin-bottom: 16px;
+    box-shadow: 0 6px 18px rgba(15, 23, 42, 0.04);
+}
+.card h2 {
+    margin: 0 0 12px; font-size: 1.12rem; color: var(--navy);
+    display: flex; align-items: center; gap: 10px;
+    padding-bottom: 10px; border-bottom: 1px solid var(--line);
+}
+.badge {
+    display: inline-block; font-size: 0.7rem; font-weight: 800;
+    letter-spacing: 0.04em; padding: 3px 8px; border-radius: 6px; color: #fff;
+}
+.badge-p2 { background: var(--orange); }
+.badge-p3 { background: var(--purple); }
+.badge-ok { background: #38a169; }
+.lead { margin: 0 0 12px; font-size: 0.98rem; }
+.ok {
+    background: #f0fff4; border-left: 4px solid #38a169;
+    border-radius: 0 10px 10px 0; padding: 12px 14px; margin: 12px 0 14px;
+}
+.metrics {
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin: 12px 0 16px;
+}
+@media (max-width: 860px) { .metrics { grid-template-columns: 1fr 1fr; } }
+.m { background: #f7fafc; border: 1px solid var(--line); border-radius: 12px; padding: 12px; }
+.m .t { font-size: 0.75rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.03em; }
+.m .n { font-size: 1.2rem; font-weight: 750; margin-top: 4px; }
+.m .n.was { color: #c53030; }
+.m .n.now { color: var(--green); }
+.m .n.x { color: var(--blue); }
+.m .note { font-size: 0.8rem; color: var(--muted); margin-top: 2px; }
+.shot {
+    margin-top: 8px; border: 1px solid var(--line); border-radius: 14px;
+    overflow: hidden; background: #edf2f7;
+}
+.shot .cap {
+    display: flex; justify-content: space-between; align-items: baseline;
+    gap: 10px; flex-wrap: wrap; padding: 10px 14px; background: #f7fafc;
+    border-bottom: 1px solid var(--line); font-size: 0.86rem; font-weight: 600; color: #2d3748;
+}
+.shot .cap span { font-weight: 500; color: var(--muted); font-size: 0.8rem; }
+.shot-body { padding: 12px; background: #cbd5e0; }
+.shot-body svg {
+    display: block; width: 100%; height: auto;
+    border-radius: 8px; box-shadow: 0 8px 24px rgba(0,0,0,0.12); background: #fff;
+}
+.note { margin-top: 10px; font-size: 0.85rem; color: var(--muted); }
+.footer { text-align: center; color: var(--muted); font-size: 0.84rem; margin-top: 8px; }
+code { background: #edf2f7; padding: 1px 6px; border-radius: 4px; font-size: 0.88em; }
+ul { margin: 8px 0 4px 18px; }
+li { margin: 6px 0; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="hero">
+    <h1>План ИТ Тестирования — результаты</h1>
+    <p>
+        Подтверждение улучшений расторжения РДУ по двум алгоритмам.
+        Источник: «План ИТ Тестирования 9104». Скрины прогонов перерисованы
+        в <strong>векторном SVG</strong> (не PNG/base64) по фактическим цифрам сравнений.
+    </p>
+    <div class="meta">
+        <span class="pill"><a href="https://jira/browse/IMDEV-9104">IMDEV-9104</a></span>
+        <span class="pill">Контур: тестовый разработческий</span>
+        <span class="pill">Способ: EPF сравнения было/стало</span>
+        <span class="pill">Дата отчёта: 21.07.2026</span>
+    </div>
+</header>
+
+<section class="grid-kpi">
+    <div class="kpi">
+        <div class="l">P2 ускорение</div>
+        <div class="v ok">x21</div>
+        <div class="s">112.9 с → 5.4 с (20 дог.)</div>
+    </div>
+    <div class="kpi">
+        <div class="l">P3 ускорение</div>
+        <div class="v ok">x27</div>
+        <div class="s">43.9 с → 1.6 с (10 дог.)</div>
+    </div>
+    <div class="kpi">
+        <div class="l">Регресс сумм / полей</div>
+        <div class="v ok">ДА</div>
+        <div class="s">оба сравнения совпали</div>
+    </div>
+    <div class="kpi">
+        <div class="l">P1</div>
+        <div class="v">вне scope</div>
+        <div class="s">достаточность ДС не дорабатывали</div>
+    </div>
+</section>
+
+<!-- P2 -->
+<section class="card">
+    <h2>
+        <span class="badge badge-p2">P2</span>
+        Подбор счёта УК по платёжной позиции — 514.8 с (39.9%)
+    </h2>
+    <p class="lead">
+        Прогон <code>внТестСравнениеПлатежнойПозиции</code>:
+        было — без кэша, стало — пакетный кэш IMDEV-9104-1.
+    </p>
+    <div class="metrics">
+        <div class="m"><div class="t">Было</div><div class="n was">112 914 мс</div><div class="note">~112.9 с</div></div>
+        <div class="m"><div class="t">Стало</div><div class="n now">5 368 мс</div><div class="note">~5.4 с</div></div>
+        <div class="m"><div class="t">Ускорение</div><div class="n x">x21.03</div><div class="note">экономия 95.2%</div></div>
+        <div class="m"><div class="t">Регресс</div><div class="n now">совпадают</div><div class="note">20 договоров</div></div>
+    </div>
+    <div class="ok">
+        <strong>Вывод (из плана ИТ):</strong>
+        время «было» ≈ 112 сек, «стало» ≈ 6 сек (порядка <strong>x20</strong>).
+        На прогоне: 20 договоров, 112914 → 5368 мс.
+    </div>
+
+    <figure class="shot">
+        <div class="cap">
+            Векторный скин сравнения P2
+            <span>SVG · внТестСравнениеПлатежнойПозиции v1.3</span>
+        </div>
+        <div class="shot-body">
+<svg viewBox="0 0 920 420" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Сравнение P2">
+  <defs>
+    <linearGradient id="titleP2" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#1a365d"/><stop offset="100%" stop-color="#2b6cb0"/>
+    </linearGradient>
+  </defs>
+  <rect width="920" height="420" rx="10" fill="#f0f2f5"/>
+  <rect x="12" y="12" width="700" height="396" rx="8" fill="#fff" stroke="#cbd5e0"/>
+  <rect x="724" y="12" width="184" height="396" rx="8" fill="#fff" stroke="#cbd5e0"/>
+
+  <rect x="12" y="12" width="700" height="36" rx="8" fill="url(#titleP2)"/>
+  <rect x="12" y="36" width="700" height="12" fill="url(#titleP2)"/>
+  <text x="28" y="36" fill="#fff" font-family="Segoe UI, Arial" font-size="14" font-weight="700">IMDEV-9104 ПлатежноеПоручение (P2) | v. 1.3</text>
+
+  <text x="28" y="72" fill="#4a5568" font-family="Segoe UI, Arial" font-size="12">Параметры теста</text>
+  <rect x="28" y="82" width="110" height="26" rx="4" fill="#fff" stroke="#a0aec0"/>
+  <text x="36" y="99" fill="#2d3748" font-family="Segoe UI, Arial" font-size="12">20</text>
+  <text x="28" y="78" fill="#718096" font-family="Segoe UI, Arial" font-size="9">Кол-во договоров</text>
+  <rect x="150" y="82" width="180" height="26" rx="4" fill="#fff" stroke="#a0aec0"/>
+  <text x="158" y="99" fill="#2d3748" font-family="Segoe UI, Arial" font-size="12">Розничное ДУ</text>
+  <rect x="350" y="82" width="160" height="26" rx="4" fill="#3182ce"/>
+  <text x="368" y="99" fill="#fff" font-family="Segoe UI, Arial" font-size="12" font-weight="600">Сравнить было/стало</text>
+
+  <text x="28" y="140" fill="#1a365d" font-family="Segoe UI, Arial" font-size="15" font-weight="700">Отчёт сравнения P2</text>
+  <text x="28" y="162" fill="#4a5568" font-family="Segoe UI, Arial" font-size="12">Успех: Да   |   Дата: 20.07.2026   |   Договоров: 20   |   Пул: Розничное ДУ</text>
+
+  <text x="28" y="196" fill="#2d3748" font-family="Segoe UI, Arial" font-size="13" font-weight="700">1. РЕГРЕСС ПОЛЕЙ ПП</text>
+  <rect x="28" y="206" width="240" height="28" rx="6" fill="#f0fff4" stroke="#9ae6b4"/>
+  <text x="40" y="224" fill="#276749" font-family="Segoe UI, Arial" font-size="13" font-weight="700">Результаты совпадают: ДА</text>
+  <text x="280" y="224" fill="#718096" font-family="Segoe UI, Arial" font-size="12">различий: 0</text>
+
+  <text x="28" y="268" fill="#2d3748" font-family="Segoe UI, Arial" font-size="13" font-weight="700">2. СКОРОСТЬ (заполнение ПП)</text>
+  <rect x="28" y="280" width="660" height="110" rx="8" fill="#f7fafc" stroke="#e2e8f0"/>
+  <text x="44" y="308" fill="#4a5568" font-family="Segoe UI, Arial" font-size="12">ПО-СТАРОМУ (кэш выкл.)</text>
+  <text x="320" y="308" fill="#c53030" font-family="Segoe UI, Arial" font-size="16" font-weight="700">112 914 мс</text>
+  <text x="44" y="336" fill="#4a5568" font-family="Segoe UI, Arial" font-size="12">ПО-НОВОМУ (кэш IMDEV-9104-1)</text>
+  <text x="320" y="336" fill="#276749" font-family="Segoe UI, Arial" font-size="16" font-weight="700">5 368 мс</text>
+  <text x="44" y="364" fill="#4a5568" font-family="Segoe UI, Arial" font-size="12">Ускорение / экономия</text>
+  <text x="320" y="364" fill="#2b6cb0" font-family="Segoe UI, Arial" font-size="16" font-weight="700">x21.03  ·  95.2%</text>
+
+  <text x="740" y="40" fill="#2d3748" font-family="Segoe UI, Arial" font-size="12" font-weight="700">Сообщения</text>
+  <rect x="740" y="52" width="152" height="120" rx="6" fill="#ebf8ff" stroke="#90cdf4"/>
+  <text x="752" y="74" fill="#2b6cb0" font-family="Segoe UI, Arial" font-size="11" font-weight="700">Сравнение завершено</text>
+  <text x="752" y="94" fill="#4a5568" font-family="Segoe UI, Arial" font-size="11">Договоров: 20</text>
+  <text x="752" y="112" fill="#276749" font-family="Segoe UI, Arial" font-size="11">совпадают=ДА</text>
+  <text x="752" y="130" fill="#4a5568" font-family="Segoe UI, Arial" font-size="11">было мс=112914</text>
+  <text x="752" y="148" fill="#4a5568" font-family="Segoe UI, Arial" font-size="11">стало мс=5368</text>
+</svg>
+        </div>
+    </figure>
+</section>
+
+<!-- P3 -->
+<section class="card">
+    <h2>
+        <span class="badge badge-p3">P3</span>
+        Алгоритм MF вознаграждения Розничное ДУ — 205.1 с (15.9%)
+    </h2>
+    <p class="lead">
+        Прогон <code>внТестСравнениеMFВознаграждения</code>:
+        было — MAX(Период) + сумма, стало — только сумма (IMDEV-9104-3).
+    </p>
+    <div class="metrics">
+        <div class="m"><div class="t">Было</div><div class="n was">43 885 мс</div><div class="note">~43.9 с</div></div>
+        <div class="m"><div class="t">Стало</div><div class="n now">1 648 мс</div><div class="note">~1.6 с</div></div>
+        <div class="m"><div class="t">Ускорение</div><div class="n x">x26.63</div><div class="note">экономия 96.2%</div></div>
+        <div class="m"><div class="t">Регресс</div><div class="n now">совпадают</div><div class="note">10 договоров</div></div>
+    </div>
+    <div class="ok">
+        <strong>Вывод (из плана ИТ):</strong>
+        для 10 РДУ время «было» = 43 сек, «стало» = 2 сек (порядка <strong>x20</strong>).
+        На прогоне: 43885 → 1648 мс (x26.63).
+    </div>
+
+    <figure class="shot">
+        <div class="cap">
+            Векторный скин сравнения P3
+            <span>SVG · внТестСравнениеMFВознаграждения v1.3</span>
+        </div>
+        <div class="shot-body">
+<svg viewBox="0 0 920 460" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Сравнение P3">
+  <defs>
+    <linearGradient id="titleP3" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#44337a"/><stop offset="100%" stop-color="#6b46c1"/>
+    </linearGradient>
+  </defs>
+  <rect width="920" height="460" rx="10" fill="#f0f2f5"/>
+  <rect x="12" y="12" width="700" height="436" rx="8" fill="#fff" stroke="#cbd5e0"/>
+  <rect x="724" y="12" width="184" height="436" rx="8" fill="#fff" stroke="#cbd5e0"/>
+
+  <rect x="12" y="12" width="700" height="36" rx="8" fill="url(#titleP3)"/>
+  <rect x="12" y="36" width="700" height="12" fill="url(#titleP3)"/>
+  <text x="28" y="36" fill="#fff" font-family="Segoe UI, Arial" font-size="14" font-weight="700">IMDEV-9104-3 MF вознаграждение | v. 1.3</text>
+
+  <text x="28" y="72" fill="#4a5568" font-family="Segoe UI, Arial" font-size="12">Параметры теста</text>
+  <rect x="28" y="82" width="170" height="26" rx="4" fill="#fff" stroke="#a0aec0"/>
+  <text x="36" y="99" fill="#2d3748" font-family="Segoe UI, Arial" font-size="12">Розничное ДУ</text>
+  <rect x="210" y="82" width="90" height="26" rx="4" fill="#fff" stroke="#a0aec0"/>
+  <text x="242" y="99" fill="#2d3748" font-family="Segoe UI, Arial" font-size="12">10</text>
+  <rect x="314" y="82" width="150" height="26" rx="4" fill="#fff" stroke="#a0aec0"/>
+  <text x="326" y="99" fill="#2d3748" font-family="Segoe UI, Arial" font-size="11">21.07.2026 23:59:59</text>
+  <rect x="480" y="82" width="160" height="26" rx="4" fill="#6b46c1"/>
+  <text x="498" y="99" fill="#fff" font-family="Segoe UI, Arial" font-size="12" font-weight="600">Сравнить было/стало</text>
+
+  <text x="28" y="140" fill="#44337a" font-family="Segoe UI, Arial" font-size="14" font-weight="700">IMDEV-9104-3: РазмерВознагражденияПриРасторжении</text>
+  <text x="28" y="160" fill="#4a5568" font-family="Segoe UI, Arial" font-size="12">Пул: Розничное ДУ   |   Договоров: 10   |   лимит: 10</text>
+
+  <text x="28" y="192" fill="#2d3748" font-family="Segoe UI, Arial" font-size="13" font-weight="700">1. РЕГРЕСС: Договор — СуммаВознаграждения</text>
+  <rect x="28" y="202" width="240" height="28" rx="6" fill="#f0fff4" stroke="#9ae6b4"/>
+  <text x="40" y="220" fill="#276749" font-family="Segoe UI, Arial" font-size="13" font-weight="700">Результаты совпадают: ДА</text>
+
+  <rect x="28" y="242" width="660" height="88" rx="6" fill="#f7fafc" stroke="#e2e8f0"/>
+  <text x="44" y="264" fill="#718096" font-family="Segoe UI, Arial" font-size="11">ДоговорДУ</text>
+  <text x="280" y="264" fill="#718096" font-family="Segoe UI, Arial" font-size="11">Сумма старая</text>
+  <text x="420" y="264" fill="#718096" font-family="Segoe UI, Arial" font-size="11">Сумма новая</text>
+  <text x="560" y="264" fill="#718096" font-family="Segoe UI, Arial" font-size="11">Совпадает</text>
+  <text x="44" y="288" fill="#2d3748" font-family="Segoe UI, Arial" font-size="12">ДУ МИ10012 … (10 строк)</text>
+  <text x="300" y="288" fill="#2d3748" font-family="Segoe UI, Arial" font-size="12">0,00</text>
+  <text x="440" y="288" fill="#2d3748" font-family="Segoe UI, Arial" font-size="12">0,00</text>
+  <text x="575" y="288" fill="#276749" font-family="Segoe UI, Arial" font-size="12" font-weight="700">ДА</text>
+  <text x="44" y="312" fill="#718096" font-family="Segoe UI, Arial" font-size="11">все 10 договоров — суммы совпали</text>
+
+  <text x="28" y="356" fill="#2d3748" font-family="Segoe UI, Arial" font-size="13" font-weight="700">2. СКОРОСТЬ</text>
+  <rect x="28" y="368" width="660" height="64" rx="8" fill="#faf5ff" stroke="#d6bcfa"/>
+  <text x="44" y="392" fill="#4a5568" font-family="Segoe UI, Arial" font-size="12">ПО-СТАРОМУ  43 885 мс</text>
+  <text x="280" y="392" fill="#4a5568" font-family="Segoe UI, Arial" font-size="12">ПО-НОВОМУ  1 648 мс</text>
+  <text x="480" y="392" fill="#6b46c1" font-family="Segoe UI, Arial" font-size="14" font-weight="700">x26.63 · 96.2%</text>
+  <text x="44" y="416" fill="#718096" font-family="Segoe UI, Arial" font-size="11">MAX(Период)+сумма  →  только сумма (IMDEV-9104-3)</text>
+
+  <text x="740" y="40" fill="#2d3748" font-family="Segoe UI, Arial" font-size="12" font-weight="700">Сообщения</text>
+  <rect x="740" y="52" width="152" height="140" rx="6" fill="#faf5ff" stroke="#d6bcfa"/>
+  <text x="752" y="74" fill="#6b46c1" font-family="Segoe UI, Arial" font-size="11" font-weight="700">Сравнение завершено</text>
+  <text x="752" y="94" fill="#4a5568" font-family="Segoe UI, Arial" font-size="11">Договоров: 10</text>
+  <text x="752" y="112" fill="#276749" font-family="Segoe UI, Arial" font-size="11">совпадают=ДА</text>
+  <text x="752" y="130" fill="#4a5568" font-family="Segoe UI, Arial" font-size="11">было мс=43885</text>
+  <text x="752" y="148" fill="#4a5568" font-family="Segoe UI, Arial" font-size="11">стало мс=1648</text>
+  <text x="752" y="170" fill="#718096" font-family="Segoe UI, Arial" font-size="10">HTML на клиенте</text>
+</svg>
+        </div>
+    </figure>
+</section>
+
+<section class="card">
+    <h2><span class="badge badge-ok">ИТОГ</span> По плану ИТ Тестирования</h2>
+    <ul>
+        <li><strong>P2</strong> — подтверждено: регресс OK, ускорение ~x21 на 20 договорах.</li>
+        <li><strong>P3</strong> — подтверждено: регресс OK, ускорение ~x27 на 10 договорах.</li>
+        <li><strong>P1</strong> — в план улучшений этого прогона не входил.</li>
+    </ul>
+    <p class="note">
+        Векторные «скрины» — SVG-реконструкция окон сравнений по цифрам из плана/прогонов.
+        Это не трассировка пиксельного скриншота 1С (UI растровый), а самостоятельная векторная схема результатов.
+    </p>
+</section>
+
+<p class="footer">IMDEV-9104 · ИТ-тестирование · SVG · 21.07.2026</p>
+
+</div>
+</body>
+</html>

@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>IMDEV-9104: итоговый отчёт по разработке и тестированию</title>
+<style>
+* { box-sizing: border-box; }
+body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+    line-height: 1.55; color: #1a202c; background: #f0f2f5; margin: 0; padding: 24px 12px;
+}
+.container { max-width: 980px; margin: 0 auto; }
+.hero {
+    background: #1a365d; color: #fff; border-radius: 10px;
+    padding: 22px 26px; margin-bottom: 16px;
+}
+.hero h1 { margin: 0 0 8px; font-size: 1.35rem; font-weight: 600; }
+.hero p { margin: 0; opacity: 0.92; font-size: 0.95rem; }
+.meta { margin-top: 12px; font-size: 0.84rem; opacity: 0.88; }
+.card {
+    background: #fff; border-radius: 10px; padding: 18px 22px; margin-bottom: 14px;
+    border: 1px solid #e2e8f0;
+}
+h2 {
+    color: #1a365d; font-size: 1.08rem; margin: 0 0 12px;
+    padding-bottom: 8px; border-bottom: 2px solid #e2e8f0;
+}
+h3 { color: #2d3748; font-size: 0.98rem; margin: 14px 0 8px; }
+.verdict {
+    background: #ebf8ff; border-left: 4px solid #3182ce;
+    padding: 12px 14px; border-radius: 0 8px 8px 0; margin-bottom: 12px;
+}
+.problem-box {
+    background: #fff5f5; border-left: 4px solid #dc3545;
+    padding: 12px 14px; border-radius: 0 8px 8px 0; margin-bottom: 10px;
+}
+.ok-box {
+    background: #f0fff4; border-left: 4px solid #28a745;
+    padding: 12px 14px; border-radius: 0 8px 8px 0; margin-bottom: 10px;
+}
+.warn-box {
+    background: #fffaf0; border-left: 4px solid #dd6b20;
+    padding: 12px 14px; border-radius: 0 8px 8px 0; margin-bottom: 10px;
+}
+.info-box {
+    background: #e7f5ff; border-left: 4px solid #17a2b8;
+    padding: 12px 14px; border-radius: 0 8px 8px 0; margin-bottom: 10px;
+}
+.kpi { display: flex; flex-wrap: wrap; gap: 10px; margin: 10px 0; }
+.kpi div {
+    flex: 1 1 140px; background: #f7fafc; border: 1px solid #e2e8f0;
+    border-radius: 8px; padding: 10px 12px;
+}
+.kpi .v { font-size: 1.15rem; font-weight: 700; color: #2c5282; }
+.kpi .v.ok { color: #28a745; }
+.kpi .v.hot { color: #c53030; }
+.kpi .v.muted { color: #718096; }
+.kpi .l { font-size: 0.8rem; color: #718096; }
+table { width: 100%; border-collapse: collapse; font-size: 0.88rem; margin: 10px 0; }
+th, td { border: 1px solid #e2e8f0; padding: 7px 9px; vertical-align: top; }
+th { background: #f7fafc; text-align: left; font-weight: 600; }
+.num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.ok-row { background: #f0fff4; }
+.skip-row { background: #f7fafc; color: #718096; }
+.hot { background: #fff5f5; }
+.muted { color: #718096; font-size: 0.85rem; }
+code { background: #edf2f7; padding: 1px 5px; border-radius: 3px; font-size: 0.86em; }
+pre {
+    background: #2d3748; color: #e2e8f0; padding: 12px 14px;
+    border-radius: 8px; overflow-x: auto; font-size: 0.78rem; line-height: 1.45;
+    white-space: pre; margin: 8px 0;
+}
+.badge {
+    display: inline-block; font-weight: 700; font-size: 0.72rem;
+    padding: 2px 7px; border-radius: 4px; margin-right: 4px; color: #fff;
+}
+.badge-ok { background: #28a745; }
+.badge-skip { background: #a0aec0; }
+.badge-p2 { background: #dd6b20; }
+.badge-p3 { background: #805ad5; }
+.badge-p1 { background: #718096; }
+.toc a { color: #2b6cb0; text-decoration: none; }
+.toc li { margin: 4px 0; }
+ul { margin: 8px 0 4px 18px; }
+li { margin: 6px 0; }
+</style>
+</head>
+<body>
+<div class="container">
+
+<div class="hero">
+    <h1>IMDEV-9104: итоговый отчёт</h1>
+    <p>Оптимизация расторжения РДУ: разработка (P2, P3) и ИТ-тестирование. P1 вне scope доработки.</p>
+    <div class="meta">
+        Дата отчёта: 21.07.2026 |
+        Задача: <a href="https://jira/browse/IMDEV-9104" style="color:#bee3f8">IMDEV-9104</a> |
+        Источник плана: План ИТ Тестирования 9104.docx |
+        Baseline замера: полный контур v2.2 (N=50, 19.07.2026)
+    </div>
+</div>
+
+<div class="card">
+    <h2>Содержание</h2>
+    <ol class="toc">
+        <li><a href="#s1">Введение и вердикт</a></li>
+        <li><a href="#s2">Технология тестирования</a></li>
+        <li><a href="#s3">Baseline: три hotspot до доработки</a></li>
+        <li><a href="#s4">Что сделано в разработке</a></li>
+        <li><a href="#s5">Результаты ИТ-тестирования (P2, P3)</a></li>
+        <li><a href="#s6">Детали тестов и артефакты</a></li>
+        <li><a href="#s7">Выводы</a></li>
+    </ol>
+</div>
+
+<!-- 1 -->
+<div class="card" id="s1">
+    <h2>1. Введение и вердикт</h2>
+    <div class="verdict">
+        По результатам разработки и ИТ-тестирования закрыты два основных узких места
+        контура расторжения РДУ: <strong>P2</strong> (подбор счёта УК по платёжной позиции)
+        и <strong>P3</strong> (MF расчёт вознаграждения). На выборке <strong>10 договоров</strong>
+        ускорение каждого алгоритма порядка <strong>x20</strong>.
+        <strong>P1</strong> (проверка достаточности ДС) осознанно не дорабатывался.
+    </div>
+    <div class="kpi">
+        <div><div class="v ok">x20</div><div class="l">P2: 112 с -&gt; 6 с (10 РДУ)</div></div>
+        <div><div class="v ok">x20</div><div class="l">P3: 43 с -&gt; 2 с (10 РДУ)</div></div>
+        <div><div class="v muted">skip</div><div class="l">P1: без доработки</div></div>
+        <div><div class="v">~56%</div><div class="l">доля baseline P2+P3 от прогона N=50</div></div>
+    </div>
+    <p class="muted">
+        Baseline N=50 (протокол v2.2): весь прогон ~1291 с; P2 ~515 с (40%), P3 ~205 с (16%),
+        P1 ~329 с (25%). ИТ-сравнение «было/стало» выполнялось на 10 договорах по изолированным
+        алгоритмам (не полный контур).
+    </p>
+</div>
+
+<!-- 2 -->
+<div class="card" id="s2">
+    <h2>2. Технология тестирования</h2>
+
+    <div class="info-box">
+        ИТ-проверки выполнялись <strong>вручную в 1С</strong> на тестовом разработческом контуре:
+        открывались специальные внешние обработки сравнения (EPF), подготовленные для IMDEV-9104.
+        Автоматизация через COM/Python в этом прогоне не использовалась.
+    </div>
+
+    <h3>2.1. Контур и способ запуска</h3>
+    <ul>
+        <li>База: тестовый разработческий контур ДУ</li>
+        <li>Способ: Файл → Открыть → внешняя обработка <code>.epf</code></li>
+        <li>Параметры на форме: пул «Розничное ДУ», количество договоров (лимит / все), дата расчёта</li>
+        <li>Результат: табличный документ на форме + (для P3) HTML-файл на клиентской машине</li>
+    </ul>
+
+    <h3>2.2. Специальные обработки сравнения</h3>
+    <table>
+        <tr>
+            <th>Обработка</th>
+            <th>Что сравнивает</th>
+            <th>Что измеряет</th>
+        </tr>
+        <tr>
+            <td><code>внТестСравнениеПлатежнойПозиции.epf</code></td>
+            <td>P2: подбор счёта УК без кэша vs с пакетным кэшем</td>
+            <td>регресс полей ПП + скорость</td>
+        </tr>
+        <tr>
+            <td><code>внТестСравнениеMFВознаграждения.epf</code></td>
+            <td>P3: <code>РазмерВознагражденияПриРасторжении</code> «было» (MAX+сумма) vs «стало» (только сумма)</td>
+            <td>регресс сумм Договор/Сумма + скорость</td>
+        </tr>
+    </table>
+
+    <h3>2.3. Как устроен прогон «было / стало»</h3>
+    <ol>
+        <li>На форме задаётся пул и лимит договоров (например, 10; 0 = все договоры пула).</li>
+        <li>Обработка последовательно считает алгоритм <strong>по-старому</strong> и <strong>по-новому</strong> на одном и том же наборе.</li>
+        <li>Сверяются результаты (поля ПП или суммы вознаграждения) и суммарное время обоих путей.</li>
+        <li>Для P3 запись HTML выполняется на клиенте по выбранному пути (расчёт — на сервере ИБ).</li>
+    </ol>
+
+    <h3>2.4. Baseline полного контура (для контекста долей %)</h3>
+    <p class="muted">
+        Доли P1/P2/P3 (~25% / ~40% / ~16%) взяты из более раннего замера полного контура
+        <code>внТестРасторжениеРДУ_ПолныйКонтур</code> v2.2 (N=50) — это исходный протокол hotspots,
+        а не способ ИТ-приёмки P2/P3. Приёмка улучшений — через сравнения выше.
+    </p>
+</div>
+
+<!-- 3 -->
+<div class="card" id="s3">
+    <h2>3. Baseline: три hotspot до доработки</h2>
+    <p>
+        Источник: замер полного контура <code>внТестРасторжениеРДУ_ПолныйКонтур</code> v2.2,
+        N=50, пул «Розничное ДУ» (протокол
+        <a href="../Тестирование/reports/imdev9104_protocol_perf_v2_2.html">imdev9104_protocol_perf_v2_2.html</a>).
+    </p>
+    <table>
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Суть</th>
+                <th class="num">Self, с</th>
+                <th class="num">Доля</th>
+                <th>Решение в IMDEV-9104</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr class="ok-row">
+                <td><span class="badge badge-p2">P2</span></td>
+                <td><code>ПлатежныеПозицииПоСчетамДС</code> — поштучный вызов при подборе счёта УК (L1388)</td>
+                <td class="num">514.8</td>
+                <td class="num">39.9%</td>
+                <td><span class="badge badge-ok">СДЕЛАНО</span> пакетный кэш</td>
+            </tr>
+            <tr class="skip-row">
+                <td><span class="badge badge-p1">P1</span></td>
+                <td><code>ПервыйЭтапПроверкиДостаточностиДС</code> перед ПП на вывод (L1835)</td>
+                <td class="num">328.6</td>
+                <td class="num">25.5%</td>
+                <td><span class="badge badge-skip">НЕ ДЕЛАЛИ</span></td>
+            </tr>
+            <tr class="ok-row">
+                <td><span class="badge badge-p3">P3</span></td>
+                <td>MF: лишний <code>МАКСИМУМ(Период)</code> в <code>РазмерВознагражденияПриРасторжении</code> (L197)</td>
+                <td class="num">205.1</td>
+                <td class="num">15.9%</td>
+                <td><span class="badge badge-ok">СДЕЛАНО</span> убран запрос</td>
+            </tr>
+        </tbody>
+    </table>
+</div>
+
+<!-- 4 -->
+<div class="card" id="s4">
+    <h2>4. Что сделано в разработке</h2>
+
+    <h3><span class="badge badge-p2">P2</span> Пакетный кэш платёжных позиций</h3>
+    <div class="ok-box">
+        Обработка <code>внРасторжениеДоговоровРозничногоДУ</code> <strong>v1.19</strong>
+        (<code>(IMDEV-9104-P2)</code>: перед циклом один вызов
+        <code>ПлатежныеПозицииПоСчетамДС(СписокДоговоров, Валюта)</code>,
+        результат в <code>КэшПлатежныхПозицийПакет</code>;
+        <code>БанковскийСчетПоПлатежнойПозиции</code> читает кэш вместо N запросов.
+    </div>
+<pre>// Было: на каждый договор
+ТЗ = Документы.ПлатежноеПоручение.ПлатежныеПозицииПоСчетамДС(ДоговорДУ, Валюта);
+
+// Стало: один пакет + кэш
+КэшПлатежныхПозицийПакет = ПодготовитьКэшПлатежныхПозицийПоСчетамДС(Список, Валюта);
+// далее БанковскийСчетПоПлатежнойПозиции берёт строки из кэша</pre>
+
+    <h3><span class="badge badge-p3">P3</span> MF вознаграждение без лишнего MAX</h3>
+    <div class="ok-box">
+        Обработка <code>MF_РасчетВознаграждения_РозничноеДУ</code> <strong>v1.01</strong>
+        <code>(IMDEV-9104-3)</code>: в <code>РазмерВознагражденияПриРасторжении</code>
+        отключён запрос <code>МАКСИМУМ(Период)</code> — дата не использовалась,
+        запрос всегда возвращал одну строку и всегда вёл к
+        <code>РазмерВознаграждения</code>.
+    </div>
+<pre>// Было: тяжёлый MAX + РазмерВознаграждения
+// Стало (IMDEV-9104-3):
+СуммаВознаграждения = РазмерВознаграждения(ДоговорДУ, ДатаРасчета, ПоказателиСправки);
+Возврат СуммаВознаграждения;</pre>
+
+    <h3><span class="badge badge-p1">P1</span> Не дорабатывался</h3>
+    <div class="warn-box">
+        Пакетный API <code>ПервыйЭтапПроверкиДостаточностиДСПоСпискуСчетов</code>
+        семантически расходится с одиночным (дата и состав запроса).
+        Доработка менеджера ПП не входила в задачу. Решение: оставить как есть;
+        при необходимости — отдельный этап (свой пакет-клон в EPF или memo-кэш).
+    </div>
+</div>
+
+<!-- 5 -->
+<div class="card" id="s5">
+    <h2>5. Результаты ИТ-тестирования (P2, P3)</h2>
+    <p>
+        По документу <strong>«План ИТ Тестирования 9104»</strong>
+        (сравнение алгоритмов «было» / «стало» на <strong>10 РДУ</strong>):
+    </p>
+
+    <h3>P2 — подбор счёта УК по платёжной позиции</h3>
+    <div class="kpi">
+        <div><div class="v hot">112 с</div><div class="l">Было (10 РДУ)</div></div>
+        <div><div class="v ok">6 с</div><div class="l">Стало (10 РДУ)</div></div>
+        <div><div class="v ok">x20</div><div class="l">Ускорение</div></div>
+        <div><div class="v ok">~95%</div><div class="l">Экономия времени</div></div>
+    </div>
+    <div class="ok-box">
+        Вывод ИТ: для расторжения 10 РДУ время по алгоритму «было» = 112 сек,
+        «стало» = 6 сек (x20).
+    </div>
+
+    <h3>P3 — MF расчёт вознаграждения Розничное ДУ</h3>
+    <div class="kpi">
+        <div><div class="v hot">43 с</div><div class="l">Было (10 РДУ)</div></div>
+        <div><div class="v ok">2 с</div><div class="l">Стало (10 РДУ)</div></div>
+        <div><div class="v ok">x20</div><div class="l">Ускорение</div></div>
+        <div><div class="v ok">~95%</div><div class="l">Экономия времени</div></div>
+    </div>
+    <div class="ok-box">
+        Вывод ИТ: для расчёта вознаграждения при расторжении 10 РДУ
+        время «было» = 43 сек, «стало» = 2 сек (x20).
+    </div>
+
+    <h3>Сводка по пунктам плана</h3>
+    <table>
+        <thead>
+            <tr>
+                <th>Пункт плана</th>
+                <th>Baseline доля (N=50)</th>
+                <th>ИТ-тест 10 РДУ</th>
+                <th>Статус</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr class="ok-row">
+                <td>Улучшение «Подбор счёта УК…» (P2, ~39.9%)</td>
+                <td class="num">514.8 с</td>
+                <td>112 с -&gt; 6 с</td>
+                <td>OK</td>
+            </tr>
+            <tr class="ok-row">
+                <td>Улучшение «Алгоритм MF…» (P3, ~15.9%)</td>
+                <td class="num">205.1 с</td>
+                <td>43 с -&gt; 2 с</td>
+                <td>OK</td>
+            </tr>
+            <tr class="skip-row">
+                <td>Проверка достаточности ДС (P1, ~25.5%)</td>
+                <td class="num">328.6 с</td>
+                <td>—</td>
+                <td>вне scope</td>
+            </tr>
+        </tbody>
+    </table>
+</div>
+
+<!-- 6 -->
+<div class="card" id="s6">
+    <h2>6. Детали тестов и артефакты</h2>
+
+    <h3>6.1. Регресс и скорость P2</h3>
+    <ul>
+        <li>Обработка: <code>Тестирование/внТестСравнениеПлатежнойПозиции.epf</code></li>
+        <li>Регресс: поля ПП (СчетДоговораДУ, ТекстПлательщика и др.) было/стало</li>
+        <li>Скорость: заполнение с кэшем vs без кэша</li>
+    </ul>
+<pre>параметры: Пул="Розничное ДУ", КоличествоДоговоров=N
+режим было: КэшПлатежныхПозицийПакет = Неопределено
+режим стало: ПодготовитьКэшПлатежныхПозицийПоСчетамДС(Список, Валюта)</pre>
+
+    <h3>6.2. Регресс и скорость P3</h3>
+    <ul>
+        <li>Обработка: <code>Тестирование/внТестСравнениеMFВознаграждения.epf</code> (v1.3)</li>
+        <li>Регресс: таблица ДоговорДУ — СуммаВознаграждения (старая/новая)</li>
+        <li>Скорость: MAX+сумма vs только сумма; лимит 0 = все договоры пула</li>
+        <li>Без <code>УдалитьОбязательствоДС</code> (только чтение)</li>
+    </ul>
+<pre>параметры: Пул="Розничное ДУ", КоличествоДоговоров=10 (или 0=все)
+было: Запрос МАКСИМУМ(Период) + СуммаВознагражденияПоОстатку
+стало: СуммаВознагражденияПоОстатку
+HTML: сохраняется на клиенте по выбранному пути</pre>
+</div>
+
+<!-- 7 -->
+<div class="card" id="s7">
+    <h2>7. Выводы</h2>
+    <ol>
+        <li>
+            <strong>P2 и P3 выполнены и подтверждены ИТ-тестом:</strong>
+            на 10 РДУ ускорение порядка x20 по каждому алгоритму
+            (P2: 112→6 с; P3: 43→2 с).
+        </li>
+        <li>
+            <strong>P1 не входил в доработку</strong> из-за рисков расхождения пакетного API ПП
+            и нежелания менять менеджер документа; hotspot ~25% baseline сохраняется.
+        </li>
+        <li>
+            <strong>Поставка:</strong> обновлённые EPF
+            <code>внРасторжениеДоговоровРозничногоДУ</code> (v1.19) и
+            <code>MF_РасчетВознаграждения_РозничноеДУ</code> (v1.01),
+            плюс тестовые сравнения в каталоге <code>Тестирование/</code>.
+        </li>
+        <li>
+            <strong>Рекомендация:</strong> принять P2+P3; при необходимости продолжения —
+            отдельная задача на P1 и контрольный полный замер N=50 после выкладки.
+        </li>
+    </ol>
+    <div class="ok-box" style="margin-top:12px">
+        Итог по плану ИТ Тестирования 9104: пункты улучшения P2 и P3 — <strong>успешно</strong>;
+        пункт P1 — <strong>отложен</strong>.
+    </div>
+</div>
+
+<p class="muted" style="text-align:center;margin:20px 0 8px">
+    IMDEV-9104 | итоговый отчёт 21.07.2026 |
+    <a href="index.md">Документация/index.md</a> |
+    <a href="../Тестирование/index.md">Тестирование/index.md</a>
+</p>
+
+</div>
+</body>
+</html>
