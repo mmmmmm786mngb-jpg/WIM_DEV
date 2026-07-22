@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>ВАР1 СВО / ДУЛ — кратко для письма</title>
+</head>
+<body style="margin:0; padding:12px; font-family:Calibri, Arial, sans-serif; font-size:12pt; color:#222; line-height:1.35;">
+
+<p style="margin:0 0 8px 0;"><b>Тема:</b> ВАР1 — временное отключение проверки ДУЛ по справке участника СВО<br>
+<span style="color:#555; font-size:11pt;">Обращение WIMI-2448 / задача IMCCT-338 | оценка ~1.5 недели</span></p>
+
+<table width="100%" cellpadding="6" cellspacing="0" border="1" style="border-collapse:collapse; border-color:#999; font-size:11.5pt; margin-bottom:10px;">
+	<tr style="background:#e8f4fc;">
+		<td colspan="2" style="font-weight:bold;">Что делаем (ВАР1)</td>
+	</tr>
+	<tr>
+		<td width="28%" style="background:#f5f5f5;"><b>Цель</b></td>
+		<td>Клиент со справкой СВО и просроченным паспортом может работать с паями в КК без блокировки по ДУЛ — на ограниченный срок.</td>
+	</tr>
+	<tr>
+		<td style="background:#f5f5f5;"><b>КК</b></td>
+		<td>Клиент грузит справку через текущий «иной документ» (отдельный блок СВО в КК <b>не делаем</b>).</td>
+	</tr>
+	<tr>
+		<td style="background:#f5f5f5;"><b>КА</b></td>
+		<td>«Отдельный блок» = UI в профиле клиента: флаг «отключить проверку ДУЛ» + дата «действует по». Ставит сотрудник УК после проверки справки.</td>
+	</tr>
+	<tr>
+		<td style="background:#f5f5f5;"><b>Срок</b></td>
+		<td><b>T+30</b> от даты выдачи справки (позиция ЦДФ). Пример: выдана 30.06.2026 → по 30.07.2026 включительно; с 31.07.2026 проверка снова включена автоматически.</td>
+	</tr>
+	<tr>
+		<td style="background:#f5f5f5;"><b>Снятие</b></td>
+		<td>Автоматически системой по истечении срока + обязательный лог (кто, когда, до какой даты).</td>
+	</tr>
+	<tr>
+		<td style="background:#f5f5f5;"><b>КК логика</b></td>
+		<td>Достаёт признак и сверяет с текущей датой; если активен — проверку ДУЛ не применяет.</td>
+	</tr>
+</table>
+
+<table width="100%" cellpadding="6" cellspacing="0" border="1" style="border-collapse:collapse; border-color:#999; font-size:11.5pt; margin-bottom:10px;">
+	<tr style="background:#fff3cd;">
+		<td colspan="2" style="font-weight:bold;">Риски</td>
+	</tr>
+	<tr>
+		<td width="8%" style="background:#f8d7da; text-align:center;"><b>1</b></td>
+		<td><b>ЕСИА (главный):</b> ВАР1 снимает только нашу проверку ДУЛ. Регистрация / апгрейд / ИАД через ЕСИА могут по-прежнему блокировать клиента с просроченным паспортом. На тесте кейс плохо воспроизводится. Нужно до старта понять: какие операции клиента идут в ЕСИА и поможет ли флаг.</td>
+	</tr>
+	<tr>
+		<td style="background:#f8d7da; text-align:center;"><b>2</b></td>
+		<td><b>Не все точки проверки:</b> ДУЛ может проверяться в нескольких местах (заявки, лс, обмен, погашение и т.д.). Риск обойти одну точку и оставить другую.</td>
+	</tr>
+	<tr>
+		<td style="background:#ffeeba; text-align:center;"><b>3</b></td>
+		<td><b>Ручной шаг УК:</b> без проставления флага в КА клиент остаётся заблокирован; отдельного уведомления «СВО» в ВАР1 нет — документ может затеряться среди «иных».</td>
+	</tr>
+	<tr>
+		<td style="background:#ffeeba; text-align:center;"><b>4</b></td>
+		<td><b>Частичный эффект:</b> формально ТЗ закрыто, а нужные клиенту операции (паи) всё ещё недоступны из-за ЕСИА/другого контура.</td>
+	</tr>
+	<tr>
+		<td style="background:#e2e3e5; text-align:center;"><b>5</b></td>
+		<td><b>Прочее:</b> кэш сессии КК; авто-снятие только джобом (лучше проверять дату «на лету»); права на установку флага; зависимость от вендора.</td>
+	</tr>
+</table>
+
+<p style="margin:0 0 4px 0; font-size:11.5pt;"><b>Уточнение по вопросу «что за отдельный блок?»:</b> это блок в <b>КА</b> (флаг + срок), не новый раздел загрузки в КК. Отдельный блок в КК = ВАР2 (~3 нед.), вне текущего скоупа.</p>
+
+<p style="margin:8px 0 0 0; font-size:11pt; color:#555;">Просьба подтвердить ВАР1 и отдельно закрыть вопрос по ЕСИА для сценариев регистрации/ИАД текущего обращения.</p>
+
+</body>
+</html>
