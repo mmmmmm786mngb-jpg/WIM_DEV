@@ -1,0 +1,673 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Подключение к Яндекс ВМ | ВИМ Инвестиции</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-deep: #0b1220;
+      --bg: #101a2e;
+      --bg-soft: #16233b;
+      --panel: rgba(22, 35, 59, 0.72);
+      --line: rgba(148, 178, 220, 0.18);
+      --text: #e8eef8;
+      --muted: #9db0cb;
+      --accent: #3db8e8;
+      --accent-2: #5ee0c0;
+      --warn: #f0b429;
+      --danger: #ef6b6b;
+      --ok: #4ade80;
+      --shadow: 0 24px 60px rgba(0, 0, 0, 0.35);
+      --radius: 18px;
+      --max: 980px;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: "Manrope", system-ui, sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(1200px 600px at 10% -10%, rgba(61, 184, 232, 0.18), transparent 55%),
+        radial-gradient(900px 500px at 90% 0%, rgba(94, 224, 192, 0.12), transparent 50%),
+        linear-gradient(180deg, var(--bg-deep) 0%, var(--bg) 40%, #0d1728 100%);
+      min-height: 100vh;
+      line-height: 1.55;
+    }
+
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      background-image:
+        linear-gradient(rgba(255,255,255,0.015) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,0.015) 1px, transparent 1px);
+      background-size: 48px 48px;
+      mask-image: radial-gradient(ellipse at center, black 20%, transparent 75%);
+      opacity: 0.5;
+      z-index: 0;
+    }
+
+    a { color: var(--accent); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    .wrap {
+      position: relative;
+      z-index: 1;
+      width: min(100% - 2rem, var(--max));
+      margin: 0 auto;
+      padding: 2.5rem 0 4rem;
+    }
+
+    /* Hero */
+    .hero {
+      padding: 2.2rem 0 2.8rem;
+      animation: fadeUp 0.7s ease both;
+    }
+
+    .brand {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.85rem;
+      margin-bottom: 1.6rem;
+    }
+
+    .brand img {
+      height: 36px;
+      width: auto;
+      filter: drop-shadow(0 0 12px rgba(61, 184, 232, 0.35));
+    }
+
+    .brand-badge {
+      font-size: 0.75rem;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--accent-2);
+      border: 1px solid rgba(94, 224, 192, 0.35);
+      background: rgba(94, 224, 192, 0.08);
+      padding: 0.35rem 0.7rem;
+      border-radius: 999px;
+    }
+
+    .hero h1 {
+      font-size: clamp(2rem, 4.5vw, 3.1rem);
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      line-height: 1.15;
+      max-width: 16ch;
+      margin-bottom: 1rem;
+      background: linear-gradient(120deg, #fff 20%, #9ad8f5 70%, #7ef0d0 100%);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+    }
+
+    .hero-lead {
+      font-size: 1.1rem;
+      color: var(--muted);
+      max-width: 42rem;
+      margin-bottom: 1.6rem;
+    }
+
+    .hero-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.7rem;
+      margin-bottom: 1.8rem;
+    }
+
+    .chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.45rem;
+      padding: 0.45rem 0.85rem;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      background: rgba(16, 26, 46, 0.65);
+      color: var(--muted);
+      font-size: 0.85rem;
+      font-weight: 500;
+    }
+
+    .chip strong { color: var(--text); font-weight: 700; }
+
+    .toc {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+      gap: 0.65rem;
+      margin-top: 0.5rem;
+    }
+
+    .toc a {
+      display: block;
+      padding: 0.85rem 0.95rem;
+      border-radius: 14px;
+      border: 1px solid var(--line);
+      background: linear-gradient(180deg, rgba(255,255,255,0.04), transparent);
+      color: var(--text);
+      text-decoration: none;
+      transition: transform 0.2s ease, border-color 0.2s ease, background 0.2s ease;
+    }
+
+    .toc a:hover {
+      transform: translateY(-2px);
+      border-color: rgba(61, 184, 232, 0.45);
+      background: rgba(61, 184, 232, 0.08);
+      text-decoration: none;
+    }
+
+    .toc .n {
+      display: block;
+      font-family: "JetBrains Mono", monospace;
+      font-size: 0.72rem;
+      color: var(--accent);
+      margin-bottom: 0.25rem;
+    }
+
+    .toc .t {
+      display: block;
+      font-size: 0.88rem;
+      font-weight: 600;
+      line-height: 1.3;
+    }
+
+    /* Steps */
+    .timeline {
+      position: relative;
+      margin-top: 2.5rem;
+    }
+
+    .timeline::before {
+      content: "";
+      position: absolute;
+      left: 18px;
+      top: 12px;
+      bottom: 12px;
+      width: 2px;
+      background: linear-gradient(180deg, var(--accent), rgba(94, 224, 192, 0.15));
+      opacity: 0.55;
+    }
+
+    .step {
+      position: relative;
+      padding-left: 3.4rem;
+      margin-bottom: 1.6rem;
+      animation: fadeUp 0.6s ease both;
+    }
+
+    .step:nth-child(1) { animation-delay: 0.05s; }
+    .step:nth-child(2) { animation-delay: 0.1s; }
+    .step:nth-child(3) { animation-delay: 0.15s; }
+    .step:nth-child(4) { animation-delay: 0.2s; }
+    .step:nth-child(5) { animation-delay: 0.25s; }
+    .step:nth-child(6) { animation-delay: 0.3s; }
+    .step:nth-child(7) { animation-delay: 0.35s; }
+
+    .step-num {
+      position: absolute;
+      left: 0;
+      top: 0.15rem;
+      width: 38px;
+      height: 38px;
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      font-family: "JetBrains Mono", monospace;
+      font-weight: 500;
+      font-size: 0.85rem;
+      color: var(--bg-deep);
+      background: linear-gradient(145deg, var(--accent), var(--accent-2));
+      box-shadow: 0 0 0 6px rgba(61, 184, 232, 0.12), 0 8px 20px rgba(0,0,0,0.25);
+      z-index: 1;
+    }
+
+    .panel {
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: var(--panel);
+      backdrop-filter: blur(10px);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+
+    .panel-body { padding: 1.35rem 1.4rem 1.5rem; }
+
+    .step h2 {
+      font-size: 1.25rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      margin-bottom: 0.55rem;
+    }
+
+    .step p { color: var(--muted); margin-bottom: 0.75rem; }
+    .step p:last-child { margin-bottom: 0; }
+
+    .note {
+      display: flex;
+      gap: 0.75rem;
+      align-items: flex-start;
+      margin-top: 1rem;
+      padding: 0.9rem 1rem;
+      border-radius: 12px;
+      border: 1px solid rgba(240, 180, 41, 0.28);
+      background: rgba(240, 180, 41, 0.08);
+      color: #f5d98a;
+      font-size: 0.92rem;
+    }
+
+    .note.info {
+      border-color: rgba(61, 184, 232, 0.3);
+      background: rgba(61, 184, 232, 0.08);
+      color: #9ad8f5;
+    }
+
+    .note.ok {
+      border-color: rgba(74, 222, 128, 0.28);
+      background: rgba(74, 222, 128, 0.08);
+      color: #9ae6b4;
+    }
+
+    .note .icon {
+      flex: 0 0 auto;
+      width: 1.25rem;
+      height: 1.25rem;
+      margin-top: 0.1rem;
+    }
+
+    .checklist {
+      list-style: none;
+      margin: 0.9rem 0 0;
+      display: grid;
+      gap: 0.45rem;
+    }
+
+    .checklist li {
+      display: flex;
+      gap: 0.6rem;
+      align-items: flex-start;
+      color: var(--muted);
+      font-size: 0.95rem;
+    }
+
+    .checklist li::before {
+      content: "";
+      width: 0.7rem;
+      height: 0.7rem;
+      margin-top: 0.4rem;
+      border-radius: 50%;
+      background: linear-gradient(145deg, var(--accent), var(--accent-2));
+      flex: 0 0 auto;
+      box-shadow: 0 0 0 3px rgba(61, 184, 232, 0.15);
+    }
+
+    code, .mono {
+      font-family: "JetBrains Mono", monospace;
+      font-size: 0.86em;
+      color: #b8e8ff;
+      background: rgba(0, 0, 0, 0.28);
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      padding: 0.1rem 0.4rem;
+    }
+
+    .shot {
+      margin-top: 1.1rem;
+      border-top: 1px solid var(--line);
+      background: #0a101c;
+    }
+
+    .shot figcaption {
+      padding: 0.7rem 1.1rem;
+      font-size: 0.82rem;
+      color: var(--muted);
+      border-bottom: 1px solid var(--line);
+    }
+
+    .shot a {
+      display: block;
+      line-height: 0;
+    }
+
+    .shot img {
+      width: 100%;
+      height: auto;
+      display: block;
+      transition: transform 0.35s ease, filter 0.35s ease;
+    }
+
+    .shot a:hover img {
+      transform: scale(1.015);
+      filter: brightness(1.05);
+    }
+
+    .download {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.55rem;
+      margin-top: 1rem;
+      padding: 0.75rem 1.1rem;
+      border-radius: 12px;
+      background: linear-gradient(135deg, rgba(61,184,232,0.95), rgba(94,224,192,0.85));
+      color: #041018;
+      font-weight: 700;
+      text-decoration: none;
+      box-shadow: 0 10px 28px rgba(61, 184, 232, 0.25);
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .download:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 14px 34px rgba(61, 184, 232, 0.35);
+      text-decoration: none;
+    }
+
+    .finale {
+      margin-top: 2rem;
+      padding: 1.6rem 1.5rem;
+      border-radius: var(--radius);
+      border: 1px solid rgba(74, 222, 128, 0.28);
+      background:
+        radial-gradient(500px 180px at 10% 0%, rgba(74, 222, 128, 0.12), transparent 60%),
+        rgba(16, 32, 28, 0.75);
+      text-align: center;
+      animation: fadeUp 0.7s ease both 0.4s;
+    }
+
+    .finale h2 {
+      font-size: 1.45rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .finale p { color: var(--muted); }
+
+    footer {
+      margin-top: 2.8rem;
+      padding-top: 1.4rem;
+      border-top: 1px solid var(--line);
+      color: var(--muted);
+      font-size: 0.88rem;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.75rem 1.5rem;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    footer .sig strong {
+      color: var(--text);
+      display: block;
+      margin-bottom: 0.15rem;
+    }
+
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(14px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    @media (max-width: 640px) {
+      .wrap { width: min(100% - 1.25rem, var(--max)); padding-top: 1.5rem; }
+      .timeline::before { left: 14px; }
+      .step { padding-left: 2.8rem; }
+      .step-num { width: 30px; height: 30px; font-size: 0.75rem; }
+      .panel-body { padding: 1.1rem; }
+      .hero h1 { max-width: none; }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header class="hero">
+      <div class="brand">
+        <img src="images/vim_logo.png" alt="ВИМ Инвестиции">
+        <span class="brand-badge">Внутренняя инструкция</span>
+      </div>
+
+      <h1>Как подключиться к Яндекс ВМ</h1>
+      <p class="hero-lead">
+        Пошаговый квест: админская учётная запись, PAM с двухфакторной аутентификацией
+        и удалённый вход через RDP на виртуальную машину в Яндекс.
+      </p>
+
+      <div class="hero-meta">
+        <span class="chip"><strong>Цель:</strong> доступ к VM через RDP</span>
+        <span class="chip"><strong>Шлюз:</strong> PAM / SKDPU</span>
+        <span class="chip"><strong>Host:</strong> <span class="mono">10.76.91.9</span></span>
+      </div>
+
+      <nav class="toc" aria-label="Содержание">
+        <a href="#step-1"><span class="n">01</span><span class="t">Заявка на ADM</span></a>
+        <a href="#step-2"><span class="n">02</span><span class="t">Смена пароля</span></a>
+        <a href="#step-3"><span class="n">03</span><span class="t">Вход в PAM</span></a>
+        <a href="#step-4"><span class="n">04</span><span class="t">Настройка 2FA</span></a>
+        <a href="#step-5"><span class="n">05</span><span class="t">RDP через PAM</span></a>
+        <a href="#step-6"><span class="n">06</span><span class="t">Учётка на ВМ</span></a>
+      </nav>
+    </header>
+
+    <main class="timeline">
+
+      <!-- Step 1 -->
+      <section class="step" id="step-1">
+        <div class="step-num">1</div>
+        <article class="panel">
+          <div class="panel-body">
+            <h2>Создайте админский аккаунт</h2>
+            <p>
+              Для входа на виртуальные машины нужен административный аккаунт
+              (<strong>ADM/ADX</strong> и доступ в корпоративный PAM через 2FA.
+            </p>
+            <p>
+              В <strong>ИТ Портале</strong> откройте каталог сервисов → раздел
+              <strong>«Доступ»</strong> и оформите заявку
+              <strong>«Создание нового административного аккаунта»</strong>.
+            </p>
+            <ul class="checklist">
+              <li>Заявка создаёт новую административную (ADM/ADX) учётную запись</li>
+              <li>Дождитесь подтверждения от IT Service Desk</li>
+            </ul>
+          </div>
+          <figure class="shot">
+            <figcaption>ИТ Портал → Доступ → «Создание нового административного аккаунта»</figcaption>
+            <a href="images/step1_it_portal.png" target="_blank" rel="noopener">
+              <img src="images/step1_it_portal.png" alt="Скриншот: заявка на создание административного аккаунта в ИТ Портале">
+            </a>
+          </figure>
+        </article>
+      </section>
+
+      <!-- Step 2 -->
+      <section class="step" id="step-2">
+        <div class="step-num">2</div>
+        <article class="panel">
+          <div class="panel-body">
+            <h2>Смените пароль админской учётки</h2>
+            <p>
+              Когда аккаунт появится, нужно сразу сменить пароль.
+              Инструкция часто приходит письмом от IT Service Desk.
+            </p>
+            <div class="note">
+              <svg class="icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.8"/>
+                <path d="M12 8v5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+                <circle cx="12" cy="16.2" r="1" fill="currentColor"/>
+              </svg>
+              <div>
+                Если письмо не пришло — напишите в IT Service Desk и попросите подсказать,
+                как сменить пароль на новой админской учётке.
+              </div>
+            </div>
+          </div>
+        </article>
+      </section>
+
+      <!-- Step 3 -->
+      <section class="step" id="step-3">
+        <div class="step-num">3</div>
+        <article class="panel">
+          <div class="panel-body">
+            <h2>Откройте PAM</h2>
+            <p>
+              <strong>PAM</strong> — система контроля доступов внутри компании
+              («Система контроля действий поставщиков услуг» / SKDPU).
+            </p>
+            <p>
+              В Яндекс Браузере наберите слово <code>pam</code> — откроется внутренняя страница.
+              Либо зайдите напрямую на шлюз <code>10.76.91.9</code>.
+            </p>
+            <div class="note info">
+              <svg class="icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.8"/>
+                <path d="M12 11v5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+                <circle cx="12" cy="8" r="1" fill="currentColor"/>
+              </svg>
+              <div>
+                На форме входа укажите <strong>админский логин</strong> и
+                <strong>уже изменённый пароль</strong>.
+              </div>
+            </div>
+          </div>
+          <figure class="shot">
+            <figcaption>Поиск «pam» в браузере → внутренняя страница SKDPU</figcaption>
+            <a href="images/step2_search_pam.png" target="_blank" rel="noopener">
+              <img src="images/step2_search_pam.png" alt="Скриншот: поиск PAM в адресной строке браузера">
+            </a>
+          </figure>
+          <figure class="shot">
+            <figcaption>Страница входа PAM / SKDPU (логин и пароль → «Войти»)</figcaption>
+            <a href="images/step3_pam_login.png" target="_blank" rel="noopener">
+              <img src="images/step3_pam_login.png" alt="Скриншот: форма входа в систему PAM SKDPU">
+            </a>
+          </figure>
+        </article>
+      </section>
+
+      <!-- Step 4 -->
+      <section class="step" id="step-4">
+        <div class="step-num">4</div>
+        <article class="panel">
+          <div class="panel-body">
+            <h2>Настройте двухфакторную аутентификацию</h2>
+            <p>
+              После первого входа система покажет <strong>QR-код</strong> для 2FA.
+              Добавьте его в приложение на телефоне:
+            </p>
+            <ul class="checklist">
+              <li>Avanpost Authenticator</li>
+              <li>или Google Authenticator</li>
+            </ul>
+            <p style="margin-top: 1rem;">
+              Подробная инструкция:
+              <a href="https://confluence/pages/viewpage.action?pageId=274588947" target="_blank" rel="noopener">
+                Confluence — настройка 2FA
+              </a>
+            </p>
+            <div class="note ok">
+              <svg class="icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.8"/>
+                <path d="M8 12.5l2.5 2.5L16 9.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+              <div>
+                Итог этого этапа: админский логин + пароль + одноразовый код в телефоне.
+                Теперь можно полноценно работать в PAM.
+              </div>
+            </div>
+          </div>
+        </article>
+      </section>
+
+      <!-- Step 5 -->
+      <section class="step" id="step-5">
+        <div class="step-num">5</div>
+        <article class="panel">
+          <div class="panel-body">
+            <h2>Подключитесь по RDP через ярлык</h2>
+            <p>
+              Удобнее всего заходить через готовый RDP-ярлык
+              <strong>«ВМ Яндекс 1»</strong> (файл во вложении к письму / рядом с этой инструкцией).
+            </p>
+            <ul class="checklist">
+              <li>Цель: <code>Interactive@ya_jumphost:RDP:ya_jumphost_auth</code></li>
+              <li>Логин: ваш <code>adm_...</code></li>
+              <li>Пароль: админский пароль</li>
+              <li>Далее система запросит код из аутентификатора</li>
+            </ul>
+            <a class="download" href="VM_Yandex_1.rdp" download>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <path d="M12 4v10m0 0l-4-4m4 4l4-4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M5 18h14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+              </svg>
+              Скачать ярлык VM_Yandex_1.rdp
+            </a>
+            <div class="note" style="margin-top: 1rem;">
+              <svg class="icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.8"/>
+                <path d="M12 8v5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+                <circle cx="12" cy="16.2" r="1" fill="currentColor"/>
+              </svg>
+              <div>
+                В готовом ярлыке может быть чужой логин (например, автора письма).
+                Замените его на свой <code>adm_...</code> перед подключением.
+              </div>
+            </div>
+          </div>
+          <figure class="shot">
+            <figcaption>Окно авторизации PAM при RDP: Цель / Логин / Пароль + код с телефона</figcaption>
+            <a href="images/step5_rdp_auth.png" target="_blank" rel="noopener">
+              <img src="images/step5_rdp_auth.png" alt="Скриншот: форма входа RDP через PAM jumphost">
+            </a>
+          </figure>
+        </article>
+      </section>
+
+      <!-- Step 6 -->
+      <section class="step" id="step-6">
+        <div class="step-num">6</div>
+        <article class="panel">
+          <div class="panel-body">
+            <h2>Запросите учётку на самой Яндекс ВМ</h2>
+            <p>
+              После PAM система снова спросит логин и пароль — уже
+              <strong>на виртуальную машину Яндекс</strong> (<code>ya_jumphost</code>).
+            </p>
+            <p>
+              Попросите <strong>Сергея Сторожука</strong> создать вам новую учётную запись на ВМ.
+              Без неё финальный вход не пройдёт.
+            </p>
+          </div>
+          <figure class="shot">
+            <figcaption>Target Information Required: Device = ya_jumphost → Login / Password</figcaption>
+            <a href="images/step6_vm_credentials.png" target="_blank" rel="noopener">
+              <img src="images/step6_vm_credentials.png" alt="Скриншот: запрос логина и пароля на ya_jumphost">
+            </a>
+          </figure>
+        </article>
+      </section>
+
+    </main>
+
+    <section class="finale">
+      <h2>Если все квесты пройдены — вы на ВМ</h2>
+      <p>
+        Админская учётка → пароль → 2FA → RDP через PAM → учётка на Яндекс ВМ.
+        После этого удалённый рабочий стол должен открыться.
+      </p>
+    </section>
+
+    <footer>
+      <div class="sig">
+        <strong>Алексей Чмыхалов</strong>
+        Главный специалист-программист · Развитие бизнес приложений · ВИМ Инвестиции
+      </div>
+      <div>По материалам письма от 24.07.2026</div>
+    </footer>
+  </div>
+</body>
+</html>
