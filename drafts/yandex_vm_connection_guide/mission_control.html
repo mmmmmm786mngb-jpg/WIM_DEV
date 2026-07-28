@@ -1,0 +1,846 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MISSION // YANDEX VM ACCESS</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --void: #000000;
+      --surface: #070707;
+      --panel: #0c0c0c;
+      --line: rgba(255,255,255,0.12);
+      --line-strong: rgba(255,255,255,0.28);
+      --text: #f5f5f5;
+      --dim: #8a8a8a;
+      --ghost: #5a5a5a;
+      --go: #ffffff;
+      --hold: #e81828;
+      --ready: #2ee66d;
+      --link: #9ecbff;
+      --max: 1180px;
+      --rail: 240px;
+      --ease: cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: "Space Grotesk", system-ui, sans-serif;
+      background: var(--void);
+      color: var(--text);
+      line-height: 1.55;
+      overflow-x: hidden;
+    }
+
+    ::selection { background: #fff; color: #000; }
+
+    a { color: var(--link); text-decoration: none; border-bottom: 1px solid transparent; transition: border-color .2s var(--ease); }
+    a:hover { border-bottom-color: rgba(158,203,255,.5); }
+
+    /* Progress */
+    #mission-progress {
+      position: fixed; top: 0; left: 0; height: 2px; width: 0%;
+      background: linear-gradient(90deg, #fff, #9ecbff);
+      z-index: 100; box-shadow: 0 0 18px rgba(255,255,255,.35);
+    }
+
+    /* Stars */
+    #stars {
+      position: fixed; inset: 0; z-index: 0; pointer-events: none;
+      background:
+        radial-gradient(1px 1px at 12% 18%, rgba(255,255,255,.55), transparent),
+        radial-gradient(1px 1px at 28% 72%, rgba(255,255,255,.35), transparent),
+        radial-gradient(1.5px 1.5px at 64% 22%, rgba(255,255,255,.5), transparent),
+        radial-gradient(1px 1px at 81% 58%, rgba(255,255,255,.3), transparent),
+        radial-gradient(1px 1px at 45% 40%, rgba(255,255,255,.25), transparent),
+        radial-gradient(1.5px 1.5px at 91% 12%, rgba(255,255,255,.4), transparent),
+        radial-gradient(1px 1px at 7% 88%, rgba(255,255,255,.3), transparent),
+        radial-gradient(1px 1px at 53% 91%, rgba(255,255,255,.2), transparent);
+      animation: drift 60s linear infinite;
+      opacity: .7;
+    }
+    @keyframes drift {
+      from { transform: translateY(0); }
+      to { transform: translateY(-40px); }
+    }
+
+    .scanline {
+      position: fixed; inset: 0; z-index: 1; pointer-events: none;
+      background: repeating-linear-gradient(
+        0deg,
+        transparent,
+        transparent 2px,
+        rgba(255,255,255,0.012) 3px
+      );
+      opacity: .4;
+    }
+
+    .shell {
+      position: relative; z-index: 2;
+      width: min(100% - 2rem, var(--max));
+      margin: 0 auto;
+      padding-bottom: 2.5rem;
+    }
+
+    /* Top bar */
+    .topbar {
+      display: flex; align-items: center; justify-content: space-between;
+      gap: 1rem; padding: .7rem 0; border-bottom: 1px solid var(--line);
+      position: sticky; top: 0; background: rgba(0,0,0,.82);
+      backdrop-filter: blur(16px); z-index: 50;
+    }
+    .brand-lock {
+      display: flex; align-items: center; gap: .75rem;
+    }
+    .brand-lock img { height: 22px; width: auto; opacity: .95; }
+    .brand-lock .mark {
+      font-family: "IBM Plex Mono", monospace;
+      font-size: .68rem; letter-spacing: .18em; text-transform: uppercase;
+      color: var(--dim);
+    }
+    .live {
+      display: inline-flex; align-items: center; gap: .45rem;
+      font-family: "IBM Plex Mono", monospace;
+      font-size: .68rem; letter-spacing: .14em; text-transform: uppercase;
+      color: var(--ready);
+    }
+    .live i {
+      width: 7px; height: 7px; border-radius: 50%; background: var(--ready);
+      box-shadow: 0 0 10px rgba(46,230,109,.8);
+      animation: pulse 1.6s ease infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: .45; transform: scale(.85); }
+    }
+
+    /* Hero */
+    .hero {
+      display: grid;
+      padding: 1.4rem 0 1.5rem;
+      border-bottom: 1px solid var(--line);
+      position: relative;
+    }
+    .hero::before {
+      content: "";
+      position: absolute; right: -4%; top: -10%;
+      width: min(36vw, 320px); height: min(36vw, 320px);
+      border: 1px solid rgba(255,255,255,.08);
+      border-radius: 50%;
+      animation: spin 80s linear infinite;
+      pointer-events: none;
+    }
+    .hero::after {
+      content: "";
+      position: absolute; right: 6%; top: 8%;
+      width: min(24vw, 210px); height: min(24vw, 210px);
+      border: 1px dashed rgba(255,255,255,.1);
+      border-radius: 50%;
+      animation: spin 50s linear infinite reverse;
+      pointer-events: none;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .eyebrow {
+      font-family: "IBM Plex Mono", monospace;
+      font-size: .68rem; letter-spacing: .18em; text-transform: uppercase;
+      color: var(--dim); margin-bottom: .7rem;
+      display: flex; gap: .75rem; align-items: center; flex-wrap: wrap;
+    }
+    .eyebrow .sep { opacity: .35; }
+
+    .hero h1 {
+      font-size: clamp(2.1rem, 5.5vw, 3.6rem);
+      font-weight: 700; letter-spacing: -0.04em; line-height: .95;
+      max-width: 14ch; margin-bottom: .7rem;
+    }
+    .hero h1 span {
+      display: inline; color: transparent;
+      -webkit-text-stroke: 1px rgba(255,255,255,.55);
+      margin-left: .2em;
+    }
+    .hero-lead {
+      max-width: 40rem; color: var(--dim); font-size: .98rem;
+      margin-bottom: 1rem; line-height: 1.45;
+    }
+
+    .telemetry {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 1px; background: var(--line);
+      border: 1px solid var(--line);
+      margin-bottom: 1rem;
+      max-width: 720px;
+    }
+    .telemetry div {
+      background: var(--surface); padding: .55rem .8rem;
+    }
+    .telemetry .k {
+      font-family: "IBM Plex Mono", monospace;
+      font-size: .62rem; letter-spacing: .16em; text-transform: uppercase;
+      color: var(--ghost); margin-bottom: .35rem;
+    }
+    .telemetry .v {
+      font-size: .95rem; font-weight: 600; letter-spacing: -0.02em;
+    }
+    .telemetry .v.mono {
+      font-family: "IBM Plex Mono", monospace; font-size: .82rem; font-weight: 500;
+    }
+
+    .cta-row { display: flex; flex-wrap: wrap; gap: .75rem; }
+    .btn {
+      display: inline-flex; align-items: center; gap: .55rem;
+      padding: .65rem 1rem;
+      font-family: "IBM Plex Mono", monospace;
+      font-size: .68rem; letter-spacing: .12em; text-transform: uppercase;
+      border: 1px solid #fff; background: #fff; color: #000;
+      text-decoration: none; transition: transform .25s var(--ease), background .2s, color .2s;
+      cursor: pointer;
+    }
+    .btn:hover { transform: translateY(-2px); border-bottom: 1px solid #fff; }
+    .btn.ghost {
+      background: transparent; color: #fff;
+    }
+    .btn.ghost:hover { background: rgba(255,255,255,.06); }
+
+    /* Layout */
+    .mission {
+      display: grid;
+      grid-template-columns: var(--rail) minmax(0, 1fr);
+      gap: 1.5rem;
+      padding-top: 1.25rem;
+    }
+
+    .rail {
+      position: sticky; top: 3.2rem; align-self: start;
+      max-height: calc(100vh - 4rem); overflow: auto;
+      padding-right: .25rem;
+    }
+    .rail-title {
+      font-family: "IBM Plex Mono", monospace;
+      font-size: .62rem; letter-spacing: .2em; text-transform: uppercase;
+      color: var(--ghost); margin-bottom: .55rem;
+    }
+    .rail a {
+      display: grid; grid-template-columns: 2.2rem 1fr; gap: .55rem;
+      padding: .45rem 0; border-bottom: 1px solid rgba(255,255,255,.06);
+      color: var(--dim); text-decoration: none; border-bottom-color: rgba(255,255,255,.06);
+      transition: color .2s;
+    }
+    .rail a:hover, .rail a.active { color: #fff; border-bottom-color: rgba(255,255,255,.2); }
+    .rail a .n {
+      font-family: "IBM Plex Mono", monospace; font-size: .72rem; color: var(--ghost);
+    }
+    .rail a.active .n { color: var(--ready); }
+    .rail a .t { font-size: .86rem; font-weight: 500; line-height: 1.25; }
+
+    /* Phases */
+    .phase {
+      border: 1px solid var(--line);
+      background: linear-gradient(180deg, rgba(255,255,255,0.02), transparent 40%), var(--panel);
+      margin-bottom: .85rem;
+      opacity: 0; transform: translateY(10px);
+      transition: opacity .5s var(--ease), transform .5s var(--ease);
+    }
+    .phase.in { opacity: 1; transform: none; }
+    .phase-head {
+      display: flex; align-items: flex-start; justify-content: space-between;
+      gap: 1rem; padding: .75rem 1rem;
+      border-bottom: 1px solid var(--line);
+    }
+    .phase-id {
+      font-family: "IBM Plex Mono", monospace;
+      font-size: .68rem; letter-spacing: .18em; text-transform: uppercase;
+      color: var(--ghost);
+    }
+    .phase-id b { color: #fff; font-weight: 600; }
+    .badge {
+      font-family: "IBM Plex Mono", monospace;
+      font-size: .62rem; letter-spacing: .14em; text-transform: uppercase;
+      padding: .3rem .55rem; border: 1px solid var(--line);
+      color: var(--dim);
+    }
+    .badge.hold { color: var(--hold); border-color: rgba(232,24,40,.45); background: rgba(232,24,40,.08); }
+    .badge.go { color: var(--ready); border-color: rgba(46,230,109,.35); background: rgba(46,230,109,.06); }
+    .badge.info { color: #9ecbff; border-color: rgba(158,203,255,.3); background: rgba(158,203,255,.06); }
+
+    .phase-body { padding: .9rem 1rem 1rem; }
+    .phase h2 {
+      font-size: clamp(1.15rem, 2.2vw, 1.45rem);
+      font-weight: 600; letter-spacing: -0.03em;
+      margin: .15rem 0 .55rem; line-height: 1.2;
+    }
+    .phase h3 {
+      font-size: .95rem; font-weight: 600; margin: 1rem 0 .45rem;
+      letter-spacing: -0.02em;
+    }
+    .phase p { color: var(--dim); margin-bottom: .55rem; }
+    .phase strong { color: #fff; font-weight: 600; }
+
+    .checks { list-style: none; display: grid; gap: .35rem; margin: .7rem 0; }
+    .checks li {
+      display: flex;
+      align-items: flex-start;
+      gap: .7rem;
+      color: var(--dim);
+      font-size: .95rem;
+    }
+    .checks li::before {
+      content: "";
+      flex: 0 0 auto;
+      width: .55rem;
+      height: .55rem;
+      margin-top: .45rem;
+      border: 1px solid #fff;
+      background: transparent;
+    }
+    .checks li > span {
+      flex: 1 1 auto;
+      min-width: 0;
+    }
+
+    .ordered {
+      margin: .9rem 0 0 1.15rem; color: var(--dim);
+      display: grid; gap: .45rem;
+    }
+
+    code, .mono {
+      font-family: "IBM Plex Mono", monospace;
+      font-size: .84em; color: #d7e9ff;
+      background: rgba(255,255,255,.04);
+      border: 1px solid var(--line);
+      padding: .05rem .35rem;
+      overflow-wrap: anywhere;
+      word-break: normal;
+      white-space: normal;
+    }
+
+    .callout {
+      margin-top: .75rem; padding: .7rem .85rem;
+      border-left: 2px solid var(--line-strong);
+      background: rgba(255,255,255,.03);
+      color: var(--dim); font-size: .9rem;
+    }
+    .callout.hold { border-left-color: var(--hold); color: #ffb4b8; background: rgba(232,24,40,.06); }
+    .callout.go { border-left-color: var(--ready); color: #b7f5cb; background: rgba(46,230,109,.05); }
+    .callout.info { border-left-color: #9ecbff; color: #c5ddff; background: rgba(158,203,255,.05); }
+    .callout .tag {
+      font-family: "IBM Plex Mono", monospace;
+      font-size: .62rem; letter-spacing: .16em; text-transform: uppercase;
+      display: block; margin-bottom: .4rem; opacity: .85;
+    }
+
+    .people { display: grid; gap: .4rem; margin: .7rem 0; }
+    .person {
+      display: flex; flex-wrap: wrap; gap: .35rem .8rem; align-items: baseline;
+      padding: .55rem .75rem; border: 1px solid var(--line); background: rgba(0,0,0,.35);
+    }
+    .person strong { font-size: .98rem; }
+    .person span { color: var(--dim); font-size: .9rem; }
+
+    .codepane {
+      margin: 1rem 0; border: 1px solid var(--line); background: #050505;
+      position: relative;
+    }
+    .codepane .meta {
+      display: flex; justify-content: space-between; align-items: center;
+      gap: .75rem; padding: .55rem .85rem;
+      border-bottom: 1px solid var(--line);
+      font-family: "IBM Plex Mono", monospace;
+      font-size: .62rem; letter-spacing: .14em; text-transform: uppercase;
+      color: var(--ghost);
+    }
+    .codepane pre {
+      padding: 1rem .95rem; font-family: "IBM Plex Mono", monospace;
+      font-size: .82rem; color: #d7e9ff; white-space: pre-wrap; word-break: break-all;
+      line-height: 1.5;
+    }
+    .copy-btn {
+      border: 1px solid var(--line); background: transparent; color: #fff;
+      font-family: "IBM Plex Mono", monospace; font-size: .62rem;
+      letter-spacing: .12em; text-transform: uppercase;
+      padding: .35rem .55rem; cursor: pointer;
+    }
+    .copy-btn:hover { border-color: #fff; }
+
+    .actions { display: flex; flex-wrap: wrap; gap: .65rem; margin-top: 1rem; }
+
+    .shot {
+      margin-top: 1.2rem; border-top: 1px solid var(--line); background: #000;
+    }
+    .shot figcaption {
+      padding: .65rem 1rem;
+      font-family: "IBM Plex Mono", monospace;
+      font-size: .68rem; letter-spacing: .08em; text-transform: uppercase;
+      color: var(--ghost); border-bottom: 1px solid var(--line);
+    }
+    .shot a { display: block; line-height: 0; border: 0; }
+    .shot img {
+      width: 100%; height: auto; display: block;
+      filter: contrast(1.05) saturate(.92);
+      transition: filter .35s var(--ease), transform .5s var(--ease);
+    }
+    .shot a:hover img { filter: contrast(1.08) saturate(1); transform: scale(1.01); }
+
+    .liftoff {
+      margin-top: 1.1rem; padding: 1.2rem 1rem;
+      border: 1px solid rgba(46,230,109,.25);
+      text-align: center;
+      background:
+        radial-gradient(600px 180px at 50% 0%, rgba(46,230,109,.12), transparent 60%),
+        #050805;
+    }
+    .liftoff .k {
+      font-family: "IBM Plex Mono", monospace;
+      font-size: .62rem; letter-spacing: .18em; text-transform: uppercase;
+      color: var(--ready); margin-bottom: .45rem;
+    }
+    .liftoff h2 {
+      font-size: clamp(1.2rem, 2.5vw, 1.6rem);
+      letter-spacing: -0.03em; margin-bottom: .4rem;
+    }
+    .liftoff p { color: var(--dim); max-width: 38rem; margin: 0 auto; font-size: .92rem; }
+
+    footer.site {
+      margin-top: 1.25rem; padding-top: 1rem;
+      border-top: 1px solid var(--line);
+      display: flex; flex-wrap: wrap; justify-content: space-between; gap: 1rem;
+      color: var(--ghost); font-size: .85rem;
+    }
+    footer.site strong { color: var(--dim); display: block; margin-bottom: .2rem; }
+
+    .keys {
+      position: fixed; right: 1rem; bottom: 1rem; z-index: 40;
+      font-family: "IBM Plex Mono", monospace;
+      font-size: .62rem; letter-spacing: .1em; text-transform: uppercase;
+      color: var(--ghost); background: rgba(0,0,0,.75);
+      border: 1px solid var(--line); padding: .45rem .65rem;
+      backdrop-filter: blur(8px);
+    }
+    .keys kbd {
+      display: inline-block; border: 1px solid var(--line-strong);
+      padding: .05rem .3rem; margin: 0 .1rem; color: #fff;
+    }
+
+    @media (max-width: 920px) {
+      .mission { grid-template-columns: 1fr; }
+      .rail { position: relative; top: 0; max-height: none; display: grid; grid-template-columns: repeat(3, 1fr); gap: .25rem .75rem; margin-bottom: .5rem; }
+      .rail a { border: 1px solid var(--line); padding: .65rem .7rem; }
+      .telemetry { grid-template-columns: 1fr 1fr; }
+      .keys { display: none; }
+      .hero::before, .hero::after { opacity: .35; }
+    }
+    @media (max-width: 560px) {
+      .rail { grid-template-columns: 1fr 1fr; }
+      .telemetry { grid-template-columns: 1fr; }
+      .hero { padding-top: 1rem; }
+      .hero h1 span { display: block; margin-left: 0; }
+    }
+  </style>
+</head>
+<body>
+  <div id="mission-progress" aria-hidden="true"></div>
+  <div id="stars" aria-hidden="true"></div>
+  <div class="scanline" aria-hidden="true"></div>
+
+  <div class="shell">
+    <div class="topbar">
+      <div class="brand-lock">
+        <img src="images/vim_logo.png" alt="ВИМ">
+        <span class="mark">VIM // INTERNAL OPS</span>
+      </div>
+      <div class="live"><i></i> SYSTEMS NOMINAL</div>
+    </div>
+
+    <header class="hero">
+      <div class="eyebrow">
+        <span>Mission Brief</span>
+        <span class="sep">/</span>
+        <span>Doc REV 2.0</span>
+        <span class="sep">/</span>
+        <span>28 JUL 2026</span>
+      </div>
+      <h1>YANDEX VM <span>ACCESS</span></h1>
+      <p class="hero-lead">
+        Инструкция уровня mission control: админская УЗ в CORP, допуск в PAM,
+        2FA и выход на орбиту удалённого рабочего стола через RDP или mRemoteNG.
+      </p>
+
+      <div class="telemetry" aria-label="Телеметрия">
+        <div><div class="k">Objective</div><div class="v">Remote VM</div></div>
+        <div><div class="k">Gateway</div><div class="v">PAM / SKDPU</div></div>
+        <div><div class="k">Host</div><div class="v mono">10.76.91.9</div></div>
+        <div><div class="k">Domain</div><div class="v">CORP</div></div>
+      </div>
+
+      <div class="cta-row">
+        <a class="btn" href="#phase-1">Begin sequence</a>
+        <a class="btn ghost" href="#phase-6">Jump to connect</a>
+      </div>
+    </header>
+
+    <div class="mission">
+      <nav class="rail" aria-label="Фазы миссии" id="mission-rail">
+        <div class="rail-title">Flight plan</div>
+        <a href="#phase-1" data-phase="phase-1"><span class="n">01</span><span class="t">ADM account</span></a>
+        <a href="#phase-2" data-phase="phase-2"><span class="n">02</span><span class="t">Password</span></a>
+        <a href="#phase-3" data-phase="phase-3"><span class="n">03</span><span class="t">PAM clearance</span></a>
+        <a href="#phase-4" data-phase="phase-4"><span class="n">04</span><span class="t">Auth + 2FA</span></a>
+        <a href="#phase-5" data-phase="phase-5"><span class="n">05</span><span class="t">VM identity</span></a>
+        <a href="#phase-6" data-phase="phase-6"><span class="n">06</span><span class="t">Connect</span></a>
+      </nav>
+
+      <main>
+        <section class="phase" id="phase-1">
+          <div class="phase-head">
+            <div class="phase-id">Phase <b>01</b> // Identity</div>
+            <span class="badge hold">HOLD POINT</span>
+          </div>
+          <div class="phase-body">
+            <h2>Создайте админский аккаунт ADM/ADX</h2>
+            <p>
+              Для входа на виртуальные машины нужен административный аккаунт
+              и доступ в корпоративный PAM через 2FA.
+            </p>
+            <p>
+              В <strong>ИТ Портале</strong> откройте каталог сервисов → раздел
+              <strong>«Доступ»</strong> и оформите заявку
+              <strong>«Создание нового административного аккаунта»</strong>.
+            </p>
+            <ul class="checks">
+              <li>Заявка создаёт новую административную (ADM/ADX) учётную запись</li>
+              <li><strong>Админская УЗ должна быть в домене CORP</strong></li>
+              <li>Дождитесь подтверждения от IT Service Desk</li>
+            </ul>
+            <div class="callout hold">
+              <span class="tag">Critical constraint</span>
+              Админская учётная запись должна быть заведена в <strong>CORP</strong>.
+              Без этого дальнейшие шаги с PAM и подключением к ВМ не сработают.
+            </div>
+          </div>
+          <figure class="shot">
+            <figcaption>Telemetry cam // IT Portal → Access → New ADM account</figcaption>
+            <a href="images/step1_it_portal.png" target="_blank" rel="noopener">
+              <img src="images/step1_it_portal.png" alt="Заявка на создание административного аккаунта в ИТ Портале">
+            </a>
+          </figure>
+        </section>
+
+        <section class="phase" id="phase-2">
+          <div class="phase-head">
+            <div class="phase-id">Phase <b>02</b> // Credentials</div>
+            <span class="badge info">PROCEDURE</span>
+          </div>
+          <div class="phase-body">
+            <h2>Смените пароль админской учётки</h2>
+            <p>
+              Когда аккаунт появится, нужно сменить пароль.
+              Инструкция часто приходит письмом от IT Service Desk.
+            </p>
+            <p>
+              Если на админской УЗ стоит <strong>временный пароль</strong>, смените его через Citrix:
+            </p>
+            <p>
+              <a href="https://sfmskvdi.corp.vtbcapital.internal/Citrix/VTBCWeb/" target="_blank" rel="noopener">
+                https://sfmskvdi.corp.vtbcapital.internal/Citrix/VTBCWeb/
+              </a>
+            </p>
+            <div class="callout">
+              <span class="tag">Fallback</span>
+              Если письмо не пришло и форма не помогает — напишите в IT Service Desk
+              и попросите подсказать, как сменить пароль на новой админской учётке.
+            </div>
+          </div>
+        </section>
+
+        <section class="phase" id="phase-3">
+          <div class="phase-head">
+            <div class="phase-id">Phase <b>03</b> // Clearance</div>
+            <span class="badge hold">HOLD POINT</span>
+          </div>
+          <div class="phase-body">
+            <h2>Запросите доступ админской УЗ в PAM</h2>
+            <p>
+              После появления админской учётки её ещё нужно <strong>добавить в PAM</strong>.
+              Этот шаг часто пропускают — без него войти в систему контроля доступов нельзя.
+            </p>
+            <div class="people">
+              <div class="person">
+                <strong>Алексей Донской</strong>
+                <span>primary — доступ для админской УЗ в PAM</span>
+              </div>
+              <div class="person">
+                <strong>Сергей Сторожук</strong>
+                <span>support — может помочь с запросом в ЛС</span>
+              </div>
+            </div>
+            <div class="callout hold">
+              <span class="tag">Mandatory gate</span>
+              Доступ для админской УЗ в PAM запрашивается у <strong>Алексея Донского</strong>.
+            </div>
+          </div>
+        </section>
+
+        <section class="phase" id="phase-4">
+          <div class="phase-head">
+            <div class="phase-id">Phase <b>04</b> // Authentication</div>
+            <span class="badge go">GO</span>
+          </div>
+          <div class="phase-body">
+            <h2>Войдите в PAM и настройте 2FA</h2>
+            <p>
+              <strong>PAM</strong> — система контроля доступов внутри компании
+              («Система контроля действий поставщиков услуг» / SKDPU).
+            </p>
+            <p>
+              В Яндекс Браузере наберите <code>pam</code> — откроется внутренняя страница.
+              Либо зайдите напрямую на шлюз <code>10.76.91.9</code>.
+            </p>
+            <ul class="checks">
+              <li>Введите админский логин и уже изменённый пароль</li>
+              <li>На первом входе появится QR-код для двухфакторной аутентификации</li>
+              <li>Добавьте QR в Avanpost Authenticator или Google Authenticator</li>
+            </ul>
+            <p>
+              Инструкция по 2FA:
+              <a href="https://confluence/pages/viewpage.action?pageId=274588947" target="_blank" rel="noopener">
+                Confluence // pageId=274588947
+              </a>
+            </p>
+            <div class="callout go">
+              <span class="tag">Checkpoint complete</span>
+              Админский логин + пароль + код в телефоне + доступ УЗ в PAM.
+            </div>
+          </div>
+          <figure class="shot">
+            <figcaption>Nav // search «pam»</figcaption>
+            <a href="images/step2_search_pam.png" target="_blank" rel="noopener">
+              <img src="images/step2_search_pam.png" alt="Поиск PAM в адресной строке браузера">
+            </a>
+          </figure>
+          <figure class="shot">
+            <figcaption>Gateway // PAM login</figcaption>
+            <a href="images/step3_pam_login.png" target="_blank" rel="noopener">
+              <img src="images/step3_pam_login.png" alt="Форма входа в систему PAM SKDPU">
+            </a>
+          </figure>
+        </section>
+
+        <section class="phase" id="phase-5">
+          <div class="phase-head">
+            <div class="phase-id">Phase <b>05</b> // Target identity</div>
+            <span class="badge hold">HOLD POINT</span>
+          </div>
+          <div class="phase-body">
+            <h2>Запросите учётку на самой Яндекс ВМ</h2>
+            <p>
+              После входа через PAM система снова спросит логин и пароль — уже
+              <strong>на виртуальную машину Яндекс</strong> (<code>ya_jumphost</code>).
+            </p>
+            <div class="people">
+              <div class="person">
+                <strong>Сергей Сторожук</strong>
+                <span>создать учётную запись на ВМ Яндекс</span>
+              </div>
+            </div>
+            <div class="callout info">
+              <span class="tag">Do not confuse</span>
+              Учётка на ВМ — отдельный логин/пароль, не путать с админской УЗ CORP.
+            </div>
+          </div>
+          <figure class="shot">
+            <figcaption>Target // ya_jumphost credentials</figcaption>
+            <a href="images/step6_vm_credentials.png" target="_blank" rel="noopener">
+              <img src="images/step6_vm_credentials.png" alt="Запрос логина и пароля на ya_jumphost">
+            </a>
+          </figure>
+        </section>
+
+        <section class="phase" id="phase-6">
+          <div class="phase-head">
+            <div class="phase-id">Phase <b>06</b> // Launch</div>
+            <span class="badge go">LIFTOFF</span>
+          </div>
+          <div class="phase-body">
+            <h2>Подключитесь: RDP-ярлык или mRemoteNG</h2>
+            <p>После настройки PAM и учётки на ВМ доступны два канала связи.</p>
+
+            <h3>Channel A — RDP shortcut</h3>
+            <p>
+              После входа в PAM скачайте ярлык подключения (или используйте пример
+              <strong>«ВМ Яндекс 1»</strong>). Введите админский логин, пароль и код 2FA.
+            </p>
+            <ul class="checks">
+              <li>Цель: <code>Interactive@ya_jumphost:RDP:ya_jumphost_auth</code></li>
+              <li>Логин: ваш <code>adm_...</code></li>
+              <li>Пароль: админский пароль + код 2FA</li>
+            </ul>
+            <div class="actions">
+              <a class="btn" href="VM_Yandex_1.rdp" download="VM_Yandex_1.rdp">Download RDP</a>
+            </div>
+            <div class="callout">
+              <span class="tag">Caution</span>
+              В чужом ярлыке будет чужой логин. Откройте файл в Блокноте и замените
+              <code>adm_...</code> на свой — либо скопируйте строку <code>username:s:...</code>
+              для mRemoteNG.
+            </div>
+
+            <h3>Channel B — mRemoteNG</h3>
+            <p>
+              Клиент:
+              <a href="https://github.com/mRemoteNG/mRemoteNG/releases/tag/v1.76.20" target="_blank" rel="noopener">
+                mRemoteNG v1.76.20
+              </a>
+            </p>
+            <p>
+              В параметрах подключения задайте <strong>Hostname/IP</strong> и <strong>Username</strong>
+              (как на скрине ниже).
+            </p>
+            <ul class="checks">
+              <li>Hostname/IP: <code>pam</code></li>
+              <li>Username: полная строка из PAM-ярлыка (см. ниже)</li>
+              <li>Protocol: RDP · Port: 3389</li>
+            </ul>
+          </div>
+          <figure class="shot">
+            <figcaption>mRemoteNG // Hostname = pam + Username из PAM</figcaption>
+            <a href="images/olga_mremoteng_config.png" target="_blank" rel="noopener">
+              <img src="images/olga_mremoteng_config.png" alt="Параметры подключения mRemoteNG: Hostname pam и Username">
+            </a>
+          </figure>
+          <div class="phase-body">
+            <p>
+              Откуда взять строку Username: после входа в PAM скачайте ярлык подключения,
+              откройте его в Блокноте и скопируйте значение после <code>username:s:</code>.
+            </p>
+          </div>
+          <figure class="shot">
+            <figcaption>Download // ярлык подключения из PAM</figcaption>
+            <a href="images/olga_rdp_shortcut.png" target="_blank" rel="noopener">
+              <img src="images/olga_rdp_shortcut.png" alt="Скачанный RDP-ярлык ya_jumphost">
+            </a>
+          </figure>
+          <figure class="shot">
+            <figcaption>Notepad // скопировать строку username:s:...</figcaption>
+            <a href="images/olga_rdp_notepad.png" target="_blank" rel="noopener">
+              <img src="images/olga_rdp_notepad.png" alt="RDP-файл в редакторе: строка username для mRemoteNG">
+            </a>
+          </figure>
+          <div class="phase-body">
+            <div class="codepane">
+              <div class="meta">
+                <span>Username payload // PAM</span>
+                <button type="button" class="copy-btn" data-copy="Interactive@ya_jumphost:RDP:ya_jumphost_auth:adm_ВашЛогин">Copy</button>
+              </div>
+              <pre id="username-payload">Interactive@ya_jumphost:RDP:ya_jumphost_auth:adm_ВашЛогин</pre>
+            </div>
+
+            <div class="callout info">
+              <span class="tag">Comms</span>
+              В mRemoteNG Hostname = <code>pam</code>.
+              В Username — полная строка из ярлыка, а не просто <code>adm_...</code>.
+              В самом .rdp также видно <code>full address:s:10.76.91.9:3389</code>.
+            </div>
+
+            <div class="actions">
+              <a class="btn ghost" href="https://github.com/mRemoteNG/mRemoteNG/releases/tag/v1.76.20" target="_blank" rel="noopener">
+                Get mRemoteNG
+              </a>
+            </div>
+          </div>
+          <figure class="shot">
+            <figcaption>Auth overlay // PAM RDP challenge</figcaption>
+            <a href="images/step5_rdp_auth.png" target="_blank" rel="noopener">
+              <img src="images/step5_rdp_auth.png" alt="Форма входа RDP через PAM jumphost">
+            </a>
+          </figure>
+        </section>
+
+        <section class="liftoff">
+          <div class="k">Mission success criteria</div>
+          <h2>Все hold points пройдены — вы на ВМ</h2>
+          <p>
+            ADM в CORP → пароль → доступ в PAM у Донского → 2FA → учётка на ВМ у Сторожука →
+            RDP или mRemoteNG.
+          </p>
+        </section>
+
+        <footer class="site">
+          <div>
+            <strong>Алексей Чмыхалов</strong>
+            Развитие бизнес приложений · ВИМ Инвестиции
+            <div style="margin-top:.4rem">Дополнения: Ольга Сенюшкина</div>
+          </div>
+          <div>REV 2.0 · 28.07.2026 · STANDALONE</div>
+        </footer>
+      </main>
+    </div>
+  </div>
+
+  <div class="keys" aria-hidden="true"><kbd>1</kbd>-<kbd>6</kbd> phases · <kbd>T</kbd> top</div>
+
+  <script>
+    (function () {
+      var bar = document.getElementById("mission-progress");
+      var phases = Array.prototype.slice.call(document.querySelectorAll(".phase"));
+      var links = Array.prototype.slice.call(document.querySelectorAll("#mission-rail a"));
+
+      function onScroll() {
+        var doc = document.documentElement;
+        var max = doc.scrollHeight - doc.clientHeight;
+        var p = max > 0 ? (doc.scrollTop / max) * 100 : 0;
+        bar.style.width = p + "%";
+
+        var current = phases[0] && phases[0].id;
+        phases.forEach(function (el) {
+          var top = el.getBoundingClientRect().top;
+          if (top < window.innerHeight * 0.35) current = el.id;
+          if (top < window.innerHeight * 0.85) el.classList.add("in");
+        });
+        links.forEach(function (a) {
+          a.classList.toggle("active", a.getAttribute("data-phase") === current);
+        });
+      }
+
+      window.addEventListener("scroll", onScroll, { passive: true });
+      onScroll();
+
+      document.querySelectorAll(".copy-btn").forEach(function (btn) {
+        btn.addEventListener("click", function () {
+          var text = btn.getAttribute("data-copy") || "";
+          if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(text).then(function () {
+              btn.textContent = "Copied";
+              setTimeout(function () { btn.textContent = "Copy"; }, 1400);
+            });
+          } else {
+            var ta = document.createElement("textarea");
+            ta.value = text;
+            document.body.appendChild(ta);
+            ta.select();
+            document.execCommand("copy");
+            document.body.removeChild(ta);
+            btn.textContent = "Copied";
+            setTimeout(function () { btn.textContent = "Copy"; }, 1400);
+          }
+        });
+      });
+
+      window.addEventListener("keydown", function (e) {
+        if (e.target && /input|textarea|select/i.test(e.target.tagName)) return;
+        if (e.key >= "1" && e.key <= "6") {
+          var el = document.getElementById("phase-" + e.key);
+          if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+        }
+        if (e.key === "t" || e.key === "T") {
+          window.scrollTo({ top: 0, behavior: "smooth" });
+        }
+      });
+    })();
+  </script>
+</body>
+</html>
