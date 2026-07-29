@@ -1,0 +1,760 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Code Review v2 — ОплатаКзПоКлиентамРДУ 2.19</title>
+<style>
+:root {
+  --bg: #f4f6fa;
+  --card: #fff;
+  --border: #d7deea;
+  --text: #1f2937;
+  --muted: #5b6575;
+  --fail: #dc3545;
+  --warn: #fd7e14;
+  --ok: #28a745;
+  --info: #17a2b8;
+  --part: #6f42c1;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  font-family: "Segoe UI", Arial, sans-serif;
+  color: var(--text);
+  background: var(--bg);
+  line-height: 1.5;
+}
+.wrap { max-width: 1180px; margin: 0 auto; padding: 24px 18px 60px; }
+h1 { margin: 0 0 6px; font-size: 26px; }
+h2 { margin: 0 0 12px; font-size: 20px; border-bottom: 2px solid #e5ebf5; padding-bottom: 8px; }
+h3 { margin: 0 0 8px; font-size: 16px; }
+.meta { color: var(--muted); font-size: 14px; margin-bottom: 18px; }
+.card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 18px;
+  margin-bottom: 16px;
+  box-shadow: 0 1px 2px rgba(16,24,40,.04);
+}
+.nav {
+  display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0 4px;
+}
+.nav a {
+  text-decoration: none; color: #0b5ed7;
+  background: #eef4ff; border: 1px solid #d6e4ff;
+  border-radius: 999px; padding: 6px 12px; font-size: 13px;
+}
+.nav a:hover { background: #dfeaff; }
+.badge {
+  display: inline-block; color: #fff; font-size: 11px; font-weight: 700;
+  border-radius: 5px; padding: 2px 8px; margin-right: 6px; vertical-align: middle;
+}
+.b-fail { background: var(--fail); }
+.b-warn { background: var(--warn); }
+.b-ok { background: var(--ok); }
+.b-info { background: var(--info); }
+.b-part { background: var(--part); }
+.verdict {
+  background: #fff8e6; border-left: 4px solid #f0ad4e;
+  padding: 12px 14px; border-radius: 0 8px 8px 0; margin: 8px 0;
+}
+.timeline { position: relative; margin: 8px 0 0; padding-left: 18px; }
+.timeline::before {
+  content: ""; position: absolute; left: 6px; top: 4px; bottom: 4px;
+  width: 2px; background: #cfd8e6;
+}
+.t-item { position: relative; margin: 0 0 14px; padding-left: 16px; }
+.t-item::before {
+  content: ""; position: absolute; left: -15px; top: 7px;
+  width: 10px; height: 10px; border-radius: 50%;
+  background: #0b5ed7; border: 2px solid #fff; box-shadow: 0 0 0 1px #0b5ed7;
+}
+.t-item.task::before { background: #28a745; box-shadow: 0 0 0 1px #28a745; }
+.t-item.issue::before { background: #dc3545; box-shadow: 0 0 0 1px #dc3545; }
+.t-date { font-size: 12px; color: var(--muted); font-weight: 700; }
+.t-who { font-size: 12px; color: #334155; }
+.t-body { margin-top: 4px; font-size: 14px; }
+.finding {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  margin: 12px 0;
+  overflow: hidden;
+}
+.finding-h {
+  padding: 10px 14px;
+  background: #f8fafc;
+  border-bottom: 1px solid var(--border);
+  font-weight: 600;
+}
+.finding-b { padding: 12px 14px; display: grid; gap: 10px; }
+@media (min-width: 900px) {
+  .finding-b { grid-template-columns: 1fr 1fr; }
+}
+.box {
+  border-radius: 8px; padding: 10px 12px; font-size: 14px;
+}
+.box-bad { background: #fff1f2; border-left: 3px solid var(--fail); }
+.box-fix { background: #ecfdf3; border-left: 3px solid var(--ok); }
+.box-note { background: #eef8ff; border-left: 3px solid var(--info); }
+.lbl { font-size: 11px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); font-weight: 700; margin-bottom: 4px; }
+pre, code {
+  font-family: Consolas, "Courier New", monospace; font-size: 12px;
+}
+pre {
+  margin: 6px 0 0; padding: 8px; background: #f3f5f9;
+  border: 1px solid #e2e8f0; border-radius: 6px; white-space: pre-wrap;
+}
+table.mtx { width: 100%; border-collapse: collapse; font-size: 14px; }
+table.mtx th, table.mtx td {
+  border: 1px solid var(--border); padding: 8px 10px; vertical-align: top; text-align: left;
+}
+table.mtx th { background: #eef3fb; }
+.stats {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 10px; margin-top: 10px;
+}
+.stat {
+  background: #f8fafc; border: 1px solid var(--border);
+  border-radius: 8px; padding: 12px; text-align: center;
+}
+.stat .n { font-size: 26px; font-weight: 800; }
+.stat .l { font-size: 12px; color: var(--muted); }
+.toc ol { margin: 6px 0 0 18px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<div class="card">
+  <h1>Code Review: Оплата КЗ по клиентам РДУ v2.19</h1>
+  <p class="meta">
+    Артефакт: <code>СозданиеПорученийПоДоговорамДУ_2_19.epf</code>
+    → объект <code>ОплатаКзПоКлиентамРДУ</code><br>
+    Дата: 29.07.2026 · Источники: IMDEV-8815, IMDEV-8837, ФТ, «Блокировка ДС», код + CF WIM_DU
+  </p>
+  <div class="verdict">
+    <strong>Вердикт: Request changes.</strong>
+    Постановка и тикеты подтверждают апдейт одной обработки «Оплата КЗ…».
+    Критично: фоновый НДФЛ не реализует ветвление по блок-схеме (три режима подряд),
+    плюс расхождения по сумме/дате блокировки и дефекты кода, влияющие на деньги и статусы.
+  </div>
+  <div class="stats">
+    <div class="stat"><div class="n" style="color:var(--fail)">6</div><div class="l">FAIL vs постановка</div></div>
+    <div class="stat"><div class="n" style="color:var(--warn)">5</div><div class="l">логика / алгоритмы</div></div>
+    <div class="stat"><div class="n" style="color:var(--info)">5</div><div class="l">стандарты кода</div></div>
+    <div class="stat"><div class="n" style="color:var(--part)">4</div><div class="l">производительность</div></div>
+  </div>
+  <div class="nav">
+    <a href="#seq">0. Хронология</a>
+    <a href="#s1">1. Постановка</a>
+    <a href="#s2">2. Алгоритмы</a>
+    <a href="#s3">3. Стандарты</a>
+    <a href="#s4">4. Скорость</a>
+  </div>
+</div>
+
+<!-- ========== 0 TIMELINE ========== -->
+<div class="card" id="seq">
+  <h2>0. Последовательность задач и комментариев</h2>
+  <p class="meta">Собрано из Jira-экспорта и вложений. Связанный тикет ВУК: IMDEV-8836 (ФТ в комплекте нет).</p>
+
+  <h3>IMDEV-8815 — Блокировка ДС у брокера РДУ</h3>
+  <div class="timeline">
+    <div class="t-item task">
+      <div class="t-date">28.04.2026</div>
+      <div class="t-who">Kukushkin — создание CR</div>
+      <div class="t-body">Блокировка ДС по брокерским счетам клиентов РДУ «согласно приложенному файлу» (Блокировка ДС.docx).</div>
+    </div>
+    <div class="t-item">
+      <div class="t-date">12.05.2026</div>
+      <div class="t-who">Fesenko</div>
+      <div class="t-body">Реализуем <b>в обработке «Оплата КЗ по клиентам РДУ»</b>. Флаг «Учитывать остатки…» предлагается как новый вид сравнения в поле «Сумму обязательств сравнивать с».</div>
+    </div>
+    <div class="t-item">
+      <div class="t-date">12.05.2026</div>
+      <div class="t-who">Kukushkin</div>
+      <div class="t-body">ок</div>
+    </div>
+    <div class="t-item">
+      <div class="t-date">18.05.2026</div>
+      <div class="t-who">Fesenko — UAT</div>
+      <div class="t-body">AVC_UAT_DU: версия <b>2.0</b>, алгоритм блокировки, рассылка (пока отдельной кнопкой).</div>
+    </div>
+    <div class="t-item task">
+      <div class="t-date">20.05.2026</div>
+      <div class="t-who">Kukushkin</div>
+      <div class="t-body">ок, прошу на прод. Статус тикета: Awaiting IT Approval.</div>
+    </div>
+  </div>
+
+  <h3>Ключевые требования из «Блокировка ДС.docx»</h3>
+  <ul>
+    <li>Пул Розничное ДУ; статус основания «Новый»; объект блокировки НДФЛ / Вознаграждение.</li>
+    <li>Флаг учёта остатков б/с: отбор где б/с <b>МЕНЬШЕ</b> обязательства; сумма блокировки = обязательство − б/с.</li>
+    <li>Без флага: сумма блокировки = сумма обязательств.</li>
+    <li>Дата документа: <b>T−1 рабочий день</b>, 09:00.</li>
+    <li>Рассылка Middle с датой в теме (ВУК / НДФЛ).</li>
+  </ul>
+
+  <h3>IMDEV-8837 — Фоновая оплата НДФЛ из менеджера РДУ</h3>
+  <div class="timeline">
+    <div class="t-item task">
+      <div class="t-date">05.05.2026</div>
+      <div class="t-who">Kukushkin</div>
+      <div class="t-body">Реализовать оплату годового НДФЛ розничного пула в <b>фоне</b> из менеджера РДУ. Вложение: массовая оплата / ФТ.</div>
+    </div>
+    <div class="t-item">
+      <div class="t-date">21.05.2026</div>
+      <div class="t-who">Fesenko</div>
+      <div class="t-body">Вопросы: когда создавать Поступление/Списание? текст рассылки после блокировок; дубль с «Групповым созданием блокировки»?</div>
+    </div>
+    <div class="t-item">
+      <div class="t-date">25.05.2026</div>
+      <div class="t-who">Fesenko</div>
+      <div class="t-body">Фон — в <b>одной</b> обработке «Оплата КЗ…»; отдельная рассылка Middle не нужна (уже из 8815).</div>
+    </div>
+    <div class="t-item">
+      <div class="t-date">26.05.2026</div>
+      <div class="t-who">Kukushkin ответы</div>
+      <div class="t-body">
+        Запуск <b>1 раз в день</b>. Поступления/списания с р/с — <b>разборщик выписки</b>, не эта обработка.
+        Режим б/с: только поручения на перевод б/с→р/с; рассылки уже есть; сбор для Middle — IMAPPS-37390.
+        Развёрнутый отчёт ошибок — пока исключаем.
+      </div>
+    </div>
+    <div class="t-item">
+      <div class="t-date">29.06.2026</div>
+      <div class="t-who">Kukushkin</div>
+      <div class="t-body">Проверить по приложенной блок-схеме (ФТ: 68.01 → блокировки → требования → ветка р/с или б/с).</div>
+    </div>
+    <div class="t-item issue">
+      <div class="t-date">06.07.2026</div>
+      <div class="t-who">Kukushkin</div>
+      <div class="t-body">У списаний ВУК одна дата в назначении у всех договоров. Вендор забрал.</div>
+    </div>
+    <div class="t-item">
+      <div class="t-date">07.07.2026</div>
+      <div class="t-who">Fesenko — UAT 2.13</div>
+      <div class="t-body">Фон НДФЛ; временный выбор даты для теста (потом убрать). Дата в назначении списания исправлена.</div>
+    </div>
+    <div class="t-item">
+      <div class="t-date">07.07.2026</div>
+      <div class="t-who">Fesenko / звонок</div>
+      <div class="t-body">Если автосумма «Сумма требования» ≠ 0 — создавать поручения по <b>всем</b> ДУ (включая с нулевым требованием).</div>
+    </div>
+    <div class="t-item">
+      <div class="t-date">10–13.07.2026</div>
+      <div class="t-who">Fesenko / Kukushkin</div>
+      <div class="t-body">Окно поиска начислений: ВУК 3 мес., НДФЛ 2 мес. (можно едино 3). Сценарий дней 1–8 по ДУ1–ДУ4.</div>
+    </div>
+    <div class="t-item">
+      <div class="t-date">15.07.2026</div>
+      <div class="t-who">Fesenko</div>
+      <div class="t-body">Ограничение: начисления одного фона — <b>одной датой</b> (и ВУК, и НДФЛ).</div>
+    </div>
+    <div class="t-item">
+      <div class="t-date">21.07.2026</div>
+      <div class="t-who">Fesenko — UAT 2.14</div>
+      <div class="t-body">Временные рамки + логика автосуммы требований.</div>
+    </div>
+    <div class="t-item issue">
+      <div class="t-date">21.07.2026</div>
+      <div class="t-who">Kukushkin</div>
+      <div class="t-body">Есть начисления, регистр блокировок пуст — блокировка не создаётся.</div>
+    </div>
+    <div class="t-item">
+      <div class="t-date">23.07.2026</div>
+      <div class="t-who">Fesenko — 2.15</div>
+      <div class="t-body">Убрали проверку Требований перед созданием блокировок.</div>
+    </div>
+    <div class="t-item issue">
+      <div class="t-date">23.07.2026</div>
+      <div class="t-who">Kukushkin</div>
+      <div class="t-body">«Не должна создавать документы — в эти дни другая ветка» (нет данных в Требованиях).</div>
+    </div>
+    <div class="t-item">
+      <div class="t-date">23.07.2026</div>
+      <div class="t-who">Fesenko — 2.16</div>
+      <div class="t-body">Исправление ветвления / лишнего создания документов.</div>
+    </div>
+    <div class="t-item issue">
+      <div class="t-date">24.07.2026</div>
+      <div class="t-who">Kukushkin</div>
+      <div class="t-body">Статус менять <b>после п/п с р/с</b>, не после перевода б/с→р/с. Не нашлись поручения по рассылке.</div>
+    </div>
+    <div class="t-item task">
+      <div class="t-date">24.07.2026</div>
+      <div class="t-who">Fesenko — UAT <b>2.19</b></div>
+      <div class="t-body">Поручения/рассылка поправлены. Смена статусов — <b>к обсуждению</b> (п/п с р/с делает другая обработка). Статус тикета: IT test.</div>
+    </div>
+  </div>
+
+  <h3>Суть блок-схемы ФТ (один запуск = одна ветка)</h3>
+  <pre>68.01 кредит (день запуска, НП = год-1)
+  нет  → КОНЕЦ
+  да   → ДС заблокированные НДФЛ, начальный остаток на Т-1
+           нет  → режим «Не учитывать остатки» + блокировка + Middle
+           да   → Требования по ДС (начальный остаток)
+                    нет  → режим «Расчетным счетом» + рассылка Settlements
+                    да   → режим «Брокерским счетом» + поручения перевода</pre>
+</div>
+
+<!-- ========== SECTION 1 ========== -->
+<div class="card" id="s1">
+  <h2>Раздел 1. Соответствие постановке задачи</h2>
+  <p class="meta">Сверка требований тикетов/ФТ/«Блокировка ДС» с кодом v2.19.</p>
+
+  <table class="mtx">
+    <tr><th>Требование</th><th>Источник</th><th>В коде</th><th>Оценка</th></tr>
+    <tr>
+      <td>Доработки в «Оплата КЗ по клиентам РДУ», не новая обработка</td>
+      <td>8815, 8837</td>
+      <td>Name = ОплатаКзПоКлиентамРДУ, v2.19</td>
+      <td><span class="badge b-ok">OK</span></td>
+    </tr>
+    <tr>
+      <td>Фон 1 раз/день; ветка по регистрам, не все режимы сразу</td>
+      <td>ФТ, дни 1–8, коммент 23.07</td>
+      <td>ВыполнитьОбработкуВФонеНДФЛ: шаги 1+2+3 подряд</td>
+      <td><span class="badge b-fail">FAIL</span></td>
+    </tr>
+    <tr>
+      <td>НП = год запуска − 1</td>
+      <td>ФТ</td>
+      <td>НачалоГода(Период)-1 → НалоговыеПериоды</td>
+      <td><span class="badge b-ok">OK</span></td>
+    </tr>
+    <tr>
+      <td>Сумма блокировки при учёте остатков = обяз. − б/с; отбор б/с &lt; обяз.</td>
+      <td>Блокировка ДС</td>
+      <td>&lt;= ; СуммаБлокировки = полная сумма</td>
+      <td><span class="badge b-fail">FAIL</span></td>
+    </tr>
+    <tr>
+      <td>Дата блокировки T−1 рабочий день 09:00</td>
+      <td>Блокировка ДС</td>
+      <td>календарный Период−1 + 9ч</td>
+      <td><span class="badge b-fail">FAIL</span></td>
+    </tr>
+    <tr>
+      <td>Без Поступления/Списания в фоне НДФЛ</td>
+      <td>8837 26.05</td>
+      <td>в фоне нет</td>
+      <td><span class="badge b-ok">OK</span></td>
+    </tr>
+    <tr>
+      <td>Статус начисления после п/п с р/с</td>
+      <td>8837 24.07</td>
+      <td>меняется в СформироватьШаблон</td>
+      <td><span class="badge b-warn">СПОРНО</span></td>
+    </tr>
+    <tr>
+      <td>Окно поиска начислений 2–3 мес.</td>
+      <td>8837 13.07</td>
+      <td>ДобавитьМесяц(..., -3)</td>
+      <td><span class="badge b-ok">OK</span></td>
+    </tr>
+    <tr>
+      <td>Имя файла поставки = понятная идентичность объекта</td>
+      <td>процесс CR</td>
+      <td>файл «СозданиеПоручений…», Name другой</td>
+      <td><span class="badge b-warn">РИСК</span></td>
+    </tr>
+  </table>
+
+  <div class="finding">
+    <div class="finding-h"><span class="badge b-fail">1.1</span> Фон НДФЛ не соответствует блок-схеме</div>
+    <div class="finding-b">
+      <div class="box box-bad">
+        <div class="lbl">Где плохо</div>
+        Постановка: каждый день — <b>одна</b> ветка (блокировка <i>или</i> б/с <i>или</i> р/с) после проверок 68.01 / блокировок / требований.
+        Заказчик прямо писал: в дни без Требований обработка «не должна создавать документы».
+        <pre>ВыполнитьОбработкуВФонеНДФЛ:
+  режим НеУчитывать + блокировка + письмо
+  режим БрокерскимСчетом + поручения + письмо
+  режим РасчетнымСчетом + шаблон/статусы</pre>
+      </div>
+      <div class="box box-fix">
+        <div class="lbl">Как исправить</div>
+        В начале фона выполнить гейты ФТ (или получить уже выбранный режим от менеджера РДУ) и вызвать <b>только одну</b> ветку:
+        <pre>Если НетСальдо6801 Тогда Возврат; КонецЕсли;
+Если НетБлокировокНДФЛ Тогда
+  // только блокировка + Middle
+ИначеЕсли ЕстьТребованияПоДС Тогда
+  // только БрокерскимСчетом + поручения
+Иначе
+  // только РасчетнымСчетом + Settlements
+КонецЕсли;</pre>
+      </div>
+    </div>
+  </div>
+
+  <div class="finding">
+    <div class="finding-h"><span class="badge b-fail">1.2</span> Сумма и условие блокировки при учёте остатков б/с</div>
+    <div class="finding-b">
+      <div class="box box-bad">
+        <div class="lbl">Где плохо</div>
+        ТЗ: б/с <b>меньше</b> обязательства; сумма = обязательство − б/с.
+        <pre>СуммаБрокерскийСчет &lt;= СуммаОбязательства
+НоваяСтрока.СуммаБлокировки = Выборка.СуммаОбязательства;</pre>
+      </div>
+      <div class="box box-fix">
+        <div class="lbl">Как исправить</div>
+        <pre>// ПроверкаУсловийДобавления
+СуммаБрокерскийСчет &lt; СуммаОбязательства
+
+// ЗаполнитьНачислениями
+НоваяСтрока.СуммаБлокировки =
+  Выборка.СуммаОбязательства - Выборка.СуммаБрокерскийСчет;</pre>
+      </div>
+    </div>
+  </div>
+
+  <div class="finding">
+    <div class="finding-h"><span class="badge b-fail">1.3</span> Дата блокировки — не рабочий день</div>
+    <div class="finding-b">
+      <div class="box box-bad">
+        <div class="lbl">Где плохо</div>
+        <pre>ДатаДок = НачалоДня(НачалоДня(Период) - 1) + 60*60*9;</pre>
+        После выходных получится воскресенье/суббота, а не T−1 рабочий.
+      </div>
+      <div class="box box-fix">
+        <div class="lbl">Как исправить</div>
+        Использовать производственный календарь конфигурации / БСП:
+        <pre>РабочийДень = ПредыдущийРабочийДень(Период);
+ДатаДок = НачалоДня(РабочийДень) + 9 * 3600;</pre>
+      </div>
+    </div>
+  </div>
+
+  <div class="finding">
+    <div class="finding-h"><span class="badge b-warn">1.4</span> Смена статуса начисления — точка процесса не согласована</div>
+    <div class="finding-b">
+      <div class="box box-bad">
+        <div class="lbl">Где плохо</div>
+        Заказчик: статус после п/п с р/с. В 2.19 смена вызывается из <code>СформироватьШаблон</code>; вендор отметил «к обсуждению».
+      </div>
+      <div class="box box-fix">
+        <div class="lbl">Как исправить</div>
+        Убрать вызов из этой обработки до фиксации контракта с разборщиком/обработкой п/п;
+        либо менять статус только при появлении документа списания/п/п с р/с.
+      </div>
+    </div>
+  </div>
+
+  <div class="finding">
+    <div class="finding-h"><span class="badge b-warn">1.5</span> Имя файла поставки vs ИмяОбъекта</div>
+    <div class="finding-b">
+      <div class="box box-bad">
+        <div class="lbl">Где плохо</div>
+        Файл <code>СозданиеПорученийПоДоговорамДУ_2_19.epf</code>, объект <code>ОплатаКзПоКлиентамРДУ</code>.
+        При установке БСП идентифицирует по Name → перетирает существующую запись.
+      </div>
+      <div class="box box-fix">
+        <div class="lbl">Как исправить</div>
+        Переименовать файл в <code>ОплатаКзПоКлиентамРДУ_2_19.epf</code>. Name не менять (это апдейт по 8815/8837).
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ========== SECTION 2 ========== -->
+<div class="card" id="s2">
+  <h2>Раздел 2. Корректность алгоритмов и логики</h2>
+
+  <div class="finding">
+    <div class="finding-h"><span class="badge b-fail">2.1</span> После смены режима таблица не перечитывается</div>
+    <div class="finding-b">
+      <div class="box box-bad">
+        <div class="lbl">Где плохо</div>
+        <pre>СравниватьСБрокерскимиСуммами = "БрокерскимСчетом";
+//ЗаполнитьНачислениями(...);  // закомментировано
+ПересчитатьСуммуОбязательства();
+СформироватьПлатежноеПоручение();</pre>
+        Строки остались от режима «Не учитывать». Фильтры/суммы и создание поручений расходятся с режимом.
+      </div>
+      <div class="box box-fix">
+        <div class="lbl">Как исправить</div>
+        Перед каждым режимом (после внедрения ветвления 1.1 — перед единственной веткой):
+        <pre>ЗаполнитьНачислениями(НачислениеНДФЛ, Истина);
+ПересчитатьСуммуОбязательства();</pre>
+      </div>
+    </div>
+  </div>
+
+  <div class="finding">
+    <div class="finding-h"><span class="badge b-fail">2.2</span> Цикл смены статусов обрывается на первой «плохой» строке</div>
+    <div class="finding-b">
+      <div class="box box-bad">
+        <div class="lbl">Где плохо</div>
+        <pre>Если Не ЗначениеЗаполнено(ДокументОснование) Тогда
+    Возврат; // выход из всей процедуры
+КонецЕсли;</pre>
+        Типовой шаблон CF — на один документ; здесь цикл по ТЧ.
+      </div>
+      <div class="box box-fix">
+        <div class="lbl">Как исправить</div>
+        Заменить <code>Возврат</code> на <code>Продолжить</code> в обеих проверках (пустое основание / неподходящий тип).
+      </div>
+    </div>
+  </div>
+
+  <div class="finding">
+    <div class="finding-h"><span class="badge b-fail">2.3</span> Приоритет И/ИЛИ в ДанныеДляРассылки</div>
+    <div class="finding-b">
+      <div class="box box-bad">
+        <div class="lbl">Где плохо</div>
+        <pre>Если ВидРассылки = "Перевод" И СуммаПоручений = 0
+    ИЛИ СуммаОбязательства = 0 Тогда</pre>
+        При СуммаОбязательства = 0 отсекается любая рассылка (в т.ч. не «Перевод»).
+      </div>
+      <div class="box box-fix">
+        <div class="lbl">Как исправить</div>
+        <pre>Если ВидРассылки = "Перевод" Тогда
+  Если СуммаПоручений = 0 Или СуммаОбязательства = 0 Тогда
+    Возврат ...;
+  КонецЕсли;
+ИначеЕсли ВидРассылки = "Блокировка" Тогда
+  Если СуммаБлокировки = 0 Тогда Возврат ...; КонецЕсли;
+КонецЕсли;</pre>
+      </div>
+    </div>
+  </div>
+
+  <div class="finding">
+    <div class="finding-h"><span class="badge b-fail">2.4</span> СтрШаблон без параметра (блокировка ВУК)</div>
+    <div class="finding-b">
+      <div class="box box-bad">
+        <div class="lbl">Где плохо</div>
+        <pre>СтрШаблон("Коллеги, %1 произведена ... вознаграждения УК");
+// нет второго аргумента</pre>
+      </div>
+      <div class="box box-fix">
+        <div class="lbl">Как исправить</div>
+        <pre>СтрШаблон("Коллеги, %1 произведена ... УК", ПериодФормат);
+// лучше: дата документа блокировки (T-1 рабочий)</pre>
+      </div>
+    </div>
+  </div>
+
+  <div class="finding">
+    <div class="finding-h"><span class="badge b-warn">2.5</span> Фон ВУК: два режима подряд + нет ФТ 8836</div>
+    <div class="finding-b">
+      <div class="box box-bad">
+        <div class="lbl">Где плохо</div>
+        <pre>РасчетнымСчетом → Заполнить + Поручения + Шаблон
+БрокерскимСчетом → Пересчитать + письмо (без Fill)</pre>
+        Отбор «РасчетнымСчетом» требует ДокументБлокировки; шаг создания блокировок в ВУК-фоне отсутствует.
+        ФТ IMDEV-8836 в комплекте CR нет.
+      </div>
+      <div class="box box-fix">
+        <div class="lbl">Как исправить</div>
+        Получить ФТ 8836; выровнять ветвление аналогично НДФЛ; при необходимости добавить шаг блокировки
+        или явно требовать уже существующие блокировки Вознаграждение.
+      </div>
+    </div>
+  </div>
+
+  <div class="finding">
+    <div class="finding-h"><span class="badge b-warn">2.6</span> Отказ при непроведённом основании не останавливает запись</div>
+    <div class="finding-b">
+      <div class="box box-bad">
+        <div class="lbl">Где плохо</div>
+        <pre>Если Основание.Проведен = Ложь Тогда
+  Отказ = Истина; ...
+КонецЕсли;
+// дальше СоздатьДокумент / Записать(Проведение)</pre>
+      </div>
+      <div class="box box-fix">
+        <div class="lbl">Как исправить</div>
+        <pre>Если Отказ Тогда
+  Возврат Документы.Поручение.ПустаяСсылка();
+КонецЕсли;</pre>
+        То же в БлокировкаДенежныхСредствСоздатьЗаполнить.
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ========== SECTION 3 ========== -->
+<div class="card" id="s3">
+  <h2>Раздел 3. Корректность кода по стандартам</h2>
+  <p class="meta">Стандарты 1С / БСП / читаемость / безопасность побочных эффектов.</p>
+
+  <div class="finding">
+    <div class="finding-h"><span class="badge b-fail">3.1</span> Возврат вместо Продолжить в цикле</div>
+    <div class="finding-b">
+      <div class="box box-bad">
+        <div class="lbl">Где плохо</div>
+        Нарушение семантики цикла: досрочный выход из процедуры вместо пропуска элемента.
+        Метод: <code>ИзменитьСтатусВознагражденияПриИзмененииСтатусаПлатежногоПоручения</code>.
+      </div>
+      <div class="box box-fix">
+        <div class="lbl">Как исправить</div>
+        <code>Продолжить</code>; не копировать «однодокументный» типовой шаблон в пакетный цикл без адаптации.
+      </div>
+    </div>
+  </div>
+
+  <div class="finding">
+    <div class="finding-h"><span class="badge b-fail">3.2</span> СтрШаблон / конкатенация без проверки числа параметров</div>
+    <div class="finding-b">
+      <div class="box box-bad">
+        <div class="lbl">Где плохо</div>
+        Платформа падает или даёт непредсказуемый текст при несовпадении плейсхолдеров.
+      </div>
+      <div class="box box-fix">
+        <div class="lbl">Как исправить</div>
+        Всегда передавать аргументы; покрыть ветку ВУК тестом/ручным прогоном рассылки.
+      </div>
+    </div>
+  </div>
+
+  <div class="finding">
+    <div class="finding-h"><span class="badge b-warn">3.3</span> Глотание ошибок почты</div>
+    <div class="finding-b">
+      <div class="box box-bad">
+        <div class="lbl">Где плохо</div>
+        <pre>Попытка
+  РаботаСПочтовымиСообщениями.ОтправитьСообщение(...);
+Исключение
+  ЗаписьЖурналаРегистрации(..., Уровень.Информация, ...); // не Ошибка
+КонецПопытки;</pre>
+        Флаг ОшибкиВыполнения не ставится → фон «успешен» без письма.
+      </div>
+      <div class="box box-fix">
+        <div class="lbl">Как исправить</div>
+        Уровень <code>Ошибка</code>; <code>ОшибкиВыполнения = Истина</code>;
+        по согласованию с 26.05 детальный отчёт на почту не обязателен, но сбой отправки должен быть виден.
+      </div>
+    </div>
+  </div>
+
+  <div class="finding">
+    <div class="finding-h"><span class="badge b-warn">3.4</span> Ключевые слова / стиль / мёртвый код</div>
+    <div class="finding-b">
+      <div class="box box-bad">
+        <div class="lbl">Где плохо</div>
+        Опечатки в UX-текстах («регламетного», «согластно»); закомментированные блоки шагов фона;
+        <code>ПередЗакрытием</code> сразу делает <code>Возврат</code> (контроль рассылки мёртв);
+        no-op <code>НомерВходящегоДокумента = НомерВходящегоДокумента</code> на форме.
+      </div>
+      <div class="box box-fix">
+        <div class="lbl">Как исправить</div>
+        Почистить мёртвый код; инкремент номера; восстановить или удалить проверку закрытия формы осознанно.
+      </div>
+    </div>
+  </div>
+
+  <div class="finding">
+    <div class="finding-h"><span class="badge b-info">3.5</span> Что по стандартам приемлемо</div>
+    <div class="finding-b">
+      <div class="box box-note" style="grid-column: 1 / -1;">
+        Регистрация БСП (<code>СведенияОВнешнейОбработке</code>), параметры запросов без конкатенации,
+        использование предопределённых <code>ОбъектыБлокировки</code>,
+        <code>ОбщегоНазначения</code> с ServerCall — соответствуют практике конфигурации.
+        <code>БезопасныйРежим = Ложь</code> оправдан Word/COM, но требует контроля среды сервера.
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ========== SECTION 4 ========== -->
+<div class="card" id="s4">
+  <h2>Раздел 4. Оптимизация по скорости</h2>
+
+  <div class="finding">
+    <div class="finding-h"><span class="badge b-fail">4.1</span> Busy-wait Задержка — жжёт CPU сервера</div>
+    <div class="finding-b">
+      <div class="box box-bad">
+        <div class="lbl">Где плохо</div>
+        <pre>Пока ТекущаяДатаСеанса() &lt; КонДата Цикл
+КонецЦикла;</pre>
+        Вызывается из рассылки/Word (по 10 сек). В фоне блокирует рабочий процесс вхолостую.
+      </div>
+      <div class="box box-fix">
+        <div class="lbl">Как исправить</div>
+        Убрать искусственные паузы; если нужна синхронизация с файлом — явная проверка готовности / retry с паузой ОС, не цикл.
+      </div>
+    </div>
+  </div>
+
+  <div class="finding">
+    <div class="finding-h"><span class="badge b-fail">4.2</span> Word.Application на сервере регламента</div>
+    <div class="finding-b">
+      <div class="box box-bad">
+        <div class="lbl">Где плохо</div>
+        COM Word в <code>СформироватьШаблон</code> — тяжёлый, нестабильный на сервере 1С, сериализует задания.
+      </div>
+      <div class="box box-fix">
+        <div class="lbl">Как исправить</div>
+        Генерация docx без Word (OpenXML / макет табличного документа / HTML→PDF),
+        либо вынос на выделенный хост с Word вне критического пути регламента.
+      </div>
+    </div>
+  </div>
+
+  <div class="finding">
+    <div class="finding-h"><span class="badge b-warn">4.3</span> Лишняя работа из-за «трёх шагов подряд»</div>
+    <div class="finding-b">
+      <div class="box box-bad">
+        <div class="lbl">Где плохо</div>
+        Даже в дни «пустой» ветки код гоняет заполнение/проведение/почту/Word по нескольким режимам.
+        Это и логическая ошибка (раздел 1), и лишняя нагрузка на СУБД/проведение.
+      </div>
+      <div class="box box-fix">
+        <div class="lbl">Как исправить</div>
+        Одна ветка на запуск — сразу снижает число запросов и документов в разы.
+      </div>
+    </div>
+  </div>
+
+  <div class="finding">
+    <div class="finding-h"><span class="badge b-warn">4.4</span> Запрос и журналирование</div>
+    <div class="finding-b">
+      <div class="box box-bad">
+        <div class="lbl">Где плохо</div>
+        <ul>
+          <li>Сначала выборка всех договоров РДУ в массив, потом тяжёлый пакет с ВТ и ОстаткиИОбороты.</li>
+          <li><code>НайтиПоНаименованию("Розничное ДУ")</code> на каждый вызов.</li>
+          <li>Журнал регистрации на <b>каждую строку</b> цикла блокировки (шаги 1.2 / 1.3) — I/O.</li>
+          <li><code>МАКСИМУМ</code> по ссылкам аналитических счетов — недетерминированно и тяжело при дублях.</li>
+        </ul>
+      </div>
+      <div class="box box-fix">
+        <div class="lbl">Как исправить</div>
+        <ul>
+          <li>Кэшировать ссылку пула; соединять договоры во временной таблице запроса без лишнего round-trip.</li>
+          <li>Журнал: старт/итог/ошибки, не каждая строка.</li>
+          <li>Явный выбор аналитического счёта (приоритет / единственный открытый), не MAX(Ссылка).</li>
+          <li>Окно 3 месяца уже есть — сохранить; для НДФЛ при желании сузить до 2 мес. по договорённости.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="box box-note">
+    <div class="lbl">Позитив по скорости</div>
+    Введение временного окна поиска начислений (2.14) — правильный шаг; без него полный срез статусов «Новый» был бы ещё тяжелее.
+  </div>
+</div>
+
+<!-- SUMMARY -->
+<div class="card">
+  <h2>Итог для автора / ревьюера</h2>
+  <ol>
+    <li><b>Обязательно:</b> ветвление фона по ФТ (не 1+2+3); сумма/дата блокировки по «Блокировка ДС»; СтрШаблон ВУК; Возврат→Продолжить; early return при Отказ.</li>
+    <li><b>Согласовать:</b> точка смены статуса; комплект ФТ по ВУК (8836).</li>
+    <li><b>Скорость:</b> убрать busy-wait и Word с пути регламента; сократить журналирование по строкам.</li>
+    <li><b>Поставка:</b> имя файла = <code>ОплатаКзПоКлиентамРДУ_2_19.epf</code>.</li>
+  </ol>
+  <p class="meta">
+    Связанные файлы: <code>CR_OplataKz_2_19.html</code>, <code>CR_Zamechaniya_tablica.html</code>, <code>docs_extracted/</code>
+  </p>
+</div>
+
+</div>
+</body>
+</html>
