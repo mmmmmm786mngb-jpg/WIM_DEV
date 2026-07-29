@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Code Review: ОплатаКзПоКлиентамРДУ 2.19 (со сверкой с ТЗ)</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 24px; color: #222; background: #f7f9fc; line-height: 1.45; }
+        h1, h2, h3 { margin-top: 0; }
+        .card { background: #fff; border: 1px solid #d9e2ef; border-radius: 10px; padding: 16px; margin-bottom: 16px; }
+        .meta { font-size: 14px; color: #555; }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        th, td { border: 1px solid #d9e2ef; padding: 10px; vertical-align: top; text-align: left; }
+        th { background: #eef3fb; }
+        .badge { color: #fff; border-radius: 6px; padding: 2px 8px; display: inline-block; font-size: 12px; font-weight: bold; }
+        .crit { background: #dc3545; }
+        .high { background: #fd7e14; }
+        .med { background: #17a2b8; }
+        .low { background: #6f42c1; }
+        .ok { background: #28a745; }
+        .info { background: #6c757d; }
+        .verdict { background: #fff3cd; border-left: 4px solid #f0ad4e; padding: 14px; margin: 8px 0; }
+        .issue-high { background: #ffe6e9; border-left: 4px solid #dc3545; padding: 12px; margin: 10px 0; }
+        .issue-med { background: #e9f7ff; border-left: 4px solid #17a2b8; padding: 12px; margin: 10px 0; }
+        .issue-low { background: #f1ecff; border-left: 4px solid #6f42c1; padding: 12px; margin: 10px 0; }
+        .ok-block { background: #e8f8ee; border-left: 4px solid #28a745; padding: 10px; margin: 8px 0; }
+        .note { background: #e7f5ff; border-left: 4px solid #17a2b8; padding: 10px; margin: 8px 0; }
+        .warn { background: #fff3cd; border-left: 4px solid #f0ad4e; padding: 10px; margin: 8px 0; }
+        code, pre { background: #f4f6fa; border: 1px solid #dde3ef; border-radius: 6px; font-family: Consolas, "Courier New", monospace; font-size: 13px; }
+        pre { padding: 10px; overflow-x: auto; white-space: pre-wrap; }
+        code { padding: 1px 5px; }
+        ul, ol { margin: 6px 0 6px 18px; }
+        .stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; }
+        .stat { background: #f8fafc; border: 1px solid #d9e2ef; border-radius: 8px; padding: 12px; text-align: center; }
+        .stat .n { font-size: 28px; font-weight: bold; }
+        .stat .l { font-size: 12px; color: #666; }
+        .match { color: #28a745; font-weight: bold; }
+        .mismatch { color: #dc3545; font-weight: bold; }
+        .partial { color: #fd7e14; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+<div class="card">
+    <h1>Code Review: Оплата КЗ по клиентам РДУ v2.19</h1>
+    <p class="meta">
+        Дата отчёта: 29.07.2026<br>
+        Файл: <code>СозданиеПорученийПоДоговорамДУ_2_19.epf</code> → объект <code>ОплатаКзПоКлиентамРДУ</code><br>
+        База сверки кода: <code>localhost/WIM_DU</code>, эталон SRC v1.19<br>
+        Документация: ФТ.docx, Блокировка ДС.docx, Массовая оплата НДФЛ….docx, IMDEV-8815.doc, IMDEV-8837.doc
+    </p>
+</div>
+
+<div class="card">
+    <h2>1. Вердикт</h2>
+    <div class="verdict">
+        <strong>Request changes.</strong> По тикетам это осознанный апдейт обработки
+        «Оплата КЗ по клиентам РДУ» (не новая обработка). Имя файла вводит в заблуждение,
+        но идентичность объекта подтверждена документацией (IMDEV-8815 / 8837, UAT v2.19).<br><br>
+        Главное расхождение с ФТ: фоновый НДФЛ в коде выполняет <em>три режима подряд в одном запуске</em>,
+        тогда как по блок-схеме и сценарию заказчика (дни 1–8) каждый день выбирается
+        <em>одна ветка</em> по регистрам 68.01 / ДС заблокированные / Требования по ДС.
+    </div>
+    <div class="stat-grid">
+        <div class="stat"><div class="n" style="color:#dc3545">5</div><div class="l">критичных vs ТЗ/код</div></div>
+        <div class="stat"><div class="n" style="color:#fd7e14">4</div><div class="l">высоких</div></div>
+        <div class="stat"><div class="n" style="color:#17a2b8">4</div><div class="l">средних</div></div>
+        <div class="stat"><div class="n" style="color:#28a745">6</div><div class="l">совпало с ТЗ</div></div>
+    </div>
+</div>
+
+<div class="card">
+    <h2>2. Документы в объёме CR</h2>
+    <table>
+        <tr><th>Документ</th><th>Роль</th></tr>
+        <tr><td>IMDEV-8815.doc</td><td>Блокировка ДС у брокера РДУ → доработка <strong>той же</strong> обработки «Оплата КЗ…»; UAT v2.0</td></tr>
+        <tr><td>Блокировка ДС.docx</td><td>ФТ на флаг/режим учёта остатков на б/с, создание блокировок, рассылку Middle</td></tr>
+        <tr><td>IMDEV-8837.doc</td><td>Фоновая оплата НДФЛ из менеджера РДУ в рамках «Оплата КЗ…»; UAT до <strong>v2.19</strong>; связь с IMDEV-8836 (ВУК)</td></tr>
+        <tr><td>ФТ.docx / Массовая оплата НДФЛ….docx</td><td>Блок-схема веток: 68.01 → блокировки → требования → режимы б/с или р/с</td></tr>
+    </table>
+    <div class="warn">
+        Отдельного ФТ по фону ВУК (IMDEV-8836) в папке нет — замечания по ВУК остаются частично без ТЗ.
+    </div>
+</div>
+
+<div class="card">
+    <h2>3. Идентичность файла и объекта (после ТЗ)</h2>
+    <table>
+        <tr><th>Вопрос</th><th>До ТЗ</th><th>После ТЗ</th></tr>
+        <tr>
+            <td>Не ту обработку отдали?</td>
+            <td>риск</td>
+            <td><span class="match">Нет</span> — в комментариях явно: доработки в «Оплата КЗ по клиентам РДУ»</td>
+        </tr>
+        <tr>
+            <td>Апдейт существующей?</td>
+            <td>вероятно</td>
+            <td><span class="match">Да</span> — UAT: 2.0 → 2.13 → 2.14 → 2.15 → 2.16 → <strong>2.19</strong></td>
+        </tr>
+        <tr>
+            <td>Новая рядом со старой?</td>
+            <td>возможно</td>
+            <td><span class="match">Нет</span> — отдельную обработку не делают</td>
+        </tr>
+        <tr>
+            <td>Имя файла vs Name</td>
+            <td>блокер</td>
+            <td><span class="partial">Процессный риск</span>: файл <code>СозданиеПоручений…</code> путает, при установке идентификация по <code>ОплатаКзПоКлиентамРДУ</code> — перетрёт зарегистрированную. Рекомендация: переименовать файл под объект.</td>
+        </tr>
+    </table>
+</div>
+
+<div class="card">
+    <h2>4. Соответствие ТЗ (матрица)</h2>
+    <table>
+        <tr><th>Требование</th><th>Источник</th><th>Код</th><th>Статус</th></tr>
+        <tr>
+            <td>Доработки в обработке «Оплата КЗ по клиентам РДУ»</td>
+            <td>8815, 8837</td>
+            <td>Name / синоним / команды фона</td>
+            <td><span class="match">OK</span></td>
+        </tr>
+        <tr>
+            <td>Фон НДФЛ: одна ветка на запуск по регистрам (не все режимы сразу)</td>
+            <td>ФТ, сценарий дней 1–8</td>
+            <td><code>ВыполнитьОбработкуВФонеНДФЛ</code>: шаг1+2+3 подряд</td>
+            <td><span class="mismatch">FAIL</span></td>
+        </tr>
+        <tr>
+            <td>Налоговый период = год запуска − 1</td>
+            <td>ФТ</td>
+            <td><code>НачалоГода(Период)-1</code> → <code>НалоговыеПериоды</code></td>
+            <td><span class="match">OK</span> (при корректном Период)</td>
+        </tr>
+        <tr>
+            <td>Блокировка: дата Т−1 <strong>рабочий</strong> день, 09:00</td>
+            <td>Блокировка ДС.docx</td>
+            <td><code>НачалоДня(Период)-1 + 9ч</code> — календарный день</td>
+            <td><span class="mismatch">FAIL</span></td>
+        </tr>
+        <tr>
+            <td>Режим «Учитывать остатки»: отбор б/с <strong>МЕНЬШЕ</strong> обязательства; сумма блокировки = обязательство − б/с</td>
+            <td>Блокировка ДС.docx</td>
+            <td>условие <code>&lt;=</code>; <code>СуммаБлокировки = СуммаОбязательства</code> (полная)</td>
+            <td><span class="mismatch">FAIL</span></td>
+        </tr>
+        <tr>
+            <td>Объект блокировки НДФЛ / Вознаграждение</td>
+            <td>Блокировка ДС, CF</td>
+            <td>явная установка предопределённых</td>
+            <td><span class="match">OK</span></td>
+        </tr>
+        <tr>
+            <td>Фон НДФЛ: без поступлений/списаний с р/с (разборщик выписки)</td>
+            <td>8837 коммент 26.05</td>
+            <td>в фоне ПП/списаний нет</td>
+            <td><span class="match">OK</span></td>
+        </tr>
+        <tr>
+            <td>Смена статуса начисления — после п/п с р/с, не после перевода б/с→р/с</td>
+            <td>8837 коммент 24.07; открытый вопрос</td>
+            <td>статус меняется в <code>СформироватьШаблон</code> после режима р/с</td>
+            <td><span class="partial">Спорно</span> — заказчик против; в UAT 2.19 отмечено «к обсуждению»</td>
+        </tr>
+        <tr>
+            <td>Автосумма требований ≠ 0 → поручения и по договорам с требованием 0</td>
+            <td>8837 07.07 / 2.14</td>
+            <td>итог по <code>ДатаОснования</code> + фильтр б/с</td>
+            <td><span class="partial">Частично</span> — нужна проверка на данных</td>
+        </tr>
+        <tr>
+            <td>Окно поиска начислений ~2–3 месяца</td>
+            <td>8837 13.07</td>
+            <td><code>ДобавитьМесяц(..., -3)</code></td>
+            <td><span class="match">OK</span> (единые 3 мес.)</td>
+        </tr>
+        <tr>
+            <td>Пул Розничное ДУ, без расторжения, ФЛ</td>
+            <td>ФТ / блокировка</td>
+            <td><code>ДоговорыКЗаполнению</code></td>
+            <td><span class="match">OK</span></td>
+        </tr>
+        <tr>
+            <td>Развёрнутый отчёт ошибок на почту</td>
+            <td>8837: «ошибок не должно, исключаем»</td>
+            <td>журнал + флаг, почта ошибок слабая</td>
+            <td><span class="match">OK</span> по ТЗ (не требуется)</td>
+        </tr>
+    </table>
+</div>
+
+<div class="card">
+    <h2>5. Критичные замечания</h2>
+
+    <div class="issue-high">
+        <p><span class="badge crit">C1</span> <strong>Фон НДФЛ: три режима подряд вместо выбора ветки</strong></p>
+        <p>
+            По ФТ и сценарию Вадима (дни 1–8) регламент <strong>раз в день</strong> смотрит регистры и запускает
+            «Оплату КЗ» в <em>одном</em> режиме: блокировка <em>или</em> сравнение с б/с <em>или</em> с р/с.
+        </p>
+        <p>
+            В коде <code>ВыполнитьОбработкуВФонеНДФЛ</code> всегда подряд:
+            (1) НеУчитывать + блокировка + письмо,
+            (2) БрокерскимСчетом + поручения + письмо,
+            (3) РасчетнымСчетом + шаблон/статусы.
+            Проверок 68.01 / начального остатка блокировок / требований как гейтов ветки нет.
+        </p>
+        <p><em>Риск:</em> в дни, когда по схеме должна отрабатывать «пустая» ветка р/с или только б/с,
+        обработка всё равно создаёт блокировки/поручения/меняет статусы — расходится с замечаниями заказчика
+        («идёт по другой ветке», 23.07).</p>
+    </div>
+
+    <div class="issue-high">
+        <p><span class="badge crit">C2</span> <strong>Сумма блокировки при учёте остатков на б/с</strong></p>
+        <p>ТЗ: при флаге «Учитывать остатки» сумма блокировки = <code>Сумма обязательств − Брокерский счет</code>, отбор где б/с <strong>меньше</strong> обязательства.</p>
+        <p>Код: всегда <code>СуммаБлокировки = СуммаОбязательства</code>; условие <code>СуммаБрокерскийСчет &lt;= СуммаОбязательства</code>.</p>
+    </div>
+
+    <div class="issue-high">
+        <p><span class="badge crit">C3</span> <strong>Дата блокировки: календарный T−1 вместо рабочего дня</strong></p>
+        <pre>ДатаДок = НачалоДня(НачалоДня(Период) - 1) + 60*60*9;</pre>
+        <p>ТЗ: «ВСЕГДА … Т−1 <strong>рабочий</strong> день … 09:00». После выходных/праздников дата будет неверной.</p>
+    </div>
+
+    <div class="issue-high">
+        <p><span class="badge crit">C4</span> <strong>Смена статусов: <code>Возврат</code> в цикле</strong></p>
+        <p>В <code>ИзменитьСтатус…</code> при пустом/чужом основании — <code>Возврат</code> вместо <code>Продолжить</code>.
+        Остальные строки пакета не обновляются. Типовой шаблон CF рассчитан на один документ.</p>
+    </div>
+
+    <div class="issue-high">
+        <p><span class="badge crit">C5</span> <strong><code>СтрШаблон</code> без аргумента в теме/теле блокировки ВУК</strong></p>
+        <p>Текст из ТЗ содержит дату; в коде для ветки ВУК <code>%1</code> без подстановки — падение или битая тема.
+        Для НДФЛ аргумент передан.</p>
+    </div>
+</div>
+
+<div class="card">
+    <h2>6. Высокий риск</h2>
+
+    <div class="issue-high">
+        <p><span class="badge high">H1</span> <strong>Статус начисления меняется не в той точке процесса</strong></p>
+        <p>
+            Заказчик (24.07): статус менять после создания п/п <strong>с р/с</strong>, не после поручения перевода б/с→р/с.
+            Вендор в 2.19 оставил смену в обработке и пометил «к обсуждению».
+            Сейчас вызов из <code>СформироватьШаблон</code> (ветка р/с) — может быть рано относительно разборщика выписки.
+        </p>
+    </div>
+
+    <div class="issue-high">
+        <p><span class="badge high">H2</span> <strong>Шаги 2–3 фона без повторного <code>ЗаполнитьНачислениями</code></strong></p>
+        <p>После шага блокировки таблица не перечитывается под новый режим сравнения (вызовы закомментированы).
+        Даже если оставить «все шаги в одном запуске», отбор/суммы будут от режима шага 1.</p>
+    </div>
+
+    <div class="issue-high">
+        <p><span class="badge high">H3</span> <strong>Приоритет И/ИЛИ в <code>ДанныеДляРассылки</code></strong></p>
+        <pre>Если ВидРассылки = "Перевод" И СуммаПоручений = 0 ИЛИ СуммаОбязательства = 0</pre>
+        <p>При нулевой сумме обязательства отсекается любая рассылка. В 2.19 чинили кейс некорректной рассылки — этот оператор всё ещё опасен.</p>
+    </div>
+
+    <div class="issue-high">
+        <p><span class="badge high">H4</span> <strong>Запись документов при непроведённом основании</strong></p>
+        <p><code>Отказ = Истина</code>, но создание/проведение продолжается (поручение, блокировка).</p>
+    </div>
+</div>
+
+<div class="card">
+    <h2>7. Средние / низкие</h2>
+    <div class="issue-med">
+        <ul>
+            <li><span class="badge med">M1</span> Входящий номер поступлений/списаний не инкрементируется (ручной контур; в фоне по ТЗ не нужен).</li>
+            <li><span class="badge med">M2</span> Word COM + busy-wait <code>Задержка</code> на сервере — риск для фонового шага шаблона.</li>
+            <li><span class="badge med">M3</span> Ошибки почты → Info, без <code>ОшибкиВыполнения</code>.</li>
+            <li><span class="badge med">M4</span> Hardcode субсчёта 13W6XW в письмах (совпадает с текстом в тикете — осознанно, но хрупко).</li>
+            <li><span class="badge low">L1</span> Имя файла EPF ≠ Name объекта — путаница при передаче на установку.</li>
+            <li><span class="badge low">L2</span> Нет ФТ ВУК (8836) в комплекте — фон ВУК ревьюить неполно.</li>
+        </ul>
+    </div>
+</div>
+
+<div class="card">
+    <h2>8. Что совпало с ТЗ / CF</h2>
+    <div class="ok-block">
+        <ul>
+            <li>Развитие одной обработки «Оплата КЗ…», не отдельный продукт.</li>
+            <li>Команды фона НДФЛ/ВУК в <code>СведенияОВнешнейОбработке</code>.</li>
+            <li>Пул Розничное ДУ, ФЛ, без уведомления о расторжении.</li>
+            <li>Налоговый период год−1; окно поиска начислений 3 месяца.</li>
+            <li>Объекты блокировки НДФЛ/Вознаграждение — как в ТЗ и предопределённых CF.</li>
+            <li>В фоне НДФЛ нет автосоздания поступлений/списаний с р/с — как согласовал заказчик.</li>
+        </ul>
+    </div>
+</div>
+
+<div class="card">
+    <h2>9. Вопросы, которые ещё открыты</h2>
+    <ol>
+        <li>Гейты 68.01 / блокировки / требования — должны жить <strong>внутри</strong> EPF или во внешнем оркестраторе менеджера РДУ? Сейчас в EPF их нет, а «всё подряд» ломает сценарий дней.</li>
+        <li>Окончательное решение по смене статуса (после п/п с р/с другой обработкой) — зафиксировано ли письменно после 2.19?</li>
+        <li>Где ФТ/критерии приёмки по IMDEV-8836 (фон ВУК)?</li>
+    </ol>
+    <div class="verdict">
+        <strong>Минимум до повторной подачи:</strong> C1 (ветвление фона по ФТ), C2 (сумма блокировки), C3 (рабочий день), C4, C5;
+        согласовать H1 по статусам; переименовать файл EPF под <code>ОплатаКзПоКлиентамРДУ_2_19</code>.
+    </div>
+</div>
+
+<div class="card">
+    <h2>10. Метод проверки</h2>
+    <ul>
+        <li>epf-dump → XML/BSL</li>
+        <li>Сверка с CF Wim_Du и SRC EPF 1.19</li>
+        <li>Извлечение текста из docx/doc (Word)</li>
+        <li>Сверка матрицы требований ↔ код</li>
+    </ul>
+    <p class="meta">
+        Файлы: <code>CR_OplataKz_2_19.html</code> (этот отчёт),
+        <code>CR_Zamechaniya.md</code>,
+        <code>docs_extracted/</code>
+    </p>
+</div>
+
+</body>
+</html>
