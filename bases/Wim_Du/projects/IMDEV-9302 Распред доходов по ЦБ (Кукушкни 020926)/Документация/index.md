@@ -1,0 +1,6 @@
+# Документация IMDEV-9302
+
+| Файл | Назначение |
+|------|------------|
+| [how_it_works.html](how_it_works.html) | Принципы работы: постановка IMDEV-7688, уточнение в переписке, реализация EPF, счета CF Wim_Du |
+| [business_changes_parallel_create.html](business_changes_parallel_create.html) | Для бизнес-пользователей: что меняется при ускорении кнопки «Создать всё» (IMDEV-9302) |
