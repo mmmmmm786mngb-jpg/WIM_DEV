@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<title>IMDEV-9302: Базовая скорость «по-старому»</title>
+<style>
+body { font-family: Calibri, Arial, sans-serif; font-size: 15px; color: #222; line-height: 1.5; max-width: 900px; margin: 24px; }
+h1 { font-size: 20px; }
+h2 { font-size: 16px; margin-top: 22px; border-bottom: 1px solid #ccc; padding-bottom: 4px; }
+.ok { background: #e8f5e9; border-left: 4px solid #28a745; padding: 10px 14px; margin: 12px 0; }
+.info { background: #e7f5ff; border-left: 4px solid #17a2b8; padding: 10px 14px; margin: 12px 0; }
+.note { background: #fff8e1; border-left: 4px solid #f0ad4e; padding: 10px 14px; margin: 12px 0; }
+code { font-family: Consolas, monospace; font-size: 13px; }
+table { border-collapse: collapse; width: 100%; margin: 10px 0; }
+th, td { border: 1px solid #ccc; padding: 6px 8px; text-align: left; vertical-align: top; }
+th { background: #f0f0f0; width: 55%; }
+.muted { color: #666; font-size: 13px; }
+.highlight { font-size: 18px; font-weight: bold; color: #0d47a1; }
+.summary { background: #f5f9fc; border: 1px solid #b0bec5; padding: 14px 16px; margin: 14px 0 18px 0; }
+.summary h2 { margin: 0 0 10px 0; border: none; padding: 0; font-size: 16px; }
+.summary table th { width: 45%; }
+.kpi { font-size: 17px; font-weight: bold; }
+</style>
+</head>
+<body>
+
+<h1>Базовая скорость выполнения «по-старому»</h1>
+<p class="muted">
+IMDEV-9302. Замер последовательного режима кнопки «Создать всё»
+обработки <code>внРаспределениеДоходовПоЦеннымБумагам</code>.
+</p>
+
+<div class="summary">
+<h2>Базовые параметры запуска</h2>
+<table>
+<tr><th>Параметр</th><th>Значение</th></tr>
+<tr><td>Режим</td><td>«Создать всё», последовательный (без оптимизации)</td></tr>
+<tr><td>Дата документов</td><td>16.09.2026</td></tr>
+<tr><td>Заполненные вкладки</td><td>только <strong>НКД</strong> (Погашение и Дивиденды — пустые)</td></tr>
+<tr><td>Строк в таблице НКД</td><td class="kpi">19 688</td></tr>
+<tr><td>Средняя скорость создания</td><td class="kpi">≈ 42,4 док./мин (≈ 0,71 док./сек)</td></tr>
+<tr><td>Время на «Создать всё» (прогноз на весь объём)</td><td class="kpi">≈ 7 ч 45 мин</td></tr>
+</table>
+</div>
+
+<div class="info">
+Актуальный замер прогресса: <strong>21:02</strong>, создано <strong>7 712</strong> из 19 688.
+</div>
+
+<h2>Сводный отчёт (замер 21:02)</h2>
+<table>
+<tr><th>Параметр</th><th>Значение</th></tr>
+<tr><td>Общее количество документов к созданию (НКД)</td><td>19 688 шт.</td></tr>
+<tr><td>Уже создано на момент замера</td><td>7 712 шт.</td></tr>
+<tr><td>Осталось создать</td><td>11 976 шт.</td></tr>
+<tr><td>Время старта процесса</td><td>18:00</td></tr>
+<tr><td>Текущее время замера</td><td>21:02</td></tr>
+<tr><td>Затраченное время на текущий момент</td><td>3 ч 02 мин (182 минуты)</td></tr>
+<tr><td>Скорость создания</td><td>≈ 42,4 док./мин (≈ 0,71 док./сек)</td></tr>
+<tr><td>Прогнозное время до завершения</td><td>≈ 4 ч 43 мин</td></tr>
+<tr><td>Прогнозируемое время окончания</td><td>01:45 (следующих суток)</td></tr>
+<tr>
+  <td>Общее расчётное время на весь объём</td>
+  <td class="highlight">≈ 7 ч 45 мин</td>
+</tr>
+</table>
+
+<div class="ok">
+<strong>Итог для сравнения с оптимизацией:</strong>
+при текущей скорости «по-старому» полный прогон 19 688 документов НКД
+занимает порядка <strong>7 часов 45 минут</strong>
+(скорость ≈ 42,4 документа в минуту).
+</div>
+
+<h2>Как посчитано (21:02)</h2>
+<ol>
+<li>Прошло времени: с 18:00 до 21:02 = <strong>182 минуты</strong>.</li>
+<li>Скорость: 7712 / 182 ≈ <strong>42,37 док./мин</strong>
+(≈ 0,71 док./сек).</li>
+<li>Остаток: 19688 − 7712 = <strong>11976</strong> документов.</li>
+<li>До конца: 11976 / 42,37 ≈ <strong>283 минуты</strong> (≈ 4 ч 43 мин).</li>
+<li>Окончание: 21:02 + 4 ч 43 мин ≈ <strong>01:45</strong>.</li>
+<li>Всего с начала: 182 + 283 ≈ <strong>465 минут</strong> = <strong>7 ч 45 мин</strong>
+(или 19688 / 42,37 ≈ 465 мин).</li>
+</ol>
+
+<h2>Проверка предыдущего замера (20:58 / 7570)</h2>
+<table>
+<tr><th>Параметр</th><th>20:58</th><th>21:02</th></tr>
+<tr><td>Создано</td><td>7 570</td><td>7 712</td></tr>
+<tr><td>Прошло минут</td><td>178</td><td>182</td></tr>
+<tr><td>Скорость, док./мин</td><td>42,53</td><td>42,37</td></tr>
+<tr><td>Прогноз общего времени</td><td>7 ч 43 мин</td><td>7 ч 45 мин</td></tr>
+<tr><td>Прогноз окончания</td><td>01:43</td><td>01:45</td></tr>
+</table>
+
+<p>
+За 4 минуты (20:58 → 21:02) создано 7712 − 7570 = <strong>142</strong> документа
+(≈ 35,5 док./мин на этом отрезке — чуть ниже среднего, в пределах обычных колебаний).
+Расчёт замера 20:58 был верным; на 21:02 скорость и прогноз почти те же
+(разница ~2 минуты на весь объём).
+</p>
+
+<div class="note">
+Прогноз при постоянной скорости. В 1С при массовой записи скорость может
+снижаться (блокировки, нагрузка на СУБД, регламентные задания).
+Фактическое общее время лучше зафиксировать после полного завершения
+прогона и при необходимости обновить этот отчёт.
+</div>
+
+</body>
+</html>
