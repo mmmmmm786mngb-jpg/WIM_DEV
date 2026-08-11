@@ -1,0 +1,783 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Тип контрагента ЦБ РФ в сделках РЕПО — ответ</title>
+<style>
+  :root {
+    --ok: #28a745;
+    --err: #dc3545;
+    --info: #17a2b8;
+    --warn: #ffc107;
+    --bg: #f5f7fa;
+    --card: #ffffff;
+    --text: #1f2937;
+    --muted: #6b7280;
+    --border: #e5e7eb;
+    --accent: #0f766e;
+    --accent-soft: #ecfdf5;
+    --yellow: #fef9c3;
+    --blue: #eff6ff;
+    --purple: #f5f3ff;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: "Segoe UI", Tahoma, Arial, sans-serif;
+    background: linear-gradient(180deg, #eef2f7 0%, var(--bg) 220px);
+    color: var(--text);
+    line-height: 1.55;
+  }
+  .wrap {
+    max-width: 980px;
+    margin: 0 auto;
+    padding: 28px 18px 60px;
+  }
+  h1 {
+    font-size: 1.55rem;
+    margin: 0 0 8px;
+    color: #0b3b36;
+  }
+  .meta {
+    color: var(--muted);
+    font-size: 0.92rem;
+    margin-bottom: 22px;
+  }
+  .meta span { margin-right: 14px; }
+  .section {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 18px 20px;
+    margin-bottom: 18px;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+  }
+  .section h2 {
+    margin: 0 0 12px;
+    font-size: 1.15rem;
+    color: var(--accent);
+    border-bottom: 2px solid var(--accent-soft);
+    padding-bottom: 8px;
+  }
+  .section h3 {
+    margin: 18px 0 8px;
+    font-size: 1.02rem;
+    color: #115e59;
+  }
+  .draft {
+    border: 2px solid #0f766e;
+    background: linear-gradient(180deg, #ecfdf5 0%, #ffffff 40%);
+  }
+  .draft .label {
+    display: inline-block;
+    background: var(--accent);
+    color: #fff;
+    font-size: 0.78rem;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+    padding: 4px 10px;
+    border-radius: 999px;
+    margin-bottom: 12px;
+  }
+  .draft-body {
+    background: #fff;
+    border: 1px solid #99f6e4;
+    border-radius: 8px;
+    padding: 14px 16px;
+    white-space: pre-wrap;
+    font-size: 0.98rem;
+  }
+  .callout {
+    border-radius: 8px;
+    padding: 12px 14px;
+    margin: 12px 0;
+  }
+  .callout.info { background: var(--blue); border-left: 4px solid var(--info); }
+  .callout.warn { background: var(--yellow); border-left: 4px solid var(--warn); }
+  .callout.ok { background: var(--accent-soft); border-left: 4px solid var(--ok); }
+  .callout.purple { background: var(--purple); border-left: 4px solid #7c3aed; }
+  .callout.highlight {
+    background: var(--yellow);
+    border-left: 5px solid #eab308;
+    padding: 16px 18px;
+    font-size: 1.18rem;
+    line-height: 1.5;
+    font-weight: 600;
+    color: #713f12;
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 10px 0 6px;
+    font-size: 0.95rem;
+  }
+  th, td {
+    border: 1px solid var(--border);
+    padding: 8px 10px;
+    text-align: left;
+    vertical-align: top;
+  }
+  th {
+    background: #f8fafc;
+    color: #334155;
+    font-weight: 600;
+  }
+  tr.hl td { background: #fffbeb; }
+  .tag {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    font-weight: 600;
+  }
+  .tag.green { background: #dcfce7; color: #166534; }
+  .tag.amber { background: #fef3c7; color: #92400e; }
+  .tag.blue { background: #dbeafe; color: #1e40af; }
+  .shots {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 14px;
+  }
+  figure {
+    margin: 0;
+    background: #f8fafc;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+  figure img {
+    display: block;
+    width: 100%;
+    height: auto;
+    border-bottom: 1px solid var(--border);
+  }
+  figcaption {
+    padding: 10px 12px;
+    font-size: 0.9rem;
+    color: #374151;
+  }
+  .flow {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr auto 1fr;
+    gap: 8px;
+    align-items: stretch;
+    margin: 14px 0;
+  }
+  @media (max-width: 800px) {
+    .flow { grid-template-columns: 1fr; }
+    .arrow { transform: rotate(90deg); text-align: center; }
+  }
+  .box {
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px;
+    background: #fff;
+  }
+  .box strong { display: block; margin-bottom: 6px; color: #0f766e; }
+  .arrow {
+    align-self: center;
+    color: var(--muted);
+    font-weight: 700;
+    font-size: 1.2rem;
+  }
+  .check {
+    list-style: none;
+    padding: 0;
+    margin: 8px 0;
+  }
+  .check li {
+    padding: 8px 10px 8px 36px;
+    position: relative;
+    margin-bottom: 6px;
+    background: #f8fafc;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+  }
+  .check li:before {
+    content: "OK";
+    position: absolute;
+    left: 8px;
+    top: 8px;
+    font-size: 0.7rem;
+    font-weight: 700;
+    color: #fff;
+    background: var(--ok);
+    border-radius: 4px;
+    padding: 2px 5px;
+  }
+  code {
+    background: #f1f5f9;
+    padding: 1px 5px;
+    border-radius: 4px;
+    font-family: Consolas, "Courier New", monospace;
+    font-size: 0.92em;
+  }
+  pre.code {
+    background: #0f172a;
+    color: #e2e8f0;
+    border-radius: 8px;
+    padding: 14px 16px;
+    overflow-x: auto;
+    font-family: Consolas, "Courier New", monospace;
+    font-size: 0.86rem;
+    line-height: 1.45;
+    margin: 10px 0 14px;
+    white-space: pre;
+  }
+  pre.code .c { color: #94a3b8; }
+  pre.code .k { color: #7dd3fc; }
+  pre.code .s { color: #86efac; }
+  .algo-step {
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px 14px;
+    margin: 10px 0;
+    background: #f8fafc;
+  }
+  .algo-step .num {
+    display: inline-block;
+    background: var(--accent);
+    color: #fff;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    text-align: center;
+    line-height: 24px;
+    font-size: 0.85rem;
+    font-weight: 700;
+    margin-right: 8px;
+  }
+  .footer {
+    margin-top: 8px;
+    color: var(--muted);
+    font-size: 0.85rem;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <h1>Тип контрагента ЦБ РФ в сделках РЕПО</h1>
+
+  <!-- ========== 1. OTVET ========== -->
+  <div class="section draft">
+    <div class="label">Ответ пользователю</div>
+    <div class="draft-body">Добрый день!
+
+В сделках РЕПО реквизит «Тип контрагента ЦБ РФ» заполняется не всегда из карточки контрагента сделки.
+
+Важно: это поле из ДУ готовым значением не передаётся. В конфигурации ДУ у сделки РЕПО такого реквизита нет. Значение проставляется уже в ФИН при загрузке обмена ДУ → ФИН (алгоритм «СчетаЕПСПроставитьВСделкеРЕПО»).
+
+Если для портфеля включён параметр «Определять тип контрагента по РЕПО от клиента ДУ», значение берётся из реквизита «Тип контрагента ЦБ РФ» у клиента портфеля (в вашем примере — АО «НПФ Альфа»), а не у Банка ВТБ (ПАО).
+
+Поэтому в сделке стоит «Негосударственные финансовые организации», хотя у ВТБ в карточке — «Кредитные организации». Это штатное поведение для портфелей ДУ при включённом параметре.
+
+Проверить можно так:
+1) параметры портфеля ДУ 8298 / учётная политика — флаг «Определять тип контрагента по РЕПО от клиента ДУ»;
+2) карточку клиента портфеля (НПФ Альфа) — реквизит «Тип контрагента ЦБ РФ».
+
+С уважением.</div>
+  </div>
+
+  <!-- ========== 2. VOPROS ========== -->
+  <div class="section">
+    <h2>1. Суть вопроса</h2>
+    <p>Пользователь просит пояснить, <strong>откуда заполняется</strong> поле «Тип контрагента ЦБ РФ» в сделках РЕПО.</p>
+    <p>Наблюдение:</p>
+    <ul>
+      <li>В сделке контрагент = <strong>Банк ВТБ (ПАО)</strong>.</li>
+      <li>В карточке ВТБ тип = <span class="tag green">Кредитные организации</span>.</li>
+      <li>В самой сделке РЕПО тип = <span class="tag amber">Негосударственные финансовые организации</span>.</li>
+      <li>Это важно, потому что тип влияет на учёт и проводки.</li>
+    </ul>
+    <div class="callout highlight">
+      Кажется, что система «подставила не то». На самом деле подстановка идёт по другому источнику — по клиенту портфеля ДУ, а не по брокеру/контрагенту сделки.
+    </div>
+  </div>
+
+  <!-- ========== 3. PRIMERY IZ KARTINOK ========== -->
+  <div class="section">
+    <h2>2. Что видно на скриншотах из письма</h2>
+
+    <h3>2.1. Сделка РЕПО (обратное)</h3>
+    <table>
+      <thead>
+        <tr>
+          <th>Реквизит</th>
+          <th>Значение на скриншоте</th>
+          <th>Комментарий</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Вид / номер</td>
+          <td>Сделка РЕПО (Обратное), 8298-000000116</td>
+          <td>Дата 06.08.2026</td>
+        </tr>
+        <tr>
+          <td>Портфель</td>
+          <td>ДУ 8298 (АО «НПФ Альфа»)</td>
+          <td>Ключ к разгадке: клиент портфеля — НПФ</td>
+        </tr>
+        <tr>
+          <td>Контрагент / Брокер</td>
+          <td>Банк ВТБ (ПАО)</td>
+          <td>Именно эту карточку пользователь открывал для сверки</td>
+        </tr>
+        <tr>
+          <td>Счет брокера</td>
+          <td>14K5P1</td>
+          <td></td>
+        </tr>
+        <tr class="hl">
+          <td><strong>Тип контрагента ЦБ РФ</strong></td>
+          <td><strong>Негосударственные финансовые организации</strong></td>
+          <td>Не совпадает с типом ВТБ</td>
+        </tr>
+        <tr>
+          <td>Режим торгов</td>
+          <td>EQRP_BND</td>
+          <td>Биржевой режим; галка «Внебиржевая сделка» не стоит</td>
+        </tr>
+        <tr>
+          <td>Ставка РЕПО</td>
+          <td>13.40</td>
+          <td>Валюта RUB</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h3>2.2. Карточка контрагента «Банк ВТБ (ПАО)»</h3>
+    <table>
+      <thead>
+        <tr>
+          <th>Реквизит</th>
+          <th>Значение на скриншоте</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Код</td>
+          <td>000031870</td>
+        </tr>
+        <tr>
+          <td>ИНН / КПП / ОГРН</td>
+          <td>7702010139 / 784201001 / 1027739609391</td>
+        </tr>
+        <tr>
+          <td>Юр./физ. лицо</td>
+          <td>Юр. лицо (нерезидент — нет)</td>
+        </tr>
+        <tr class="hl">
+          <td><strong>Тип контрагента ЦБ РФ</strong></td>
+          <td><strong>Кредитные организации</strong></td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="shots">
+      <figure>
+        <img src="msg_cb_repo_extract/attachments/00_image001.jpg" alt="Сделка РЕПО с типом Негосударственные финансовые организации">
+        <figcaption>
+          <strong>Рис. 1.</strong> Сделка РЕПО: поле «Тип контрагента ЦБ РФ» = «Негосударственные финансовые организации»
+          при контрагенте Банк ВТБ (ПАО) и портфеле ДУ 8298 (АО «НПФ Альфа»).
+        </figcaption>
+      </figure>
+      <figure>
+        <img src="msg_cb_repo_extract/attachments/01_image002.jpg" alt="Карточка ВТБ с типом Кредитные организации">
+        <figcaption>
+          <strong>Рис. 2.</strong> Карточка контрагента Банк ВТБ (ПАО): «Тип контрагента ЦБ РФ» = «Кредитные организации».
+        </figcaption>
+      </figure>
+    </div>
+  </div>
+
+  <!-- ========== 4. RASUZH DENIE ========== -->
+  <div class="section">
+    <h2>3. Ход рассуждений (для бизнес-пользователя)</h2>
+
+    <h3>Шаг 1. Сравниваем два значения</h3>
+    <p>
+      Если бы система всегда копировала тип из карточки контрагента сделки,
+      в РЕПО должно было бы стоять <span class="tag green">Кредитные организации</span>.
+      Но стоит <span class="tag amber">Негосударственные финансовые организации</span>.
+      Значит, источник заполнения — <strong>не карточка ВТБ</strong>.
+    </p>
+
+    <h3>Шаг 2. Смотрим на портфель</h3>
+    <p>
+      Портфель сделки — <strong>ДУ 8298 (АО «НПФ Альфа»)</strong>.
+      НПФ — это типичная <em>негосударственная финансовая организация</em>.
+      Тип в сделке совпадает именно с ожидаемым типом клиента ДУ, а не брокера.
+    </p>
+    <div class="callout ok">
+      Вывод: в сделку подтянулся тип <strong>клиента портфеля</strong> (НПФ Альфа), а не тип контрагента/брокера (ВТБ).
+    </div>
+
+    <h3>Шаг 3. Почему так сделано в системе</h3>
+    <p>
+      Для портфелей доверительного управления в учётной политике / параметрах портфеля есть специальный флаг:
+    </p>
+    <p style="text-align:center; margin:14px 0;">
+      <span class="tag blue">Определять тип контрагента по РЕПО от клиента ДУ</span>
+    </p>
+    <p>Когда флаг включён:</p>
+    <div class="flow">
+      <div class="box">
+        <strong>1. Берём портфель</strong>
+        ДУ 8298<br>
+        (АО «НПФ Альфа»)
+      </div>
+      <div class="arrow">-&gt;</div>
+      <div class="box">
+        <strong>2. Берём клиента портфеля</strong>
+        АО «НПФ Альфа»<br>
+        (не Банк ВТБ)
+      </div>
+      <div class="arrow">-&gt;</div>
+      <div class="box">
+        <strong>3. Копируем его тип ЦБ РФ</strong>
+        Негосударственные<br>
+        финансовые организации
+      </div>
+    </div>
+    <p>
+      Если флаг <strong>выключен</strong>, тип берётся как обычно — из контрагента сделки (ВТБ → «Кредитные организации»).
+    </p>
+
+    <h3>Шаг 4. Зачем это бизнесу</h3>
+    <div class="callout info">
+      В РЕПО по портфелю ДУ контрагент на форме часто = брокер/банк (ВТБ),
+      но для регуляторного и бухгалтерского учёта важен тип <strong>клиента ДУ</strong>
+      (кто фактически владелец средств — НПФ, УК и т.п.).
+      От типа зависят счета ЕПС / символы ОФР и, как следствие, проводки.
+    </div>
+    <p>Поэтому система умеет «переключить» источник типа именно для РЕПО по ДУ.</p>
+
+    <h3>Шаг 5. Это не ошибка обмена</h3>
+    <ul>
+      <li>В ДУ у сделки РЕПО поля «Тип контрагента ЦБ РФ» нет — из ДУ оно не «приехало».</li>
+      <li>Значение посчитала сторона ФИН при загрузке обмена (алгоритм <code>СчетаЕПСПроставитьВСделкеРЕПО</code>).</li>
+      <li>Та же логика есть на форме БП в ФИН (<code>ОбновитьТипКонтрагента</code>) и при подборе символов ОФР.</li>
+    </ul>
+    <div class="callout purple">
+      В примере на скриншоте сделка биржевая (режим EQRP_BND, «Внебиржевая сделка» не отмечена).
+      Правило заполнения типа ЦБ РФ одинаково для таких сделок РЕПО: решает параметр портфеля, а не «биржа / ОТС».
+    </div>
+  </div>
+
+  <!-- ========== 4. ALGORITM KODA ========== -->
+  <div class="section">
+    <h2>4. Алгоритм в коде: откуда подтягивается поле</h2>
+
+    <h3>Как именно заполнилось поле в вашем примере (последовательность)</h3>
+    <div class="callout highlight">
+      Поле <strong>не пришло готовым из ДУ</strong>. Оно было <strong>перезаполнено в ФИН</strong>
+      в момент загрузки обмена ДУ → ФИН.
+    </div>
+
+    <div class="algo-step">
+      <span class="num">1</span>
+      <strong>В ДУ</strong> создаётся / проводится сделка РЕПО (портфель ДУ 8298, контрагент Банк ВТБ и т.д.).
+      Реквизита «Тип контрагента ЦБ РФ» у БП «Сделки РЕПО» в ДУ <strong>нет</strong> — передать его нечему.
+    </div>
+    <div class="algo-step">
+      <span class="num">2</span>
+      <strong>Обмен ДУ → ФИН</strong> загружает сделку в ФИН: подтягиваются портфель, контрагент, суммы, даты и прочие реквизиты обмена.
+    </div>
+    <div class="algo-step">
+      <span class="num">3</span>
+      При загрузке в ФИН вызывается алгоритм правил обмена
+      <code>СчетаЕПСПроставитьВСделкеРЕПО</code>
+      (флаг <code>ИспользуетсяПриЗагрузке = true</code>).
+      Именно здесь заполняется <code>ТипКонтрагентаЦБРФ</code>.
+    </div>
+    <div class="algo-step">
+      <span class="num">4</span>
+      <strong>Условие входа в алгоритм заполнения типа:</strong>
+      у загружаемого объекта <code>ЕПС = Истина</code> <strong>или</strong> <code>НУ_ЕПС = Истина</code>.
+      Без этого ветка с типом ЦБ РФ не выполняется.
+    </div>
+    <div class="algo-step">
+      <span class="num">5</span>
+      Внутри алгоритма сработали такие условия (для сделки 8298-000000116):
+      <table style="margin-top:10px;">
+        <thead>
+          <tr>
+            <th>Проверка в коде</th>
+            <th>Результат в примере</th>
+            <th>Что сделала система</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>Если Объект.ЕПС или Объект.НУ_ЕПС</code></td>
+            <td><span class="tag green">Сработало</span> (учёт ЕПС по портфелю ДУ)</td>
+            <td>Вошли в блок заполнения типа</td>
+          </tr>
+          <tr>
+            <td>Кандидат по умолчанию = <code>Объект.Контрагент</code></td>
+            <td>Банк ВТБ (ПАО)</td>
+            <td>Пока кандидат — ВТБ</td>
+          </tr>
+          <tr class="hl">
+            <td>Параметр портфеля<br><code>ОпределятьТипКонтрагентаПоРепоОтКлиентаДУ</code> = Истина?</td>
+            <td><span class="tag amber">Да, сработало</span></td>
+            <td>Кандидата заменили на <code>Портфель.Клиент</code> = АО «НПФ Альфа»</td>
+          </tr>
+          <tr class="hl">
+            <td>Читаем <code>кандидат.ТипКонтрагентаЦБРФ</code></td>
+            <td>У НПФ Альфа: «Негосударственные финансовые организации»</td>
+            <td>Это значение записали в сделку ФИН</td>
+          </tr>
+          <tr>
+            <td>Тип заполнен? Иначе ошибка загрузки</td>
+            <td><span class="tag green">Заполнен</span></td>
+            <td>Загрузка прошла без отказа</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="algo-step">
+      <span class="num">6</span>
+      Итог на форме в ФИН: контрагент = ВТБ, а «Тип контрагента ЦБ РФ» =
+      <strong>Негосударственные финансовые организации</strong> (с клиента портфеля).
+      Поэтому карточка ВТБ («Кредитные организации») с полем сделки не совпадает — это ожидаемо.
+    </div>
+
+    <div class="callout ok">
+      Кратко: ДУ отдал сделку без этого поля → ФИН при загрузке сам посчитал тип
+      процедурой/алгоритмом <code>СчетаЕПСПроставитьВСделкеРЕПО</code> →
+      из-за параметра портфеля взял тип у клиента ДУ (НПФ Альфа), а не у ВТБ.
+    </div>
+
+    <h3>Идея в коде</h3>
+    <div class="callout info">
+      Реквизит сделки <code>ТипКонтрагентаЦБРФ</code> — это <strong>снимок типа на момент заполнения</strong>,
+      а не «живая» ссылка на карточку контрагента формы.
+      Система сначала выбирает, <em>у какого</em> элемента справочника «Контрагенты» читать тип
+      (контрагент сделки или клиент портфеля), и только потом копирует его
+      <code>ТипКонтрагентаЦБРФ</code> в сделку.
+    </div>
+    <p>
+      Зачем: на форме РЕПО в поле «Контрагент» часто стоит брокер (ВТБ), но для учёта ЕПС/ОФР
+      по портфелям ДУ нужен тип <strong>клиента ДУ</strong>. Параметр портфеля включает этот особый режим.
+    </p>
+
+    <h3>Где живёт логика</h3>
+    <table>
+      <thead>
+        <tr>
+          <th>Место</th>
+          <th>Когда срабатывает</th>
+          <th>Что делает</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr class="hl">
+          <td>Правила обмена ДУ → ФИН,<br>алгоритм <code>СчетаЕПСПроставитьВСделкеРЕПО</code></td>
+          <td><strong>При загрузке сделки из ДУ</strong><br>(основной путь для вашего примера)</td>
+          <td>Перезаполняет тип в ФИН по параметру портфеля</td>
+        </tr>
+        <tr>
+          <td>БП <code>СделкиРЕПО</code>, форма,<br>процедура <code>ОбновитьТипКонтрагента()</code></td>
+          <td>Если пользователь в ФИН меняет портфель / дату / контрагента</td>
+          <td>Тот же расчёт типа на форме</td>
+        </tr>
+        <tr>
+          <td>Модуль менеджера <code>СделкиРЕПО</code><br>(подбор символов ОФР)</td>
+          <td>При расчётах / проводках</td>
+          <td>Читает уже записанный тип сделки;<br>если пусто — снова определяет источник по тому же параметру</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h3>Когда вызывается на форме (если правят сделку уже в ФИН)</h3>
+    <div class="algo-step">
+      <span class="num">1</span>
+      <strong>Изменение портфеля</strong> или <strong>даты</strong> сделки
+      (<code>ПортфельПриИзменении</code> / <code>ДатаПриИзменении</code> → <code>ИзмененПортфель()</code>).
+      После смены портфеля тип пересчитывается, потому что параметр и клиент портфеля могли измениться.
+    </div>
+    <div class="algo-step">
+      <span class="num">2</span>
+      <strong>Изменение контрагента</strong> сделки
+      (<code>КонтрпартнерПриИзменении</code> → <code>ОбновитьТипКонтрагента()</code>).
+      Если параметр выключен — тип обновится с нового контрагента;
+      если включён — останется тип клиента портфеля (смена ВТБ на другого брокера тип не сменит).
+    </div>
+
+    <h3>Условия и ветвление (пошагово)</h3>
+    <div class="algo-step">
+      <span class="num">A</span>
+      Берём «кандидата» по умолчанию: <code>КонтрагентДляТипКонтрагентаЦБРФ = Объект.Контрагент</code>
+      (в примере — Банк ВТБ).
+    </div>
+    <div class="algo-step">
+      <span class="num">B</span>
+      Читаем параметр портфеля на дату сделки:
+      <code>ОпределятьТипКонтрагентаПоРепоОтКлиентаДУ</code>.
+    </div>
+    <div class="algo-step">
+      <span class="num">C</span>
+      <strong>Если параметр = Истина</strong> → подменяем кандидата на
+      <code>Портфель.Клиент</code> (в примере — АО «НПФ Альфа»).
+      <strong>Если параметр = Ложь / не задан</strong> → оставляем контрагента сделки (ВТБ).
+    </div>
+    <div class="algo-step">
+      <span class="num">D</span>
+      В сделку пишем:
+      <code>Объект.ТипКонтрагентаЦБРФ = кандидат.ТипКонтрагентаЦБРФ</code>.
+    </div>
+
+    <h3>Применение к примеру из скриншотов</h3>
+    <table>
+      <thead>
+        <tr>
+          <th>Шаг алгоритма</th>
+          <th>Значение в примере</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>A. Контрагент сделки</td>
+          <td>Банк ВТБ (ПАО) → тип «Кредитные организации»</td>
+        </tr>
+        <tr class="hl">
+          <td>B–C. Параметр портфеля ДУ 8298</td>
+          <td>Сработал режим «от клиента ДУ» → кандидат = НПФ Альфа</td>
+        </tr>
+        <tr class="hl">
+          <td>D. Результат в сделке</td>
+          <td><strong>Негосударственные финансовые организации</strong></td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h3>Фрагмент кода формы (ФИН)</h3>
+    <p class="footer">Файл: <code>BusinessProcesses/СделкиРЕПО/Forms/ФормаБизнесПроцесса/Ext/Form/Module.bsl</code></p>
+    <pre class="code"><span class="c">// При смене портфеля / даты</span>
+Процедура ИзмененПортфель()
+    <span class="c">// ... заполнение видов учета по портфелю ...</span>
+    ОбновитьТипКонтрагента();
+КонецПроцедуры
+
+<span class="c">// При смене контрагента</span>
+Процедура КонтрпартнерПриИзмененииНаСервере()
+    ОбновитьТипКонтрагента();
+КонецПроцедуры
+
+Процедура ОбновитьТипКонтрагента()
+
+    КонтрагентДляТипКонтрагентаЦБРФ = Объект.Контрагент;
+
+    <span class="k">Если</span> УправлениеПараметрамиПортфеля.ЗначениеПараметраПортфеля(
+            Объект.Портфель,
+            ПланыВидовХарактеристик.ПараметрыПортфеля.ОпределятьТипКонтрагентаПоРепоОтКлиентаДУ,
+            Объект.Дата) = Истина <span class="k">Тогда</span>
+        КонтрагентДляТипКонтрагентаЦБРФ =
+            ОбщегоНазначения.ЗначениеРеквизитаОбъекта(Объект.Портфель, <span class="s">"Клиент"</span>);
+    <span class="k">КонецЕсли</span>;
+
+    Объект.ТипКонтрагентаЦБРФ =
+        ОбщегоНазначения.ЗначениеРеквизитаОбъекта(
+            КонтрагентДляТипКонтрагентаЦБРФ, <span class="s">"ТипКонтрагентаЦБРФ"</span>);
+
+КонецПроцедуры</pre>
+
+    <h3>То же при обмене ДУ → ФИН (основной путь для загруженных сделок)</h3>
+    <p>
+      Алгоритм <code>СчетаЕПСПроставитьВСделкеРЕПО</code> выполняется <strong>при загрузке</strong>.
+      Сначала проверяется <code>ЕПС</code> или <code>НУ_ЕПС</code>, затем — параметр портфеля,
+      затем тип записывается в объект ФИН. Если тип у кандидата пустой — загрузка падает с ошибкой (отказ).
+    </p>
+    <pre class="code"><span class="k">Если</span> Объект.ЕПС или Объект.НУ_ЕПС <span class="k">Тогда</span>
+    КонтрагентДляТипКонтрагентаЦБРФ = Объект.Контрагент;
+    <span class="k">Если</span> ...ОпределятьТипКонтрагентаПоРепоОтКлиентаДУ... = Истина <span class="k">Тогда</span>
+        КонтрагентДляТипКонтрагентаЦБРФ = ...Портфель.Клиент...;
+    <span class="k">КонецЕсли</span>;
+    Объект.ТипКонтрагентаЦБРФ = ...кандидат.ТипКонтрагентаЦБРФ...;
+    <span class="k">Если</span> НЕ ЗначениеЗаполнено(Объект.ТипКонтрагентаЦБРФ) <span class="k">Тогда</span>
+        <span class="c">// ошибка загрузки, Отказ = Истина</span>
+    <span class="k">КонецЕсли</span>;
+<span class="k">КонецЕсли</span>;</pre>
+
+    <div class="callout warn">
+      Важно: после записи в сделку тип уже «зафиксирован». Если потом поменять тип в карточке
+      НПФ или ВТБ, уже созданные сделки сами не обновятся — только при повторном срабатывании
+      обработчиков (смена портфеля/контрагента) или перезагрузке по обмену.
+    </div>
+  </div>
+
+  <!-- ========== 5. PRAVILA ========== -->
+  <div class="section">
+    <h2>5. Правило заполнения простыми словами</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Условие</th>
+          <th>Откуда берётся «Тип контрагента ЦБ РФ»</th>
+          <th>Что было бы в примере</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Параметр портфеля <strong>выключен</strong></td>
+          <td>Из контрагента сделки (Банк ВТБ)</td>
+          <td><span class="tag green">Кредитные организации</span></td>
+        </tr>
+        <tr class="hl">
+          <td>Параметр портфеля <strong>включён</strong> (типично для ДУ)</td>
+          <td>Из клиента портфеля (НПФ Альфа)</td>
+          <td><span class="tag amber">Негосударственные финансовые организации</span></td>
+        </tr>
+      </tbody>
+    </table>
+    <p class="footer">
+      Имя параметра в системе: «Определять тип контрагента по РЕПО от клиента ДУ»
+      (параметр портфеля / реквизит учётной политики).
+    </p>
+  </div>
+
+  <!-- ========== 6. KAK PROVERIT ========== -->
+  <div class="section">
+    <h2>6. Как самостоятельно проверить в базе</h2>
+    <ul class="check">
+      <li>
+        Открыть портфель <strong>ДУ 8298</strong> и посмотреть параметры портфеля /
+        связанную учётную политику: флаг
+        «Определять тип контрагента по РЕПО от клиента ДУ» должен быть включён.
+      </li>
+      <li>
+        В карточке портфеля открыть реквизит <strong>Клиент</strong>
+        (ожидается АО «НПФ Альфа») и проверить у него
+        «Тип контрагента ЦБ РФ» = «Негосударственные финансовые организации».
+      </li>
+      <li>
+        Сверить: значение в сделке РЕПО должно совпасть с типом <em>клиента</em>,
+        а не с типом ВТБ.
+      </li>
+      <li>
+        Для сравнения: у портфеля без этого флага тип в новой сделке РЕПО
+        подтянется уже из контрагента сделки.
+      </li>
+    </ul>
+  </div>
+
+  <!-- ========== 7. IT OG ========== -->
+  <div class="section">
+    <h2>7. Итог</h2>
+    <div class="callout ok">
+      В примере всё согласовано с настройкой ДУ:
+      тип в сделке <strong>перезаполнен в ФИН при обмене</strong> (не передан из ДУ) —
+      взят у клиента портфеля (НПФ Альфа) = «Негосударственные финансовые организации»,
+      поэтому он не равен типу ВТБ («Кредитные организации»).
+      Это ожидаемое поведение 1С ФИН.
+    </div>
+  </div>
+
+</div>
+</body>
+</html>
