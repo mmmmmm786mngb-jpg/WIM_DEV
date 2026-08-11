@@ -1,0 +1,503 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>IMDEV-9302: Отчёт ИТ-тестирования параллельного «Создать все»</title>
+<style>
+:root {
+  --ok: #28a745;
+  --err: #dc3545;
+  --info: #17a2b8;
+  --warn: #f0ad4e;
+  --bg: #f4f7fb;
+  --card: #ffffff;
+  --text: #1f2a37;
+  --muted: #5b6b7c;
+  --line: #d7e0ea;
+  --accent: #0b6bcb;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  font-family: "Segoe UI", Calibri, Arial, sans-serif;
+  color: var(--text);
+  background:
+    radial-gradient(1200px 500px at 10% -10%, #dcecff 0%, transparent 55%),
+    radial-gradient(900px 400px at 100% 0%, #e8fff3 0%, transparent 50%),
+    var(--bg);
+  line-height: 1.55;
+}
+.wrap { max-width: 1080px; margin: 0 auto; padding: 28px 20px 60px; }
+.hero {
+  background: linear-gradient(135deg, #0b6bcb 0%, #0a8f6c 100%);
+  color: #fff;
+  border-radius: 18px;
+  padding: 28px 30px;
+  box-shadow: 0 12px 30px rgba(11, 107, 203, 0.25);
+}
+.hero h1 { margin: 0 0 8px; font-size: 28px; font-weight: 700; }
+.hero p { margin: 0; opacity: 0.95; }
+.badges { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
+.badge {
+  display: inline-block;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: rgba(255,255,255,0.18);
+  border: 1px solid rgba(255,255,255,0.28);
+  font-size: 13px;
+}
+.grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  margin: 22px 0;
+}
+@media (max-width: 900px) {
+  .grid { grid-template-columns: repeat(2, 1fr); }
+}
+.kpi {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 14px 16px;
+  box-shadow: 0 2px 8px rgba(20, 40, 70, 0.04);
+}
+.kpi .label { color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: 0.04em; }
+.kpi .value { font-size: 24px; font-weight: 700; margin-top: 4px; color: var(--accent); }
+.kpi .sub { color: var(--muted); font-size: 13px; margin-top: 2px; }
+.card {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  padding: 20px 22px;
+  margin: 18px 0;
+  box-shadow: 0 2px 10px rgba(20, 40, 70, 0.04);
+}
+h2 {
+  margin: 0 0 12px;
+  font-size: 20px;
+  border-bottom: 1px solid var(--line);
+  padding-bottom: 8px;
+}
+h3 { margin: 18px 0 8px; font-size: 16px; }
+.ok, .info, .note, .err {
+  border-radius: 10px;
+  padding: 12px 14px;
+  margin: 12px 0;
+}
+.ok { background: #e8f5e9; border-left: 4px solid var(--ok); }
+.info { background: #e7f8fc; border-left: 4px solid var(--info); }
+.note { background: #fff8e1; border-left: 4px solid var(--warn); }
+.err { background: #fdecea; border-left: 4px solid var(--err); }
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 10px 0 4px;
+  font-size: 14px;
+}
+th, td {
+  border: 1px solid var(--line);
+  padding: 8px 10px;
+  text-align: left;
+  vertical-align: top;
+}
+th { background: #f3f7fb; width: 42%; }
+code, pre {
+  font-family: Consolas, "Courier New", monospace;
+  font-size: 12.5px;
+}
+pre {
+  background: #0f1720;
+  color: #e8eef5;
+  border-radius: 10px;
+  padding: 14px;
+  overflow: auto;
+  white-space: pre-wrap;
+}
+.muted { color: var(--muted); font-size: 13px; }
+.step {
+  display: grid;
+  grid-template-columns: 56px 1fr;
+  gap: 14px;
+  margin: 22px 0;
+  align-items: start;
+}
+.step-num {
+  width: 56px;
+  height: 56px;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #0b6bcb, #19a37a);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 18px;
+}
+.shot {
+  margin-top: 10px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  overflow: hidden;
+  background: #eef2f7;
+}
+.shot img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+.caption {
+  padding: 8px 12px;
+  font-size: 13px;
+  color: var(--muted);
+  background: #f8fafc;
+  border-top: 1px solid var(--line);
+}
+.compare {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+@media (max-width: 800px) {
+  .compare { grid-template-columns: 1fr; }
+}
+.compare .box {
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 14px;
+  background: #fafcfe;
+}
+.compare .box.old { border-top: 4px solid #90a4ae; }
+.compare .box.new { border-top: 4px solid var(--ok); }
+.footer {
+  margin-top: 28px;
+  color: var(--muted);
+  font-size: 13px;
+  text-align: center;
+}
+a { color: #0b6bcb; }
+.pass {
+  display: inline-block;
+  background: var(--ok);
+  color: #fff;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 13px;
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<div class="hero">
+  <h1>ИТ-тестирование IMDEV-9302</h1>
+  <p>Параллельное создание операций «Создать все» в обработке распределения доходов по ценным бумагам</p>
+  <div class="badges">
+    <span class="badge">Дата теста: 11.08.2026</span>
+    <span class="badge">Период операций: 18.03.2026</span>
+    <span class="badge">Пул: Розничное ДУ</span>
+    <span class="badge">Брокер: Банк ВТБ (ПАО)</span>
+    <span class="badge">Jira: IMDEV-9302</span>
+  </div>
+</div>
+
+<div class="grid">
+  <div class="kpi">
+    <div class="label">Создано документов</div>
+    <div class="value">7 582</div>
+    <div class="sub">ошибок: 0</div>
+  </div>
+  <div class="kpi">
+    <div class="label">Время «Создать все»</div>
+    <div class="value">11 мин 31 сек</div>
+    <div class="sub">10:46:39 - 10:58:10</div>
+  </div>
+  <div class="kpi">
+    <div class="label">Скорость</div>
+    <div class="value">10,97 док/сек</div>
+    <div class="sub">658,4 док/мин</div>
+  </div>
+  <div class="kpi">
+    <div class="label">Регресс данных</div>
+    <div class="value" style="color:var(--ok)">ПРОЙДЕН</div>
+    <div class="sub">расхождений: 0</div>
+  </div>
+</div>
+
+<div class="card">
+  <h2>1. Введение</h2>
+  <p>
+    Цель прогона - подтвердить, что оптимизированная обработка
+    <code>внРаспределениеДоходовПоЦеннымБумагам</code> в режиме параллельного «Создать все»:
+  </p>
+  <ul>
+    <li>создаёт полный набор операций без ошибок;</li>
+    <li>показывает ход выполнения через окно ожидания БСП;</li>
+    <li>даёт существенный прирост скорости относительно последовательного режима;</li>
+    <li>не меняет состав и поля созданных документов (регресс ДО/ПОСЛЕ).</li>
+  </ul>
+  <div class="ok">
+    <strong>Вердикт:</strong> тест успешен.
+    Режим <strong>Параллельно</strong>, создано <strong>7 582</strong> документов, ошибок <strong>0</strong>,
+    регресс данных <span class="pass">ПРОЙДЕН</span>.
+  </div>
+</div>
+
+<div class="card">
+  <h2>2. Технология и окружение теста</h2>
+  <table>
+    <tr><th>Параметр</th><th>Значение</th></tr>
+    <tr><td>Задача</td><td><a href="https://jira/browse/IMDEV-9302">IMDEV-9302</a></td></tr>
+    <tr><td>Объект тестирования</td><td>Внешняя обработка распределения доходов по ЦБ (оптимизация)</td></tr>
+    <tr><td>Вспомогательные EPF</td><td>Удаление операций; Сравнение результатов распределения доходов по ЦБ</td></tr>
+    <tr><td>Период / дата создания</td><td>18.03.2026</td></tr>
+    <tr><td>Пул</td><td>Розничное ДУ</td></tr>
+    <tr><td>Брокер</td><td>Банк ВТБ (ПАО)</td></tr>
+    <tr><td>Объём выборки</td><td>НКД = 7 582; Погашение = 0; Дивиденды = 0</td></tr>
+    <tr><td>Фильтр</td><td>Только с комментарием автообработки</td></tr>
+    <tr><td>Источник снимков</td><td>ОперацияПоСчетуБрокера</td></tr>
+    <tr><td>Снимок ДО</td><td>11.08.2026 09:10:22 → <code>snapshot_before_1803.json</code></td></tr>
+    <tr><td>Снимок ПОСЛЕ</td><td>11.08.2026 11:01:26</td></tr>
+    <tr><td>Отчёт сравнения</td><td>11.08.2026 11:02:09 → <code>Сравнение.txt</code></td></tr>
+  </table>
+  <div class="info">
+    Источники отчёта: документ <code>ИТ тестирование 9302.docx</code> (11 скриншотов),
+    файл <code>Сравнение.txt</code>, базовый замер <code>baseline_speed_old.html</code>.
+  </div>
+</div>
+
+<div class="card">
+  <h2>3. Статистика и сравнение со старым режимом</h2>
+  <div class="compare">
+    <div class="box old">
+      <h3>Было (последовательно)</h3>
+      <table>
+        <tr><th>Скорость</th><td>≈ 42,4 док/мин (0,71 док/сек)</td></tr>
+        <tr><th>Прогноз на ~20 тыс. строк</th><td>≈ 7 ч 45 мин</td></tr>
+        <tr><th>Источник</th><td>baseline_speed_old.html (НКД 19 688)</td></tr>
+      </table>
+    </div>
+    <div class="box new">
+      <h3>Стало (параллельно)</h3>
+      <table>
+        <tr><th>Скорость</th><td><strong>658,4 док/мин (10,97 док/сек)</strong></td></tr>
+        <tr><th>Факт на 7 582</th><td><strong>11 мин 31 сек</strong></td></tr>
+        <tr><th>Прогноз на ~20 тыс.</th><td><strong>30-40 минут</strong></td></tr>
+      </table>
+    </div>
+  </div>
+  <div class="ok">
+    Прирост скорости порядка <strong>×15</strong> относительно последовательного режима
+    (658,4 / 42,4). На объём ~20 тыс. строк ожидаемое время сокращается с часов до десятков минут.
+  </div>
+  <table>
+    <tr><th>Метрика прогона 11.08.2026</th><th>Значение</th></tr>
+    <tr><td>Старт</td><td>11.08.2026 10:46:39</td></tr>
+    <tr><td>Финиш</td><td>11.08.2026 10:58:10</td></tr>
+    <tr><td>Режим</td><td>Параллельно</td></tr>
+    <tr><td>Создано / ошибок</td><td>7 582 / 0</td></tr>
+    <tr><td>Строк ДО = ПОСЛЕ</td><td>7 582 = 7 582</td></tr>
+    <tr><td>Только в ДО / только в ПОСЛЕ / расхождения полей</td><td>0 / 0 / 0</td></tr>
+  </table>
+</div>
+
+<div class="card">
+  <h2>4. Ход тестирования (по шагам)</h2>
+
+  <div class="step">
+    <div class="step-num">1</div>
+    <div>
+      <h3>Сохранение текущего состояния (снимок ДО)</h3>
+      <p>
+        Перед удалением выгружен снимок операций за 18.03.2026:
+        найдено <strong>7 582</strong> операций (НКД=7582, Погашение=0, Дивиденды=0),
+        файл <code>snapshot_before_1803.json</code>.
+      </p>
+      <div class="shot">
+        <img src="it_test_assets/image1.png" alt="Снимок ДО: выгрузка 7582 операций">
+        <div class="caption">Рис. 1. Выгрузка снимка ДО - 7 582 операций, период 18.03.2026</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="step-num">2</div>
+    <div>
+      <h3>Удаление старых документов</h3>
+      <p>
+        Обработка удаления: период 18.03.2026-18.03.2026, N=7582,
+        фильтр «только созданные обработкой». Найдено к удалению: <strong>7582</strong>.
+      </p>
+      <div class="shot">
+        <img src="it_test_assets/image2.png" alt="Удаление операций: найдено 7582">
+        <div class="caption">Рис. 2. Подготовка удаления 7 582 операций автообработки</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="step-num">3</div>
+    <div>
+      <h3>Заполнение обработки после удаления</h3>
+      <p>
+        После удаления запущено заполнение. Вкладка НКД: <strong>7 582</strong> отмеченных строк,
+        колонка «Операция по счету брокера» пустая - документы ещё не созданы.
+      </p>
+      <div class="shot">
+        <img src="it_test_assets/image3.png" alt="Заполнение: 7582 строк НКД без операций">
+        <div class="caption">Рис. 3. Готовность к созданию: 7 582 строк НКД</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="step-num">4</div>
+    <div>
+      <h3>Запуск «Создать все» и окно прогресса</h3>
+      <p>
+        Старт: <strong>11.08.2026 10:46:39</strong>.
+        Окно БСП: «Создание операций по счету брокера, строк: 7582»,
+        прогресс от 0% до промежуточных значений (на скрине 14% / 1 100 из 7 582).
+      </p>
+      <div class="shot">
+        <img src="it_test_assets/image4.png" alt="Старт создания, прогресс 0%">
+        <div class="caption">Рис. 4. Старт параллельного создания, прогресс 0%</div>
+      </div>
+      <div class="shot">
+        <img src="it_test_assets/image5.png" alt="Прогресс 14%, создано 1100">
+        <div class="caption">Рис. 5. Ход выполнения: 14% (создано 1 100 из 7 582)</div>
+      </div>
+      <div class="shot">
+        <img src="it_test_assets/image6.png" alt="Сообщения о создании операций">
+        <div class="caption">Рис. 6. В сообщениях идут подтверждения создания операций</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="step-num">5</div>
+    <div>
+      <h3>Итог создания</h3>
+      <div class="ok">
+        Создание операций завершено: <strong>11.08.2026 10:58:10</strong><br>
+        Режим: <strong>Параллельно</strong>; создано документов: <strong>7582</strong>; ошибок: <strong>0</strong><br>
+        Общее время: <strong>0 ч 11 мин 31 сек</strong>; скорость: <strong>658,4 док/мин (10,97 док/сек)</strong>
+      </div>
+      <div class="shot">
+        <img src="it_test_assets/image7.png" alt="Итоговые сообщения о скорости">
+        <div class="caption">Рис. 7. Финальные сообщения формы с замером времени и скорости</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="step-num">6</div>
+    <div>
+      <h3>Повторное «Заполнить все» - таблица пустая</h3>
+      <p>
+        Повторное заполнение завершилось сообщением «Заполнение завершено»,
+        табличная часть НКД пустая - все строки уже обеспечены созданными операциями.
+      </p>
+      <div class="shot">
+        <img src="it_test_assets/image8.png" alt="Повторное заполнение: таблица пустая">
+        <div class="caption">Рис. 8. Контроль: после создания повторное заполнение даёт пустую ТЧ</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="step-num">7</div>
+    <div>
+      <h3>Выгрузка снимка ПОСЛЕ и сравнение</h3>
+      <p>
+        Выгружен снимок после пересоздания (снова 7 582 операций),
+        затем сравнение файлов ДО и ПОСЛЕ.
+      </p>
+      <div class="shot">
+        <img src="it_test_assets/image9.png" alt="Снимок ПОСЛЕ: 7582 операций">
+        <div class="caption">Рис. 9. Снимок ПОСЛЕ: 7 582 операций</div>
+      </div>
+      <div class="shot">
+        <img src="it_test_assets/image10.png" alt="Регресс OK">
+        <div class="caption">Рис. 10. Результат сравнения: регресс OK</div>
+      </div>
+      <div class="shot">
+        <img src="it_test_assets/image11.png" alt="Текст отчёта сравнения">
+        <div class="caption">Рис. 11. Текст отчёта Сравнение.txt</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="card">
+  <h2>5. Детали регресса (полный текст сравнения)</h2>
+  <div class="note">
+    В снимках время «Создать все» не передавалось в JSON (это ожидаемо для данного прогона).
+    Замер скорости взят из сообщений основной обработки (рис. 7).
+  </div>
+  <pre>=== Сравнение: ВРЕМЯ + РЕГРЕСС ===
+Дата отчёта: 11.08.2026 11:02:09
+
+--- ШАПКА: ВРЕМЯ «Создать всё» ---
+Время ДО: не замерялось
+Время ПОСЛЕ: не замерялось
+ИТОГ ПО ВРЕМЕНИ: не сравнивалось (в одном или обоих снимках время не замерялось). Регресс данных ниже — отдельно.
+
+--- ШАПКА: РЕГРЕСС ДАННЫХ ---
+Строк в ДО: 7582
+Строк в ПОСЛЕ: 7582
+Только в ДО (нет в ПОСЛЕ): 0
+Только в ПОСЛЕ (нет в ДО): 0
+Расхождения полей при том же ключе: 0
+ИТОГ ПО РЕГРЕССУ: ПРОЙДЕН. Расхождений нет.
+
+ОБЩИЙ ИТОГ: регресс OK; время не замерялось (сравнение времени пропущено).
+
+--- Мета ДО ---
+ВерсияФормата=1.1; Источник=ОперацияПоСчетуБрокера; Обработка=Распределение доходов по ценным бумагам; Период=2026-03-18; Пул=Розничное ДУ; ТолькоАвтоОбработка=Да; ДатаСнимка=2026-08-11T09:10:22; Количество=7 582; КоличествоНКД=7 582; КоличествоПогашение=0; КоличествоДивиденды=0; ВремяВыполненияСек=0; ВремяЗамерено=Нет; ВремяВыполненияПредставление=не замерялось
+--- Мета ПОСЛЕ ---
+ВерсияФормата=1.1; Источник=ОперацияПоСчетуБрокера; Обработка=Распределение доходов по ценным бумагам; Период=2026-03-18; Пул=Розничное ДУ; ТолькоАвтоОбработка=Да; ДатаСнимка=2026-08-11T11:01:26; Количество=7 582; КоличествоНКД=7 582; КоличествоПогашение=0; КоличествоДивиденды=0; ВремяВыполненияСек=0; ВремяЗамерено=Нет; ВремяВыполненияПредставление=не замерялось
+
+--- Ключи только в ДО (первые 50) ---
+(нет)
+
+--- Ключи только в ПОСЛЕ (первые 50) ---
+(нет)
+
+--- Расхождения полей (первые 30) ---
+(нет)
+</pre>
+</div>
+
+<div class="card">
+  <h2>6. Возможности, подтверждённые тестом</h2>
+  <ul>
+    <li>Параллельный путь «Создать все» отрабатывает на полном объёме дня (7 582 НКД).</li>
+    <li>Окно ожидания БСП показывает процент и счётчик «создано из N».</li>
+    <li>В сообщениях фиксируются старт, финиш, режим, число ошибок и скорость.</li>
+    <li>Повторное заполнение не находит строк к созданию - признак полноты покрытия.</li>
+    <li>Регресс ДО/ПОСЛЕ: идентичный состав и поля операций.</li>
+  </ul>
+</div>
+
+<div class="card">
+  <h2>7. Выводы</h2>
+  <div class="ok">
+    <strong>1.</strong> Функциональный результат корректный: 7 582 / 0 ошибок, регресс ПРОЙДЕН.<br>
+    <strong>2.</strong> Производительность: <strong>10,97 док/сек</strong> (658,4 док/мин), факт на прогоне - <strong>11 мин 31 сек</strong>.<br>
+    <strong>3.</strong> Экстраполяция автора теста: на ~20 тыс. строк ориентир <strong>30-40 минут</strong>
+    против ~7-8 часов в последовательном режиме.<br>
+    <strong>4.</strong> Оптимизация IMDEV-9302 готова к передаче по итогам ИТ-теста.
+  </div>
+</div>
+
+<div class="footer">
+  Отчёт собран автоматически из материалов ИТ-тестирования IMDEV-9302 · 11.08.2026<br>
+  Картинки: <code>Документация/it_test_assets/image1.png</code> ... <code>image11.png</code>
+</div>
+
+</div>
+</body>
+</html>
