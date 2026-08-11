@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>IMDEV-9302: Сравнение скорости на базе Т-1 (было / стало)</title>
+<style>
+:root {
+  --ok: #28a745;
+  --err: #dc3545;
+  --info: #17a2b8;
+  --warn: #f0ad4e;
+  --bg: #f4f7fb;
+  --card: #ffffff;
+  --text: #1f2a37;
+  --muted: #5b6b7c;
+  --line: #d7e0ea;
+  --accent: #0b6bcb;
+  --old: #607d8b;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  font-family: "Segoe UI", Calibri, Arial, sans-serif;
+  color: var(--text);
+  background:
+    radial-gradient(1100px 480px at 0% -10%, #dcecff 0%, transparent 55%),
+    radial-gradient(900px 420px at 100% 0%, #e7fff2 0%, transparent 50%),
+    var(--bg);
+  line-height: 1.55;
+}
+.wrap { max-width: 1080px; margin: 0 auto; padding: 28px 20px 60px; }
+.hero {
+  background: linear-gradient(135deg, #0b6bcb 0%, #0a8f6c 100%);
+  color: #fff;
+  border-radius: 18px;
+  padding: 28px 30px;
+  box-shadow: 0 12px 30px rgba(11, 107, 203, 0.25);
+}
+.hero h1 { margin: 0 0 8px; font-size: 26px; font-weight: 700; }
+.hero p { margin: 0; opacity: 0.95; }
+.badges { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
+.badge {
+  display: inline-block;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: rgba(255,255,255,0.18);
+  border: 1px solid rgba(255,255,255,0.28);
+  font-size: 13px;
+}
+.grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  margin: 22px 0;
+}
+@media (max-width: 900px) {
+  .grid { grid-template-columns: repeat(2, 1fr); }
+}
+.kpi {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 14px 16px;
+  box-shadow: 0 2px 8px rgba(20, 40, 70, 0.04);
+}
+.kpi .label { color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: 0.04em; }
+.kpi .value { font-size: 24px; font-weight: 700; margin-top: 4px; color: var(--accent); }
+.kpi .sub { color: var(--muted); font-size: 13px; margin-top: 2px; }
+.card {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  padding: 20px 22px;
+  margin: 18px 0;
+  box-shadow: 0 2px 10px rgba(20, 40, 70, 0.04);
+}
+h2 {
+  margin: 0 0 12px;
+  font-size: 20px;
+  border-bottom: 1px solid var(--line);
+  padding-bottom: 8px;
+}
+h3 { margin: 16px 0 8px; font-size: 16px; }
+.ok, .info, .note {
+  border-radius: 10px;
+  padding: 12px 14px;
+  margin: 12px 0;
+}
+.ok { background: #e8f5e9; border-left: 4px solid var(--ok); }
+.info { background: #e7f8fc; border-left: 4px solid var(--info); }
+.note { background: #fff8e1; border-left: 4px solid var(--warn); }
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 10px 0 4px;
+  font-size: 14px;
+}
+th, td {
+  border: 1px solid var(--line);
+  padding: 8px 10px;
+  text-align: left;
+  vertical-align: top;
+}
+th { background: #f3f7fb; }
+.compare {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+@media (max-width: 800px) {
+  .compare { grid-template-columns: 1fr; }
+}
+.box {
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 14px;
+  background: #fafcfe;
+}
+.box.old { border-top: 4px solid var(--old); }
+.box.new { border-top: 4px solid var(--ok); }
+.box h3 { margin-top: 0; }
+.big {
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--accent);
+  margin: 4px 0 2px;
+}
+.big.ok { color: var(--ok); }
+.big.old { color: var(--old); }
+.muted { color: var(--muted); font-size: 13px; }
+.shot {
+  margin-top: 10px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  overflow: hidden;
+  background: #eef2f7;
+}
+.shot img { display: block; width: 100%; height: auto; }
+.caption {
+  padding: 8px 12px;
+  font-size: 13px;
+  color: var(--muted);
+  background: #f8fafc;
+  border-top: 1px solid var(--line);
+}
+.bar-wrap { margin: 16px 0 6px; }
+.bar-row { display: grid; grid-template-columns: 120px 1fr 110px; gap: 10px; align-items: center; margin: 8px 0; }
+.bar {
+  height: 18px;
+  border-radius: 9px;
+  background: #e8eef5;
+  overflow: hidden;
+}
+.bar > span { display: block; height: 100%; border-radius: 9px; }
+.bar.old > span { width: 100%; background: #90a4ae; }
+.bar.new > span { width: 21.7%; background: #28a745; }
+.footer {
+  margin-top: 28px;
+  color: var(--muted);
+  font-size: 13px;
+  text-align: center;
+}
+code { font-family: Consolas, "Courier New", monospace; font-size: 12.5px; }
+.pass {
+  display: inline-block;
+  background: var(--ok);
+  color: #fff;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 13px;
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<div class="hero">
+  <h1>Сравнение скорости на базе Т-1</h1>
+  <p>IMDEV-9302: последовательный режим vs параллельный «Создать все» (данные за 16.09.2026)</p>
+  <div class="badges">
+    <span class="badge">База: Т-1</span>
+    <span class="badge">Период: 16.09.2026</span>
+    <span class="badge">Пул: Розничное ДУ</span>
+    <span class="badge">Брокер: Банк ВТБ (ПАО)</span>
+    <span class="badge">Вкладка: НКД</span>
+  </div>
+</div>
+
+<div class="grid">
+  <div class="kpi">
+    <div class="label">Было (прогноз)</div>
+    <div class="value" style="color:var(--old)">7 ч 45 мин</div>
+    <div class="sub">42,4 док/мин</div>
+  </div>
+  <div class="kpi">
+    <div class="label">Стало (факт)</div>
+    <div class="value" style="color:var(--ok)">1 ч 41 мин</div>
+    <div class="sub">194,8 док/мин</div>
+  </div>
+  <div class="kpi">
+    <div class="label">Ускорение</div>
+    <div class="value">x4,6</div>
+    <div class="sub">по скорости и времени</div>
+  </div>
+  <div class="kpi">
+    <div class="label">Экономия</div>
+    <div class="value">~6 ч 04 мин</div>
+    <div class="sub">на объёме ~20 тыс.</div>
+  </div>
+</div>
+
+<div class="card">
+  <h2>1. Введение</h2>
+  <p>
+    На базе <strong>Т-1</strong> ранее выполнен замер старого (последовательного) алгоритма
+    и зафиксирован в <code>baseline_speed_old.html</code>.
+    11.08.2026 на тех же условиях (день операций <strong>16.09.2026</strong>) прогнан новый
+    параллельный алгоритм. Ниже - прямое сравнение «было / стало».
+  </p>
+  <div class="ok">
+    <strong>Вердикт:</strong> полный прогон параллельно завершён успешно
+    (<span class="pass">19 705 / 0 ошибок</span>),
+    время сократилось с ~7 ч 45 мин до <strong>1 ч 41 мин 08 сек</strong>.
+  </div>
+</div>
+
+<div class="card">
+  <h2>2. Условия прогона (одинаковые)</h2>
+  <table>
+    <tr><th style="width:42%">Параметр</th><th>Значение</th></tr>
+    <tr><td>База</td><td>Т-1</td></tr>
+    <tr><td>Обработка</td><td>Распределение доходов по ценным бумагам</td></tr>
+    <tr><td>Команда</td><td>«Создать все»</td></tr>
+    <tr><td>Период / дата создания</td><td>16.09.2026</td></tr>
+    <tr><td>Пул</td><td>Розничное ДУ</td></tr>
+    <tr><td>Брокер</td><td>Банк ВТБ (ПАО)</td></tr>
+    <tr><td>Заполненные вкладки</td><td>только НКД (Погашение и Дивиденды пустые)</td></tr>
+  </table>
+  <div class="note">
+    Объём чуть отличается: в baseline было <strong>19 688</strong> строк НКД (прогноз),
+    в новом прогоне фактически создано <strong>19 705</strong> документов.
+    Разница ~17 строк на сравнение скорости не влияет.
+  </div>
+</div>
+
+<div class="card">
+  <h2>3. Было vs Стало</h2>
+  <div class="compare">
+    <div class="box old">
+      <h3>Было (последовательно)</h3>
+      <div class="muted">Источник: baseline_speed_old.html</div>
+      <div class="big old">~7 ч 45 мин</div>
+      <div class="muted">прогноз на полный объём</div>
+      <table>
+        <tr><th>Режим</th><td>Последовательный</td></tr>
+        <tr><th>Строк НКД</th><td>19 688</td></tr>
+        <tr><th>Скорость</th><td>≈ 42,4 док/мин (0,71 док/сек)</td></tr>
+        <tr><th>Метод замера</th><td>Промежуточный: 7 712 из 19 688 за 3 ч 02 мин (старт 18:00, замер 21:02)</td></tr>
+        <tr><th>Статус</th><td>Полный прогон не дожидались; экстраполяция</td></tr>
+      </table>
+    </div>
+    <div class="box new">
+      <h3>Стало (параллельно)</h3>
+      <div class="muted">Источник: Тестирование на Т_1.docx</div>
+      <div class="big ok">1 ч 41 мин 08 сек</div>
+      <div class="muted">факт полного прогона</div>
+      <table>
+        <tr><th>Режим</th><td>Параллельно</td></tr>
+        <tr><th>Создано</th><td>19 705</td></tr>
+        <tr><th>Ошибок</th><td>0</td></tr>
+        <tr><th>Скорость</th><td>194,8 док/мин (3,25 док/сек)</td></tr>
+        <tr><th>Старт / финиш</th><td>11.08.2026 14:12:13 → 15:53:21</td></tr>
+        <tr><th>Статус</th><td>Полный прогон завершён</td></tr>
+      </table>
+    </div>
+  </div>
+
+  <h3>Наглядное сравнение времени на ~20 тыс. документов</h3>
+  <div class="bar-wrap">
+    <div class="bar-row">
+      <div>Было</div>
+      <div class="bar old"><span></span></div>
+      <div><strong>7 ч 45 мин</strong></div>
+    </div>
+    <div class="bar-row">
+      <div>Стало</div>
+      <div class="bar new"><span></span></div>
+      <div><strong>1 ч 41 мин</strong></div>
+    </div>
+  </div>
+  <p class="muted">Длина полосы «Стало» ≈ 21,7% от «Было» (101 мин / 465 мин).</p>
+
+  <h3>Сводная таблица</h3>
+  <table>
+    <tr>
+      <th>Метрика</th>
+      <th>Было</th>
+      <th>Стало</th>
+      <th>Изменение</th>
+    </tr>
+    <tr>
+      <td>Объём НКД</td>
+      <td>19 688</td>
+      <td>19 705</td>
+      <td>+17</td>
+    </tr>
+    <tr>
+      <td>Скорость, док/мин</td>
+      <td>42,4</td>
+      <td>194,8</td>
+      <td><strong>x4,6</strong></td>
+    </tr>
+    <tr>
+      <td>Скорость, док/сек</td>
+      <td>0,71</td>
+      <td>3,25</td>
+      <td><strong>x4,6</strong></td>
+    </tr>
+    <tr>
+      <td>Время на полный объём</td>
+      <td>≈ 7 ч 45 мин (прогноз)</td>
+      <td>1 ч 41 мин 08 сек (факт)</td>
+      <td><strong>−6 ч 04 мин</strong></td>
+    </tr>
+    <tr>
+      <td>Ошибки</td>
+      <td>не фиксировались в baseline</td>
+      <td>0</td>
+      <td>—</td>
+    </tr>
+  </table>
+</div>
+
+<div class="card">
+  <h2>4. Расчёт ускорения</h2>
+  <ol>
+    <li>Старое время на сопоставимый объём: 19 705 / 42,4 ≈ <strong>465 мин</strong> (≈ 7 ч 45 мин).</li>
+    <li>Новое фактическое время: 1 ч 41 мин 08 сек = <strong>101,13 мин</strong>.</li>
+    <li>Ускорение по времени: 465 / 101,13 ≈ <strong>x4,6</strong>.</li>
+    <li>Ускорение по скорости: 194,8 / 42,4 ≈ <strong>x4,6</strong>.</li>
+    <li>Экономия: 465 − 101 ≈ <strong>364 минуты</strong> ≈ <strong>6 ч 04 мин</strong> на одном дне.</li>
+  </ol>
+  <div class="info">
+    На Т-1 скорость параллельного режима (3,25 док/сек) ниже, чем на предыдущем ИТ-прогоне
+    с 7 582 строками (10,97 док/сек). Это ожидаемо: другой объём, нагрузка СУБД и окружение базы.
+    Главный результат для Т-1 - сокращение полного дня с почти 8 часов до менее 2 часов.
+  </div>
+</div>
+
+<div class="card">
+  <h2>5. Доказательства нового прогона (скриншоты)</h2>
+
+  <h3>Ход выполнения (96%)</h3>
+  <p>
+    Старт создания: <strong>11.08.2026 14:12:13</strong>.
+    На скрине прогресс 96% (создано 19 105 из 19 705), вкладка НКД (19 705),
+    сумма по таблице 248 413 229,22.
+  </p>
+  <div class="shot">
+    <img src="t1_test_assets/image1.png" alt="Прогресс 96 процентов на Т-1">
+    <div class="caption">Рис. 1. Параллельное создание на Т-1: 96% (19 105 из 19 705)</div>
+  </div>
+
+  <h3>Сообщения о старте и создании операций</h3>
+  <div class="shot">
+    <img src="t1_test_assets/image2.png" alt="Сообщения о старте создания">
+    <div class="caption">Рис. 2. Заполнение завершено, создание начато 14:12:13, идут сообщения о созданных операциях</div>
+  </div>
+
+  <h3>Итог полного прогона</h3>
+  <div class="ok">
+    Создание операций завершено: <strong>11.08.2026 15:53:21</strong><br>
+    Режим: <strong>Параллельно</strong>; создано документов: <strong>19705</strong>; ошибок: <strong>0</strong><br>
+    Общее время: <strong>1 ч 41 мин 08 сек</strong>; скорость: <strong>194,8 док/мин (3,25 док/сек)</strong>
+  </div>
+  <div class="shot">
+    <img src="t1_test_assets/image3.png" alt="Итог параллельного создания на Т-1">
+    <div class="caption">Рис. 3. Финальные сообщения формы после полного прогона на Т-1</div>
+  </div>
+</div>
+
+<div class="card">
+  <h2>6. Выводы</h2>
+  <div class="ok">
+    <strong>1.</strong> На базе Т-1 новый алгоритм отработал полный день 16.09.2026 без ошибок.<br>
+    <strong>2.</strong> Время сократилось с прогноза <strong>~7 ч 45 мин</strong> до факта <strong>1 ч 41 мин</strong> (примерно в 4,6 раза).<br>
+    <strong>3.</strong> Скорость выросла с <strong>42,4</strong> до <strong>194,8</strong> док/мин.<br>
+    <strong>4.</strong> Для эксплуатационного сценария Т-1 оптимизация IMDEV-9302 даёт экономию порядка <strong>6 часов</strong> на одном прогоне «Создать все».
+  </div>
+</div>
+
+<div class="footer">
+  Сравнение собрано из baseline_speed_old.html и Тестирование на Т_1.docx · IMDEV-9302 · 11.08.2026<br>
+  Картинки: <code>Документация/t1_test_assets/</code>
+</div>
+
+</div>
+</body>
+</html>
