@@ -1,0 +1,198 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<title>Фоновое распределение регламентных операций</title>
+</head>
+<body style="margin:0; padding:0; font-family:Calibri, Arial, sans-serif; font-size:14px; color:#222222; line-height:1.45;">
+
+<table width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:720px;">
+<tr>
+<td style="padding:12px 4px;">
+
+<p style="margin:0 0 12px 0;">Коллеги, краткое описание, как устроено <b>фоновое распределение</b> при формировании регламентных операций (справочник <b>РегламентныеПериоды</b>, модуль менеджера, база Wim_Du).</p>
+
+<!-- ===================== БЛОК 1 ===================== -->
+<table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 14px 0; border:1px solid #c8d6e5; border-radius:4px;">
+<tr>
+<td style="background:#1f4e79; color:#ffffff; padding:8px 12px; font-size:15px; font-weight:bold;">
+1. Два уровня фона
+</td>
+</tr>
+<tr>
+<td style="padding:10px 12px; background:#f7fbff;">
+
+<p style="margin:0 0 8px 0;">Работает не один фон, а <b>два уровня</b>:</p>
+
+<table width="100%" cellpadding="6" cellspacing="0" border="1" style="border-collapse:collapse; border-color:#b0c4de; font-size:13px;">
+<tr style="background:#d6e3f0;">
+<th align="left" style="padding:6px;">Уровень</th>
+<th align="left" style="padding:6px;">Что делает</th>
+<th align="left" style="padding:6px;">Где в коде</th>
+</tr>
+<tr>
+<td style="padding:6px; vertical-align:top;"><b>Внешний</b></td>
+<td style="padding:6px; vertical-align:top;">Форма запускает длительную операцию БСП, чтобы интерфейс не зависал и был прогресс.</td>
+<td style="padding:6px; vertical-align:top; font-family:Consolas, monospace; font-size:12px;">Forms\РегламентныйПериод\...\Module.bsl<br>ДлительныеОперации.ВыполнитьВФоне(...)</td>
+</tr>
+<tr style="background:#f0f6fc;">
+<td style="padding:6px; vertical-align:top;"><b>Внутренний</b></td>
+<td style="padding:6px; vertical-align:top;">Внутри менеджера по каждому договору поднимается отдельное фоновое задание на создание плана операций. Одновременно работает пул потоков.</td>
+<td style="padding:6px; vertical-align:top; font-family:Consolas, monospace; font-size:12px;">Ext\ManagerModule.bsl<br>СформироватьДокументыЗакрытияПериода</td>
+</tr>
+</table>
+
+<p style="margin:10px 0 0 0; font-size:13px; color:#444444;">Лимит параллельности берётся из константы <b>МаксимальноеКоличествоПараллельныхПотоков</b> и кладётся в <span style="font-family:Consolas, monospace;">ПараметрыСохранения.КоличествоПотоков</span>.</p>
+
+</td>
+</tr>
+</table>
+
+<!-- ===================== БЛОК 2 ===================== -->
+<table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 14px 0; border:1px solid #c8d6e5;">
+<tr>
+<td style="background:#1f4e79; color:#ffffff; padding:8px 12px; font-size:15px; font-weight:bold;">
+2. Диспетчер в модуле менеджера
+</td>
+</tr>
+<tr>
+<td style="padding:10px 12px;">
+
+<p style="margin:0 0 8px 0;">Экспортная процедура <span style="font-family:Consolas, monospace;">СформироватьРегламентныеОперации</span>:</p>
+<ol style="margin:0 0 0 18px; padding:0;">
+<li style="margin-bottom:4px;">Проверяет входные параметры (дата, список договоров, параметры сохранения).</li>
+<li style="margin-bottom:4px;">Режет список договоров на <b>пачки по 3000</b> (экономия памяти).</li>
+<li style="margin-bottom:4px;">Для утренних/вечерних операций подгружает пакетный кэш только по текущей пачке.</li>
+<li style="margin-bottom:4px;">По каждому договору сообщает прогресс и вызывает <span style="font-family:Consolas, monospace;">СформироватьДокументыЗакрытияПериода</span>.</li>
+</ol>
+
+<p style="margin:10px 0 4px 0; font-size:12px; color:#555555;">Фрагмент (пачки + вызов по договору):</p>
+<pre style="margin:0; padding:8px 10px; background:#f4f4f4; border:1px solid #dddddd; font-family:Consolas, monospace; font-size:11px; white-space:pre-wrap;">РазмерПачки = 3000;
+Для ИндексПачки = 0 По Цел((КоличествоДоговоров - 1) / РазмерПачки) Цикл
+    // ... подготовка пачки и кэша ...
+    Для Каждого ТекДоговор Из СписокПачки Цикл
+        ДлительныеОперации.СообщитьПрогресс(...);
+        СформироватьДокументыЗакрытияПериода(
+            ДатаПериода, ТекДоговор, УчитыватьВыполненные,
+            НаименованиеФоновогоЗадания, ТекущийНомер, КоличествоДоговоров,
+            ПараметрыСохранения);
+    КонецЦикла;
+КонецЦикла;</pre>
+
+</td>
+</tr>
+</table>
+
+<!-- ===================== БЛОК 3 ===================== -->
+<table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 14px 0; border:1px solid #c8d6e5;">
+<tr>
+<td style="background:#1f4e79; color:#ffffff; padding:8px 12px; font-size:15px; font-weight:bold;">
+3. Само «фоновое распределение» (пул заданий)
+</td>
+</tr>
+<tr>
+<td style="padding:10px 12px; background:#fffdf5;">
+
+<p style="margin:0 0 8px 0;">В <span style="font-family:Consolas, monospace;">СформироватьДокументыЗакрытияПериода</span> для договора собирается таблица операций и кэш, затем:</p>
+
+<table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 10px 0;">
+<tr>
+<td style="padding:6px 10px; background:#e8f5e9; border-left:4px solid #28a745;">
+<b>Если</b> <span style="font-family:Consolas, monospace;">КоличествоПотоков &gt; 0</span> и фоновые задания разрешены — создаётся отдельное ФЗ:<br>
+<span style="font-family:Consolas, monospace; font-size:12px;">ФоновыеЗадания.Выполнить("ФоновыеЗаданияСервер.СоздатьПланРегламентныхОперацийДУ", ...)</span>
+</td>
+</tr>
+<tr><td style="height:6px;"></td></tr>
+<tr>
+<td style="padding:6px 10px; background:#fff3cd; border-left:4px solid #ffc107;">
+<b>Иначе</b> — то же создание плана выполняется <b>синхронно</b> в текущем сеансе (без параллели).
+</td>
+</tr>
+</table>
+
+<p style="margin:0 0 6px 0;"><b>Логика пула:</b></p>
+<ol style="margin:0 0 0 18px; padding:0;">
+<li style="margin-bottom:4px;">Каждое запущенное ФЗ добавляется в <span style="font-family:Consolas, monospace;">МассивФоновыхЗаданий</span>.</li>
+<li style="margin-bottom:4px;">Когда набрано <b>N = КоличествоПотоков</b> заданий <b>или</b> обработан последний договор — вызывается ожидание завершения порции.</li>
+<li style="margin-bottom:4px;">После ожидания массив очищается, набирается следующая порция.</li>
+<li style="margin-bottom:4px;">На последнем договоре дополнительно собираются аварийно завершённые задания с тем же наименованием и выводятся их ошибки.</li>
+</ol>
+
+<p style="margin:10px 0 4px 0; font-size:12px; color:#555555;">Фрагмент (запуск + барьер ожидания):</p>
+<pre style="margin:0; padding:8px 10px; background:#f4f4f4; border:1px solid #dddddd; font-family:Consolas, monospace; font-size:11px; white-space:pre-wrap;">Если КоличествоПотоков &gt; 0 И ФоновыеЗаданияСервер.ФоновыеЗаданияРазрешены() Тогда
+    ТекФоновоеЗадание = ФоновыеЗадания.Выполнить(
+        "ФоновыеЗаданияСервер.СоздатьПланРегламентныхОперацийДУ",
+        МассивПараметров,, НаименованиеФоновогоЗадания);
+    ПараметрыСохранения.МассивФоновыхЗаданий.Добавить(ТекФоновоеЗадание);
+
+    Если ПараметрыСохранения.МассивФоновыхЗаданий.Количество() = КоличествоПотоков
+        ИЛИ ТекЗначение = МаксимальноеЗначение Тогда
+        ОжидатьЗавершенияТекущихФоновых(ПараметрыСохранения.МассивФоновыхЗаданий);
+        ПараметрыСохранения.МассивФоновыхЗаданий.Очистить();
+    КонецЕсли;
+Иначе
+    ФоновыеЗаданияСервер.СоздатьПланРегламентныхОперацийДУ(...); // синхронно
+КонецЕсли;</pre>
+
+<p style="margin:10px 0 0 0; font-size:13px;">Ожидание крутится, пока все задания порции не перестанут быть в состоянии <b>Активно</b> (<span style="font-family:Consolas, monospace;">ОжидатьЗавершенияТекущихФоновых</span> / <span style="font-family:Consolas, monospace;">ВсеЗаданияЗавершены</span>).</p>
+
+</td>
+</tr>
+</table>
+
+<!-- ===================== БЛОК 4 ===================== -->
+<table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 14px 0; border:1px solid #c8d6e5;">
+<tr>
+<td style="background:#1f4e79; color:#ffffff; padding:8px 12px; font-size:15px; font-weight:bold;">
+4. Простыми словами (аналогия)
+</td>
+</tr>
+<tr>
+<td style="padding:10px 12px;">
+<p style="margin:0;">Одно большое фоновое задание (БСП) держит общий процесс и прогресс. Внутри него договоры идут пачками по 3000. По каждому договору стартует маленькое задание «создать план». Одновременно живёт не больше N таких заданий: набрали N — подождали — очистили — набрали следующую порцию. В конце проверяют упавшие задания.</p>
+<p style="margin:8px 0 0 0; color:#555555; font-size:13px;">Это не распределение сумм/СКД, а <b>параллельная раздача работы по договорам</b> пулом фоновых заданий.</p>
+</td>
+</tr>
+</table>
+
+<!-- ===================== ВЫВОД ===================== -->
+<table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 8px 0; border:1px solid #28a745;">
+<tr>
+<td style="background:#28a745; color:#ffffff; padding:8px 12px; font-size:15px; font-weight:bold;">
+Вывод по коду: работает ли фоновое распределение?
+</td>
+</tr>
+<tr>
+<td style="padding:10px 12px; background:#e8f5e9;">
+
+<p style="margin:0 0 8px 0; font-size:15px;"><b>Да — по коду механизм реализован и должен работать</b> (при выполнении условий ниже).</p>
+
+<p style="margin:0 0 6px 0;">Почему так:</p>
+<ul style="margin:0 0 8px 18px; padding:0;">
+<li style="margin-bottom:4px;">Есть полный цикл: запуск ФЗ → накопление в пул → ожидание при достижении лимита/конца списка → очистка → следующая порция.</li>
+<li style="margin-bottom:4px;">Есть явный fallback на синхронный вызов, если фон недоступен или <span style="font-family:Consolas, monospace;">КоличествоПотоков = 0</span>.</li>
+<li style="margin-bottom:4px;">Есть обработка аварийных заданий на последнем договоре.</li>
+<li style="margin-bottom:4px;">Внешний слой БСП корректно вызывает экспортную процедуру менеджера.</li>
+</ul>
+
+<p style="margin:0 0 6px 0;"><b>Когда параллель реально включится:</b></p>
+<ul style="margin:0 0 8px 18px; padding:0;">
+<li style="margin-bottom:4px;">константа <b>МаксимальноеКоличествоПараллельныхПотоков</b> &gt; 0;</li>
+<li style="margin-bottom:4px;"><span style="font-family:Consolas, monospace;">ФоновыеЗаданияСервер.ФоновыеЗаданияРазрешены()</span> = Истина (обычно серверная ИБ, не файловая/отладка с ограничениями).</li>
+</ul>
+
+<p style="margin:0; padding:8px 10px; background:#fff8e1; border-left:4px solid #f0ad4e; font-size:13px;">
+<b>Оговорка:</b> код выглядит рабочим по статическому разбору. Это не замена прогона на стенде. Имеет смысл проверить на тестовой базе: константа &gt; 1, несколько договоров, в консоли фоновых заданий видно пачку параллельных <span style="font-family:Consolas, monospace;">СоздатьПланРегламентныхОперацийДУ</span>, прогресс на форме доходит до 100%.
+</p>
+
+</td>
+</tr>
+</table>
+
+<p style="margin:12px 0 0 0; font-size:12px; color:#777777;">Источник: <span style="font-family:Consolas, monospace;">C:\1c\Cursor_1c\WORK\Wim_Du\SRC\CF\Catalogs\РегламентныеПериоды\Ext\ManagerModule.bsl</span> (+ форма РегламентныйПериод).</p>
+
+</td>
+</tr>
+</table>
+
+</body>
+</html>
