@@ -1,0 +1,8 @@
+# План и письма
+
+| Файл | Описание |
+|------|----------|
+| [plan_customer_queries.html](plan_customer_queries.html) | План для Заказчика: как выполняем задачу, как доделываем запросы, свой JOIN x2 |
+| [background_jobs.html](background_jobs.html) | Как устроено фоновое распределение в РегламентныеПериоды |
+
+Сравнение запросов: [../queries/index.md](../queries/index.md).

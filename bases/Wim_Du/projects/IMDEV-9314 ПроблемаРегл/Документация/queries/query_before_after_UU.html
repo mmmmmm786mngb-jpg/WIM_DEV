@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>БУ: запрос был / запрос стал</title>
+<title>УУ: запрос был / запрос стал</title>
 <style>
   :root {
     --ink: #1b2430;
@@ -149,9 +149,9 @@
 <body>
 <div class="page">
 
-<h1>БУ: запрос был / запрос стал</h1>
-<p class="sub">IMDEV-9314 &middot; Документ.УстановкаКотировокЦБ &middot; ЗафиксированныеКотировкиБУ &middot; строка 404</p>
-<p class="nav">Дорабатываем два запроса: <b>БУ</b> (этот файл) и <a href="query_before_after_UU.html">УУ</a>.</p>
+<h1>УУ: запрос был / запрос стал</h1>
+<p class="sub">IMDEV-9314 &middot; Документ.УстановкаКотировокЦБ &middot; ЗафиксированныеКотировкиУУ &middot; строка 562</p>
+<p class="nav">Дорабатываем два запроса: <a href="query_before_after_BU.html">БУ</a> и <b>УУ</b> (этот файл). План: <a href="../plan/plan_customer_queries.html">plan_customer_queries.html</a>.</p>
 <div class="legend">
   <span class="chip"><span class="sw was"></span> Красный — убираем строку</span>
   <span class="chip"><span class="sw chg"></span> Жёлтый — меняем на месте</span>
@@ -160,7 +160,7 @@
 
   <div class="pair">
     <div class="col was">
-      <div class="col-head">Было <span class="why">строка 404, ЗафиксированныеКотировкиБУ</span></div>
+      <div class="col-head">Было <span class="why">строка 562, ЗафиксированныеКотировкиУУ</span></div>
 <div class="code">
 <div class="hl"><span class="g"></span><span class="ln"> 1</span>ВЫБРАТЬ РАЗРЕШЕННЫЕ</div>
 <div class="hl"><span class="g"></span><span class="ln"> 2</span>    СпрАктивы.Ссылка КАК Актив</div>
@@ -197,32 +197,38 @@
 <div class="hl"><span class="g"></span><span class="ln">33</span>    Котировки.Валюта,</div>
 <div class="hl"><span class="g"></span><span class="ln">34</span>    Котировки.Котировка,</div>
 <div class="hl"><span class="g"></span><span class="ln">35</span>    Котировки.Расчетная,</div>
-<div class="hl"><span class="g"></span><span class="ln">36</span>    ЕСТЬNULL(ВТ_КотировкиЦБ.МинимальнаяЦена, Котировки.МинимальнаяЦена) КАК МинимальнаяЦена,</div>
-<div class="hl"><span class="g"></span><span class="ln">37</span>    ЕСТЬNULL(ВТ_КотировкиЦБ.МаксимальнаяЦена, Котировки.МаксимальнаяЦена) КАК МаксимальнаяЦена,</div>
-<div class="hl"><span class="g"></span><span class="ln">38</span>    Котировки.Биржа,</div>
-<div class="hl"><span class="g"></span><span class="ln">39</span>    ВЫБОР</div>
-<div class="hl"><span class="g"></span><span class="ln">40</span>        КОГДА Котировки.ДатаОпределения = &amp;ПустаяДата</div>
-<div class="hl"><span class="g"></span><span class="ln">41</span>            ТОГДА Котировки.Период</div>
-<div class="hl"><span class="g"></span><span class="ln">42</span>        ИНАЧЕ Котировки.ДатаОпределения</div>
-<div class="hl"><span class="g"></span><span class="ln">43</span>    КОНЕЦ КАК ДатаОпределения</div>
-<div class="hl"><span class="g"></span><span class="ln">44</span>ПОМЕСТИТЬ АктуальныеКотировки</div>
-<div class="hl"><span class="g"></span><span class="ln">45</span>ИЗ</div>
-<div class="hl del"><span class="g">-</span><span class="ln">46</span>    РегистрСведений.ЗафиксированныеКотировкиЦБ_БУ.СрезПоследних(</div>
-<div class="hl del"><span class="g">-</span><span class="ln">47</span>            &amp;Дата,</div>
-<div class="hl del"><span class="g">-</span><span class="ln">48</span>            Актив В (ВЫБРАТЬ Актив ИЗ втАктивы)</div>
-<div class="hl del"><span class="g">-</span><span class="ln">49</span>                И ДоговорДУ = &amp;ДоговорДУ</div>
-<div class="hl del"><span class="g">-</span><span class="ln">50</span>                И Расчетная = ЛОЖЬ) КАК Котировки</div>
-<div class="hl"><span class="g"></span><span class="ln">51</span>        ЛЕВОЕ СОЕДИНЕНИЕ ВТ_КотировкиЦБ КАК ВТ_КотировкиЦБ</div>
-<div class="hl"><span class="g"></span><span class="ln">52</span>        ПО Котировки.Актив = ВТ_КотировкиЦБ.Актив</div>
-<div class="hl"><span class="g"></span><span class="ln">53</span>            И Котировки.Валюта = ВТ_КотировкиЦБ.Валюта</div>
-<div class="hl"><span class="g"></span><span class="ln">54</span>ИНДЕКСИРОВАТЬ ПО</div>
-<div class="hl"><span class="g"></span><span class="ln">55</span>    Котировки.Актив,</div>
-<div class="hl"><span class="g"></span><span class="ln">56</span>    ДатаОпределения</div>
+<div class="hl"><span class="g"></span><span class="ln">36</span>    Котировки.СредневзвешеннаяЦена,</div>
+<div class="hl"><span class="g"></span><span class="ln">37</span>    ЕСТЬNULL(ВТ_КотировкиЦБ.МинимальнаяЦена, Котировки.МинимальнаяЦена) КАК МинимальнаяЦена,</div>
+<div class="hl"><span class="g"></span><span class="ln">38</span>    ЕСТЬNULL(ВТ_КотировкиЦБ.МаксимальнаяЦена, Котировки.МаксимальнаяЦена) КАК МаксимальнаяЦена,</div>
+<div class="hl"><span class="g"></span><span class="ln">39</span>    Котировки.ЦенаЗакрытия,</div>
+<div class="hl"><span class="g"></span><span class="ln">40</span>    Котировки.ЭкспертнаяЦена,</div>
+<div class="hl"><span class="g"></span><span class="ln">41</span>    Котировки.ЦенаСпроса,</div>
+<div class="hl"><span class="g"></span><span class="ln">42</span>    Котировки.Биржа,</div>
+<div class="hl"><span class="g"></span><span class="ln">43</span>    Котировки.ОбъемТоргов,</div>
+<div class="hl"><span class="g"></span><span class="ln">44</span>    Котировки.УровеньКотировальногоЛиста,</div>
+<div class="hl"><span class="g"></span><span class="ln">45</span>    ВЫБОР</div>
+<div class="hl"><span class="g"></span><span class="ln">46</span>        КОГДА Котировки.ДатаОпределения = &amp;ПустаяДата</div>
+<div class="hl"><span class="g"></span><span class="ln">47</span>            ТОГДА Котировки.Период</div>
+<div class="hl"><span class="g"></span><span class="ln">48</span>        ИНАЧЕ Котировки.ДатаОпределения</div>
+<div class="hl"><span class="g"></span><span class="ln">49</span>    КОНЕЦ КАК ДатаОпределения</div>
+<div class="hl"><span class="g"></span><span class="ln">50</span>ПОМЕСТИТЬ АктуальныеКотировки</div>
+<div class="hl"><span class="g"></span><span class="ln">51</span>ИЗ</div>
+<div class="hl del"><span class="g">-</span><span class="ln">52</span>    РегистрСведений.ЗафиксированныеКотировкиЦБ.СрезПоследних(</div>
+<div class="hl del"><span class="g">-</span><span class="ln">53</span>            &amp;Дата,</div>
+<div class="hl del"><span class="g">-</span><span class="ln">54</span>            Актив В (ВЫБРАТЬ Актив ИЗ втАктивы)</div>
+<div class="hl del"><span class="g">-</span><span class="ln">55</span>                И ДоговорДУ = &amp;ДоговорДУ</div>
+<div class="hl del"><span class="g">-</span><span class="ln">56</span>                И Расчетная = ЛОЖЬ) КАК Котировки</div>
+<div class="hl"><span class="g"></span><span class="ln">57</span>        ЛЕВОЕ СОЕДИНЕНИЕ ВТ_КотировкиЦБ КАК ВТ_КотировкиЦБ</div>
+<div class="hl"><span class="g"></span><span class="ln">58</span>        ПО Котировки.Актив = ВТ_КотировкиЦБ.Актив</div>
+<div class="hl"><span class="g"></span><span class="ln">59</span>            И Котировки.Валюта = ВТ_КотировкиЦБ.Валюта</div>
+<div class="hl"><span class="g"></span><span class="ln">60</span>ИНДЕКСИРОВАТЬ ПО</div>
+<div class="hl"><span class="g"></span><span class="ln">61</span>    Котировки.Актив,</div>
+<div class="hl"><span class="g"></span><span class="ln">62</span>    ДатаОпределения</div>
 </div>
     </div>
 
     <div class="col became">
-      <div class="col-head">Стало <span class="why">Заказчик 1а+1б + JOIN втАктивы</span></div>
+      <div class="col-head">Стало <span class="why">та же схема, регистр ЗафиксированныеКотировкиЦБ</span></div>
 <div class="code">
 <div class="hl chg"><span class="g">~</span><span class="ln"> 1</span>ВЫБРАТЬ</div>
 <div class="hl chg"><span class="g">~</span><span class="ln"> 2</span>    ТаблицаАктивов.Актив КАК Актив</div>
@@ -258,61 +264,71 @@
 <div class="hl add"><span class="g">+</span><span class="ln">32</span>    Котировки.Валюта,</div>
 <div class="hl add"><span class="g">+</span><span class="ln">33</span>    Котировки.Котировка,</div>
 <div class="hl add"><span class="g">+</span><span class="ln">34</span>    Котировки.Расчетная,</div>
-<div class="hl add"><span class="g">+</span><span class="ln">35</span>    Котировки.МинимальнаяЦена,</div>
-<div class="hl add"><span class="g">+</span><span class="ln">36</span>    Котировки.МаксимальнаяЦена,</div>
-<div class="hl add"><span class="g">+</span><span class="ln">37</span>    Котировки.Биржа,</div>
-<div class="hl add"><span class="g">+</span><span class="ln">38</span>    ВЫБОР</div>
-<div class="hl add"><span class="g">+</span><span class="ln">39</span>        КОГДА Котировки.ДатаОпределения = &amp;ПустаяДата</div>
-<div class="hl add"><span class="g">+</span><span class="ln">40</span>            ТОГДА Котировки.Период</div>
-<div class="hl add"><span class="g">+</span><span class="ln">41</span>        ИНАЧЕ Котировки.ДатаОпределения</div>
-<div class="hl add"><span class="g">+</span><span class="ln">42</span>    КОНЕЦ КАК ДатаОпределения</div>
-<div class="hl add"><span class="g">+</span><span class="ln">43</span>ПОМЕСТИТЬ втСрезЗафиксированных</div>
-<div class="hl add"><span class="g">+</span><span class="ln">44</span>ИЗ</div>
-<div class="hl add"><span class="g">+</span><span class="ln">45</span>    РегистрСведений.ЗафиксированныеКотировкиЦБ_БУ.СрезПоследних(</div>
-<div class="hl add"><span class="g">+</span><span class="ln">46</span>            &amp;Дата,</div>
-<div class="hl add"><span class="g">+</span><span class="ln">47</span>            ДоговорДУ = &amp;ДоговорДУ</div>
-<div class="hl add"><span class="g">+</span><span class="ln">48</span>                И Расчетная = ЛОЖЬ) КАК Котировки</div>
-<div class="hl add"><span class="g">+</span><span class="ln">49</span>ИНДЕКСИРОВАТЬ ПО</div>
-<div class="hl add"><span class="g">+</span><span class="ln">50</span>    Актив,</div>
-<div class="hl add"><span class="g">+</span><span class="ln">51</span>    Валюта</div>
-<div class="hl add"><span class="g">+</span><span class="ln">52</span>;</div>
-<div class="hl"><span class="g"></span><span class="ln">53</span></div>
-<div class="hl"><span class="g"></span><span class="ln">54</span>ВЫБРАТЬ</div>
-<div class="hl"><span class="g"></span><span class="ln">55</span>    Котировки.Актив,</div>
-<div class="hl"><span class="g"></span><span class="ln">56</span>    Котировки.Валюта,</div>
-<div class="hl"><span class="g"></span><span class="ln">57</span>    Котировки.Котировка,</div>
-<div class="hl"><span class="g"></span><span class="ln">58</span>    Котировки.Расчетная,</div>
-<div class="hl"><span class="g"></span><span class="ln">59</span>    ЕСТЬNULL(ВТ_КотировкиЦБ.МинимальнаяЦена, Котировки.МинимальнаяЦена) КАК МинимальнаяЦена,</div>
-<div class="hl"><span class="g"></span><span class="ln">60</span>    ЕСТЬNULL(ВТ_КотировкиЦБ.МаксимальнаяЦена, Котировки.МаксимальнаяЦена) КАК МаксимальнаяЦена,</div>
-<div class="hl"><span class="g"></span><span class="ln">61</span>    Котировки.Биржа,</div>
-<div class="hl"><span class="g"></span><span class="ln">62</span>    Котировки.ДатаОпределения</div>
-<div class="hl"><span class="g"></span><span class="ln">63</span>ПОМЕСТИТЬ АктуальныеКотировки</div>
-<div class="hl"><span class="g"></span><span class="ln">64</span>ИЗ</div>
-<div class="hl add"><span class="g">+</span><span class="ln">65</span>    втСрезЗафиксированных КАК Котировки</div>
-<div class="hl add"><span class="g">+</span><span class="ln">66</span>        ВНУТРЕННЕЕ СОЕДИНЕНИЕ втАктивы КАК втАктивы</div>
-<div class="hl add"><span class="g">+</span><span class="ln">67</span>        ПО Котировки.Актив = втАктивы.Актив</div>
-<div class="hl"><span class="g"></span><span class="ln">68</span>        ЛЕВОЕ СОЕДИНЕНИЕ ВТ_КотировкиЦБ КАК ВТ_КотировкиЦБ</div>
-<div class="hl"><span class="g"></span><span class="ln">69</span>        ПО Котировки.Актив = ВТ_КотировкиЦБ.Актив</div>
-<div class="hl"><span class="g"></span><span class="ln">70</span>            И Котировки.Валюта = ВТ_КотировкиЦБ.Валюта</div>
-<div class="hl"><span class="g"></span><span class="ln">71</span>ИНДЕКСИРОВАТЬ ПО</div>
-<div class="hl"><span class="g"></span><span class="ln">72</span>    Актив,</div>
-<div class="hl"><span class="g"></span><span class="ln">73</span>    ДатаОпределения</div>
+<div class="hl add"><span class="g">+</span><span class="ln">35</span>    Котировки.СредневзвешеннаяЦена,</div>
+<div class="hl add"><span class="g">+</span><span class="ln">36</span>    Котировки.МинимальнаяЦена,</div>
+<div class="hl add"><span class="g">+</span><span class="ln">37</span>    Котировки.МаксимальнаяЦена,</div>
+<div class="hl add"><span class="g">+</span><span class="ln">38</span>    Котировки.ЦенаЗакрытия,</div>
+<div class="hl add"><span class="g">+</span><span class="ln">39</span>    Котировки.ЭкспертнаяЦена,</div>
+<div class="hl add"><span class="g">+</span><span class="ln">40</span>    Котировки.ЦенаСпроса,</div>
+<div class="hl add"><span class="g">+</span><span class="ln">41</span>    Котировки.Биржа,</div>
+<div class="hl add"><span class="g">+</span><span class="ln">42</span>    Котировки.ОбъемТоргов,</div>
+<div class="hl add"><span class="g">+</span><span class="ln">43</span>    Котировки.УровеньКотировальногоЛиста,</div>
+<div class="hl add"><span class="g">+</span><span class="ln">44</span>    ВЫБОР</div>
+<div class="hl add"><span class="g">+</span><span class="ln">45</span>        КОГДА Котировки.ДатаОпределения = &amp;ПустаяДата</div>
+<div class="hl add"><span class="g">+</span><span class="ln">46</span>            ТОГДА Котировки.Период</div>
+<div class="hl add"><span class="g">+</span><span class="ln">47</span>        ИНАЧЕ Котировки.ДатаОпределения</div>
+<div class="hl add"><span class="g">+</span><span class="ln">48</span>    КОНЕЦ КАК ДатаОпределения</div>
+<div class="hl add"><span class="g">+</span><span class="ln">49</span>ПОМЕСТИТЬ втСрезЗафиксированных</div>
+<div class="hl add"><span class="g">+</span><span class="ln">50</span>ИЗ</div>
+<div class="hl add"><span class="g">+</span><span class="ln">51</span>    РегистрСведений.ЗафиксированныеКотировкиЦБ.СрезПоследних(</div>
+<div class="hl add"><span class="g">+</span><span class="ln">52</span>            &amp;Дата,</div>
+<div class="hl add"><span class="g">+</span><span class="ln">53</span>            ДоговорДУ = &amp;ДоговорДУ</div>
+<div class="hl add"><span class="g">+</span><span class="ln">54</span>                И Расчетная = ЛОЖЬ) КАК Котировки</div>
+<div class="hl add"><span class="g">+</span><span class="ln">55</span>ИНДЕКСИРОВАТЬ ПО</div>
+<div class="hl add"><span class="g">+</span><span class="ln">56</span>    Актив,</div>
+<div class="hl add"><span class="g">+</span><span class="ln">57</span>    Валюта</div>
+<div class="hl add"><span class="g">+</span><span class="ln">58</span>;</div>
+<div class="hl"><span class="g"></span><span class="ln">59</span></div>
+<div class="hl"><span class="g"></span><span class="ln">60</span>ВЫБРАТЬ</div>
+<div class="hl"><span class="g"></span><span class="ln">61</span>    Котировки.Актив,</div>
+<div class="hl"><span class="g"></span><span class="ln">62</span>    Котировки.Валюта,</div>
+<div class="hl"><span class="g"></span><span class="ln">63</span>    Котировки.Котировка,</div>
+<div class="hl"><span class="g"></span><span class="ln">64</span>    Котировки.Расчетная,</div>
+<div class="hl"><span class="g"></span><span class="ln">65</span>    Котировки.СредневзвешеннаяЦена,</div>
+<div class="hl"><span class="g"></span><span class="ln">66</span>    ЕСТЬNULL(ВТ_КотировкиЦБ.МинимальнаяЦена, Котировки.МинимальнаяЦена) КАК МинимальнаяЦена,</div>
+<div class="hl"><span class="g"></span><span class="ln">67</span>    ЕСТЬNULL(ВТ_КотировкиЦБ.МаксимальнаяЦена, Котировки.МаксимальнаяЦена) КАК МаксимальнаяЦена,</div>
+<div class="hl"><span class="g"></span><span class="ln">68</span>    Котировки.ЦенаЗакрытия,</div>
+<div class="hl"><span class="g"></span><span class="ln">69</span>    Котировки.ЭкспертнаяЦена,</div>
+<div class="hl"><span class="g"></span><span class="ln">70</span>    Котировки.ЦенаСпроса,</div>
+<div class="hl"><span class="g"></span><span class="ln">71</span>    Котировки.Биржа,</div>
+<div class="hl"><span class="g"></span><span class="ln">72</span>    Котировки.ОбъемТоргов,</div>
+<div class="hl"><span class="g"></span><span class="ln">73</span>    Котировки.УровеньКотировальногоЛиста,</div>
+<div class="hl"><span class="g"></span><span class="ln">74</span>    Котировки.ДатаОпределения</div>
+<div class="hl"><span class="g"></span><span class="ln">75</span>ПОМЕСТИТЬ АктуальныеКотировки</div>
+<div class="hl"><span class="g"></span><span class="ln">76</span>ИЗ</div>
+<div class="hl add"><span class="g">+</span><span class="ln">77</span>    втСрезЗафиксированных КАК Котировки</div>
+<div class="hl add"><span class="g">+</span><span class="ln">78</span>        ВНУТРЕННЕЕ СОЕДИНЕНИЕ втАктивы КАК втАктивы</div>
+<div class="hl add"><span class="g">+</span><span class="ln">79</span>        ПО Котировки.Актив = втАктивы.Актив</div>
+<div class="hl"><span class="g"></span><span class="ln">80</span>        ЛЕВОЕ СОЕДИНЕНИЕ ВТ_КотировкиЦБ КАК ВТ_КотировкиЦБ</div>
+<div class="hl"><span class="g"></span><span class="ln">81</span>        ПО Котировки.Актив = ВТ_КотировкиЦБ.Актив</div>
+<div class="hl"><span class="g"></span><span class="ln">82</span>            И Котировки.Валюта = ВТ_КотировкиЦБ.Валюта</div>
+<div class="hl"><span class="g"></span><span class="ln">83</span>ИНДЕКСИРОВАТЬ ПО</div>
+<div class="hl"><span class="g"></span><span class="ln">84</span>    Актив,</div>
+<div class="hl"><span class="g"></span><span class="ln">85</span>    ДатаОпределения</div>
 </div>
     </div>
   </div>
   <div class="note">
-    <span class="step">1а</span> втАктивы из одной таблицы значений, не из IN.<br>
-    <span class="step">1б</span> срез БУ сначала в втСрезЗафиксированных с индексом, потом JOIN с ВТ_КотировкиЦБ.<br>
-    <span class="step">x2</span> актив не в параметрах среза, а INNER JOIN втАктивы.
+    Схема та же, что у БУ. Отличие только в регистре (ЗафиксированныеКотировкиЦБ) и наборе полей УУ: средневзвешенная, закрытие, экспертная, спрос, объём, уровень листа.
   </div>
 
 <h2>Основной код модуля объекта — параметры запроса</h2>
-<p class="sub" style="margin-bottom:12px;">Сигнатура <b>ЗафиксированныеКотировкиБУ</b> не меняется: по-прежнему приходит <b>СписокЦБ</b>. Меняется то, как этот список кладётся в запрос.</p>
+<p class="sub" style="margin-bottom:12px;">Сигнатура <b>ЗафиксированныеКотировкиУУ</b> не меняется: по-прежнему приходит <b>СписокЦБ</b>. Меняется то, как этот список кладётся в запрос.</p>
 <div class="pair">
   <div class="col was">
-    <div class="col-head">Было <span class="why">модуль объекта, ЗафиксированныеКотировкиБУ</span></div>
+    <div class="col-head">Было <span class="why">модуль объекта, ЗафиксированныеКотировкиУУ</span></div>
 <div class="code">
-<div class="hl"><span class="g"></span><span class="ln">  </span>Функция ЗафиксированныеКотировкиБУ(СписокЦБ, СписокБирж)</div>
+<div class="hl"><span class="g"></span><span class="ln">  </span>Функция ЗафиксированныеКотировкиУУ(СписокЦБ, СписокБирж)</div>
 <div class="hl"><span class="g"></span><span class="ln">  </span></div>
 <div class="hl"><span class="g"></span><span class="ln">  </span>    МенеджерВТ = Новый МенеджерВременныхТаблиц;</div>
 <div class="hl"><span class="g"></span><span class="ln">  </span>    Запрос = Новый Запрос;</div>
@@ -330,7 +346,7 @@
   <div class="col became">
     <div class="col-head">Стало <span class="why">список -&gt; таблица значений -&gt; один параметр</span></div>
 <div class="code">
-<div class="hl"><span class="g"></span><span class="ln">  </span>Функция ЗафиксированныеКотировкиБУ(СписокЦБ, СписокБирж)</div>
+<div class="hl"><span class="g"></span><span class="ln">  </span>Функция ЗафиксированныеКотировкиУУ(СписокЦБ, СписокБирж)</div>
 <div class="hl"><span class="g"></span><span class="ln">  </span></div>
 <div class="hl"><span class="g"></span><span class="ln">  </span>    МенеджерВТ = Новый МенеджерВременныхТаблиц;</div>
 <div class="hl"><span class="g"></span><span class="ln">  </span>    Запрос = Новый Запрос;</div>
