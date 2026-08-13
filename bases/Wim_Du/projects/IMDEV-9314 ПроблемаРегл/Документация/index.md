@@ -9,6 +9,7 @@
 | [ticket](ticket/index.md) | Тикет Jira |
 | [plan](plan/index.md) | План работ и письма (включая [vendor_code_changes.html](plan/vendor_code_changes.html) для вендора) |
 | [queries](queries/index.md) | Сравнение запросов БУ/УУ и консоль |
+| [summary_imdev9314.html](summary_imdev9314.html) | Сводка: постановка, сделано, тесты 1 поток и 12 потоков, передача вендору |
 
 Расширение CFE: [../Расширения/index.md](../Расширения/index.md).
 

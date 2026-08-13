@@ -7,3 +7,5 @@
 | [background_jobs.html](background_jobs.html) | Как устроено фоновое распределение в РегламентныеПериоды |
 
 Сравнение запросов: [../queries/index.md](../queries/index.md).
+
+Сводка по задаче и тестам: [../summary_imdev9314.html](../summary_imdev9314.html). Вендору после замера: [vendor_code_changes.html](vendor_code_changes.html).

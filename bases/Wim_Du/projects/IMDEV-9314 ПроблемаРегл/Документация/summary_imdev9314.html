@@ -1,0 +1,232 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<title>IMDEV-9314: сводка — постановка, сделано, тест, вендор</title>
+</head>
+<body style="margin:0; padding:0; font-family:Calibri, Arial, sans-serif; font-size:14px; color:#222222; line-height:1.45;">
+
+<table width="100%" cellpadding="0" cellspacing="0" border="0">
+<tr>
+<td style="padding:12px 8px;">
+
+<p style="margin:0 0 6px 0; font-size:18px; font-weight:bold; color:#1f4e79;">IMDEV-9314. Сводка: постановка, что сделано, результаты теста</p>
+<p style="margin:0 0 14px 0; color:#555555; font-size:13px;">Документ «Установка котировок ц/б», база Wim_Du. Причина: IMAPPS-38656. Итог: запросы БУ и УУ ушли из топа медленных, правки можно отдавать вендору в типовую 1.5.29.7.</p>
+
+<!-- 1. Постановка -->
+<table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 16px 0; border:1px solid #c8d6e5;">
+<tr>
+<td style="background:#1f4e79; color:#ffffff; padding:8px 12px; font-size:15px; font-weight:bold;">1. Постановка задачи</td>
+</tr>
+<tr>
+<td style="padding:12px;">
+<p style="margin:0 0 8px 0;">Тикет <b>IMDEV-9314</b> (Change Request, AvancoreDU). Вечерний регламент тормозит на больших ИДУ. В замере «было» две строки модуля объекта документа «Установка котировок ц/б» давали около 40% чистого времени:</p>
+<ul style="margin:0 0 10px 18px; padding:0;">
+<li style="margin-bottom:4px;"><span style="font-family:Consolas, monospace;">ЗафиксированныеКотировкиУУ</span> — строка 562, <span style="font-family:Consolas, monospace;">Запрос.Выполнить()</span>;</li>
+<li style="margin-bottom:4px;"><span style="font-family:Consolas, monospace;">ЗафиксированныеКотировкиБУ</span> — строка 404, то же.</li>
+</ul>
+<p style="margin:0 0 8px 0;">Что просил Заказчик:</p>
+<table width="100%" cellpadding="6" cellspacing="0" border="1" style="border-collapse:collapse; border-color:#b0c4de; font-size:13px;">
+<tr style="background:#d6e3f0;">
+<th align="left" style="padding:6px;">Пункт</th>
+<th align="left" style="padding:6px;">Суть</th>
+<th align="left" style="padding:6px;">Статус</th>
+</tr>
+<tr>
+<td style="padding:6px; vertical-align:top;"><b>1а</b></td>
+<td style="padding:6px;">Список ЦБ в параметр запроса класть таблицей значений, не <span style="font-family:Consolas, monospace;">В (&amp;СписокЦБ)</span> — лимит параметров SQL.</td>
+<td style="padding:6px; background:#e8f5e9;"><b>Сделано</b></td>
+</tr>
+<tr style="background:#f7fbff;">
+<td style="padding:6px; vertical-align:top;"><b>1б</b></td>
+<td style="padding:6px;">СрезПоследних сначала во временную таблицу с индексом, потом JOIN с <span style="font-family:Consolas, monospace;">ВТ_КотировкиЦБ</span>.</td>
+<td style="padding:6px; background:#e8f5e9;"><b>Сделано</b></td>
+</tr>
+<tr>
+<td style="padding:6px; vertical-align:top;"><b>JOIN</b></td>
+<td style="padding:6px;">Отбор активов через <span style="font-family:Consolas, monospace;">ВНУТРЕННЕЕ СОЕДИНЕНИЕ втАктивы</span>, а не IN внутри виртуальной таблицы. Согласовано с Заказчиком поверх 1а/1б.</td>
+<td style="padding:6px; background:#e8f5e9;"><b>Сделано</b></td>
+</tr>
+<tr style="background:#f7fbff;">
+<td style="padding:6px; vertical-align:top;"><b>2</b></td>
+<td style="padding:6px;">Перепроверить многопоточность ИДУ в справочнике «Регламентные периоды» (IMDEV-8926 / IMAPPS-35039).</td>
+<td style="padding:6px; background:#e8f5e9;"><b>Сделано</b> ранее: пул живой, 1 клиент + главное ФЗ + ФЗ по договорам.</td>
+</tr>
+<tr>
+<td style="padding:6px; vertical-align:top;"><b>3</b></td>
+<td style="padding:6px;">Унести вендору в коробку (типовая 1.5.29.7).</td>
+<td style="padding:6px; background:#fff3cd;"><b>Готово к передаче</b> после замера «стало».</td>
+</tr>
+</table>
+<p style="margin:10px 0 0 0; font-size:13px;">НУ не трогаем. Сигнатуры <span style="font-family:Consolas, monospace;">ЗафиксированныеКотировкиБУ/УУ(СписокЦБ, СписокБирж)</span> не меняются.</p>
+</td>
+</tr>
+</table>
+
+<!-- 2. Что сделано -->
+<table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 16px 0; border:1px solid #c8d6e5;">
+<tr>
+<td style="background:#1f4e79; color:#ffffff; padding:8px 12px; font-size:15px; font-weight:bold;">2. Что сделано</td>
+</tr>
+<tr>
+<td style="padding:12px;">
+<p style="margin:0 0 8px 0;">Расширение <b>IM9314</b> (Patch, префикс <span style="font-family:Consolas, monospace;">IM9314_</span>). Перехват <span style="font-family:Consolas, monospace;">&amp;Вместо</span> двух функций модуля объекта. База сравнения — типовая <b>1.5.29.7</b>.</p>
+<ol style="margin:0 0 10px 18px; padding:0;">
+<li style="margin-bottom:4px;">Хелпер <span style="font-family:Consolas, monospace;">ТаблицаАктивовИзСпискаЦБ</span> (в CFE: <span style="font-family:Consolas, monospace;">IM9314_ТаблицаАктивовИзСпискаЦБ</span>) — один параметр <span style="font-family:Consolas, monospace;">&amp;ТаблицаАктивов</span>.</li>
+<li style="margin-bottom:4px;"><span style="font-family:Consolas, monospace;">втСрезЗафиксированных</span> с индексом (Актив, Валюта); срез только по договору и <span style="font-family:Consolas, monospace;">Расчетная = ЛОЖЬ</span>.</li>
+<li style="margin-bottom:4px;">Отбор ЦБ — JOIN к <span style="font-family:Consolas, monospace;">втАктивы</span>. После JOIN индекс с префиксом таблицы (<span style="font-family:Consolas, monospace;">Котировки.Актив</span>), иначе «Неоднозначное поле Актив».</li>
+</ol>
+<p style="margin:0 0 6px 0; font-size:13px;">Материалы:</p>
+<ul style="margin:0; padding:0 0 0 18px;">
+<li style="margin-bottom:3px;">Расширение: <a href="../Расширения/index.md">Расширения/IM9314</a>, файл <span style="font-family:Consolas, monospace;">IM9314.cfe</span></li>
+<li style="margin-bottom:3px;">Сравнение запросов: <a href="queries/query_before_after_BU.html">БУ</a>, <a href="queries/query_before_after_UU.html">УУ</a></li>
+<li style="margin-bottom:3px;">Письмо вендору (готовый код в типовую): <a href="plan/vendor_code_changes.html">vendor_code_changes.html</a></li>
+</ul>
+</td>
+</tr>
+</table>
+
+<!-- 3. Тест 1 поток -->
+<table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 16px 0; border:1px solid #c8d6e5;">
+<tr>
+<td style="background:#1f4e79; color:#ffffff; padding:8px 12px; font-size:15px; font-weight:bold;">3. Тест 1: разработческая база, 1 поток, отладчик</td>
+</tr>
+<tr>
+<td style="padding:12px;">
+<p style="margin:0 0 8px 0;">Цель — увидеть в замере, что <span style="font-family:Consolas, monospace;">Запрос.Выполнить()</span> в модуле «Установка котировок ц/б» ушёл из топа. Прогон под отладчиком, поэтому <b>общее</b> время сессии не сравнивать с «было» как выигрыш wall-clock. Сравнивать две строки запросов при том же числе вызовов.</p>
+<table width="100%" cellpadding="6" cellspacing="0" border="1" style="border-collapse:collapse; border-color:#b0c4de; font-size:13px; margin:0 0 12px 0;">
+<tr style="background:#d6e3f0;">
+<th align="left" style="padding:6px;">Параметр</th>
+<th align="left" style="padding:6px;">Значение</th>
+</tr>
+<tr>
+<td style="padding:6px;">База</td>
+<td style="padding:6px;"><span style="font-family:Consolas, monospace;">Srvr="SMSK02MG138U:6541";Ref="AVC_REGR_CLEAN_DU"</span>, версия <b>1.5.29.2</b> + расширение IM9314</td>
+</tr>
+<tr style="background:#f7fbff;">
+<td style="padding:6px;">Сценарий</td>
+<td style="padding:6px;">Вечерние операции, 12.08.2026. Фильтр: тип клиента = Физические лица, пул &lt;&gt; Розничное ДУ. В плане есть «Установка котировок ц/б».</td>
+</tr>
+<tr>
+<td style="padding:6px;">Потоки</td>
+<td style="padding:6px;">1</td>
+</tr>
+<tr style="background:#f7fbff;">
+<td style="padding:6px;">Старт / финиш</td>
+<td style="padding:6px;">10:25 — 16:05 (~5 ч 30 мин). Замер «стало» в отладчике.</td>
+</tr>
+</table>
+
+<p style="margin:0 0 6px 0; font-weight:bold; color:#1f4e79;">Таблица замера: что было и что стало</p>
+<p style="margin:0 0 8px 0; font-size:13px; color:#555555;">Оба прогона: по <b>2195</b> вызовов каждой функции. Модуль «стало» — <span style="font-family:Consolas, monospace;">IM9314 Документ.УстановкаКотировокЦБ.МодульОбъекта</span>.</p>
+
+<table width="100%" cellpadding="6" cellspacing="0" border="1" style="border-collapse:collapse; border-color:#b0c4de; font-size:13px; margin:0 0 10px 0;">
+<tr style="background:#d6e3f0;">
+<th align="left" style="padding:6px;">Функция</th>
+<th align="left" style="padding:6px;">Было (строка CF)</th>
+<th align="left" style="padding:6px;">Чистое время / доля</th>
+<th align="left" style="padding:6px;">Стало (строка CFE)</th>
+<th align="left" style="padding:6px;">Чистое время / доля</th>
+<th align="left" style="padding:6px;">Ускорение</th>
+</tr>
+<tr>
+<td style="padding:6px;">УУ, <span style="font-family:Consolas, monospace;">Запрос.Выполнить()</span></td>
+<td style="padding:6px;">562</td>
+<td style="padding:6px; background:#fff1f0;">3652 с &nbsp; <b>21.08%</b></td>
+<td style="padding:6px;">264</td>
+<td style="padding:6px; background:#ecfdf3;">481 с &nbsp; <b>2.43%</b> (8-е место)</td>
+<td style="padding:6px;"><b>~7.6 раза</b></td>
+</tr>
+<tr style="background:#f7fbff;">
+<td style="padding:6px;">БУ, <span style="font-family:Consolas, monospace;">Запрос.Выполнить()</span></td>
+<td style="padding:6px;">404</td>
+<td style="padding:6px; background:#fff1f0;">3134 с &nbsp; <b>18.09%</b></td>
+<td style="padding:6px;">139</td>
+<td style="padding:6px; background:#ecfdf3;">400 с &nbsp; <b>2.02%</b> (11-е место)</td>
+<td style="padding:6px;"><b>~7.8 раза</b></td>
+</tr>
+<tr>
+<td style="padding:6px;"><b>Сумма БУ+УУ</b></td>
+<td style="padding:6px;"></td>
+<td style="padding:6px; background:#fff1f0;"><b>~39%</b> топа</td>
+<td style="padding:6px;"></td>
+<td style="padding:6px; background:#ecfdf3;"><b>~4.5%</b>, не топ</td>
+<td style="padding:6px;"><b>~7.7 раза</b></td>
+</tr>
+</table>
+
+<p style="margin:0 0 8px 0; font-size:13px;">После правки первое место занимает другой запрос: <span style="font-family:Consolas, monospace;">ОбщегоНазначенияДУПовтИсп</span>, строка 130 (~9.8%). Котировки документа больше не узкое место этого прогона.</p>
+<p style="margin:0; font-size:13px;">Скриншоты замера: <a href="../Тестирование/reports/profiler_was.png">было</a>, <a href="../Тестирование/reports/profiler_became.png">стало</a>. Настройка прогона: <a href="../Тестирование/reports/setup_dev_evening_ops.png">вечерние, физики не РДУ</a>.</p>
+</td>
+</tr>
+</table>
+
+<!-- 4. Тест 12 потоков -->
+<table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 16px 0; border:1px solid #c8d6e5;">
+<tr>
+<td style="background:#1f4e79; color:#ffffff; padding:8px 12px; font-size:15px; font-weight:bold;">4. Тест 2: сервер — копия ПРОД по мощности, 12 потоков</td>
+</tr>
+<tr>
+<td style="padding:12px;">
+<p style="margin:0 0 8px 0;">Боевой сценарий без отладчика. Тот же отбор: физические лица, не розничное ДУ. Вечерние операции, в плане есть «Установка котировок ц/б».</p>
+<table width="100%" cellpadding="6" cellspacing="0" border="1" style="border-collapse:collapse; border-color:#b0c4de; font-size:13px; margin:0 0 12px 0;">
+<tr style="background:#d6e3f0;">
+<th align="left" style="padding:6px;">Параметр</th>
+<th align="left" style="padding:6px;">Значение</th>
+</tr>
+<tr>
+<td style="padding:6px;">База</td>
+<td style="padding:6px;"><span style="font-family:Consolas, monospace;">Srvr="SMSK02MG138:8541";Ref="AVC_UAT_RDU_PERFTEST"</span></td>
+</tr>
+<tr style="background:#f7fbff;">
+<td style="padding:6px;">Конфигурация</td>
+<td style="padding:6px;">Доверительное управление <b>1.5.29.7</b> (Аванкор). Платформа 8.3.27.2214.</td>
+</tr>
+<tr>
+<td style="padding:6px;">Потоки</td>
+<td style="padding:6px;">Константа «Максимальное количество параллельных потоков» = <b>12</b></td>
+</tr>
+<tr style="background:#f7fbff;">
+<td style="padding:6px;">Период</td>
+<td style="padding:6px;">28.07.2026, ответственный Admin</td>
+</tr>
+<tr>
+<td style="padding:6px;">Старт / финиш</td>
+<td style="padding:6px;">13.08.2026 16:45 — 17:25:44 (сеанс SMSK02MG138, завершение)</td>
+</tr>
+<tr style="background:#e8f5e9;">
+<td style="padding:6px;"><b>Итог прогона</b></td>
+<td style="padding:6px;"><b>~40 минут</b></td>
+</tr>
+</table>
+<p style="margin:0 0 8px 0; padding:8px 10px; background:#e8f5e9; border-left:4px solid #28a745;">
+<b>Вывод по ПРОД.</b> На расчёт порядка 3000 договоров ДУ физических лиц не РДУ на мощности ПРОД закладывать около <b>40 минут</b>.
+</p>
+<p style="margin:0; font-size:13px;">Скриншоты: <a href="../Тестирование/reports/about_uat_rduperftest.png">О программе</a>, <a href="../Тестирование/reports/constant_12_threads.png">12 потоков</a>, <a href="../Тестирование/reports/monitor_period_28_07.png">период 28.07</a>, <a href="../Тестирование/reports/setup_prodcopy_evening_ops.png">настройка вечерних</a>.</p>
+</td>
+</tr>
+</table>
+
+<!-- 5. Вендор -->
+<table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 16px 0; border:1px solid #28a745;">
+<tr>
+<td style="background:#28a745; color:#ffffff; padding:8px 12px; font-size:15px; font-weight:bold;">5. Можно отдавать вендору</td>
+</tr>
+<tr>
+<td style="padding:12px; background:#f7fff8;">
+<p style="margin:0 0 8px 0;">Замер «стало» есть: те же 2195 вызовов, запросы БУ и УУ больше не в топе, ускорение строк ~7.6–7.8 раза. На копии ПРОД вечерний пакет физиков не РДУ в 12 потоков прошёл за ~40 минут.</p>
+<p style="margin:0 0 8px 0;">Вендору отдавать письмо с готовым кодом в типовую <b>1.5.29.7</b>:</p>
+<p style="margin:0 0 8px 0;"><b><a href="plan/vendor_code_changes.html">Документация/plan/vendor_code_changes.html</a></b></p>
+<p style="margin:0 0 8px 0;">Там: хелпер <span style="font-family:Consolas, monospace;">ТаблицаАктивовИзСпискаЦБ</span> и полная замена тел <span style="font-family:Consolas, monospace;">ЗафиксированныеКотировкиБУ</span> и <span style="font-family:Consolas, monospace;">ЗафиксированныеКотировкиУУ</span>. Функцию НУ не трогать. Построчно: <a href="queries/query_before_after_BU.html">БУ</a>, <a href="queries/query_before_after_UU.html">УУ</a>.</p>
+<p style="margin:0; font-size:13px;">Локально до коробки держим расширение IM9314. В типовой имена без префикса <span style="font-family:Consolas, monospace;">IM9314_</span>.</p>
+</td>
+</tr>
+</table>
+
+<p style="margin:0; font-size:12px; color:#777777;">Источники: IMDEV-9314; IMAPPS-38656; протокол <a href="../Тестирование/reports/test_new_algorithm_it.docx">test_new_algorithm_it.docx</a>; замеры профилировщика 12–13.08.2026.</p>
+
+</td>
+</tr>
+</table>
+
+</body>
+</html>
