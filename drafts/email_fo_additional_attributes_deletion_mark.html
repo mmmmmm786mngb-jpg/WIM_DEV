@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<title>Почему в списке набора Контрагенты свойство с крестиком</title>
+</head>
+<body style="margin:0; padding:0; background:#ffffff;">
+<div style="font-family:Calibri, Arial, sans-serif; font-size:14px; color:#222222; line-height:1.45; max-width:820px;">
+
+<p style="margin:0 0 12px 0;">Роман, привет!</p>
+
+<p style="margin:0 0 14px 0;">
+Спасибо, что уточнил: крестик виден в списке набора <strong>«Контрагенты»</strong>.
+Посмотрел по коду FO — это как раз тот список.
+</p>
+
+<table cellpadding="0" cellspacing="0" border="0" width="100%" style="border-collapse:collapse; margin:0 0 16px 0;">
+  <tr>
+    <td style="background:#e8f5e9; border-left:4px solid #2e7d32; padding:12px 14px;">
+      <div style="font-weight:bold; color:#1b5e20; margin:0 0 6px 0;">Коротко</div>
+      <div style="color:#222222; margin:0;">
+        В списке набора крестик — это <strong>не пометка удаления элемента ПВХ</strong>.
+        Это флаг в табличной части набора: «свойство исключено из набора».
+        <code>Записать()</code> у ПВХ сам этот флаг не ставит.
+        Нужно ещё записать строку в ТЧ набора и явно снять
+        <strong>ПометкаУдаления = Ложь</strong>.
+      </div>
+    </td>
+  </tr>
+</table>
+
+<p style="margin:0 0 6px 0; font-weight:bold; color:#1565c0;">Что происходит в этом списке</p>
+<p style="margin:0 0 10px 0;">
+Список набора «Контрагенты» строится из ТЧ справочника
+<strong>НаборыДополнительныхРеквизитовИСведений</strong>.
+Иконка удаления берётся из колонки ТЧ <strong>ПометкаУдаления</strong>.
+В метаданных FO у неё подсказка:
+</p>
+<p style="margin:0 0 14px 0; font-style:italic; color:#555555;">
+«Устанавливается при исключении дополнительного реквизита из набора,
+чтобы можно было вернуть связь с уникальным дополнительным реквизитом.»
+</p>
+<p style="margin:0 0 14px 0;">
+Ты заполняешь <strong>НаборСвойств</strong> — для БСП это уникальное свойство набора.
+А строку в ТЧ в том фрагменте не пишешь.
+Без строки свойства в составе набора нет.
+Если строка есть, но флаг ТЧ не сброшен — в списке будет крестик.
+</p>
+
+<p style="margin:0 0 6px 0; font-weight:bold; color:#1565c0;">На что ещё смотреть</p>
+<ol style="margin:0 0 14px 20px; padding:0;">
+  <li style="margin:0 0 8px 0;">
+    У тебя <strong>ЭтоДополнительноеСведение = Истина</strong>.
+    Это сведение, не реквизит. Смотри вкладку <strong>доп. сведений</strong>,
+    строку клади в ТЧ <strong>ДополнительныеСведения</strong>.
+  </li>
+  <li style="margin:0 0 8px 0;">
+    Если включено <strong>«Показать неиспользуемые сведения»</strong> —
+    слева может быть «Контрагенты», а справа уже не состав набора, а сироты.
+    Этот флажок лучше выключить.
+  </li>
+  <li style="margin:0 0 8px 0;">
+    <strong>НайтиПоНаименованию("Контрагенты")</strong> лучше не использовать.
+    Надёжнее предопределённый набор
+    <span style="font-family:Consolas, 'Courier New', monospace; font-size:13px;">Справочник_Контрагенты</span>.
+  </li>
+</ol>
+
+<p style="margin:0 0 6px 0; font-weight:bold; color:#1565c0;">Как создавать из кода</p>
+
+<table cellpadding="0" cellspacing="0" border="0" width="100%" style="border-collapse:collapse; margin:0 0 16px 0;">
+  <tr>
+    <td style="background:#f5f5f5; border:1px solid #e0e0e0; padding:10px 12px; font-family:Consolas, 'Courier New', monospace; font-size:12px; color:#222222; line-height:1.4;">
+НаборСвойств = УправлениеСвойствами.НаборСвойствПоИмени("Справочник_Контрагенты");<br>
+<br>
+ДопРеквизит = ПланыВидовХарактеристик.ДополнительныеРеквизитыИСведения.СоздатьЭлемент();<br>
+ДопРеквизит.Наименование = "FIRMID";<br>
+ДопРеквизит.Заголовок = "FIRMID";<br>
+ДопРеквизит.Имя = "FIRMID_C4T";<br>
+ДопРеквизит.ТипЗначения = Новый ОписаниеТипов("Строка", , , , Новый КвалификаторыСтроки(1));<br>
+ДопРеквизит.Виден = Истина;<br>
+ДопРеквизит.Доступен = Истина;<br>
+ДопРеквизит.ЭтоДополнительноеСведение = Истина;<br>
+ДопРеквизит.НаборСвойств = НаборСвойств;<br>
+ДопРеквизит.Записать();<br>
+<br>
+НаборОбъект = НаборСвойств.ПолучитьОбъект();<br>
+СтрокаНабора = НаборОбъект.ДополнительныеСведения.Найти(ДопРеквизит.Ссылка, "Свойство");<br>
+Если СтрокаНабора = Неопределено Тогда<br>
+&nbsp;&nbsp;&nbsp;&nbsp;СтрокаНабора = НаборОбъект.ДополнительныеСведения.Добавить();<br>
+&nbsp;&nbsp;&nbsp;&nbsp;СтрокаНабора.Свойство = ДопРеквизит.Ссылка;<br>
+КонецЕсли;<br>
+СтрокаНабора.ПометкаУдаления = Ложь;<br>
+НаборОбъект.Записать();
+    </td>
+  </tr>
+</table>
+
+<table cellpadding="0" cellspacing="0" border="0" width="100%" style="border-collapse:collapse; margin:0 0 16px 0;">
+  <tr>
+    <td style="background:#fff8e1; border-left:4px solid #f9a825; padding:12px 14px;">
+      Если нужен именно <strong>реквизит на форме</strong> контрагента, а не сведение:
+      <strong>ЭтоДополнительноеСведение = Ложь</strong>
+      и строка в ТЧ <strong>ДополнительныеРеквизиты</strong>.
+    </td>
+  </tr>
+</table>
+
+<p style="margin:0 0 14px 0;">
+В самой FO этот приём уже есть: обработка
+<strong>АвтоматическоеСозданиеЗаявокРЕПО</strong> так же создаёт сведение
+и сразу добавляет его в ТЧ набора.
+</p>
+
+<p style="margin:0 0 2px 0;">Если что — пиши.</p>
+<p style="margin:0 0 16px 0;">Алексей</p>
+
+</div>
+</body>
+</html>
