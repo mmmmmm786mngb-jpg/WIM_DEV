@@ -1,0 +1,1086 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<title>Вынос расчета СЧА/РСА в отдельный этап — предложение на согласование</title>
+<style>
+    :root {
+        --brand: #52648A;
+        --brand-dark: #33405C;
+        --brand-deep: #232C41;
+        --accent: #8DB8C7;
+        --accent-soft: #DCE8EE;
+        --tint: #A8B1C4;
+        --gold: #B98A22;
+        --gold-soft: #FBF4E2;
+        --green: #2E7D64;
+        --green-soft: #E7F2EE;
+        --red: #A8423F;
+        --red-soft: #F8ECEB;
+        --ink: #23293D;
+        --muted: #6A7488;
+        --line: #DCE1E9;
+        --bg: #F3F5F8;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body {
+        height: 100%;
+        background: #1B2030;
+        font-family: "Segoe UI", Calibri, Arial, sans-serif;
+        color: var(--ink);
+        overflow: hidden;
+    }
+    #stage {
+        position: fixed;
+        left: 0; top: 0;
+        width: 1280px;
+        height: 720px;
+        transform-origin: 0 0;
+    }
+    .slide {
+        position: absolute;
+        left: 0; top: 0;
+        width: 1280px;
+        height: 720px;
+        background: #fff;
+        padding: 46px 62px 62px 62px;
+        display: none;
+        flex-direction: column;
+        overflow: hidden;
+    }
+    .slide.active { display: flex; }
+
+    /* ---------- shared chrome ---------- */
+    .eyebrow {
+        font-size: 14px;
+        letter-spacing: 1.6px;
+        text-transform: uppercase;
+        color: var(--tint);
+        font-weight: 600;
+        margin-bottom: 10px;
+    }
+    h1.stitle {
+        font-size: 34px;
+        font-weight: 600;
+        color: var(--brand-dark);
+        line-height: 1.2;
+        margin-bottom: 6px;
+    }
+    .rule {
+        width: 74px;
+        height: 4px;
+        background: var(--accent);
+        margin: 12px 0 24px 0;
+        border-radius: 2px;
+    }
+    .logo-tr {
+        position: absolute;
+        right: 56px;
+        top: 40px;
+        height: 30px;
+        width: auto;
+        opacity: 0.95;
+    }
+    .slide.section .chip img { width: auto; }
+    .num {
+        position: absolute;
+        right: 56px;
+        bottom: 26px;
+        font-size: 13px;
+        color: var(--tint);
+        letter-spacing: 1px;
+    }
+    .foot {
+        position: absolute;
+        left: 62px;
+        bottom: 26px;
+        font-size: 13px;
+        color: var(--tint);
+    }
+    .lead { font-size: 20px; line-height: 1.5; color: #333C52; }
+    .body { font-size: 17px; line-height: 1.5; color: #3A4358; }
+    strong { font-weight: 600; color: var(--brand-dark); }
+
+    /* ---------- title slide ---------- */
+    .slide.title {
+        background: linear-gradient(125deg, #FFFFFF 0%, #EDF1F6 58%, #E2E9F0 100%);
+        justify-content: center;
+        padding-left: 96px;
+    }
+    .slide.title::before {
+        content: "";
+        position: absolute;
+        left: 0; top: 0; bottom: 0;
+        width: 14px;
+        background: linear-gradient(180deg, var(--brand) 0%, var(--accent) 100%);
+    }
+    .slide.title img.logo {
+        height: 52px;
+        width: auto;
+        align-self: flex-start;
+        margin-bottom: 54px;
+    }
+    .slide.title h1 {
+        font-size: 50px;
+        line-height: 1.16;
+        color: var(--brand-dark);
+        font-weight: 600;
+        max-width: 900px;
+    }
+    .slide.title .sub {
+        font-size: 26px;
+        color: var(--brand);
+        margin-top: 18px;
+        max-width: 860px;
+    }
+    .badge-approve {
+        display: inline-block;
+        align-self: flex-start;
+        background: var(--gold);
+        color: #fff;
+        font-size: 15px;
+        font-weight: 600;
+        letter-spacing: 0.6px;
+        padding: 8px 18px;
+        border-radius: 4px;
+        margin-top: 38px;
+    }
+    .title-meta {
+        position: absolute;
+        left: 96px;
+        bottom: 54px;
+        font-size: 16px;
+        color: var(--muted);
+        line-height: 1.7;
+    }
+    .title-meta b { color: var(--brand-dark); font-weight: 600; }
+
+    /* ---------- section divider ---------- */
+    .slide.section {
+        background: linear-gradient(125deg, var(--brand-dark) 0%, var(--brand-deep) 100%);
+        justify-content: center;
+        padding-left: 96px;
+    }
+    .slide.section .chip {
+        position: absolute;
+        right: 56px;
+        top: 38px;
+        background: #fff;
+        border-radius: 6px;
+        padding: 9px 14px;
+        line-height: 0;
+    }
+    .slide.section .chip img { height: 28px; }
+    .slide.section .kicker {
+        font-size: 15px;
+        letter-spacing: 2px;
+        text-transform: uppercase;
+        color: var(--accent);
+        font-weight: 600;
+        margin-bottom: 20px;
+    }
+    .slide.section h1 {
+        font-size: 52px;
+        color: #fff;
+        font-weight: 600;
+        line-height: 1.15;
+        max-width: 940px;
+    }
+    .slide.section p {
+        font-size: 23px;
+        color: #C9D3E0;
+        margin-top: 22px;
+        max-width: 860px;
+    }
+    .slide.section .num { color: #7C89A3; }
+
+    /* ---------- generic blocks ---------- */
+    .row { display: flex; gap: 20px; }
+    .row.grow { flex: 1; align-items: stretch; }
+    .col { flex: 1; }
+
+    .card {
+        background: var(--bg);
+        border: 1px solid var(--line);
+        border-top: 4px solid var(--brand);
+        border-radius: 4px;
+        padding: 22px 24px;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+    }
+    .row.mid { margin-top: auto; margin-bottom: auto; }
+    .tiles.grow { flex: 1; align-content: stretch; }
+    .tiles.grow .tile {
+        height: calc(50% - 7px);
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+    }
+    .tl.grow { margin-top: auto; margin-bottom: auto; align-items: flex-start; }
+    .flow.tall { flex: 1; }
+    .ask.grow { flex: 1; align-items: center; }
+    table.t.tall { height: 100%; }
+    .card .ch {
+        font-size: 19px;
+        font-weight: 600;
+        color: var(--brand-dark);
+        margin-bottom: 10px;
+    }
+    .card .cb { font-size: 16px; line-height: 1.5; color: #3A4358; }
+
+    .stat {
+        background: var(--bg);
+        border: 1px solid var(--line);
+        border-radius: 4px;
+        padding: 22px 24px;
+        text-align: center;
+    }
+    .stat .v {
+        font-size: 46px;
+        font-weight: 700;
+        color: var(--brand);
+        line-height: 1;
+        margin-bottom: 10px;
+    }
+    .stat .l { font-size: 15px; color: var(--muted); line-height: 1.4; }
+
+    .note {
+        border-left: 5px solid var(--accent);
+        background: var(--accent-soft);
+        padding: 16px 20px;
+        font-size: 17px;
+        line-height: 1.5;
+        border-radius: 0 4px 4px 0;
+    }
+    .note.gold { border-left-color: var(--gold); background: var(--gold-soft); }
+    .note.green { border-left-color: var(--green); background: var(--green-soft); }
+    .note.red { border-left-color: var(--red); background: var(--red-soft); }
+    .note .nt { font-weight: 600; color: var(--brand-dark); display: block; margin-bottom: 4px; }
+
+    ul.clean { list-style: none; }
+    ul.clean li {
+        position: relative;
+        padding-left: 26px;
+        margin-bottom: 14px;
+        font-size: 17px;
+        line-height: 1.5;
+    }
+    ul.clean li::before {
+        content: "";
+        position: absolute;
+        left: 4px; top: 9px;
+        width: 8px; height: 8px;
+        background: var(--accent);
+        border-radius: 50%;
+    }
+
+    table.t {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 15.5px;
+    }
+    table.t th {
+        background: var(--brand-dark);
+        color: #fff;
+        text-align: left;
+        padding: 11px 14px;
+        font-weight: 600;
+        font-size: 15px;
+    }
+    table.t td {
+        border: 1px solid var(--line);
+        padding: 11px 14px;
+        vertical-align: top;
+        line-height: 1.4;
+    }
+    table.t tr:nth-child(even) td { background: #FAFBFD; }
+
+    /* ---------- proposal cards ---------- */
+    .prop {
+        background: #fff;
+        border: 1px solid var(--line);
+        border-left: 6px solid var(--brand);
+        border-radius: 0 5px 5px 0;
+        padding: 22px 26px;
+        flex: 1;
+    }
+    .prop .pn {
+        display: inline-block;
+        width: 34px; height: 34px;
+        line-height: 34px;
+        text-align: center;
+        background: var(--brand);
+        color: #fff;
+        border-radius: 50%;
+        font-size: 17px;
+        font-weight: 600;
+        margin-right: 12px;
+        vertical-align: middle;
+    }
+    .prop .ph {
+        font-size: 21px;
+        font-weight: 600;
+        color: var(--brand-dark);
+        display: inline;
+        vertical-align: middle;
+    }
+    .prop dl { margin-top: 18px; }
+    .prop dt {
+        font-size: 12.5px;
+        text-transform: uppercase;
+        letter-spacing: 0.8px;
+        color: var(--brand);
+        font-weight: 700;
+        margin-top: 14px;
+    }
+    .prop dd { font-size: 16px; line-height: 1.48; margin-top: 4px; color: #3A4358; }
+
+    /* ---------- flow diagram ---------- */
+    .flow-lbl {
+        font-size: 15px;
+        font-weight: 700;
+        letter-spacing: 1px;
+        text-transform: uppercase;
+        color: var(--muted);
+        margin-bottom: 10px;
+    }
+    .flow {
+        display: flex;
+        align-items: center;
+        gap: 0;
+        margin-bottom: 8px;
+    }
+    .fbox {
+        background: var(--bg);
+        border: 1px solid var(--line);
+        border-radius: 4px;
+        padding: 12px 14px;
+        font-size: 14.5px;
+        line-height: 1.35;
+        text-align: center;
+        min-height: 78px;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        flex: 1;
+    }
+    .fbox b { display: block; font-size: 15px; margin-bottom: 3px; }
+    .fbox.heavy { background: var(--red-soft); border-color: #E3C4C2; }
+    .fbox.good { background: var(--green-soft); border-color: #C3DED4; }
+    .fbox.wide { flex: 2.2; }
+    .fsep {
+        width: 26px;
+        flex: 0 0 26px;
+        text-align: center;
+        color: var(--tint);
+        font-size: 20px;
+        font-weight: 700;
+    }
+    .fdots { flex: 0 0 40px; text-align: center; color: var(--tint); font-weight: 700; letter-spacing: 2px; }
+
+    /* ---------- tiles ---------- */
+    .tiles { display: flex; flex-wrap: wrap; gap: 14px; }
+    .tile {
+        width: calc(33.333% - 10px);
+        background: var(--green-soft);
+        border: 1px solid #C9DFD8;
+        border-radius: 4px;
+        padding: 16px 18px;
+    }
+    .tile .tt { font-size: 16.5px; font-weight: 600; color: #24604F; margin-bottom: 5px; }
+    .tile .td { font-size: 14.5px; line-height: 1.4; color: #3E5A52; }
+
+    /* ---------- timeline ---------- */
+    .tl { display: flex; gap: 0; margin-top: 8px; }
+    .tl-step { flex: 1; padding-right: 18px; position: relative; }
+    .tl-step::after {
+        content: "";
+        position: absolute;
+        left: 20px; right: 6px; top: 19px;
+        height: 2px;
+        background: var(--line);
+        z-index: 0;
+    }
+    .tl-step:last-child::after { display: none; }
+    .tl-step .c {
+        position: relative;
+        z-index: 1;
+        width: 40px; height: 40px;
+        line-height: 40px;
+        text-align: center;
+        background: var(--brand);
+        color: #fff;
+        border-radius: 50%;
+        font-weight: 700;
+        font-size: 17px;
+        margin-bottom: 14px;
+    }
+    .tl-step .th { font-size: 17px; font-weight: 600; color: var(--brand-dark); margin-bottom: 8px; line-height: 1.3; }
+    .tl-step .tb { font-size: 14.5px; line-height: 1.45; color: #3A4358; }
+
+    /* ---------- ask slide ---------- */
+    .ask {
+        display: flex;
+        gap: 16px;
+        background: var(--gold-soft);
+        border: 1px solid #E8D9AE;
+        border-left: 6px solid var(--gold);
+        border-radius: 0 4px 4px 0;
+        padding: 18px 22px;
+        margin-bottom: 14px;
+        align-items: flex-start;
+    }
+    .ask .an {
+        flex: 0 0 32px;
+        width: 32px; height: 32px;
+        line-height: 32px;
+        text-align: center;
+        background: var(--gold);
+        color: #fff;
+        border-radius: 50%;
+        font-weight: 700;
+        font-size: 16px;
+    }
+    .ask .at { font-size: 18px; font-weight: 600; color: #6E5313; margin-bottom: 4px; }
+    .ask .ad { font-size: 15.5px; line-height: 1.45; color: #4B4535; }
+
+    code {
+        font-family: Consolas, "Courier New", monospace;
+        font-size: 14px;
+        background: #EEF1F5;
+        border: 1px solid #DDE3EA;
+        border-radius: 3px;
+        padding: 1px 5px;
+        color: var(--brand-dark);
+    }
+
+    /* ---------- nav ---------- */
+    #bar {
+        position: fixed;
+        left: 0; top: 0;
+        height: 3px;
+        background: var(--accent);
+        z-index: 50;
+        transition: width 0.18s ease;
+    }
+    #hint {
+        position: fixed;
+        right: 14px; bottom: 10px;
+        font-size: 12px;
+        color: #6E7A92;
+        z-index: 50;
+        font-family: "Segoe UI", Arial, sans-serif;
+    }
+
+    /* ---------- print / PDF ---------- */
+    @page { size: 338.7mm 190.5mm; margin: 0; }
+    @media print {
+        html, body { overflow: visible; background: #fff; height: auto; }
+        #stage { position: static; width: auto; height: auto; transform: none !important; }
+        .slide {
+            position: relative;
+            display: flex !important;
+            page-break-after: always;
+            break-after: page;
+            border: 0;
+        }
+        .slide:last-child { page-break-after: auto; }
+        #bar, #hint { display: none !important; }
+        * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    }
+</style>
+</head>
+<body>
+
+<div id="bar"></div>
+<div id="hint">Стрелки или пробел — вперед, Home — в начало</div>
+
+<div id="stage">
+
+<!-- 1 -->
+<section class="slide title active">
+    <img class="logo" src="vim_logo.png" alt="ВИМ Инвестиции">
+    <h1>Ускорение вечерних регламентных операций розничного ДУ</h1>
+    <div class="sub">Вынос расчета СЧА и РСА в отдельный завершающий этап</div>
+    <span class="badge-approve">Предложение на согласование</span>
+    <div class="title-meta">
+        <b>Кому:</b> Кукушкин В.Ю., Юрашева Ю.Ю.<br>
+        <b>Система:</b> база ДУ, группа операций "2. Вечерние операции"<br>
+        <b>Дата:</b> 15 августа 2026
+    </div>
+    <div class="num">1 / 16</div>
+</section>
+
+<!-- 2 -->
+<section class="slide">
+    <img class="logo-tr" src="vim_logo.png" alt="">
+    <div class="eyebrow">Контекст</div>
+    <h1 class="stitle">О чем идет речь</h1>
+    <div class="rule"></div>
+
+    <div class="row mid">
+        <div class="col card">
+            <div class="ch">Что оптимизируем</div>
+            <div class="cb">Группу регламентных операций <strong>"2. Вечерние операции"</strong> по розничному доверительному управлению</div>
+        </div>
+        <div class="col card">
+            <div class="ch">Какой объем</div>
+            <div class="cb">Порядка <strong>22 000 договоров</strong> в одном прогоне, и клиентская база продолжает расти</div>
+        </div>
+        <div class="col card">
+            <div class="ch">Что считается тяжело</div>
+            <div class="cb">Два показателя: <strong>СЧА</strong> — стоимость чистых активов и <strong>РСА</strong> — размер собственных активов</div>
+        </div>
+    </div>
+
+    <div class="note gold">
+        <span class="nt">Важное уточнение по терминологии</span>
+        Название "вечерние операции" — историческое. Фактически эта группа запускается <strong>днем и обрабатывает предыдущий рабочий день</strong>. Значит, длительный прогон нагружает базу в рабочие часы и отодвигает момент готовности данных за вчера.
+    </div>
+
+    <div class="foot">Предложение по доработке. База ДУ</div>
+    <div class="num">2 / 16</div>
+</section>
+
+<!-- 3 -->
+<section class="slide">
+    <img class="logo-tr" src="vim_logo.png" alt="">
+    <div class="eyebrow">Проблема</div>
+    <h1 class="stitle">Сегодня показатели считаются отдельно по каждому договору</h1>
+    <div class="rule"></div>
+
+    <div class="flow" style="margin-bottom:22px;">
+        <div class="fbox">Договор 1<b>5 тяжелых запросов</b></div>
+        <div class="fdots">+</div>
+        <div class="fbox">Договор 2<b>5 тяжелых запросов</b></div>
+        <div class="fdots">+</div>
+        <div class="fbox">Договор 3<b>5 тяжелых запросов</b></div>
+        <div class="fdots">...</div>
+        <div class="fbox">Договор 22 000<b>5 тяжелых запросов</b></div>
+        <div class="fsep">=</div>
+        <div class="fbox heavy" style="flex:1.15;"><b style="font-size:22px;">110 000</b>обращений к базе данных</div>
+    </div>
+
+    <div class="row grow">
+        <div class="col">
+            <ul class="clean">
+                <li>Каждое обращение — <strong>не справочный запрос, а расчет остатков на конец дня</strong>: счета бухгалтерского учета плюс около 17 регистров управленческого учета.</li>
+                <li>Одна и та же по своей сути работа выполняется <strong>22 000 раз</strong>. База многократно перечитывает одни и те же таблицы.</li>
+                <li>Расчет идет <strong>в общей очереди операций</strong> по договору, вперемешку с остальным закрытием.</li>
+            </ul>
+        </div>
+        <div class="col" style="flex:0 0 330px;">
+            <div class="stat" style="height:100%; justify-content:center; display:flex; flex-direction:column;">
+                <div class="v">22 000</div>
+                <div class="l">договоров в прогоне,<br>и число растет</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="note" style="margin-top:20px;">
+        <span class="nt">Из чего состоят эти пять запросов на каждый договор</span>
+        Параметры учетной политики договора, курсы валют, остатки по счетам бухгалтерского учета, остатки по регистрам управленческого учета и — при соответствующей настройке — справедливая стоимость незавершенных сделок.
+    </div>
+
+    <div class="num">3 / 16</div>
+</section>
+
+<!-- 4 -->
+<section class="slide">
+    <img class="logo-tr" src="vim_logo.png" alt="">
+    <div class="eyebrow">Почему сейчас</div>
+    <h1 class="stitle">Время прогона растет пропорционально числу договоров</h1>
+    <div class="rule"></div>
+
+    <div class="row mid">
+        <div class="col card">
+            <div class="ch">Рост клиентской базы</div>
+            <div class="cb">Каждый новый договор добавляет прогону свою порцию времени. Зависимость линейная, потолка у нее нет.</div>
+        </div>
+        <div class="col card">
+            <div class="ch">Нагрузка в рабочие часы</div>
+            <div class="cb">Прогон идет днем, одновременно с работой пользователей: тяжелые запросы конкурируют с ними за ресурсы сервера.</div>
+        </div>
+        <div class="col card">
+            <div class="ch">Позднее закрытие "вчера"</div>
+            <div class="cb">Чем дольше прогон, тем позже готовы показатели за предыдущий рабочий день и все, что от них зависит.</div>
+        </div>
+    </div>
+
+    <div class="note red">
+        <span class="nt">Вывод</span>
+        Дело не только в том, что прогон долгий. Текущая схема расчета <strong>ограничивает дальнейший рост розничного ДУ</strong>: при сохранении подхода время будет увеличиваться вместе с числом договоров.
+    </div>
+
+    <div class="num">4 / 16</div>
+</section>
+
+<!-- 5 -->
+<section class="slide section">
+    <div class="chip"><img src="vim_logo.png" alt=""></div>
+    <div class="kicker">Ключевая часть</div>
+    <h1>Что мы предлагаем</h1>
+    <p>Два решения, которые требуют вашего согласования. Первое меняет <b style="color:#fff;font-weight:600;">момент</b> расчета, второе — <b style="color:#fff;font-weight:600;">способ</b> расчета.</p>
+    <div class="num">5 / 16</div>
+</section>
+
+<!-- 6 -->
+<section class="slide">
+    <img class="logo-tr" src="vim_logo.png" alt="">
+    <div class="eyebrow">Предложение 1 из 2</div>
+    <h1 class="stitle">Выделить расчет показателей в отдельный завершающий этап</h1>
+    <div class="rule"></div>
+
+    <div class="row grow">
+        <div class="prop">
+            <dl>
+                <dt>Что меняем</dt>
+                <dd>Сейчас этапов закрытия два: "1. Утренние операции" и "2. Вечерние операции". Добавляем третий — <strong>"3. Расчет СЧА/РСА"</strong> — и переносим в него расчет показателей вместе со связанными контрольными операциями. Этап стартует после того, как все вечерние операции по всем договорам завершены.</dd>
+                <dt>Зачем это нужно</dt>
+                <dd>Показатели считаются по остаткам, которые формируются в ходе самого закрытия: переоценки, начисления, резервы. Посчитать их сразу по всем договорам можно только тогда, когда все эти операции уже завершены. <strong>Без отдельного этапа пакетный расчет технически невозможен.</strong></dd>
+            </dl>
+        </div>
+        <div class="prop" style="flex:0 0 430px; border-left-color: var(--gold); background: #FEFCF6;">
+            <div class="ph" style="color:#6E5313;">Что именно согласовываем</div>
+            <dl>
+                <dt style="color:var(--gold);">Появление третьего этапа</dt>
+                <dd>В списке групп регламентных операций добавится этап "3. Расчет СЧА/РСА".</dd>
+                <dt style="color:var(--gold);">Третий документ плана за день</dt>
+                <dd>По договору будет три документа "План регламентных операций ДУ" вместо двух: утро, вечер, расчет показателей. Система изначально спроектирована под несколько планов в день.</dd>
+                <dt style="color:var(--gold);">Порядок запуска</dt>
+                <dd>Предлагаем автоматизировать: для оператора это остается одним действием.</dd>
+            </dl>
+        </div>
+    </div>
+
+    <div class="num">6 / 16</div>
+</section>
+
+<!-- 7 -->
+<section class="slide">
+    <img class="logo-tr" src="vim_logo.png" alt="">
+    <div class="eyebrow">Предложение 2 из 2</div>
+    <h1 class="stitle">Считать показатели пакетно, по группам однотипных договоров</h1>
+    <div class="rule"></div>
+
+    <div class="row grow">
+        <div class="prop">
+            <dl>
+                <dt>Что меняем</dt>
+                <dd>Вместо отдельного расчета по каждому договору система считает <strong>сразу по группе договоров с одинаковыми настройками учетной политики</strong>, а затем раскладывает готовый результат по договорам.</dd>
+                <dt>Почему группами, а не все одним запросом</dt>
+                <dd>Состав данных зависит от параметров договора: ведется ли обособленный учет задолженности эмитента, как учитываются сделки РЕПО, к какому типу клиента относится портфель. Договоры с одинаковым набором параметров считать вместе можно, с разным — нельзя: результат исказится.</dd>
+                <dt>Что это дает</dt>
+                <dd>Розничные портфели настроены однотипно, поэтому вместо 22 000 отдельных расчетов система выполнит <strong>несколько групповых запросов</strong>. Логика расчета остается той же — меняется только объем данных за одно обращение.</dd>
+            </dl>
+        </div>
+        <div class="col" style="flex:0 0 340px; display:flex; flex-direction:column; gap:16px;">
+            <div class="stat" style="border-top:4px solid var(--red);">
+                <div class="v" style="color:var(--red);">110 000</div>
+                <div class="l">обращений к базе<br>по этому блоку сейчас</div>
+            </div>
+            <div class="stat" style="border-top:4px solid var(--green);">
+                <div class="v" style="color:var(--green);">десятки</div>
+                <div class="l">обращений к базе<br>после доработки</div>
+            </div>
+            <div class="note green" style="font-size:15.5px;">
+                <span class="nt">Что согласовываем</span>
+                Подход и критерий приемки: суммы должны совпасть с текущими <strong>полностью, до копейки</strong>.
+            </div>
+        </div>
+    </div>
+
+    <div class="num">7 / 16</div>
+</section>
+
+<!-- 8 -->
+<section class="slide">
+    <img class="logo-tr" src="vim_logo.png" alt="">
+    <div class="eyebrow">Схема</div>
+    <h1 class="stitle">Как есть и как будет</h1>
+    <div class="rule"></div>
+
+    <div class="flow-lbl">Как есть: расчет внутри общей очереди по каждому договору</div>
+    <div class="flow tall" style="margin-bottom:26px;">
+        <div class="fbox">Договор 1<b>операции закрытия</b></div>
+        <div class="fsep">&gt;</div>
+        <div class="fbox heavy">Договор 1<b>расчет СЧА/РСА</b></div>
+        <div class="fsep">&gt;</div>
+        <div class="fbox">Договор 2<b>операции закрытия</b></div>
+        <div class="fsep">&gt;</div>
+        <div class="fbox heavy">Договор 2<b>расчет СЧА/РСА</b></div>
+        <div class="fdots">...</div>
+        <div class="fbox heavy" style="flex:0.9;"><b>x 22 000</b>договоров</div>
+    </div>
+
+    <div class="flow-lbl">Как будет: два этапа, расчет один раз на всех</div>
+    <div class="flow tall" style="margin-bottom:24px;">
+        <div class="fbox wide"><b>Этап 2. Вечерние операции</b>все операции закрытия по всем 22 000 договоров, как сейчас</div>
+        <div class="fsep">&gt;</div>
+        <div class="fbox good wide"><b>Этап 3. Расчет СЧА/РСА</b>групповой расчет показателей сразу по всем договорам</div>
+        <div class="fsep">&gt;</div>
+        <div class="fbox wide"><b>Запись документов</b>те же документы по каждому договору, с той же датой</div>
+    </div>
+
+    <div class="note">
+        Порядок операций внутри этапа сохраняется, зависимости между расчетом показателей и контрольными операциями не нарушаются. Меняется только момент и способ получения данных.
+    </div>
+
+    <div class="num">8 / 16</div>
+</section>
+
+<!-- 9 -->
+<section class="slide">
+    <img class="logo-tr" src="vim_logo.png" alt="">
+    <div class="eyebrow">Границы изменений</div>
+    <h1 class="stitle">Что при этом не меняется</h1>
+    <div class="rule"></div>
+
+    <div class="tiles grow" style="margin-bottom:22px;">
+        <div class="tile">
+            <div class="tt">Методика расчета</div>
+            <div class="td">Формулы, состав счетов и регистров, правила исключения и вычитания — тот же алгоритм</div>
+        </div>
+        <div class="tile">
+            <div class="tt">Суммы показателей</div>
+            <div class="td">Результат совпадает до копейки. Это критерий приемки работ</div>
+        </div>
+        <div class="tile">
+            <div class="tt">Документы</div>
+            <div class="td">Те же документы по каждому договору, с той же датой и временем</div>
+        </div>
+        <div class="tile">
+            <div class="tt">Справка-расчет</div>
+            <div class="td">Тот же состав и та же детализация по показателям</div>
+        </div>
+        <div class="tile">
+            <div class="tt">Отчетность в Банк России</div>
+            <div class="td">Источник данных и его содержимое не меняются</div>
+        </div>
+        <div class="tile">
+            <div class="tt">Права и интерфейсы</div>
+            <div class="td">Роли, права доступа и формы отчетов не затрагиваются</div>
+        </div>
+    </div>
+
+    <div class="note green">
+        <span class="nt">Это техническая оптимизация, а не изменение учета</span>
+        Меняется <strong>когда</strong> и <strong>каким запросом</strong> система получает данные. Что она считает и что записывает — остается прежним.
+    </div>
+
+    <div class="num">9 / 16</div>
+</section>
+
+<!-- 10 -->
+<section class="slide">
+    <img class="logo-tr" src="vim_logo.png" alt="">
+    <div class="eyebrow">Эксплуатация</div>
+    <h1 class="stitle">Что изменится в ежедневной работе</h1>
+    <div class="rule"></div>
+
+    <table class="t" style="margin-bottom:20px;">
+        <tr>
+            <th style="width:30%">Что</th>
+            <th>Как будет</th>
+        </tr>
+        <tr>
+            <td>Список этапов закрытия</td>
+            <td>Появится третий этап — "3. Расчет СЧА/РСА"</td>
+        </tr>
+        <tr>
+            <td>Порядок запуска</td>
+            <td>Сначала вечерние операции, затем расчет показателей. Предлагаем автоматизировать, чтобы оператор по-прежнему выполнял одно действие</td>
+        </tr>
+        <tr>
+            <td>Документы плана операций</td>
+            <td>Три документа по договору за день вместо двух. Ограничение уникальности документов это штатно допускает</td>
+        </tr>
+        <tr>
+            <td>Контроль выполнения</td>
+            <td>Работает как раньше. Пока этап не выполнен, операции видны в мониторе как невыполненные</td>
+        </tr>
+        <tr>
+            <td>Повторный прогон по договору</td>
+            <td>При перезапуске вечерних операций показатели нужно пересчитать — предусмотрим это программно, не полагаясь на память оператора</td>
+        </tr>
+    </table>
+
+    <div class="note gold">
+        <span class="nt">Безопасный режим отказа</span>
+        Если третий этап не запустить, система <strong>не выдаст неверные цифры</strong>: показатели просто не будут рассчитаны, и это сразу видно в мониторе как невыполненная операция.
+    </div>
+
+    <div class="num">10 / 16</div>
+</section>
+
+<!-- 11 -->
+<section class="slide">
+    <img class="logo-tr" src="vim_logo.png" alt="">
+    <div class="eyebrow">Эффект</div>
+    <h1 class="stitle">Что получаем и как это проверим</h1>
+    <div class="rule"></div>
+
+    <div class="row" style="margin-bottom:24px;">
+        <div class="col card" style="border-top-color: var(--green);">
+            <div class="ch">Быстрее прогон</div>
+            <div class="cb">Число тяжелых обращений к базе по блоку СЧА/РСА сокращается на порядок — с десятков тысяч до десятков</div>
+        </div>
+        <div class="col card" style="border-top-color: var(--green);">
+            <div class="ch">Меньше нагрузки днем</div>
+            <div class="cb">Прогон меньше конкурирует с работой пользователей за ресурсы сервера в рабочие часы</div>
+        </div>
+        <div class="col card" style="border-top-color: var(--green);">
+            <div class="ch">Предсказуемость</div>
+            <div class="cb">Время расчета показателей начинает слабо зависеть от числа договоров, база может расти дальше</div>
+        </div>
+    </div>
+
+    <div class="row grow">
+        <div class="col note">
+            <span class="nt">Замер до начала разработки</span>
+            На первом этапе мы измерим фактическую долю расчета СЧА/РСА в общем времени прогона и покажем ожидаемый выигрыш в цифрах. <strong>Если доля окажется небольшой — сообщим об этом и предложим направить усилия на другой участок.</strong>
+        </div>
+        <div class="col note green">
+            <span class="nt">Критерий приемки</span>
+            Полное совпадение сумм СЧА и РСА по всем договорам за контрольный день, до копейки, при сокращении времени этапа. Сверка "до и после" выполняется на копии продуктивной базы.
+        </div>
+    </div>
+
+    <div class="num">11 / 16</div>
+</section>
+
+<!-- 12 -->
+<section class="slide">
+    <img class="logo-tr" src="vim_logo.png" alt="">
+    <div class="eyebrow">Управление риском</div>
+    <h1 class="stitle">Риски и как мы их закрываем</h1>
+    <div class="rule"></div>
+
+    <table class="t tall">
+        <tr>
+            <th style="width:34%">Риск</th>
+            <th>Как закрываем</th>
+        </tr>
+        <tr>
+            <td>Расхождение сумм после доработки</td>
+            <td>Внедряем в два шага: сначала переносим расчет в конец <strong>без изменения алгоритма</strong> и убеждаемся в полном совпадении, только потом включаем пакетный расчет</td>
+        </tr>
+        <tr>
+            <td>Третий этап не запущен</td>
+            <td>Автоматический последовательный запуск и отражение невыполненной операции в мониторе. Расчет можно доформировать отдельно, не повторяя все закрытие</td>
+        </tr>
+        <tr>
+            <td>Повторный прогон без пересчета показателей</td>
+            <td>Программная связка: при перезапуске вечерних операций по договору показатели помечаются к пересчету</td>
+        </tr>
+        <tr>
+            <td>Выигрыш меньше ожидаемого</td>
+            <td>Замер выполняется до разработки, решение "делаем или не делаем" принимается по факту</td>
+        </tr>
+        <tr>
+            <td>Потребуется откат</td>
+            <td>Откат — это возврат операций в вечерний этап, то есть <strong>изменение настройки</strong>, а не переустановка доработки</td>
+        </tr>
+    </table>
+
+    <div class="num">12 / 16</div>
+</section>
+
+<!-- 13 -->
+<section class="slide">
+    <img class="logo-tr" src="vim_logo.png" alt="">
+    <div class="eyebrow">План</div>
+    <h1 class="stitle">Четыре этапа с контролем результата на каждом</h1>
+    <div class="rule"></div>
+
+    <div class="tl grow">
+        <div class="tl-step">
+            <div class="c">1</div>
+            <div class="th">Замер и анализ</div>
+            <div class="tb">Измеряем фактическую долю расчета СЧА/РСА в общем времени прогона, анализируем настройки договоров. Итог — цифра ожидаемого выигрыша и решение о продолжении</div>
+        </div>
+        <div class="tl-step">
+            <div class="c">2</div>
+            <div class="th">Перенос в отдельный этап</div>
+            <div class="tb">Создаем третий этап и переносим в него операции, алгоритм расчета не трогаем. Итог — суммы совпадают с текущими полностью</div>
+        </div>
+        <div class="tl-step">
+            <div class="c">3</div>
+            <div class="th">Включение пакетного расчета</div>
+            <div class="tb">Включаем групповой расчет по однотипным договорам. Итог — сокращение времени этапа при тех же суммах</div>
+        </div>
+        <div class="tl-step">
+            <div class="c">4</div>
+            <div class="th">Регресс и сверка</div>
+            <div class="tb">Прогон и сверка на копии продуктива, итоговый замер. Итог — протоколы сверки и замеров, готовность к переносу на продуктив</div>
+        </div>
+    </div>
+
+    <div class="note">
+        Оценку трудозатрат представим после согласования подхода: объем работ по третьему этапу зависит от результатов анализа настроек договоров на первом этапе.
+    </div>
+
+    <div class="num">13 / 16</div>
+</section>
+
+<!-- 14 -->
+<section class="slide">
+    <img class="logo-tr" src="vim_logo.png" alt="">
+    <div class="eyebrow">Решение за вами</div>
+    <h1 class="stitle">Что требуется от бизнес-заказчика</h1>
+    <div class="rule"></div>
+
+    <div class="ask grow">
+        <div class="an">1</div>
+        <div>
+            <div class="at">Согласовать появление третьего этапа закрытия</div>
+            <div class="ad">И, как следствие, третьего документа плана регламентных операций по договору за день</div>
+        </div>
+    </div>
+    <div class="ask grow">
+        <div class="an">2</div>
+        <div>
+            <div class="at">Подтвердить требование к запуску</div>
+            <div class="ad">Автоматический последовательный запуск двух этапов одним действием оператора — либо два отдельных запуска по регламенту эксплуатации</div>
+        </div>
+    </div>
+    <div class="ask grow">
+        <div class="an">3</div>
+        <div>
+            <div class="at">Согласовать окно на копии продуктивной базы</div>
+            <div class="ad">Для замеров и сверки результатов "до и после"</div>
+        </div>
+    </div>
+    <div class="ask grow">
+        <div class="an">4</div>
+        <div>
+            <div class="at">Подтвердить критерий приемки</div>
+            <div class="ad">Полное совпадение сумм СЧА и РСА по всем договорам за контрольный день при сокращении времени этапа</div>
+        </div>
+    </div>
+
+    <div class="num">14 / 16</div>
+</section>
+
+<!-- 15 -->
+<section class="slide">
+    <img class="logo-tr" src="vim_logo.png" alt="">
+    <div class="eyebrow">Техническое приложение 1 из 2</div>
+    <h1 class="stitle">Суть решения для отдела разработки</h1>
+    <div class="rule"></div>
+
+    <div class="row grow" style="gap:22px;">
+        <div class="col">
+            <div class="card" style="height:100%;">
+                <div class="ch">Часть A. Отдельная группа операций (второй проход)</div>
+                <div class="cb">
+                    Создается группа <code>3. "Расчет СЧА/РСА"</code>, в нее переносятся пять видов операций: расчет СЧА, расчет РСА, доходность портфеля, контроль уменьшения стоимости, контроль уровня рисков.<br><br>
+                    <strong>Ключевой факт:</strong> привязка вида операции к группе хранится в иерархии справочника <code>ВидыОперацийЗакрытияПериода</code>, а не в разрезе договоров. Перенос — это смена реквизита <code>Родитель</code> у пяти предопределенных элементов. Миграция настроек по 22 000 договоров не требуется, индивидуальная периодичность сохраняется.
+                </div>
+            </div>
+        </div>
+        <div class="col">
+            <div class="card" style="height:100%; border-top-color: var(--accent);">
+                <div class="ch">Часть D1. Группировка по сигнатуре параметров</div>
+                <div class="cb">
+                    Тело запроса не переписывается. Отбор <code>ДоговорДУ = &amp;ДоговорДУ</code> заменяется на <code>ДоговорДУ В (&amp;ДоговорыГруппы)</code>, договор добавляется в выборку и группировку.<br><br>
+                    Группы формируются по 9 параметрам учетной политики, влияющим на состав счетов и регистров. Теоретический максимум: 12 групп по БУ, 32 по УУ. Для розничных портфелей ожидается 1-3 группы. Расчет выполняется пачками договоров — ограничение по памяти.
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="note" style="margin-top:20px;">
+        Готовые таблицы доезжают до операции штатным каналом: предподготовка данных перед циклом плюс седьмой параметр исполняемой процедуры. Многопоточность, обработка отказов и регистрация исполнения операций остаются без изменений.
+    </div>
+
+    <div class="num">15 / 16</div>
+</section>
+
+<!-- 16 -->
+<section class="slide">
+    <img class="logo-tr" src="vim_logo.png" alt="">
+    <div class="eyebrow">Техническое приложение 2 из 2</div>
+    <h1 class="stitle">Результаты проверки технической возможности</h1>
+    <div class="rule"></div>
+
+    <table class="t" style="margin-bottom:18px;">
+        <tr>
+            <th style="width:46%">Проверка по исходным текстам конфигурации</th>
+            <th>Результат</th>
+        </tr>
+        <tr>
+            <td>Несколько планов операций на договор в день</td>
+            <td>Допустимо штатно: уникальность контролируется в разрезе даты, договора <strong>и группы операций</strong></td>
+        </tr>
+        <tr>
+            <td>Сдвиг даты документов расчета</td>
+            <td>Не происходит: дата привязана к окончанию рабочего дня, от момента расчета не зависит</td>
+        </tr>
+        <tr>
+            <td>Влияние операций 1000-1030 на входные данные расчета</td>
+            <td>Отсутствует: регистр бухгалтерии и регистры накопления УУ они не затрагивают, поэтому предподготовка второго прохода корректна</td>
+        </tr>
+        <tr>
+            <td>Зависимость контрольных операций от результата расчета</td>
+            <td>Есть, поэтому переносятся вместе. Порядок внутри группы сохраняется</td>
+        </tr>
+        <tr>
+            <td>Отображение новой группы в интерфейсе, блокировки, план-факт</td>
+            <td>Доработка не требуется, конфликтов нет</td>
+        </tr>
+    </table>
+
+    <div class="note green">
+        <span class="nt">Вывод</span>
+        Решение реализуемо <strong>без изменения архитектуры механизма регламентных операций</strong>. Правки локализованы в предподготовке данных и в расчетном методе менеджера документа. Выполняется расширением конфигурации.
+    </div>
+
+    <div class="foot">Подробное описание — в документе proposal_scha_rsa_batch_calculation.html</div>
+    <div class="num">16 / 16</div>
+</section>
+
+</div>
+
+<script>
+(function () {
+    var slides = Array.prototype.slice.call(document.querySelectorAll(".slide"));
+    var stage = document.getElementById("stage");
+    var bar = document.getElementById("bar");
+    var i = 0;
+
+    function fit() {
+        var s = Math.min(window.innerWidth / 1280, window.innerHeight / 720);
+        var ox = (window.innerWidth - 1280 * s) / 2;
+        var oy = (window.innerHeight - 720 * s) / 2;
+        stage.style.transform = "translate(" + ox + "px," + oy + "px) scale(" + s + ")";
+    }
+
+    function show(n) {
+        i = Math.max(0, Math.min(slides.length - 1, n));
+        slides.forEach(function (el, k) { el.classList.toggle("active", k === i); });
+        bar.style.width = ((i + 1) / slides.length * 100) + "%";
+        try { history.replaceState(null, "", "#" + (i + 1)); } catch (e) {}
+    }
+
+    document.addEventListener("keydown", function (e) {
+        if (e.key === "ArrowRight" || e.key === "PageDown" || e.key === " " || e.key === "Enter") { show(i + 1); e.preventDefault(); }
+        else if (e.key === "ArrowLeft" || e.key === "PageUp" || e.key === "Backspace") { show(i - 1); e.preventDefault(); }
+        else if (e.key === "Home") { show(0); }
+        else if (e.key === "End") { show(slides.length - 1); }
+    });
+
+    document.addEventListener("click", function (e) {
+        show(e.clientX < window.innerWidth * 0.25 ? i - 1 : i + 1);
+    });
+
+    window.addEventListener("resize", fit);
+    fit();
+    var start = parseInt((location.hash || "#1").slice(1), 10);
+    show(isNaN(start) ? 0 : start - 1);
+})();
+</script>
+
+</body>
+</html>
