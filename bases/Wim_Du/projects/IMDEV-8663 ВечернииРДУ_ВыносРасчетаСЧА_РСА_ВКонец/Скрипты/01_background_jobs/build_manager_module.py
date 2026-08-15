@@ -53,6 +53,8 @@ def patch_parent(src: str) -> str:
         f"{TAB}{TAB}{TAB}ПараметрыСохранения.Вставить(\"ОшибокЗаданий\", 0);\n"
         f"{TAB}{TAB}{TAB}ПараметрыСохранения.Вставить(\"ПроблемныеДоговоры\", Новый Массив);\n"
         f"{TAB}{TAB}{TAB}ПараметрыСохранения.Вставить(\"РазмерЧанкаПоУИД\", Новый Соответствие);\n"
+        f"{TAB}{TAB}{TAB}ПараметрыСохранения.Вставить(\"IM8663_НачалоРасчетаМС\",\n"
+        f"{TAB}{TAB}{TAB}{TAB}ТекущаяУниверсальнаяДатаВМиллисекундах());\n"
         f"{TAB}{TAB}{TAB}// IMDEV-8663.1.B\n"
         f"{TAB}{TAB}{TAB}РазмерЧанка = 50;\n"
         f"{TAB}{TAB}{TAB}ПараметрыСохранения.Вставить(\"РазмерЧанка\", РазмерЧанка);\n"
@@ -138,13 +140,36 @@ def patch_parent(src: str) -> str:
         f"{TAB}{TAB}{TAB}#Вставка\n"
         f"{TAB}{TAB}{TAB}// IMDEV-8663.1.A\n"
         f"{TAB}{TAB}{TAB}IM8663_ЗавершитьФоновыеЗаданияПорции(ПараметрыСохранения);\n"
-        f"{TAB}{TAB}{TAB}ТекстСводки = СтрШаблон(\n"
-        f"{TAB}{TAB}{TAB}{TAB}НСтр(\"ru='Успешных заданий: %1; с ошибкой: %2'\"),\n"
-        f"{TAB}{TAB}{TAB}{TAB}ПараметрыСохранения.УспешныхЗаданий,\n"
-        f"{TAB}{TAB}{TAB}{TAB}ПараметрыСохранения.ОшибокЗаданий);\n"
+        f"{TAB}{TAB}{TAB}НачалоРасчетаМС = 0;\n"
+        f"{TAB}{TAB}{TAB}ПараметрыСохранения.Свойство(\"IM8663_НачалоРасчетаМС\", НачалоРасчетаМС);\n"
+        f"{TAB}{TAB}{TAB}ДлительностьСек = 0;\n"
+        f"{TAB}{TAB}{TAB}Если НачалоРасчетаМС > 0 Тогда\n"
+        f"{TAB}{TAB}{TAB}{TAB}ДлительностьСек = Цел(\n"
+        f"{TAB}{TAB}{TAB}{TAB}{TAB}(ТекущаяУниверсальнаяДатаВМиллисекундах() - НачалоРасчетаМС) / 1000);\n"
+        f"{TAB}{TAB}{TAB}КонецЕсли;\n"
+        f"{TAB}{TAB}{TAB}МинутРасчета = Цел(ДлительностьСек / 60);\n"
+        f"{TAB}{TAB}{TAB}СекундРасчета = ДлительностьСек - МинутРасчета * 60;\n"
+        f"{TAB}{TAB}{TAB}ТекстВремени = СтрШаблон(\n"
+        f"{TAB}{TAB}{TAB}{TAB}НСтр(\"ru='%1 мин %2 сек'\"),\n"
+        f"{TAB}{TAB}{TAB}{TAB}Формат(МинутРасчета, \"ЧН=0; ЧГ=\"),\n"
+        f"{TAB}{TAB}{TAB}{TAB}Формат(СекундРасчета, \"ЧН=0; ЧГ=\"));\n"
+        f"{TAB}{TAB}{TAB}Если ПараметрыСохранения.ФоновыеЗаданияДоступны Тогда\n"
+        f"{TAB}{TAB}{TAB}{TAB}ТекстСводки = СтрШаблон(\n"
+        f"{TAB}{TAB}{TAB}{TAB}{TAB}НСтр(\"ru='Обработано договоров: %1. Успешных заданий: %2, с ошибкой: %3. Затрачено: %4'\"),\n"
+        f"{TAB}{TAB}{TAB}{TAB}{TAB}КоличествоДоговоров,\n"
+        f"{TAB}{TAB}{TAB}{TAB}{TAB}ПараметрыСохранения.УспешныхЗаданий,\n"
+        f"{TAB}{TAB}{TAB}{TAB}{TAB}ПараметрыСохранения.ОшибокЗаданий,\n"
+        f"{TAB}{TAB}{TAB}{TAB}{TAB}ТекстВремени);\n"
+        f"{TAB}{TAB}{TAB}Иначе\n"
+        f"{TAB}{TAB}{TAB}{TAB}ТекстСводки = СтрШаблон(\n"
+        f"{TAB}{TAB}{TAB}{TAB}{TAB}НСтр(\"ru='Обработано договоров: %1. Режим: последовательно, без фоновых. Затрачено: %2'\"),\n"
+        f"{TAB}{TAB}{TAB}{TAB}{TAB}КоличествоДоговоров,\n"
+        f"{TAB}{TAB}{TAB}{TAB}{TAB}ТекстВремени);\n"
+        f"{TAB}{TAB}{TAB}КонецЕсли;\n"
         f"{TAB}{TAB}{TAB}Если ПараметрыСохранения.ПроблемныеДоговоры.Количество() > 0 Тогда\n"
         f"{TAB}{TAB}{TAB}{TAB}ТекстСводки = ТекстСводки + \". \" + СтрСоединить(ПараметрыСохранения.ПроблемныеДоговоры, \"; \");\n"
         f"{TAB}{TAB}{TAB}КонецЕсли;\n"
+        f"{TAB}{TAB}{TAB}Сообщить(ТекстСводки);\n"
         f"{TAB}{TAB}{TAB}#КонецВставки\n"
         + needle_fin.replace(
             f"{TAB}{TAB}{TAB}Результат.Сообщение = \"\";\n",
@@ -154,9 +179,6 @@ def patch_parent(src: str) -> str:
             f"{TAB}{TAB}{TAB}#Вставка\n"
             f"{TAB}{TAB}{TAB}// IMDEV-8663.1.A\n"
             f"{TAB}{TAB}{TAB}Результат.Сообщение = ТекстСводки;\n"
-            f"{TAB}{TAB}{TAB}Если ПараметрыСохранения.ОшибокЗаданий > 0 Тогда\n"
-            f"{TAB}{TAB}{TAB}{TAB}ДлительныеОперации.СообщитьПрогресс(100, ТекстСводки);\n"
-            f"{TAB}{TAB}{TAB}КонецЕсли;\n"
             f"{TAB}{TAB}{TAB}#КонецВставки\n",
         )
     )
@@ -187,76 +209,62 @@ def patch_parent(src: str) -> str:
 
 def patch_docs(src: str) -> str:
     src = src.replace(
-        f"Процедура СформироватьДокументыЗакрытияПериода(",
-        f'&ИзменениеИКонтроль("СформироватьДокументыЗакрытияПериода")\n'
+        "Процедура СформироватьДокументыЗакрытияПериода(",
+        '&ИзменениеИКонтроль("СформироватьДокументыЗакрытияПериода")\n'
         f"{TAB}Процедура IM8663_СформироватьДокументыЗакрытияПериода(",
         1,
     )
-    old_if = f"{TAB}{TAB}{TAB}{TAB}Если КоличествоПотоков > 0 И ФоновыеЗаданияСервер.ФоновыеЗаданияРазрешены() Тогда  \t\t\t\t\n"
-    # read exact from file via caller
-    return src
+
+    key = "Если КоличествоПотоков > 0 И ФоновыеЗаданияСервер.ФоновыеЗаданияРазрешены() Тогда"
+    pos = src.find(key)
+    if pos < 0:
+        raise SystemExit("bg if not found")
+    line0 = src.rfind("\n", 0, pos) + 1
+    sync_marker = (
+        "СоответствиеОперацияТаблица); // ASP-197909 IMAPPS-35037++ "
+        "Добавлен параметр СоответствиеОперацияТаблица"
+    )
+    m1 = src.find(sync_marker, pos)
+    if m1 < 0:
+        raise SystemExit("sync call marker not found")
+    endif_pos = src.find("КонецЕсли;", m1)
+    if endif_pos < 0:
+        raise SystemExit("endif after sync call not found")
+    line2 = src.find("\n", endif_pos) + 1
+    old_block = src[line0:line2]
+
+    indent = TAB * 4
+    new_block = (
+        f"{indent}#Удаление\n"
+        + old_block
+        + f"{indent}#КонецУдаления\n"
+        f"{indent}#Вставка\n"
+        f"{indent}// IMDEV-8663.1.A\n"
+        f"{indent}// Удалена неиспользуемая ветка \"один договор = одно фоновое задание\":\n"
+        f"{indent}// запуск ФоновыеЗадания.Выполнить(СоздатьПланРегламентныхОперацийДУ)\n"
+        f"{indent}// и ожидание порции внутри этой процедуры. Сюда больше не заходят:\n"
+        f"{indent}// диспетчер вызывает процедуру с КоличествоПотоков = 0 и\n"
+        f"{indent}// ФоновыеЗаданияДоступны = Ложь; последовательный путь родителя уже\n"
+        f"{indent}// идёт при ФоновыеЗаданияДоступны = Ложь. Параллельность только у\n"
+        f"{indent}// диспетчера чанков. Остаётся синхронный вызов, как в Иначе типовой.\n"
+        f"{indent}ФоновыеЗаданияСервер.СоздатьПланРегламентныхОперацийДУ(\n"
+        f"{indent}ДатаПериода,\n"
+        f"{indent}ДоговорДУ,\n"
+        f"{indent}ТаблицаОпераций,\n"
+        f"{indent}ТекПлан,\n"
+        f"{indent}ТекГруппаОперацийПользователя,\n"
+        f"{indent}УчитыватьВыполненные,\n"
+        f"{indent}СоответствиеОперацияТаблица); // ASP-197909 IMAPPS-35037++ Добавлен параметр СоответствиеОперацияТаблица\n"
+        f"{indent}#КонецВставки\n"
+    )
+    return src[:line0] + new_block + src[line2:]
 
 
 def main():
     raw = CF.read_text(encoding="utf-8-sig")
     parent = extract_proc(raw, "СформироватьРегламентныеОперации")
     docs = extract_proc(raw, "СформироватьДокументыЗакрытияПериода")
-
-    # exact if-line from docs
-    key = "Если КоличествоПотоков > 0 И ФоновыеЗаданияСервер.ФоновыеЗаданияРазрешены() Тогда"
-    pos = docs.find(key)
-    if pos < 0:
-        raise SystemExit("bg if not found")
-    line_end = docs.find("\n", pos)
-    old_if_line = docs[docs.rfind("\n", 0, pos) + 1 : line_end + 1]
-    new_if = (
-        f"{TAB}{TAB}{TAB}{TAB}#Удаление\n"
-        + old_if_line
-        + f"{TAB}{TAB}{TAB}{TAB}#КонецУдаления\n"
-        f"{TAB}{TAB}{TAB}{TAB}#Вставка\n"
-        f"{TAB}{TAB}{TAB}{TAB}// IMDEV-8663.1.A\n"
-        f"{TAB}{TAB}{TAB}{TAB}Если Не ПараметрыСохранения.Свойство(\"ФоновыеЗаданияДоступны\") Тогда\n"
-        f"{TAB}{TAB}{TAB}{TAB}{TAB}ПараметрыСохранения.Вставить(\"ФоновыеЗаданияДоступны\",\n"
-        f"{TAB}{TAB}{TAB}{TAB}{TAB}{TAB}КоличествоПотоков > 0 И ФоновыеЗаданияСервер.ФоновыеЗаданияРазрешены());\n"
-        f"{TAB}{TAB}{TAB}{TAB}КонецЕсли;\n"
-        f"{TAB}{TAB}{TAB}{TAB}Если КоличествоПотоков > 0 И ПараметрыСохранения.ФоновыеЗаданияДоступны Тогда\n"
-        f"{TAB}{TAB}{TAB}{TAB}#КонецВставки\n"
-    )
-    docs = docs.replace(old_if_line, new_if, 1)
-
-    wait_start = "Если ПараметрыСохранения.СписокФоновыхЗаданий.Количество() = КоличествоПотоков ИЛИ ТекЗначение = МаксимальноеЗначение Тогда"
-    w0 = docs.find(wait_start)
-    if w0 < 0:
-        raise SystemExit("wait start not found")
-    line0 = docs.rfind("\n", 0, w0) + 1
-    # find matching КонецЕсли for this If: after Очистить and before Иначе
-    wait_end_marker = f"{TAB}{TAB}{TAB}{TAB}{TAB}{TAB}ПараметрыСохранения.СписокФоновыхЗаданий.Очистить();"
-    w1 = docs.find(wait_end_marker, w0)
-    if w1 < 0:
-        raise SystemExit("wait clear not found")
-    # include following empty lines and КонецЕсли
-    w2 = docs.find("КонецЕсли;", w1)
-    line2 = docs.find("\n", w2) + 1
-    old_wait = docs[line0:line2]
-    new_wait = (
-        f"{TAB}{TAB}{TAB}{TAB}{TAB}{TAB}#Удаление\n"
-        + old_wait
-        + f"{TAB}{TAB}{TAB}{TAB}{TAB}{TAB}#КонецУдаления\n"
-        f"{TAB}{TAB}{TAB}{TAB}{TAB}{TAB}#Вставка\n"
-        f"{TAB}{TAB}{TAB}{TAB}{TAB}{TAB}// IMDEV-8663.1.A\n"
-        f"{TAB}{TAB}{TAB}{TAB}{TAB}{TAB}Если ПараметрыСохранения.СписокФоновыхЗаданий.Количество() >= КоличествоПотоков Тогда\n"
-        f"{TAB}{TAB}{TAB}{TAB}{TAB}{TAB}{TAB}IM8663_ЗавершитьФоновыеЗаданияПорции(ПараметрыСохранения);\n"
-        f"{TAB}{TAB}{TAB}{TAB}{TAB}{TAB}КонецЕсли;\n"
-        f"{TAB}{TAB}{TAB}{TAB}{TAB}{TAB}#КонецВставки\n"
-    )
-    docs = docs.replace(old_wait, new_wait, 1)
-
-    docs = docs.replace(
-        "Процедура СформироватьДокументыЗакрытияПериода(",
-        '&ИзменениеИКонтроль("СформироватьДокументыЗакрытияПериода")\n'
-        f"{TAB}Процедура IM8663_СформироватьДокументыЗакрытияПериода(",
-        1,
-    )
+    docs = patch_docs(docs)
 
     parent = patch_parent(parent)
     extra = Path(__file__).with_name("new_procedures.bsl").read_text(encoding="utf-8")
