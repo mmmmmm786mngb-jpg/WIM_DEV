@@ -56,13 +56,35 @@ def patch_parent(src: str) -> str:
         f"{TAB}{TAB}{TAB}ПараметрыСохранения.Вставить(\"IM8663_НачалоРасчетаМС\",\n"
         f"{TAB}{TAB}{TAB}{TAB}ТекущаяУниверсальнаяДатаВМиллисекундах());\n"
         f"{TAB}{TAB}{TAB}// IMDEV-8663.1.B\n"
-        f"{TAB}{TAB}{TAB}РазмерЧанка = 50;\n"
+        f"{TAB}{TAB}{TAB}РазмерЧанка = IM8663_ПолучитьЧисловуюКонстанту(\n"
+        f"{TAB}{TAB}{TAB}{TAB}\"МаксимальныйРазмерПорцииДоговоровВПотокеРегл\", 50);\n"
+        f"{TAB}{TAB}{TAB}Если РазмерЧанка < 1 Тогда\n"
+        f"{TAB}{TAB}{TAB}{TAB}РазмерЧанка = 1;\n"
+        f"{TAB}{TAB}{TAB}КонецЕсли;\n"
         f"{TAB}{TAB}{TAB}ПараметрыСохранения.Вставить(\"РазмерЧанка\", РазмерЧанка);\n"
         f"{TAB}{TAB}{TAB}#КонецВставки\n"
     )
     if needle_init not in src:
         raise SystemExit("init needle not found")
     src = src.replace(needle_init, insert_init, 1)
+
+    needle_batch = f"{TAB}{TAB}{TAB}РазмерПачки         = 3000; // IMDEV-8926\n"
+    insert_batch = (
+        f"{TAB}{TAB}{TAB}#Удаление\n"
+        f"{TAB}{TAB}{TAB}РазмерПачки         = 3000; // IMDEV-8926\n"
+        f"{TAB}{TAB}{TAB}#КонецУдаления\n"
+        f"{TAB}{TAB}{TAB}#Вставка\n"
+        f"{TAB}{TAB}{TAB}// IMDEV-8663.1.B\n"
+        f"{TAB}{TAB}{TAB}РазмерПачки = IM8663_ПолучитьЧисловуюКонстанту(\n"
+        f"{TAB}{TAB}{TAB}{TAB}\"МаксимальныйРазмерПачкиДоговоровДляПредварительногоЗапросаРегл\", 3000);\n"
+        f"{TAB}{TAB}{TAB}Если РазмерПачки < 1 Тогда\n"
+        f"{TAB}{TAB}{TAB}{TAB}РазмерПачки = 1;\n"
+        f"{TAB}{TAB}{TAB}КонецЕсли;\n"
+        f"{TAB}{TAB}{TAB}#КонецВставки\n"
+    )
+    if needle_batch not in src:
+        raise SystemExit("batch size needle not found")
+    src = src.replace(needle_batch, insert_batch, 1)
 
     loop_start = (
         f"{TAB}{TAB}{TAB}{TAB}// ASP-206799 IMDEV-8926: цикл по договорам текущей пачки (в типовой - по всему СписокДоговоровДУ)\n"
