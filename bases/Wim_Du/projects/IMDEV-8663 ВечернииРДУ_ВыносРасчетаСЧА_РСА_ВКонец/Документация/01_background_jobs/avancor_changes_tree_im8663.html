@@ -1,0 +1,692 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <title>IMDEV-8663.1 — дерево изменений для Аванкор (перенос IM8663 в базовую CF)</title>
+  <style>
+    :root {
+      --add: #276749;
+      --chg: #2b6cb0;
+      --del: #9b2c2c;
+      --info: #744210;
+      --mute: #4a5568;
+    }
+    body {
+      font-family: "Segoe UI", Tahoma, sans-serif;
+      margin: 1rem 2rem 2.5rem;
+      background: #fafafa;
+      color: #1a202c;
+      line-height: 1.45;
+    }
+    h1 { font-size: 1.35rem; margin: 0 0 0.35rem 0; }
+    .subtitle { color: #718096; font-size: 0.92rem; margin: 0 0 1rem 0; }
+    .ref-block {
+      margin-bottom: 1rem;
+      padding: 0.75rem 1rem;
+      background: #ebf8ff;
+      border: 1px solid #90cdf4;
+      border-radius: 6px;
+      font-size: 0.9rem;
+    }
+    .ref-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 0.8rem;
+      margin-bottom: 1rem;
+    }
+    .ref-card {
+      background: #fff;
+      border: 1px solid #e2e8f0;
+      border-radius: 6px;
+      padding: 0.75rem 0.9rem;
+      font-size: 0.9rem;
+    }
+    .ref-card h2 { margin: 0 0 0.45rem 0; font-size: 0.98rem; }
+    .ref-card ul { margin: 0.35rem 0 0; padding-left: 1.15rem; }
+    .ref-card li { margin: 0.2rem 0; }
+    .vendor-note { border-color: #f6ad55; background: #fffaf0; }
+    .good { border-color: #9ae6b4; background: #f0fff4; }
+    code {
+      background: #edf2f7;
+      padding: 0.05rem 0.35rem;
+      border-radius: 3px;
+      font-family: Consolas, monospace;
+      font-size: 0.88em;
+    }
+    ul.tree {
+      list-style: none;
+      padding-left: 1.1rem;
+      margin: 0.3rem 0 1rem;
+    }
+    ul.tree ul {
+      list-style: none;
+      padding-left: 1.15rem;
+      border-left: 1px solid #e2e8f0;
+      margin: 0.15rem 0 0.15rem 0.35rem;
+    }
+    .branch { margin: 0.22rem 0; }
+    .branch > .cap {
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      padding: 0.12rem 0.2rem;
+      flex-wrap: wrap;
+    }
+    .branch > .cap:hover { background: #edf2f7; border-radius: 4px; }
+    .toggle { font-size: 0.72rem; color: #718096; user-select: none; }
+    .name { font-weight: 600; }
+    .leaf {
+      padding-left: 1.4rem;
+      margin: 0.18rem 0;
+      display: flex;
+      align-items: flex-start;
+      gap: 0.4rem;
+      flex-wrap: wrap;
+    }
+    .leaf .name {
+      font-weight: 400;
+      font-family: Consolas, monospace;
+      font-size: 0.88rem;
+    }
+    .hint {
+      flex-basis: 100%;
+      margin: 0.1rem 0 0.25rem 1.55rem;
+      font-size: 0.84rem;
+      color: #4a5568;
+    }
+    .tag {
+      font-size: 0.74rem;
+      padding: 0.1rem 0.42rem;
+      border-radius: 4px;
+      white-space: nowrap;
+      font-weight: 600;
+    }
+    .tag.add { background: #c6f6d5; color: var(--add); }
+    .tag.chg { background: #bee3f8; color: var(--chg); }
+    .tag.del { background: #fed7d7; color: var(--del); }
+    .tag.cf { background: #feebc8; color: var(--info); }
+    .tag.ext { background: #e9d8fd; color: #553c9a; }
+    .tag.a { background: #e2e8f0; color: var(--mute); }
+    .tag.b { background: #c3dafe; color: #2c5282; }
+    .legend {
+      margin-top: 0.5rem;
+      padding: 0.75rem 1rem;
+      background: #fff;
+      border: 1px solid #e2e8f0;
+      border-radius: 6px;
+      font-size: 0.85rem;
+    }
+    .legend h3 { margin: 0 0 0.4rem 0; font-size: 0.95rem; }
+    .legend span { display: inline-block; margin: 0 0.55rem 0.25rem 0; }
+    table.steps {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.9rem;
+      margin: 0.75rem 0 1.2rem;
+      background: #fff;
+    }
+    table.steps th, table.steps td {
+      border: 1px solid #e2e8f0;
+      padding: 0.55rem 0.7rem;
+      vertical-align: top;
+      text-align: left;
+    }
+    table.steps th { background: #edf2f7; }
+    .foot {
+      margin-top: 1.2rem;
+      font-size: 0.82rem;
+      color: #718096;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="ref-block">
+    <strong>Вендор: Аванкор (AvancoreDU).</strong>
+    Источник пилота — расширение <code>IM8663</code> (CFE). Ниже — дерево того, что нужно
+    <b>внести в базовую конфигурацию ДУ</b>, и как это соотносится с файлами расширения.
+    Префикс процедур <code>IM8663_</code> в базовой CF можно оставить (трассировка) или переименовать
+    по стандарту вендора — важно сохранить логику и экспорт воркера порции.
+  </div>
+
+  <h1>Дерево изменений для переноса IM8663 → базовая CF</h1>
+  <p class="subtitle">
+    IMDEV-8663.1 — диспетчер порций договоров + исправления CR по фоновым заданиям регламента.
+    База: Wim_Du / Доверительное управление. Артефакт пилота: <code>Расширения/IM8663.cfe</code>.
+  </p>
+
+  <div class="ref-grid">
+    <div class="ref-card good">
+      <h2>Что переносим (кратко)</h2>
+      <ul>
+        <li><b>2 константы</b> (имена уже без префикса расширения — копировать как есть).</li>
+        <li><b>1 модуль менеджера</b> справочника <code>РегламентныеПериоды</code>:
+          правки двух типовых процедур + 5 новых методов.</li>
+        <li>Общий модуль <code>ФоновыеЗаданияСервер</code> <b>не трогать</b> (типовой вызов
+          <code>ФоновыеЗаданияРазрешены</code> / <code>СоздатьПланРегламентныхОперацийДУ</code> остаётся).</li>
+        <li>Формы / роли / другие объекты — <b>не менять</b>.</li>
+      </ul>
+    </div>
+    <div class="ref-card vendor-note">
+      <h2>Как читать дерево</h2>
+      <ul>
+        <li><span class="tag add">ДОБАВИТЬ</span> — новый объект/метод в базовой CF.</li>
+        <li><span class="tag chg">ИЗМЕНИТЬ</span> — правки внутри существующего типового метода.</li>
+        <li><span class="tag del">УБРАТЬ</span> — удалить/заменить старый фрагмент типового кода.</li>
+        <li><span class="tag cf">в CF</span> — целевое место в базовой конфигурации.</li>
+        <li><span class="tag ext">из CFE</span> — откуда взять код в расширении.</li>
+        <li><span class="tag a">этап A</span> / <span class="tag b">этап B</span> — маркеры IMDEV-8663.1.</li>
+      </ul>
+    </div>
+  </div>
+
+  <h2 style="font-size:1.05rem; margin:1rem 0 0.4rem;">Порядок работ для вендора (пошагово)</h2>
+  <p style="font-size:0.9rem; margin:0 0 0.6rem; color:#4a5568;">
+    Целевой объект почти везде один:
+    <b>Справочник.РегламентныеПериоды</b> → <b>модуль менеджера</b>
+    (<code>Catalogs/РегламентныеПериоды/Ext/ManagerModule.bsl</code> в выгрузке).
+    Источник пилота: расширение <code>IM8663</code> / файл <code>IM8663.cfe</code>.
+    Директивы расширения (<code>&amp;ИзменениеИКонтроль</code>, <code>#Вставка</code>, <code>#Удаление</code>)
+    в базовую CF <b>не копировать</b> — переносить только тело кода.
+  </p>
+
+  <table class="steps">
+    <tr>
+      <th style="width:42px;">Шаг</th>
+      <th style="width:88px;">Действие</th>
+      <th style="width:28%;">Куда (объект / модуль / процедура)</th>
+      <th>Что сделать</th>
+    </tr>
+
+    <tr>
+      <td>1</td>
+      <td><span class="tag add">СОЗДАТЬ</span></td>
+      <td>
+        Метаданные конфигурации → <b>Константы</b><br>
+        <code>МаксимальныйРазмерПорцииДоговоровВПотокеРегл</code>
+      </td>
+      <td>
+        <b>Создать</b> константу: тип Число(10,0), неотрицательное.<br>
+        Синоним: «Максимальный размер порции договоров в потоке регл».<br>
+        Подсказка: 0 = дефолт 50; 1 = один договор на ФЗ.<br>
+        <b>Копировать свойства из:</b>
+        <code>Constants/МаксимальныйРазмерПорцииДоговоровВПотокеРегл.xml</code>
+      </td>
+    </tr>
+
+    <tr>
+      <td>2</td>
+      <td><span class="tag add">СОЗДАТЬ</span></td>
+      <td>
+        Метаданные конфигурации → <b>Константы</b><br>
+        <code>МаксимальныйРазмерПачкиДоговоровДляПредварительногоЗапросаРегл</code>
+      </td>
+      <td>
+        <b>Создать</b> константу: тип Число(10,0), неотрицательное.<br>
+        Синоним: «Максимальный размер пачки договоров для предварительного запроса регл».<br>
+        Подсказка: 0 = дефолт 3000.<br>
+        <b>Копировать свойства из:</b>
+        <code>Constants/МаксимальныйРазмерПачкиДоговоровДляПредварительногоЗапросаРегл.xml</code>
+      </td>
+    </tr>
+
+    <tr>
+      <td>3</td>
+      <td><span class="tag add">ВСТАВИТЬ</span></td>
+      <td>
+        <b>Справочник.РегламентныеПериоды</b><br>
+        → модуль менеджера<br>
+        <i>(в конец модуля, после существующих процедур)</i>
+      </td>
+      <td>
+        <b>Скопировать целиком</b> 5 методов из CFE (имена можно оставить с префиксом
+        <code>IM8663_</code> или переименовать, но тогда поправить все вызовы):
+        <ol style="margin:0.35rem 0 0; padding-left:1.2rem;">
+          <li><code>IM8663_ЗавершитьФоновыеЗаданияПорции</code></li>
+          <li><code>IM8663_ОтменитьАктивныеЗадания</code></li>
+          <li><code>IM8663_ПолучитьЧисловуюКонстанту</code> (функция)</li>
+          <li><code>IM8663_ОбработатьПачкуДиспетчером</code></li>
+          <li><code>IM8663_СоздатьПланыРегламентныхОперацийПоЧанку</code>
+            — обязательно <b>Экспорт</b> (метод воркера ФЗ)</li>
+        </ol>
+        <b>Источник:</b> <code>Catalogs/РегламентныеПериоды/Ext/ManagerModule.bsl</code>,
+        области <code>#Область IMDEV_8663_1_A</code> / <code>IMDEV_8663_1_B</code>
+        (без строк <code>#Область</code>, если в типовой их не используют).
+      </td>
+    </tr>
+
+    <tr>
+      <td>4</td>
+      <td><span class="tag add">ВСТАВИТЬ</span></td>
+      <td>
+        <b>Справочник.РегламентныеПериоды</b><br>
+        → модуль менеджера<br>
+        → процедура <code>СформироватьРегламентныеОперации</code><br>
+        <i>сразу после проверки</i>
+        <code>ПараметрыСохранения = Неопределено … Возврат; КонецЕсли;</code>
+      </td>
+      <td>
+        <b>Вставить</b> блок инициализации (без <code>#Вставка</code>):
+        вычисление <code>ФоновыеЗаданияДоступны</code>, счётчики,
+        <code>ПроблемныеДоговоры</code>, <code>РазмерЧанкаПоУИД</code>, таймер,
+        чтение константы порции → <code>ПараметрыСохранения.РазмерЧанка</code>.<br>
+        <b>Источник:</b> первый блок <code>#Вставка</code> … <code>#КонецВставки</code>
+        в начале тела процедуры (маркеры <code>// IMDEV-8663.1.A</code> / <code>.B</code>).
+      </td>
+    </tr>
+
+    <tr>
+      <td>5</td>
+      <td><span class="tag del">УДАЛИТЬ</span>
+        + <span class="tag add">ВСТАВИТЬ</span></td>
+      <td>
+        та же процедура<br>
+        <code>СформироватьРегламентныеОперации</code><br>
+        строка <code>РазмерПачки = 3000; // IMDEV-8926</code>
+        (или аналог в вашей редакции)
+      </td>
+      <td>
+        <b>Удалить</b> литерал <code>РазмерПачки = 3000</code>.<br>
+        <b>Вставить вместо него</b> чтение константы пачки через
+        <code>IM8663_ПолучитьЧисловуюКонстанту("МаксимальныйРазмерПачки…", 3000)</code>
+        + защита <code>Если РазмерПачки &lt; 1</code>.<br>
+        <b>Источник:</b> пара <code>#Удаление</code> / <code>#Вставка</code> около
+        <code>РазмерПачки</code>.
+      </td>
+    </tr>
+
+    <tr>
+      <td>6</td>
+      <td><span class="tag del">УДАЛИТЬ</span>
+        + <span class="tag add">ВСТАВИТЬ</span></td>
+      <td>
+        та же процедура<br>
+        <code>СформироватьРегламентныеОперации</code><br>
+        внутри цикла по пачкам:<br>
+        <code>Для Каждого ТекДоговор Из СписокПачки Цикл … КонецЦикла</code>
+        <i>(после пакетной предподготовки)</i>
+      </td>
+      <td>
+        <b>Удалить</b> безусловный цикл «по каждому договору пачки →
+        <code>СформироватьДокументыЗакрытияПериода</code>».<br>
+        <b>Вставить вместо него:</b>
+        <ul style="margin:0.35rem 0 0; padding-left:1.2rem;">
+          <li>если <code>ПараметрыСохранения.ФоновыеЗаданияДоступны</code> →
+            вызов <code>IM8663_ОбработатьПачкуДиспетчером(...)</code>;</li>
+          <li>иначе → прежний цикл по договорам (последовательный режим);</li>
+          <li>после ветки — вызов
+            <code>IM8663_ЗавершитьФоновыеЗаданияПорции(ПараметрыСохранения)</code>
+            (барьер пачки).</li>
+        </ul>
+        <b>Источник:</b> блок <code>#Удаление</code> (старый цикл) + <code>#Вставка</code>
+        (Если / Иначе / барьер) с маркером <code>// IMDEV-8663.1.B</code>.
+      </td>
+    </tr>
+
+    <tr>
+      <td>7</td>
+      <td><span class="tag add">ВСТАВИТЬ</span>
+        + <span class="tag del">ЗАМЕНИТЬ</span></td>
+      <td>
+        та же процедура<br>
+        <code>СформироватьРегламентныеОперации</code><br>
+        <i>перед</i> финальным
+        <code>ДлительныеОперации.СообщитьПрогресс(100, …завершено)</code>
+        и присвоением <code>Результат.Сообщение</code>
+      </td>
+      <td>
+        <b>Вставить</b> финальный вызов
+        <code>IM8663_ЗавершитьФоновыеЗаданияПорции</code>, расчёт времени, сборку
+        <code>ТекстСводки</code>, <code>Сообщить(ТекстСводки)</code>.<br>
+        <b>Заменить</b> <code>Результат.Сообщение = ""</code>
+        на <code>Результат.Сообщение = ТекстСводки</code>.<br>
+        <b>Источник:</b> блоки <code>#Вставка</code> / <code>#Удаление</code> в финале
+        успешного завершения (маркер <code>// IMDEV-8663.1.A</code>).
+      </td>
+    </tr>
+
+    <tr>
+      <td>8</td>
+      <td><span class="tag add">ВСТАВИТЬ</span></td>
+      <td>
+        та же процедура<br>
+        <code>СформироватьРегламентныеОперации</code><br>
+        → ветка <code>Исключение</code><br>
+        <i>в самом начале обработчика исключения</i>
+      </td>
+      <td>
+        <b>Вставить</b>
+        <code>IM8663_ОтменитьАктивныеЗадания(ПараметрыСохранения);</code>
+        до завершения замера / записи ошибки.<br>
+        <b>Источник:</b> <code>#Вставка</code> в <code>Исключение</code>
+        (маркер <code>// IMDEV-8663.1.A</code>).
+      </td>
+    </tr>
+
+    <tr>
+      <td>9</td>
+      <td><span class="tag del">УДАЛИТЬ</span>
+        + <span class="tag add">ВСТАВИТЬ</span></td>
+      <td>
+        <b>Справочник.РегламентныеПериоды</b><br>
+        → модуль менеджера<br>
+        → процедура <code>СформироватьДокументыЗакрытияПериода</code><br>
+        внутри <code>Если ТаблицаОпераций.Количество() &gt; 0</code>:<br>
+        блок
+        <code>Если КоличествоПотоков &gt; 0 И ФоновыеЗаданияСервер.ФоновыеЗаданияРазрешены()</code>
+      </td>
+      <td>
+        <b>Удалить целиком</b> ветку параллельного запуска
+        <code>ФоновыеЗадания.Выполнить("ФоновыеЗаданияСервер.СоздатьПланРегламентныхОперацийДУ", …)</code>
+        и вложенное ожидание/разбор порции (старая схема «1 договор = 1 ФЗ»).<br>
+        <b>Вставить вместо всего If/Else</b> один синхронный вызов
+        (как было в типовом <code>Иначе</code>):
+        <code>ФоновыеЗаданияСервер.СоздатьПланРегламентныхОперацийДУ(ДатаПериода, ДоговорДУ, …)</code>.<br>
+        <b>Источник:</b> <code>#Удаление</code> (старый If) + <code>#Вставка</code>
+        (только синхронный вызов) с маркером <code>// IMDEV-8663.1.A</code>.
+      </td>
+    </tr>
+  </table>
+
+  <div class="ref-card" style="margin-bottom:1rem;">
+    <h2>Что не копировать и не менять</h2>
+    <ul>
+      <li>Не копировать в CF строки
+        <code>&amp;ИзменениеИКонтроль(...)</code>,
+        <code>#Вставка</code> / <code>#Удаление</code> / <code>#Конец…</code>.</li>
+      <li>Не заимствовать и не менять
+        <code>ОбщийМодуль.ФоновыеЗаданияСервер</code>
+        и <code>ОбщегоНазначения.ВыполнитьБПБезопасно</code> — только вызовы.</li>
+      <li>Не трогать форму <code>РегламентныйПериод</code> и процедуры пакетной предподготовки
+        (<code>ЗаполнитьПараметрыСохраненияПакетнымиДанными…</code>) — меняется только размер пачки.</li>
+      <li>Не переносить пустые модули констант
+        (<code>Constants/…/Ext/ManagerModule.bsl</code>) — не нужны.</li>
+    </ul>
+  </div>
+
+  <h2 style="font-size:1.05rem; margin:1rem 0 0.35rem;">Дерево объектов</h2>
+
+  <ul class="tree">
+    <li class="branch">
+      <span class="cap">
+        <span class="toggle">[−]</span>
+        <span class="name">Базовая конфигурация ДУ (цель переноса)</span>
+        <span class="tag cf">в CF</span>
+      </span>
+      <ul>
+
+        <li class="branch">
+          <span class="cap">
+            <span class="toggle">[−]</span>
+            <span class="name">Константы</span>
+            <span class="tag add">ДОБАВИТЬ</span>
+            <span class="tag b">этап B</span>
+          </span>
+          <ul>
+            <li class="leaf">
+              <span class="name">МаксимальныйРазмерПорцииДоговоровВПотокеРегл</span>
+              <span class="tag add">ДОБАВИТЬ</span>
+              <span class="tag ext">из CFE</span>
+            </li>
+            <div class="hint">
+              Число договоров в одном ФЗ (порции). <b>0 → 50</b>. Значение <b>1</b> —
+              зерно «почти как раньше» (1 договор на задание) через новый диспетчер.
+            </div>
+            <li class="leaf">
+              <span class="name">МаксимальныйРазмерПачкиДоговоровДляПредварительногоЗапросаРегл</span>
+              <span class="tag add">ДОБАВИТЬ</span>
+              <span class="tag ext">из CFE</span>
+            </li>
+            <div class="hint">
+              Размер пачки предподготовки вместо литерала 3000 (IMDEV-8926). <b>0 → 3000</b>.
+            </div>
+          </ul>
+        </li>
+
+        <li class="branch">
+          <span class="cap">
+            <span class="toggle">[−]</span>
+            <span class="name">Справочник.РегламентныеПериоды → Модуль менеджера</span>
+            <span class="tag chg">ИЗМЕНИТЬ</span>
+            <span class="tag cf">в CF</span>
+          </span>
+          <ul>
+
+            <li class="branch">
+              <span class="cap">
+                <span class="toggle">[−]</span>
+                <span class="name">СформироватьРегламентныеОперации</span>
+                <span class="tag chg">ИЗМЕНИТЬ</span>
+                <span class="tag a">этап A</span>
+                <span class="tag b">этап B</span>
+              </span>
+              <ul>
+                <li class="leaf">
+                  <span class="name">инициализация ПараметрыСохранения</span>
+                  <span class="tag chg">ИЗМЕНИТЬ</span>
+                </li>
+                <div class="hint">
+                  Один раз на прогон: <code>ФоновыеЗаданияДоступны</code>, счётчики,
+                  <code>ПроблемныеДоговоры</code>, <code>РазмерЧанкаПоУИД</code>, таймер,
+                  <code>РазмерЧанка</code> из константы порции.
+                </div>
+                <li class="leaf">
+                  <span class="name">РазмерПачки = …</span>
+                  <span class="tag chg">ИЗМЕНИТЬ</span>
+                </li>
+                <div class="hint">
+                  Вместо литерала <code>3000</code> — чтение константы пачки (дефолт 3000).
+                </div>
+                <li class="leaf">
+                  <span class="name">цикл по договорам пачки</span>
+                  <span class="tag chg">ИЗМЕНИТЬ</span>
+                  <span class="tag del">УБРАТЬ старый цикл в фоне</span>
+                </li>
+                <div class="hint">
+                  Если фоновые доступны → <code>…ОбработатьПачкуДиспетчером</code>;
+                  иначе — прежний последовательный цикл.
+                  В конце пачки — безусловное завершение порции ФЗ (барьер, BG-02/BG-03).
+                </div>
+                <li class="leaf">
+                  <span class="name">финал прогона + Исключение</span>
+                  <span class="tag chg">ИЗМЕНИТЬ</span>
+                </li>
+                <div class="hint">
+                  Сводка в сообщение результата; в <code>Исключение</code> — отмена активных детей (BG-10).
+                </div>
+              </ul>
+            </li>
+
+            <li class="branch">
+              <span class="cap">
+                <span class="toggle">[−]</span>
+                <span class="name">СформироватьДокументыЗакрытияПериода</span>
+                <span class="tag chg">ИЗМЕНИТЬ</span>
+                <span class="tag a">этап A</span>
+              </span>
+              <ul>
+                <li class="leaf">
+                  <span class="name">ветка «КоличествоПотоков &gt; 0 → ФЗ на договор»</span>
+                  <span class="tag del">УБРАТЬ</span>
+                </li>
+                <div class="hint">
+                  Параллельность больше не здесь. Остаётся только синхронный
+                  <code>ФоновыеЗаданияСервер.СоздатьПланРегламентныхОперацийДУ(...)</code>
+                  (как в типовом <code>Иначе</code>).
+                </div>
+              </ul>
+            </li>
+
+            <li class="branch">
+              <span class="cap">
+                <span class="toggle">[−]</span>
+                <span class="name">Новые методы модуля (перенести целиком)</span>
+                <span class="tag add">ДОБАВИТЬ</span>
+              </span>
+              <ul>
+                <li class="leaf">
+                  <span class="name">…ЗавершитьФоновыеЗаданияПорции</span>
+                  <span class="tag add">ДОБАВИТЬ</span>
+                  <span class="tag a">этап A</span>
+                </li>
+                <div class="hint">
+                  Ожидание, актуальный снимок после <code>ОжидатьЗавершенияВыполнения</code> (BG-14),
+                  журнал/счётчики (BG-11), прогресс, барьер пачки.
+                </div>
+                <li class="leaf">
+                  <span class="name">…ОтменитьАктивныеЗадания</span>
+                  <span class="tag add">ДОБАВИТЬ</span>
+                  <span class="tag a">этап A</span>
+                </li>
+                <div class="hint">Отмена ещё активных дочерних ФЗ при сбое родителя (BG-10).</div>
+                <li class="leaf">
+                  <span class="name">…ПолучитьЧисловуюКонстанту</span>
+                  <span class="tag add">ДОБАВИТЬ</span>
+                  <span class="tag b">этап B</span>
+                </li>
+                <div class="hint">
+                  <code>Метаданные.Константы.Найти</code>; нет константы или 0 → дефолт.
+                </div>
+                <li class="leaf">
+                  <span class="name">…ОбработатьПачкуДиспетчером</span>
+                  <span class="tag add">ДОБАВИТЬ</span>
+                  <span class="tag b">этап B</span>
+                </li>
+                <div class="hint">
+                  Очередь порций по группам, срез соответствий «договор → таблица» только по договорам порции,
+                  скользящее окно потоков, запуск через <code>ВыполнитьБПБезопасно</code>.
+                </div>
+                <li class="leaf">
+                  <span class="name">…СоздатьПланыРегламентныхОперацийПоЧанку</span>
+                  <span class="tag add">ДОБАВИТЬ</span>
+                  <span class="tag b">этап B</span>
+                  <span class="tag a">Экспорт</span>
+                </li>
+                <div class="hint">
+                  Воркер ФЗ: цикл по договорам порции → синхронная
+                  <code>СформироватьДокументыЗакрытияПериода</code>.
+                  Имя метода в строке запуска ФЗ должно совпасть с фактическим именем в CF.
+                </div>
+              </ul>
+            </li>
+
+          </ul>
+        </li>
+
+        <li class="branch">
+          <span class="cap">
+            <span class="toggle">[−]</span>
+            <span class="name">Не менять</span>
+            <span class="tag a">вне объёма</span>
+          </span>
+          <ul>
+            <li class="leaf">
+              <span class="name">ОбщийМодуль.ФоновыеЗаданияСервер</span>
+            </li>
+            <div class="hint">Типовые методы вызываются как есть. В расширение не заимствовать.</div>
+            <li class="leaf">
+              <span class="name">ОбщийМодуль.ОбщегоНазначения.ВыполнитьБПБезопасно</span>
+            </li>
+            <div class="hint">Только вызов из диспетчера (обёртка для запуска метода менеджера в ФЗ).</div>
+            <li class="leaf">
+              <span class="name">Форма РегламентныйПериод / пакетная предподготовка запросов</span>
+            </li>
+            <div class="hint">
+              Предподготовка пачками (утренние/вечерние) уже в типовой (IMDEV-8926 / IMAPPS-35037).
+              Меняется только размер пачки через константу.
+            </div>
+            <li class="leaf">
+              <span class="name">Группа 3 СЧА/РСА (IMDEV-8663.2)</span>
+            </li>
+            <div class="hint">Отдельная доработка. Барьер пачки уже точка вставки.</div>
+          </ul>
+        </li>
+
+      </ul>
+    </li>
+
+    <li class="branch">
+      <span class="cap">
+        <span class="toggle">[−]</span>
+        <span class="name">Расширение IM8663 (источник пилота)</span>
+        <span class="tag ext">из CFE</span>
+      </span>
+      <ul>
+        <li class="leaf">
+          <span class="name">Configuration.xml</span>
+          <span class="tag ext">из CFE</span>
+        </li>
+        <div class="hint">Состав: Language, 2 Constant, Catalog.РегламентныеПериоды.</div>
+        <li class="leaf">
+          <span class="name">Constants/МаксимальныйРазмерПорцииДоговоровВПотокеРегл.xml</span>
+          <span class="tag add">→ в CF</span>
+        </li>
+        <li class="leaf">
+          <span class="name">Constants/МаксимальныйРазмерПачкиДоговоровДляПредварительногоЗапросаРегл.xml</span>
+          <span class="tag add">→ в CF</span>
+        </li>
+        <li class="leaf">
+          <span class="name">Catalogs/РегламентныеПериоды/Ext/ManagerModule.bsl</span>
+          <span class="tag chg">→ в CF</span>
+        </li>
+        <div class="hint">
+          В CFE: <code>&amp;ИзменениеИКонтроль</code> + <code>#Вставка</code>/<code>#Удаление</code>.
+          В базовой CF директивы расширения убрать, влить логику в типовые процедуры.
+        </div>
+        <li class="leaf">
+          <span class="name">IM8663.cfe</span>
+          <span class="tag ext">артефакт</span>
+        </li>
+        <div class="hint">Готовый файл расширения для пилота / сравнения. После переноса в CF — снять с ИБ.</div>
+      </ul>
+    </li>
+  </ul>
+
+  <div class="legend">
+    <h3>Легенда тегов</h3>
+    <span class="tag add">ДОБАВИТЬ</span>
+    <span class="tag chg">ИЗМЕНИТЬ</span>
+    <span class="tag del">УБРАТЬ</span>
+    <span class="tag cf">в CF</span>
+    <span class="tag ext">из CFE</span>
+    <span class="tag a">этап A</span>
+    <span class="tag b">этап B</span>
+    <p style="margin:0.5rem 0 0; color:#718096;">
+      Подробное ТЗ: <code>tz_imdev8663_1.html</code>.
+      Краткое задание Jira: <code>jira_813_task_background_jobs.html</code>.
+      CR: <code>code_review_background_jobs.html</code>.
+    </p>
+  </div>
+
+  <p class="foot">
+    IMDEV-8663.1 · дерево для Аванкор · каталог Документация/01_background_jobs/ ·
+    клик по узлу сворачивает/разворачивает ветку.
+  </p>
+
+  <script>
+    document.querySelectorAll(".branch > .cap").forEach(function (cap) {
+      cap.addEventListener("click", function () {
+        var ul = this.nextElementSibling;
+        if (!ul) return;
+        var toggle = this.querySelector(".toggle");
+        if (ul.style.display === "none") {
+          ul.style.display = "block";
+          if (toggle) toggle.textContent = "[−]";
+        } else {
+          ul.style.display = "none";
+          if (toggle) toggle.textContent = "[+]";
+        }
+      });
+    });
+    document.querySelectorAll(".branch > ul").forEach(function (ul) {
+      ul.style.display = "block";
+      var prev = ul.previousElementSibling;
+      if (prev) {
+        var t = prev.querySelector(".toggle");
+        if (t) t.textContent = "[−]";
+      }
+    });
+  </script>
+</body>
+</html>
