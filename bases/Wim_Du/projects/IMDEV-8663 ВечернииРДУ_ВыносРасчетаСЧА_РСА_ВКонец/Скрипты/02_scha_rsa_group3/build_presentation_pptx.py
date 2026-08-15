@@ -20,7 +20,7 @@ from pptx.enum.shapes import MSO_SHAPE
 from pptx.enum.text import PP_ALIGN, MSO_ANCHOR
 from pptx.util import Inches, Pt, Emu
 
-BASE = Path(__file__).resolve().parent.parent / "Документация"
+BASE = Path(__file__).resolve().parent.parent.parent / "Документация" / "02_scha_rsa_group3"
 LOGO = BASE / "vim_logo.png"
 OUT = BASE / "presentation_scha_rsa.pptx"
 
@@ -305,13 +305,14 @@ def slide_01(prs):
     para(tf, "Ускорение вечерних регламентных операций розничного ДУ",
          size=50, color=BRAND_DARK, bold=True, line=1.14)
     tf = box(s, 96, 372, 880, 40)
-    para(tf, "Вынос расчета СЧА и РСА в отдельный завершающий этап", size=26, color=BRAND, line=1.25)
+    para(tf, "Вынос расчета СЧА и РСА в отдельную группу 3 регламентных операций", size=26, color=BRAND, line=1.25)
     rect(s, 96, 438, 340, 42, fill=GOLD)
     tf = box(s, 112, 450, 312, 24)
     para(tf, "**Предложение на согласование**", size=15, color=WHITE, spacing=0.6)
     tf = box(s, 96, 560, 700, 100)
+    para(tf, "**Задача:** IMDEV-8663, доработка 2 из 2", size=16, color=MUTED, line=1.7)
     para(tf, "**Кому:** Кукушкин В.Ю., Юрашева Ю.Ю.", size=16, color=MUTED, line=1.7)
-    para(tf, "**Система:** база ДУ, группа операций \"2. Вечерние операции\"", size=16, color=MUTED, line=1.7)
+    para(tf, "**Система:** база ДУ; новая группа 3. \"Расчет СЧА/РСА\"", size=16, color=MUTED, line=1.7)
     para(tf, "**Дата:** 15 августа 2026", size=16, color=MUTED, line=1.7)
     page_num(s, 1)
 
@@ -428,7 +429,7 @@ def _prop_body(slide, x, y, w, h, items, accent=BRAND, fill=WHITE, title=None):
 
 def slide_06(prs):
     s = new_slide(prs)
-    header(s, "Предложение 1 из 2", "Выделить расчет показателей в отдельный завершающий этап", 6)
+    header(s, "Предложение 1 из 2", "Вынести расчет показателей в отдельную группу 3", 6)
     y = 200
     _prop_body(s, 62, y, 700, 440, [
         ("Что меняем",
@@ -739,7 +740,7 @@ def slide_16(prs):
          "локализованы в предподготовке данных и в расчетном методе менеджера документа. Выполняется "
          "расширением конфигурации.", kind="green", size=16)
     tf = box(s, 62, 676, 700, 20)
-    para(tf, "Подробное описание — в документе proposal_scha_rsa_batch_calculation.html",
+    para(tf, "IMDEV-8663, доработка 2. Подробное описание — proposal_scha_rsa_batch_calculation.html",
          size=13, color=TINT)
 
 

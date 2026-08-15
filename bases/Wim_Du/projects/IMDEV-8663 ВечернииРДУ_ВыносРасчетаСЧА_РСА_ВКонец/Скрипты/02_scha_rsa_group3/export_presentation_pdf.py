@@ -11,7 +11,7 @@
 import sys
 from pathlib import Path
 
-BASE = Path(__file__).resolve().parent.parent / "Документация"
+BASE = Path(__file__).resolve().parent.parent.parent / "Документация" / "02_scha_rsa_group3"
 HTML = BASE / "presentation_scha_rsa.html"
 PDF = BASE / "presentation_scha_rsa.pdf"
 

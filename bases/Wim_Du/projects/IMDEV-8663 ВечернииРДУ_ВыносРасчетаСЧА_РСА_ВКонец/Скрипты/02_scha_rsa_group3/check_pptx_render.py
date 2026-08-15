@@ -12,7 +12,7 @@ import sys
 import tempfile
 from pathlib import Path
 
-SRC = Path(__file__).resolve().parent.parent / "Документация" / "presentation_scha_rsa.pptx"
+SRC = Path(__file__).resolve().parent.parent.parent / "Документация" / "02_scha_rsa_group3" / "presentation_scha_rsa.pptx"
 OUT = Path(tempfile.gettempdir()) / "deck_pptx_check"
 CELL = (480, 270)
 COLS = 4
