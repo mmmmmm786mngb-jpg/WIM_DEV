@@ -8,6 +8,8 @@
 |---|---|
 | [tz_imdev8663_1.html](tz_imdev8663_1.html) | **ТЗ на разработку:** этап A + этап B, константы размеров (50/3000), расширение IM8663 |
 | [avancor_changes_tree_im8663.html](avancor_changes_tree_im8663.html) | **Для Аванкор:** дерево изменений — что перенести из IM8663 в базовую CF |
+| [algorithm_bg_before_after.html](algorithm_bg_before_after.html) | Диаграмма алгоритма фоновых: было / стало, процедуры, ресурсы |
+| [test_plan_measurements_bg.html](test_plan_measurements_bg.html) | План тестирования + разбор замеров DR vs прод (`ЗамерыБыли.xlsx`) |
 | [jira_813_task_background_jobs.html](jira_813_task_background_jobs.html) | Краткое задание для комментария Jira (п. 8.13) |
 | [prompt_imdev8663_1_extension.html](prompt_imdev8663_1_extension.html) | **Промпт агенту:** порядок сборки расширения, skills, запреты |
 | [prompt_remove_wrapper_module.md](prompt_remove_wrapper_module.md) | **Выполнено:** убран общий модуль-заглушка; запуск порций через `ОбщегоНазначения.ВыполнитьБПБезопасно` |

@@ -1,0 +1,462 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>IMDEV-8663.1 — диаграмма алгоритма фоновых: было / стало</title>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<style>
+  :root {
+    --text: #1a202c;
+    --muted: #4a5568;
+    --line: #cbd5e0;
+    --was: #9b2c2c;
+    --was-bg: #fff5f5;
+    --now: #276749;
+    --now-bg: #f0fff4;
+    --mod: #2b6cb0;
+    --res: #744210;
+    --res-bg: #fffaf0;
+  }
+  body {
+    font-family: "Segoe UI", Tahoma, sans-serif;
+    margin: 0;
+    padding: 1.25rem 1.5rem 2.5rem;
+    background: #f7fafc;
+    color: var(--text);
+    line-height: 1.45;
+  }
+  h1 { font-size: 1.35rem; margin: 0 0 0.35rem; }
+  .sub { color: var(--muted); font-size: 0.92rem; margin: 0 0 1.1rem; }
+  h2 {
+    font-size: 1.1rem;
+    margin: 1.6rem 0 0.6rem;
+    padding-bottom: 0.35rem;
+    border-bottom: 2px solid var(--line);
+  }
+  h3 { font-size: 0.98rem; margin: 1rem 0 0.45rem; }
+  .note {
+    background: #ebf8ff;
+    border: 1px solid #90cdf4;
+    border-radius: 6px;
+    padding: 0.7rem 0.9rem;
+    font-size: 0.9rem;
+    margin-bottom: 1rem;
+  }
+  .grid2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+    margin: 0.75rem 0 1.2rem;
+  }
+  @media (max-width: 980px) { .grid2 { grid-template-columns: 1fr; } }
+  .panel {
+    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 0.75rem 0.9rem 0.5rem;
+  }
+  .panel.was { border-top: 4px solid var(--was); }
+  .panel.now { border-top: 4px solid var(--now); }
+  .panel h3 {
+    margin: 0 0 0.55rem;
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+  }
+  .badge {
+    font-size: 0.72rem;
+    font-weight: 700;
+    padding: 0.12rem 0.45rem;
+    border-radius: 4px;
+  }
+  .badge.was { background: #fed7d7; color: var(--was); }
+  .badge.now { background: #c6f6d5; color: var(--now); }
+  .mermaid {
+    background: #fff;
+    border-radius: 6px;
+    overflow-x: auto;
+    font-size: 14px;
+  }
+  table.res {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.88rem;
+    background: #fff;
+    margin: 0.5rem 0 1rem;
+  }
+  table.res th, table.res td {
+    border: 1px solid var(--line);
+    padding: 0.5rem 0.65rem;
+    vertical-align: top;
+    text-align: left;
+  }
+  table.res th { background: #edf2f7; }
+  table.res td.k { white-space: nowrap; font-weight: 600; width: 18%; }
+  code {
+    background: #edf2f7;
+    padding: 0.05rem 0.32rem;
+    border-radius: 3px;
+    font-family: Consolas, monospace;
+    font-size: 0.86em;
+  }
+  ul.tight { margin: 0.35rem 0; padding-left: 1.15rem; }
+  ul.tight li { margin: 0.2rem 0; }
+  .leg {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.55rem 1rem;
+    font-size: 0.85rem;
+    margin: 0.5rem 0 0.9rem;
+  }
+  .leg span::before {
+    content: "";
+    display: inline-block;
+    width: 0.7rem;
+    height: 0.7rem;
+    border-radius: 2px;
+    margin-right: 0.35rem;
+    vertical-align: -1px;
+  }
+  .leg .m::before { background: #bee3f8; }
+  .leg .t::before { background: #feebc8; }
+  .leg .p::before { background: #e2e8f0; }
+  .leg .r::before { background: #faf089; }
+  .box-res {
+    background: var(--res-bg);
+    border: 1px solid #f6ad55;
+    border-radius: 6px;
+    padding: 0.65rem 0.85rem;
+    font-size: 0.88rem;
+    margin: 0.5rem 0 1rem;
+  }
+  .foot { margin-top: 1.5rem; font-size: 0.82rem; color: var(--muted); }
+</style>
+</head>
+<body>
+
+<h1>Диаграмма алгоритма фоновых заданий: было / стало</h1>
+<p class="sub">
+  IMDEV-8663.1 · модуль менеджера <code>Справочник.РегламентныеПериоды</code> ·
+  расширение <code>IM8663</code>
+</p>
+
+<div class="note">
+  Слева — типовой параллельный режим до доработки (1 договор = 1 ФЗ).
+  Справа — после IM8663.1 (порция договоров = 1 ФЗ, скользящее окно, барьер пачки).
+  Ниже — таблица процедур и используемых ресурсов.
+</div>
+
+<div class="leg">
+  <span class="m">модуль менеджера РегламентныеПериоды</span>
+  <span class="t">типовой общий модуль / платформа</span>
+  <span class="p">параметры / кэш в памяти</span>
+  <span class="r">константа / настройка</span>
+</div>
+
+<h2>1. Потоки вызовов: было и стало</h2>
+
+<div class="grid2">
+  <div class="panel was">
+    <h3><span class="badge was">БЫЛО</span> 1 договор = 1 фоновое задание</h3>
+    <div class="mermaid">
+flowchart TB
+  F["Форма РегламентныйПериод<br/>сборка ПараметрыСохранения"] --> R["СформироватьРегламентныеОперации<br/>родитель, длительная операция"]
+  R --> C["Константа<br/>МаксимальноеКоличествоПараллельныхПотоков"]
+  R --> P["Пачка до 3000<br/>предподготовка Утро/Вечер"]
+  P --> L["Цикл по договорам пачки"]
+  L --> D["СформироватьДокументыЗакрытияПериода<br/>на 1 договор"]
+  D --> BG{"КоличествоПотоков > 0<br/>и ФЗ разрешены?"}
+  BG -->|да| FZ["ФоновыеЗадания.Выполнить<br/>ФоновыеЗаданияСервер.<br/>СоздатьПланРегламентныхОперацийДУ"]
+  BG -->|нет| SYNC["Синхронно<br/>СоздатьПланРегламентныхОперацийДУ"]
+  FZ --> LIST["ПараметрыСохранения.<br/>СписокФоновыхЗаданий"]
+  LIST --> WAIT["Ожидание внутри D<br/>при N потоков или<br/>последнем договоре отбора"]
+  WAIT --> SNAP["Разбор по старому<br/>снимку ФоновоеЗадание"]
+  P --> NEXT["Следующая пачка<br/>без жёсткого барьера ФЗ"]
+
+  classDef mgr fill:#bee3f8,stroke:#2b6cb0,color:#1a202c
+  classDef typ fill:#feebc8,stroke:#c05621,color:#1a202c
+  classDef mem fill:#e2e8f0,stroke:#4a5568,color:#1a202c
+  classDef kon fill:#faf089,stroke:#975a16,color:#1a202c
+  class R,L,D mgr
+  class FZ,SYNC,WAIT,SNAP typ
+  class F,LIST,P mem
+  class C kon
+    </div>
+    <div class="box-res">
+      <b>Ресурсы «было»:</b>
+      потоки из константы; пачка 3000 в коде; кэш предподготовки на всю пачку
+      в <code>ПараметрыСохранения</code>; в каждое ФЗ — таблицы <b>одного</b> договора
+      (<code>СоответствиеОперацияТаблица</code>); до N одновременных ФЗ.
+    </div>
+  </div>
+
+  <div class="panel now">
+    <h3><span class="badge now">СТАЛО</span> порция договоров = 1 ФЗ</h3>
+    <div class="mermaid">
+flowchart TB
+  F["Форма РегламентныйПериод<br/>сборка ПараметрыСохранения"] --> R["СформироватьРегламентныеОперации<br/>+ init ФоновыеЗаданияДоступны<br/>+ РазмерЧанка / РазмерПачки"]
+  R --> K1["Константа порции<br/>МаксимальныйРазмерПорции…Регл<br/>0 → 50"]
+  R --> K2["Константа пачки<br/>МаксимальныйРазмерПачки…Регл<br/>0 → 3000"]
+  R --> K0["Константа потоков<br/>МаксимальноеКоличество…Потоков"]
+  R --> P["Пачка предподготовки<br/>кэш СоответствиеДоговорТаблица*"]
+  P --> IF{"ФоновыеЗаданияДоступны?"}
+  IF -->|нет| SEQ["Последовательный цикл<br/>СформироватьДокументыЗакрытияПериода<br/>синхронно"]
+  IF -->|да| DISP["IM8663_ОбработатьПачкуДиспетчером<br/>очередь порций + окно потоков"]
+  DISP --> SLICE["Срез ПараметрыСохранения<br/>только договоры порции"]
+  SLICE --> RUN["ФоновыеЗадания.Выполнить<br/>ОбщегоНазначения.ВыполнитьБПБезопасно"]
+  RUN --> WRK["IM8663_СоздатьПланы…ПоЧанку<br/>Экспорт, воркер ФЗ"]
+  WRK --> D2["СформироватьДокументыЗакрытияПериода<br/>КоличествоПотоков = 0<br/>синхронно по договорам порции"]
+  D2 --> PLAN["ФоновыеЗаданияСервер.<br/>СоздатьПланРегламентныхОперацийДУ"]
+  DISP --> FIN["IM8663_ЗавершитьФоновыеЗаданияПорции<br/>актуальный снимок, прогресс"]
+  FIN --> BAR["Барьер пачки → следующая пачка"]
+  R --> EX["Исключение родителя →<br/>IM8663_ОтменитьАктивныеЗадания"]
+
+  classDef mgr fill:#bee3f8,stroke:#2b6cb0,color:#1a202c
+  classDef new fill:#c6f6d5,stroke:#276749,color:#1a202c
+  classDef typ fill:#feebc8,stroke:#c05621,color:#1a202c
+  classDef mem fill:#e2e8f0,stroke:#4a5568,color:#1a202c
+  classDef kon fill:#faf089,stroke:#975a16,color:#1a202c
+  class R,D2,SEQ mgr
+  class DISP,SLICE,WRK,FIN,EX new
+  class RUN,PLAN typ
+  class F,P,LIST mem
+  class K0,K1,K2 kon
+    </div>
+    <div class="box-res">
+      <b>Ресурсы «стало»:</b>
+      те же потоки; пачка и порция из констант; кэш предподготовки на пачку;
+      в ФЗ — <b>срез</b> соответствий по ~50 договорам; до N одновременных <b>порций</b>
+      (а не договоров).
+    </div>
+  </div>
+</div>
+
+<h2>2. Взаимодействие процедур модуля менеджера (стало)</h2>
+<div class="panel now" style="margin-bottom:1rem;">
+  <div class="mermaid">
+sequenceDiagram
+  participant Form as Форма РегламентныйПериод
+  participant Parent as СформироватьРегламентныеОперации
+  participant Const as Константы порции/пачки/потоков
+  participant Prep as Предподготовка пачки
+  participant Disp as IM8663_ОбработатьПачкуДиспетчером
+  participant Wait as IM8663_ЗавершитьФоновыеЗаданияПорции
+  participant Plat as ФоновыеЗадания + ВыполнитьБПБезопасно
+  participant Worker as IM8663_СоздатьПланы…ПоЧанку
+  participant Docs as СформироватьДокументыЗакрытияПериода
+  participant Plan as ФоновыеЗаданияСервер.СоздатьПлан…
+
+  Form->>Parent: ПараметрыСохранения
+  Parent->>Const: прочитать размеры и потоки
+  loop Каждая пачка
+    Parent->>Prep: ЗаполнитьПараметрыСохраненияПакетнымиДанными…
+    alt Фоновые доступны
+      Parent->>Disp: СписокПачки
+      loop Скользящее окно потоков
+        Disp->>Disp: срез СоответствиеДоговорТаблица*
+        Disp->>Plat: старт ФЗ порции
+        Plat->>Worker: ПараметрыЧанка
+        loop Договоры порции
+          Worker->>Docs: 1 договор, потоки=0
+          Docs->>Plan: синхронно
+        end
+        Disp->>Wait: дождаться слот / барьер
+      end
+      Parent->>Wait: барьер пачки
+    else Последовательно
+      Parent->>Docs: цикл по договорам пачки
+      Docs->>Plan: синхронно
+    end
+  end
+  Parent->>Wait: финальный хвост + сводка
+  Note over Parent: При исключении → IM8663_ОтменитьАктивныеЗадания
+  </div>
+</div>
+
+<h2>3. Процедуры: роль и взаимодействие</h2>
+<table class="res">
+  <tr>
+    <th>Процедура</th>
+    <th>Где</th>
+    <th>Было</th>
+    <th>Стало</th>
+    <th>С кем взаимодействует</th>
+  </tr>
+  <tr>
+    <td class="k"><code>СформироватьРегламентныеОперации</code></td>
+    <td>модуль менеджера</td>
+    <td>цикл пачек → цикл договоров → D</td>
+    <td>init; пачки; диспетчер или seq; барьер; сводка</td>
+    <td>константы, предподготовка, диспетчер, завершение порции, отмена</td>
+  </tr>
+  <tr>
+    <td class="k"><code>СформироватьДокументыЗакрытияПериода</code></td>
+    <td>модуль менеджера</td>
+    <td>сама стартовала ФЗ на договор + ждала порцию</td>
+    <td>только синхронный <code>СоздатьПлан…</code> (параллельность убрана)</td>
+    <td>вызывается из seq-цикла родителя или из воркера порции</td>
+  </tr>
+  <tr>
+    <td class="k"><code>IM8663_ОбработатьПачкуДиспетчером</code></td>
+    <td>модуль менеджера (новая)</td>
+    <td>—</td>
+    <td>нарезка порций, срез кэша, окно потоков, запуск ФЗ</td>
+    <td>родитель → диспетчер → платформа → воркер; ждёт через завершение порции</td>
+  </tr>
+  <tr>
+    <td class="k"><code>IM8663_СоздатьПланы…ПоЧанку</code></td>
+    <td>модуль менеджера, <b>Экспорт</b></td>
+    <td>—</td>
+    <td>воркер ФЗ: цикл договоров порции</td>
+    <td>платформа → воркер → <code>СформироватьДокументыЗакрытияПериода</code></td>
+  </tr>
+  <tr>
+    <td class="k"><code>IM8663_ЗавершитьФоновыеЗаданияПорции</code></td>
+    <td>модуль менеджера (новая)</td>
+    <td>частично было внутри D / <code>ОжидатьЗавершенияТекущихФоновых</code></td>
+    <td>ожидание, актуальный снимок, журнал, прогресс, барьер</td>
+    <td>диспетчер и родитель</td>
+  </tr>
+  <tr>
+    <td class="k"><code>IM8663_ОтменитьАктивныеЗадания</code></td>
+    <td>модуль менеджера (новая)</td>
+    <td>—</td>
+    <td>отмена детей при исключении родителя</td>
+    <td>ветка <code>Исключение</code> родителя</td>
+  </tr>
+  <tr>
+    <td class="k"><code>IM8663_ПолучитьЧисловуюКонстанту</code></td>
+    <td>модуль менеджера (новая)</td>
+    <td>—</td>
+    <td>чтение константы по имени; нет/0 → дефолт</td>
+    <td>родитель при init размеров</td>
+  </tr>
+  <tr>
+    <td class="k"><code>ФоновыеЗаданияСервер.СоздатьПланРегламентныхОперацийДУ</code></td>
+    <td>типовой ОМ</td>
+    <td>в ФЗ (1 договор) или синхронно</td>
+    <td>только синхронно из D</td>
+    <td>прикладное проведение плана</td>
+  </tr>
+  <tr>
+    <td class="k"><code>ОбщегоНазначения.ВыполнитьБПБезопасно</code></td>
+    <td>типовой ОМ</td>
+    <td>не использовался для этого</td>
+    <td>обёртка запуска метода менеджера в ФЗ</td>
+    <td>диспетчер → платформа → воркер</td>
+  </tr>
+</table>
+
+<h2>4. Используемые ресурсы</h2>
+<table class="res">
+  <tr>
+    <th>Ресурс</th>
+    <th>Тип</th>
+    <th>Было</th>
+    <th>Стало</th>
+  </tr>
+  <tr>
+    <td class="k"><code>МаксимальноеКоличествоПараллельныхПотоков</code></td>
+    <td>константа базы</td>
+    <td>число одновременных ФЗ (договоров)</td>
+    <td>число одновременных ФЗ (<b>порций</b>)</td>
+  </tr>
+  <tr>
+    <td class="k"><code>МаксимальныйРазмерПорцииДоговоровВПотокеРегл</code></td>
+    <td>константа (CFE → CF)</td>
+    <td>не было (всегда 1 договор на ФЗ)</td>
+    <td>договоров в одном ФЗ; 0 → 50; 1 ≈ старое зерно</td>
+  </tr>
+  <tr>
+    <td class="k"><code>МаксимальныйРазмерПачкиДоговоровДляПредварительногоЗапросаРегл</code></td>
+    <td>константа (CFE → CF)</td>
+    <td>литерал 3000 в коде</td>
+    <td>размер пачки предподготовки; 0 → 3000</td>
+  </tr>
+  <tr>
+    <td class="k"><code>ПараметрыСохранения</code></td>
+    <td>структура в памяти родителя</td>
+    <td>список ФЗ, операции, документы, кэш пачки</td>
+    <td>+ флаги/счётчики A, <code>РазмерЧанка</code>, <code>РазмерЧанкаПоУИД</code>, прогресс</td>
+  </tr>
+  <tr>
+    <td class="k"><code>СоответствиеДоговорТаблица*</code></td>
+    <td>кэш предподготовки пачки</td>
+    <td>на пачку; в ФЗ уходил срез на 1 договор через D</td>
+    <td>на пачку; в ФЗ уходит <b>срез порции</b> (~50 ключей)</td>
+  </tr>
+  <tr>
+    <td class="k"><code>СоответствиеОперацияТаблица</code></td>
+    <td>параметр плана на 1 договор</td>
+    <td>собирается в D перед ФЗ/sync</td>
+    <td>то же, но только на sync-пути внутри воркера/seq</td>
+  </tr>
+  <tr>
+    <td class="k"><code>СписокФоновыхЗаданий</code></td>
+    <td>список значений в параметрах</td>
+    <td>до N заданий-договоров</td>
+    <td>до N заданий-порций</td>
+  </tr>
+  <tr>
+    <td class="k">Сеансы ФЗ платформы</td>
+    <td>сервер 1С</td>
+    <td>много коротких ФЗ (до ~22k запусков на отбор)</td>
+    <td>меньше длиннее ФЗ (~отбор/порция запусков)</td>
+  </tr>
+  <tr>
+    <td class="k">Замер производительности (IMDEV-8927)</td>
+    <td>РС замеров БСП</td>
+    <td>шаг «обработка пачки» после цикла договоров</td>
+    <td>тот же шаг после диспетчера+барьера (в регистре — удельное время)</td>
+  </tr>
+</table>
+
+<h2>5. Сжатое сравнение</h2>
+<table class="res">
+  <tr>
+    <th></th>
+    <th>Было</th>
+    <th>Стало</th>
+  </tr>
+  <tr>
+    <td class="k">Единица ФЗ</td>
+    <td>1 договор</td>
+    <td>порция договоров (дефолт 50)</td>
+  </tr>
+  <tr>
+    <td class="k">Кто стартует ФЗ</td>
+    <td><code>СформироватьДокументыЗакрытияПериода</code></td>
+    <td><code>IM8663_ОбработатьПачкуДиспетчером</code></td>
+  </tr>
+  <tr>
+    <td class="k">Метод ФЗ</td>
+    <td><code>ФоновыеЗаданияСервер.СоздатьПлан…</code></td>
+    <td><code>ВыполнитьБПБезопасно</code> → воркер менеджера → sync <code>СоздатьПлан…</code></td>
+  </tr>
+  <tr>
+    <td class="k">Ожидание</td>
+    <td>внутри D, привязка к «последнему договору»</td>
+    <td>отдельная процедура, барьер пачки/прогона</td>
+  </tr>
+  <tr>
+    <td class="k">Кэш в ФЗ</td>
+    <td>таблицы 1 договора</td>
+    <td>срез соответствий по договорам порции</td>
+  </tr>
+</table>
+
+<p class="foot">
+  IMDEV-8663.1 · Документация/01_background_jobs/algorithm_bg_before_after.html ·
+  см. также tz_imdev8663_1.html, avancor_changes_tree_im8663.html
+</p>
+
+<script>
+  mermaid.initialize({
+    startOnLoad: true,
+    theme: "neutral",
+    flowchart: { curve: "basis", htmlLabels: true },
+    sequence: { mirrorActors: false }
+  });
+</script>
+</body>
+</html>

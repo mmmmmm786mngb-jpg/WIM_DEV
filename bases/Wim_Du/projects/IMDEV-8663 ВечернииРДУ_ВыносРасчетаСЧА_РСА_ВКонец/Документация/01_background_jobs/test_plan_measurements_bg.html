@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>IMDEV-8663.1 — план тестирования и разбор замеров (было / стало)</title>
+<style>
+  body { font-family: "Segoe UI", Tahoma, sans-serif; margin: 0; padding: 1.25rem 1.5rem 2.5rem; background: #f7fafc; color: #1a202c; line-height: 1.45; }
+  h1 { font-size: 1.35rem; margin: 0 0 0.3rem; }
+  .sub { color: #4a5568; font-size: 0.92rem; margin: 0 0 1rem; }
+  h2 { font-size: 1.12rem; margin: 1.5rem 0 0.55rem; padding-bottom: 0.3rem; border-bottom: 2px solid #cbd5e0; color: #2b6cb0; }
+  h3 { font-size: 0.98rem; margin: 1rem 0 0.4rem; }
+  .note { background: #ebf8ff; border: 1px solid #90cdf4; border-radius: 6px; padding: 0.7rem 0.9rem; font-size: 0.9rem; margin: 0.6rem 0 1rem; }
+  .warn { background: #fffaf0; border: 1px solid #f6ad55; border-radius: 6px; padding: 0.7rem 0.9rem; font-size: 0.9rem; margin: 0.6rem 0 1rem; }
+  .ok { background: #f0fff4; border: 1px solid #9ae6b4; border-radius: 6px; padding: 0.7rem 0.9rem; font-size: 0.9rem; margin: 0.6rem 0 1rem; }
+  table { width: 100%; border-collapse: collapse; background: #fff; font-size: 0.88rem; margin: 0.5rem 0 1rem; }
+  th, td { border: 1px solid #cbd5e0; padding: 0.45rem 0.55rem; vertical-align: top; text-align: left; }
+  th { background: #edf2f7; }
+  td.num, th.num { text-align: right; white-space: nowrap; }
+  td.okv { color: #276749; font-weight: 700; }
+  td.bad { color: #9b2c2c; font-weight: 600; }
+  code { background: #edf2f7; padding: 0.05rem 0.3rem; border-radius: 3px; font-family: Consolas, monospace; font-size: 0.86em; }
+  ul { margin: 0.35rem 0 0.7rem; padding-left: 1.2rem; }
+  li { margin: 0.25rem 0; }
+  .shot { max-width: 100%; border: 1px solid #cbd5e0; border-radius: 6px; margin: 0.5rem 0 1rem; }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 0.8rem; }
+  @media (max-width: 900px) { .grid2 { grid-template-columns: 1fr; } }
+  .card { background: #fff; border: 1px solid #cbd5e0; border-radius: 8px; padding: 0.7rem 0.85rem; }
+  .card h3 { margin-top: 0; }
+  .tag { display: inline-block; font-size: 0.72rem; font-weight: 700; padding: 0.1rem 0.4rem; border-radius: 4px; }
+  .tag.pass { background: #c6f6d5; color: #276749; }
+  .tag.plan { background: #bee3f8; color: #2b6cb0; }
+  .tag.base { background: #feebc8; color: #9c4221; }
+  .foot { margin-top: 1.4rem; font-size: 0.82rem; color: #718096; }
+  ol.plan > li { margin: 0.45rem 0; }
+</style>
+</head>
+<body>
+
+<h1>План тестирования и разбор замеров IMDEV-8663.1</h1>
+<p class="sub">
+  Фоновые регламентные операции (диспетчер порций). Источники:
+  <code>Замеры_ФизЛицаНеРДУ_и_РДУ.png</code> (новый алгоритм, DR),
+  <code>ЗамерыБыли.xlsx</code> (прод / как сейчас).
+</p>
+
+<div class="note">
+  <b>Главный показатель для сравнения</b> — ключевая операция без суффикса:
+  <code>Д у. регламентные операции.2. вечерние операции</code>
+  (полное время прогона, wall-clock).<br>
+  Строки <code>…обработка пачки договоров</code> и <code>…удельный</code> в регистре БСП —
+  это <b>удельное</b> время (сек на 1 договор), а не длительность пачки.
+  Проверка: удельное × вес ≈ полное время.
+</div>
+
+<h2>1. Цель тестирования</h2>
+<ul>
+  <li>Подтвердить корректность нового параллельного режима (порция договоров = 1 ФЗ).</li>
+  <li>Сравнить время вечернего регламента с продовым baseline на сопоставимых объёмах.</li>
+  <li>Зафиксировать, что прикладной результат (планы/операции) не хуже типового пути.</li>
+</ul>
+
+<h2>2. Как читать строки регистра замеров</h2>
+<table>
+  <tr>
+    <th>Ключевая операция</th>
+    <th>Что означает «Время выполнения»</th>
+    <th>Вес</th>
+  </tr>
+  <tr>
+    <td><code>…вечерние операции</code></td>
+    <td><b>Полное</b> время прогона (сек) — использовать для «было/стало»</td>
+    <td>≈ число договоров (+ хвост шага)</td>
+  </tr>
+  <tr>
+    <td><code>…обработка пачки договоров</code></td>
+    <td><b>Удельное</b> сек/договор по накопленным пачкам (комментарий часто «Пачка 1…»)</td>
+    <td>сумма размеров пачек</td>
+  </tr>
+  <tr>
+    <td><code>…удельный</code></td>
+    <td>Сводный удельный показатель БСП</td>
+    <td>вес + последний шаг</td>
+  </tr>
+  <tr>
+    <td><code>…последний шаг</code></td>
+    <td>Хвост после последней фиксации пачки до завершения замера</td>
+    <td>обычно 1</td>
+  </tr>
+</table>
+
+<div class="warn">
+  Пример из скрина (РДУ ~22k): полное <b>2464,874</b> сек;
+  удельное пачки <b>0,112</b> × вес <b>21994</b> ≈ <b>2463</b> сек — сходится.
+  Нельзя читать 0,112 сек как «пачка прошла за 0,1 секунды».
+</div>
+
+<h2>3. План тестирования</h2>
+<ol class="plan">
+  <li>
+    <span class="tag plan">T-01</span> <b>Дымовой</b> — малый отбор (3–10 договоров), 12 потоков.
+    Ожидание: прогон без ошибок; сводка; прогресс «Договоров обработано…».
+  </li>
+  <li>
+    <span class="tag plan">T-02</span> <b>ФЛ, не Розничное ДУ</b> — отбор ~3000 договоров, 12 потоков,
+    те же операции вечернего регламента, что на проде.
+  </li>
+  <li>
+    <span class="tag plan">T-03</span> <b>Розничное ДУ</b> — отбор ~22 000 договоров, 12 потоков.
+  </li>
+  <li>
+    <span class="tag plan">T-04</span> <b>Последовательный режим</b> — потоки = 0 (или ФЗ недоступны):
+    результат совпадает с типовым sync-путём.
+  </li>
+  <li>
+    <span class="tag plan">T-05</span> <b>Порция = 1</b> (константа порции): зерно как «1 договор = 1 ФЗ»
+    через новый диспетчер; прогон завершается, время может быть хуже порции 50.
+  </li>
+  <li>
+    <span class="tag plan">T-06</span> <b>Качество данных</b> — выборочно сравнить созданные/проведённые
+    планы и статусы операций с эталоном (тот же период/отбор без расширения или на копии «до»).
+  </li>
+  <li>
+    <span class="tag plan">T-07</span> <b>Ошибки</b> — при сбое дочернего: журнал, сводка, остальные порции
+    продолжают; при исключении родителя — дети отменяются.
+  </li>
+  <li>
+    <span class="tag plan">T-08</span> <b>Замер</b> — снять строки РС замеров времени по ключевой операции
+    вечерних; сохранить скрин/выгрузку рядом с этим отчётом.
+  </li>
+</ol>
+
+<p>Окружение зафиксировать в протоколе: платформа, версия конф, потоки, значения констант порции/пачки, имя ИБ.</p>
+
+<h2>4. Результаты нового алгоритма (DR, 15.08.2026)</h2>
+<p>Источник: <code>Замеры_ФизЛицаНеРДУ_и_РДУ.png</code>. Платформа 8.3.27.2214, конф 1.5.29.7, потоков 12, пользователь Admin.</p>
+
+<img class="shot" src="Замеры_ФизЛицаНеРДУ_и_РДУ.png" alt="Скрин замеров нового алгоритма: ФЛ не РДУ и РДУ">
+
+<table>
+  <tr>
+    <th>Сценарий</th>
+    <th class="num">Договоров</th>
+    <th class="num">Полное время</th>
+    <th class="num">Минут</th>
+    <th class="num">Удельное пачки</th>
+    <th class="num">Удельное × вес</th>
+    <th>Сеанс / запись</th>
+    <th>Статус</th>
+  </tr>
+  <tr>
+    <td>Дымовой (малый)</td>
+    <td class="num">3</td>
+    <td class="num">22,132 сек</td>
+    <td class="num">0,4</td>
+    <td class="num">7,376</td>
+    <td class="num">≈22,1</td>
+    <td>сеанс 3, 15:33</td>
+    <td><span class="tag pass">OK</span></td>
+  </tr>
+  <tr>
+    <td>Дымовой (повтор)</td>
+    <td class="num">3</td>
+    <td class="num">20,353 сек</td>
+    <td class="num">0,3</td>
+    <td class="num">6,784</td>
+    <td class="num">≈20,4</td>
+    <td>сеанс 4, 16:26</td>
+    <td><span class="tag pass">OK</span></td>
+  </tr>
+  <tr>
+    <td><b>Розничное ДУ (РДУ)</b></td>
+    <td class="num"><b>21 993</b></td>
+    <td class="num"><b>2 464,874 сек</b></td>
+    <td class="num"><b>41,1</b></td>
+    <td class="num">0,112</td>
+    <td class="num">≈2 463</td>
+    <td>сеанс 3, 16:16</td>
+    <td><span class="tag pass">OK</span></td>
+  </tr>
+  <tr>
+    <td><b>ФЛ, не Розничное ДУ</b></td>
+    <td class="num"><b>3 086</b></td>
+    <td class="num"><b>1 150,617 сек</b></td>
+    <td class="num"><b>19,2</b></td>
+    <td class="num">0,373</td>
+    <td class="num">≈1 151</td>
+    <td>сеанс 6, 16:45</td>
+    <td><span class="tag pass">OK</span></td>
+  </tr>
+</table>
+
+<div class="ok">
+  Разбор таблицы нового алгоритма: все четыре прогона без ошибки;
+  для больших отборов удельное × вес совпадает с полным временем;
+  комментарии содержат «Потоков: 12» и фактическое число договоров.
+</div>
+
+<h2>5. Baseline с прода (как сейчас)</h2>
+<p>
+  Источник: <code>ЗамерыБыли.xlsx</code> (выгрузка РС замеров, операция
+  <code>…вечерние операции</code>, потоков 12). Период выборки в файле: конец июля — середина августа 2026.
+</p>
+
+<div class="grid2">
+  <div class="card">
+    <h3><span class="tag base">Прод</span> Розничное ДУ (~22 000)</h3>
+    <ul>
+      <li>Прогонов в выборке: <b>13</b></li>
+      <li>Медиана полного времени: <b>5 887 сек ≈ 98,1 мин</b></li>
+      <li>Типичный коридор (без редких выбросов): <b>92–112 мин</b></li>
+      <li>Мин / макс: 27,0 / 111,6 мин (есть ускоренные дни 27 и 42,5 мин)</li>
+      <li>Пример: 29.07.2026 — 22 034 дог., <b>5 574 сек ≈ 92,9 мин</b></li>
+    </ul>
+  </div>
+  <div class="card">
+    <h3><span class="tag base">Прод</span> ФЛ не РДУ (~3 080)</h3>
+    <ul>
+      <li>Дневные «нормальные» прогоны (без ночных выбросов &gt;1,5 ч): <b>6</b></li>
+      <li>Медиана: <b>2 407 сек ≈ 40,1 мин</b></li>
+      <li>Коридор: <b>37–45 мин</b></li>
+      <li>Пример: 29.07.2026 — 3 087 дог., <b>2 492 сек ≈ 41,5 мин</b></li>
+      <li>В файле также есть аномалии 2–6+ часов (нагрузка/ночь) — в сравнение не брать</li>
+    </ul>
+  </div>
+</div>
+
+<h2>6. Сравнение было / стало</h2>
+<table>
+  <tr>
+    <th>Сценарий</th>
+    <th class="num">Договоров</th>
+    <th class="num">Прод (типично / медиана)</th>
+    <th class="num">Новый алгоритм (DR)</th>
+    <th class="num">Ускорение</th>
+    <th class="num">Экономия времени</th>
+  </tr>
+  <tr>
+    <td>Розничное ДУ</td>
+    <td class="num">~22 000</td>
+    <td class="num">≈ 98 мин (медиана)<br>коридор 92–112</td>
+    <td class="num okv">41,1 мин<br>(2 465 сек)</td>
+    <td class="num okv">≈ 2,4×</td>
+    <td class="num okv">≈ −57 мин (−58%)</td>
+  </tr>
+  <tr>
+    <td>ФЛ, не Розничное ДУ</td>
+    <td class="num">~3 080</td>
+    <td class="num">≈ 40 мин (медиана)<br>коридор 37–45</td>
+    <td class="num okv">19,2 мин<br>(1 151 сек)</td>
+    <td class="num okv">≈ 2,1×</td>
+    <td class="num okv">≈ −21 мин (−52%)</td>
+  </tr>
+</table>
+
+<div class="ok">
+  <b>Вывод по производительности:</b> на DR при 12 потоках новый алгоритм даёт примерно
+  двукратное сокращение wall-clock на обоих целевых отборах относительно типичного прода.
+  Это согласуется с ранее зафиксированными ориентирами (~1,5 ч → ~45 мин для РДУ; ~40 → ~20 мин для ФЛ).
+</div>
+
+<div class="warn">
+  <b>Оговорки:</b> DR ≠ прод (железо, данные, конкурирующая нагрузка).
+  Сравниваем близкие объёмы и ту же ключевую операцию / 12 потоков.
+  Отдельные продовые дни уже были быстрее медианы (27–42 мин на 22k) — ориентир для приёмки:
+  стабильно не хуже типичного коридора и целевой выигрыш на повторных прогонах.
+</div>
+
+<h2>7. Критерии приёмки</h2>
+<table>
+  <tr>
+    <th>ID</th>
+    <th>Критерий</th>
+    <th>Порог</th>
+    <th>По DR 15.08</th>
+  </tr>
+  <tr>
+    <td>A1</td>
+    <td>Прогон РДУ ~22k завершён без ошибки</td>
+    <td>да</td>
+    <td class="okv">да</td>
+  </tr>
+  <tr>
+    <td>A2</td>
+    <td>Прогон ФЛ ~3k завершён без ошибки</td>
+    <td>да</td>
+    <td class="okv">да</td>
+  </tr>
+  <tr>
+    <td>A3</td>
+    <td>Время РДУ vs типичный прод (~98 мин)</td>
+    <td>заметно лучше (ориентир ≤ 50–60 мин на сопоставимом стенде)</td>
+    <td class="okv">41 мин</td>
+  </tr>
+  <tr>
+    <td>A4</td>
+    <td>Время ФЛ vs типичный прод (~40 мин)</td>
+    <td>заметно лучше (ориентир ≤ 25 мин)</td>
+    <td class="okv">19 мин</td>
+  </tr>
+  <tr>
+    <td>A5</td>
+    <td>Удельное × вес ≈ полное время</td>
+    <td>сходимость ±1–2%</td>
+    <td class="okv">сходится</td>
+  </tr>
+  <tr>
+    <td>A6</td>
+    <td>Качество документов/операций (T-06)</td>
+    <td>без расхождений на выборке</td>
+    <td>выполнить / зафиксировать отдельно</td>
+  </tr>
+</table>
+
+<h2>8. Чек-лист протокола прогона</h2>
+<ul>
+  <li>[ ] ИБ / копия, версия расширения <code>IM8663</code></li>
+  <li>[ ] Константы: порция, пачка, потоки (факт значения)</li>
+  <li>[ ] Отбор договоров (РДУ / ФЛ), дата периода, группа «вечерние»</li>
+  <li>[ ] Скрин/выгрузка РС замеров + сводка из сообщения результата</li>
+  <li>[ ] Замечания по ошибкам в журнале / проблемным договорам</li>
+</ul>
+
+<p class="foot">
+  IMDEV-8663.1 · Документация/01_background_jobs/test_plan_measurements_bg.html ·
+  источники: Замеры_ФизЛицаНеРДУ_и_РДУ.png, ЗамерыБыли.xlsx
+</p>
+
+</body>
+</html>
