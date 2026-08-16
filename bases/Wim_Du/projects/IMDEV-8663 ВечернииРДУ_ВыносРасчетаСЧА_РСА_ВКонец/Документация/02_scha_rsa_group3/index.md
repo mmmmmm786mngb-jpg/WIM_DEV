@@ -16,6 +16,7 @@
 
 | Файл | Назначение |
 |---|---|
+| [prompt_imdev8663_2_extension.html](prompt_imdev8663_2_extension.html) | **Промпт на реализацию**: новое расширение IM86632 над базой после переноса 8663.1 вендором |
 | [proposal_scha_rsa_batch_calculation.html](proposal_scha_rsa_batch_calculation.html) | Полное предложение для бизнеса и разработки |
 | [presentation_scha_rsa.html](presentation_scha_rsa.html) | Презентация 16:9 (HTML) |
 | [presentation_scha_rsa.pdf](presentation_scha_rsa.pdf) | PDF |
