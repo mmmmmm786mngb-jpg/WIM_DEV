@@ -7,7 +7,8 @@
 | Файл | Назначение |
 |---|---|
 | [tz_imdev8663_1.html](tz_imdev8663_1.html) | **ТЗ на разработку:** этап A + этап B, константы размеров (50/3000), расширение IM8663 |
-| [avancor_changes_tree_im8663.html](avancor_changes_tree_im8663.html) | **Для Аванкор:** дерево изменений — что перенести из IM8663 в базовую CF |
+| [avancor_changes_tree_im8663.html](avancor_changes_tree_im8663.html) | **Для Аванкор:** пошагово что копировать/удалить/вставить в базовую CF |
+| [changes_map_im8663_1.html](changes_map_im8663_1.html) | **Карта изменений** по объектам/модулям |
 | [algorithm_bg_before_after.html](algorithm_bg_before_after.html) | Диаграмма алгоритма фоновых: было / стало, процедуры, ресурсы |
 | [test_plan_measurements_bg.html](test_plan_measurements_bg.html) | План тестирования + разбор замеров DR vs прод (`ЗамерыБыли.xlsx`) |
 | [jira_813_task_background_jobs.html](jira_813_task_background_jobs.html) | Краткое задание для комментария Jira (п. 8.13) |
