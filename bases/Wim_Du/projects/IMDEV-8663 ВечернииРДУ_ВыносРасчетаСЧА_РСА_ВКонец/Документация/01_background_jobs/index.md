@@ -12,6 +12,7 @@
 | [ПометкаУдаленияПлановРеглЗаДень.epf](../../Скрипты/01_background_jobs/epf_mark_plans_deleted/build/ПометкаУдаленияПлановРеглЗаДень.epf) | EPF: пометка планов регл. за день (+подчиненные) в N потоках |
 | [algorithm_bg_before_after.html](algorithm_bg_before_after.html) | Диаграмма алгоритма фоновых: было / стало, процедуры, ресурсы |
 | [test_plan_measurements_bg.html](test_plan_measurements_bg.html) | План тестирования + разбор замеров DR vs прод (`ЗамерыБыли.xlsx`) |
+| [regression_8663_1.html](regression_8663_1.html) | **Регресс 17.08.2026:** 3000 физлиц, было/стало, 7/7 MXL идентичны |
 | [jira_813_task_background_jobs.html](jira_813_task_background_jobs.html) | Краткое задание для комментария Jira (п. 8.13) |
 | [prompt_imdev8663_1_extension.html](prompt_imdev8663_1_extension.html) | **Промпт агенту:** порядок сборки расширения, skills, запреты |
 | [prompt_remove_wrapper_module.md](prompt_remove_wrapper_module.md) | **Выполнено:** убран общий модуль-заглушка; запуск порций через `ОбщегоНазначения.ВыполнитьБПБезопасно` |

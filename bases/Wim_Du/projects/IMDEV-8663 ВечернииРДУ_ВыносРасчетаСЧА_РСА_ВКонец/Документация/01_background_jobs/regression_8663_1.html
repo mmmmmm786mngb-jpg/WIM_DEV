@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>IMDEV-8663.1 — регресс: было / стало (3000 физлиц)</title>
+<style>
+    body { font-family: "Segoe UI", Tahoma, Arial, sans-serif; font-size: 15px; line-height: 1.55;
+           color: #212529; background: #f5f6f8; margin: 0; padding: 0; }
+    .wrap { max-width: 1180px; margin: 0 auto; background: #fff; padding: 32px 44px 60px 44px;
+            box-shadow: 0 0 18px rgba(0,0,0,.08); }
+    h1 { font-size: 26px; color: #16324f; border-bottom: 4px solid #17a2b8; padding-bottom: 12px; margin-top: 0; }
+    h2 { font-size: 21px; color: #16324f; margin-top: 38px; border-left: 6px solid #17a2b8;
+         padding-left: 12px; background: #f0f8fa; padding-top: 6px; padding-bottom: 6px; }
+    h3 { font-size: 17px; color: #1b4b72; margin-top: 26px; border-bottom: 1px dashed #b7d4e0; padding-bottom: 4px; }
+    code { font-family: Consolas, "Courier New", monospace; background: #eef2f5; padding: 1px 5px;
+           border-radius: 3px; font-size: 13.5px; color: #b8003a; }
+    table { border-collapse: collapse; width: 100%; margin: 14px 0 22px 0; font-size: 14px; }
+    th { background: #16324f; color: #fff; text-align: left; padding: 9px 10px; font-weight: 600; }
+    td { border: 1px solid #d8dee4; padding: 8px 10px; vertical-align: top; }
+    tr:nth-child(even) td { background: #fafbfc; }
+    td.num { text-align: right; white-space: nowrap; font-family: Consolas, monospace; }
+    .box { padding: 14px 18px; border-radius: 6px; margin: 16px 0; }
+    .warn { background: #fff8e1; border-left: 6px solid #ffc107; }
+    .info { background: #e8f4fd; border-left: 6px solid #17a2b8; }
+    .ok   { background: #eaf7ee; border-left: 6px solid #28a745; }
+    .tag { display: inline-block; font-size: 12px; padding: 2px 8px; border-radius: 10px;
+           color: #fff; font-weight: 600; margin-right: 6px; }
+    .t-ok { background: #28a745; }
+    .t-info { background: #17a2b8; }
+    .t-warn { background: #fd7e14; }
+    .small { font-size: 13px; color: #6c757d; }
+    .path { font-family: Consolas, monospace; font-size: 13px; color: #0b5f75; }
+    .shot { max-width: 100%; border: 1px solid #d8dee4; border-radius: 6px; margin: 8px 0 16px; }
+    .caption { font-size: 13px; color: #6c757d; margin: -8px 0 18px; }
+    ul, ol { margin-top: 6px; }
+    li { margin-bottom: 5px; }
+    .stat { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin: 16px 0 22px; }
+    .stat .card { background: #f8fafb; border: 1px solid #d8dee4; border-radius: 8px; padding: 14px 16px; }
+    .stat .n { font-size: 26px; font-weight: 700; color: #16324f; }
+    .stat .l { font-size: 13px; color: #6c757d; }
+    @media (max-width: 900px) { .stat { grid-template-columns: 1fr 1fr; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<h1>Регресс IMDEV-8663.1 — вечерний регламент, 3000 физлиц<br>
+<span style="font-size:19px;font-weight:400;color:#495057;">Сравнение выгрузок «было» (типовые ФЗ) и «стало» (диспетчер порций, IM8663)</span></h1>
+
+<p class="small">
+Источник: <span class="path">Тесты_Регресс.rar</span>
+(<code>ТестыРегресс_8663.docx</code> + 7 пар MXL) &nbsp;|&nbsp;
+Платформенное тестирование: <a href="https://jira/browse/IMDEV-9320">IMDEV-9320</a> &nbsp;|&nbsp;
+Доработка: IMDEV-8663.1
+</p>
+
+<div class="box ok">
+<b>Итог.</b> По семи выгрузкам табличных документов за период <b>05.08.2026</b>
+файлы «было» и «стало» <b>побайтно идентичны</b> (MD5 совпал по всем парам).
+Платформенное сравнение 1С («Сравнить файлы» → табличный документ) по каждой паре:
+«Файлы идентичны.» Расхождения прикладного результата не обнаружены.
+</div>
+
+<div class="box info">
+<b>Что проверяли.</b> Не скорость, а корректность: после прогона вечерних операций
+«по-старому», пометки планов и повторного прогона с расширением <code>IM8663</code>
+документы/движения совпали с эталоном. Это тест T-06 из плана
+(<a href="test_plan_measurements_bg.html">test_plan_measurements_bg.html</a>): качество данных на отборе ~3000 физлиц.
+</div>
+
+<!-- ================================================================ -->
+<h2>1. Введение</h2>
+
+<p>Регресс выполнен 17.08.2026. Сценарий:</p>
+<ol>
+<li>Создан регламентный период на дату <b>05.08.2026</b>.</li>
+<li>Группа операций: <b>2. «Вечерние» операции</b>, отбор договоров — папка «Физические лица»
+    (в протоколе: «3000 физиков»).</li>
+<li>Первый прогон <b>без</b> доработки фоновых (типовой режим «1 договор = 1 ФЗ»).</li>
+<li>Планы/подчиненные сброшены (чтобы второй прогон создал документы заново).</li>
+<li>Включено расширение <code>IM8663</code> v1.0.0.1 (назначение «Адаптация», безопасный режим выкл.).</li>
+<li>Второй прогон тем же отбором и группой.</li>
+<li>Выгрузки табличных документов сравнены попарно: <code>Было_3000_*</code> vs <code>Стало_3000_*</code>.</li>
+</ol>
+
+<!-- ================================================================ -->
+<h2>2. Окружение и параметры прогона</h2>
+
+<table>
+<tr><th style="width:32%">Параметр</th><th>Значение</th></tr>
+<tr><td>Задача тестирования</td><td><a href="https://jira/browse/IMDEV-9320">IMDEV-9320</a></td></tr>
+<tr><td>Доработка</td><td>IMDEV-8663.1, расширение <code>IM8663</code> 1.0.0.1</td></tr>
+<tr><td>Дата периода</td><td>05.08.2026</td></tr>
+<tr><td>Группа регл. операций</td><td>2. «Вечерние» операции</td></tr>
+<tr><td>Отбор договоров</td><td>Физические лица, ~3000</td></tr>
+<tr><td>Первый прогон (было)</td><td>Старт 17.08.2026 5:49, финиш 6:29:21 — <b>40 минут</b></td></tr>
+<tr><td>Второй прогон (стало)</td><td>После включения IM8663. Длительность в протоколе не зафиксирована</td></tr>
+<tr><td>Способ сравнения</td><td>1С: «Сравнить файлы» как табличный документ; независимо — MD5 файлов</td></tr>
+</table>
+
+<div class="box warn">
+В Word-протоколе есть время только первого прогона (40 мин). Это согласуется с продовым
+baseline ФЛ не РДУ (~40 мин на ~3k). Время второго прогона в архиве не приложено —
+для скорости смотреть <a href="test_plan_measurements_bg.html">замеры DR</a> (~19 мин на том же объёме).
+</div>
+
+<img class="shot" src="regression_8663_1/image1.png" alt="Дата периода 05.08.2026">
+<p class="caption">Дата периода: 05.08.2026.</p>
+
+<img class="shot" src="regression_8663_1/image2.png" alt="Форма регламентного периода, вечерние операции, физлица">
+<p class="caption">Форма периода: группа «2. Вечерние операции», отбор «Физические лица».
+В дереве отмечены операции вечернего регламента, включая расчет РСА/СЧА
+(на этом контуре они ещё в группе 2 — вынос в группу 3 это IMDEV-8663.2).</p>
+
+<img class="shot" src="regression_8663_1/image3.png" alt="Расширение IM8663 включено">
+<p class="caption">Перед вторым прогоном включено расширение IM8663 1.0.0.1 (рядом IMTOOLS).</p>
+
+<!-- ================================================================ -->
+<h2>3. Статистика сравнений</h2>
+
+<div class="stat">
+    <div class="card"><div class="n">7 / 7</div><div class="l">пар MXL идентичны</div></div>
+    <div class="card"><div class="n">0</div><div class="l">расхождений по MD5</div></div>
+    <div class="card"><div class="n">~191 МБ</div><div class="l">суммарный объём одной стороны</div></div>
+    <div class="card"><div class="n">40 мин</div><div class="l">прогон «было» (зафиксирован)</div></div>
+</div>
+
+<table>
+<tr>
+    <th>Файл</th>
+    <th class="num">Размер</th>
+    <th>Что видно в выгрузке (по скрину / имени)</th>
+    <th>Сравнение 1С</th>
+    <th>MD5 «было» = «стало»</th>
+</tr>
+<tr>
+    <td><code>3000_1_1</code></td>
+    <td class="num">33,5 МБ</td>
+    <td>Строки документов «Расчет СЧА/РСА» (источник показателя, сумма, договор ДУ)</td>
+    <td><span class="tag t-ok">идентичны</span></td>
+    <td><code>b8f54dc8…</code></td>
+</tr>
+<tr>
+    <td><code>3000_1_2</code></td>
+    <td class="num">32,3 МБ</td>
+    <td>Тоже «Расчет СЧА/РСА» (вторая таблица/выборка по тем же документам)</td>
+    <td><span class="tag t-ok">идентичны</span></td>
+    <td><code>5815aca6…</code></td>
+</tr>
+<tr>
+    <td><code>3000_2</code></td>
+    <td class="num">30,9 МБ</td>
+    <td>Табличный документ с идентификаторами / суммами (валюта RUB)</td>
+    <td><span class="tag t-ok">идентичны</span></td>
+    <td><code>3d1cf6d6…</code></td>
+</tr>
+<tr>
+    <td><code>3000_3</code></td>
+    <td class="num">22,5 МБ</td>
+    <td>Документы «Начисление купонного дохода»: актив, облигация, купонный период, база, УУ</td>
+    <td><span class="tag t-ok">идентичны</span></td>
+    <td><code>772c4763…</code></td>
+</tr>
+<tr>
+    <td><code>3000_4</code></td>
+    <td class="num">53,2 МБ</td>
+    <td>Самая большая выгрузка пакета (содержимое на скрине перекрыто диалогом)</td>
+    <td><span class="tag t-ok">идентичны</span></td>
+    <td><code>ade5ec8c…</code></td>
+</tr>
+<tr>
+    <td><code>3000_6</code></td>
+    <td class="num">2,9 КБ</td>
+    <td>Пустая/короткая выгрузка (оба файла одинакового размера). На скрине в диалоге
+        случайно указан один и тот же путь «Стало»; независимый MD5 пары Было/Стало совпал</td>
+    <td><span class="tag t-ok">идентичны</span></td>
+    <td><code>6ad73a6b…</code></td>
+</tr>
+<tr>
+    <td><code>3000_9</code></td>
+    <td class="num">18,2 МБ</td>
+    <td>Движения НКД: договор, облигация, купонный период, обороты, регистратор
+        «Начисление купонного дохода»</td>
+    <td><span class="tag t-ok">идентичны</span></td>
+    <td><code>9dfbcd36…</code></td>
+</tr>
+</table>
+
+<p class="small">Полный MD5 посчитан по файлам из архива после распаковки.
+Имена в архиве: <code>Было_3000_*.mxl</code> и <code>Стало_3000_*.mxl</code>.</p>
+
+<!-- ================================================================ -->
+<h2>4. Детали сравнений (скрины из протокола)</h2>
+
+<p>Ниже — диалоги 1С «Сравнить файлы» из <code>ТестыРегресс_8663.docx</code>, в том же порядке,
+что в документе (после включения расширения).</p>
+
+<h3>4.1 <code>3000_9</code> — движения НКД</h3>
+<img class="shot" src="regression_8663_1/image4.png" alt="Сравнение 3000_9 файлы идентичны">
+<p class="caption">Было_3000_9.mxl vs Стало_3000_9.mxl — файлы идентичны.</p>
+
+<h3>4.2 <code>3000_6</code> — короткая выгрузка</h3>
+<img class="shot" src="regression_8663_1/image5.png" alt="Сравнение 3000_6 файлы идентичны">
+<p class="caption">Диалог 1С: «Файлы идентичны.» На скрине в оба поля попал путь Стало_3000_6;
+контроль MD5 пары Было/Стало — совпадение.</p>
+
+<h3>4.3 <code>3000_4</code></h3>
+<img class="shot" src="regression_8663_1/image6.png" alt="Сравнение 3000_4 файлы идентичны">
+<p class="caption">Было_3000_4.mxl vs Стало_3000_4.mxl — файлы идентичны.</p>
+
+<h3>4.4 <code>3000_3</code> — начисление купонного дохода</h3>
+<img class="shot" src="regression_8663_1/image7.png" alt="Сравнение 3000_3 файлы идентичны">
+<p class="caption">Было_3000_3.mxl vs Стало_3000_3.mxl — файлы идентичны.</p>
+
+<h3>4.5 <code>3000_2</code></h3>
+<img class="shot" src="regression_8663_1/image8.png" alt="Сравнение 3000_2 файлы идентичны">
+<p class="caption">Было_3000_2.mxl vs Стало_3000_2.mxl — файлы идентичны.</p>
+
+<h3>4.6 <code>3000_1_2</code> — расчет СЧА/РСА</h3>
+<img class="shot" src="regression_8663_1/image9.png" alt="Сравнение 3000_1_2 файлы идентичны">
+<p class="caption">Было_3000_1_2.mxl vs Стало_3000_1_2.mxl — файлы идентичны.
+На фоне строки «Расчет СЧА/РСА 00000022».</p>
+
+<h3>4.7 <code>3000_1_1</code> — расчет СЧА/РСА</h3>
+<img class="shot" src="regression_8663_1/image10.png" alt="Сравнение 3000_1_1 файлы идентичны">
+<p class="caption">Было_3000_1_1.mxl vs Стало_3000_1_1.mxl — файлы идентичны.</p>
+
+<!-- ================================================================ -->
+<h2>5. Что это даёт</h2>
+
+<ul>
+<li>Диспетчер порций (чанки договоров в ФЗ) на отборе ~3000 физлиц <b>не меняет</b>
+    состав и суммы выгруженных документов/движений относительно типового параллельного режима.</li>
+<li>Совпали в том числе расчеты СЧА/РСА и начисления купонного дохода — чувствительные
+    к порядку и к кэшу предподготовки операции.</li>
+<li>Пустая выгрузка <code>3000_6</code> одинакова с обеих сторон: новый путь не «дорисовал»
+    лишних строк.</li>
+</ul>
+
+<div class="box info">
+<b>Ограничения протокола.</b>
+Не приложено: время второго прогона, значения констант порции/пачки и числа потоков,
+прогон РДУ ~22k, последовательный режим (потоки = 0), сценарий с ошибкой дочернего ФЗ.
+Это не отменяет результат по качеству данных на 3000 физлиц.
+</div>
+
+<!-- ================================================================ -->
+<h2>6. Выводы</h2>
+
+<ol>
+<li><span class="tag t-ok">ПРОЙДЕН</span> регресс качества на вечернем регламенте,
+    период 05.08.2026, ~3000 физлиц: 7/7 выгрузок идентичны.</li>
+<li>Расширение <code>IM8663</code> на этом контуре можно считать безопасным по результату
+    относительно «как было» (типовые ФЗ по договору).</li>
+<li>Для приёмки по производительности опираться на уже снятые замеры DR, а не на этот архив.</li>
+</ol>
+
+<p class="small">
+Скриншоты скопированы из <code>ТестыРегресс_8663.docx</code> в
+<span class="path">Документация/01_background_jobs/regression_8663_1/</span>.
+Исходные MXL (~191 МБ × 2) остаются в <code>Тесты_Регресс.rar</code> и в отчёт не дублируются.
+</p>
+
+</div>
+</body>
+</html>
