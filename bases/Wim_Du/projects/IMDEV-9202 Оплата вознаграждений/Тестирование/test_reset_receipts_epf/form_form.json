@@ -1,0 +1,77 @@
+{
+  "title": "IMDEV-9202 тест: сброс поступлений РДУ",
+  "properties": { "autoTitle": false, "width": 90, "height": 40 },
+  "events": { "OnCreateAtServer": "ПриСозданииНаСервере" },
+  "elements": [
+    {
+      "label": "ДекорНазначение",
+      "title": "Тестовая обработка. Считает поступления обработки ПоступленияНаРасчетныйСчет_РозничноеДУ (вид Списание с брокерского счета, основание - поручение Перевод). Удаление: 12 потоков, порции по 50. После удаления статус поручения = Новый."
+    },
+    {
+      "group": "alwaysHorizontal",
+      "name": "ГруппаПериод",
+      "children": [
+        { "input": "ДатаНачала", "path": "ДатаНачала", "title": "Период с", "events": { "OnChange": "ПериодПриИзменении" } },
+        { "input": "ДатаОкончания", "path": "ДатаОкончания", "title": "по", "events": { "OnChange": "ПериодПриИзменении" } },
+        { "input": "ДатаОперации", "path": "ДатаОперации", "title": "Дата операции" },
+        { "check": "ТолькоПеревод", "path": "ТолькоПеревод", "title": "Только Перевод" }
+      ]
+    },
+    {
+      "table": "Статистика",
+      "path": "Статистика",
+      "changeRowSet": false,
+      "changeRowOrder": false,
+      "height": 12,
+      "commandBarLocation": "None",
+      "events": { "OnActivateRow": "СтатистикаПриАктивизацииСтроки" },
+      "columns": [
+        { "input": "СтатистикаДата", "path": "Статистика.Дата", "title": "День", "readOnly": true, "width": 12 },
+        { "input": "СтатистикаКоличество", "path": "Статистика.Количество", "title": "Всего", "readOnly": true, "width": 10 },
+        { "input": "СтатистикаКоличествоПроведенных", "path": "Статистика.КоличествоПроведенных", "title": "Проведенных", "readOnly": true, "width": 12 },
+        { "input": "СтатистикаСумма", "path": "Статистика.Сумма", "title": "Сумма проведенных", "readOnly": true, "width": 16 }
+      ]
+    },
+    {
+      "input": "Лог",
+      "path": "Лог",
+      "title": "Лог",
+      "multiLine": true,
+      "height": 6,
+      "readOnly": true
+    },
+    {
+      "autoCmdBar": "ФормаКоманднаяПанель",
+      "autofill": false,
+      "children": [
+        { "button": "ЗаполнитьСтатистику", "command": "ЗаполнитьСтатистику", "defaultButton": true },
+        { "button": "СохранитьСнимок", "command": "СохранитьСнимок" },
+        { "button": "УдалитьДокументы", "command": "УдалитьДокументы" },
+        { "button": "Закрыть", "stdCommand": "Close" }
+      ]
+    }
+  ],
+  "attributes": [
+    { "name": "Объект", "type": "ExternalDataProcessorObject.внТестСбросПоступленийРДУ", "main": true },
+    { "name": "ДатаНачала", "type": "date" },
+    { "name": "ДатаОкончания", "type": "date" },
+    { "name": "ДатаОперации", "type": "date" },
+    { "name": "ТолькоПеревод", "type": "boolean" },
+    { "name": "Лог", "type": "string" },
+    {
+      "name": "Статистика",
+      "type": "ValueTable",
+      "columns": [
+        { "name": "Дата", "type": "date" },
+        { "name": "Количество", "type": "decimal(10,0,nonneg)" },
+        { "name": "КоличествоПроведенных", "type": "decimal(10,0,nonneg)" },
+        { "name": "Сумма", "type": "decimal(15,2)" }
+      ]
+    }
+  ],
+  "commands": [
+    { "name": "ЗаполнитьСтатистику", "action": "ЗаполнитьСтатистику", "title": "Заполнить" },
+    { "name": "УдалитьДокументы", "action": "УдалитьДокументы", "title": "Удалить документы" },
+    { "name": "СохранитьСнимок", "action": "СохранитьСнимок", "title": "Сохранить снимок в файл" }
+  ]
+}
