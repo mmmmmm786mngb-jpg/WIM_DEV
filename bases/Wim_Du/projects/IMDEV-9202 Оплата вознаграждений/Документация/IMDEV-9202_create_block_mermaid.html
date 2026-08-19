@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>IMDEV-9202. Блок Создать: Было/Стало</title>
+  <style>
+    body { font-family: "Segoe UI", Arial, sans-serif; background: #f4f6f8; margin: 0; padding: 18px; }
+    .wrap { max-width: 1100px; margin: 0 auto; }
+    h1 { margin: 0 0 6px; color: #1f3c88; }
+    h2 { margin: 24px 0 10px; color: #24365c; }
+    .card { background: #fff; border: 1px solid #d9dee3; border-radius: 10px; padding: 16px 16px 6px; margin-bottom: 18px; }
+    .hint { color: #5c6570; font-size: 13px; margin: 0 0 10px; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>IMDEV-9202. Блок Создать: Было/Стало</h1>
+    <p class="hint">Диаграммы показывают изменение только диспетчеризации создания/проведения документов Поступление: последовательная очередь (Было) -> параллельные воркеры по порциям (Стало).</p>
+
+    <div class="card">
+      <h2>Было (последовательно)</h2>
+      <div class="mermaid">
+flowchart TD;
+    A["СоздатьПоступленияДС"] --> B["ПорученияПоДС: получить ТЧ"];
+    B --> C["Цикл по строкам порций/ТЧ"];
+    C --> D{Есть следующая строка};
+    D -- Да --> E{Поступление пусто};
+    E -- Да --> F["Вызвать Поступление(...)"];
+    F --> G["Записать(Проведение)"];
+    E -- Нет --> H["Пропустить создание"];
+    G --> I["Следующая строка"];
+    H --> I["Следующая строка"];
+    I --> D;
+    D -- Нет --> J["Готово"];
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Стало (параллельно по порциям)</h2>
+      <div class="mermaid">
+flowchart TD;
+    A["СоздатьПоступленияДС"] --> B["Поделить на порции (РазмерПачки)"];
+    B --> C["Запустить воркеры параллельно (КоличествоПотоков)"];
+    C --> W1["Воркер 1: цикл по строкам порции"];
+    C --> WN["Воркер N: цикл по строкам порции"];
+    W1 --> X{Поступление пусто};
+    WN --> X;
+    X -- Да --> Y["Создать реквизиты Поступления"];
+    Y --> Z["Записать(Проведение)"];
+    X -- Нет --> AA["Пропустить создание"];
+    Z --> AB["Завершить воркер"];
+    AA --> AB["Завершить воркер"];
+    AB --> E["Дождаться всех воркеров"];
+    E --> F["Готово"];
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10.8.0/dist/mermaid.min.js"></script>
+  <script>
+    mermaid.initialize({ startOnLoad: true, theme: 'default' });
+  </script>
+</body>
+</html>
+
