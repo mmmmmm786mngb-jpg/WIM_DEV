@@ -8,3 +8,4 @@
 | [rev2_changes_tree_phase2.html](rev2_changes_tree_phase2.html) | Дерево изменений rev2, этап 2 |
 | [rs_params_du_business.html](rs_params_du_business.html) | **Для бизнеса:** функция `ЗначенияПараметровДоговораДУ` — что стало (полный код), что изменилось, почему логика та же, прогоны тестов |
 | [rs_params_du_function.html](rs_params_du_function.html) | Технический разбор той же функции: старый пакет ПВХ+LEFT JOIN vs срез с фильтром |
+| [rs_params_du_dneprovsky.html](rs_params_du_dneprovsky.html) | **Для Д. Днепровского:** его исходный код, пошаговое было/стало, что принять в КФ |
