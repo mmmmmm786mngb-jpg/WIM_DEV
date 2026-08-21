@@ -6,14 +6,15 @@
 
 - `IMDEV-9340.doc` — выгрузка Jira IMDEV-9340 (UAT, план внедрения)
 - `RE задачи МО.msg` — переписка 19-21.08.2026 (Чмыхалов, Чухачёв, Васильев)
+- `RE задачи МО_2.msg` — письмо Чухачёва 21.08.2026 14:53 (прод 6 августа, 80 тыс., в копии Хромов)
 - `План тестирования IMDEV-9106.docx` — план ИТ-тестирования 9106 + замеры загрузки для 9340
 
-Расшифровка письма: [correspondence_re_zadachi_mo.txt](correspondence_re_zadachi_mo.txt).
-Скриншоты из письма: [screenshots/](screenshots/).
+Расшифровка писем: [correspondence_re_zadachi_mo.txt](correspondence_re_zadachi_mo.txt), [correspondence_re_zadachi_mo_2.txt](correspondence_re_zadachi_mo_2.txt).
+Скриншоты: [screenshots/](screenshots/) — в том числе прод 06.08.2026 (БП 000062555 и 000062544).
 
 ## Ответ заказчику
 
-Черновик письма Александру Чухачёву (вместо короткого «конкретизируйте замечания»):
+Черновик письма Александру Чухачёву (актуальный — по письму 14:53 про прод и 80 тыс.):
 
 - [email_reply_chukhachev_imdev9340.html](email_reply_chukhachev_imdev9340.html)
 

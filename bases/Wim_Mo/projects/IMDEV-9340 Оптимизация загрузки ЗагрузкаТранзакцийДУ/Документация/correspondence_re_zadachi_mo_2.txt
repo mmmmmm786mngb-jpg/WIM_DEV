@@ -1,0 +1,435 @@
+Коллеги, надо перепроверить цифры. Есть ощущение,  что допущение о том что начитка объектов в ДУ и их последующая выгрузка в МО занимают примерно одно и то же время, неверно. 
+
+Кроме того возможно замеры на базе от декабря 25-го года дают сильно оптимистичные результаты, по сравнению с реальной жизнью. 
+
+Посмотрите пжл на реальное время работы обмена на конторе Розничного ДУ ниже и давайте обсудим, достаточно ли нам оптимизации скорости работы на 15%, если нам необходимо будет прогрузить 80 тыс транзакций к примеру (это всего лишь 20 тыс. сделок + 3 подчиненных документа под каждой сделкой).  
+
+ 
+
+Для примера взял два запуска обмена 6 августа 2026 , когда было примерно 6 тыс сделок. В тот день продавали под вознаграждение причем по максимально лайтовому варианту. Продажи прошли только по половине портфелей (вторую половину под вознаграждение продали 10 августа) и продавали только паи ликвидности, что означает на один договор ДУ приходилась одна сделка продажи (+3 подчиненных документа под сделкой есс-но), а не несколько сделок на договор, как в норме может быть при продаже ОФЗ под выплату НДФЛ или при реинвестировании купонов).
+
+ 
+
+Итак:
+
+1)      На проде потребовалось 20 мин чтобы загрузить 7500тыс объектов (в тесте примерно 3 мин на 3000 объектов до ускорения)
+
+
+
+ 
+
+ 
+
+2.  На проде потребовалось 30 мин чтобы загрузить 13 тыс объектов (в тесте примерно 3 мин на 3000 объектов до ускорения)
+
+
+
+ 
+
+С уважением,
+
+Александр Чухачов
+
+ 
+
+From: Vasiliev, Fedor [EXT] [WIMINVEST] <Fedor.Vasiliev@wiminvest.ru> 
+Sent: Friday, August 21, 2026 2:00 PM
+To: Chukhachov, Alexander <Alexander.Chukhachov@wiminvest.ru>; Chmykhalov, Aleksey [WIMINVEST] <Aleksey.Chmykhalov@wiminvest.ru>
+Subject: RE: задачи МО
+
+ 
+
+ 
+
+На скриншоте замер выгрузки на 3 тыс. объектов, 
+
+Состоит из:
+Док.Сделка - 500 
+
+Док.ОперацияПоСчетуБрокера – 500
+
+Док.ОткрытиеПлановойПозиции – 500
+
+БП.СделкиТн – 500
+
++
+
+Связанные объекты по ссылкам с этими объектами.
+
+
+а есть еще отдельно загрузка, в плане тестирования отдельно замеряется, 
+
+итого оптимизация:
+
+15% от выгрузки
+
+5% от загрузки
+
+ 
+
+скрин с общим итогом:
+
+ 
+
+
+
+ 
+
+ 
+
+С уважением,
+
+Васильев Федор
+
+ 
+
+ 
+
+ 
+
+ 
+
+From: Chukhachov, Alexander <Alexander.Chukhachov@wiminvest.ru <mailto:Alexander.Chukhachov@wiminvest.ru> > 
+Sent: Friday, August 21, 2026 1:47 PM
+To: Chmykhalov, Aleksey [WIMINVEST] <Aleksey.Chmykhalov@wiminvest.ru <mailto:Aleksey.Chmykhalov@wiminvest.ru> >; Vasiliev, Fedor [EXT] [WIMINVEST] <Fedor.Vasiliev@wiminvest.ru <mailto:Fedor.Vasiliev@wiminvest.ru> >
+Subject: RE: задачи МО
+
+ 
+
+1.       Посмотрел что в IMDEV-9106 <https://jira/browse/IMDEV-9106> 
+
+
+Оптимизация процедуры загрузка статики по клиентам и договорам, и транзакций из Аванкора ДУ
+
+
+ 
+
+Учитывая что время загрузки и выгрузки было примерно за одинаковое время.
+
+Следовательно общий прирост производительности составил 19.5% округлим до 15%.
+
+
+
+
+ 
+
+Федор,  а можешь пояснить все же прирост производительности составил 15% или в два раза, если на твоем замере время ДО и время ПОСЛЕ почти в два раза отличается?
+
+ 
+
+2000 объектов за минуту, значит 20 тыс. объектов за 10 минут, я правильно считаю? Можно тебя попросить зарегистрировать на юате сделки по клиентам Розничного ДУ с подчиненными документами, например можно взять за период с 01.08.26 по 20.08.26 (там ~17 тыс.сделок, т.к. были продажи под ВУК) и посмотреть сколько это займет времени. 
+
+Потому что сейчас у нас 20 тыс.объектов за 10 мин не выгружаются насколько я знаю. 
+
+ 
+
+Итоговые замеры выгрузки, на крупных данных за день. Регистрируем по 500 объектов, 4 вида объектов, итого 2000 объектов выгрузки.
+
+ 
+
+Замер До.
+
+
+
+Начало выгрузки:   28.07.2026 10:50:03
+
+Окончание выгрузки: 28.07.2026 10:51:39
+
+Выгружено объектов: 3 005
+
+Итого 96с.
+
+ 
+
+Замер После.
+
+Начало выгрузки:   28.07.2026 10:55:50
+
+Окончание выгрузки: 28.07.2026 10:56:49
+
+Выгружено объектов: 3 005
+
+Итого: 59с.
+
+ 
+
+59  / 96 = 0.61 Итого выгрузка быстрее на 39%
+
+ 
+
+ 
+
+ 
+
+С уважением,
+
+Александр Чухачов
+
+ 
+
+From: Chmykhalov, Aleksey [WIMINVEST] <Aleksey.Chmykhalov@wiminvest.ru <mailto:Aleksey.Chmykhalov@wiminvest.ru> > 
+Sent: Friday, August 21, 2026 1:14 PM
+To: Chukhachov, Alexander <Alexander.Chukhachov@wiminvest.ru <mailto:Alexander.Chukhachov@wiminvest.ru> >
+Subject: RE: задачи МО
+
+ 
+
+Была задача https://jira/browse/IMDEV-9106   Федора,  в ней надо было доработать ускорение выгрузки и загрузки.
+
+Выгрузку ускорили и случайно внедрили на прод не дождавшись доработки загрузки.
+
+ 
+
+Теперь сделали загрузку ускорение, но уже задачу 9106 нельзя внедрить так как она фактически на проде,
+
+Поэтому завели новую задачу чтобы до-внедрить 9106
+
+ 
+
+ 
+
+Это доработки Федора Веселова  (он МО занимается оптимизацией)
+
+ 
+
+Там во вложении есть план внедрения где все описано по ускорению.
+
+ 
+
+ 
+
+From: Chukhachov, Alexander <Alexander.Chukhachov@wiminvest.ru <mailto:Alexander.Chukhachov@wiminvest.ru> > 
+Sent: Friday, August 21, 2026 1:10 PM
+To: Chmykhalov, Aleksey [WIMINVEST] <Aleksey.Chmykhalov@wiminvest.ru <mailto:Aleksey.Chmykhalov@wiminvest.ru> >
+Subject: RE: задачи МО
+
+ 
+
+А насколько получилось ускорить?
+
+Не увидел цифр в задаче. Обычно всегда ты указываешь процент ускорения или во сколько раз быстрее стало
+
+ 
+
+С уважением,
+
+Александр Чухачов
+
+ 
+
+From: Chmykhalov, Aleksey [WIMINVEST] <Aleksey.Chmykhalov@wiminvest.ru <mailto:Aleksey.Chmykhalov@wiminvest.ru> > 
+Sent: Friday, August 21, 2026 1:07 PM
+To: Chukhachov, Alexander <Alexander.Chukhachov@wiminvest.ru <mailto:Alexander.Chukhachov@wiminvest.ru> >
+Subject: RE: задачи МО
+
+ 
+
+да
+
+ 
+
+From: Chukhachov, Alexander <Alexander.Chukhachov@wiminvest.ru <mailto:Alexander.Chukhachov@wiminvest.ru> > 
+Sent: Friday, August 21, 2026 1:05 PM
+To: Chmykhalov, Aleksey [WIMINVEST] <Aleksey.Chmykhalov@wiminvest.ru <mailto:Aleksey.Chmykhalov@wiminvest.ru> >
+Subject: RE: задачи МО
+
+ 
+
+А, то есть эту загрузку оптимизировали?
+
+ 
+
+С уважением,
+
+Александр Чухачов
+
+ 
+
+From: Chmykhalov, Aleksey [WIMINVEST] <Aleksey.Chmykhalov@wiminvest.ru <mailto:Aleksey.Chmykhalov@wiminvest.ru> > 
+Sent: Friday, August 21, 2026 1:04 PM
+To: Chukhachov, Alexander <Alexander.Chukhachov@wiminvest.ru <mailto:Alexander.Chukhachov@wiminvest.ru> >
+Subject: RE: задачи МО
+
+ 
+
+Это наоборот – внедряется на ПРОД,  это была задача 9106, но ее раньше вывели без доработок, пожтому решили доввести доработки
+
+ 
+
+From: Chukhachov, Alexander <Alexander.Chukhachov@wiminvest.ru <mailto:Alexander.Chukhachov@wiminvest.ru> > 
+Sent: Friday, August 21, 2026 1:03 PM
+To: Chmykhalov, Aleksey [WIMINVEST] <Aleksey.Chmykhalov@wiminvest.ru <mailto:Aleksey.Chmykhalov@wiminvest.ru> >
+Subject: RE: задачи МО
+
+ 
+
+Насчет этой не уверен, что ничего делать не надо.
+
+Кто-нибудь проверял что у меня сотня тысяч транзакций из ДУ загрузится?
+
+Реинвестирование 40 тыс клиентов по 2 сделки на каждого это уже 80 тыс.
+
+ 
+
+С уважением,
+
+Александр Чухачов
+
+ 
+
+From: Chmykhalov, Aleksey [WIMINVEST] <Aleksey.Chmykhalov@wiminvest.ru <mailto:Aleksey.Chmykhalov@wiminvest.ru> > 
+Sent: Friday, August 21, 2026 12:48 PM
+To: Chukhachov, Alexander <Alexander.Chukhachov@wiminvest.ru <mailto:Alexander.Chukhachov@wiminvest.ru> >
+Subject: RE: задачи МО
+
+ 
+
+Еще вот эту https://jira/browse/IMDEV-9340
+
+ 
+
+ 
+
+From: Chukhachov, Alexander <Alexander.Chukhachov@wiminvest.ru <mailto:Alexander.Chukhachov@wiminvest.ru> > 
+Sent: Friday, August 21, 2026 11:48 AM
+To: Chmykhalov, Aleksey [WIMINVEST] <Aleksey.Chmykhalov@wiminvest.ru <mailto:Aleksey.Chmykhalov@wiminvest.ru> >
+Subject: RE: задачи МО
+
+ 
+
+двинул
+
+ 
+
+С уважением,
+
+Александр Чухачов
+
+ 
+
+From: Chmykhalov, Aleksey [WIMINVEST] <Aleksey.Chmykhalov@wiminvest.ru <mailto:Aleksey.Chmykhalov@wiminvest.ru> > 
+Sent: Friday, August 21, 2026 11:13 AM
+To: Chukhachov, Alexander <Alexander.Chukhachov@wiminvest.ru <mailto:Alexander.Chukhachov@wiminvest.ru> >
+Subject: RE: задачи МО
+
+ 
+
+Спасибо!
+
+ 
+
+Еще одна  
+
+ 
+
+https://jira/browse/IMDEV-9198
+
+ 
+
+ 
+
+ 
+
+From: Chmykhalov, Aleksey [WIMINVEST] 
+Sent: Friday, August 21, 2026 9:11 AM
+To: Chukhachov, Alexander <Alexander.Chukhachov@wiminvest.ru <mailto:Alexander.Chukhachov@wiminvest.ru> >
+Subject: RE: задачи МО
+
+ 
+
+Доброе утро!
+
+ 
+
+Передвинь плиз по статусу задачи
+
+ 
+
+https://jira/browse/IMDEV-9192   - оптимизация не требуется
+
+ 
+
+https://jira/browse/IMDEV-9106  - будем выводить на ПРОД
+
+ 
+
+Спасибо!
+
+ 
+
+From: Chukhachov, Alexander <Alexander.Chukhachov@wiminvest.ru <mailto:Alexander.Chukhachov@wiminvest.ru> > 
+Sent: Thursday, August 20, 2026 9:58 PM
+To: Chmykhalov, Aleksey [WIMINVEST] <Aleksey.Chmykhalov@wiminvest.ru <mailto:Aleksey.Chmykhalov@wiminvest.ru> >
+Subject: RE: задачи МО
+
+ 
+
+Подтверждаю.
+
+Задачи двинул.
+
+ 
+
+С уважением,
+
+Александр Чухачов
+
+ 
+
+From: Chmykhalov, Aleksey [WIMINVEST] <Aleksey.Chmykhalov@wiminvest.ru <mailto:Aleksey.Chmykhalov@wiminvest.ru> > 
+Sent: Wednesday, August 19, 2026 8:11 AM
+To: Chukhachov, Alexander <Alexander.Chukhachov@wiminvest.ru <mailto:Alexander.Chukhachov@wiminvest.ru> >
+Subject: задачи МО
+
+ 
+
+Привет!
+
+ 
+
+ 
+
+Можешь подтвердить ненужность этих задач и двинуть по статусу дальше?
+
+ 
+
+https://jira/browse/IMDEV-9199
+
+https://jira/browse/IMDEV-9191
+
+https://jira/browse/IMDEV-9193
+
+ 
+
+ 
+
+ 
+
+ 
+
+Спасибо!
+
+ 
+
+ 
+
+ 
+
+С уважением,
+
+Алексей Чмыхалов
+
+ 
+
+Главный специалист-программист
+
+Развитие бизнес приложений
+
+ВИМ Инвестиции
+
+ 
+
+
+
+ 
+
