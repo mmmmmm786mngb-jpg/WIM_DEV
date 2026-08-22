@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>IMDEV-9202: демонстрация ЕБС/ЕРС (Т-1, 13.08)</title>
+</head>
+<body style="margin:0; padding:0; background:#f2f4f7; font-family:Calibri, Arial, sans-serif; color:#1c2430; font-size:15px; line-height:1.45;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#f2f4f7;">
+<tr>
+<td align="center" style="padding:24px 12px;">
+<table role="presentation" width="680" cellpadding="0" cellspacing="0" border="0" style="max-width:680px; width:100%; background:#ffffff; border:1px solid #d9dee3;">
+
+<!-- Header -->
+<tr>
+<td style="background:#1f3c88; color:#ffffff; padding:20px 28px;">
+<div style="font-size:20px; font-weight:bold; margin:0 0 6px 0;">IMDEV-9202 / IMAPPS-38786</div>
+<div style="font-size:14px; opacity:0.95; margin:0;">Специальная демонстрация на Т-1: договор контрагента ЕБС vs ЕРС</div>
+</td>
+</tr>
+
+<!-- Intro -->
+<tr>
+<td style="padding:20px 28px 8px 28px;">
+<p style="margin:0 0 12px 0;">Коллеги, кратко по проверке на базе <b>Т-1</b> за <b>13.08.2026</b> (поступления от Перевода / ВводВДУ).</p>
+</td>
+</tr>
+
+<!-- Actions -->
+<tr>
+<td style="padding:0 28px 8px 28px;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#e8f4fc; border-left:4px solid #17a2b8;">
+<tr>
+<td style="padding:14px 16px;">
+<div style="font-weight:bold; color:#0f6e8c; margin:0 0 8px 0;">Что сделали</div>
+<ol style="margin:0; padding-left:20px;">
+<li style="margin-bottom:6px;">В базе за 13.08 уже были поступления: <b>3 ВУК</b>, <b>20 расторжение</b>, <b>1 ВводДУ</b>.</li>
+<li style="margin-bottom:6px;">Пример: поручение ВУК <b>МИ25538-Кл-002</b> и поступление <b>МИ25538-000002</b> — в поручении договор <b>ЕРС</b>, в поступлении стоял <b>ЕБС</b>.</li>
+<li style="margin-bottom:6px;">Удалили поступления и пересоздали через банковскую выписку 13.08 (оставили только ВУК, расторжения убрали / отменили).</li>
+<li style="margin-bottom:0;">Нажали <b>«Зачисления на р/с Розничного ДУ»</b> — создались 3 поступления ВУК; у того же примера договор в поступлении стал <b>ЕРС</b> (как в поручении).</li>
+</ol>
+</td>
+</tr>
+</table>
+</td>
+</tr>
+
+<!-- Conclusions - main -->
+<tr>
+<td style="padding:16px 28px 8px 28px;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#eaf7ec; border-left:4px solid #28a745;">
+<tr>
+<td style="padding:14px 16px;">
+<div style="font-weight:bold; color:#1a7a32; margin:0 0 10px 0; font-size:16px;">Выводы</div>
+<ol style="margin:0; padding-left:20px;">
+<li style="margin-bottom:10px;">
+<b>Кнопка «Зачисления на р/с Розничного ДУ» заполняет Договор контрагента из Поручения.</b>
+При пересоздании по текущим данным поручения в поступление уходит ЕРС — это ожидаемое поведение обработки.
+</li>
+<li style="margin-bottom:10px;">
+<b>Расхождение ЕБС в «старых» поступлениях vs ЕРС в поручении — не эффект ускорения IMDEV-9202.</b>
+То же поведение даёт и текущая (медленная) логика заполнения: договор берётся с поручения на момент создания.
+</li>
+<li style="margin-bottom:10px;">
+<b>Почему на ПРОД/в уже созданных документах мог оказаться ЕБС</b> — отдельный вопрос вне скоупа ускорения
+(данные поручения на момент старого создания, ручная правка, другой сценарий заполнения и т.п.).
+На корректность параллельного создания это не указывает.
+</li>
+<li style="margin-bottom:0;">
+<b>Для приёмки IMDEV-9202:</b> расхождения регресса по ДоговорКонтрагента (ЕБС/ЕРС) не считаем регрессией новой обработки,
+если новое поступление совпадает с поручением. Фиксируем это заранее, чтобы не было претензий «сломалось в ускоренной версии».
+</li>
+</ol>
+</td>
+</tr>
+</table>
+</td>
+</tr>
+
+<!-- Ask -->
+<tr>
+<td style="padding:16px 28px 24px 28px;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#fff8e1; border-left:4px solid #b78103;">
+<tr>
+<td style="padding:14px 16px;">
+<div style="font-weight:bold; color:#8a6500; margin:0 0 6px 0;">Открытый вопрос (не блокер ускорения)</div>
+<p style="margin:0;">Каким образом в уже существующих поступлениях на ПРОД/Т-1 договор мог стать ЕБС, если в связанном поручении сейчас ЕРС?
+Готов помочь разобрать отдельно, если нужно — но в рамках IMDEV-9202 меняем только скорость создания, не правила заполнения реквизитов.</p>
+</td>
+</tr>
+</table>
+</td>
+</tr>
+
+<!-- Footer -->
+<tr>
+<td style="padding:12px 28px 20px 28px; border-top:1px solid #e5e9ee; color:#5c6570; font-size:13px;">
+Источник: «Специальная демонстрация.docx» · база Т-1 · день 13.08.2026 · пример МИ25538
+</td>
+</tr>
+
+</table>
+</td>
+</tr>
+</table>
+</body>
+</html>
