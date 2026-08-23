@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>IMDEV-9202: два пути создания поступлений на р/с</title>
+</head>
+<body style="margin:0; padding:0; background:#f2f4f7; font-family:Calibri, Arial, sans-serif; color:#1c2430; font-size:15px; line-height:1.45;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#f2f4f7;">
+<tr>
+<td align="center" style="padding:24px 12px;">
+<table role="presentation" width="700" cellpadding="0" cellspacing="0" border="0" style="max-width:700px; width:100%; background:#ffffff; border:1px solid #d9dee3;">
+
+<!-- Header -->
+<tr>
+<td style="background:#1f3c88; color:#ffffff; padding:20px 28px;">
+<div style="font-size:20px; font-weight:bold; margin:0 0 6px 0;">IMDEV-9202</div>
+<div style="font-size:14px; opacity:0.95; margin:0;">Поступления на расчетный счет по Розничному ДУ создаются двумя разными путями</div>
+</td>
+</tr>
+
+<!-- Intro -->
+<tr>
+<td style="padding:20px 28px 8px 28px;">
+<p style="margin:0 0 12px 0;">Вадим, добрый день.</p>
+<p style="margin:0 0 12px 0;">Разобрали историю с поступлениями за <b>13.08.2026</b> и расхождением ЕБС / ЕРС. Ниже — последовательно, как эти документы появляются в базе.</p>
+<p style="margin:0;">Главный вывод: <b>поступления на р/с по Розничному ДУ создаются не одним, а двумя независимыми механизмами</b>. Каждый заполняет реквизиты по своим правилам. Именно поэтому у документов одного дня разные договоры контрагента, разные назначения платежа и разное время создания.</p>
+</td>
+</tr>
+
+<!-- Main conclusion box -->
+<tr>
+<td style="padding:8px 28px 8px 28px;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#eaf7ec; border-left:4px solid #28a745;">
+<tr>
+<td style="padding:14px 16px;">
+<div style="font-weight:bold; color:#1a7a32; margin:0 0 10px 0; font-size:16px;">Коротко: два пути</div>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="font-size:14px;">
+<tr>
+<td style="padding:0 0 8px 0; vertical-align:top; width:24px;"><b>A</b></td>
+<td style="padding:0 0 8px 0;"><b>Из банковской выписки.</b> Кнопка «Зачисления на р/с Розничного ДУ» — закрывает поручения «Перевод ДС при расторжении» массовой пачкой.</td>
+</tr>
+<tr>
+<td style="padding:0; vertical-align:top;"><b>B</b></td>
+<td style="padding:0;"><b>Из обработки «Оплата КЗ по клиентам РДУ».</b> Кнопка «Сформировать поступление на расчетный счет» — закрывает поручения «Оплата ВУК» и «Оплата НДФЛ» по одному, без участия выписки.</td>
+</tr>
+</table>
+</td>
+</tr>
+</table>
+</td>
+</tr>
+
+<!-- Path A -->
+<tr>
+<td style="padding:18px 28px 8px 28px;">
+<div style="font-weight:bold; color:#1f3c88; margin:0 0 4px 0; font-size:16px;">Путь A. Поступления из банковской выписки (расторжение)</div>
+<div style="font-size:13px; color:#5c6570; margin:0 0 10px 0;">Обработки: «Загрузка выписок ДУ» + «Поступления на расчетный счет: Розничное ДУ»</div>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse; font-size:14px;">
+<tr style="background:#eef2f7;">
+<td style="border:1px solid #d5dbe3; padding:8px 10px; width:36px;"><b>Шаг</b></td>
+<td style="border:1px solid #d5dbe3; padding:8px 10px;"><b>Что происходит</b></td>
+</tr>
+<tr>
+<td style="border:1px solid #d5dbe3; padding:8px 10px; vertical-align:top;">1</td>
+<td style="border:1px solid #d5dbe3; padding:8px 10px;">Загружается банковская выписка за день. В ней строки платежных документов.</td>
+</tr>
+<tr style="background:#f8fbff;">
+<td style="border:1px solid #d5dbe3; padding:8px 10px; vertical-align:top;">2</td>
+<td style="border:1px solid #d5dbe3; padding:8px 10px;">Нажимается кнопка <b>«Зачисления на р/с Розничного ДУ»</b>.</td>
+</tr>
+<tr>
+<td style="border:1px solid #d5dbe3; padding:8px 10px; vertical-align:top;">3</td>
+<td style="border:1px solid #d5dbe3; padding:8px 10px;">Обработка ищет в выписке <b>строго заданные строки</b>: перевод с брокерского счета на ЕРС (назначение «Вывод денежных средств с брокерского счета…») и компенсацию (назначение «Перевод средств компенсации…»). Понятия «строка ВУК» в коде нет.</td>
+</tr>
+<tr style="background:#f8fbff;">
+<td style="border:1px solid #d5dbe3; padding:8px 10px; vertical-align:top;">4</td>
+<td style="border:1px solid #d5dbe3; padding:8px 10px;">Запрашиваются <b>все</b> поручения вида Перевод по пулу Розничное ДУ в статусе <b>Новый</b>, у которых еще нет проведенного поступления. <b>Фильтра по комментарию нет</b> — в выборку попадают и расторжение, и ВУК, и НДФЛ.</td>
+</tr>
+<tr>
+<td style="border:1px solid #d5dbe3; padding:8px 10px; vertical-align:top;">5</td>
+<td style="border:1px solid #d5dbe3; padding:8px 10px;">Сверяется <b>сумма всех найденных поручений</b> с суммой <b>одной</b> строки выписки. Не совпало — сообщение об ошибке и <b>ни одного документа не создается</b>.</td>
+</tr>
+<tr style="background:#f8fbff;">
+<td style="border:1px solid #d5dbe3; padding:8px 10px; vertical-align:top;">6</td>
+<td style="border:1px solid #d5dbe3; padding:8px 10px;">Совпало — создается пачка поступлений, по одному на поручение. Дата = дата платежа <b>плюс 9 часов</b>, назначение платежа берется <b>из текста выписки</b>, договор контрагента — <b>из поручения</b>, ответственный <b>не заполняется</b>.</td>
+</tr>
+</table>
+</td>
+</tr>
+
+<!-- Path B -->
+<tr>
+<td style="padding:18px 28px 8px 28px;">
+<div style="font-weight:bold; color:#1f3c88; margin:0 0 4px 0; font-size:16px;">Путь B. Поступления из «Оплата КЗ по клиентам РДУ» (ВУК / НДФЛ)</div>
+<div style="font-size:13px; color:#5c6570; margin:0 0 10px 0;">Обработка: «Оплата КЗ по клиентам РДУ». Выписка не участвует</div>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse; font-size:14px;">
+<tr style="background:#eef2f7;">
+<td style="border:1px solid #d5dbe3; padding:8px 10px; width:36px;"><b>Шаг</b></td>
+<td style="border:1px solid #d5dbe3; padding:8px 10px;"><b>Что происходит</b></td>
+</tr>
+<tr>
+<td style="border:1px solid #d5dbe3; padding:8px 10px; vertical-align:top;">1</td>
+<td style="border:1px solid #d5dbe3; padding:8px 10px;">Обработка заполняется <b>начислениями вознаграждения</b> по договорам за период.</td>
+</tr>
+<tr style="background:#f8fbff;">
+<td style="border:1px solid #d5dbe3; padding:8px 10px; vertical-align:top;">2</td>
+<td style="border:1px solid #d5dbe3; padding:8px 10px;">Кнопка <b>«Сформировать платежное поручение»</b> — создаются поручения в Мидл с комментарием <b>«Оплата ВУК»</b> (или «Оплата НДФЛ»).</td>
+</tr>
+<tr>
+<td style="border:1px solid #d5dbe3; padding:8px 10px; vertical-align:top;">3</td>
+<td style="border:1px solid #d5dbe3; padding:8px 10px;">Кнопка <b>«Сформировать поступление на расчетный счет»</b>. Обработка спрашивает <b>дату</b>, затем <b>начальный входящий номер</b>.</td>
+</tr>
+<tr style="background:#f8fbff;">
+<td style="border:1px solid #d5dbe3; padding:8px 10px; vertical-align:top;">4</td>
+<td style="border:1px solid #d5dbe3; padding:8px 10px;">По каждой строке, где есть поручение в Мидл и еще нет поступления, создается свое поступление. <b>Никакой сверки с суммой выписки нет</b> — сумма берется прямо из обязательства.</td>
+</tr>
+<tr>
+<td style="border:1px solid #d5dbe3; padding:8px 10px; vertical-align:top;">5</td>
+<td style="border:1px solid #d5dbe3; padding:8px 10px;">Реквизиты заполняются по своим правилам: дата = введенная дата <b>плюс 9 часов</b>, назначение платежа — <b>свой шаблон</b> обработки, договор контрагента — <b>из аналитического счета плательщика</b> (брокерский счет), ответственный — <b>текущий пользователь</b>. Документ сразу записывается с проведением.</td>
+</tr>
+<tr style="background:#f8fbff;">
+<td style="border:1px solid #d5dbe3; padding:8px 10px; vertical-align:top;">6</td>
+<td style="border:1px solid #d5dbe3; padding:8px 10px;">Позже по этой же цепочке поручение переводится в статус <b>«Исполнено»</b>.</td>
+</tr>
+</table>
+</td>
+</tr>
+
+<!-- Comparison -->
+<tr>
+<td style="padding:18px 28px 8px 28px;">
+<div style="font-weight:bold; color:#1f3c88; margin:0 0 10px 0; font-size:16px;">Откуда берутся реквизиты: сравнение путей</div>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse; font-size:14px;">
+<tr style="background:#eef2f7;">
+<td style="border:1px solid #d5dbe3; padding:8px 10px;"><b>Реквизит поступления</b></td>
+<td style="border:1px solid #d5dbe3; padding:8px 10px;"><b>Путь A — выписка</b></td>
+<td style="border:1px solid #d5dbe3; padding:8px 10px;"><b>Путь B — Оплата КЗ</b></td>
+</tr>
+<tr>
+<td style="border:1px solid #d5dbe3; padding:8px 10px;">Договор контрагента</td>
+<td style="border:1px solid #d5dbe3; padding:8px 10px;">Из <b>поручения</b> — как правило <b>ЕРС</b></td>
+<td style="border:1px solid #d5dbe3; padding:8px 10px;">Из <b>аналитического счета плательщика</b> — как правило <b>ЕБС</b></td>
+</tr>
+<tr style="background:#f8fbff;">
+<td style="border:1px solid #d5dbe3; padding:8px 10px;">Назначение платежа</td>
+<td style="border:1px solid #d5dbe3; padding:8px 10px;">Текст <b>из выписки</b> плюс номер ДУ; часто содержит «по распоряжению от»</td>
+<td style="border:1px solid #d5dbe3; padding:8px 10px;"><b>Шаблон обработки</b>; текста выписки нет</td>
+</tr>
+<tr>
+<td style="border:1px solid #d5dbe3; padding:8px 10px;">Ответственный</td>
+<td style="border:1px solid #d5dbe3; padding:8px 10px;">Не заполняется (пусто)</td>
+<td style="border:1px solid #d5dbe3; padding:8px 10px;"><b>Текущий пользователь</b></td>
+</tr>
+<tr style="background:#f8fbff;">
+<td style="border:1px solid #d5dbe3; padding:8px 10px;">Дата документа</td>
+<td style="border:1px solid #d5dbe3; padding:8px 10px;">Дата платежа + 9 часов</td>
+<td style="border:1px solid #d5dbe3; padding:8px 10px;">Введенная дата + 9 часов</td>
+</tr>
+<tr>
+<td style="border:1px solid #d5dbe3; padding:8px 10px;">Сверка суммы</td>
+<td style="border:1px solid #d5dbe3; padding:8px 10px;">Обязательна: сумма поручений = сумма строки выписки</td>
+<td style="border:1px solid #d5dbe3; padding:8px 10px;">Нет, сумма из обязательства по строке</td>
+</tr>
+<tr style="background:#f8fbff;">
+<td style="border:1px solid #d5dbe3; padding:8px 10px;">Сколько создает за раз</td>
+<td style="border:1px solid #d5dbe3; padding:8px 10px;">Пачку по всем поручениям выборки</td>
+<td style="border:1px solid #d5dbe3; padding:8px 10px;">По отмеченным строкам обработки</td>
+</tr>
+</table>
+<p style="margin:12px 0 0 0; font-size:14px;">Оба пути ставят дату «плюс 9 часов», поэтому у всех документов дня стоит время <b>9:00</b>. <b>Это не время работы пользователя</b> — по нему нельзя понять, когда нажимали кнопку.</p>
+</td>
+</tr>
+
+<!-- Key finding: EBS/ERS -->
+<tr>
+<td style="padding:8px 28px 8px 28px;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#fff8e1; border-left:4px solid #b78103;">
+<tr>
+<td style="padding:14px 16px;">
+<div style="font-weight:bold; color:#8a6500; margin:0 0 10px 0; font-size:16px;">Это объясняет расхождение ЕБС / ЕРС из предыдущего письма</div>
+<p style="margin:0 0 10px 0;">По примеру <b>МИ25538</b>: в поручении стоял <b>ЕРС</b>, а в исходном поступлении — <b>ЕБС</b>. Причина не в ускорении и не в ошибке данных.</p>
+<ul style="margin:0 0 10px 0; padding-left:20px;">
+<li style="margin-bottom:6px;">Исходное поступление создавалось <b>путем B</b> (Оплата КЗ), а он подставляет договор <b>из аналитического счета плательщика</b> — это брокерский счет, отсюда <b>ЕБС</b>.</li>
+<li style="margin-bottom:0;">При демонстрации на Т-1 документ пересоздавали <b>путем A</b> (через выписку), а он берет договор <b>из поручения</b> — отсюда стал <b>ЕРС</b>.</li>
+</ul>
+<p style="margin:0;">То есть <b>разница в договоре — это следствие разных путей создания</b>, а не регресс оптимизации. Сравнивать документы «до и после» имеет смысл только внутри одного пути.</p>
+</td>
+</tr>
+</table>
+</td>
+</tr>
+
+<!-- How to tell -->
+<tr>
+<td style="padding:18px 28px 8px 28px;">
+<div style="font-weight:bold; color:#1f3c88; margin:0 0 10px 0; font-size:16px;">Как по готовому документу понять, каким путем он создан</div>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse; font-size:14px;">
+<tr style="background:#eef2f7;">
+<td style="border:1px solid #d5dbe3; padding:8px 10px;"><b>Признак</b></td>
+<td style="border:1px solid #d5dbe3; padding:8px 10px;"><b>Путь A — выписка</b></td>
+<td style="border:1px solid #d5dbe3; padding:8px 10px;"><b>Путь B — Оплата КЗ</b></td>
+</tr>
+<tr>
+<td style="border:1px solid #d5dbe3; padding:8px 10px;">Комментарий поручения</td>
+<td style="border:1px solid #d5dbe3; padding:8px 10px;">Перевод ДС при расторжении</td>
+<td style="border:1px solid #d5dbe3; padding:8px 10px;">Оплата ВУК / Оплата НДФЛ</td>
+</tr>
+<tr style="background:#f8fbff;">
+<td style="border:1px solid #d5dbe3; padding:8px 10px;">Назначение платежа</td>
+<td style="border:1px solid #d5dbe3; padding:8px 10px;">Текст выписки, часто «по распоряжению от»</td>
+<td style="border:1px solid #d5dbe3; padding:8px 10px;">Шаблон обработки, без текста выписки</td>
+</tr>
+<tr>
+<td style="border:1px solid #d5dbe3; padding:8px 10px;">Ответственный</td>
+<td style="border:1px solid #d5dbe3; padding:8px 10px;">Пусто</td>
+<td style="border:1px solid #d5dbe3; padding:8px 10px;">Заполнен пользователем</td>
+</tr>
+<tr style="background:#f8fbff;">
+<td style="border:1px solid #d5dbe3; padding:8px 10px;">Договор контрагента</td>
+<td style="border:1px solid #d5dbe3; padding:8px 10px;">Совпадает с поручением (ЕРС)</td>
+<td style="border:1px solid #d5dbe3; padding:8px 10px;">ЕБС по брокерскому счету</td>
+</tr>
+</table>
+</td>
+</tr>
+
+<!-- 13.08 timeline -->
+<tr>
+<td style="padding:18px 28px 8px 28px;">
+<div style="font-weight:bold; color:#1f3c88; margin:0 0 10px 0; font-size:16px;">Что было 13.08.2026: восстановили по версиям и истории статусов</div>
+<p style="margin:0 0 10px 0; font-size:14px;">За день в базе 23 поступления: <b>20 расторжение</b> и <b>3 ВУК</b>. Реальное время работы видно не по дате документа, а по первой версии поручений.</p>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse; font-size:14px;">
+<tr style="background:#eef2f7;">
+<td style="border:1px solid #d5dbe3; padding:8px 10px; width:110px;"><b>Время</b></td>
+<td style="border:1px solid #d5dbe3; padding:8px 10px;"><b>Событие</b></td>
+</tr>
+<tr>
+<td style="border:1px solid #d5dbe3; padding:8px 10px; vertical-align:top;"><b>14:49–14:51</b></td>
+<td style="border:1px solid #d5dbe3; padding:8px 10px;"><b>Путь A.</b> Пачка из 20 поручений «Перевод ДС при расторжении» и поступления с отпечатком выписки. Окно около 2 минут.</td>
+</tr>
+<tr style="background:#f8fbff;">
+<td style="border:1px solid #d5dbe3; padding:8px 10px; vertical-align:top;"><b>16:47:30</b></td>
+<td style="border:1px solid #d5dbe3; padding:8px 10px;"><b>Путь B.</b> Три поручения «Оплата ВУК» (МИ25538, МИ25543, МИ25551) созданы <b>в одну секунду</b>, и по ним поступления из «Оплата КЗ».</td>
+</tr>
+<tr>
+<td style="border:1px solid #d5dbe3; padding:8px 10px; vertical-align:top;"><b>17:33</b></td>
+<td style="border:1px solid #d5dbe3; padding:8px 10px;">Поручения ВУК переведены в статус <b>«Исполнено»</b> — завершение цепочки пути B.</td>
+</tr>
+</table>
+<p style="margin:12px 0 0 0; font-size:14px;">Между путями <b>около 2 часов</b>. Это два отдельных запуска, а не один проход кнопки выписки.</p>
+</td>
+</tr>
+
+<!-- Sum question -->
+<tr>
+<td style="padding:8px 28px 8px 28px;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#e8f4fc; border-left:4px solid #17a2b8;">
+<tr>
+<td style="padding:14px 16px;">
+<div style="font-weight:bold; color:#0f6e8c; margin:0 0 10px 0; font-size:16px;">Почему сумма поручений не «поломала» расторжение</div>
+<p style="margin:0 0 10px 0;">Вы справедливо заметили: если бы в момент нажатия кнопки в базе уже лежали и расторжения, и ВУК без поступлений, сверка «сумма всех поручений = сумма одной строки выписки» <b>не прошла бы</b>. Удаление строки ВУК из выписки поручения из выборки не убирает.</p>
+<p style="margin:0;">По нашим данным в 14:49 поручений «Оплата ВУК» <b>еще не существовало</b> — они появились только в 16:47, уже путем B. Поэтому в выборке были только расторжения, сумма совпала, и пачка из 20 документов создалась без конфликта.</p>
+</td>
+</tr>
+</table>
+</td>
+</tr>
+
+<!-- Ask -->
+<tr>
+<td style="padding:18px 28px 24px 28px;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#f3e8ff; border-left:4px solid #7c3aed;">
+<tr>
+<td style="padding:14px 16px;">
+<div style="font-weight:bold; color:#5b21b6; margin:0 0 8px 0;">Просьба подтвердить или поправить</div>
+<ul style="margin:0 0 10px 0; padding-left:20px;">
+<li style="margin-bottom:6px;">Верно ли, что ВУК и НДФЛ всегда закрываются через «Оплата КЗ», а выписка используется только для расторжения?</li>
+<li style="margin-bottom:6px;">13.08 порядок был именно такой: сначала расторжение из выписки (около 15:00), затем ВУК через «Оплата КЗ» (около 17:00)?</li>
+<li style="margin-bottom:0;">Есть ли случаи, когда ВУК сознательно закрывают через выписку? Тогда нужно заранее договориться о правилах, иначе поручения ВУК попадут в общую сверку суммы.</li>
+</ul>
+<p style="margin:0;">Если подтвердите — зафиксируем как эталон приемки: регресс по ускорению проверяем на <b>20 расторжениях</b> (путь A), а три ВУК считаем отдельным сценарием (путь B) и в сравнение «до и после» не включаем.</p>
+</td>
+</tr>
+</table>
+</td>
+</tr>
+
+<!-- Footer -->
+<tr>
+<td style="padding:12px 28px 20px 28px; border-top:1px solid #e5e9ee; color:#5c6570; font-size:13px;">
+Основание: анализ данных за 13.08.2026 и разбор кода обработок «Загрузка выписок ДУ» (6.00), «Поступления на расчетный счет: Розничное ДУ» (1.04), «Оплата КЗ по клиентам РДУ».
+Связанные письма: демонстрация ЕБС / ЕРС на Т-1, письмо про две платежки Перевод.
+</td>
+</tr>
+
+</table>
+</td>
+</tr>
+</table>
+</body>
+</html>

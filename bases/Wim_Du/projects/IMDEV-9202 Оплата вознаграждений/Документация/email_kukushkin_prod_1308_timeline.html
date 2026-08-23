@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>IMDEV-9202: как прошел день 13.08.2026 на ПРОД</title>
+</head>
+<body style="margin:0; padding:0; background:#f2f4f7; font-family:Calibri, Arial, sans-serif; color:#1c2430; font-size:15px; line-height:1.45;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#f2f4f7;">
+<tr>
+<td align="center" style="padding:24px 12px;">
+<table role="presentation" width="680" cellpadding="0" cellspacing="0" border="0" style="max-width:680px; width:100%; background:#ffffff; border:1px solid #d9dee3;">
+
+<!-- Header -->
+<tr>
+<td style="background:#1f3c88; color:#ffffff; padding:20px 28px;">
+<div style="font-size:20px; font-weight:bold; margin:0 0 6px 0;">IMDEV-9202</div>
+<div style="font-size:14px; opacity:0.95; margin:0;">Как на самом деле прошел 13.08.2026 на ПРОД: два пути поступлений и время действий</div>
+</td>
+</tr>
+
+<!-- Intro -->
+<tr>
+<td style="padding:20px 28px 8px 28px;">
+<p style="margin:0 0 12px 0;">Вадим, добрый день.</p>
+<p style="margin:0 0 12px 0;">Продолжаем тему письма про демонстрацию ЕБС/ЕРС и вопрос про <b>две строки в банковской выписке</b> (перевод при расторжении и оплата ВУК). Ниже — наше предположение, как день <b>13.08.2026</b> складывался на ПРОД, если смотреть не только на дату документов (9:00), а на <b>реальные временные кластеры</b> из версий и истории статусов.</p>
+<p style="margin:0;">Анализ делали обработкой тестирования на копии данных за этот день (23 поступления: 20 расторжение + 3 ВУК).</p>
+</td>
+</tr>
+
+<!-- Question -->
+<tr>
+<td style="padding:0 28px 8px 28px;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#fff8e1; border-left:4px solid #b78103;">
+<tr>
+<td style="padding:14px 16px;">
+<div style="font-weight:bold; color:#8a6500; margin:0 0 8px 0;">Суть вопроса</div>
+<p style="margin:0 0 8px 0;">В выписке были две платежки Перевод. Обработка при нажатии «Зачисления на р/с Розничного ДУ» сначала читает <b>все неоплаченные поручения Перевод</b> и сверяет сумму с <b>одной</b> строкой выписки (типовая логика <code>внЗагрузкаВыписокДУ</code> 6.00 + <code>внПоступленияНаРасчетныйСчет_РозничноеДУ</code> 1.04).</p>
+<p style="margin:0;">Если бы в этот момент в базе уже лежали и расторжения, и ВУК без поступлений — сумма поручений не совпала бы с суммой одной платежки, даже если удалить строку ВУК из выписки. Как тогда получилось 20 поступлений по расторжению?</p>
+</td>
+</tr>
+</table>
+</td>
+</tr>
+
+<!-- Timeline -->
+<tr>
+<td style="padding:16px 28px 8px 28px;">
+<div style="font-weight:bold; color:#1f3c88; margin:0 0 10px 0; font-size:16px;">Хронология 13.08.2026 (три временных кластера)</div>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse; font-size:14px;">
+<tr style="background:#eef2f7;">
+<td style="border:1px solid #d5dbe3; padding:8px 10px; width:110px;"><b>Время</b></td>
+<td style="border:1px solid #d5dbe3; padding:8px 10px; width:130px;"><b>Что видим в базе</b></td>
+<td style="border:1px solid #d5dbe3; padding:8px 10px;"><b>Как это читать</b></td>
+</tr>
+<tr>
+<td style="border:1px solid #d5dbe3; padding:8px 10px; vertical-align:top;"><b>9:00</b></td>
+<td style="border:1px solid #d5dbe3; padding:8px 10px; vertical-align:top;">Дата на документах; в истории статусов «Новый» / «Проведен»</td>
+<td style="border:1px solid #d5dbe3; padding:8px 10px; vertical-align:top;"><b>Не время реальной работы.</b> Это бизнес-дата дня. По ней нельзя понять, в какой час нажимали кнопки.</td>
+</tr>
+<tr style="background:#f8fbff;">
+<td style="border:1px solid #d5dbe3; padding:8px 10px; vertical-align:top;"><b>14:49–14:51</b></td>
+<td style="border:1px solid #d5dbe3; padding:8px 10px; vertical-align:top;">Первая версия 20 поручений «Перевод ДС при расторжении»; поступления с отпечатком выписки (назначение с «по распоряжению от»)</td>
+<td style="border:1px solid #d5dbe3; padding:8px 10px; vertical-align:top;"><b>Кластер 1 — массовое расторжение из выписки.</b> Автор версий поручений — вы. Окно ~2 минуты, пакетная работа.</td>
+</tr>
+<tr>
+<td style="border:1px solid #d5dbe3; padding:8px 10px; vertical-align:top;"><b>16:47:30</b></td>
+<td style="border:1px solid #d5dbe3; padding:8px 10px; vertical-align:top;">Первая версия 3 поручений «Оплата ВУК» (МИ25538, МИ25543, МИ25551); поступления без текста выписки, договор ЕБС, ответственный заполнен</td>
+<td style="border:1px solid #d5dbe3; padding:8px 10px; vertical-align:top;"><b>Кластер 2 — ОплатаКЗ, не выписка.</b> Поручения и поступления созданы отдельным сценарием (<code>внОплатаКЗПоКлиентамРДУ</code>), примерно через 2 часа после расторжения.</td>
+</tr>
+<tr style="background:#f8fbff;">
+<td style="border:1px solid #d5dbe3; padding:8px 10px; vertical-align:top;"><b>17:33:14–17</b></td>
+<td style="border:1px solid #d5dbe3; padding:8px 10px; vertical-align:top;">Статус поручений ВУК: «Исполнено»</td>
+<td style="border:1px solid #d5dbe3; padding:8px 10px; vertical-align:top;"><b>Завершение цепочки ОплатаКЗ</b> — не создание из выписки. Поручения перевели в исполнено уже после поступлений (~46 мин после 16:47).</td>
+</tr>
+</table>
+<p style="margin:12px 0 0 0; font-size:14px; color:#5c6570;">Разница между первым кластером (расторжение) и вторым (ВУК) по поручениям — около <b>118 минут</b>. Один автор в обоих кластерах, но это <b>два отдельных запуска</b>, а не один проход кнопки выписки.</p>
+</td>
+</tr>
+
+<!-- Reconstruction -->
+<tr>
+<td style="padding:8px 28px 8px 28px;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#e8f4fc; border-left:4px solid #17a2b8;">
+<tr>
+<td style="padding:14px 16px;">
+<div style="font-weight:bold; color:#0f6e8c; margin:0 0 8px 0;">Наше предположение: как это выглядело на ПРОД</div>
+<ol style="margin:0; padding-left:20px;">
+<li style="margin-bottom:8px;"><b>Около 14:50</b> вы (или коллега) нажали «Зачисления на р/с Розничного ДУ» по выписке за 13.08.</li>
+<li style="margin-bottom:8px;">В базе на тот момент были только поручения <b>«Перевод ДС при расторжении»</b> — поручений «Оплата ВУК» <b>еще не было</b> (они появляются в версиях только в 16:47).</li>
+<li style="margin-bottom:8px;">Обработка подтянула неоплаченные Перевод, сумма <b>20 поручений</b> совпала с суммой <b>первой</b> подходящей платежки Перевод в выписке (вывод с брокерского счета на ЕРС). Поступления созданы пачкой — 20 штук.</li>
+<li style="margin-bottom:8px;">Вторая строка выписки (если была под ВУК/остаток) на этом шаге <b>не использовалась</b>: типовая логика 6.00/1.04 на один клик обрабатывает одну найденную строку Перевод и не ищет вторую автоматически.</li>
+<li style="margin-bottom:8px;"><b>Около 16:47</b> отдельно отработала <b>ОплатаКЗ</b>: созданы 3 поручения «Оплата ВУК» и 3 поступления по кнопке в этой обработке (не из выписки).</li>
+<li style="margin-bottom:0;"><b>Около 17:33</b> по цепочке ОплатаКЗ поручения ВУК получили статус <b>«Исполнено»</b> — это финальный шаг, не момент появления денег в выписке.</li>
+</ol>
+</td>
+</tr>
+</table>
+</td>
+</tr>
+
+<!-- Two paths -->
+<tr>
+<td style="padding:16px 28px 8px 28px;">
+<div style="font-weight:bold; color:#1f3c88; margin:0 0 10px 0; font-size:16px;">Два пути — две разные обработки</div>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse; font-size:14px;">
+<tr style="background:#eef2f7;">
+<td style="border:1px solid #d5dbe3; padding:8px 10px;"><b>Группа</b></td>
+<td style="border:1px solid #d5dbe3; padding:8px 10px;"><b>Комментарий поручения</b></td>
+<td style="border:1px solid #d5dbe3; padding:8px 10px;"><b>Откуда поступление</b></td>
+<td style="border:1px solid #d5dbe3; padding:8px 10px;"><b>Признак в поступлении</b></td>
+</tr>
+<tr>
+<td style="border:1px solid #d5dbe3; padding:8px 10px;">20 док.</td>
+<td style="border:1px solid #d5dbe3; padding:8px 10px;">Перевод ДС при расторжении</td>
+<td style="border:1px solid #d5dbe3; padding:8px 10px;">Выписка, кнопка «Зачисления…»</td>
+<td style="border:1px solid #d5dbe3; padding:8px 10px;">Часто «по распоряжению от» в назначении; ответственный пустой</td>
+</tr>
+<tr>
+<td style="border:1px solid #d5dbe3; padding:8px 10px;">3 док.</td>
+<td style="border:1px solid #d5dbe3; padding:8px 10px;">Оплата ВУК</td>
+<td style="border:1px solid #d5dbe3; padding:8px 10px;">ОплатаКЗ по клиентам РДУ</td>
+<td style="border:1px solid #d5dbe3; padding:8px 10px;">ЕБС, брокерский счет; без «по распоряжению от»; ответственный заполнен</td>
+</tr>
+</table>
+</td>
+</tr>
+
+<!-- Answer to sum question -->
+<tr>
+<td style="padding:8px 28px 8px 28px;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#eaf7ec; border-left:4px solid #28a745;">
+<tr>
+<td style="padding:14px 16px;">
+<div style="font-weight:bold; color:#1a7a32; margin:0 0 10px 0; font-size:16px;">Ответ на вопрос про суммы и удаление строки ВУК из выписки</div>
+<p style="margin:0 0 10px 0;">Вы правы: если бы <b>в момент нажатия кнопки</b> в базе уже лежали все поручения (расторжение + ВУК) без поступлений, типовая сверка <i>«сумма всех Новых Перевод = сумма одной строки выписки»</i> <b>не прошла бы</b>. Удаление строки ВУК из ТЧ выписки само по себе не убирает поручения ВУК из запроса.</p>
+<p style="margin:0 0 10px 0;">На ПРОД 13.08, по нашим данным, сработал другой порядок: <b>сначала закрыли расторжение из выписки, когда ВУК еще не существовали как поручения</b>; ВУК оформили позже через ОплатаКЗ. Поэтому «смешения» сумм в одном проходе не было.</p>
+<p style="margin:0;">Это согласуется с демонстрацией на Т-1 (письмо про ЕБС/ЕРС): там наоборот — убрали расторжения и пересоздали только ВУК из выписки. Оба кейса показывают: кнопка выписки закрывает <b>то, что сейчас неоплачено в запросе</b>, а не «строку ВУК» как отдельный тип в коде.</p>
+</td>
+</tr>
+</table>
+</td>
+</tr>
+
+<!-- Diagram simple -->
+<tr>
+<td style="padding:16px 28px 8px 28px;">
+<div style="font-weight:bold; color:#1f3c88; margin:0 0 8px 0;">Схема дня (упрощенно)</div>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#f8f9fa; border:1px solid #e5e9ee;">
+<tr>
+<td style="padding:14px 16px; font-family:Consolas, 'Courier New', monospace; font-size:13px; line-height:1.6; white-space:pre-wrap;">14:49  Выписка: поручения расторжения + 20 поступлений
+        (ВУК в базе еще нет)
+
+16:47  ОплатаКЗ: 3 поручения ВУК + 3 поступления
+        (отдельно от выписки)
+
+17:33  ОплатаКЗ: поручения ВУК -> статус «Исполнено»</td>
+</tr>
+</table>
+</td>
+</tr>
+
+<!-- Ask -->
+<tr>
+<td style="padding:16px 28px 24px 28px;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#f3e8ff; border-left:4px solid #7c3aed;">
+<tr>
+<td style="padding:14px 16px;">
+<div style="font-weight:bold; color:#5b21b6; margin:0 0 8px 0;">Просьба подтвердить или поправить</div>
+<p style="margin:0 0 8px 0;">Совпадает ли с вашими воспоминаниями по 13.08?</p>
+<ul style="margin:0; padding-left:20px;">
+<li style="margin-bottom:6px;">Сначала «Зачисления…» по расторжению (около 15:00), потом ОплатаКЗ по ВУК (около 17:00)?</li>
+<li style="margin-bottom:6px;">Были ли в выписке две платежки Перевод именно в тот день, или вторая строка относилась к другому сценарию?</li>
+<li style="margin-bottom:0;">Делали ли вы что-то вручную между этими шагами (отмена поручений, удаление строк выписки)?</li>
+</ul>
+<p style="margin:12px 0 0 0;">Если подтвердите порядок — зафиксируем как эталон для приемки IMDEV-9202: регресс по ускорению проверяем на <b>20 расторжениях</b>, три ВУК — отдельный сценарий ОплатаКЗ.</p>
+</td>
+</tr>
+</table>
+</td>
+</tr>
+
+<!-- Footer -->
+<tr>
+<td style="padding:12px 28px 20px 28px; border-top:1px solid #e5e9ee; color:#5c6570; font-size:13px;">
+Источник: анализ ПРОД/копии за 13.08.2026 (обработка внТестСбросПоступленийРДУ v1.16).
+Типовая логика: внЗагрузкаВыписокДУ 6.00, внПоступленияНаРасчетныйСчет_РозничноеДУ 1.04.
+Связанное письмо: email_demo_ebs_ers.html (демо ЕБС/ЕРС на Т-1).
+</td>
+</tr>
+
+</table>
+</td>
+</tr>
+</table>
+</body>
+</html>
