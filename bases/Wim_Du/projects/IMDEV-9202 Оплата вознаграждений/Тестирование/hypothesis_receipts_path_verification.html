@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IMDEV-9202: проверка гипотезы путей создания поступлений РДУ</title>
+    <style>
+        :root {
+            --success: #28a745;
+            --error: #dc3545;
+            --info: #17a2b8;
+            --warn-bg: #fff3cd;
+            --warn-border: #ffc107;
+            --note-bg: #e7f3ff;
+            --note-border: #17a2b8;
+            --block-bg: #f8f9fa;
+            --border: #dee2e6;
+            --text: #212529;
+            --muted: #6c757d;
+        }
+        * { box-sizing: border-box; }
+        body {
+            font-family: Segoe UI, Tahoma, sans-serif;
+            line-height: 1.55;
+            color: var(--text);
+            max-width: 960px;
+            margin: 0 auto;
+            padding: 24px 20px 48px;
+            background: #fff;
+        }
+        h1 {
+            font-size: 1.5rem;
+            border-bottom: 3px solid var(--info);
+            padding-bottom: 10px;
+            margin-bottom: 8px;
+        }
+        h2 {
+            font-size: 1.2rem;
+            margin-top: 32px;
+            margin-bottom: 12px;
+            color: #0c5460;
+        }
+        h3 {
+            font-size: 1.05rem;
+            margin-top: 20px;
+            margin-bottom: 8px;
+        }
+        .meta {
+            color: var(--muted);
+            font-size: 0.9rem;
+            margin-bottom: 24px;
+        }
+        .intro { margin-bottom: 24px; }
+        .hypothesis-box {
+            background: var(--note-bg);
+            border: 1px solid var(--note-border);
+            border-left: 4px solid var(--info);
+            padding: 16px 20px;
+            margin: 20px 0;
+            border-radius: 4px;
+        }
+        .warn-box {
+            background: var(--warn-bg);
+            border: 1px solid var(--warn-border);
+            border-left: 4px solid var(--warn-border);
+            padding: 14px 18px;
+            margin: 16px 0;
+            border-radius: 4px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 12px 0 20px;
+            font-size: 0.92rem;
+        }
+        th, td {
+            border: 1px solid var(--border);
+            padding: 8px 12px;
+            text-align: left;
+            vertical-align: top;
+        }
+        th {
+            background: #343a40;
+            color: #fff;
+        }
+        tr:nth-child(even) { background: var(--block-bg); }
+        .ok { color: var(--success); font-weight: 600; }
+        .fail { color: var(--error); font-weight: 600; }
+        .info-label { color: var(--info); font-weight: 600; }
+        ol.steps, ul.checklist {
+            margin: 8px 0 16px;
+            padding-left: 24px;
+        }
+        ol.steps li { margin-bottom: 10px; }
+        ul.checklist li { margin-bottom: 6px; }
+        pre {
+            background: #2d2d2d;
+            color: #f8f8f2;
+            padding: 14px 16px;
+            border-radius: 4px;
+            overflow-x: auto;
+            font-size: 0.85rem;
+            line-height: 1.45;
+            margin: 12px 0;
+        }
+        code {
+            background: #eef1f4;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 0.9em;
+        }
+        pre code {
+            background: none;
+            padding: 0;
+            color: inherit;
+        }
+        .path-card {
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 14px 18px;
+            margin: 12px 0;
+            background: var(--block-bg);
+        }
+        .path-card h4 {
+            margin: 0 0 8px;
+            font-size: 1rem;
+        }
+        .badge {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 3px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            margin-right: 6px;
+        }
+        .badge-oplata { background: #d4edda; color: #155724; }
+        .badge-rdu { background: #cce5ff; color: #004085; }
+        .badge-mix { background: var(--warn-bg); color: #856404; }
+        .badge-unknown { background: #f8d7da; color: #721c24; }
+        .flow {
+            background: var(--block-bg);
+            border: 1px solid var(--border);
+            padding: 16px;
+            border-radius: 4px;
+            font-family: Consolas, monospace;
+            font-size: 0.85rem;
+            line-height: 1.6;
+            white-space: pre-wrap;
+        }
+        .toc a { color: var(--info); text-decoration: none; }
+        .toc a:hover { text-decoration: underline; }
+        .toc li { margin-bottom: 4px; }
+        footer {
+            margin-top: 40px;
+            padding-top: 16px;
+            border-top: 1px solid var(--border);
+            font-size: 0.85rem;
+            color: var(--muted);
+        }
+    </style>
+</head>
+<body>
+
+<h1>IMDEV-9202: проверка гипотезы путей создания поступлений РДУ</h1>
+<p class="meta">
+    Проект: Оплата вознаграждений |
+    База: WIM_DU (Wim_Du) |
+    Обработка: <code>внТестСбросПоступленийРДУ.epf</code> v1.11+
+</p>
+
+<div class="intro">
+    <p>Документ описывает пошаговую проверку гипотезы о том, как в Аванкоре создаются
+    поступления на расчетный счет при операциях «Списание с брокерского счета» для пула
+    <strong>Розничное ДУ</strong>: отдельно через <strong>Оплата КЗ</strong> (ВУК/НДФЛ)
+    и массово через <strong>банковскую выписку</strong> (переводы при расторжении).</p>
+</div>
+
+<h2>Содержание</h2>
+<ul class="toc">
+    <li><a href="#hypothesis">1. Гипотеза</a></li>
+    <li><a href="#paths">2. Два пути в коде</a></li>
+    <li><a href="#prepare">3. Подготовка</a></li>
+    <li><a href="#epf-steps">4. Проверка через EPF (основной способ)</a></li>
+    <li><a href="#interpret">5. Как читать результат</a></li>
+    <li><a href="#criteria">6. Критерии подтверждения / опровержения</a></li>
+    <li><a href="#query">7. Альтернатива: консоль запросов</a></li>
+    <li><a href="#example">8. Пример для 13.08.2026</a></li>
+</ul>
+
+<h2 id="hypothesis">1. Гипотеза</h2>
+<div class="hypothesis-box">
+    <p><strong>Гипотеза пользователя:</strong></p>
+    <ol>
+        <li>Поступления по поручениям с комментарием <strong>«Оплата ВУК»</strong> (и аналогично НДФЛ)
+            всегда создаются обработкой <code>внОплатаКЗПоКлиентамРДУ</code>, а не из выписки.</li>
+        <li>Когда приходит банковская выписка, пользователь вручную убирает строку с оплатой ВУК
+            и оставляет сумму только по <strong>переводу при расторжении</strong>.</li>
+        <li>Кнопка <strong>«Зачисления на р/с Розничного ДУ»</strong> в выписке создает поступления
+            именно по этой сумме перевода через <code>внПоступленияНаРасчетныйСчет_РозничноеДУ</code>.</li>
+    </ol>
+</div>
+<p>Код не описывает ручное удаление строки в выписке, но <strong>требует точного совпадения суммы</strong>
+поручений и строки платежа. Если ВУК уже закрыт отдельно, в начитку массовой обработки такие поручения
+не попадают (уже есть поступление по плановой позиции).</p>
+
+<h2 id="paths">2. Два пути в коде</h2>
+
+<div class="path-card">
+    <h4><span class="badge badge-oplata">ОплатаКЗ</span> внОплатаКЗПоКлиентамРДУ</h4>
+    <ul>
+        <li>Поручение: комментарий <code>Оплата ВУК</code> или <code>Оплата НДФЛ</code></li>
+        <li>Кнопка: <strong>«Сформировать поступление на р/с»</strong></li>
+        <li>Основание поступления: документ <strong>Начисление</strong> (не поручение)</li>
+        <li>Отпечаток: <code>ДоговорКонтрагента</code> = <strong>ЕБС</strong>, часто заполнен брокерский
+            <code>СчетКонтрагента</code>, в назначении <strong>нет</strong> «по распоряжению от ...»</li>
+    </ul>
+</div>
+
+<div class="path-card">
+    <h4><span class="badge badge-rdu">РДУ выписка</span> внЗагрузкаВыписокДУ + внПоступленияНаРасчетныйСчет_РозничноеДУ</h4>
+    <ul>
+        <li>Поручения: массовая пачка, например <code>МИ25551-Кл-002</code>, комментарий
+            <strong>«Перевод ДС при расторжении»</strong></li>
+        <li>Кнопка в выписке: <strong>«Зачисления на р/с Розничного ДУ»</strong></li>
+        <li>Основание = плановая позиция = <strong>то же поручение</strong></li>
+        <li>Дата документа = входящая дата + <strong>9 часов</strong></li>
+        <li>Отпечаток: часто <code>ДоговорКонтрагента</code> = <strong>ЕРС</strong> (из поручения),
+            в назначении <strong>есть</strong> «по распоряжению от ...» (текст из выписки)</li>
+    </ul>
+</div>
+
+<div class="flow">Оплата ВУК/НДФЛ          Массовый перевод (расторжение)
+       |                              |
+  ОплатаКЗ EPF                    Выписка ДУ
+  Поручение в Мидл                Зачисления на РС
+  Сформировать поступление        внПоступления РДУ
+       |                              |
+   ЕБС, брокерский счет            ЕРС, текст выписки
+   без "по распоряжению от"       с "по распоряжению от"</div>
+
+<h2 id="prepare">3. Подготовка</h2>
+<table>
+    <tr><th>Что</th><th>Где</th></tr>
+    <tr>
+        <td>EPF для проверки</td>
+        <td><code>Тестирование\внТестСбросПоступленийРДУ.epf</code></td>
+    </tr>
+    <tr>
+        <td>База 1С</td>
+        <td>WIM_DU (конфигурация Wim_Du)</td>
+    </tr>
+    <tr>
+        <td>Дата для проверки</td>
+        <td>Например <strong>13.08.2026</strong> (или день с известными поступлениями)</td>
+    </tr>
+    <tr>
+        <td>Запросы (опционально)</td>
+        <td><code>Тестирование\query_trace_receipts_rdu.txt</code></td>
+    </tr>
+</table>
+
+<div class="warn-box">
+    <strong>Важно:</strong> для анализа гипотезы <strong>не используйте</strong> кнопки
+    «Удалить документы» и «Сохранить снимок» — они для регресса и сброса тестовых данных.
+</div>
+
+<h2 id="epf-steps">4. Проверка через EPF (основной способ)</h2>
+
+<h3>4.1. Открыть обработку</h3>
+<ol class="steps">
+    <li>В 1С: <strong>Файл → Открыть</strong> → выберите
+        <code>внТестСбросПоступленийРДУ.epf</code> из каталога <code>Тестирование</code>.</li>
+    <li>Либо откройте из <strong>Дополнительные отчеты и обработки</strong>, если EPF уже зарегистрирована
+        (при обновлении файла на диске переподключите обработку).</li>
+    <li>В заголовке формы проверьте версию: <strong>v. 1.11</strong> или выше.</li>
+</ol>
+
+<h3>4.2. Задать период</h3>
+<p>На вкладке <strong>«Сброс и статистика»</strong>:</p>
+<table>
+    <tr><th>Поле</th><th>Значение</th></tr>
+    <tr><td>Период с</td><td>дата проверки, напр. <code>13.08.2026</code></td></tr>
+    <tr><td>по</td><td>та же дата</td></tr>
+    <tr><td>Дата операции</td><td>та же дата (для согласованности)</td></tr>
+    <tr><td>Пул</td><td>подставится <strong>Розничное ДУ</strong></td></tr>
+    <tr><td>ЕРС</td><td>из настроек обработки РДУ (подставится автоматически)</td></tr>
+</table>
+
+<h3>4.3. Запустить анализ путей</h3>
+<ol class="steps">
+    <li>Перейдите на вкладку <strong>«Анализ путей»</strong>.</li>
+    <li><strong>Снимите</strong> галочку <strong>«Только строгий отпечаток РДУ»</strong>
+        (первый проход — расширенный отбор, видны все списания с брокерского счета пула).</li>
+    <li>Нажмите <strong>«Анализ путей создания»</strong>
+        (кнопка на вкладке или в командной панели формы).</li>
+    <li>Дождите завершения. Результат:
+        <ul>
+            <li>таблица на вкладке «Анализ путей»;</li>
+            <li>сводка в поле <strong>Лог</strong> на вкладке «Сброс и статистика».</li>
+        </ul>
+    </li>
+</ol>
+
+<h3>4.4. Уточняющий проход (строгий отпечаток)</h3>
+<ol class="steps">
+    <li>Установите галочку <strong>«Только строгий отпечаток РДУ»</strong>.</li>
+    <li>Снова нажмите <strong>«Анализ путей создания»</strong>.</li>
+    <li>Сравните количество строк: строгий отбор показывает только документы,
+        созданные по шаблону <code>ПоступленияНаРасчетныйСчет_РозничноеДУ</code>
+        (основание = поручение, дата = вх.дата + 9ч, БУ/ВУ/УУ, RUB).</li>
+</ol>
+
+<h3>4.5. (Опционально) Статистика по комментариям поручений</h3>
+<p>На вкладке «Сброс и статистика» нажмите <strong>«Заполнить»</strong>.
+В таблице по дням колонка <strong>«Комментарии поручений»</strong> покажет разбивку, например:</p>
+<pre><code>Оплата ВУК - 5; Перевод ДС при расторжении - 24</code></pre>
+
+<h2 id="interpret">5. Как читать результат</h2>
+
+<h3>Колонки таблицы «Анализ путей»</h3>
+<table>
+    <tr><th>Колонка</th><th>Что смотреть</th></tr>
+    <tr><td><code>ПоручениеКомментарий</code></td><td>Оплата ВУК / Оплата НДФЛ / Перевод ДС при расторжении</td></tr>
+    <tr><td><code>ПоручениеНомер</code></td><td>Напр. МИ25551-Кл-002 (массовый перевод)</td></tr>
+    <tr><td><code>ГипотезаПути</code></td><td>Автоматическая классификация (см. ниже)</td></tr>
+    <tr><td><code>Уверенность</code></td><td>Высокая / Средняя / Низкая</td></tr>
+    <tr><td><code>ДоговорКонтрагента</code></td><td>ЕБС (ОплатаКЗ) или ЕРС (выписка)</td></tr>
+    <tr><td><code>СчетКонтрагента</code></td><td>Заполнен — типично ОплатаКЗ; пустой — типично массовая выписка</td></tr>
+    <tr><td><code>НазначениеПлатежа</code></td><td>«по распоряжению от ...» — из выписки; без этого — ОплатаКЗ</td></tr>
+    <tr><td><code>Пояснение</code></td><td>Текстовое объяснение классификатора</td></tr>
+</table>
+
+<h3>Значения <code>ГипотезаПути</code></h3>
+<table>
+    <tr><th>ГипотезаПути</th><th>Интерпретация</th></tr>
+    <tr>
+        <td><span class="badge badge-oplata">ОплатаКЗ</span></td>
+        <td>Основание = Начисление, или отпечаток EBS + брокерский счет + шаблон назначения без «по распоряжению от»</td>
+    </tr>
+    <tr>
+        <td><span class="badge badge-rdu">РДУ: Зачисления из выписки</span></td>
+        <td>Основание = поручение, отпечаток РДУ, в назначении «по распоряжению от»</td>
+    </tr>
+    <tr>
+        <td><span class="badge badge-rdu">РДУ: ERS без счета контрагента</span></td>
+        <td>Массовая обработка, договор ЕРС, счет контрагента пуст</td>
+    </tr>
+    <tr>
+        <td><span class="badge badge-mix">Смешанный: EBS + текст выписки</span></td>
+        <td>Договор ЕБС, но в назначении «по распоряжению от» — не чистый ни ОплатаКЗ, ни типичная выписка</td>
+    </tr>
+    <tr>
+        <td><span class="badge badge-unknown">Не определен</span></td>
+        <td>Ручное создание, КлиентБанк или другой путь — проверить ответственного и журнал</td>
+    </tr>
+</table>
+
+<h2 id="criteria">6. Критерии подтверждения / опровержения гипотезы</h2>
+
+<h3 class="ok">Гипотеза подтверждается, если:</h3>
+<ul class="checklist">
+    <li>Все строки с <code>ПоручениеКомментарий</code> = <strong>Оплата ВУК</strong> или <strong>Оплата НДФЛ</strong>
+        имеют <code>ГипотезаПути</code> = <strong>ОплатаКЗ</strong> (уверенность Высокая или Средняя).</li>
+    <li>Все строки с комментарием <strong>«Перевод ДС при расторжении»</strong> или номерами <strong>Кл-002</strong>
+        имеют <code>ГипотезаПути</code> = <strong>РДУ: Зачисления из выписки</strong>.</li>
+    <li>В сводке в Логе два отдельные блока по количеству — ВУК/НДФЛ через ОплатаКЗ, расторжение через РДУ.</li>
+    <li>При строгом отборе РДУ остаются только массовые переводы (без Оплата ВУК).</li>
+</ul>
+
+<h3 class="fail">Гипотеза не подтверждается или частично, если:</h3>
+<ul class="checklist">
+    <li>Поручения <code>Кл-002</code> классифицированы как <strong>ОплатаКЗ</strong> или <strong>Смешанный</strong>
+        (эталон мог создаваться другим путем).</li>
+    <li>Много строк <strong>«Смешанный: EBS + текст выписки»</strong> — договор ЕБС, но назначение из выписки
+        (как в снимке <code>IM9202_receipts_2026-08-13_сталоТ1</code>).</li>
+    <li>Оплата ВУК попадает в строгий отбор РДУ (основание = поручение, не Начисление) —
+        тогда поступление создавалось не через типичный ОплатаКЗ.</li>
+</ul>
+
+<h2 id="query">7. Альтернатива: консоль запросов</h2>
+<p>Файл <code>query_trace_receipts_rdu.txt</code> содержит готовые запросы.</p>
+<table>
+    <tr><th>Запрос</th><th>Назначение</th></tr>
+    <tr><td>Запрос 3</td><td>Сводка: гипотеза → количество и сумма (начните с него)</td></tr>
+    <tr><td>Запрос 1</td><td>Детальный список с колонкой ГипотезаПути</td></tr>
+    <tr><td>Запрос 4</td><td>Только поручения Оплата ВУК/НДФЛ и связанные поступления</td></tr>
+</table>
+<p>Параметры:</p>
+<pre><code>&НачалоПериода = 13.08.2026 00:00:00
+&КонецПериода  = 13.08.2026 23:59:59</code></pre>
+
+<h2 id="example">8. Пример проверки для 13.08.2026</h2>
+
+<h3>Шаги</h3>
+<ol class="steps">
+    <li>Открыть EPF, период <code>13.08.2026</code> — <code>13.08.2026</code>.</li>
+    <li>Вкладка «Анализ путей», без строгого отбора → «Анализ путей создания».</li>
+    <li>В таблице отфильтровать <code>ПоручениеКомментарий</code> содержит <code>ВУК</code>.</li>
+    <li>Отфильтровать <code>ПоручениеНомер</code> содержит <code>Кл-002</code> или комментарий содержит <code>расторжени</code>.</li>
+    <li>Сравнить с регрессом <code>IM9202_regress_2026-08-22.txt</code> (МИ25551, МИ25543, МИ25538).</li>
+</ol>
+
+<h3>Ожидаемое при подтверждении гипотезы</h3>
+<table>
+    <tr><th>Документ / ключ</th><th>Комментарий поручения</th><th>Ожидаемый путь</th></tr>
+    <tr><td>МИ25551-Кл-002</td><td>Перевод ДС при расторжении</td><td>РДУ: Зачисления из выписки</td></tr>
+    <tr><td>Поручение Оплата ВУК</td><td>Оплата ВУК</td><td>ОплатаКЗ</td></tr>
+</table>
+
+<h3>Что было в регрессе (расхождение эталон vs новый)</h3>
+<table>
+    <tr><th>Поле</th><th>Эталон (БЫЛО)</th><th>Новый (оптимизация)</th></tr>
+    <tr><td>ДоговорКонтрагента</td><td>ЕБС</td><td>ЕРС</td></tr>
+    <tr><td>СчетКонтрагента</td><td>брокерский заполнен</td><td>пустой</td></tr>
+    <tr><td>НазначениеПлатежа</td><td>без «по распоряжению от»</td><td>с «по распоряжению от 13.08.2026»</td></tr>
+</table>
+<p>Отпечаток эталона ближе к <strong>ОплатаКЗ</strong>, нового пути — к <strong>РДУ Зачисления из выписки</strong>.
+Если анализ покажет для <code>Кл-002</code> путь «Смешанный» или «ОплатаКЗ», эталон на T-1 создавался не кнопкой из выписки.</p>
+
+<div class="warn-box">
+    <strong>Ручная правка выписки</strong> (удаление строки ВУК перед кнопкой «Зачисления на РС»)
+    в данных 1С не сохраняется. Косвенные признаки: сумма строки выписки = итог только поручений
+    расторжения; поручения Оплата ВУК уже имеют поступления и не входят в массовую начитку.
+</div>
+
+<footer>
+    IMDEV-9202 | Файл: <code>hypothesis_receipts_path_verification.html</code> |
+    Каталог: <code>Тестирование</code> |
+    EPF: <code>внТестСбросПоступленийРДУ.epf</code> v1.11
+</footer>
+
+</body>
+</html>
