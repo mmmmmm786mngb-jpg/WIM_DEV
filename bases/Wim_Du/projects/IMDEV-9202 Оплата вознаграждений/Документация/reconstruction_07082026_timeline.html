@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>IMDEV-9202: реконструкция 07.08.2026</title>
+<style>
+body { margin: 0; padding: 0; background: #f2f4f7; font-family: Calibri, Arial, sans-serif; color: #1c2430; font-size: 15px; line-height: 1.45; }
+.wrap { max-width: 920px; margin: 0 auto; padding: 24px 12px; }
+.card { background: #fff; border: 1px solid #d9dee3; margin-bottom: 16px; }
+.hdr { background: #1f3c88; color: #fff; padding: 20px 28px; }
+.hdr h1 { margin: 0 0 6px; font-size: 20px; }
+.hdr p { margin: 0; font-size: 14px; opacity: 0.95; }
+.pad { padding: 18px 28px; }
+h2 { margin: 0 0 12px; font-size: 17px; color: #1f3c88; }
+h3 { margin: 16px 0 8px; font-size: 15px; color: #26385c; }
+p { margin: 0 0 10px; }
+ul, ol { margin: 0 0 12px; padding-left: 22px; }
+li { margin-bottom: 6px; }
+table.t { width: 100%; border-collapse: collapse; font-size: 14px; margin: 8px 0 14px; }
+table.t th, table.t td { border: 1px solid #d5dbe3; padding: 8px 10px; vertical-align: top; text-align: left; }
+table.t th { background: #eef2f7; color: #26385c; }
+.note { background: #e8f4fc; border-left: 4px solid #17a2b8; padding: 12px 14px; margin: 12px 0; }
+.ok { background: #eaf7ec; border-left: 4px solid #28a745; padding: 12px 14px; margin: 12px 0; }
+.warn { background: #fff8e1; border-left: 4px solid #b78103; padding: 12px 14px; margin: 12px 0; }
+.muted { color: #5c6570; font-size: 13px; }
+.tag-a { display: inline-block; background: #dbeafe; color: #1e40af; padding: 2px 8px; font-size: 12px; font-weight: 700; }
+.tag-b { display: inline-block; background: #fce7f3; color: #9d174d; padding: 2px 8px; font-size: 12px; font-weight: 700; }
+.tl { position: relative; margin: 16px 0; padding-left: 28px; }
+.tl::before { content: ""; position: absolute; left: 10px; top: 4px; bottom: 4px; width: 3px; background: #c5ced9; }
+.tl-item { position: relative; margin-bottom: 14px; padding: 10px 12px; border: 1px solid #e5e9ee; background: #fafbfc; }
+.tl-item::before { content: ""; position: absolute; left: -22px; top: 14px; width: 11px; height: 11px; border-radius: 50%; background: #1f3c88; border: 2px solid #fff; box-shadow: 0 0 0 1px #1f3c88; }
+.tl-item.path-a::before { background: #2563eb; box-shadow: 0 0 0 1px #2563eb; }
+.tl-item.path-b::before { background: #db2777; box-shadow: 0 0 0 1px #db2777; }
+.tl-item.gap::before { background: #94a3b8; box-shadow: 0 0 0 1px #94a3b8; }
+.tl-time { font-weight: 700; color: #1f3c88; margin-bottom: 4px; }
+.tl-item.gap { background: #f1f5f9; color: #5c6570; }
+.bars { margin: 10px 0 4px; }
+.bar-row { display: flex; align-items: center; margin-bottom: 3px; font-size: 12px; }
+.bar-lbl { width: 42px; color: #5c6570; flex-shrink: 0; }
+.bar-track { flex: 1; background: #eef2f7; height: 14px; }
+.bar-fill-a { background: #3b82f6; height: 14px; }
+.bar-fill-b { background: #ec4899; height: 14px; }
+.bar-n { width: 48px; text-align: right; color: #5c6570; flex-shrink: 0; padding-left: 6px; }
+.flow { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 10px 0 14px; }
+.flow .box { border: 1px solid #d5dbe3; padding: 8px 10px; background: #fff; font-size: 13px; max-width: 180px; }
+.flow .box strong { display: block; font-size: 12px; color: #5c6570; margin-bottom: 2px; }
+.flow .arr { color: #94a3b8; font-size: 18px; }
+.footer { padding: 12px 28px 20px; border-top: 1px solid #e5e9ee; color: #5c6570; font-size: 13px; }
+code { font-family: Consolas, "Courier New", monospace; font-size: 13px; background: #f1f5f9; padding: 1px 4px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<!-- 0. Intro -->
+<div class="card">
+<div class="hdr">
+<h1>IMDEV-9202: реконструкция дня 07.08.2026</h1>
+<p>Поступления на р/с пула Розничное ДУ: два независимых пути</p>
+</div>
+<div class="pad">
+<p>Источник: лог <code>Проблемы/ЛогОпераций_07082026.txt</code> (анализ путей, <code>внТестСбросПоступленийРДУ</code> v1.16) и код обработок на ПРОД.</p>
+<div class="ok">
+<strong>Вывод.</strong> За день последовательно отработали два пути без смешения в одном клике выписки:
+сначала <span class="tag-a">путь A</span> (расторжение, 16 шт.), затем <span class="tag-b">путь B</span> (Оплата ВУК, 3555 шт.).
+К моменту зачислений из выписки (~13:58) поручений ВУК ещё не было.
+</div>
+</div>
+</div>
+
+<!-- 1. Results -->
+<div class="card">
+<div class="pad">
+<h2>1. Результаты за день</h2>
+<table class="t">
+<tr>
+<th>Группа</th>
+<th>Кол-во</th>
+<th>Комментарий поручения</th>
+<th>Ключевые окна</th>
+<th>Путь</th>
+</tr>
+<tr>
+<td><span class="tag-a">Расторжение</span></td>
+<td><b>16</b></td>
+<td>Перевод ДС при расторжении</td>
+<td>Поручения v1: 13:48–13:58<br>Поступления: в том же окне (выписка)</td>
+<td>Выписка → «Зачисления на р/с Розничного ДУ»</td>
+</tr>
+<tr>
+<td><span class="tag-b">Оплата ВУК</span></td>
+<td><b>3555</b></td>
+<td>Оплата ВУК</td>
+<td>Поручения v1: 14:07–14:39 (~109/мин)<br>Поступления (по каскаду): 15:34–16:23 (~70/мин)</td>
+<td>«Оплата КЗ по клиентам РДУ»</td>
+</tr>
+<tr>
+<td>Итого</td>
+<td><b>3571</b></td>
+<td colspan="3">Автор версий поручений: Кукушкин Вадим Юрьевич. Дата документов 9:00 — бизнес-дата, не час операции (см. п. 5).</td>
+</tr>
+</table>
+</div>
+</div>
+
+<!-- 2. Chronology - detailed user/system narrative -->
+<div class="card">
+<div class="pad">
+<h2>2. Хронология операций</h2>
+<p>Картина дня с двух сторон: что делал пользователь и что в этот момент делала система.
+Структура путей и кнопки — в п. 3; каскад статусов при проведении — в п. 5.</p>
+
+<div class="tl">
+
+<div class="tl-item path-a">
+<div class="tl-time">13:48–13:49 · <span class="tag-a">Путь A</span> · подготовка расторжений</div>
+<p style="margin:0;"><b>Пользователь.</b> В обработке расторжения договоров РДУ оформляет вывод ДС по закрываемым договорам (первая пачка за ~1 мин).</p>
+<p style="margin:8px 0 0;"><b>Система.</b> Создаёт и проводит <b>12 поручений</b> с комментарием «Перевод ДС при расторжении», статус <b>Новый</b>. Фиксируется v1 в ВерсииОбъектов (пример: МИ24288-Кл-003, МИ20784-Кл-003, …).</p>
+</div>
+
+<div class="tl-item gap">
+<div class="tl-time">13:49–13:58 · пауза ~9 мин</div>
+<p style="margin:0;"><b>Пользователь.</b> Короткая пауза внутри сценария расторжения: догрузка договоров, сверка с выпиской или повторный запуск.</p>
+<p style="margin:8px 0 0;"><b>Система.</b> Новых поручений ВУК нет. В базе по-прежнему только расторжения в статусе Новый без поступлений.</p>
+</div>
+
+<div class="tl-item path-a">
+<div class="tl-time">~13:58 · <span class="tag-a">Путь A</span> · догрузка + зачисления из выписки</div>
+<p style="margin:0;"><b>Пользователь.</b> Дооформляет оставшиеся расторжения, затем в <code>внЗагрузкаВыписокДУ</code> нажимает <b>«Зачисления на р/с Розничного ДУ»</b>.</p>
+<p style="margin:8px 0 0;"><b>Система.</b> Создаёт ещё <b>4 поручения</b> расторжения (итого за день <b>16</b>). Обработка поступлений РДУ отбирает все неоплаченные Перевод в статусе Новый — на этот момент это <b>только расторжения</b>. Сумма совпадает с одной строкой выписки → создаётся и проводится пачка из <b>16 поступлений</b>. Поручениям расторжения каскадом ставится <b>Исполнено</b> (через <code>ПлановаяПозиция</code>).</p>
+<p style="margin:8px 0 0;" class="muted">Отпечаток поступлений: ответственный пустой; назначение типичное для выписки («по распоряжению от…»). Путь ОплатаКЗ не участвует.</p>
+</div>
+
+<div class="tl-item gap">
+<div class="tl-time">13:58–14:07 · пауза ~9 мин</div>
+<p style="margin:0;"><b>Пользователь.</b> Переключается на другой сценарий — массовую оплату ВУК. Расторжение уже закрыто поступлениями, к выписке возвращаться не нужно.</p>
+<p style="margin:8px 0 0;"><b>Система.</b> Поручений «Оплата ВУК» ещё нет. Если бы выписку нажали повторно, в выборке снова были бы только уже оплаченные/закрытые расторжения — смешения с ВУК пока невозможно.</p>
+</div>
+
+<div class="tl-item path-b">
+<div class="tl-time">перед 14:07 · <span class="tag-b">Путь B</span> · подготовка ТЧ</div>
+<p style="margin:0;"><b>Пользователь.</b> Открывает <code>внОплатаКЗПоКлиентамРДУ</code>, нажимает <b>«Заполнить»</b> — начитывает начисления вознаграждения (долг ВУК с июня) в табличную часть.</p>
+<p style="margin:8px 0 0;"><b>Система.</b> Строит строки ТЧ: начисление ↔ договор ДУ / аналитические счета. Документы оплаты ещё не создаёт.</p>
+</div>
+
+<div class="tl-item path-b">
+<div class="tl-time">14:07:10 – 14:39:41 · <span class="tag-b">Путь B</span> · платежные поручения</div>
+<p style="margin:0;"><b>Пользователь.</b> Нажимает <b>«Сформировать платежное поручение»</b> и ждёт окончания массового прогона (~32,5 мин). Это отдельный шаг: поступления в этом интервале поручения ещё не закрывают.</p>
+<p style="margin:8px 0 0;"><b>Система.</b> Создаёт и проводит <b>3555 поручений</b> «Оплата ВУК» (~109 шт./мин, ровный поток). Каждому — статус <b>Новый</b>, v1 в ВерсииОбъектов. Автор версий: Кукушкин Вадим Юрьевич. Поступления и списания на этом шаге не создаются.</p>
+</div>
+
+<div class="tl-item gap">
+<div class="tl-time">14:39–15:34 · пауза ~54 мин</div>
+<p style="margin:0;"><b>Пользователь.</b> Пауза между кнопками: проверка, подготовка входящих номеров/даты, переход к следующему действию формы.</p>
+<p style="margin:8px 0 0;"><b>Система.</b> В базе лежат 3555 поручений ВУК в статусе <b>Новый</b> без закрывающих поступлений. Именно поэтому волна «Исполнено» на поручениях ещё не началась.</p>
+</div>
+
+<div class="tl-item path-b">
+<div class="tl-time">15:33:57 – 16:23:01 · <span class="tag-b">Путь B</span> · поступления на р/с</div>
+<p style="margin:0;"><b>Пользователь.</b> Нажимает <b>«Сформировать поступление на расчетный счет»</b>, указывает дату ввода и начальный входящий номер. Система проходит по строкам ТЧ, где есть поручение и ещё нет поступления (~49 мин).</p>
+<p style="margin:8px 0 0;"><b>Система.</b> Для каждой строки: <code>ЗаполнитьПоДокументуОснованию(поручение)</code> → запись <code>ПлановаяПозиция = поручение</code> → <b>проведение</b> поступления. Поступлению — статус <b>Проведен</b>; каскад ставит поручению <b>Исполнено</b>. Скорость волны ~70 док./мин. В логе у поступлений часто нет v1 (в истории «Проведен» = 9:00), поэтому час операции выведен из волны «Исполнено» на поручениях.</p>
+<p style="margin:8px 0 0;" class="muted">Отпечаток: ответственный заполнен; без текста выписки «по распоряжению от». Отдельной кнопки «Исполнено» нет — статус ставит проведение поступления.</p>
+</div>
+
+<div class="tl-item path-b">
+<div class="tl-time">после поступлений · <span class="tag-b">Путь B</span> · списания с р/с</div>
+<p style="margin:0;"><b>Пользователь.</b> Нажимает <b>«Сформировать списания с расчетного счета»</b> (оплата ВУК уже с расчётного счёта клиента).</p>
+<p style="margin:8px 0 0;"><b>Система.</b> Создаёт и проводит списания (в цепочке нашлись у <b>3554 из 3555</b>). Основание обычно <b>начисление</b>, не поручение. Точное минутное окно в логе отдельно не выделялось; шаг логически после поступлений и до/около шаблона.</p>
+</div>
+
+<div class="tl-item path-b">
+<div class="tl-time">16:26:16 – 16:28:10 · <span class="tag-b">Путь B</span> · шаблон</div>
+<p style="margin:0;"><b>Пользователь.</b> Нажимает <b>«Сформировать шаблон»</b> (письмо / Word по оплате).</p>
+<p style="margin:8px 0 0;"><b>Система.</b> Одним проходом по ТЧ ставит ~3554 начислениям статус <b>Сформировано п/п</b> (~2 мин, ~1185/мин). Это не ручные клики по каждому начислению и не эффект поступления.</p>
+</div>
+
+<div class="tl-item path-b">
+<div class="tl-time">17:03:36 – 17:52:18 · <span class="tag-b">Путь B</span> · финал начислений</div>
+<p style="margin:0;"><b>Пользователь.</b> Отдельной кнопки «Исполнено» для начислений в ОплатаКЗ нет — финал идёт как завершение цепочки оплаты.</p>
+<p style="margin:8px 0 0;"><b>Система.</b> Волна начислениям → <b>Исполнено</b> (~50 мин, ~71/мин). Скорее каскад при проведении списания / завершении оплаты, а не массовые ручные смены статуса. На этом путь B за день в основном закрыт.</p>
+</div>
+
+</div>
+
+<div class="warn">
+<strong>Не путать два «Исполнено» в хронологии:</strong>
+у <b>поручения</b> (15:34–16:23) — следствие проведения <b>поступления</b>;
+у <b>начисления</b> (17:03–17:52) — следствие цепочки <b>после списания / шаблона</b>.
+</div>
+</div>
+</div>
+
+<!-- 3. Paths - structure once -->
+<div class="card">
+<div class="pad">
+<h2>3. Пути создания поступлений</h2>
+
+<h3><span class="tag-a">Путь A</span> — расторжение (16)</h3>
+<div class="flow">
+<div class="box"><strong>1</strong>Расторжение договоров РДУ</div>
+<span class="arr">→</span>
+<div class="box"><strong>2</strong>Поручение «Перевод ДС при расторжении»</div>
+<span class="arr">→</span>
+<div class="box"><strong>3</strong>Выписка: «Зачисления…»</div>
+<span class="arr">→</span>
+<div class="box"><strong>4</strong>Поступление на р/с<br>+ поручению Исполнено</div>
+</div>
+<p class="muted">Обработки: <code>внРасторжениеДоговоровРозничногоДУ</code>, <code>внЗагрузкаВыписокДУ</code> 6.00, <code>внПоступленияНаРасчетныйСчет_РозничноеДУ</code> 1.04.</p>
+
+<h3><span class="tag-b">Путь B</span> — Оплата ВУК (3555)</h3>
+<p>Обработка <code>внОплатаКЗПоКлиентамРДУ</code> 2.0. Выписка не участвует. Каждый шаг — отдельная кнопка формы.</p>
+
+<table class="t">
+<tr>
+<th>#</th>
+<th>Кнопка</th>
+<th>Результат</th>
+<th>Связь документов</th>
+<th>Окно 07.08</th>
+</tr>
+<tr>
+<td>0</td>
+<td><span class="muted">уже в базе</span></td>
+<td>Начисление вознаграждения</td>
+<td>Исходный долг ВУК</td>
+<td>до дня оплаты</td>
+</tr>
+<tr>
+<td>1</td>
+<td>Заполнить</td>
+<td>Строки ТЧ</td>
+<td>Начисление ↔ договор / счета</td>
+<td>перед 14:07</td>
+</tr>
+<tr>
+<td>2</td>
+<td>Сформировать платежное поручение</td>
+<td>Поручение «Оплата ВУК», <b>Новый</b></td>
+<td>На основании начисления</td>
+<td><b>14:07–14:39</b></td>
+</tr>
+<tr>
+<td>3</td>
+<td>Сформировать поступление на р/с</td>
+<td>Поступление <b>Проведен</b>; поручению <b>Исполнено</b></td>
+<td><code>ПлановаяПозиция</code> = поручение (шаг 2); брокер → р/с</td>
+<td><b>15:34–16:23</b></td>
+</tr>
+<tr>
+<td>4</td>
+<td>Сформировать списания с р/с</td>
+<td>Списание <b>Проведен</b> (3554 из 3555)</td>
+<td>Обычно на <b>начисление</b>, не на поручение</td>
+<td>после шага 3</td>
+</tr>
+<tr>
+<td>5</td>
+<td>Сформировать шаблон</td>
+<td>Начислению <b>Сформировано п/п</b></td>
+<td>Пакет по ТЧ</td>
+<td><b>16:26–16:28</b></td>
+</tr>
+<tr>
+<td>6</td>
+<td><span class="muted">не кнопка «Исполнено»</span></td>
+<td>Начислению <b>Исполнено</b></td>
+<td>Каскад списания / завершение цепочки</td>
+<td><b>17:03–17:52</b></td>
+</tr>
+</table>
+
+<div class="note">
+Два разных «Исполнено» (поручение vs начисление) — см. хронологию в п. 2.
+</div>
+<p class="muted">Отпечаток поступлений пути B: ответственный заполнен, без «по распоряжению от» из выписки.</p>
+</div>
+</div>
+
+<!-- 4. Intensity - unique chart -->
+<div class="card">
+<div class="pad">
+<h2>4. Интенсивность создания поручений ВУК</h2>
+<p class="muted">Окно 14:07–14:39. Ровный поток без длинных пауз — один непрерывный сеанс кнопки «Сформировать платежное поручение».</p>
+<div class="bars">
+<div class="bar-row"><div class="bar-lbl">14:07</div><div class="bar-track"><div class="bar-fill-b" style="width:84%"></div></div><div class="bar-n">97</div></div>
+<div class="bar-row"><div class="bar-lbl">14:08</div><div class="bar-track"><div class="bar-fill-b" style="width:100%"></div></div><div class="bar-n">115</div></div>
+<div class="bar-row"><div class="bar-lbl">14:09</div><div class="bar-track"><div class="bar-fill-b" style="width:100%"></div></div><div class="bar-n">115</div></div>
+<div class="bar-row"><div class="bar-lbl">14:10</div><div class="bar-track"><div class="bar-fill-b" style="width:96%"></div></div><div class="bar-n">111</div></div>
+<div class="bar-row"><div class="bar-lbl">14:15</div><div class="bar-track"><div class="bar-fill-b" style="width:97%"></div></div><div class="bar-n">112</div></div>
+<div class="bar-row"><div class="bar-lbl">14:20</div><div class="bar-track"><div class="bar-fill-b" style="width:93%"></div></div><div class="bar-n">107</div></div>
+<div class="bar-row"><div class="bar-lbl">14:25</div><div class="bar-track"><div class="bar-fill-b" style="width:92%"></div></div><div class="bar-n">106</div></div>
+<div class="bar-row"><div class="bar-lbl">14:30</div><div class="bar-track"><div class="bar-fill-b" style="width:90%"></div></div><div class="bar-n">104</div></div>
+<div class="bar-row"><div class="bar-lbl">14:35</div><div class="bar-track"><div class="bar-fill-b" style="width:92%"></div></div><div class="bar-n">106</div></div>
+<div class="bar-row"><div class="bar-lbl">14:39</div><div class="bar-track"><div class="bar-fill-b" style="width:63%"></div></div><div class="bar-n">73</div></div>
+</div>
+<p class="muted">Расторжение для масштаба: ~12 шт. в 13:48–13:49 и 4 шт. в 13:58.</p>
+<div class="bars">
+<div class="bar-row"><div class="bar-lbl">13:48</div><div class="bar-track"><div class="bar-fill-a" style="width:10%"></div></div><div class="bar-n">~12</div></div>
+<div class="bar-row"><div class="bar-lbl">13:58</div><div class="bar-track"><div class="bar-fill-a" style="width:3%"></div></div><div class="bar-n">4</div></div>
+</div>
+</div>
+</div>
+
+<!-- 5. Status mechanics only -->
+<div class="card">
+<div class="pad">
+<h2>5. Механика статусов при поступлении</h2>
+<p>Кнопка создаёт и проводит поступление. Связанные статусы меняет <b>каскад</b> в <code>ИсторияСтатусовОбъектов</code> при проведении, а не отдельная кнопка «Исполнено».</p>
+
+<div class="flow">
+<div class="box"><strong>Проведение</strong>поступления</div>
+<span class="arr">→</span>
+<div class="box"><strong>Поступление</strong>«Проведен»</div>
+<span class="arr">→</span>
+<div class="box"><strong>Каскад</strong><code>ПлановаяПозиция</code></div>
+<span class="arr">→</span>
+<div class="box"><strong>Поручение</strong>«Исполнено»</div>
+</div>
+
+<table class="t">
+<tr>
+<th>Реквизит</th>
+<th>Кому пишет статус</th>
+<th>При «Проведен»</th>
+<th>Для РДУ / ВУК</th>
+</tr>
+<tr>
+<td><code>ПлановаяПозиция</code></td>
+<td>Поручение (или начисление — если ссылка на него)</td>
+<td><b>Исполнено</b></td>
+<td><b>Да</b> для поручения. Заполняется в ОплатаКЗ через <code>ЗаполнитьПоДокументуОснованию</code> или явно в обработке выписки.</td>
+</tr>
+<tr>
+<td><code>ДокументОснование</code></td>
+<td>Только банковское <code>ПлатежноеПоручение</code></td>
+<td><b>Исполнено</b> у п/п</td>
+<td><b>Нет</b> для поручения Мидл (тип <code>Поручение</code>).</td>
+</tr>
+</table>
+
+<div class="note">
+Поступление <b>не меняет</b> статусы начисления («Сформировано п/п», «Исполнено»). Если <code>ПлановаяПозиция</code> пустая — поручение при проведении не закрывается.
+</div>
+
+<h3>Как читать время в логах</h3>
+<ul>
+<li><b>9:00</b> на документе / «Проведен» в истории — бизнес-дата дня.</li>
+<li><b>v1 в ВерсииОбъектов</b> — реальное создание (надёжно у поручений; у поступлений ВУК часто нет).</li>
+<li><b>«Исполнено» у поручения ВУК</b> — прокси часа проведения поступления (15:34–16:23).</li>
+</ul>
+</div>
+</div>
+
+<!-- 6. Isolation -->
+<div class="card">
+<div class="pad">
+<h2>6. Почему выписка не смешалась с ВУК</h2>
+<p>Логика ПРОД <code>внЗагрузкаВыписокДУ</code> 6.00: один клик «Зачисления…» сверяет сумму <b>всех</b> неоплаченных Перевод с <b>одной</b> строкой выписки.</p>
+<ol>
+<li>В 13:48–13:58 в выборке были только расторжения → 16 поступлений созданы.</li>
+<li>Поручения ВУК появились с 14:07 и закрывались ОплатаКЗ, минуя сверку с выпиской.</li>
+</ol>
+</div>
+<div class="footer">
+Реконструкция по временным кластерам и коду; точный порядок кликов внутри пути B между шагами 3–4 может отличаться в деталях.
+</div>
+</div>
+
+</div>
+</body>
+</html>
