@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>IMDEV-9202: дерево изменений (Оптимизация vs ОРИГИНАЛ)</title>
+<style>
+body { margin: 0; padding: 0; background: #f2f4f7; font-family: Calibri, Arial, sans-serif; color: #1c2430; font-size: 15px; line-height: 1.45; }
+.wrap { max-width: 960px; margin: 0 auto; padding: 24px 12px; }
+.card { background: #fff; border: 1px solid #d9dee3; margin-bottom: 16px; }
+.hdr { background: #1f3c88; color: #fff; padding: 20px 28px; }
+.hdr h1 { margin: 0 0 6px; font-size: 20px; }
+.hdr p { margin: 0; font-size: 14px; opacity: 0.95; }
+.pad { padding: 18px 28px; }
+h2 { margin: 0 0 12px; font-size: 17px; color: #1f3c88; }
+h3 { margin: 16px 0 8px; font-size: 15px; color: #26385c; }
+p { margin: 0 0 10px; }
+ul { margin: 6px 0 12px; padding-left: 22px; }
+li { margin-bottom: 8px; }
+ul ul { margin-top: 6px; }
+table.t { width: 100%; border-collapse: collapse; font-size: 14px; margin: 8px 0 14px; }
+table.t th, table.t td { border: 1px solid #d5dbe3; padding: 8px 10px; vertical-align: top; text-align: left; }
+table.t th { background: #eef2f7; color: #26385c; }
+.note { background: #e8f4fc; border-left: 4px solid #17a2b8; padding: 12px 14px; margin: 12px 0; }
+.ok { background: #eaf7ec; border-left: 4px solid #28a745; padding: 12px 14px; margin: 12px 0; }
+.warn { background: #fff8e1; border-left: 4px solid #b78103; padding: 12px 14px; margin: 12px 0; }
+.muted { color: #5c6570; font-size: 13px; }
+.tag-add { display: inline-block; background: #dcfce7; color: #166534; padding: 1px 6px; font-size: 11px; font-weight: 700; }
+.tag-chg { display: inline-block; background: #dbeafe; color: #1e40af; padding: 1px 6px; font-size: 11px; font-weight: 700; }
+.tag-same { display: inline-block; background: #f1f5f9; color: #475569; padding: 1px 6px; font-size: 11px; font-weight: 700; }
+code { font-family: Consolas, "Courier New", monospace; font-size: 13px; background: #f1f5f9; padding: 1px 4px; }
+pre { font-family: Consolas, "Courier New", monospace; font-size: 12px; background: #f8f9fa; border: 1px solid #e5e9ee; padding: 10px 12px; overflow-x: auto; white-space: pre-wrap; margin: 6px 0 0; }
+.tree { font-size: 14px; }
+.footer { padding: 12px 28px 20px; border-top: 1px solid #e5e9ee; color: #5c6570; font-size: 13px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<div class="card">
+<div class="hdr">
+<h1>IMDEV-9202: дерево изменений</h1>
+<p>Оптимизация относительно ОРИГИНАЛ — две доработанные обработки</p>
+</div>
+<div class="pad">
+<div class="ok">
+<strong>Базовый релиз.</strong> Оставляем текущую оптимизацию из папки <code>Оптимизация/</code>
+(не урезаем до «только SafeMode»). Папка <code>Оптимизация/_TEST</code> в сравнение не входит.
+</div>
+<table class="t">
+<tr><th>Обработка</th><th>ОРИГИНАЛ</th><th>Оптимизация</th><th>Где правки</th></tr>
+<tr>
+<td><code>внЗагрузкаВыписокДУ</code></td>
+<td>версия <b>6.00</b>, БезопасныйРежим = Ложь</td>
+<td>версия <b>6.05</b>, БезопасныйРежим = Ложь</td>
+<td>Только <code>Ext/ObjectModule.bsl</code></td>
+</tr>
+<tr>
+<td><code>внПоступленияНаРасчетныйСчет_РозничноеДУ</code></td>
+<td>версия <b>1.04</b>, БезопасныйРежим = Истина</td>
+<td>версия <b>1.10</b>, БезопасныйРежим = Ложь</td>
+<td>Модуль объекта, XML метаданных, формы Форма / ФормаНастроек</td>
+</tr>
+</table>
+<p class="muted">Сравнение папок: <code>.../ОРИГИНАЛ/</code> и <code>.../Оптимизация/</code> проекта IMDEV-9202 (Wim_Du).</p>
+</div>
+</div>
+
+<!-- ========== 1. Zagruzka ========== -->
+<div class="card">
+<div class="pad">
+<h2>1. внЗагрузкаВыписокДУ (6.00 → 6.05)</h2>
+<p>Цель правок: (1) фон поступлений не наследует безопасный режим; (2) две платежки Перевод в одной выписке (группа «расторжение» + остаток); (3) диагностика при несходстве сумм.</p>
+
+<ul class="tree">
+<li>
+<strong>Уровень 1:</strong> обработка <code>внЗагрузкаВыписокДУ</code>
+<ul>
+<li>
+<strong>Уровень 2:</strong> <code>Ext/ObjectModule.bsl</code>
+<ul>
+<li>
+<span class="tag-chg">ИЗМЕНЕНА</span> <code>СведенияОВнешнейОбработке()</code>
+<div class="muted">Версия <code>6.00</code> → <code>6.05</code>. Комментарий IMDEV-9202. <code>БезопасныйРежим</code> без изменений (уже Ложь).</div>
+</li>
+<li>
+<span class="tag-chg">ИЗМЕНЕНА</span> <code>ЗачисленияНаРСРозничногоДУ()</code>
+<div class="muted">Создание внешней обработки поступлений без безопасного режима (иначе воркеры БСП падают).</div>
+<pre>Было:  ВнешниеОбработки.Создать(ИмяФайла);
+Стало: ВнешниеОбработки.Создать(ИмяФайла, Ложь);  // IMDEV-9202</pre>
+</li>
+<li>
+<span class="tag-chg">ИЗМЕНЕНА</span> <code>СоздатьДокументы_РозничноеДУ(...)</code>
+<ul>
+<li>Для вида <b>Перевод</b>: если итог ТЧ ≠ сумме платежки → <code>ОтобратьПорученияПодСуммуПлатежки(..., "Перевод ДС при расторжении")</code>.</li>
+<li>После успешного создания первой пачки → <code>СоздатьОстатокПереводаПоВторойПлатежке</code>.</li>
+<li>Сравнение сумм через <code>Окр(..., 2)</code>.</li>
+<li>При несходстве — развёрнутый текст диагностики (вид, № платежки, суммы, число строк, разница).</li>
+<li>Вид <b>ВводВДУ</b>: логика сверки/создания как в оригинале (без двух платежек).</li>
+</ul>
+</li>
+<li>
+<span class="tag-add">ДОБАВЛЕНА</span> <code>ОтобратьПорученияПодСуммуПлатежки(ТабличнаяЧасть, СуммаПлатежки, ПодстрокаКомментария)</code>
+<div class="muted">
+Читает комментарий поручений. Если сумма строк с подстрокой = платежке — оставляет группу;
+если платежке равен остаток без группы — оставляет остаток; иначе ТЧ не меняет.
+Порядок строк выписки не используется.
+</div>
+</li>
+<li>
+<span class="tag-add">ДОБАВЛЕНА</span> <code>СоздатьОстатокПереводаПоВторойПлатежке(ПерваяСтрока, НоваяОбработка, ТекстСообщения)</code>
+<div class="muted">
+Повторный <code>ПорученияПоДС(Перевод)</code> (уже проведённые не попадают). Если остаток 0 — выход.
+Иначе ищет вторую входящую на тот же счёт получателя с суммой остатка и другим номером, создаёт вторую пачку.
+Строки дописываются в ТЧ выписки; форма открывается один раз с обеими пачками.
+</div>
+</li>
+<li>
+<span class="tag-same">БЕЗ ИЗМЕНЕНИЙ</span>
+<div class="muted">Формы, макеты, <code>ЗагрузитьГруппуВыписокВФоне</code> (IMDEV-9096), прочие процедуры модуля.</div>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</div>
+</div>
+
+<!-- ========== 2. Postupleniya ========== -->
+<div class="card">
+<div class="pad">
+<h2>2. внПоступленияНаРасчетныйСчет_РозничноеДУ (1.04 → 1.10)</h2>
+<p>Цель правок: параллельное создание/проведение документов; фикс дублей в запросе начитки; работа фона без безопасного режима; идемпотентность и дозаполнение порций.</p>
+
+<ul class="tree">
+<li>
+<strong>Уровень 1:</strong> обработка <code>внПоступленияНаРасчетныйСчет_РозничноеДУ</code>
+<ul>
+
+<li>
+<strong>Уровень 2:</strong> <code>внПоступленияНаРасчетныйСчет_РозничноеДУ.xml</code>
+<ul>
+<li><span class="tag-add">ДОБАВЛЕН</span> реквизит объекта <code>КоличествоПотоков</code> (число, неотрицательное).</li>
+</ul>
+</li>
+
+<li>
+<strong>Уровень 2:</strong> <code>Ext/ObjectModule.bsl</code>
+<ul>
+<li>
+<span class="tag-chg">ИЗМЕНЕНА</span> <code>СведенияОВнешнейОбработке()</code>
+<div class="muted">Версия <code>1.04</code> → <code>1.10</code>. <code>БезопасныйРежим</code>: Истина → <b>Ложь</b>.</div>
+</li>
+<li>
+<span class="tag-chg">ИЗМЕНЕНА</span> <code>ПорученияПоДС(ВидОперации)</code>
+<ul>
+<li>JOIN к <code>НачислениеЗадолженности</code> только при виде <b>ВводВДУ</b> (иначе размножение строк ВТ и раздувание <code>Итог("СуммаДС")</code>).</li>
+<li>Итоговый пакет: <code>ВЫБРАТЬ РАЗЛИЧНЫЕ</code>.</li>
+<li>Замер: ключ <code>ДУ.ПоступленияНаРасчетныйСчетРДУ.ПорученияПоДС</code>.</li>
+</ul>
+</li>
+<li>
+<span class="tag-chg">ИЗМЕНЕНА</span> <code>СоздатьПоступленияДС(ВидОперации)</code>
+<div class="muted">Вместо последовательного цикла — вызов диспетчера <code>СоздатьПоступленияПоТабличнойЧасти</code> для Перевод и ВводВДУ.</div>
+</li>
+<li>
+<span class="tag-chg">ИЗМЕНЕНА</span> <code>Поступление(ПоручениеПоДС, Настройки)</code>
+<div class="muted">В начале — идемпотентность: если уже есть проведённое поступление по основанию (<code>ПоступлениеПоДокументуОснованию</code>), возвращает его без повторного создания. Заполнение реквизитов и проведение — как в оригинале.</div>
+</li>
+<li>
+<span class="tag-add">ДОБАВЛЕНА</span> <code>СоздатьПоступленияПоТабличнойЧасти(ТабличнаяЧасть, Настройки)</code>
+<div class="muted">
+Диспетчер. Параллель, если строк &gt; 50, потоков &gt; 1, обработка в доп. обработках и фон разрешён.
+Дефолт потоков = 5. Воркеры через <code>ДлительныеОперации.ВыполнитьВФоне</code> (<code>ОжидатьЗавершение = 0</code>).
+При сбое фона — selective retry порции, дальше последовательно. Сводка в окно сообщений + замер <code>...Создать</code>.
+</div>
+</li>
+<li>
+<span class="tag-add">ДОБАВЛЕНА</span> <code>ОбработатьПачкуПоступлений(ПараметрыВыполнения, АдресХранилища)</code> Экспорт
+<div class="muted">Воркер: создание пачки через <code>Поступление()</code>; ошибка одной строки не рвёт всю порцию; замер <code>...Пачка</code>.</div>
+</li>
+<li>
+<span class="tag-add">ДОБАВЛЕНА</span> <code>СоздатьПачкуПоследовательно(...)</code>
+<div class="muted">Откат/добивка строк конкретной порции; сверка с БД перед созданием.</div>
+</li>
+<li>
+<span class="tag-add">ДОБАВЛЕНА</span> <code>ДозаполнитьНедостающиеСтрокиПорции(...)</code>
+<div class="muted">Для строк порции без ссылки в ТЧ — reconcile из БД или досоздание (идемпотентно).</div>
+</li>
+<li>
+<span class="tag-add">ДОБАВЛЕНА</span> <code>ЗафиксироватьОшибкуПорции(...)</code>
+<div class="muted">Журнал <code>IMDEV-9202.ПоступленияНаРасчетныйСчетРДУ</code> + массив сообщений (лимит 20).</div>
+</li>
+<li>
+<span class="tag-add">ДОБАВЛЕНА</span> <code>ТекстОшибкиДлительнойОперации(...)</code>
+<div class="muted">Краткое представление ошибки из ответа БСП.</div>
+</li>
+<li>
+<span class="tag-same">БЕЗ ИЗМЕНЕНИЙ</span> логика заполнения полей в <code>Поступление()</code> (кроме проверки идемпотентности), <code>Настройки()</code>, сохранение пользовательских настроек.
+</li>
+</ul>
+</li>
+
+<li>
+<strong>Уровень 2:</strong> <code>Forms/ФормаНастроек/Ext/Form.xml</code>
+<ul>
+<li><span class="tag-add">ДОБАВЛЕНО</span> поле <code>КоличествоПотоков</code> (привязка к реквизиту объекта).</li>
+</ul>
+</li>
+<li>
+<strong>Уровень 2:</strong> <code>Forms/Форма/Ext/Form/Module.bsl</code>
+<ul>
+<li><span class="tag-chg">ИЗМЕНЕНА</span> <code>ПриСозданииНаСервере</code> — дефолт потоков = 5.</li>
+</ul>
+</li>
+<li>
+<strong>Уровень 2:</strong> <code>Forms/ФормаНастроек/Ext/Form/Module.bsl</code>
+<ul>
+<li><span class="tag-chg">ИЗМЕНЕНА</span> <code>ПриСозданииНаСервере</code> — дефолт потоков = 5.</li>
+</ul>
+</li>
+
+</ul>
+</li>
+</ul>
+
+<div class="note">
+<strong>Связка двух обработок.</strong> Выписка вызывает поступления через
+<code>ВнешниеОбработки.Создать(..., Ложь)</code>. Без этого параллельный режим поступлений
+при старте из выписки не работает (безопасный режим наследуется фоном).
+</div>
+</div>
+</div>
+
+<!-- Summary -->
+<div class="card">
+<div class="pad">
+<h2>3. Сводка «что осталось как в оригинале»</h2>
+<table class="t">
+<tr><th>Область</th><th>Статус</th></tr>
+<tr><td>Заполнение одного документа <code>Поступление</code> (реквизиты, проведение)</td><td>Как оригинал (+ идемпотентность в начале)</td></tr>
+<tr><td>Поиск строк выписки (брокер / компенсация ВводВДУ)</td><td>Как оригинал</td></tr>
+<tr><td>Одна платежка Перевод на всю сумму поручений</td><td>Как оригинал (отбор/вторая пачка не срабатывают)</td></tr>
+<tr><td>Формы и макеты выписок</td><td>Без изменений</td></tr>
+<tr><td>IMDEV-9096 (фон загрузки групп выписок)</td><td>Без изменений</td></tr>
+</table>
+</div>
+<div class="footer">
+Источник: папки <code>ОРИГИНАЛ</code> и <code>Оптимизация</code> · версии 6.05 / 1.10 · дата сверки 24.08.2026 ·
+<code>Оптимизация/_TEST</code> не включён.
+</div>
+</div>
+
+</div>
+</body>
+</html>
