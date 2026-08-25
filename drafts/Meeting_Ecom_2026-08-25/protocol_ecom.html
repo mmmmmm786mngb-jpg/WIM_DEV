@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Протокол: E-com 25.08.2026</title>
+<style>
+  :root {
+    --bg: #f4f7f9;
+    --card: #ffffff;
+    --ink: #1a2b3c;
+    --muted: #5a6b7c;
+    --line: #d5dee7;
+    --accent: #0d6e6e;
+    --accent-soft: #e6f4f4;
+    --warn: #8a6d00;
+    --warn-bg: #fff8e1;
+    --ok: #1b6b3a;
+    --ok-bg: #e8f6ee;
+    --info: #0b5f8a;
+    --info-bg: #e8f4fb;
+    --shadow: 0 1px 3px rgba(26,43,60,.08);
+    --radius: 10px;
+    --font: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0;
+    font-family: var(--font);
+    color: var(--ink);
+    background: var(--bg);
+    line-height: 1.55;
+  }
+  .top {
+    background: linear-gradient(135deg, #0a3d3d 0%, #0d6e6e 55%, #149494 100%);
+    color: #fff;
+    padding: 28px 20px 22px;
+  }
+  .top-inner { max-width: 980px; margin: 0 auto; }
+  .top h1 { margin: 0 0 8px; font-size: 1.55rem; font-weight: 700; }
+  .top .meta { opacity: .92; font-size: .95rem; }
+  .top .meta span { display: inline-block; margin-right: 14px; }
+  .nav {
+    position: sticky; top: 0; z-index: 20;
+    background: rgba(255,255,255,.94);
+    backdrop-filter: blur(8px);
+    border-bottom: 1px solid var(--line);
+    box-shadow: var(--shadow);
+  }
+  .nav-inner {
+    max-width: 980px; margin: 0 auto;
+    display: flex; flex-wrap: wrap; gap: 6px 4px;
+    padding: 10px 16px;
+  }
+  .nav a {
+    text-decoration: none;
+    color: var(--accent);
+    font-size: .88rem;
+    font-weight: 600;
+    padding: 6px 10px;
+    border-radius: 6px;
+  }
+  .nav a:hover { background: var(--accent-soft); }
+  .wrap { max-width: 980px; margin: 0 auto; padding: 20px 16px 48px; }
+  section {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 20px 22px;
+    margin-bottom: 16px;
+  }
+  section h2 {
+    margin: 0 0 14px;
+    font-size: 1.2rem;
+    color: var(--accent);
+    border-bottom: 2px solid var(--accent-soft);
+    padding-bottom: 8px;
+  }
+  h3 { margin: 18px 0 8px; font-size: 1.02rem; }
+  .note {
+    background: var(--warn-bg);
+    border-left: 4px solid #e0b100;
+    color: var(--warn);
+    padding: 10px 14px;
+    border-radius: 0 8px 8px 0;
+    font-size: .92rem;
+    margin: 0 0 14px;
+  }
+  .info {
+    background: var(--info-bg);
+    border-left: 4px solid var(--info);
+    color: var(--info);
+    padding: 10px 14px;
+    border-radius: 0 8px 8px 0;
+    font-size: .92rem;
+    margin: 0 0 14px;
+  }
+  ul.people { margin: 0; padding-left: 1.2rem; }
+  .item {
+    border-top: 1px solid var(--line);
+    padding: 12px 0;
+  }
+  .item:first-of-type { border-top: none; padding-top: 0; }
+  .item strong.num {
+    display: inline-block;
+    min-width: 1.6rem;
+    color: var(--accent);
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: .92rem;
+  }
+  th, td {
+    border: 1px solid var(--line);
+    padding: 8px 10px;
+    text-align: left;
+    vertical-align: top;
+  }
+  th { background: var(--accent-soft); color: var(--accent); }
+  tr:nth-child(even) td { background: #fafcfd; }
+  .files a {
+    color: var(--accent);
+    font-weight: 600;
+  }
+  .glossary-tools {
+    display: flex; flex-wrap: wrap; gap: 10px; align-items: center;
+    margin-bottom: 12px;
+  }
+  .glossary-tools input {
+    flex: 1; min-width: 200px;
+    padding: 9px 12px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    font-size: .95rem;
+  }
+  .glossary-tools input:focus {
+    outline: 2px solid var(--accent);
+    border-color: var(--accent);
+  }
+  .tag {
+    display: inline-block;
+    font-size: .75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .03em;
+    padding: 2px 7px;
+    border-radius: 4px;
+    margin-left: 6px;
+    vertical-align: middle;
+  }
+  .tag-asr { background: #ffe8d6; color: #9a4a00; }
+  .tag-proc { background: var(--ok-bg); color: var(--ok); }
+  .tag-sys { background: var(--info-bg); color: var(--info); }
+  .g-list { margin: 0; padding: 0; list-style: none; }
+  .g-list li {
+    border-bottom: 1px solid var(--line);
+    padding: 10px 4px;
+  }
+  .g-list li:last-child { border-bottom: none; }
+  .g-list .term {
+    font-weight: 700;
+    color: var(--ink);
+  }
+  .g-list .def { color: var(--muted); margin-top: 3px; font-size: .93rem; }
+  .g-list .also {
+    font-size: .82rem;
+    color: #8a6d00;
+    margin-top: 4px;
+  }
+  .hidden { display: none !important; }
+  .count { font-size: .85rem; color: var(--muted); }
+  footer {
+    max-width: 980px; margin: 0 auto;
+    padding: 8px 16px 28px;
+    color: var(--muted);
+    font-size: .85rem;
+  }
+  @media (max-width: 640px) {
+    .top h1 { font-size: 1.25rem; }
+    section { padding: 16px; }
+    table { font-size: .85rem; }
+  }
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="top-inner">
+    <h1>Протокол совещания: прогнозирование E-com</h1>
+    <div class="meta">
+      <span>25.08.2026, ~13:00</span>
+      <span>~48 мин</span>
+      <span>Источник: 25.08.2026 13.00 (1).m4a</span>
+    </div>
+  </div>
+</header>
+
+<nav class="nav" aria-label="Разделы">
+  <div class="nav-inner">
+    <a href="#about">О совещании</a>
+    <a href="#summary">Содержание</a>
+    <a href="#decisions">Решения</a>
+    <a href="#tasks">Поручения</a>
+    <a href="#open">Вопросы</a>
+    <a href="#glossary">Глоссарий</a>
+    <a href="#files">Файлы</a>
+  </div>
+</nav>
+
+<main class="wrap">
+
+<section id="about">
+  <h2>О совещании</h2>
+  <p class="info">Передача и разбор процесса прогнозирования E-com: Excel-шаблоны, выкупы, перемещения, загрузка в 1С, переход на FBS.</p>
+  <h3>Участники (по аудио; имена могут быть неточны)</h3>
+  <ul class="people">
+    <li>Ведущая — передача процесса E-com</li>
+    <li>Владимир</li>
+    <li>Ирина (Ира)</li>
+    <li>Упоминания: Жучкина Марина, Хочекян / Педгар (КАМы), Надежда, Хамяков (остатки МП), Макаров / Ренёк (без НДС), Вика Голубева (ранее запросы)</li>
+  </ul>
+  <p class="note" style="margin-top:14px">Расшифровка автоматическая (Whisper small, CPU). Имена, бренды и цифры местами искажены — сверяйте критичное с аудио и Excel. В глоссарии есть раздел «Как услышал Whisper».</p>
+</section>
+
+<section id="summary">
+  <h2>Краткое содержание</h2>
+
+  <div class="item"><strong class="num">1.</strong> <strong>E-com vs основной бизнес.</strong> Основной бизнес: прогноз на силы и выкупы. E-com: на <strong>выкупы и перемещения</strong>. Сроки те же, но E-com даёт <strong>+2–3 дня</strong> зазора на графике подачи потребности.</div>
+
+  <div class="item"><strong class="num">2.</strong> <strong>КАМы.</strong> Ведут зоны/маркетплейсы. Перемещения до конца года спланированы; по <strong>выкупам</strong> — вакансия. Новинки смотрела Надежда; остальной ассортимент моделировала ведущая.</div>
+
+  <div class="item"><strong class="num">3.</strong> <strong>Рабочие шаблоны.</strong> Папка вроде «E-com 0.1 ежемесячная demand». Рабочие файлы: <strong>3P</strong>, <strong>Ozon</strong>, <strong>Wildberries (New)</strong>. Копии / Marketplace не использовать. Важно: наименование для прайса как в 1С, ID клиента с портала (КАМы), нормативный остаток, подвид данных.</div>
+
+  <div class="item"><strong class="num">4.</strong> <strong>Нормативный сток.</strong> В шаблоне часто 45 (встречается 60); цель — <strong>30 дней</strong>. Сверх норматива — платное хранение у МП.</div>
+
+  <div class="item"><strong class="num">5.</strong> <strong>Новинки.</strong> Отдельного вида нет — как <strong>проект</strong>. Добавлять копированием последней строки (формулы). Запрос от РП/руководителей; КАМ ставит перемещение по выкупам.</div>
+
+  <div class="item"><strong class="num">6.</strong> <strong>Остатки МП.</strong> Запрашивать у ответственных, вставлять, <strong>формулы убирать</strong>. Автоподключения — осторожно. При FBS логичнее Planicum / кубы.</div>
+
+  <div class="item"><strong class="num">7.</strong> <strong>FBS.</strong> Выкупы ≈ перемещения → упрощение. Для FBS-ассортимента ~<strong>30%</strong> средних продаж (модель от июля). FBS = от нас клиенту; FBO = со склада WB.</div>
+
+  <div class="item"><strong class="num">8.</strong> <strong>Перемещения.</strong> Раньше — сложная формула (остаток, оборачиваемость, поступления, заказы, выкупы, норматив). Сейчас при FBS — <strong>среднее 2 соседних месяцев</strong>.</div>
+
+  <div class="item"><strong class="num">9.</strong> <strong>Заказы.</strong> В этом году <strong>не обновляют</strong> (в отличие от 2025).</div>
+
+  <div class="item"><strong class="num">10.</strong> <strong>Цены.</strong> Средняя за 3–4 месяца (иногда 2). Следить за новинками (нули → ложные 100 руб.).</div>
+
+  <div class="item"><strong class="num">11.</strong> <strong>Загрузка в 1С.</strong> Формат: клиент, артикул, 12 мес штуки/рубли, подвид. Сводный файл Владимира (WB+Ozon+3P). Артикул клиента приоритетнее артикула компании. Янв–июль без плана — обнулять значения, месяцы оставлять.</div>
+
+  <div class="item"><strong class="num">12.</strong> <strong>Зоны.</strong> Рита — FIX и дискаунтеры. Владимир — остальное + шаблон E-com. Коммуникацию по прогнозам нужно явно закрепить.</div>
+
+  <div class="item"><strong class="num">13.</strong> <strong>Мелкие каналы</strong> (Детский мир, Яндекс и др.) — шаблон устарел; на 2027 обсудить развитие с Надеждой/ОП.</div>
+
+  <div class="item"><strong class="num">14.</strong> <strong>Контроль.</strong> Стратплан (~4037 — сверить), WB ~100 млн/мес, отклонение перемещений от выкупов ~10–15%, сверка после ночной пересборки 1С. Отчёт без НДС — по запросу.</div>
+
+  <div class="item"><strong class="num">15.</strong> <strong>Обеспечение.</strong> Август не делали; с сентября — дефициты (остатки + перемещения от Иры).</div>
+</section>
+
+<section id="decisions">
+  <h2>Решения</h2>
+  <table>
+    <thead><tr><th>#</th><th>Решение</th></tr></thead>
+    <tbody>
+      <tr><td>1</td><td>Только три рабочих шаблона: 3P, Ozon, Wildberries; копии не трогать.</td></tr>
+      <tr><td>2</td><td>Целевой нормативный сток — 30 дней; актуализировать с ОП.</td></tr>
+      <tr><td>3</td><td>Новинки помечать как «проект»; добавлять копированием строки с формулами.</td></tr>
+      <tr><td>4</td><td>Остатки МП запрашивать вручную; после вставки убирать формулы.</td></tr>
+      <tr><td>5</td><td>При FBS упрощать перемещения (среднее 2 месяцев); стремиться к Planicum.</td></tr>
+      <tr><td>6</td><td>Заказы в текущем цикле не обновлять.</td></tr>
+      <tr><td>7</td><td>В 1С грузить через сводный файл Владимира (клиент–артикул–штуки–рубли–подвид).</td></tr>
+      <tr><td>8</td><td>Рита — FIX/дискаунтеры; Владимир — остальное + E-com-шаблон.</td></tr>
+      <tr><td>9</td><td>Мелкие МП — навести порядок при развитии направления.</td></tr>
+      <tr><td>10</td><td>Доступы к папкам E-com — довести до выдачи.</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<section id="tasks">
+  <h2>Поручения</h2>
+  <table>
+    <thead><tr><th>#</th><th>Что сделать</th><th>Кто</th><th>Срок</th></tr></thead>
+    <tbody>
+      <tr><td>1</td><td>Проверить / добиться доступов к папке E-com и шаблонам</td><td>Кому не выдали</td><td>Как можно скорее</td></tr>
+      <tr><td>2</td><td>Ежемесячно обновлять шаблоны WB / Ozon / 3P</td><td>Владимир (+ команда)</td><td>График demand (+2–3 дня)</td></tr>
+      <tr><td>3</td><td>Сводный файл и загрузка в 1С (выкупы / перемещения)</td><td>Владимир</td><td>По циклу загрузки</td></tr>
+      <tr><td>4</td><td>Сфокусировать КАМов / письмо с руководителем</td><td>Ира / уточнить</td><td>До следующего цикла</td></tr>
+      <tr><td>5</td><td>Обсудить мелкие каналы и план на 2027 с Надеждой / ОП</td><td>Команда прогноза</td><td>При старте фокуса</td></tr>
+      <tr><td>6</td><td>При необходимости — отчёт выкупов без НДС</td><td>Владелец отчёта</td><td>По запросу</td></tr>
+      <tr><td>7</td><td>С сентября — обеспечение / дефициты</td><td>Ира + аналитик E-com</td><td>Сентябрь</td></tr>
+      <tr><td>8</td><td>Переключить вспомогательные таблицы на 2026/2027</td><td>Владелец файлов</td><td>По мере перехода года</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<section id="open">
+  <h2>Открытые вопросы</h2>
+  <ol>
+    <li>Кому передана коммуникация с КАМами / ОП по E-com?</li>
+    <li>Выдан ли доступ ко всем нужным папкам (в т.ч. Форсева)?</li>
+    <li>Когда закроют вакансию по выкупам E-com?</li>
+    <li>Нужен ли формальный чек-лист ежемесячной проверки?</li>
+    <li>Переход на BI вместо Excel — на усмотрение новой команды?</li>
+    <li>Сверить цифры стратплана / WB 100 млн / 348 млн с НДС с файлами (ASR мог исказить).</li>
+  </ol>
+</section>
+
+<section id="glossary">
+  <h2>Глоссарий</h2>
+  <p class="info">Термины совещания + расшифровка искажений Whisper. Печатайте в поле поиска, чтобы отфильтровать.</p>
+  <div class="glossary-tools">
+    <input type="search" id="g-search" placeholder="Поиск по глоссарию..." aria-label="Поиск по глоссарию" autocomplete="off">
+    <span class="count" id="g-count"></span>
+  </div>
+  <ul class="g-list" id="g-list">
+    <!-- process -->
+    <li data-q="e-com ecom яком ecommerce интернет-торговля">
+      <div class="term">E-com (электронная коммерция) <span class="tag tag-proc">процесс</span></div>
+      <div class="def">Канал продаж через маркетплейсы и интернет. На совещании — отдельный контур прогнозирования (выкупы + перемещения).</div>
+      <div class="also">Whisper часто писал: «яком», «яком»</div>
+    </li>
+    <li data-q="выкуп buyback выкупы">
+      <div class="term">Выкуп <span class="tag tag-proc">процесс</span></div>
+      <div class="def">План/факт объёма, который выкупается (отгружается) на маркетплейс или под спрос канала. В E-com — ключевая часть прогноза наряду с перемещениями.</div>
+    </li>
+    <li data-q="перемещение перемещения fbs">
+      <div class="term">Перемещение <span class="tag tag-proc">процесс</span></div>
+      <div class="def">План движения товара на склады МП / под поставку. При FBS часто близко к выкупам.</div>
+    </li>
+    <li data-q="fbs fulfilment by seller фбс">
+      <div class="term">FBS (Fulfilment by Seller) <span class="tag tag-sys">схема</span></div>
+      <div class="def">Доставка клиенту со склада продавца (от «нас»). Упрощает связку выкуп = перемещение.</div>
+      <div class="also">Whisper: «фбс», «хвс»</div>
+    </li>
+    <li data-q="fbo fulfilment by operator фбо склад wb">
+      <div class="term">FBO (Fulfilment by Operator) <span class="tag tag-sys">схема</span></div>
+      <div class="def">Доставка клиенту со склада маркетплейса (например, Wildberries).</div>
+    </li>
+    <li data-q="3p third party три пи">
+      <div class="term">3P (Third Party) <span class="tag tag-sys">канал</span></div>
+      <div class="def">Один из трёх рабочих Excel-шаблонов E-com наряду с Ozon и Wildberries.</div>
+      <div class="also">Whisper: «3Пи», «три пи»</div>
+    </li>
+    <li data-q="wildberries wb валберис вайлдберриз">
+      <div class="term">Wildberries (WB) <span class="tag tag-sys">канал</span></div>
+      <div class="def">Маркетплейс; отдельный рабочий шаблон. Ориентир контроля на совещании — порядка 100 млн руб./мес (сверить с файлом).</div>
+      <div class="also">Whisper: «валберис», «вауэбрис», «валдерес»</div>
+    </li>
+    <li data-q="ozon азон">
+      <div class="term">Ozon <span class="tag tag-sys">канал</span></div>
+      <div class="def">Маркетплейс; отдельный шаблон. Часть цен тянется из куба; среднюю цену сдвигают ежемесячно.</div>
+      <div class="also">Whisper: «азон», «зон»</div>
+    </li>
+    <li data-q="кам key account manager камы">
+      <div class="term">КАМ (Key Account Manager) <span class="tag tag-proc">роль</span></div>
+      <div class="def">Менеджер по клиенту/зоне МП: ID клиента, выкупы/перемещения по своей зоне, коммуникация по цифрам.</div>
+      <div class="also">Whisper: «камы», «ком»</div>
+    </li>
+    <li data-q="наименование для прайса прайс 1с номенклатура">
+      <div class="term">Наименование для прайса <span class="tag tag-sys">1С / Excel</span></div>
+      <div class="def">Ключ сопоставления с 1С (не «дробная» номенклатура). По нему определяется артикул для загрузки плана.</div>
+      <div class="also">Whisper: «номинование для пресса/прайса»</div>
+    </li>
+    <li data-q="артикул клиента компании впр">
+      <div class="term">Артикул клиента / компании <span class="tag tag-sys">1С</span></div>
+      <div class="def">В регистре 1С: основной артикул компании и артикулы под клиента (в т.ч. под WB). В своде: если есть артикул клиента — он, иначе артикул компании.</div>
+    </li>
+    <li data-q="подвид данных база промо проект новинка">
+      <div class="term">Подвид данных <span class="tag tag-sys">Excel</span></div>
+      <div class="def">Классификация строк плана: база, промо, проект. Отдельного вида «новинка» нет — новинки ведут как проект.</div>
+    </li>
+    <li data-q="нормативный сток остаток 30 45 60 дней">
+      <div class="term">Нормативный сток <span class="tag tag-proc">метрика</span></div>
+      <div class="def">Целевой запас в днях. В шаблонах часто 45 (иногда 60); целевой ориентир команды — 30 дней. Сверх нормы — платное хранение у МП.</div>
+    </li>
+    <li data-q="стратплан оперплан stratplan 4037">
+      <div class="term">Стратплан / оперплан <span class="tag tag-proc">план</span></div>
+      <div class="def">Стратегический и операционный планы. На совещании точка контроля — стратплан «~4037» (уточнить единицы/версию в файле).</div>
+      <div class="also">Whisper: «стратплан», «тратплан», «зарплата» (ошибка ASR)</div>
+    </li>
+    <li data-q="куб bi дашборд демон planning">
+      <div class="term">Куб / дашборд <span class="tag tag-sys">аналитика</span></div>
+      <div class="def">OLAP/BI-источники (куб планирования, куб «демон»/дашборд). Используются для факта, цен, истории планов.</div>
+    </li>
+    <li data-q="planicum планикум плаником">
+      <div class="term">Planicum <span class="tag tag-sys">система</span></div>
+      <div class="def">Система планирования, куда рекомендуют переносить процесс при упрощении (особенно на FBS) вместо сложных Excel-формул.</div>
+      <div class="also">Whisper: «плаником», «планикум»</div>
+    </li>
+    <li data-q="demand потребность график подачи">
+      <div class="term">Demand / график потребности <span class="tag tag-proc">процесс</span></div>
+      <div class="def">Цикл сбора прогноза. У E-com дедлайн обычно на +2–3 дня позже основного бизнеса.</div>
+    </li>
+    <li data-q="fix discounters дискаунтеры рита">
+      <div class="term">FIX / дискаунтеры <span class="tag tag-sys">канал</span></div>
+      <div class="def">Зона ответственности Риты (Planicum); сложность — согласование каждой цифры с коллегами.</div>
+      <div class="also">Whisper: «фэйс»</div>
+    </li>
+    <li data-q="обеспечение дефицит план факт">
+      <div class="term">Обеспечение / дефицит <span class="tag tag-proc">процесс</span></div>
+      <div class="def">Сверка остатков и плана перемещений для выявления дефицитов. В августе не делали; с сентября — возобновить.</div>
+    </li>
+    <li data-q="сводный файл загрузка 1с владимир">
+      <div class="term">Сводный файл загрузки <span class="tag tag-sys">1С / Excel</span></div>
+      <div class="def">Файл Владимира: через запрос тянет WB + Ozon + 3P в один формат для загрузки в 1С (отдельно выкупы, отдельно перемещения).</div>
+    </li>
+    <li data-q="сезонность категория продажи">
+      <div class="term">Сезонность <span class="tag tag-proc">метрика</span></div>
+      <div class="def">Коэффициенты по месяцам/категориям в шаблоне; влияют на расчёт выкупов. Ответственность ОП — актуализировать при необходимости.</div>
+    </li>
+    <li data-q="ндс без ндс макаров отчёт">
+      <div class="term">Отчёт с НДС / без НДС <span class="tag tag-sys">отчётность</span></div>
+      <div class="def">Выкупы E-com сейчас собираются с НДС; просили перейти на без НДС (источник — кубы, переключается легко).</div>
+    </li>
+    <li data-q="форсева папка доступы">
+      <div class="term">Папка Форсева / доступы <span class="tag tag-sys">инфра</span></div>
+      <div class="def">Рабочие каталоги с шаблонами и запросами. На момент совещания у части участников доступа ещё не было — поручение добить выдачу.</div>
+    </li>
+    <!-- ASR helpers -->
+    <li data-q="whisper asr искажение словарь">
+      <div class="term">Как читать расшифровку Whisper <span class="tag tag-asr">ASR</span></div>
+      <div class="def">Автотекст часто путает: яком=E-com, валберис=Wildberries, азон=Ozon, плаником=Planicum, фэйс=FIX, камы=КАМы, номинование=наименование, зарплата/тратплан≈стратплан.</div>
+    </li>
+  </ul>
+</section>
+
+<section id="files" class="files">
+  <h2>Файлы в этой папке</h2>
+  <table>
+    <thead><tr><th>Файл</th><th>Назначение</th></tr></thead>
+    <tbody>
+      <tr><td><a href="protocol_ecom_full.html">protocol_ecom_full.html</a></td><td>Полный протокол встречи (рассказ Анны, без сокращений)</td></tr>
+      <tr><td><a href="protocol_ecom.html">protocol_ecom.html</a></td><td>Этот отчёт (протокол + глоссарий)</td></tr>
+      <tr><td><a href="protocol.md">protocol.md</a></td><td>Протокол в Markdown</td></tr>
+      <tr><td><a href="transcript.txt">transcript.txt</a></td><td>Полная расшифровка с таймкодами</td></tr>
+      <tr><td><a href="transcript.md">transcript.md</a></td><td>Расшифровка Markdown</td></tr>
+      <tr><td><a href="transcript.srt">transcript.srt</a></td><td>Субтитры SRT</td></tr>
+      <tr><td><a href="transcribe_meeting.py">transcribe_meeting.py</a></td><td>Скрипт Whisper (faster-whisper)</td></tr>
+    </tbody>
+  </table>
+</section>
+
+</main>
+
+<footer>
+  Папка: drafts/Meeting_Ecom_2026-08-25 · Собрано из аудио 25.08.2026
+</footer>
+
+<script>
+(function () {
+  var input = document.getElementById("g-search");
+  var list = document.getElementById("g-list");
+  var count = document.getElementById("g-count");
+  var items = Array.prototype.slice.call(list.querySelectorAll("li"));
+
+  function update() {
+    var q = (input.value || "").trim().toLowerCase();
+    var shown = 0;
+    items.forEach(function (li) {
+      var hay = (li.getAttribute("data-q") || "") + " " + li.textContent;
+      hay = hay.toLowerCase();
+      var ok = !q || hay.indexOf(q) !== -1;
+      li.classList.toggle("hidden", !ok);
+      if (ok) shown++;
+    });
+    count.textContent = shown + " из " + items.length;
+  }
+
+  input.addEventListener("input", update);
+  update();
+})();
+</script>
+</body>
+</html>
