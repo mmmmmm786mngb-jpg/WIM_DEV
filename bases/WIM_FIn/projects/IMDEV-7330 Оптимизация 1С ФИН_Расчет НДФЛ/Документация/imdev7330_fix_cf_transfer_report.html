@@ -1,0 +1,595 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>IMDEV-7330. Проверка переноса расширения IMDEV7330_Fix в базовую конфигурацию</title>
+<style>
+  :root {
+    --ok: #2f855a;
+    --ok-bg: #f0fff4;
+    --ok-br: #9ae6b4;
+    --warn: #c05621;
+    --warn-bg: #fffaf0;
+    --warn-br: #f6ad55;
+    --err: #9b2c2c;
+    --err-bg: #fff5f5;
+    --err-br: #fc8181;
+    --info: #2b6cb0;
+    --info-bg: #ebf8ff;
+    --info-br: #90cdf4;
+    --muted: #718096;
+    --line: #e2e8f0;
+    --ink: #1a202c;
+    --header: #1f2d3d;
+  }
+  * { box-sizing: border-box; }
+  body {
+    font-family: "Segoe UI", Tahoma, Arial, sans-serif;
+    margin: 0;
+    background: #f5f6f8;
+    color: var(--ink);
+    line-height: 1.55;
+  }
+  header {
+    background: var(--header);
+    color: #fff;
+    padding: 28px 0 22px 0;
+  }
+  .wrap { max-width: 1100px; margin: 0 auto; padding: 0 24px; }
+  header h1 { margin: 0 0 8px 0; font-size: 24px; font-weight: 650; }
+  header .sub { color: #b8c4d0; font-size: 14px; }
+  h2 {
+    font-size: 1.15rem;
+    margin: 2.2rem 0 0.7rem 0;
+    padding-bottom: 0.35rem;
+    border-bottom: 2px solid #17a2b8;
+  }
+  h3 { font-size: 1.02rem; margin: 1.3rem 0 0.45rem 0; }
+  p { margin: 0.55rem 0; }
+  code {
+    font-family: Consolas, "Courier New", monospace;
+    font-size: 0.88em;
+    background: #edf2f7;
+    padding: 0.05rem 0.28rem;
+    border-radius: 3px;
+  }
+  pre {
+    font-family: Consolas, "Courier New", monospace;
+    font-size: 0.8rem;
+    background: #1a202c;
+    color: #e2e8f0;
+    padding: 0.75rem 0.95rem;
+    border-radius: 6px;
+    overflow-x: auto;
+    line-height: 1.42;
+    white-space: pre;
+  }
+  pre.diff { background: #f7fafc; color: #1a202c; border: 1px solid var(--line); }
+  pre.diff .del { color: #9b2c2c; background: #fff5f5; display: block; }
+  pre.diff .add { color: #22543d; background: #f0fff4; display: block; }
+  pre.diff .ctx { color: #4a5568; display: block; }
+  pre.diff .hdr { color: #2b6cb0; font-weight: 700; display: block; }
+  .box {
+    border-radius: 8px;
+    padding: 0.85rem 1.05rem;
+    margin: 0.8rem 0;
+    border: 1px solid var(--line);
+    background: #fff;
+  }
+  .box.ok   { background: var(--ok-bg);   border-color: var(--ok-br); }
+  .box.warn { background: var(--warn-bg); border-color: var(--warn-br); }
+  .box.err  { background: var(--err-bg);  border-color: var(--err-br); }
+  .box.info { background: var(--info-bg); border-color: var(--info-br); }
+  .box p:first-child { margin-top: 0; }
+  .box p:last-child { margin-bottom: 0; }
+  .verdict {
+    display: flex;
+    gap: 1.2rem;
+    align-items: center;
+    padding: 1.1rem 1.3rem;
+    margin: 1.4rem 0 0.4rem 0;
+    border-radius: 10px;
+    background: linear-gradient(180deg, #f0fff4 0%, #e6ffed 100%);
+    border: 2px solid #68d391;
+  }
+  .verdict .mark {
+    flex: 0 0 auto;
+    width: 72px; height: 72px;
+    border-radius: 50%;
+    background: #38a169;
+    color: #fff;
+    font-size: 1.7rem;
+    font-weight: 800;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    letter-spacing: 0.02em;
+  }
+  .verdict h2 { margin: 0 0 0.25rem 0; border: none; padding: 0; color: #22543d; font-size: 1.35rem; }
+  .verdict p { margin: 0; color: #2f855a; }
+  .tag {
+    font-size: 0.74rem;
+    padding: 0.14rem 0.5rem;
+    border-radius: 4px;
+    white-space: nowrap;
+    display: inline-block;
+    font-weight: 650;
+  }
+  .tag.ok   { background: #c6f6d5; color: var(--ok); }
+  .tag.warn { background: #fbd38d; color: var(--warn); }
+  .tag.err  { background: #fed7d7; color: var(--err); }
+  .tag.info { background: #bee3f8; color: var(--info); }
+  .tag.grey { background: #e2e8f0; color: #4a5568; }
+  table { border-collapse: collapse; width: 100%; font-size: 0.88rem; margin: 0.6rem 0 1rem 0; background: #fff; }
+  th, td { border: 1px solid var(--line); padding: 0.45rem 0.6rem; text-align: left; vertical-align: top; }
+  th { background: #1f2d3d; color: #fff; font-weight: 600; }
+  tbody tr:nth-child(even) { background: #fafbfc; }
+  tr.row-ok td:first-child { border-left: 3px solid var(--ok); }
+  tr.row-warn td:first-child { border-left: 3px solid var(--warn); }
+  .stat-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 0.8rem;
+    margin: 1rem 0 1.2rem 0;
+  }
+  .stat {
+    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 0.85rem 0.9rem;
+    text-align: center;
+  }
+  .stat .val { font-size: 1.85rem; font-weight: 750; line-height: 1.1; }
+  .stat .lbl { font-size: 0.8rem; color: var(--muted); margin-top: 0.3rem; }
+  .stat.good .val { color: var(--ok); }
+  .stat.mid .val { color: var(--warn); }
+  .stat.neutral .val { color: var(--info); }
+  .path { font-family: Consolas, monospace; font-size: 0.82rem; color: #2d3748; word-break: break-all; }
+  ul, ol { padding-left: 1.3rem; margin: 0.4rem 0 0.8rem 0; }
+  li { margin-bottom: 0.28rem; }
+  .small { font-size: 0.85rem; color: var(--muted); }
+  .toc {
+    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 12px 20px;
+    margin: 16px 0 8px 0;
+  }
+  .toc a { text-decoration: none; color: #0a58ca; }
+  .toc a:hover { text-decoration: underline; }
+  .toc ol { margin: 4px 0 0 18px; }
+  .two {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.8rem;
+  }
+  .card {
+    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 0.85rem 1rem;
+  }
+  .card h3 { margin-top: 0; }
+  footer {
+    margin: 2.4rem 0 0 0;
+    padding: 16px 0 28px 0;
+    border-top: 1px solid var(--line);
+    font-size: 13px;
+    color: var(--muted);
+  }
+  @media (max-width: 800px) {
+    .stat-grid, .two { grid-template-columns: 1fr 1fr; }
+    .verdict { flex-direction: column; text-align: center; }
+  }
+  @media print {
+    body { background: #fff; }
+    header { background: #fff; color: #000; border-bottom: 2px solid #000; }
+    header .sub { color: #444; }
+    .verdict { break-inside: avoid; }
+    pre { white-space: pre-wrap; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap">
+    <h1>IMDEV-7330. Перенос расширения IMDEV7330_Fix в базовую конфигурацию</h1>
+    <div class="sub">
+      Проверка: попали ли исправления Д-1 и Д-2 из патча <code style="background:#2d3e50;color:#e2e8f0;">IMDEV7330_Fix</code>
+      в типовую конфигурацию WIM_FIn (выгрузка <code style="background:#2d3e50;color:#e2e8f0;">C:\1c\Cursor_1c\WORK\WIM_FIn\src\cf</code>).
+      Дата проверки: 31.08.2026. Версия CF: 2.8.7.5, вендор ООО «Аванкор».
+    </div>
+  </div>
+</header>
+
+<div class="wrap">
+
+<div class="verdict">
+  <div class="mark">OK</div>
+  <div>
+    <h2>Все изменения патча перенесены</h2>
+    <p>
+      Три перехватчика расширения, пять вставок кода — все найдены в базовой конфигурации.
+      Потерянных блоков нет. Расширение <code>IMDEV7330_Fix</code> после обновления базы на эту CF
+      больше не требуется.
+    </p>
+  </div>
+</div>
+
+<div class="toc">
+  <b>Содержание</b>
+  <ol>
+    <li><a href="#s1">Зачем проверяли и что такое Д-1 / Д-2</a></li>
+    <li><a href="#s2">Как проверяли</a></li>
+    <li><a href="#s3">Итог в цифрах</a></li>
+    <li><a href="#s4">Д-1. Имена методов без префикса NDFL_RDU_</a></li>
+    <li><a href="#s5">Д-2. Сброс кэша НКД при раннем выходе</a></li>
+    <li><a href="#s6">Что осталось с текстом NDFL_RDU — и это не ошибка</a></li>
+    <li><a href="#s7">Вывод и что делать дальше</a></li>
+  </ol>
+</div>
+
+<h2 id="s1">1. Зачем проверяли и что такое Д-1 / Д-2</h2>
+
+<div class="box info">
+  <p>
+    После внедрения расширения <code>NDFL_RDU</code> в типовую конфигурацию (отчёт
+    <code>imdev7330_vendor_merge_report.html</code>) в CF 2.8.7.3 остались два дефекта.
+    Их оформили замечаниями вендору (<code>imdev7330_jira_d1_d2.html</code>) и закрыли
+    патч-расширением <code>IMDEV7330_Fix</code> (исправление D-1 D-2, версия 1.0.0.1).
+  </p>
+  <p>
+    Сейчас в каталоге <code>src\cf</code> лежит конфигурация <strong>2.8.7.5</strong>.
+    Нужно убедиться, что вендор вшил оба исправления в типовую, а не оставил их только в расширении.
+  </p>
+</div>
+
+<div class="two">
+  <div class="card">
+    <h3>Д-1. Критично</h3>
+    <p>
+      В форме обработки «Отмена проведения начислений НДФЛ» остались обращения
+      к методам с префиксом <code>NDFL_RDU_</code>. В типовой таких методов нет —
+      сценарий отмены проведения падал с ошибкой «метод объекта не обнаружен».
+    </p>
+    <p class="small">Три вызова: <code>ДанныеВXML</code>, имя оркестратора фона, <code>ДанныеИзXML</code>.</p>
+  </div>
+  <div class="card">
+    <h3>Д-2. Средний</h3>
+    <p>
+      В процедуре <code>РассчитатьНДФЛ</code> сброс внешнего кэша НКД стоял только в конце.
+      Два ранних <code>Возврат</code> (не заполнены УК/клиент, пустой список портфелей)
+      обходили сброс — кэш мог «залипнуть» в параметрах сеанса.
+    </p>
+    <p class="small">Две вставки вызова <code>УстановитьВнешнийКэшНКДРасходов(Неопределено)</code>.</p>
+  </div>
+</div>
+
+<table>
+  <thead>
+    <tr>
+      <th>Источник</th>
+      <th>Путь</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Расширение-патч</td>
+      <td class="path">bases\WIM_FIn\projects\IMDEV-7330 ...\Расширения\IMDEV7330_Fix</td>
+    </tr>
+    <tr>
+      <td>Базовая конфигурация</td>
+      <td class="path">C:\1c\Cursor_1c\WORK\WIM_FIn\src\cf &nbsp; (конфигурация ДУ 2.8.7.5)</td>
+    </tr>
+    <tr>
+      <td>Объекты патча</td>
+      <td>
+        Документ <code>НачислениеНДФЛПоУправляющейКомпании</code> (модуль объекта),
+        обработка <code>ОтменаПроведенияНачисленийНДФЛ</code> (модуль формы).
+        Собственных объектов в расширении нет — только заимствование и <code>&amp;ИзменениеИКонтроль</code>.
+      </td>
+    </tr>
+  </tbody>
+</table>
+
+<h2 id="s2">2. Как проверяли</h2>
+
+<div class="box">
+  <p>Проверка сделана по исходникам XML/BSL, без запуска 1С.</p>
+  <ol>
+    <li>
+      Обзор расширения скриптом <code>cfe-diff</code> (режим A): какие объекты заимствованы
+      и какие методы перехвачены.
+    </li>
+    <li>
+      Проверка переноса (режим B): из каждого блока <code>#Вставка</code> берётся код
+      и ищется в соответствующем модуле типовой CF.
+    </li>
+    <li>
+      Ручная сверка тел процедур: читали модули CF рядом с расширением, плюс поиск
+      старых имён <code>NDFL_RDU_ДанныеВXML</code> / <code>NDFL_RDU_ДанныеИзXML</code> /
+      <code>NDFL_RDU_ОркестраторОтменыПроведенияНачисленийНДФЛ</code> — их в CF быть не должно.
+    </li>
+    <li>
+      Контроль, что целевые методы без префикса в CF существуют и экспортированы:
+      <code>ДанныеВXML</code>, <code>ДанныеИзXML</code>,
+      <code>ОркестраторОтменыПроведенияНачисленийНДФЛ</code>,
+      <code>УстановитьВнешнийКэшНКДРасходов</code>.
+    </li>
+  </ol>
+  <p class="small">
+    Статусы режима B: TRANSFERRED — код вставки найден в CF;
+    NOT_TRANSFERRED — не найден; NEEDS_REVIEW — нет блоков вставки или нет модуля в CF.
+  </p>
+</div>
+
+<h2 id="s3">3. Итог в цифрах</h2>
+
+<div class="stat-grid">
+  <div class="stat good"><div class="val">3 / 3</div><div class="lbl">перехватчика перенесены<br>(cfe-diff Mode B)</div></div>
+  <div class="stat good"><div class="val">5 / 5</div><div class="lbl">вставок #Вставка<br>найдены в типовой CF</div></div>
+  <div class="stat good"><div class="val">0</div><div class="lbl">не перенесено<br>потерянных блоков нет</div></div>
+  <div class="stat neutral"><div class="val">2.8.7.5</div><div class="lbl">версия базовой CF<br>(было замечание к 2.8.7.3)</div></div>
+</div>
+
+<table>
+  <thead>
+    <tr>
+      <th>Дефект</th>
+      <th>Объект / метод</th>
+      <th>Что должно появиться в CF</th>
+      <th>Результат</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr class="row-ok">
+      <td>Д-2</td>
+      <td>
+        Документ.НачислениеНДФЛПоУправляющейКомпании<br>
+        <code>РассчитатьНДФЛ</code>
+      </td>
+      <td>Сброс кэша НКД перед двумя ранними <code>Возврат</code></td>
+      <td><span class="tag ok">ПЕРЕНЕСЕНО</span> 2 блока</td>
+    </tr>
+    <tr class="row-ok">
+      <td>Д-1</td>
+      <td>
+        Обработка.ОтменаПроведенияНачисленийНДФЛ.Форма<br>
+        <code>ЗапуститьОтменуПроведенияНаСервере</code>
+      </td>
+      <td>
+        <code>ДанныеВXML</code> вместо <code>NDFL_RDU_ДанныеВXML</code>;<br>
+        имя оркестратора без префикса
+      </td>
+      <td><span class="tag ok">ПЕРЕНЕСЕНО</span></td>
+    </tr>
+    <tr class="row-ok">
+      <td>Д-1</td>
+      <td>
+        Обработка.ОтменаПроведенияНачисленийНДФЛ.Форма<br>
+        <code>ОбработатьИтогОтменыНаСервере</code>
+      </td>
+      <td><code>ДанныеИзXML</code> вместо <code>NDFL_RDU_ДанныеИзXML</code></td>
+      <td><span class="tag ok">ПЕРЕНЕСЕНО</span></td>
+    </tr>
+  </tbody>
+</table>
+
+<p class="small">
+  Вывод <code>cfe-diff</code> Mode B:
+  <em>Transfer check: 3 transferred, 0 not transferred, 0 needs review</em>.
+</p>
+
+<h2 id="s4">4. Д-1. Имена методов без префикса NDFL_RDU_</h2>
+
+<p>
+  <strong>Файл CF:</strong>
+  <span class="path">DataProcessors\ОтменаПроведенияНачисленийНДФЛ\Forms\Форма\Ext\Form\Module.bsl</span>
+</p>
+
+<p>
+  Раньше в трёх местах вызывались имена с префиксом расширения. В типовой эти процедуры
+  называются без <code>NDFL_RDU_</code>. Все три обращения исправлены.
+</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>Место</th>
+      <th>Было в 2.8.7.3 (ошибка)</th>
+      <th>Стало в 2.8.7.5</th>
+      <th>Строка CF</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr class="row-ok">
+      <td>Запуск фона</td>
+      <td><code>NDFL_RDU_ДанныеВXML(...)</code></td>
+      <td><code>Обработки.ФормированиеНачисленийНДФЛ.ДанныеВXML(...)</code></td>
+      <td>127</td>
+    </tr>
+    <tr class="row-ok">
+      <td>Имя процедуры ДО</td>
+      <td><code>...NDFL_RDU_ОркестраторОтменыПроведенияНачисленийНДФЛ</code></td>
+      <td><code>...ОркестраторОтменыПроведенияНачисленийНДФЛ</code></td>
+      <td>136</td>
+    </tr>
+    <tr class="row-ok">
+      <td>Разбор итога</td>
+      <td><code>NDFL_RDU_ДанныеИзXML(...)</code></td>
+      <td><code>Обработки.ФормированиеНачисленийНДФЛ.ДанныеИзXML(...)</code></td>
+      <td>194</td>
+    </tr>
+  </tbody>
+</table>
+
+<p><strong>Фрагмент CF — запуск отмены проведения (строки 125–138):</strong></p>
+<pre>ПараметрыПроцедуры = Новый Структура(
+    "ПараметрыXML",
+    Обработки.ФормированиеНачисленийНДФЛ.ДанныеВXML(ПараметрыОркестратора));
+
+...
+Возврат ДлительныеОперации.ВыполнитьВФоне(
+    "Обработки.ОтменаПроведенияНачисленийНДФЛ.ОркестраторОтменыПроведенияНачисленийНДФЛ",
+    ПараметрыПроцедуры,
+    ПараметрыВыполнения);</pre>
+
+<p><strong>Фрагмент CF — разбор итога (строка 194):</strong></p>
+<pre>Итог = Обработки.ФормированиеНачисленийНДФЛ.ДанныеИзXML(ЗначениеВХ);</pre>
+
+<div class="box ok">
+  <p>
+    <strong>Целевые методы в CF есть и экспортированы.</strong>
+    Вызовы не «висят в воздухе»:
+  </p>
+  <ul>
+    <li>
+      <code>Обработки.ФормированиеНачисленийНДФЛ.ДанныеВXML</code> /
+      <code>ДанныеИзXML</code> — модуль менеджера, строки 868 и 879.
+    </li>
+    <li>
+      <code>Обработки.ОтменаПроведенияНачисленийНДФЛ.ОркестраторОтменыПроведенияНачисленийНДФЛ</code>
+      — модуль менеджера, строка 13.
+    </li>
+  </ul>
+  <p>
+    Поиск по всей CF не нашёл ни одного вызова
+    <code>NDFL_RDU_ДанныеВXML</code>, <code>NDFL_RDU_ДанныеИзXML</code>,
+    <code>NDFL_RDU_ОркестраторОтмены...</code>. Старый сломанный код удалён.
+  </p>
+</div>
+
+<h2 id="s5">5. Д-2. Сброс кэша НКД при раннем выходе</h2>
+
+<p>
+  <strong>Файл CF:</strong>
+  <span class="path">Documents\НачислениеНДФЛПоУправляющейКомпании\Ext\ObjectModule.bsl</span>,
+  процедура <code>РассчитатьНДФЛ</code> (строки 29–89).
+</p>
+
+<p>
+  В патче перед каждым ранним <code>Возврат</code> добавлен сброс внешнего кэша.
+  В CF 2.8.7.5 обе вставки на месте. Финальный сброс в конце процедуры сохранён.
+</p>
+
+<p><strong>Сравнение (логика патча и фактический код CF):</strong></p>
+<pre class="diff"><span class="hdr">// 1. Не заполнены УК или клиент</span>
+<span class="ctx">Если Не ПроверитьЗаполнениеУКИКлиента() Тогда</span>
+<span class="add">    Документы.НачислениеНДФЛПоУправляющейКомпании.УстановитьВнешнийКэшНКДРасходов(Неопределено);  // CF стр. 32</span>
+<span class="ctx">    Возврат;</span>
+<span class="ctx">КонецЕсли;</span>
+<span class="hdr">
+// 2. Пустой список портфелей</span>
+<span class="ctx">Если СписокПортфелей.Количество() = 0 Тогда</span>
+<span class="ctx">    ОбщегоНазначенияКлиентСервер.СообщитьПользователю("Не найдены портфели для расчета");</span>
+<span class="add">    Документы.НачислениеНДФЛПоУправляющейКомпании.УстановитьВнешнийКэшНКДРасходов(Неопределено);  // CF стр. 45</span>
+<span class="ctx">    Возврат;</span>
+<span class="ctx">КонецЕсли;</span>
+<span class="hdr">
+// 3. Штатный конец процедуры — было и раньше</span>
+<span class="ctx">Документы.НачислениеНДФЛПоУправляющейКомпании.УстановитьВнешнийКэшНКДРасходов(Неопределено);  // CF стр. 87</span></pre>
+
+<div class="box ok">
+  <p>
+    Процедура <code>УстановитьВнешнийКэшНКДРасходов</code> в модуле менеджера документа
+    на месте (строка 3286). Три точки сброса в <code>РассчитатьНДФЛ</code> закрывают
+    ранние выходы и нормальное завершение. Контракт патча Д-2 выполнен.
+  </p>
+</div>
+
+<div class="box warn">
+  <p>
+    <strong>Косметика, на логику не влияет.</strong>
+    В строке 31 CF после <code>Тогда</code> есть концевые пробелы, в строке 32 —
+    смесь пробелов и табуляции. Текст вызова тот же, что в расширении.
+    На выполнение в 1С это не действует.
+  </p>
+</div>
+
+<h2 id="s6">6. Что осталось с текстом NDFL_RDU — и это не ошибка</h2>
+
+<p>
+  В форме отмены проведения префикс <code>NDFL_RDU_</code> больше не используется
+  в именах вызываемых методов. Две строки с этим текстом оставлены специально
+  (так было оговорено в замечании Д-1: «строку с ключом задания можно не трогать»).
+</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>Строка CF</th>
+      <th>Код</th>
+      <th>Зачем так</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>130</td>
+      <td><code>НаименованиеФоновогоЗадания = НСтр("ru = 'NDFL_RDU: отмена проведения начислений НДФЛ'")</code></td>
+      <td>Подпись задания в консоли фоновых. На вызов методов не влияет.</td>
+    </tr>
+    <tr>
+      <td>131</td>
+      <td><code>КлючФоновогоЗадания = "NDFL_RDU_ОтменаПров_" + ...</code></td>
+      <td>Произвольный ключ задания платформы. На работоспособность не влияет.</td>
+    </tr>
+  </tbody>
+</table>
+
+<div class="box info">
+  <p>
+    Такие же строки <code>NDFL_RDU:</code> встречаются в журнале регистрации и текстах
+    исключений оркестратора формирования / отмены проведения. Это сообщения для диагностики,
+    а не имена процедур. К объёму патча <code>IMDEV7330_Fix</code> они не относятся
+    (патч их не менял).
+  </p>
+</div>
+
+<h2 id="s7">7. Вывод и что делать дальше</h2>
+
+<div class="box ok">
+  <p><strong>Заключение.</strong> Изменения расширения <code>IMDEV7330_Fix</code> полностью
+  присутствуют в базовой конфигурации 2.8.7.5:</p>
+  <ul>
+    <li>Д-1 — три обращения к методам без префикса, целевые экспортные методы существуют;</li>
+    <li>Д-2 — сброс кэша НКД на обоих ранних <code>Возврат</code> и в конце процедуры.</li>
+  </ul>
+  <p>Потерянных вставок нет. Патч можно считать внедрённым в типовую.</p>
+</div>
+
+<ol>
+  <li>
+    После обновления рабочей / тестовой базы на CF 2.8.7.5 (или новее с этими правками)
+    расширение <code>IMDEV7330_Fix</code> снимать: оно дублирует уже вшитый код.
+  </li>
+  <li>
+    Необязательная проверка в предприятии:
+    <ul>
+      <li>
+        Д-1: открыть «Отмена проведения начислений НДФЛ», запустить на дате с проведёнными
+        начислениями — фон должен стартовать без ошибки «метод не обнаружен».
+      </li>
+      <li>
+        Д-2: вызвать расчёт документа по УК с незаполненным клиентом (ранний выход),
+        затем сразу рассчитать другой документ — суммы расходов НКД как при расчёте «с нуля».
+      </li>
+    </ul>
+  </li>
+  <li>
+    Косметику с текстом <code>NDFL_RDU</code> в наименовании и ключе фонового задания
+    трогать не обязательно.
+  </li>
+</ol>
+
+<footer>
+  Задача IMDEV-7330. Проверка исходников 31.08.2026.
+  Расширение: IMDEV7330_Fix 1.0.0.1 (Patch).
+  Конфигурация: ДУ 2.8.7.5, каталог C:\1c\Cursor_1c\WORK\WIM_FIn\src\cf.
+  Инструмент: .cursor/skills/cfe-diff (режимы A и B) и сверка модулей BSL.
+</footer>
+
+</div>
+</body>
+</html>
