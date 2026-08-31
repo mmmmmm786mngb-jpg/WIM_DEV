@@ -9,6 +9,7 @@
 | [tz_imdev8663_1.html](tz_imdev8663_1.html) | **ТЗ на разработку:** этап A + этап B, константы размеров (50/3000), расширение IM8663 |
 | [avancor_changes_tree_im8663.html](avancor_changes_tree_im8663.html) | **Для Аванкор:** пошагово что копировать/удалить/вставить в базовую CF |
 | [changes_map_im8663_1.html](changes_map_im8663_1.html) | **Карта изменений** по объектам/модулям |
+| [vendor_cf_im8663_comparison.html](vendor_cf_im8663_comparison.html) | **Сверка 31.08.2026:** перенос IM8663 в CF 1.5.29.9 (Аванкор) vs HTML/CFE |
 | [ПометкаУдаленияПлановРеглЗаДень.epf](../../Скрипты/01_background_jobs/epf_mark_plans_deleted/build/ПометкаУдаленияПлановРеглЗаДень.epf) | EPF: пометка планов регл. за день (+подчиненные) в N потоках |
 | [algorithm_bg_before_after.html](algorithm_bg_before_after.html) | Диаграмма алгоритма фоновых: было / стало, процедуры, ресурсы |
 | [test_plan_measurements_bg.html](test_plan_measurements_bg.html) | План тестирования + разбор замеров DR vs прод (`ЗамерыБыли.xlsx`) |
