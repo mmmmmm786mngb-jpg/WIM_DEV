@@ -10,6 +10,7 @@
 - [imdev7330_ndfl_uk_nkd_mass_precalc_byclient.html](imdev7330_ndfl_uk_nkd_mass_precalc_byclient.html) — массовый предрасчёт НКД по клиентам УК: кэш, перехват `РасходыПоНКДПоВидуОбращаемости`, супермножество видов в SQL (`NDFL_RDU_ВидыОбращаемостиДляМассовогоКэшаНКДУК`) и возврат среза из кэша по ссылке (`Возврат ПоКД`, без копирования таблиц).
 - [imdev7330_tz_nkd_cache_pass_by_param.html](imdev7330_tz_nkd_cache_pass_by_param.html) — ТЗ расширения `IMDEV7330_NkdParam`: цель, как меняем, дерево что вендору брать из расширения. Типовая 2.8.7.5.
 - [imdev7330_nkdparam_before_after.html](imdev7330_nkdparam_before_after.html) — было/стало: сеанс `ОбщиеЗначения` против параметра и `Перем` объекта.
+- [imdev7330_ndfl_old_vs_new2_diff.html](imdev7330_ndfl_old_vs_new2_diff.html) — сверка прогона 6 потоков по-старому vs по-новому2 (без Locks/NkdParam): портфели совпали, 624 пустых УК, один клиент Платонов.
 - [../ПрмерыОПТИМИЗАЦИИ.md](../ПрмерыОПТИМИЗАЦИИ.md) — черновик идей по тексту запроса НКД (объединение оборотов, ВТ, индексы).
 - [imdev7330_fix_cf_transfer_report.html](imdev7330_fix_cf_transfer_report.html) — проверка: исправления Д-1 и Д-2 из расширения `IMDEV7330_Fix` перенесены в базовую CF 2.8.7.5. Все 5 вставок на месте.
 

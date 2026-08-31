@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>IMDEV-7330. Сверка НДФЛ: по-старому vs по-новому2</title>
+<style>
+    body { font-family: "Segoe UI", Arial, sans-serif; line-height: 1.55; color: #212529; background: #f5f6f8; margin: 0; padding: 0 0 60px 0; }
+    .wrap { max-width: 1180px; margin: 0 auto; padding: 0 24px; }
+    header { background: #1f2d3d; color: #fff; padding: 28px 0 22px 0; margin-bottom: 28px; }
+    header h1 { margin: 0 0 8px 0; font-size: 24px; }
+    header .sub { color: #b8c4d0; font-size: 14px; }
+    h2 { font-size: 20px; margin: 32px 0 12px 0; padding-bottom: 8px; border-bottom: 2px solid #17a2b8; }
+    h3 { font-size: 16px; margin: 18px 0 8px 0; color: #1f2d3d; }
+    p { margin: 10px 0; }
+    table { width: 100%; border-collapse: collapse; background: #fff; margin: 12px 0; font-size: 13.5px; }
+    th { background: #1f2d3d; color: #fff; text-align: left; padding: 8px 10px; }
+    td { padding: 7px 10px; border-bottom: 1px solid #e3e6ea; vertical-align: top; }
+    tbody tr:nth-child(even) { background: #fafbfc; }
+    tr.ok td { background: #eefaf1; }
+    tr.bad td { background: #fdf0f1; }
+    tr.warn td { background: #fff9e6; }
+    .num { text-align: right; font-family: Consolas, monospace; white-space: nowrap; }
+    .sig { font-family: Consolas, "Courier New", monospace; font-size: 12px; }
+    code { background: #eef1f4; padding: 1px 5px; border-radius: 3px; font-family: Consolas, monospace; font-size: 13px; }
+    .box { padding: 14px 18px; border-radius: 5px; margin: 14px 0; border-left: 5px solid; }
+    .box b { display: block; margin-bottom: 6px; }
+    .in { background: #eefaf1; border-color: #28a745; }
+    .out { background: #fdf0f1; border-color: #dc3545; }
+    .warn { background: #fff9e6; border-color: #f0ad4e; }
+    .info { background: #eaf7fa; border-color: #17a2b8; }
+    .small { font-size: 13px; color: #6c757d; }
+    ul, ol { margin: 8px 0 8px 22px; }
+    li { margin: 5px 0; }
+    footer { margin-top: 36px; padding-top: 12px; border-top: 1px solid #dee2e6; font-size: 13px; color: #6c757d; }
+    .toc { background: #fff; border: 1px solid #e3e6ea; border-radius: 5px; padding: 12px 20px; margin: 16px 0; }
+    .toc a { text-decoration: none; color: #0a58ca; }
+</style>
+</head>
+<body>
+<header>
+<div class="wrap">
+    <h1>IMDEV-7330. Сверка НДФЛ: по-старому vs по-новому2</h1>
+    <div class="sub">
+        6 потоков, расширения IMDEV7330_Locks и IMDEV7330_NkdParam не подключались.
+        Выборка выгрузки 27292. Дата прогона по-новому2: 30.08.2026 23:35:37 - 31.08.2026 18:40:33, ошибок в логе 0.
+    </div>
+</div>
+</header>
+<div class="wrap">
+
+<div class="toc">
+<b>Содержание</b>
+<ol>
+<li><a href="#p0">Итог</a></li>
+<li><a href="#p1">Метод и файлы</a></li>
+<li><a href="#p2">Портфели: расхождений нет</a></li>
+<li><a href="#p3">УК без Платонова</a></li>
+<li><a href="#p3b">УК, только Платонов (итоги колонок)</a></li>
+<li><a href="#p4">Платонов Д.В. (разбор документа)</a></li>
+<li><a href="#p5">Сообщения и лог</a></li>
+<li><a href="#p6">Анализ</a></li>
+</ol>
+</div>
+
+<h2 id="p0">1. Итог</h2>
+<div class="box warn">
+<b>Вердикт</b>
+По портфелям расхождений нет: 28 431 документ, все строки и суммы совпадают.
+По УК 26 667 из 26 668 общих документов совпадают по суммам.
+Единственное налоговое расхождение - клиент <b>Платонов Дмитрий Вячеславович</b>,
+документ <code>000000000038432</code>: инвестиционный вычет +8 481.00, сумма к удержанию -1 719.
+Ещё 624 документа УК есть только в новом прогоне - все с нулевыми суммами
+(только ТЧ «Выводы» и «Общие расходы»). Налог они не меняют.
+</div>
+
+<table>
+<thead><tr><th>Контур</th><th>Было</th><th>Стало</th><th>Вывод</th></tr></thead>
+<tbody>
+<tr class="ok">
+<td>Начисление НДФЛ по портфелю</td>
+<td class="num">28 431 док. / 413 547 строк</td>
+<td class="num">28 431 / 413 547</td>
+<td>Данные идентичны. MD5 xlsx разный из-за упаковки Excel, не из-за ячеек</td>
+</tr>
+<tr class="warn">
+<td>Начисление НДФЛ по УК</td>
+<td class="num">26 668 док. / 84 056 строк</td>
+<td class="num">27 292 / 85 541</td>
+<td>+624 пустых документа; 1 документ с другими суммами (Платонов)</td>
+</tr>
+<tr class="ok">
+<td>Лог формирования (новое)</td>
+<td class="num">-</td>
+<td class="num">28 431 портф. + 27 292 УК</td>
+<td>Ошибок: 0. Числа совпадают с выгрузкой «по-новому2»</td>
+</tr>
+</tbody>
+</table>
+
+<h2 id="p1">2. Метод и файлы</h2>
+<div class="box info">
+<b>Как сравнивали</b>
+Ключ строки: табличная часть + портфель + коды дохода/вычета + ставка + все суммы (допуск 0.01).
+Отдельно: итоги колонок, суммы по номеру документа, суммы по портфелю.
+Сообщения: классификация шаблонов. Расширения Locks / NkdParam в этом прогоне не использовались.
+</div>
+<table>
+<thead><tr><th>Роль</th><th>Файл</th></tr></thead>
+<tbody>
+<tr><td>Портфели, было / стало</td><td class="sig">НДФЛ_Портфели_27292.xlsx и ..._ПоНовому2.xlsx (оба 26 018 059 байт)</td></tr>
+<tr><td>УК, было / стало</td><td class="sig">НДФЛ_Управление_27292.xlsx (6.96 МБ) и ..._ПоНовому2.xlsx (7.07 МБ)</td></tr>
+<tr><td>Сообщения</td><td class="sig">Сообщения_поСтарому_Аванкор.txt, Сообщения_поНовому2_Аванкор.txt</td></tr>
+<tr><td>Лог</td><td class="sig">Лог формирования начисдений НДФЛ_ПоНовому2.txt (старого лога в комплекте нет)</td></tr>
+</tbody>
+</table>
+
+<h2 id="p2">3. Портфели: расхождений нет</h2>
+<div class="box in">
+<b>Полное совпадение данных</b>
+28 431 документ, 413 547 строк, три ТЧ (Начисления 341 177, Удержания 56 862, ОбщиеРасходы 15 508).
+Все числовые итоги равны, в том числе сумма к удержанию 1 089 408 644 и исчисленный налог 1 231 714 768.
+Лог по-новому2: ровно 28 431 «Проведено начисление НДФЛ по портфелю».
+</div>
+<table>
+<thead><tr><th>Колонка</th><th>Было = стало</th></tr></thead>
+<tbody>
+<tr class="ok"><td>Налогооблагаемая сумма</td><td class="num">9 461 241 048.22</td></tr>
+<tr class="ok"><td>Сумма вычета</td><td class="num">28 117 530 732.98</td></tr>
+<tr class="ok"><td>Сумма дохода</td><td class="num">74 373 506 176.78</td></tr>
+<tr class="ok"><td>Сумма к удержанию</td><td class="num">1 089 408 644</td></tr>
+<tr class="ok"><td>Сумма исчисленного налога</td><td class="num">1 231 714 768</td></tr>
+<tr class="ok"><td>Ранее удержанный НДФЛ</td><td class="num">143 572 863</td></tr>
+<tr class="ok"><td>Сумма (прочие строки)</td><td class="num">822 753 611.48</td></tr>
+</tbody>
+</table>
+
+<h2 id="p3">4. УК без Платонова</h2>
+<p>
+Итоги по всем документам УК <b>кроме</b> <code>000000000038432</code> (Платонов Д.В.).
+Все числовые колонки совпадают. Разница состава: +624 пустых документа в новом прогоне (суммы 0).
+</p>
+<div class="box in">
+<b>Расхождений по суммам нет</b>
+26 667 общих документов совпадают. 624 новых пустых документа в колонки ниже не добавляют ни копейки.
+</div>
+<table>
+<thead><tr><th>Колонка</th><th>Было</th><th>Стало</th><th>Дельта</th></tr></thead>
+<tbody>
+<tr class="ok"><td>Налогооблагаемая сумма</td><td class="num">17 567 537 722.97</td><td class="num">17 567 537 722.97</td><td class="num">0</td></tr>
+<tr class="ok"><td>Сумма вычета</td><td class="num">29 761 334 992.31</td><td class="num">29 761 334 992.31</td><td class="num">0</td></tr>
+<tr class="ok"><td>Сумма дохода</td><td class="num">71 366 117 753.19</td><td class="num">71 366 117 753.19</td><td class="num">0</td></tr>
+<tr class="ok"><td>Сумма к удержанию</td><td class="num">804 801 113</td><td class="num">804 801 113</td><td class="num">0</td></tr>
+<tr class="ok"><td>Ранее удержанный НДФЛ</td><td class="num">508 462 136</td><td class="num">508 462 136</td><td class="num">0</td></tr>
+<tr class="ok"><td>Финансовый результат</td><td class="num">8 663 108 626.12</td><td class="num">8 663 108 626.12</td><td class="num">0</td></tr>
+<tr class="ok"><td>Сумма (инвествычет и пр.)</td><td class="num">255 493 069.42</td><td class="num">255 493 069.42</td><td class="num">0</td></tr>
+</tbody>
+</table>
+<table>
+<thead><tr><th>Показатель</th><th>Было</th><th>Стало</th></tr></thead>
+<tbody>
+<tr class="ok"><td>Документов с теми же суммами</td><td class="num">26 667</td><td class="num">26 667</td></tr>
+<tr class="warn"><td>Пустые УК только в новом (Выводы + Общие расходы, суммы 0)</td><td class="num">0</td><td class="num">624</td></tr>
+<tr class="ok"><td>Только в старом</td><td class="num">0</td><td class="num">0</td></tr>
+</tbody>
+</table>
+<div class="box info">
+<b>624 пустых документа - не налог</b>
+Нет начислений, удержаний и инвествычета: только «Выводы» (634 строки) и «Общие расходы» (634 строки), все числа нули.
+Старый контур такие не записывал (фильтр «нет расчётных ТЧ» / IMDEV-7330-2), новый записал.
+Имя выгрузки 27292 = 27 292 документа УК вместе с Платоновым.
+</div>
+<table>
+<thead><tr><th>ТЧ (без Платонова)</th><th>Было</th><th>Стало</th><th>Дельта</th></tr></thead>
+<tbody>
+<tr class="warn"><td>Выводы</td><td class="num">29 768</td><td class="num">30 509</td><td class="num">+741</td></tr>
+<tr class="warn"><td>Общие расходы</td><td class="num">30 953</td><td class="num">31 694</td><td class="num">+741</td></tr>
+<tr class="ok"><td>Инвестиционный вычет по портфелям</td><td class="num">490</td><td class="num">490</td><td class="num">0</td></tr>
+<tr class="ok"><td>Удержания</td><td class="num">4 894</td><td class="num">4 894</td><td class="num">0</td></tr>
+<tr class="ok"><td>Начисления</td><td class="num">17 939</td><td class="num">17 939</td><td class="num">0</td></tr>
+</tbody>
+</table>
+<p class="small">+741 Выводы / Общие расходы = 624 пустых документа плюс лишние строки выводов у части из них. Начисления и удержания без Платонова совпадают.</p>
+
+<h2 id="p3b">4.2. УК, только Платонов: итоги колонок</h2>
+<p>
+Документ <code>000000000038432</code>. Это <b>вся</b> дельта файла УК по деньгам.
+Строк ТЧ: 12 было, 15 стало. Разбор строк - в следующем разделе.
+</p>
+<table>
+<thead><tr><th>Колонка</th><th>Было</th><th>Стало</th><th>Дельта</th></tr></thead>
+<tbody>
+<tr class="warn"><td>Налогооблагаемая сумма</td><td class="num">7 655 788.30</td><td class="num">8 343 088.21</td><td class="num">+687 299.91</td></tr>
+<tr class="warn"><td>Сумма вычета</td><td class="num">42 128 269.62</td><td class="num">42 136 750.62</td><td class="num">+8 481.00</td></tr>
+<tr class="warn"><td>Сумма дохода</td><td class="num">91 628 393.60</td><td class="num">92 338 856.38</td><td class="num">+710 462.78</td></tr>
+<tr class="warn"><td>Сумма к удержанию</td><td class="num">105 052</td><td class="num">103 333</td><td class="num">-1 719</td></tr>
+<tr class="ok"><td>Ранее удержанный НДФЛ</td><td class="num">453 122</td><td class="num">453 122</td><td class="num">0</td></tr>
+<tr class="warn"><td>Финансовый результат</td><td class="num">3 345 441.69</td><td class="num">4 038 598.76</td><td class="num">+693 157.07</td></tr>
+<tr class="warn"><td>Сумма (инвествычет 618)</td><td class="num">269 252.07</td><td class="num">277 733.07</td><td class="num">+8 481.00</td></tr>
+</tbody>
+</table>
+<div class="box warn">
+<b>Как читать эти дельты</b>
+Реальный налог: инвествычет <b>+8 481</b> (ДУ 2258) и к удержанию <b>-1 719</b> (оба портфеля).
++687 тыс. базы / +710 тыс. дохода / +693 тыс. финрезультата - в основном новая строка
+Удержания 13% по ДУ 10155: те же суммы уже были в ТЧ Начисления, в итоге колонок они сложились второй раз.
+</div>
+
+<h2 id="p4">5. Платонов Д.В. - разбор документа 000000000038432</h2>
+<p>
+Документ <code>Начисление НДФЛ (по управляющей компании) 000000000038432 от 31.12.2026 23:59:59</code>.
+Портфели ДУ 2258 и ДУ 10155. Строк ТЧ: 12 было, 15 стало.
+</p>
+
+<table>
+<thead><tr><th>Показатель</th><th>Было</th><th>Стало</th><th>Дельта</th></tr></thead>
+<tbody>
+<tr class="warn"><td>Инвествычет 618 по ДУ 2258</td><td class="num">269 252.07</td><td class="num">277 733.07</td><td class="num">+8 481.00</td></tr>
+<tr class="warn"><td>Сумма к удержанию, всего по документу</td><td class="num">105 052</td><td class="num">103 333</td><td class="num">-1 719</td></tr>
+<tr><td>Удержание 15% ДУ 2258</td><td class="num">87 193</td><td class="num">83 356</td><td class="num">-3 837</td></tr>
+<tr><td>Удержание 13% ДУ 2258</td><td class="num">0 (пусто)</td><td class="num">2 410</td><td class="num">+2 410</td></tr>
+<tr><td>Удержание 15% ДУ 10155</td><td class="num">17 859</td><td class="num">17 073</td><td class="num">-786</td></tr>
+<tr><td>Удержание 13% ДУ 10155</td><td class="num">строки не было</td><td class="num">494</td><td class="num">+494</td></tr>
+</tbody>
+</table>
+
+<p>
+8 481.00 ровно уходит из налогооблагаемой суммы кодов 1530 (было 3 337 941.39, стало 3 329 460.39)
+и появляется в инвествычете 618. Это контур УКД/НКД в инвестиционном вычете
+(<code>РасходыПоНКДПоВидуОбращаемости</code> / массовый кэш НКД), не портфельный расчёт:
+выгрузка портфелей по этому клиенту не расходится.
+</p>
+
+<h3>Начисления (поле «Портфель» = ФИО клиента)</h3>
+<table>
+<thead><tr><th>Код</th><th>Ставка</th><th>Было, налог. база</th><th>Стало, налог. база</th></tr></thead>
+<tbody>
+<tr><td>1537 / 211</td><td>13%</td><td class="num">7 436.27 + 695 780.91</td><td class="num">14 870.98 (два одинаковых ряда) </td></tr>
+<tr><td>1537 / 211</td><td>15%</td><td class="num">не было</td><td class="num">-7 434.71 и 680 909.93</td></tr>
+<tr class="ok"><td>1537 нетто</td><td></td><td class="num">703 217.18</td><td class="num">703 217.18</td></tr>
+<tr class="warn"><td>1530 / 201 нетто</td><td>13%+15%</td><td class="num">3 337 941.39</td><td class="num">3 329 460.39 (-8 481)</td></tr>
+</tbody>
+</table>
+<div class="box warn">
+<b>Дубль строки</b>
+В новом документе две полностью одинаковые строки начислений 1537 / 13% на 14 870.98.
+Нетто по 1537 сходится за счёт отрицательной 15%-строки, но дубль стоит проверить вручную в форме документа.
+</div>
+
+<h2 id="p5">6. Сообщения и лог</h2>
+<table>
+<thead><tr><th>Тип</th><th>Было</th><th>Стало</th></tr></thead>
+<tbody>
+<tr class="warn"><td>Невозможно распределить НДФЛ (весь налог на первый портфель)</td><td class="num">361</td><td class="num">439</td></tr>
+<tr class="warn"><td>Граница актуальности сдвинута на 30.12.2026</td><td class="num">107</td><td class="num">0</td></tr>
+<tr><td>Перерегистрация ц/б не проведена</td><td class="num">7</td><td class="num">8</td></tr>
+</tbody>
+</table>
+
+<div class="box info">
+<b>Файл старых сообщений обрезан с начала</b>
+Старый txt начинается с клиента Гайдук (буква Г). Новый - с Абдуллаева.
+Все 361 клиент «невозможно распределить» из старого файла есть в новом.
+78 «лишних» в новом - это А-В, которых в обрезанном старом файле просто нет.
+Это не регресс расчёта.
+</div>
+<p>
+107 сообщений про границу актуальности только в старом прогоне: при проведении портфельных документов
+граница уехала на 30.12.2026. В новом прогоне таких строк нет (либо граница уже стояла после первого прогона,
+либо другой порядок записи). На суммы выгрузки портфелей это не повлияло.
+</p>
+<p>
+Непроведённые перерегистрации ц/б одни и те же (10007, 6903, МИ18227, 9990, 8190, МИ18225, 9314).
+В новом списке дополнительно <code>10005-00000001 от 06.05.2026</code>. Это входные данные, не результат расчёта НДФЛ.
+</p>
+
+<h3>Лог по-новому2</h3>
+<ul>
+<li>Интервал: 30.08.2026 23:35:37 - 31.08.2026 18:40:33 (~19 ч 5 мин), 6 потоков.</li>
+<li>Ошибок в шапке: 0. Строк «не удалось» / «не создан» нет.</li>
+<li>Проведено по портфелю: 28 431 (уникальных 28 431).</li>
+<li>Проведено по клиенту УК: 27 292 строк, уникальных ФИО 27 038 (несколько клиентов с двумя документами).</li>
+</ul>
+
+<h2 id="p6">7. Анализ</h2>
+<ol>
+<li><b>Портфельный контур здоров.</b> Массовый предрасчёт оборотов и 6 потоков не разъехались
+с эталоном «по-старому» ни на одну строку.</li>
+<li><b>624 пустых УК</b> - различие политики записи, не сумм. Имеет смысл решить, оставлять ли
+такие документы в типовой (как сейчас) или вернуть отсев «нет начислений и удержаний».</li>
+<li><b>Платонов, +8 481 инвествычет / -1 719 к удержанию</b> - единственный содержательный сдвиг.
+8 481 уходит из базы 1530 в код вычета 618. Это ровно узел НКД в инвествычете УК
+(массовый кэш / <code>РасходыПоНКДПоВидуОбращаемости</code>), который в этом прогоне ещё ходил
+через <code>ПараметрыСеанса.ОбщиеЗначения</code>. Расширение NkdParam не включали.
+Нужна ручная сверка этого клиента: эталон без кэша НКД vs с кэшем, без параллелизма.</li>
+<li><b>Дубль 1537</b> на том же документе похож на артефакт разложения 13/15, а не на второй налог:
+нетто 1537 совпадает. Всё равно открыть ТЧ начислений в 1С.</li>
+<li><b>Сообщения</b> не использовать как критерий регресса без полного старого лога:
+старый txt обрезан, граница актуальности - эффект проведения, не сумм.</li>
+</ol>
+
+<footer>
+IMDEV-7330. Скрипт: Скрипты/compare_ndfl_old_vs_new2.py.
+Сырые цифры: Документация/imdev7330_ndfl_old_vs_new2_diff.json.
+Исходники: bases/WIM_FIn/projects/IMDEV-7330 НовыеТесты.
+</footer>
+</div>
+</body>
+</html>
