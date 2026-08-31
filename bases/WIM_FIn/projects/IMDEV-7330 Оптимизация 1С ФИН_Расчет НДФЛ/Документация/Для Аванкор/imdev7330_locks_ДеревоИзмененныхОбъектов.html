@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <title>IMDEV-7330 - дерево изменяемых объектов IMDEV7330_Locks (Аванкор)</title>
+  <style>
+    :root {
+      --m1: #2b6cb0;
+      --m2: #c05621;
+      --m3: #2f855a;
+      --m4: #6b46c1;
+      --common: #4a5568;
+    }
+
+    body {
+      font-family: "Segoe UI", Tahoma, sans-serif;
+      margin: 1rem 2rem;
+      background: #fafafa;
+      color: #1a202c;
+    }
+
+    h1 {
+      font-size: 1.4rem;
+      margin-bottom: 0.4rem;
+    }
+
+    .subtitle {
+      color: #718096;
+      font-size: 0.92rem;
+      margin-bottom: 1rem;
+    }
+
+    .ref-block {
+      margin-bottom: 1rem;
+      padding: 0.75rem 1rem;
+      background: #ebf8ff;
+      border: 1px solid #90cdf4;
+      border-radius: 6px;
+      font-size: 0.9rem;
+    }
+
+    .ref-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 0.8rem;
+      margin-bottom: 1rem;
+      align-items: stretch;
+    }
+
+    .ref-card {
+      background: #ffffff;
+      border: 1px solid #e2e8f0;
+      border-radius: 6px;
+      padding: 0.75rem 0.9rem;
+      font-size: 0.9rem;
+      box-sizing: border-box;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+    }
+
+    .ref-card h2 {
+      margin: 0 0 0.45rem 0;
+      font-size: 0.98rem;
+      flex-shrink: 0;
+    }
+
+    .ref-card > p {
+      margin: 0 0 0.5rem 0;
+    }
+
+    .ref-card > p:last-child {
+      margin-bottom: 0;
+    }
+
+    .ref-card ul {
+      margin: 0 0 0.5rem 0;
+      padding-left: 1.15rem;
+    }
+
+    .ref-card ul:last-child {
+      margin-bottom: 0;
+    }
+
+    .ref-card ul li {
+      margin-bottom: 0.22rem;
+    }
+
+    .ref-card ul li:last-child {
+      margin-bottom: 0;
+    }
+
+    .ref-card .ref-lead {
+      margin-top: 0;
+    }
+
+    .vendor-note {
+      border-color: #93c5fd;
+      background: #eff6ff;
+    }
+
+    ul.tree {
+      list-style: none;
+      padding-left: 1.2rem;
+      margin: 0.2rem 0;
+    }
+
+    ul.tree ul {
+      padding-left: 1.2rem;
+      border-left: 1px solid #e2e8f0;
+      margin-left: 0.35rem;
+    }
+
+    .branch {
+      margin: 0.22rem 0;
+    }
+
+    .branch > .cap {
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      padding: 0.1rem 0.15rem;
+    }
+
+    .branch > .cap:hover {
+      background: #edf2f7;
+      border-radius: 4px;
+    }
+
+    .toggle {
+      font-size: 0.72rem;
+      color: #718096;
+      user-select: none;
+    }
+
+    .name {
+      font-weight: 600;
+    }
+
+    .leaf {
+      padding-left: 1.5rem;
+      margin: 0.14rem 0;
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      flex-wrap: wrap;
+    }
+
+    .leaf .name {
+      font-weight: 400;
+      font-family: Consolas, monospace;
+      font-size: 0.9rem;
+    }
+
+    .tag {
+      font-size: 0.74rem;
+      padding: 0.1rem 0.42rem;
+      border-radius: 4px;
+      white-space: nowrap;
+    }
+
+    .tag.m1 { background: #bee3f8; color: var(--m1); }
+    .tag.m2 { background: #fbd38d; color: var(--m2); }
+    .tag.m3 { background: #c6f6d5; color: var(--m3); }
+    .tag.m4 { background: #e9d8fd; color: var(--m4); }
+    .tag.common { background: #e2e8f0; color: var(--common); }
+
+    .legend-bug-note {
+      display: block;
+      margin-top: 0.35rem;
+      font-size: 0.82rem;
+      color: #718096;
+    }
+
+    code {
+      font-family: Consolas, monospace;
+      font-size: 0.88em;
+      background: #edf2f7;
+      padding: 0.05rem 0.28rem;
+      border-radius: 3px;
+    }
+  </style>
+</head>
+<body>
+  <div class="ref-block">
+    <strong>Вендор: Аванкор.</strong> Доработки выполняются в расширении <code>IMDEV7330_Locks</code>
+    (назначение Patch, префикс <code>IMDEV7330_Locks_</code>, метод <code>&amp;ИзменениеИКонтроль</code>).
+    После приёмки содержимое маркеров <code>#Вставка</code> / <code>#Удаление</code> и новые процедуры
+    переносятся в типовую конфигурацию 1С ФИН; расширение снимается.
+    Полный код вставок: <code>imdev7330_tz_prompt_locks_extension.html</code>, приложение А.
+  </div>
+
+  <h1>Дерево изменяемых объектов и процедур расширения IMDEV7330_Locks</h1>
+  <p class="subtitle">
+    Устойчивость параллельного формирования НДФЛ к ожиданию блокировки СУБД (SQL 1222 / HYT00).
+    Релиз базы: 1С ФИН Аванкор 2.8.7.3. Расширения <code>NDFL_RDU</code>, <code>IMDEV7330_Fix</code>,
+    <code>VTB_NDFL_Exchange</code> не затрагиваются.
+  </p>
+
+  <div class="ref-grid">
+    <div class="ref-card">
+      <h2>Как переносить из расширения</h2>
+      <p class="ref-lead">
+        Карта ниже показывает фактические точки изменения в <code>IMDEV7330_Locks</code> по объектам и процедурам.
+      </p>
+      <ul>
+        <li>Содержимое <code>#Вставка</code> вставить в тело типового метода; строки из <code>#Удаление</code> убрать.</li>
+        <li>Новые процедуры без аннотации перехвата скопировать в тот же модуль (префикс <code>IMDEV7330_Locks_</code> в типовой CF снимать).</li>
+        <li>Аннотации <code>&amp;ИзменениеИКонтроль</code> и маркеры препроцессора в типовой CF не оставлять.</li>
+        <li>После переноса снять расширение <code>IMDEV7330_Locks</code>.</li>
+      </ul>
+    </div>
+
+    <div class="ref-card vendor-note">
+      <h2>Легенда групп доработок</h2>
+      <p class="ref-lead">Шаги 1-4 из отчёта <code>imdev7330_locks_solution_analysis.html</code>, раздел 7.</p>
+      <ul>
+        <li><span class="tag m1">шаг 1</span> повтор запроса при блокировке SQL 1222 (до 3 попыток, паузы 60 и 180 с)</li>
+        <li><span class="tag m2">шаг 2</span> вариант заполнения 4 «По всем клиентам на конец периода без НДФЛ»</li>
+        <li><span class="tag m3">шаг 3</span> пауза 30 с между запусками пачек (если в пачке больше 1000 строк)</li>
+        <li><span class="tag m4">шаг 4</span> <code>ИНДЕКСИРОВАТЬ ПО</code> двух временных таблиц санкций в <code>ОбщиеОборотыТекстЗапроса</code></li>
+        <li><span class="tag common">заимствование</span> справочники только для типов реквизитов формы, кода нет</li>
+      </ul>
+      <p class="legend-bug-note">
+        В расширении пункт 4 не добавлять в ChoiceList XML: подмена поля тумблера ломает раскладку.
+        Пункт живёт в <code>СписокВыбора</code> модуля формы. В типовой CF пункт 4 можно добавить в ChoiceList самой формы.
+      </p>
+    </div>
+  </div>
+
+  <ul class="tree">
+    <li class="branch">
+      <span class="cap"><span class="toggle">[-]</span><span class="name">Расширение IMDEV7330_Locks</span><span class="tag common">Patch 1.0.0.1</span></span>
+      <ul>
+        <li class="branch">
+          <span class="cap"><span class="toggle">[-]</span><span class="name">Документ НачислениеНДФЛПоПортфелю: ObjectModule</span><span class="tag m1">шаг 1</span><span class="tag m4">шаг 4</span></span>
+          <ul>
+            <li class="leaf"><span class="name">Documents/НачислениеНДФЛПоПортфелю/Ext/ObjectModule.bsl::IMDEV7330_Locks_ОбщиеОбороты</span><span class="tag m1">повтор Выполнить()</span><span class="tag common">&amp;ИзменениеИКонтроль</span></li>
+            <li class="leaf"><span class="name">...::ЭтоОшибкаОжиданияБлокировки</span><span class="tag m1">маркеры 1222 / HYT00</span><span class="tag common">новая</span></li>
+            <li class="leaf"><span class="name">...::ВыполнитьЗапросСПовторомПриБлокировке</span><span class="tag m1">3 попытки, паузы 60/180 с</span><span class="tag common">новая</span></li>
+            <li class="leaf"><span class="name">...::IMDEV7330_Locks_ОбщиеОборотыТекстЗапроса</span><span class="tag m4">два ИНДЕКСИРОВАТЬ ПО</span><span class="tag common">&amp;ИзменениеИКонтроль</span></li>
+          </ul>
+        </li>
+
+        <li class="branch">
+          <span class="cap"><span class="toggle">[-]</span><span class="name">Обработка ФормированиеНачисленийНДФЛ: ObjectModule</span><span class="tag m2">шаг 2</span></span>
+          <ul>
+            <li class="leaf"><span class="name">DataProcessors/ФормированиеНачисленийНДФЛ/Ext/ObjectModule.bsl::IMDEV7330_Locks_ЗаполнитьДатыДокументов</span><span class="tag m2">ветка ВариантЗаполнения = 4</span><span class="tag common">&amp;ИзменениеИКонтроль</span></li>
+            <li class="leaf"><span class="name">...::ЗаполнитьПоОтсутствующимНачислениямНДФЛ</span><span class="tag m2">кандидаты варианта 2 минус пара на дату конца периода</span><span class="tag common">новая Экспорт</span></li>
+          </ul>
+        </li>
+
+        <li class="branch">
+          <span class="cap"><span class="toggle">[-]</span><span class="name">Обработка ФормированиеНачисленийНДФЛ: ManagerModule</span><span class="tag m3">шаг 3</span></span>
+          <ul>
+            <li class="leaf"><span class="name">DataProcessors/ФормированиеНачисленийНДФЛ/Ext/ManagerModule.bsl::IMDEV7330_Locks_ОркестраторФормированияНДФЛ</span><span class="tag m3">пауза 30000 мс если пачка &gt; 1000</span><span class="tag common">&amp;ИзменениеИКонтроль</span></li>
+          </ul>
+        </li>
+
+        <li class="branch">
+          <span class="cap"><span class="toggle">[-]</span><span class="name">Форма обработки: Form.xml и Form Module</span><span class="tag m2">шаг 2</span></span>
+          <ul>
+            <li class="leaf"><span class="name">Forms/Форма/Ext/Form.xml::ГруппаВариантЗаполнения</span><span class="tag m2">AlwaysHorizontal вокруг тумблера</span><span class="tag common">форма</span></li>
+            <li class="leaf"><span class="name">Forms/Форма/Ext/Form/Module.bsl::IMDEV7330_Locks_УправлениеФормой</span><span class="tag m2">видимость полей 2 или 4; оплата только 2</span><span class="tag common">&amp;ИзменениеИКонтроль</span></li>
+            <li class="leaf"><span class="name">...::IMDEV7330_Locks_ДобавитьВариантПоОтсутствующимНачислениям</span><span class="tag m2">СписокВыбора.Добавить(4, ...)</span><span class="tag common">новая</span></li>
+          </ul>
+        </li>
+
+        <li class="branch">
+          <span class="cap"><span class="toggle">[-]</span><span class="name">Справочники (только заимствование типов)</span><span class="tag common">без кода</span></span>
+          <ul>
+            <li class="leaf"><span class="name">Catalogs/БанковскиеСчета.xml</span><span class="tag common">Adopted</span></li>
+            <li class="leaf"><span class="name">Catalogs/Контрагенты.xml</span><span class="tag common">Adopted</span></li>
+            <li class="leaf"><span class="name">Catalogs/Периоды.xml</span><span class="tag common">Adopted</span></li>
+          </ul>
+        </li>
+      </ul>
+    </li>
+  </ul>
+
+  <script>
+    document.querySelectorAll(".branch > .cap").forEach(function (cap) {
+      cap.addEventListener("click", function () {
+        var ul = this.nextElementSibling;
+        if (!ul) return;
+        var toggle = this.querySelector(".toggle");
+        if (ul.style.display === "none") {
+          ul.style.display = "block";
+          if (toggle) toggle.textContent = "[-]";
+        } else {
+          ul.style.display = "none";
+          if (toggle) toggle.textContent = "[+]";
+        }
+      });
+    });
+    document.querySelectorAll(".branch > ul").forEach(function (ul) {
+      ul.style.display = "block";
+      var t = ul.previousElementSibling.querySelector(".toggle");
+      if (t) t.textContent = "[-]";
+    });
+  </script>
+</body>
+</html>
