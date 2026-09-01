@@ -1,0 +1,169 @@
+{
+  "title": "IMDEV-7330: утечка купонов в массовом НКД",
+  "properties": { "autoTitle": false, "width": 120, "height": 50 },
+  "events": { "OnCreateAtServer": "ПриСозданииНаСервере" },
+  "elements": [
+    {
+      "label": "ДекорНазначение",
+      "title": "Выберите клиента (например Платонова) и дату документа УК. Обработка найдёт купоны в его ПереводНКД, которые сам клиент не оплачивал, покажет кто из других клиентов их оплатил, и сравнит расходы НКД: запрос только по клиенту против запроса вместе с этими партнёрами."
+    },
+    {
+      "group": "alwaysHorizontal",
+      "name": "ГруппаПараметры",
+      "children": [
+        { "input": "Клиент", "path": "Клиент", "title": "Клиент", "choiceButton": true, "clearButton": true, "markIncomplete": true, "autoMaxWidth": false, "maxWidth": 40 },
+        { "input": "ДатаРасчета", "path": "ДатаРасчета", "title": "Дата", "markIncomplete": true }
+      ]
+    },
+    {
+      "group": "alwaysHorizontal",
+      "name": "ГруппаИтоги",
+      "showTitle": true,
+      "title": "Итоги ПоРегистраторам (как в инвестиционном вычете УКД)",
+      "children": [
+        { "input": "СтрокОдин", "path": "СтрокОдин", "title": "Строк (один)", "readOnly": true },
+        { "input": "СтрокМассовый", "path": "СтрокМассовый", "title": "Строк (с партнёрами)", "readOnly": true },
+        { "input": "СуммаМодулейОдин", "path": "СуммаМодулейОдин", "title": "Сумма |С| один", "readOnly": true },
+        { "input": "СуммаМодулейМассовый", "path": "СуммаМодулейМассовый", "title": "Сумма |С| с партнёрами", "readOnly": true },
+        { "input": "ДельтаМодулей", "path": "ДельтаМодулей", "title": "Дельта |С|", "readOnly": true }
+      ]
+    },
+    {
+      "input": "Вердикт",
+      "path": "Вердикт",
+      "title": "Вердикт",
+      "multiLine": true,
+      "height": 6,
+      "readOnly": true,
+      "autoMaxWidth": false
+    },
+    {
+      "pages": "Страницы",
+      "pagesRepresentation": "TabsOnTop",
+      "children": [
+        {
+          "page": "СтраницаПартнеры",
+          "title": "Клиенты-партнёры",
+          "children": [
+            {
+              "table": "Партнеры",
+              "path": "Партнеры",
+              "changeRowSet": false,
+              "changeRowOrder": false,
+              "height": 10,
+              "commandBarLocation": "None",
+              "columns": [
+                { "input": "ПартнерыКлиент", "path": "Партнеры.Клиент", "title": "Клиент", "readOnly": true },
+                { "input": "ПартнерыКупон", "path": "Партнеры.Купон", "title": "Купон", "readOnly": true },
+                { "input": "ПартнерыОблигация", "path": "Партнеры.Облигация", "title": "Облигация", "readOnly": true },
+                { "input": "ПартнерыСуммаОплаты", "path": "Партнеры.СуммаОплаты", "title": "Оплата купона", "readOnly": true }
+              ]
+            }
+          ]
+        },
+        {
+          "page": "СтраницаЛатентные",
+          "title": "Латентные купоны клиента",
+          "children": [
+            {
+              "table": "ЛатентныеКупоны",
+              "path": "ЛатентныеКупоны",
+              "changeRowSet": false,
+              "changeRowOrder": false,
+              "height": 10,
+              "commandBarLocation": "None",
+              "columns": [
+                { "input": "ЛатентныеКупон", "path": "ЛатентныеКупоны.Купон", "title": "Купон", "readOnly": true },
+                { "input": "ЛатентныеВидСвязи", "path": "ЛатентныеКупоны.ВидСвязи", "title": "КорСубконто", "readOnly": true },
+                { "input": "ЛатентныеРегистратор", "path": "ЛатентныеКупоны.Регистратор", "title": "Регистратор", "readOnly": true },
+                { "input": "ЛатентныеАктив", "path": "ЛатентныеКупоны.Актив", "title": "Актив", "readOnly": true },
+                { "input": "ЛатентныеПартия", "path": "ЛатентныеКупоны.Партия", "title": "Партия", "readOnly": true },
+                { "input": "ЛатентныеСумма", "path": "ЛатентныеКупоны.СуммаОборотДт", "title": "Сумма Дт", "readOnly": true }
+              ]
+            }
+          ]
+        },
+        {
+          "page": "СтраницаЛишние",
+          "title": "Лишние / пропавшие строки НКД",
+          "children": [
+            {
+              "table": "ЛишниеСтроки",
+              "path": "ЛишниеСтроки",
+              "changeRowSet": false,
+              "changeRowOrder": false,
+              "height": 10,
+              "commandBarLocation": "None",
+              "columns": [
+                { "input": "ЛишниеВид", "path": "ЛишниеСтроки.ВидРасхождения", "title": "Вид", "readOnly": true },
+                { "input": "ЛишниеАктив", "path": "ЛишниеСтроки.Актив", "title": "Актив", "readOnly": true },
+                { "input": "ЛишниеПартия", "path": "ЛишниеСтроки.Партия", "title": "Партия", "readOnly": true },
+                { "input": "ЛишниеРегистратор", "path": "ЛишниеСтроки.Регистратор", "title": "Регистратор", "readOnly": true },
+                { "input": "ЛишниеПериод", "path": "ЛишниеСтроки.Период", "title": "Период", "readOnly": true },
+                { "input": "ЛишниеСуммаОдин", "path": "ЛишниеСтроки.СуммаОдин", "title": "Сумма один", "readOnly": true },
+                { "input": "ЛишниеСуммаМасс", "path": "ЛишниеСтроки.СуммаМассовый", "title": "Сумма с партнёрами", "readOnly": true }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "autoCmdBar": "ФормаКоманднаяПанель",
+      "autofill": false,
+      "children": [
+        { "button": "НайтиУтечку", "command": "НайтиУтечку", "defaultButton": true },
+        { "button": "Закрыть", "stdCommand": "Close" }
+      ]
+    }
+  ],
+  "attributes": [
+    { "name": "Объект", "type": "ExternalDataProcessorObject.IMDEV7330_DiagNkdCouponLeak", "main": true },
+    { "name": "Клиент", "type": "CatalogRef.Контрагенты" },
+    { "name": "ДатаРасчета", "type": "dateTime" },
+    { "name": "Вердикт", "type": "string" },
+    { "name": "СтрокОдин", "type": "decimal(10,0)" },
+    { "name": "СтрокМассовый", "type": "decimal(10,0)" },
+    { "name": "СуммаМодулейОдин", "type": "decimal(15,2)" },
+    { "name": "СуммаМодулейМассовый", "type": "decimal(15,2)" },
+    { "name": "ДельтаМодулей", "type": "decimal(15,2)" },
+    {
+      "name": "Партнеры",
+      "type": "ValueTable",
+      "columns": [
+        { "name": "Клиент", "type": "CatalogRef.Контрагенты" },
+        { "name": "Купон", "type": "string" },
+        { "name": "Облигация", "type": "string" },
+        { "name": "СуммаОплаты", "type": "decimal(15,2)" }
+      ]
+    },
+    {
+      "name": "ЛатентныеКупоны",
+      "type": "ValueTable",
+      "columns": [
+        { "name": "Купон", "type": "string" },
+        { "name": "ВидСвязи", "type": "string(20)" },
+        { "name": "Регистратор", "type": "string" },
+        { "name": "Актив", "type": "string" },
+        { "name": "Партия", "type": "string" },
+        { "name": "СуммаОборотДт", "type": "decimal(15,2)" }
+      ]
+    },
+    {
+      "name": "ЛишниеСтроки",
+      "type": "ValueTable",
+      "columns": [
+        { "name": "ВидРасхождения", "type": "string(30)" },
+        { "name": "Актив", "type": "string" },
+        { "name": "Партия", "type": "string" },
+        { "name": "Регистратор", "type": "string" },
+        { "name": "Период", "type": "dateTime" },
+        { "name": "СуммаОдин", "type": "decimal(15,2)" },
+        { "name": "СуммаМассовый", "type": "decimal(15,2)" }
+      ]
+    }
+  ],
+  "commands": [
+    { "name": "НайтиУтечку", "action": "НайтиУтечку", "title": "Найти утечку" }
+  ]
+}
