@@ -15,7 +15,6 @@
 			<Button name="НайтиУтечку" id="1">
 				<Type>CommandBarButton</Type>
 				<CommandName>Form.Command.НайтиУтечку</CommandName>
-				<DefaultButton>true</DefaultButton>
 				<ExtendedTooltip name="НайтиУтечкуРасширеннаяПодсказка" id="2"/>
 			</Button>
 			<Button name="СравнитьСПачкойУК" id="3">
@@ -23,10 +22,16 @@
 				<CommandName>Form.Command.СравнитьСПачкойУК</CommandName>
 				<ExtendedTooltip name="СравнитьСПачкойУКРасширеннаяПодсказка" id="4"/>
 			</Button>
-			<Button name="Закрыть" id="5">
+			<Button name="СравнитьЗаполнитьVsОдин" id="5">
+				<Type>CommandBarButton</Type>
+				<CommandName>Form.Command.СравнитьЗаполнитьVsОдин</CommandName>
+				<DefaultButton>true</DefaultButton>
+				<ExtendedTooltip name="СравнитьЗаполнитьVsОдинРасширеннаяПодсказка" id="6"/>
+			</Button>
+			<Button name="Закрыть" id="7">
 				<Type>CommandBarButton</Type>
 				<CommandName>Form.StandardCommand.Close</CommandName>
-				<ExtendedTooltip name="ЗакрытьРасширеннаяПодсказка" id="6"/>
+				<ExtendedTooltip name="ЗакрытьРасширеннаяПодсказка" id="8"/>
 			</Button>
 		</ChildItems>
 	</AutoCommandBar>
@@ -34,21 +39,21 @@
 		<Event name="OnCreateAtServer">ПриСозданииНаСервере</Event>
 	</Events>
 	<ChildItems>
-		<LabelDecoration name="ДекорНазначение" id="7">
+		<LabelDecoration name="ДекорНазначение" id="9">
 			<Title formatted="false">
 				<v8:item>
 					<v8:lang>ru</v8:lang>
-					<v8:content>Выберите клиента (например Платонова) и дату документа УК. Обработка найдёт купоны в его ПереводНКД, которые сам клиент не оплачивал, покажет кто из других клиентов их оплатил, и сравнит расходы НКД: запрос только по клиенту против запроса вместе с этими партнёрами.</v8:content>
+					<v8:content>Клиент на форме — кого вырезать из общего запроса. В «Заполнить» он не подставляется (иначе в массиве останется один человек). Период и вариант — как на форме «Формирование начислений НДФЛ».</v8:content>
 				</v8:item>
 			</Title>
-			<ContextMenu name="ДекорНазначениеКонтекстноеМеню" id="8"/>
-			<ExtendedTooltip name="ДекорНазначениеРасширеннаяПодсказка" id="9"/>
+			<ContextMenu name="ДекорНазначениеКонтекстноеМеню" id="10"/>
+			<ExtendedTooltip name="ДекорНазначениеРасширеннаяПодсказка" id="11"/>
 		</LabelDecoration>
-		<UsualGroup name="ГруппаПараметры" id="10">
+		<UsualGroup name="ГруппаПараметры" id="12">
 			<Group>AlwaysHorizontal</Group>
-			<ExtendedTooltip name="ГруппаПараметрыРасширеннаяПодсказка" id="11"/>
+			<ExtendedTooltip name="ГруппаПараметрыРасширеннаяПодсказка" id="13"/>
 			<ChildItems>
-				<InputField name="Клиент" id="12">
+				<InputField name="Клиент" id="14">
 					<DataPath>Клиент</DataPath>
 					<Title>
 						<v8:item>
@@ -61,24 +66,133 @@
 					<AutoMarkIncomplete>true</AutoMarkIncomplete>
 					<AutoMaxWidth>false</AutoMaxWidth>
 					<MaxWidth>40</MaxWidth>
-					<ContextMenu name="КлиентКонтекстноеМеню" id="13"/>
-					<ExtendedTooltip name="КлиентРасширеннаяПодсказка" id="14"/>
+					<ContextMenu name="КлиентКонтекстноеМеню" id="15"/>
+					<ExtendedTooltip name="КлиентРасширеннаяПодсказка" id="16"/>
 				</InputField>
-				<InputField name="ДатаРасчета" id="15">
+				<InputField name="ДатаРасчета" id="17">
 					<DataPath>ДатаРасчета</DataPath>
 					<Title>
 						<v8:item>
 							<v8:lang>ru</v8:lang>
-							<v8:content>Дата</v8:content>
+							<v8:content>Дата среза</v8:content>
 						</v8:item>
 					</Title>
 					<AutoMarkIncomplete>true</AutoMarkIncomplete>
-					<ContextMenu name="ДатаРасчетаКонтекстноеМеню" id="16"/>
-					<ExtendedTooltip name="ДатаРасчетаРасширеннаяПодсказка" id="17"/>
+					<ContextMenu name="ДатаРасчетаКонтекстноеМеню" id="18"/>
+					<ExtendedTooltip name="ДатаРасчетаРасширеннаяПодсказка" id="19"/>
 				</InputField>
 			</ChildItems>
 		</UsualGroup>
-		<UsualGroup name="ГруппаИтоги" id="18">
+		<UsualGroup name="ГруппаЗаполнить" id="20">
+			<Title>
+				<v8:item>
+					<v8:lang>ru</v8:lang>
+					<v8:content>Параметры Заполнить (как в формировании НДФЛ)</v8:content>
+				</v8:item>
+			</Title>
+			<Group>Vertical</Group>
+			<ShowTitle>true</ShowTitle>
+			<ExtendedTooltip name="ГруппаЗаполнитьРасширеннаяПодсказка" id="21"/>
+			<ChildItems>
+				<UsualGroup name="ГруппаЗаполнитьСтрока1" id="22">
+					<Group>AlwaysHorizontal</Group>
+					<ExtendedTooltip name="ГруппаЗаполнитьСтрока1РасширеннаяПодсказка" id="23"/>
+					<ChildItems>
+						<InputField name="ВариантЗаполнения" id="24">
+							<DataPath>ВариантЗаполнения</DataPath>
+							<Title>
+								<v8:item>
+									<v8:lang>ru</v8:lang>
+									<v8:content>Вариант (0/1/2/3)</v8:content>
+								</v8:item>
+							</Title>
+							<SpinButton>true</SpinButton>
+							<ContextMenu name="ВариантЗаполненияКонтекстноеМеню" id="25"/>
+							<ExtendedTooltip name="ВариантЗаполненияРасширеннаяПодсказка" id="26"/>
+						</InputField>
+						<PeriodField name="ПериодЗаполнения" id="27">
+							<DataPath>ПериодЗаполнения</DataPath>
+							<Title>
+								<v8:item>
+									<v8:lang>ru</v8:lang>
+									<v8:content>Период</v8:content>
+								</v8:item>
+							</Title>
+							<ContextMenu name="ПериодЗаполненияКонтекстноеМеню" id="28"/>
+							<ExtendedTooltip name="ПериодЗаполненияРасширеннаяПодсказка" id="29"/>
+						</PeriodField>
+						<InputField name="УправляющаяКомпания" id="30">
+							<DataPath>УправляющаяКомпания</DataPath>
+							<Title>
+								<v8:item>
+									<v8:lang>ru</v8:lang>
+									<v8:content>УК</v8:content>
+								</v8:item>
+							</Title>
+							<ChoiceButton>true</ChoiceButton>
+							<ClearButton>true</ClearButton>
+							<ContextMenu name="УправляющаяКомпанияКонтекстноеМеню" id="31"/>
+							<ExtendedTooltip name="УправляющаяКомпанияРасширеннаяПодсказка" id="32"/>
+						</InputField>
+					</ChildItems>
+				</UsualGroup>
+				<UsualGroup name="ГруппаЗаполнитьСтрока2" id="33">
+					<Group>AlwaysHorizontal</Group>
+					<ExtendedTooltip name="ГруппаЗаполнитьСтрока2РасширеннаяПодсказка" id="34"/>
+					<ChildItems>
+						<CheckBoxField name="НеСоздаватьДокументыПоКлиентамБезЦБ" id="35">
+							<DataPath>НеСоздаватьДокументыПоКлиентамБезЦБ</DataPath>
+							<Title>
+								<v8:item>
+									<v8:lang>ru</v8:lang>
+									<v8:content>Не создавать без ЦБ</v8:content>
+								</v8:item>
+							</Title>
+							<CheckBoxType>Auto</CheckBoxType>
+							<TitleLocation>Right</TitleLocation>
+							<ContextMenu name="НеСоздаватьДокументыПоКлиентамБезЦБКонтекстноеМеню" id="36"/>
+							<ExtendedTooltip name="НеСоздаватьДокументыПоКлиентамБезЦБРасширеннаяПодсказка" id="37"/>
+						</CheckBoxField>
+						<CheckBoxField name="ФормироватьНачисленияТолькоПоПортфелямСДвижениямиПоНДФЛ" id="38">
+							<DataPath>ФормироватьНачисленияТолькоПоПортфелямСДвижениямиПоНДФЛ</DataPath>
+							<Title>
+								<v8:item>
+									<v8:lang>ru</v8:lang>
+									<v8:content>Только портфели с движениями НДФЛ</v8:content>
+								</v8:item>
+							</Title>
+							<CheckBoxType>Auto</CheckBoxType>
+							<TitleLocation>Right</TitleLocation>
+							<ContextMenu name="ФормироватьНачисленияТолькоПоПортфелямСДвижениямиПоНДФЛКонтекстноеМеню" id="39"/>
+							<ExtendedTooltip name="ФормироватьНачисленияТолькоПоПортфелямСДвижениямиПоНДФЛРасширеннаяПодсказка" id="40"/>
+						</CheckBoxField>
+						<InputField name="НомерСтрокиС" id="41">
+							<DataPath>НомерСтрокиС</DataPath>
+							<Title>
+								<v8:item>
+									<v8:lang>ru</v8:lang>
+									<v8:content>Строка с</v8:content>
+								</v8:item>
+							</Title>
+							<ContextMenu name="НомерСтрокиСКонтекстноеМеню" id="42"/>
+							<ExtendedTooltip name="НомерСтрокиСРасширеннаяПодсказка" id="43"/>
+						</InputField>
+						<InputField name="НомерСтрокиПо" id="44">
+							<DataPath>НомерСтрокиПо</DataPath>
+							<Title>
+								<v8:item>
+									<v8:lang>ru</v8:lang>
+									<v8:content>Строка по</v8:content>
+								</v8:item>
+							</Title>
+							<ContextMenu name="НомерСтрокиПоКонтекстноеМеню" id="45"/>
+							<ExtendedTooltip name="НомерСтрокиПоРасширеннаяПодсказка" id="46"/>
+						</InputField>
+					</ChildItems>
+				</UsualGroup>
+			</ChildItems>
+		</UsualGroup>
+		<UsualGroup name="ГруппаИтоги" id="47">
 			<Title>
 				<v8:item>
 					<v8:lang>ru</v8:lang>
@@ -87,9 +201,9 @@
 			</Title>
 			<Group>AlwaysHorizontal</Group>
 			<ShowTitle>true</ShowTitle>
-			<ExtendedTooltip name="ГруппаИтогиРасширеннаяПодсказка" id="19"/>
+			<ExtendedTooltip name="ГруппаИтогиРасширеннаяПодсказка" id="48"/>
 			<ChildItems>
-				<InputField name="СтрокОдин" id="20">
+				<InputField name="СтрокОдин" id="49">
 					<DataPath>СтрокОдин</DataPath>
 					<Title>
 						<v8:item>
@@ -98,10 +212,10 @@
 						</v8:item>
 					</Title>
 					<ReadOnly>true</ReadOnly>
-					<ContextMenu name="СтрокОдинКонтекстноеМеню" id="21"/>
-					<ExtendedTooltip name="СтрокОдинРасширеннаяПодсказка" id="22"/>
+					<ContextMenu name="СтрокОдинКонтекстноеМеню" id="50"/>
+					<ExtendedTooltip name="СтрокОдинРасширеннаяПодсказка" id="51"/>
 				</InputField>
-				<InputField name="СтрокМассовый" id="23">
+				<InputField name="СтрокМассовый" id="52">
 					<DataPath>СтрокМассовый</DataPath>
 					<Title>
 						<v8:item>
@@ -110,10 +224,10 @@
 						</v8:item>
 					</Title>
 					<ReadOnly>true</ReadOnly>
-					<ContextMenu name="СтрокМассовыйКонтекстноеМеню" id="24"/>
-					<ExtendedTooltip name="СтрокМассовыйРасширеннаяПодсказка" id="25"/>
+					<ContextMenu name="СтрокМассовыйКонтекстноеМеню" id="53"/>
+					<ExtendedTooltip name="СтрокМассовыйРасширеннаяПодсказка" id="54"/>
 				</InputField>
-				<InputField name="СуммаМодулейОдин" id="26">
+				<InputField name="СуммаМодулейОдин" id="55">
 					<DataPath>СуммаМодулейОдин</DataPath>
 					<Title>
 						<v8:item>
@@ -122,10 +236,10 @@
 						</v8:item>
 					</Title>
 					<ReadOnly>true</ReadOnly>
-					<ContextMenu name="СуммаМодулейОдинКонтекстноеМеню" id="27"/>
-					<ExtendedTooltip name="СуммаМодулейОдинРасширеннаяПодсказка" id="28"/>
+					<ContextMenu name="СуммаМодулейОдинКонтекстноеМеню" id="56"/>
+					<ExtendedTooltip name="СуммаМодулейОдинРасширеннаяПодсказка" id="57"/>
 				</InputField>
-				<InputField name="СуммаМодулейМассовый" id="29">
+				<InputField name="СуммаМодулейМассовый" id="58">
 					<DataPath>СуммаМодулейМассовый</DataPath>
 					<Title>
 						<v8:item>
@@ -134,10 +248,10 @@
 						</v8:item>
 					</Title>
 					<ReadOnly>true</ReadOnly>
-					<ContextMenu name="СуммаМодулейМассовыйКонтекстноеМеню" id="30"/>
-					<ExtendedTooltip name="СуммаМодулейМассовыйРасширеннаяПодсказка" id="31"/>
+					<ContextMenu name="СуммаМодулейМассовыйКонтекстноеМеню" id="59"/>
+					<ExtendedTooltip name="СуммаМодулейМассовыйРасширеннаяПодсказка" id="60"/>
 				</InputField>
-				<InputField name="ДельтаМодулей" id="32">
+				<InputField name="ДельтаМодулей" id="61">
 					<DataPath>ДельтаМодулей</DataPath>
 					<Title>
 						<v8:item>
@@ -146,10 +260,10 @@
 						</v8:item>
 					</Title>
 					<ReadOnly>true</ReadOnly>
-					<ContextMenu name="ДельтаМодулейКонтекстноеМеню" id="33"/>
-					<ExtendedTooltip name="ДельтаМодулейРасширеннаяПодсказка" id="34"/>
+					<ContextMenu name="ДельтаМодулейКонтекстноеМеню" id="62"/>
+					<ExtendedTooltip name="ДельтаМодулейРасширеннаяПодсказка" id="63"/>
 				</InputField>
-				<InputField name="КлиентовВСравнении" id="35">
+				<InputField name="КлиентовВСравнении" id="64">
 					<DataPath>КлиентовВСравнении</DataPath>
 					<Title>
 						<v8:item>
@@ -158,12 +272,12 @@
 						</v8:item>
 					</Title>
 					<ReadOnly>true</ReadOnly>
-					<ContextMenu name="КлиентовВСравненииКонтекстноеМеню" id="36"/>
-					<ExtendedTooltip name="КлиентовВСравненииРасширеннаяПодсказка" id="37"/>
+					<ContextMenu name="КлиентовВСравненииКонтекстноеМеню" id="65"/>
+					<ExtendedTooltip name="КлиентовВСравненииРасширеннаяПодсказка" id="66"/>
 				</InputField>
 			</ChildItems>
 		</UsualGroup>
-		<InputField name="Вердикт" id="38">
+		<InputField name="Вердикт" id="67">
 			<DataPath>Вердикт</DataPath>
 			<Title>
 				<v8:item>
@@ -175,57 +289,57 @@
 			<MultiLine>true</MultiLine>
 			<AutoMaxWidth>false</AutoMaxWidth>
 			<Height>6</Height>
-			<ContextMenu name="ВердиктКонтекстноеМеню" id="39"/>
-			<ExtendedTooltip name="ВердиктРасширеннаяПодсказка" id="40"/>
+			<ContextMenu name="ВердиктКонтекстноеМеню" id="68"/>
+			<ExtendedTooltip name="ВердиктРасширеннаяПодсказка" id="69"/>
 		</InputField>
-		<Pages name="Страницы" id="41">
+		<Pages name="Страницы" id="70">
 			<PagesRepresentation>TabsOnTop</PagesRepresentation>
-			<ExtendedTooltip name="СтраницыРасширеннаяПодсказка" id="42"/>
+			<ExtendedTooltip name="СтраницыРасширеннаяПодсказка" id="71"/>
 			<ChildItems>
-				<Page name="СтраницаПартнеры" id="43">
+				<Page name="СтраницаПартнеры" id="72">
 					<Title>
 						<v8:item>
 							<v8:lang>ru</v8:lang>
 							<v8:content>Клиенты-партнёры</v8:content>
 						</v8:item>
 					</Title>
-					<ExtendedTooltip name="СтраницаПартнерыРасширеннаяПодсказка" id="44"/>
+					<ExtendedTooltip name="СтраницаПартнерыРасширеннаяПодсказка" id="73"/>
 					<ChildItems>
-						<Table name="Партнеры" id="45">
+						<Table name="Партнеры" id="74">
 							<DataPath>Партнеры</DataPath>
 							<ChangeRowSet>false</ChangeRowSet>
 							<ChangeRowOrder>false</ChangeRowOrder>
 							<CommandBarLocation>None</CommandBarLocation>
 							<Height>10</Height>
-							<ContextMenu name="ПартнерыКонтекстноеМеню" id="46"/>
-							<AutoCommandBar name="ПартнерыКоманднаяПанель" id="47"/>
-							<ExtendedTooltip name="ПартнерыРасширеннаяПодсказка" id="48"/>
-							<SearchStringAddition name="ПартнерыСтрокаПоиска" id="49">
+							<ContextMenu name="ПартнерыКонтекстноеМеню" id="75"/>
+							<AutoCommandBar name="ПартнерыКоманднаяПанель" id="76"/>
+							<ExtendedTooltip name="ПартнерыРасширеннаяПодсказка" id="77"/>
+							<SearchStringAddition name="ПартнерыСтрокаПоиска" id="78">
 								<AdditionSource>
 									<Item>Партнеры</Item>
 									<Type>SearchStringRepresentation</Type>
 								</AdditionSource>
-								<ContextMenu name="ПартнерыСтрокаПоискаКонтекстноеМеню" id="50"/>
-								<ExtendedTooltip name="ПартнерыСтрокаПоискаРасширеннаяПодсказка" id="51"/>
+								<ContextMenu name="ПартнерыСтрокаПоискаКонтекстноеМеню" id="79"/>
+								<ExtendedTooltip name="ПартнерыСтрокаПоискаРасширеннаяПодсказка" id="80"/>
 							</SearchStringAddition>
-							<ViewStatusAddition name="ПартнерыСостояниеПросмотра" id="52">
+							<ViewStatusAddition name="ПартнерыСостояниеПросмотра" id="81">
 								<AdditionSource>
 									<Item>Партнеры</Item>
 									<Type>ViewStatusRepresentation</Type>
 								</AdditionSource>
-								<ContextMenu name="ПартнерыСостояниеПросмотраКонтекстноеМеню" id="53"/>
-								<ExtendedTooltip name="ПартнерыСостояниеПросмотраРасширеннаяПодсказка" id="54"/>
+								<ContextMenu name="ПартнерыСостояниеПросмотраКонтекстноеМеню" id="82"/>
+								<ExtendedTooltip name="ПартнерыСостояниеПросмотраРасширеннаяПодсказка" id="83"/>
 							</ViewStatusAddition>
-							<SearchControlAddition name="ПартнерыУправлениеПоиском" id="55">
+							<SearchControlAddition name="ПартнерыУправлениеПоиском" id="84">
 								<AdditionSource>
 									<Item>Партнеры</Item>
 									<Type>SearchControl</Type>
 								</AdditionSource>
-								<ContextMenu name="ПартнерыУправлениеПоискомКонтекстноеМеню" id="56"/>
-								<ExtendedTooltip name="ПартнерыУправлениеПоискомРасширеннаяПодсказка" id="57"/>
+								<ContextMenu name="ПартнерыУправлениеПоискомКонтекстноеМеню" id="85"/>
+								<ExtendedTooltip name="ПартнерыУправлениеПоискомРасширеннаяПодсказка" id="86"/>
 							</SearchControlAddition>
 							<ChildItems>
-								<InputField name="ПартнерыКлиент" id="58">
+								<InputField name="ПартнерыКлиент" id="87">
 									<DataPath>Партнеры.Клиент</DataPath>
 									<Title>
 										<v8:item>
@@ -234,10 +348,10 @@
 										</v8:item>
 									</Title>
 									<ReadOnly>true</ReadOnly>
-									<ContextMenu name="ПартнерыКлиентКонтекстноеМеню" id="59"/>
-									<ExtendedTooltip name="ПартнерыКлиентРасширеннаяПодсказка" id="60"/>
+									<ContextMenu name="ПартнерыКлиентКонтекстноеМеню" id="88"/>
+									<ExtendedTooltip name="ПартнерыКлиентРасширеннаяПодсказка" id="89"/>
 								</InputField>
-								<InputField name="ПартнерыКупон" id="61">
+								<InputField name="ПартнерыКупон" id="90">
 									<DataPath>Партнеры.Купон</DataPath>
 									<Title>
 										<v8:item>
@@ -246,10 +360,10 @@
 										</v8:item>
 									</Title>
 									<ReadOnly>true</ReadOnly>
-									<ContextMenu name="ПартнерыКупонКонтекстноеМеню" id="62"/>
-									<ExtendedTooltip name="ПартнерыКупонРасширеннаяПодсказка" id="63"/>
+									<ContextMenu name="ПартнерыКупонКонтекстноеМеню" id="91"/>
+									<ExtendedTooltip name="ПартнерыКупонРасширеннаяПодсказка" id="92"/>
 								</InputField>
-								<InputField name="ПартнерыОблигация" id="64">
+								<InputField name="ПартнерыОблигация" id="93">
 									<DataPath>Партнеры.Облигация</DataPath>
 									<Title>
 										<v8:item>
@@ -258,10 +372,10 @@
 										</v8:item>
 									</Title>
 									<ReadOnly>true</ReadOnly>
-									<ContextMenu name="ПартнерыОблигацияКонтекстноеМеню" id="65"/>
-									<ExtendedTooltip name="ПартнерыОблигацияРасширеннаяПодсказка" id="66"/>
+									<ContextMenu name="ПартнерыОблигацияКонтекстноеМеню" id="94"/>
+									<ExtendedTooltip name="ПартнерыОблигацияРасширеннаяПодсказка" id="95"/>
 								</InputField>
-								<InputField name="ПартнерыСуммаОплаты" id="67">
+								<InputField name="ПартнерыСуммаОплаты" id="96">
 									<DataPath>Партнеры.СуммаОплаты</DataPath>
 									<Title>
 										<v8:item>
@@ -270,57 +384,57 @@
 										</v8:item>
 									</Title>
 									<ReadOnly>true</ReadOnly>
-									<ContextMenu name="ПартнерыСуммаОплатыКонтекстноеМеню" id="68"/>
-									<ExtendedTooltip name="ПартнерыСуммаОплатыРасширеннаяПодсказка" id="69"/>
+									<ContextMenu name="ПартнерыСуммаОплатыКонтекстноеМеню" id="97"/>
+									<ExtendedTooltip name="ПартнерыСуммаОплатыРасширеннаяПодсказка" id="98"/>
 								</InputField>
 							</ChildItems>
 						</Table>
 					</ChildItems>
 				</Page>
-				<Page name="СтраницаЛатентные" id="70">
+				<Page name="СтраницаЛатентные" id="99">
 					<Title>
 						<v8:item>
 							<v8:lang>ru</v8:lang>
 							<v8:content>Латентные купоны клиента</v8:content>
 						</v8:item>
 					</Title>
-					<ExtendedTooltip name="СтраницаЛатентныеРасширеннаяПодсказка" id="71"/>
+					<ExtendedTooltip name="СтраницаЛатентныеРасширеннаяПодсказка" id="100"/>
 					<ChildItems>
-						<Table name="ЛатентныеКупоны" id="72">
+						<Table name="ЛатентныеКупоны" id="101">
 							<DataPath>ЛатентныеКупоны</DataPath>
 							<ChangeRowSet>false</ChangeRowSet>
 							<ChangeRowOrder>false</ChangeRowOrder>
 							<CommandBarLocation>None</CommandBarLocation>
 							<Height>10</Height>
-							<ContextMenu name="ЛатентныеКупоныКонтекстноеМеню" id="73"/>
-							<AutoCommandBar name="ЛатентныеКупоныКоманднаяПанель" id="74"/>
-							<ExtendedTooltip name="ЛатентныеКупоныРасширеннаяПодсказка" id="75"/>
-							<SearchStringAddition name="ЛатентныеКупоныСтрокаПоиска" id="76">
+							<ContextMenu name="ЛатентныеКупоныКонтекстноеМеню" id="102"/>
+							<AutoCommandBar name="ЛатентныеКупоныКоманднаяПанель" id="103"/>
+							<ExtendedTooltip name="ЛатентныеКупоныРасширеннаяПодсказка" id="104"/>
+							<SearchStringAddition name="ЛатентныеКупоныСтрокаПоиска" id="105">
 								<AdditionSource>
 									<Item>ЛатентныеКупоны</Item>
 									<Type>SearchStringRepresentation</Type>
 								</AdditionSource>
-								<ContextMenu name="ЛатентныеКупоныСтрокаПоискаКонтекстноеМеню" id="77"/>
-								<ExtendedTooltip name="ЛатентныеКупоныСтрокаПоискаРасширеннаяПодсказка" id="78"/>
+								<ContextMenu name="ЛатентныеКупоныСтрокаПоискаКонтекстноеМеню" id="106"/>
+								<ExtendedTooltip name="ЛатентныеКупоныСтрокаПоискаРасширеннаяПодсказка" id="107"/>
 							</SearchStringAddition>
-							<ViewStatusAddition name="ЛатентныеКупоныСостояниеПросмотра" id="79">
+							<ViewStatusAddition name="ЛатентныеКупоныСостояниеПросмотра" id="108">
 								<AdditionSource>
 									<Item>ЛатентныеКупоны</Item>
 									<Type>ViewStatusRepresentation</Type>
 								</AdditionSource>
-								<ContextMenu name="ЛатентныеКупоныСостояниеПросмотраКонтекстноеМеню" id="80"/>
-								<ExtendedTooltip name="ЛатентныеКупоныСостояниеПросмотраРасширеннаяПодсказка" id="81"/>
+								<ContextMenu name="ЛатентныеКупоныСостояниеПросмотраКонтекстноеМеню" id="109"/>
+								<ExtendedTooltip name="ЛатентныеКупоныСостояниеПросмотраРасширеннаяПодсказка" id="110"/>
 							</ViewStatusAddition>
-							<SearchControlAddition name="ЛатентныеКупоныУправлениеПоиском" id="82">
+							<SearchControlAddition name="ЛатентныеКупоныУправлениеПоиском" id="111">
 								<AdditionSource>
 									<Item>ЛатентныеКупоны</Item>
 									<Type>SearchControl</Type>
 								</AdditionSource>
-								<ContextMenu name="ЛатентныеКупоныУправлениеПоискомКонтекстноеМеню" id="83"/>
-								<ExtendedTooltip name="ЛатентныеКупоныУправлениеПоискомРасширеннаяПодсказка" id="84"/>
+								<ContextMenu name="ЛатентныеКупоныУправлениеПоискомКонтекстноеМеню" id="112"/>
+								<ExtendedTooltip name="ЛатентныеКупоныУправлениеПоискомРасширеннаяПодсказка" id="113"/>
 							</SearchControlAddition>
 							<ChildItems>
-								<InputField name="ЛатентныеКупон" id="85">
+								<InputField name="ЛатентныеКупон" id="114">
 									<DataPath>ЛатентныеКупоны.Купон</DataPath>
 									<Title>
 										<v8:item>
@@ -329,10 +443,10 @@
 										</v8:item>
 									</Title>
 									<ReadOnly>true</ReadOnly>
-									<ContextMenu name="ЛатентныеКупонКонтекстноеМеню" id="86"/>
-									<ExtendedTooltip name="ЛатентныеКупонРасширеннаяПодсказка" id="87"/>
+									<ContextMenu name="ЛатентныеКупонКонтекстноеМеню" id="115"/>
+									<ExtendedTooltip name="ЛатентныеКупонРасширеннаяПодсказка" id="116"/>
 								</InputField>
-								<InputField name="ЛатентныеВидСвязи" id="88">
+								<InputField name="ЛатентныеВидСвязи" id="117">
 									<DataPath>ЛатентныеКупоны.ВидСвязи</DataPath>
 									<Title>
 										<v8:item>
@@ -341,10 +455,10 @@
 										</v8:item>
 									</Title>
 									<ReadOnly>true</ReadOnly>
-									<ContextMenu name="ЛатентныеВидСвязиКонтекстноеМеню" id="89"/>
-									<ExtendedTooltip name="ЛатентныеВидСвязиРасширеннаяПодсказка" id="90"/>
+									<ContextMenu name="ЛатентныеВидСвязиКонтекстноеМеню" id="118"/>
+									<ExtendedTooltip name="ЛатентныеВидСвязиРасширеннаяПодсказка" id="119"/>
 								</InputField>
-								<InputField name="ЛатентныеРегистратор" id="91">
+								<InputField name="ЛатентныеРегистратор" id="120">
 									<DataPath>ЛатентныеКупоны.Регистратор</DataPath>
 									<Title>
 										<v8:item>
@@ -353,10 +467,10 @@
 										</v8:item>
 									</Title>
 									<ReadOnly>true</ReadOnly>
-									<ContextMenu name="ЛатентныеРегистраторКонтекстноеМеню" id="92"/>
-									<ExtendedTooltip name="ЛатентныеРегистраторРасширеннаяПодсказка" id="93"/>
+									<ContextMenu name="ЛатентныеРегистраторКонтекстноеМеню" id="121"/>
+									<ExtendedTooltip name="ЛатентныеРегистраторРасширеннаяПодсказка" id="122"/>
 								</InputField>
-								<InputField name="ЛатентныеАктив" id="94">
+								<InputField name="ЛатентныеАктив" id="123">
 									<DataPath>ЛатентныеКупоны.Актив</DataPath>
 									<Title>
 										<v8:item>
@@ -365,10 +479,10 @@
 										</v8:item>
 									</Title>
 									<ReadOnly>true</ReadOnly>
-									<ContextMenu name="ЛатентныеАктивКонтекстноеМеню" id="95"/>
-									<ExtendedTooltip name="ЛатентныеАктивРасширеннаяПодсказка" id="96"/>
+									<ContextMenu name="ЛатентныеАктивКонтекстноеМеню" id="124"/>
+									<ExtendedTooltip name="ЛатентныеАктивРасширеннаяПодсказка" id="125"/>
 								</InputField>
-								<InputField name="ЛатентныеПартия" id="97">
+								<InputField name="ЛатентныеПартия" id="126">
 									<DataPath>ЛатентныеКупоны.Партия</DataPath>
 									<Title>
 										<v8:item>
@@ -377,10 +491,10 @@
 										</v8:item>
 									</Title>
 									<ReadOnly>true</ReadOnly>
-									<ContextMenu name="ЛатентныеПартияКонтекстноеМеню" id="98"/>
-									<ExtendedTooltip name="ЛатентныеПартияРасширеннаяПодсказка" id="99"/>
+									<ContextMenu name="ЛатентныеПартияКонтекстноеМеню" id="127"/>
+									<ExtendedTooltip name="ЛатентныеПартияРасширеннаяПодсказка" id="128"/>
 								</InputField>
-								<InputField name="ЛатентныеСумма" id="100">
+								<InputField name="ЛатентныеСумма" id="129">
 									<DataPath>ЛатентныеКупоны.СуммаОборотДт</DataPath>
 									<Title>
 										<v8:item>
@@ -389,57 +503,57 @@
 										</v8:item>
 									</Title>
 									<ReadOnly>true</ReadOnly>
-									<ContextMenu name="ЛатентныеСуммаКонтекстноеМеню" id="101"/>
-									<ExtendedTooltip name="ЛатентныеСуммаРасширеннаяПодсказка" id="102"/>
+									<ContextMenu name="ЛатентныеСуммаКонтекстноеМеню" id="130"/>
+									<ExtendedTooltip name="ЛатентныеСуммаРасширеннаяПодсказка" id="131"/>
 								</InputField>
 							</ChildItems>
 						</Table>
 					</ChildItems>
 				</Page>
-				<Page name="СтраницаЛишние" id="103">
+				<Page name="СтраницаЛишние" id="132">
 					<Title>
 						<v8:item>
 							<v8:lang>ru</v8:lang>
 							<v8:content>Лишние / пропавшие строки НКД</v8:content>
 						</v8:item>
 					</Title>
-					<ExtendedTooltip name="СтраницаЛишниеРасширеннаяПодсказка" id="104"/>
+					<ExtendedTooltip name="СтраницаЛишниеРасширеннаяПодсказка" id="133"/>
 					<ChildItems>
-						<Table name="ЛишниеСтроки" id="105">
+						<Table name="ЛишниеСтроки" id="134">
 							<DataPath>ЛишниеСтроки</DataPath>
 							<ChangeRowSet>false</ChangeRowSet>
 							<ChangeRowOrder>false</ChangeRowOrder>
 							<CommandBarLocation>None</CommandBarLocation>
 							<Height>10</Height>
-							<ContextMenu name="ЛишниеСтрокиКонтекстноеМеню" id="106"/>
-							<AutoCommandBar name="ЛишниеСтрокиКоманднаяПанель" id="107"/>
-							<ExtendedTooltip name="ЛишниеСтрокиРасширеннаяПодсказка" id="108"/>
-							<SearchStringAddition name="ЛишниеСтрокиСтрокаПоиска" id="109">
+							<ContextMenu name="ЛишниеСтрокиКонтекстноеМеню" id="135"/>
+							<AutoCommandBar name="ЛишниеСтрокиКоманднаяПанель" id="136"/>
+							<ExtendedTooltip name="ЛишниеСтрокиРасширеннаяПодсказка" id="137"/>
+							<SearchStringAddition name="ЛишниеСтрокиСтрокаПоиска" id="138">
 								<AdditionSource>
 									<Item>ЛишниеСтроки</Item>
 									<Type>SearchStringRepresentation</Type>
 								</AdditionSource>
-								<ContextMenu name="ЛишниеСтрокиСтрокаПоискаКонтекстноеМеню" id="110"/>
-								<ExtendedTooltip name="ЛишниеСтрокиСтрокаПоискаРасширеннаяПодсказка" id="111"/>
+								<ContextMenu name="ЛишниеСтрокиСтрокаПоискаКонтекстноеМеню" id="139"/>
+								<ExtendedTooltip name="ЛишниеСтрокиСтрокаПоискаРасширеннаяПодсказка" id="140"/>
 							</SearchStringAddition>
-							<ViewStatusAddition name="ЛишниеСтрокиСостояниеПросмотра" id="112">
+							<ViewStatusAddition name="ЛишниеСтрокиСостояниеПросмотра" id="141">
 								<AdditionSource>
 									<Item>ЛишниеСтроки</Item>
 									<Type>ViewStatusRepresentation</Type>
 								</AdditionSource>
-								<ContextMenu name="ЛишниеСтрокиСостояниеПросмотраКонтекстноеМеню" id="113"/>
-								<ExtendedTooltip name="ЛишниеСтрокиСостояниеПросмотраРасширеннаяПодсказка" id="114"/>
+								<ContextMenu name="ЛишниеСтрокиСостояниеПросмотраКонтекстноеМеню" id="142"/>
+								<ExtendedTooltip name="ЛишниеСтрокиСостояниеПросмотраРасширеннаяПодсказка" id="143"/>
 							</ViewStatusAddition>
-							<SearchControlAddition name="ЛишниеСтрокиУправлениеПоиском" id="115">
+							<SearchControlAddition name="ЛишниеСтрокиУправлениеПоиском" id="144">
 								<AdditionSource>
 									<Item>ЛишниеСтроки</Item>
 									<Type>SearchControl</Type>
 								</AdditionSource>
-								<ContextMenu name="ЛишниеСтрокиУправлениеПоискомКонтекстноеМеню" id="116"/>
-								<ExtendedTooltip name="ЛишниеСтрокиУправлениеПоискомРасширеннаяПодсказка" id="117"/>
+								<ContextMenu name="ЛишниеСтрокиУправлениеПоискомКонтекстноеМеню" id="145"/>
+								<ExtendedTooltip name="ЛишниеСтрокиУправлениеПоискомРасширеннаяПодсказка" id="146"/>
 							</SearchControlAddition>
 							<ChildItems>
-								<InputField name="ЛишниеВид" id="118">
+								<InputField name="ЛишниеВид" id="147">
 									<DataPath>ЛишниеСтроки.ВидРасхождения</DataPath>
 									<Title>
 										<v8:item>
@@ -448,10 +562,10 @@
 										</v8:item>
 									</Title>
 									<ReadOnly>true</ReadOnly>
-									<ContextMenu name="ЛишниеВидКонтекстноеМеню" id="119"/>
-									<ExtendedTooltip name="ЛишниеВидРасширеннаяПодсказка" id="120"/>
+									<ContextMenu name="ЛишниеВидКонтекстноеМеню" id="148"/>
+									<ExtendedTooltip name="ЛишниеВидРасширеннаяПодсказка" id="149"/>
 								</InputField>
-								<InputField name="ЛишниеАктив" id="121">
+								<InputField name="ЛишниеАктив" id="150">
 									<DataPath>ЛишниеСтроки.Актив</DataPath>
 									<Title>
 										<v8:item>
@@ -460,10 +574,10 @@
 										</v8:item>
 									</Title>
 									<ReadOnly>true</ReadOnly>
-									<ContextMenu name="ЛишниеАктивКонтекстноеМеню" id="122"/>
-									<ExtendedTooltip name="ЛишниеАктивРасширеннаяПодсказка" id="123"/>
+									<ContextMenu name="ЛишниеАктивКонтекстноеМеню" id="151"/>
+									<ExtendedTooltip name="ЛишниеАктивРасширеннаяПодсказка" id="152"/>
 								</InputField>
-								<InputField name="ЛишниеПартия" id="124">
+								<InputField name="ЛишниеПартия" id="153">
 									<DataPath>ЛишниеСтроки.Партия</DataPath>
 									<Title>
 										<v8:item>
@@ -472,10 +586,10 @@
 										</v8:item>
 									</Title>
 									<ReadOnly>true</ReadOnly>
-									<ContextMenu name="ЛишниеПартияКонтекстноеМеню" id="125"/>
-									<ExtendedTooltip name="ЛишниеПартияРасширеннаяПодсказка" id="126"/>
+									<ContextMenu name="ЛишниеПартияКонтекстноеМеню" id="154"/>
+									<ExtendedTooltip name="ЛишниеПартияРасширеннаяПодсказка" id="155"/>
 								</InputField>
-								<InputField name="ЛишниеРегистратор" id="127">
+								<InputField name="ЛишниеРегистратор" id="156">
 									<DataPath>ЛишниеСтроки.Регистратор</DataPath>
 									<Title>
 										<v8:item>
@@ -484,10 +598,10 @@
 										</v8:item>
 									</Title>
 									<ReadOnly>true</ReadOnly>
-									<ContextMenu name="ЛишниеРегистраторКонтекстноеМеню" id="128"/>
-									<ExtendedTooltip name="ЛишниеРегистраторРасширеннаяПодсказка" id="129"/>
+									<ContextMenu name="ЛишниеРегистраторКонтекстноеМеню" id="157"/>
+									<ExtendedTooltip name="ЛишниеРегистраторРасширеннаяПодсказка" id="158"/>
 								</InputField>
-								<InputField name="ЛишниеПериод" id="130">
+								<InputField name="ЛишниеПериод" id="159">
 									<DataPath>ЛишниеСтроки.Период</DataPath>
 									<Title>
 										<v8:item>
@@ -496,10 +610,10 @@
 										</v8:item>
 									</Title>
 									<ReadOnly>true</ReadOnly>
-									<ContextMenu name="ЛишниеПериодКонтекстноеМеню" id="131"/>
-									<ExtendedTooltip name="ЛишниеПериодРасширеннаяПодсказка" id="132"/>
+									<ContextMenu name="ЛишниеПериодКонтекстноеМеню" id="160"/>
+									<ExtendedTooltip name="ЛишниеПериодРасширеннаяПодсказка" id="161"/>
 								</InputField>
-								<InputField name="ЛишниеСуммаОдин" id="133">
+								<InputField name="ЛишниеСуммаОдин" id="162">
 									<DataPath>ЛишниеСтроки.СуммаОдин</DataPath>
 									<Title>
 										<v8:item>
@@ -508,10 +622,10 @@
 										</v8:item>
 									</Title>
 									<ReadOnly>true</ReadOnly>
-									<ContextMenu name="ЛишниеСуммаОдинКонтекстноеМеню" id="134"/>
-									<ExtendedTooltip name="ЛишниеСуммаОдинРасширеннаяПодсказка" id="135"/>
+									<ContextMenu name="ЛишниеСуммаОдинКонтекстноеМеню" id="163"/>
+									<ExtendedTooltip name="ЛишниеСуммаОдинРасширеннаяПодсказка" id="164"/>
 								</InputField>
-								<InputField name="ЛишниеСуммаМасс" id="136">
+								<InputField name="ЛишниеСуммаМасс" id="165">
 									<DataPath>ЛишниеСтроки.СуммаМассовый</DataPath>
 									<Title>
 										<v8:item>
@@ -520,8 +634,8 @@
 										</v8:item>
 									</Title>
 									<ReadOnly>true</ReadOnly>
-									<ContextMenu name="ЛишниеСуммаМассКонтекстноеМеню" id="137"/>
-									<ExtendedTooltip name="ЛишниеСуммаМассРасширеннаяПодсказка" id="138"/>
+									<ContextMenu name="ЛишниеСуммаМассКонтекстноеМеню" id="166"/>
+									<ExtendedTooltip name="ЛишниеСуммаМассРасширеннаяПодсказка" id="167"/>
 								</InputField>
 							</ChildItems>
 						</Table>
@@ -531,13 +645,13 @@
 		</Pages>
 	</ChildItems>
 	<Attributes>
-		<Attribute name="Объект" id="139">
+		<Attribute name="Объект" id="168">
 			<Type>
 				<v8:Type>cfg:ExternalDataProcessorObject.IMDEV7330_DiagNkdCouponLeak</v8:Type>
 			</Type>
 			<MainAttribute>true</MainAttribute>
 		</Attribute>
-		<Attribute name="Клиент" id="140">
+		<Attribute name="Клиент" id="169">
 			<Title>
 				<v8:item>
 					<v8:lang>ru</v8:lang>
@@ -548,7 +662,7 @@
 				<v8:Type>cfg:CatalogRef.Контрагенты</v8:Type>
 			</Type>
 		</Attribute>
-		<Attribute name="ДатаРасчета" id="141">
+		<Attribute name="ДатаРасчета" id="170">
 			<Title>
 				<v8:item>
 					<v8:lang>ru</v8:lang>
@@ -562,7 +676,99 @@
 				</v8:DateQualifiers>
 			</Type>
 		</Attribute>
-		<Attribute name="Вердикт" id="142">
+		<Attribute name="ВариантЗаполнения" id="171">
+			<Title>
+				<v8:item>
+					<v8:lang>ru</v8:lang>
+					<v8:content>Вариант заполнения</v8:content>
+				</v8:item>
+			</Title>
+			<Type>
+				<v8:Type>xs:decimal</v8:Type>
+				<v8:NumberQualifiers>
+					<v8:Digits>1</v8:Digits>
+					<v8:FractionDigits>0</v8:FractionDigits>
+					<v8:AllowedSign>Any</v8:AllowedSign>
+				</v8:NumberQualifiers>
+			</Type>
+		</Attribute>
+		<Attribute name="ПериодЗаполнения" id="172">
+			<Title>
+				<v8:item>
+					<v8:lang>ru</v8:lang>
+					<v8:content>Период заполнения</v8:content>
+				</v8:item>
+			</Title>
+			<Type>
+				<v8:Type>v8:StandardPeriod</v8:Type>
+			</Type>
+		</Attribute>
+		<Attribute name="УправляющаяКомпания" id="173">
+			<Title>
+				<v8:item>
+					<v8:lang>ru</v8:lang>
+					<v8:content>Управляющая компания</v8:content>
+				</v8:item>
+			</Title>
+			<Type>
+				<v8:Type>cfg:CatalogRef.Контрагенты</v8:Type>
+			</Type>
+		</Attribute>
+		<Attribute name="НеСоздаватьДокументыПоКлиентамБезЦБ" id="174">
+			<Title>
+				<v8:item>
+					<v8:lang>ru</v8:lang>
+					<v8:content>Не создавать документы по клиентам без ЦБ</v8:content>
+				</v8:item>
+			</Title>
+			<Type>
+				<v8:Type>xs:boolean</v8:Type>
+			</Type>
+		</Attribute>
+		<Attribute name="ФормироватьНачисленияТолькоПоПортфелямСДвижениямиПоНДФЛ" id="175">
+			<Title>
+				<v8:item>
+					<v8:lang>ru</v8:lang>
+					<v8:content>Формировать начисления только по портфелям с движениями по НДФЛ</v8:content>
+				</v8:item>
+			</Title>
+			<Type>
+				<v8:Type>xs:boolean</v8:Type>
+			</Type>
+		</Attribute>
+		<Attribute name="НомерСтрокиС" id="176">
+			<Title>
+				<v8:item>
+					<v8:lang>ru</v8:lang>
+					<v8:content>Номер строки с</v8:content>
+				</v8:item>
+			</Title>
+			<Type>
+				<v8:Type>xs:decimal</v8:Type>
+				<v8:NumberQualifiers>
+					<v8:Digits>10</v8:Digits>
+					<v8:FractionDigits>0</v8:FractionDigits>
+					<v8:AllowedSign>Any</v8:AllowedSign>
+				</v8:NumberQualifiers>
+			</Type>
+		</Attribute>
+		<Attribute name="НомерСтрокиПо" id="177">
+			<Title>
+				<v8:item>
+					<v8:lang>ru</v8:lang>
+					<v8:content>Номер строки по</v8:content>
+				</v8:item>
+			</Title>
+			<Type>
+				<v8:Type>xs:decimal</v8:Type>
+				<v8:NumberQualifiers>
+					<v8:Digits>10</v8:Digits>
+					<v8:FractionDigits>0</v8:FractionDigits>
+					<v8:AllowedSign>Any</v8:AllowedSign>
+				</v8:NumberQualifiers>
+			</Type>
+		</Attribute>
+		<Attribute name="Вердикт" id="178">
 			<Title>
 				<v8:item>
 					<v8:lang>ru</v8:lang>
@@ -577,7 +783,7 @@
 				</v8:StringQualifiers>
 			</Type>
 		</Attribute>
-		<Attribute name="СтрокОдин" id="143">
+		<Attribute name="СтрокОдин" id="179">
 			<Title>
 				<v8:item>
 					<v8:lang>ru</v8:lang>
@@ -593,7 +799,7 @@
 				</v8:NumberQualifiers>
 			</Type>
 		</Attribute>
-		<Attribute name="СтрокМассовый" id="144">
+		<Attribute name="СтрокМассовый" id="180">
 			<Title>
 				<v8:item>
 					<v8:lang>ru</v8:lang>
@@ -609,7 +815,7 @@
 				</v8:NumberQualifiers>
 			</Type>
 		</Attribute>
-		<Attribute name="СуммаМодулейОдин" id="145">
+		<Attribute name="СуммаМодулейОдин" id="181">
 			<Title>
 				<v8:item>
 					<v8:lang>ru</v8:lang>
@@ -625,7 +831,7 @@
 				</v8:NumberQualifiers>
 			</Type>
 		</Attribute>
-		<Attribute name="СуммаМодулейМассовый" id="146">
+		<Attribute name="СуммаМодулейМассовый" id="182">
 			<Title>
 				<v8:item>
 					<v8:lang>ru</v8:lang>
@@ -641,7 +847,7 @@
 				</v8:NumberQualifiers>
 			</Type>
 		</Attribute>
-		<Attribute name="ДельтаМодулей" id="147">
+		<Attribute name="ДельтаМодулей" id="183">
 			<Title>
 				<v8:item>
 					<v8:lang>ru</v8:lang>
@@ -657,7 +863,7 @@
 				</v8:NumberQualifiers>
 			</Type>
 		</Attribute>
-		<Attribute name="КлиентовВСравнении" id="148">
+		<Attribute name="КлиентовВСравнении" id="184">
 			<Title>
 				<v8:item>
 					<v8:lang>ru</v8:lang>
@@ -673,7 +879,7 @@
 				</v8:NumberQualifiers>
 			</Type>
 		</Attribute>
-		<Attribute name="Партнеры" id="149">
+		<Attribute name="Партнеры" id="185">
 			<Title>
 				<v8:item>
 					<v8:lang>ru</v8:lang>
@@ -684,12 +890,12 @@
 				<v8:Type>v8:ValueTable</v8:Type>
 			</Type>
 			<Columns>
-				<Column name="Клиент" id="150">
+				<Column name="Клиент" id="186">
 					<Type>
 						<v8:Type>cfg:CatalogRef.Контрагенты</v8:Type>
 					</Type>
 				</Column>
-				<Column name="Купон" id="151">
+				<Column name="Купон" id="187">
 					<Type>
 						<v8:Type>xs:string</v8:Type>
 						<v8:StringQualifiers>
@@ -698,7 +904,7 @@
 						</v8:StringQualifiers>
 					</Type>
 				</Column>
-				<Column name="Облигация" id="152">
+				<Column name="Облигация" id="188">
 					<Type>
 						<v8:Type>xs:string</v8:Type>
 						<v8:StringQualifiers>
@@ -707,7 +913,7 @@
 						</v8:StringQualifiers>
 					</Type>
 				</Column>
-				<Column name="СуммаОплаты" id="153">
+				<Column name="СуммаОплаты" id="189">
 					<Type>
 						<v8:Type>xs:decimal</v8:Type>
 						<v8:NumberQualifiers>
@@ -719,7 +925,7 @@
 				</Column>
 			</Columns>
 		</Attribute>
-		<Attribute name="ЛатентныеКупоны" id="154">
+		<Attribute name="ЛатентныеКупоны" id="190">
 			<Title>
 				<v8:item>
 					<v8:lang>ru</v8:lang>
@@ -730,7 +936,7 @@
 				<v8:Type>v8:ValueTable</v8:Type>
 			</Type>
 			<Columns>
-				<Column name="Купон" id="155">
+				<Column name="Купон" id="191">
 					<Type>
 						<v8:Type>xs:string</v8:Type>
 						<v8:StringQualifiers>
@@ -739,7 +945,7 @@
 						</v8:StringQualifiers>
 					</Type>
 				</Column>
-				<Column name="ВидСвязи" id="156">
+				<Column name="ВидСвязи" id="192">
 					<Type>
 						<v8:Type>xs:string</v8:Type>
 						<v8:StringQualifiers>
@@ -748,7 +954,7 @@
 						</v8:StringQualifiers>
 					</Type>
 				</Column>
-				<Column name="Регистратор" id="157">
+				<Column name="Регистратор" id="193">
 					<Type>
 						<v8:Type>xs:string</v8:Type>
 						<v8:StringQualifiers>
@@ -757,7 +963,7 @@
 						</v8:StringQualifiers>
 					</Type>
 				</Column>
-				<Column name="Актив" id="158">
+				<Column name="Актив" id="194">
 					<Type>
 						<v8:Type>xs:string</v8:Type>
 						<v8:StringQualifiers>
@@ -766,7 +972,7 @@
 						</v8:StringQualifiers>
 					</Type>
 				</Column>
-				<Column name="Партия" id="159">
+				<Column name="Партия" id="195">
 					<Type>
 						<v8:Type>xs:string</v8:Type>
 						<v8:StringQualifiers>
@@ -775,7 +981,7 @@
 						</v8:StringQualifiers>
 					</Type>
 				</Column>
-				<Column name="СуммаОборотДт" id="160">
+				<Column name="СуммаОборотДт" id="196">
 					<Type>
 						<v8:Type>xs:decimal</v8:Type>
 						<v8:NumberQualifiers>
@@ -787,7 +993,7 @@
 				</Column>
 			</Columns>
 		</Attribute>
-		<Attribute name="ЛишниеСтроки" id="161">
+		<Attribute name="ЛишниеСтроки" id="197">
 			<Title>
 				<v8:item>
 					<v8:lang>ru</v8:lang>
@@ -798,7 +1004,7 @@
 				<v8:Type>v8:ValueTable</v8:Type>
 			</Type>
 			<Columns>
-				<Column name="ВидРасхождения" id="162">
+				<Column name="ВидРасхождения" id="198">
 					<Type>
 						<v8:Type>xs:string</v8:Type>
 						<v8:StringQualifiers>
@@ -807,7 +1013,7 @@
 						</v8:StringQualifiers>
 					</Type>
 				</Column>
-				<Column name="Актив" id="163">
+				<Column name="Актив" id="199">
 					<Type>
 						<v8:Type>xs:string</v8:Type>
 						<v8:StringQualifiers>
@@ -816,7 +1022,7 @@
 						</v8:StringQualifiers>
 					</Type>
 				</Column>
-				<Column name="Партия" id="164">
+				<Column name="Партия" id="200">
 					<Type>
 						<v8:Type>xs:string</v8:Type>
 						<v8:StringQualifiers>
@@ -825,7 +1031,7 @@
 						</v8:StringQualifiers>
 					</Type>
 				</Column>
-				<Column name="Регистратор" id="165">
+				<Column name="Регистратор" id="201">
 					<Type>
 						<v8:Type>xs:string</v8:Type>
 						<v8:StringQualifiers>
@@ -834,7 +1040,7 @@
 						</v8:StringQualifiers>
 					</Type>
 				</Column>
-				<Column name="Период" id="166">
+				<Column name="Период" id="202">
 					<Type>
 						<v8:Type>xs:dateTime</v8:Type>
 						<v8:DateQualifiers>
@@ -842,7 +1048,7 @@
 						</v8:DateQualifiers>
 					</Type>
 				</Column>
-				<Column name="СуммаОдин" id="167">
+				<Column name="СуммаОдин" id="203">
 					<Type>
 						<v8:Type>xs:decimal</v8:Type>
 						<v8:NumberQualifiers>
@@ -852,7 +1058,7 @@
 						</v8:NumberQualifiers>
 					</Type>
 				</Column>
-				<Column name="СуммаМассовый" id="168">
+				<Column name="СуммаМассовый" id="204">
 					<Type>
 						<v8:Type>xs:decimal</v8:Type>
 						<v8:NumberQualifiers>
@@ -866,7 +1072,7 @@
 		</Attribute>
 	</Attributes>
 	<Commands>
-		<Command name="НайтиУтечку" id="169">
+		<Command name="НайтиУтечку" id="205">
 			<Title>
 				<v8:item>
 					<v8:lang>ru</v8:lang>
@@ -875,7 +1081,7 @@
 			</Title>
 			<Action>НайтиУтечку</Action>
 		</Command>
-		<Command name="СравнитьСПачкойУК" id="170">
+		<Command name="СравнитьСПачкойУК" id="206">
 			<Title>
 				<v8:item>
 					<v8:lang>ru</v8:lang>
@@ -883,6 +1089,15 @@
 				</v8:item>
 			</Title>
 			<Action>СравнитьСПачкойУК</Action>
+		</Command>
+		<Command name="СравнитьЗаполнитьVsОдин" id="207">
+			<Title>
+				<v8:item>
+					<v8:lang>ru</v8:lang>
+					<v8:content>Сравнить Заполнить vs один</v8:content>
+				</v8:item>
+			</Title>
+			<Action>СравнитьЗаполнитьVsОдин</Action>
 		</Command>
 	</Commands>
 </Form>
