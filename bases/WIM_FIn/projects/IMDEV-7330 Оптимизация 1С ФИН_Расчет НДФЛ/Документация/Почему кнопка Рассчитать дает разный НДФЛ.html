@@ -1,0 +1,533 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Почему кнопка Рассчитать дает разный НДФЛ</title>
+<style>
+  :root {
+    --ink: #1c1916;
+    --muted: #6b645c;
+    --paper: #f6f1e8;
+    --card: #fffdf8;
+    --line: #e6ddd0;
+    --accent: #b44528;
+    --accent-soft: #f8e7e1;
+    --ok: #1f6b45;
+    --ok-soft: #e7f4ec;
+    --bad: #b44528;
+    --bad-soft: #f8e7e1;
+    --gold: #c4a36a;
+    --navy: #243044;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0;
+    color: var(--ink);
+    background: var(--paper);
+    font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+    line-height: 1.6;
+    font-size: 18px;
+  }
+  h1, h2, h3 {
+    font-family: Georgia, "Times New Roman", serif;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    line-height: 1.2;
+  }
+  .wrap { max-width: 1080px; margin: 0 auto; padding: 0 28px; }
+  .hero {
+    background: var(--navy);
+    color: #f6f1e8;
+    padding: 72px 0 64px;
+  }
+  .hero .kicker {
+    text-transform: uppercase;
+    letter-spacing: 0.16em;
+    font-size: 12px;
+    color: var(--gold);
+    margin-bottom: 18px;
+  }
+  .hero h1 {
+    font-size: clamp(32px, 5vw, 52px);
+    margin: 0 0 18px;
+    max-width: 16ch;
+  }
+  .hero p { max-width: 42em; color: #d5cfc6; font-size: 19px; margin: 0; }
+  .hero-num {
+    margin-top: 36px;
+    display: flex;
+    gap: 28px;
+    flex-wrap: wrap;
+  }
+  .hero-num .big {
+    font-family: Georgia, serif;
+    font-size: clamp(40px, 6vw, 64px);
+    line-height: 1;
+    color: #fff;
+  }
+  .hero-num .cap { font-size: 14px; color: #c9c2b6; margin-top: 8px; max-width: 16em; }
+  .section { padding: 72px 0; }
+  .section + .section { border-top: 1px solid var(--line); }
+  h2 { font-size: clamp(26px, 3vw, 36px); margin: 0 0 16px; }
+  h3 { font-size: 22px; margin: 28px 0 10px; }
+  .lead { font-size: 20px; color: var(--muted); max-width: 40em; }
+  .bento {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 14px;
+    margin-top: 28px;
+  }
+  @media (max-width: 720px) { .bento { grid-template-columns: 1fr; } }
+  .tile {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    padding: 22px 22px 20px;
+  }
+  .tile .label { font-size: 13px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; }
+  .tile .val { font-family: Georgia, serif; font-size: 32px; margin-top: 8px; }
+  .tile.ok { border-color: #cfe6d7; background: var(--ok-soft); }
+  .tile.bad { border-color: #efd0c8; background: var(--accent-soft); }
+  .split {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 18px;
+    margin-top: 28px;
+  }
+  @media (max-width: 860px) { .split { grid-template-columns: 1fr; } }
+  .panel {
+    background: var(--card);
+    border-radius: 18px;
+    border: 1px solid var(--line);
+    overflow: hidden;
+  }
+  .panel head, .panel .head {
+    padding: 16px 20px;
+    font-weight: 600;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .panel.ok .head { background: var(--ok-soft); color: var(--ok); }
+  .panel.bad .head { background: var(--accent-soft); color: var(--accent); }
+  table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  th, td { padding: 9px 12px; text-align: left; border-top: 1px solid var(--line); }
+  th { color: var(--muted); font-weight: 600; font-size: 12px; text-transform: uppercase; letter-spacing: 0.04em; }
+  td.n, th.n { text-align: right; font-variant-numeric: tabular-nums; font-family: Consolas, "Courier New", monospace; }
+  .foot { background: #f3eee6; font-weight: 600; }
+  .chip {
+    display: inline-block;
+    font-size: 12px;
+    font-weight: 700;
+    padding: 3px 9px;
+    border-radius: 999px;
+    background: #eee;
+  }
+  .chip.ok { background: var(--ok); color: #fff; }
+  .chip.bad { background: var(--accent); color: #fff; }
+  .story {
+    background: var(--navy);
+    color: #f6f1e8;
+  }
+  .story h2, .story h3 { color: #fff; }
+  .story .lead { color: #c9c2b6; }
+  .lots {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin: 24px 0;
+    min-height: 168px;
+    align-items: stretch;
+  }
+  .lot {
+    flex: 1 1 180px;
+    background: #2e3b52;
+    border-radius: 14px;
+    padding: 16px;
+    position: relative;
+    border: 1px solid #3d4d68;
+    transition: transform 0.4s ease, order 0.4s ease;
+  }
+  .lot h4 { margin: 0 0 6px; font-size: 16px; color: #fff; font-family: Georgia, serif; }
+  .lot p { margin: 0; font-size: 14px; color: #c9c2b6; }
+  .lot .share {
+    margin-top: 10px;
+    font-size: 13px;
+    color: #9aa6bb;
+  }
+  .lot .rest {
+    margin-top: 12px;
+    background: var(--gold);
+    color: var(--navy);
+    font-weight: 700;
+    font-size: 13px;
+    padding: 8px 10px;
+    border-radius: 10px;
+  }
+  .lot.drop { opacity: 0.45; }
+  .lot.drop .rest { background: var(--accent); color: #fff; }
+  .controls { display: flex; gap: 10px; flex-wrap: wrap; margin: 8px 0 4px; }
+  button {
+    appearance: none;
+    border: 0;
+    background: var(--gold);
+    color: var(--navy);
+    font-weight: 700;
+    padding: 10px 16px;
+    border-radius: 999px;
+    cursor: pointer;
+    font-size: 14px;
+  }
+  button.ghost { background: transparent; color: #f6f1e8; border: 1px solid #6a7386; }
+  button:hover { filter: brightness(1.05); }
+  .status {
+    margin-top: 8px;
+    font-size: 16px;
+    min-height: 1.5em;
+  }
+  .status.ok { color: #8fd9ae; }
+  .status.bad { color: #f0b4a6; }
+  .steps { list-style: none; padding: 0; margin: 28px 0 0; }
+  .steps li {
+    display: grid;
+    grid-template-columns: 48px 1fr;
+    gap: 16px;
+    padding: 16px 0;
+    border-top: 1px solid var(--line);
+  }
+  .steps .n {
+    width: 40px; height: 40px;
+    border-radius: 50%;
+    background: var(--navy);
+    color: #fff;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 700;
+    font-size: 16px;
+  }
+  .steps h4 { margin: 0 0 4px; font-size: 18px; font-family: Georgia, serif; }
+  .steps p { margin: 0; color: var(--muted); font-size: 16px; }
+  .eq {
+    background: var(--card);
+    border: 1px dashed var(--gold);
+    border-radius: 14px;
+    padding: 18px 20px;
+    font-family: Consolas, "Courier New", monospace;
+    font-size: 15px;
+    margin: 18px 0;
+  }
+  .note {
+    font-size: 15px;
+    color: var(--muted);
+    max-width: 46em;
+  }
+  footer {
+    padding: 28px 0 48px;
+    color: var(--muted);
+    font-size: 13px;
+  }
+  .callout {
+    background: var(--card);
+    border-left: 5px solid var(--gold);
+    padding: 18px 22px;
+    border-radius: 0 12px 12px 0;
+    margin: 22px 0;
+  }
+  .reveal { opacity: 0; transform: translateY(12px); animation: up 0.7s ease forwards; }
+  @keyframes up { to { opacity: 1; transform: none; } }
+</style>
+</head>
+<body>
+
+<header class="hero">
+  <div class="wrap">
+    <div class="kicker">ВИМ Инвестиции &nbsp;&middot;&nbsp; НДФЛ по ДУ &nbsp;&middot;&nbsp; 31.12.2026</div>
+    <h1>Одна кнопка. Два разных налога.</h1>
+    <p>
+      Бухгалтер нажимает "Рассчитать" на одном и том же документе, с теми же сделками.
+      Доход не меняется ни на копейку. А таблица начислений то на 4 строки, то на 6.
+      Ниже - почему так бывает, на живом примере одного клиента.
+    </p>
+    <div class="hero-num">
+      <div>
+        <div class="big">8 481</div>
+        <div class="cap">рублей инвестиционного вычета то есть, то нет. Именно эта сумма переключает весь документ.</div>
+      </div>
+      <div>
+        <div class="big">0,00</div>
+        <div class="cap">разница в сумме дохода. Данные рынка и сделок одинаковые.</div>
+      </div>
+    </div>
+  </div>
+</header>
+
+<section class="section">
+  <div class="wrap">
+    <h2>Что увидел человек в документе</h2>
+    <p class="lead">
+      Клиент А, управляющая компания, дата документа 31 декабря 2026.
+      Два прогона кнопки "Рассчитать" без изменения исходных данных.
+    </p>
+    <div class="bento">
+      <div class="tile ok">
+        <div class="label">Первый прогон</div>
+        <div class="val">4 строки</div>
+        <p>Так выглядит привычный эталон. Вычет по коду 1530 меньше, чем в прошлом документе.</p>
+      </div>
+      <div class="tile bad">
+        <div class="label">Второй прогон</div>
+        <div class="val">6 строк</div>
+        <p>Появились лишние строки 15% и даже отрицательная сумма. Вычет по 1530 больше на 8 481.</p>
+      </div>
+      <div class="tile">
+        <div class="label">Сумма дохода</div>
+        <div class="val">46 169 428,19</div>
+        <p>Совпала в обоих прогонах до копейки. Меняется не "сколько заработал", а "как разложили налог".</p>
+      </div>
+      <div class="tile">
+        <div class="label">Это не ошибка пользователя</div>
+        <div class="val">не нажимали лишнего</div>
+        <p>Не меняли дату, портфель, сделки. Программа сама вешала остаток НКД то на одну партию покупки, то на другую.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="section" style="padding-top:0">
+  <div class="wrap">
+    <h2>Два результата рядом</h2>
+    <p class="lead">Одинаковый доход. Разная раскладка по ставкам 13% и 15%.</p>
+    <div class="split">
+      <div class="panel ok">
+        <div class="head">Эталон &nbsp; <span class="chip ok">4 строки</span></div>
+        <table>
+          <tr><th>Код</th><th>Ставка</th><th class="n">Доход</th><th class="n">Вычет</th></tr>
+          <tr><td>1530</td><td>13%</td><td class="n">43 810 039,53</td><td class="n">42 113 256,71</td></tr>
+          <tr><td>1537</td><td>13%</td><td class="n">710 462,78</td><td class="n">14 681,87</td></tr>
+          <tr><td>1537</td><td>13%</td><td class="n">7 767,31</td><td class="n">331,04</td></tr>
+          <tr><td>1530</td><td>15%</td><td class="n">1 641 158,57</td><td class="n">0,00</td></tr>
+          <tr class="foot"><td colspan="2">Итого</td><td class="n">46 169 428,19</td><td class="n">42 128 269,62</td></tr>
+        </table>
+      </div>
+      <div class="panel bad">
+        <div class="head">Случайный прогон &nbsp; <span class="chip bad">6 строк</span></div>
+        <table>
+          <tr><th>Код</th><th>Ставка</th><th class="n">Доход</th><th class="n">Вычет</th></tr>
+          <tr><td>1530</td><td>13%</td><td class="n">44 510 383,53</td><td class="n">42 117 785,31</td></tr>
+          <tr><td>1537</td><td>13%</td><td class="n">15 534,62</td><td class="n">663,64</td></tr>
+          <tr><td>1537</td><td>13%</td><td class="n">15 534,62</td><td class="n">663,64</td></tr>
+          <tr><td>1530</td><td>15%</td><td class="n">940 814,57</td><td class="n">3 952,40</td></tr>
+          <tr><td>1537</td><td>15%</td><td class="n">694 928,16</td><td class="n">14 018,23</td></tr>
+          <tr><td>1537</td><td>15%</td><td class="n">-7 767,31</td><td class="n">-332,60</td></tr>
+          <tr class="foot"><td colspan="2">Итого</td><td class="n">46 169 428,19</td><td class="n">42 136 750,62</td></tr>
+        </table>
+      </div>
+    </div>
+    <div class="callout">
+      Обратите внимание на две одинаковые строки 1537 по 15 534,62 и на минус 7 767,31.
+      Это не "так было на рынке". Это программа дважды списала прошлую сумму на текущие строки.
+    </div>
+  </div>
+</section>
+
+<section class="section story">
+  <div class="wrap">
+    <h2>Почему так: три партии одной облигации</h2>
+    <p class="lead">
+      Клиент А в ДУ продал одну облигацию. Бумага куплена не сразу, а тремя партиями:
+      в 2015, в 2016 и недавно на другом портфеле. При продаже к ней висит НКД -
+      накопленный купонный доход. Эти 8 481 рубль программа должна разнести по партиям
+      пропорционально количеству штук.
+    </p>
+    <p class="lead">
+      Правило остатка такое: <b>неделимые копейки всегда вешают на последнюю партию в списке</b>.
+      Список продаж база отдаёт без фиксированной очереди. Сегодня последняя - партия 2016 года
+      (она идёт в инвествычет). В другой момент последняя - свежая партия на портфеле без вычета,
+      и тогда 8 481 из вычета просто пропадают.
+    </p>
+
+    <div class="controls">
+      <button type="button" id="btnFifo">Сначала ранние покупки</button>
+      <button type="button" class="ghost" id="btnShuffle">Как база иногда отдаёт партии</button>
+    </div>
+    <div class="status ok" id="lotStatus">Остаток на партии 2016 года. Она в инвествычете. 8 481 на месте, в начислениях 4 строки.</div>
+    <div class="lots" id="lots">
+      <div class="lot" data-id="jan">
+        <h4>Партия 15.01.2015</h4>
+        <p>ОФЗ, Портфель 1, обычный ДУ. Срок владения достаточный - партия идёт в инвествычет.</p>
+        <div class="share">доля НКД по количеству штук</div>
+      </div>
+      <div class="lot" data-id="mar">
+        <h4>Партия 12.03.2016</h4>
+        <p>Та же облигация, Портфель 1. Тоже в инвествычете.</p>
+        <div class="share">доля НКД по количеству штук</div>
+      </div>
+      <div class="lot" data-id="dec" id="lotDec">
+        <h4>Партия 20.12.2024</h4>
+        <p>Та же бумага, Портфель 2. Признак "получать инвествычет" выключен - в таблицу вычета партия не попадает.</p>
+        <div class="share">доля НКД по количеству штук</div>
+      </div>
+    </div>
+    <p class="note" style="color:#c9c2b6">
+      Нажмите вторую кнопку. Если остаток НКД сел на партию Портфеля 2, этих 8 481 в инвестиционном вычете уже нет.
+      Программа не пишет об этом ни бухгалтеру, ни в журнал. Меняется только вычет по коду 1530 - и дальше весь документ.
+    </p>
+  </div>
+</section>
+
+<section class="section">
+  <div class="wrap">
+    <h2>Как 8 481 превращаются в 4 или 6 строк</h2>
+    <p class="lead">
+      Программа сравнивает сегодняшний вычет по коду 1530 с вычетом из предыдущего документа.
+      Порог лежит ровно между двумя случайными вариантами.
+    </p>
+    <div class="eq">
+      прошлый вычет 1530 = 42 117 785,31<br>
+      эталон сегодня &nbsp;&nbsp;= 42 113 256,71 &nbsp; (меньше порога на 4 528,60) &nbsp; -&gt; старый путь, 4 строки<br>
+      случайный сегодня = 42 121 737,71 &nbsp; (больше порога на 3 952,40) &nbsp; -&gt; новый путь, 6 строк<br>
+      разница двух сегодня = 4 528,60 + 3 952,40 = <b>8 481,00</b>
+    </div>
+    <p>
+      Если сегодняшний вычет <b>чуть меньше</b> прошлого, программа режет текущие суммы "по-старому".
+      Если <b>чуть больше</b> - она копирует прошлогодние 13% как есть, а всё лишнее кидает на 15%.
+    </p>
+    <p>
+      У клиента А по коду 1537 в документе две строки. Новый путь записывает прошлую сумму
+      <b>в обе</b>. Отсюда две одинаковые строки 15 534,62 и отрицательная -7 767,31
+      (это как раз маленькая текущая строка 7 767,31, вычтенная из удвоенного прошлого).
+    </p>
+    <ol class="steps">
+      <li>
+        <div class="n">1</div>
+        <div>
+          <h4>Список партий продажи без очереди</h4>
+          <p>Покупки одной облигации приходят то раньше-позже, то вперемешку. База не обещает один порядок, пока его не попросили.</p>
+        </div>
+      </li>
+      <li>
+        <div class="n">2</div>
+        <div>
+          <h4>Остаток НКД вешают на последнюю партию</h4>
+          <p>Последняя в списке сегодня - не та, что вчера. Вместе с ней "гуляет" 8 481.</p>
+        </div>
+      </li>
+      <li>
+        <div class="n">3</div>
+        <div>
+          <h4>Партия без инвествычета не принимает эти деньги</h4>
+          <p>НКД на Портфеле 2 не попадает в вычет. Сумма не падает в ошибку. Просто пропадает.</p>
+        </div>
+      </li>
+      <li>
+        <div class="n">4</div>
+        <div>
+          <h4>Инвествычет то 8 481, то ноль</h4>
+          <p>Он целиком садится в вычет по коду 1530.</p>
+        </div>
+      </li>
+      <li>
+        <div class="n">5</div>
+        <div>
+          <h4>Вычет пересекает порог прошлого документа</h4>
+          <p>Программа выбирает другой способ разложить 13% и 15%.</p>
+        </div>
+      </li>
+      <li>
+        <div class="n">6</div>
+        <div>
+          <h4>В таблице 4 строки или 6</h4>
+          <p>Бухгалтер видит "сломалось", хотя доход тот же.</p>
+        </div>
+      </li>
+    </ol>
+  </div>
+</section>
+
+<section class="section" style="background:#fffdf8">
+  <div class="wrap">
+    <h2>Что это значит для бизнеса</h2>
+    <div class="bento">
+      <div class="tile">
+        <div class="label">Налог может "прыгать"</div>
+        <p>Не потому что клиент продал другую бумагу, а потому что остаток НКД сел на другую партию покупки.</p>
+      </div>
+      <div class="tile">
+        <div class="label">Сверять глазами опасно</div>
+        <p>Два расчёта одного документа выглядят как два разных мира. Расхождение не в доходе, а в вычете и в числе строк.</p>
+      </div>
+      <div class="tile">
+        <div class="label">Это типовая логика, не "кнопка оператора"</div>
+        <p>Повторяется на одном клиенте при повторном расчёте. Массовый прогон только делает случайность заметнее.</p>
+      </div>
+      <div class="tile ok">
+        <div class="label">Как лечим</div>
+        <p>Всегда разбираем партии одной бумаги от ранней покупки к поздней. Остаток НКД всегда на одной и той же последней партии. Тогда кнопка "Рассчитать" даёт один результат.</p>
+      </div>
+    </div>
+    <p class="note" style="margin-top:28px">
+      Цифры на этой странице - реальный документ клиента А на 31.12.2026.
+      ФИО и номера договоров скрыты. Технический разбор с модулями и строками кода -
+      в отдельном файле для разработчиков.
+    </p>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    ВИМ Инвестиции. IMDEV-7330. Для бизнеса: почему один расчёт НДФЛ по ДУ даёт разный налог.
+  </div>
+</footer>
+
+<script>
+(function () {
+  var lots = document.getElementById("lots");
+  var status = document.getElementById("lotStatus");
+  var nodes = Array.prototype.slice.call(lots.children);
+
+  function clearRest() {
+    nodes.forEach(function (n) {
+      var old = n.querySelector(".rest");
+      if (old) old.parentNode.removeChild(old);
+      n.classList.remove("drop");
+    });
+  }
+
+  function putRest(last, lost) {
+    var badge = document.createElement("div");
+    badge.className = "rest";
+    badge.textContent = lost
+      ? "остаток НКД 8 481 - не попал в инвествычет"
+      : "остаток НКД 8 481 - в инвествычете";
+    last.appendChild(badge);
+    if (lost) last.classList.add("drop");
+  }
+
+  function fifo() {
+    clearRest();
+    lots.appendChild(nodes[0]);
+    lots.appendChild(nodes[2]);
+    lots.appendChild(nodes[1]);
+    putRest(nodes[1], false);
+    status.className = "status ok";
+    status.textContent = "Последняя в списке - партия 12.03.2016, Портфель 1. НКД 8 481 в инвествычете, в начислениях 4 строки.";
+  }
+
+  function shuffle() {
+    clearRest();
+    lots.appendChild(nodes[1]);
+    lots.appendChild(nodes[0]);
+    lots.appendChild(nodes[2]);
+    putRest(nodes[2], true);
+    status.className = "status bad";
+    status.textContent = "Последней оказалась партия 20.12.2024, Портфель 2. НКД 8 481 не попал в вычет. В начислениях 6 строк.";
+  }
+
+  document.getElementById("btnFifo").addEventListener("click", fifo);
+  document.getElementById("btnShuffle").addEventListener("click", shuffle);
+  fifo();
+})();
+</script>
+</body>
+</html>
