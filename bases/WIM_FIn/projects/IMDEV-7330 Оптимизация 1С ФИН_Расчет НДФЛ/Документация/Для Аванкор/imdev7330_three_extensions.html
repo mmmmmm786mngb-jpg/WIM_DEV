@@ -1,0 +1,663 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>IMDEV-7330. Три расширения для влива в типовую 1С ФИН</title>
+<style>
+    body { font-family: "Segoe UI", Arial, sans-serif; line-height: 1.55; color: #212529; background: #f5f6f8; margin: 0; padding: 0 0 60px 0; }
+    .wrap { max-width: 1120px; margin: 0 auto; padding: 0 24px; }
+    header { background: #1f2d3d; color: #fff; padding: 28px 0 22px 0; margin-bottom: 28px; }
+    header h1 { margin: 0 0 8px 0; font-size: 24px; }
+    header .sub { color: #b8c4d0; font-size: 14px; }
+    h2 { font-size: 20px; margin: 36px 0 12px 0; padding-bottom: 8px; border-bottom: 2px solid #17a2b8; }
+    h3 { font-size: 16px; margin: 20px 0 8px 0; color: #1f2d3d; }
+    p { margin: 10px 0; }
+    table { width: 100%; border-collapse: collapse; background: #fff; margin: 12px 0; font-size: 14px; }
+    th { background: #1f2d3d; color: #fff; text-align: left; padding: 8px 10px; }
+    td { padding: 8px 10px; border-bottom: 1px solid #e3e6ea; vertical-align: top; }
+    tbody tr:nth-child(even) { background: #fafbfc; }
+    code { background: #eef1f4; padding: 1px 5px; border-radius: 3px; font-family: Consolas, "Courier New", monospace; font-size: 13px; }
+    .box { padding: 14px 18px; border-radius: 5px; margin: 14px 0; border-left: 5px solid; }
+    .box b { display: block; margin-bottom: 6px; }
+    .in { background: #eefaf1; border-color: #28a745; }
+    .out { background: #fdf0f1; border-color: #dc3545; }
+    .warn { background: #fff9e6; border-color: #f0ad4e; }
+    .info { background: #eaf7fa; border-color: #17a2b8; }
+    .school { background: #f3eefb; border-color: #7952b3; }
+    ul, ol { margin: 8px 0 8px 22px; }
+    li { margin: 5px 0; }
+    .small { font-size: 13px; color: #6c757d; }
+    .tag { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 12px; font-weight: 600; color: #fff; }
+    .tag-new { background: #28a745; }
+    .tag-chg { background: #17a2b8; }
+    .tag-del { background: #dc3545; }
+    .tag-keep { background: #6c757d; }
+    .toc { background: #fff; border: 1px solid #e3e6ea; border-radius: 5px; padding: 12px 20px; margin: 16px 0; }
+    .toc a { text-decoration: none; color: #0a58ca; }
+    .toc ol { margin: 4px 0 0 18px; }
+    ul.objtree { list-style: none; padding-left: 1.2rem; margin: 0.4rem 0 1rem 0; }
+    ul.objtree ul { padding-left: 1.2rem; border-left: 1px solid #e2e8f0; margin-left: 0.35rem; }
+    .objtree .branch { margin: 0.22rem 0; }
+    .objtree .branch > .cap {
+        cursor: pointer; display: inline-flex; align-items: center; gap: 0.35rem;
+        padding: 0.1rem 0.15rem; flex-wrap: wrap;
+    }
+    .objtree .branch > .cap:hover { background: #edf2f7; border-radius: 4px; }
+    .objtree .toggle { font-size: 0.72rem; color: #718096; user-select: none; }
+    .objtree .name { font-weight: 600; }
+    .objtree .leaf {
+        padding-left: 1.5rem; margin: 0.18rem 0; display: flex;
+        align-items: center; gap: 0.4rem; flex-wrap: wrap;
+    }
+    .objtree .leaf .name {
+        font-weight: 400; font-family: Consolas, "Courier New", monospace; font-size: 0.9rem;
+    }
+    .treebox { background: #fff; border: 1px solid #e2e8f0; border-radius: 6px; padding: 12px 16px; }
+    .note { font-size: 13px; color: #495057; margin: 4px 0 8px 1.5rem; }
+    footer { margin-top: 36px; padding-top: 12px; border-top: 1px solid #dee2e6; font-size: 13px; color: #6c757d; }
+    .cards { display: grid; grid-template-columns: 1fr; gap: 10px; margin: 14px 0; }
+    @media (min-width: 900px) { .cards { grid-template-columns: 1fr 1fr 1fr; } }
+    .card { background: #fff; border: 1px solid #e2e8f0; border-radius: 6px; padding: 12px 14px; }
+    .card h3 { margin: 0 0 8px 0; border: 0; padding: 0; font-size: 15px; }
+</style>
+</head>
+<body>
+<header>
+<div class="wrap">
+    <h1>IMDEV-7330. Три расширения для влива в типовую</h1>
+    <div class="sub">
+        Для вендора Аванкор. Целевой релиз: конфигурация
+        «Доверительное управление, редакция 2», версия <b>2.8.7.5</b>
+        (ООО «Аванкор»). В этом релизе параллельное формирование НДФЛ и массовый кэш НКД
+        уже в базовой конфигурации. Три Patch-расширения ниже - следующий слой.
+        После переноса расширения снять. Дата документа: 02.09.2026.
+    </div>
+</div>
+</header>
+
+<div class="wrap">
+
+<div class="toc">
+    <b>Содержание</b>
+    <ol>
+        <li><a href="#how">Как читать этот файл и как переносить код</a></li>
+        <li><a href="#locks">Раздел 1. IMDEV7330_Locks</a></li>
+        <li><a href="#coupon">Раздел 2. IMDEV7330_NkdCoupon</a></li>
+        <li><a href="#param">Раздел 3. IMDEV7330_NkdParam</a></li>
+    </ol>
+</div>
+
+<h2 id="how">Как читать этот файл</h2>
+
+<p>
+Это не три разных продукта. Это три небольших патча к релизу <b>2.8.7.5</b>.
+Каждый патч закрывает свою дыру. В типовую этого релиза нужно перенести все три.
+</p>
+
+<table>
+    <tbody>
+        <tr><td style="width:240px">Конфигурация</td><td>Доверительное управление, редакция 2 (имя метаданных <code>ДУ</code>)</td></tr>
+        <tr><td>Вендор</td><td>ООО «Аванкор»</td></tr>
+        <tr><td>Целевой релиз</td><td><b>2.8.7.5</b></td></tr>
+        <tr><td>Совместимость платформы</td><td>8.3.27</td></tr>
+        <tr><td>Что уже есть в 2.8.7.5</td><td>
+            Оркестратор пачек <code>ОркестраторФормированияНДФЛ</code>,
+            константа <code>ЧислоПараллельныхПачекФормированияНДФЛ</code>,
+            массовый предрасчёт НКД, сигнатуры с параметром <code>ВнешнийКэшНКД</code>.
+            Параметр в 2.8.7.5 объявлен, но кэш по-прежнему кладётся в
+            <code>ПараметрыСеанса.ОбщиеЗначения</code> - это как раз чинит
+            <code>IMDEV7330_NkdParam</code>.
+        </td></tr>
+        <tr><td>Что влить</td><td><code>IMDEV7330_Locks</code>, <code>IMDEV7330_NkdCoupon</code>, <code>IMDEV7330_NkdParam</code></td></tr>
+    </tbody>
+</table>
+
+<div class="cards">
+    <div class="card">
+        <h3>Locks</h3>
+        <p>Редкие зависания, когда несколько потоков стартуют разом. Плюс тумблер добрать клиентов без документа, если пачка упала.</p>
+    </div>
+    <div class="card">
+        <h3>NkdCoupon</h3>
+        <p>Тяжёлый массовый запрос НКД: купоны считать только у того клиента, который их оплатил. Запрос становится меньше и быстрее.</p>
+    </div>
+    <div class="card">
+        <h3>NkdParam</h3>
+        <p>Кэш НКД больше не достают из сейфа сеанса (это медленно). Плюс расчёт перестаёт зависеть от случайного порядка строк.</p>
+    </div>
+</div>
+
+<div class="box info">
+    <b>База для влива - только 2.8.7.5</b>
+    В релизе 2.8.7.5 оркестратор пачек и массовый кэш НКД уже в типовых модулях.
+    Три расширения меняют уже существующие процедуры этого релиза
+    (пауза между пачками, текст массового запроса купонов, проброс кэша параметром,
+    стабильный порядок партий).
+    Вливать в более ранний релиз, где нет <code>ОркестраторФормированияНДФЛ</code>, нельзя.
+</div>
+
+<div class="box in">
+    <b>Правило переноса (одинаковое для всех трёх)</b>
+    <ol>
+        <li>Открыть модуль расширения. Найти процедуру с аннотацией <code>&amp;ИзменениеИКонтроль</code>.</li>
+        <li>Строки между <code>#Вставка</code> и <code>#КонецВставки</code> вставить в тело типового метода с тем же именем.</li>
+        <li>Строки между <code>#Удаление</code> и <code>#КонецУдаления</code> убрать из типового метода.</li>
+        <li>Новые процедуры без аннотации перехвата скопировать в тот же модуль целиком. Префикс <code>IMDEV7330_..._</code> в типовой снимать.</li>
+        <li>Аннотации <code>&amp;ИзменениеИКонтроль</code> и маркеры <code>#Вставка</code> / <code>#Удаление</code> в типовой не оставлять.</li>
+        <li>Не копировать расширение целиком вместо точечной вставки: в перехвате часто лежит копия всего метода, включая чужой код.</li>
+        <li>После приёмки снять три расширения.</li>
+    </ol>
+</div>
+
+<p>
+Легенда дерева:
+<span class="tag tag-new">новое</span>
+<span class="tag tag-chg">изменено</span>
+<span class="tag tag-del">удалить из типовой / убрать старое тело</span>
+<span class="tag tag-keep">не трогать</span>
+</p>
+
+<!-- ===================== LOCKS ===================== -->
+<h2 id="locks">1. Расширение IMDEV7330_Locks</h2>
+
+<h3>Какая проблема решается</h3>
+
+<div class="box school">
+    <b>Простыми словами</b>
+    Представьте десять кассиров, которые в одну секунду тянут одну и ту же папку из шкафа.
+    Шкаф говорит: «подождите», но ждать можно не бесконечно. Когда время вышло,
+    СУБД бросает запрос с ошибкой ожидания блокировки (SQL 1222 / HYT00).
+    Так бывает редко: только если предварительные запросы нескольких пачек стартовали одновременно.
+</div>
+
+<p>Расширение делает три вещи.</p>
+<ol>
+    <li>
+        <b>Не стартовать все пачки в одну секунду.</b>
+        После запуска большой пачки (больше 1000 строк) оркестратор ждёт 30 секунд,
+        потом запускает следующую.
+    </li>
+    <li>
+        <b>Если шкаф всё же занят - повторить запрос.</b>
+        Тяжёлый запрос оборотов по портфелю выполняется до трёх раз.
+        Паузы между попытками: 60 секунд, потом 180 секунд.
+        Повторяют только ошибку ожидания блокировки, не любую ошибку.
+    </li>
+    <li>
+        <b>Если пачка всё равно упала - добрать клиентов вручную.</b>
+        В обработке появляется четвёртый вариант заполнения:
+        «По всем клиентам на конец периода без НДФЛ».
+        В список попадают пары клиент + УК, у которых на дату конца периода
+        нет проведённого документа начисления. Документы других дат пару не закрывают.
+        Так можно дозаполнить тех, кого упавшая пачка не посчитала.
+    </li>
+</ol>
+
+<div class="box warn">
+    <b>Что это не меняет</b>
+    Суммы налога расширение не считает заново. Оно только помогает массовому запуску
+    не падать на блокировке и даёт кнопку «добить хвост».
+</div>
+
+<h3>Дерево: что взять из расширения</h3>
+
+<div class="treebox">
+<ul class="objtree">
+    <li class="branch">
+        <span class="cap"><span class="toggle">[-]</span><span class="name">IMDEV7330_Locks</span><span class="tag tag-keep">Patch</span></span>
+        <ul>
+            <li class="branch">
+                <span class="cap"><span class="toggle">[-]</span><span class="name">Документ НачислениеНДФЛПоПортфелю / Ext/ObjectModule.bsl</span></span>
+                <ul>
+                    <li class="leaf">
+                        <span class="name">ОбщиеОбороты</span>
+                        <span class="tag tag-chg">изменено</span>
+                    </li>
+                    <li class="note">
+                        Типовой <code>Запрос.Выполнить()</code> заменить на вызов
+                        <code>ВыполнитьЗапросСПовторомПриБлокировке</code>.
+                    </li>
+                    <li class="leaf">
+                        <span class="name">ВыполнитьЗапросСПовторомПриБлокировке</span>
+                        <span class="tag tag-new">новое</span>
+                    </li>
+                    <li class="note">3 попытки, паузы 60 и 180 с через <code>АванкорСервер.Пауза</code>.</li>
+                    <li class="leaf">
+                        <span class="name">ЭтоОшибкаОжиданияБлокировки</span>
+                        <span class="tag tag-new">новое</span>
+                    </li>
+                    <li class="note">Ищет в тексте ошибки маркеры 1222 и HYT00.</li>
+                    <li class="leaf">
+                        <span class="name">ОбщиеОборотыТекстЗапроса</span>
+                        <span class="tag tag-chg">изменено</span>
+                    </li>
+                    <li class="note">
+                        Добавить <code>ИНДЕКСИРОВАТЬ ПО</code> у временных таблиц санкций / документов расчёта.
+                        Это снижает шанс, что СУБД будет долго держать блокировку на соединении.
+                    </li>
+                </ul>
+            </li>
+            <li class="branch">
+                <span class="cap"><span class="toggle">[-]</span><span class="name">Обработка ФормированиеНачисленийНДФЛ / Ext/ManagerModule.bsl</span></span>
+                <ul>
+                    <li class="leaf">
+                        <span class="name">ОркестраторФормированияНДФЛ</span>
+                        <span class="tag tag-chg">изменено</span>
+                    </li>
+                    <li class="note">
+                        В цикл запуска пачек вставить паузу 30 с, если в пачке больше 1000 строк
+                        и это не последняя пачка. Остальное тело оркестратора не переписывать.
+                    </li>
+                </ul>
+            </li>
+            <li class="branch">
+                <span class="cap"><span class="toggle">[-]</span><span class="name">Обработка ФормированиеНачисленийНДФЛ / Ext/ObjectModule.bsl</span></span>
+                <ul>
+                    <li class="leaf">
+                        <span class="name">ЗаполнитьДатыДокументов</span>
+                        <span class="tag tag-chg">изменено</span>
+                    </li>
+                    <li class="note">Новая ветка: если <code>ВариантЗаполнения = 4</code>, вызвать процедуру ниже.</li>
+                    <li class="leaf">
+                        <span class="name">ЗаполнитьПоОтсутствующимНачислениямНДФЛ</span>
+                        <span class="tag tag-new">новое</span>
+                    </li>
+                    <li class="note">
+                        Кандидаты как у варианта 2, минус пары, у которых на конец периода
+                        уже есть проведённый документ по портфелю или по УК.
+                    </li>
+                </ul>
+            </li>
+            <li class="branch">
+                <span class="cap"><span class="toggle">[-]</span><span class="name">Форма обработки ФормированиеНачисленийНДФЛ</span></span>
+                <ul>
+                    <li class="leaf">
+                        <span class="name">Forms/Форма/Ext/Form.xml : ГруппаВариантЗаполнения</span>
+                        <span class="tag tag-chg">изменено</span>
+                    </li>
+                    <li class="note">Горизонтальная группа вокруг тумблера, чтобы подпись четвёртого пункта не ломала раскладку.</li>
+                    <li class="leaf">
+                        <span class="name">УправлениеФормой</span>
+                        <span class="tag tag-chg">изменено</span>
+                    </li>
+                    <li class="note">
+                        Поля отбора портфелей и схема выплаты видны при варианте 2 или 4.
+                        «Создавать оплату НДФЛ» - только при варианте 2.
+                    </li>
+                    <li class="leaf">
+                        <span class="name">ДобавитьВариантПоОтсутствующимНачислениям</span>
+                        <span class="tag tag-new">новое</span>
+                    </li>
+                    <li class="note">
+                        <code>СписокВыбора.Добавить(4, "По всем клиентам на конец периода без НДФЛ")</code>.
+                        В типовой пункт 4 можно сразу положить в ChoiceList формы.
+                        В расширении его нельзя писать в XML поля: подмена тумблера ломает форму.
+                    </li>
+                </ul>
+            </li>
+            <li class="branch">
+                <span class="cap"><span class="toggle">[-]</span><span class="name">Справочники БанковскиеСчета, Контрагенты, Периоды</span></span>
+                <ul>
+                    <li class="leaf">
+                        <span class="name">только заимствование типов для формы</span>
+                        <span class="tag tag-keep">не трогать</span>
+                    </li>
+                    <li class="note">Кода нет. В типовую ничего не переносить.</li>
+                </ul>
+            </li>
+        </ul>
+    </li>
+</ul>
+</div>
+
+<!-- ===================== COUPON ===================== -->
+<h2 id="coupon">2. Расширение IMDEV7330_NkdCoupon</h2>
+
+<h3>Какая проблема решается</h3>
+
+<div class="box school">
+    <b>Простыми словами</b>
+    Когда считают сразу много клиентов одной пачкой, программа сначала собирает
+    «все оплаченные купоны этих людей» в одну общую кучу.
+    Потом для перевода НКД смотрит: есть ли купон в этой куче.
+    Куча общая. Поэтому купон соседа может попасть в расчёт другого человека,
+    а запрос раздувается: база перебирает лишние строки.
+</div>
+
+<p>
+Исправление одно: в массовом запросе расходов НКД оплаченный купон хранится
+вместе с клиентом, который его оплатил. Перевод НКД соединяется уже не с «любым купоном пачки»,
+а с парой «этот клиент + этот купон».
+</p>
+<p>
+Чтобы база не размножала строки и быстрее находила пару, куча свёрнута
+(<code>СГРУППИРОВАТЬ ПО</code>) и проиндексирована по клиенту и купону.
+Две ветки перевода НКД вынесены во временные таблицы с таким же индексом.
+</p>
+
+<div class="box in">
+    <b>Зачем это вендору</b>
+    Это правка одного текста запроса. Поведение одиночного расчёта одного клиента
+    не меняется (там клиент и так один). Меняется массовый предрасчёт пачки:
+    меньше работы у СУБД и нет «чужих» купонов в кэше соседа.
+</div>
+
+<h3>Дерево: что взять из расширения</h3>
+
+<div class="treebox">
+<ul class="objtree">
+    <li class="branch">
+        <span class="cap"><span class="toggle">[-]</span><span class="name">IMDEV7330_NkdCoupon</span><span class="tag tag-keep">Patch</span></span>
+        <ul>
+            <li class="branch">
+                <span class="cap"><span class="toggle">[-]</span><span class="name">Документ НачислениеНДФЛПоУправляющейКомпании / Ext/ManagerModule.bsl</span></span>
+                <ul>
+                    <li class="leaf">
+                        <span class="name">РасходыПоНКДПоКлиентамИДате</span>
+                        <span class="tag tag-chg">изменено</span>
+                        <span class="tag tag-del">старый текст запроса убрать</span>
+                    </li>
+                    <li class="note">
+                        Единственный перехват расширения. В типовой заменить текст запроса целиком
+                        на текст из блока <code>#Вставка</code>.
+                    </li>
+                    <li class="leaf">
+                        <span class="name">ВТ ОплаченныеКупоныЗаПериод</span>
+                        <span class="tag tag-chg">изменено</span>
+                    </li>
+                    <li class="note">
+                        Добавлено поле <code>Клиент</code>. Удалены неиспользуемые колонки
+                        <code>Облигация</code> и <code>СуммаОборот</code>.
+                        Добавлены группировка и <code>ИНДЕКСИРОВАТЬ ПО Клиент, Купон</code>.
+                    </li>
+                    <li class="leaf">
+                        <span class="name">ВТ_ПереводыНКД_Кор2 и ВТ_ПереводыНКД_Кор3</span>
+                        <span class="tag tag-new">новое</span>
+                    </li>
+                    <li class="note">
+                        Бывшие ветки <code>ОБЪЕДИНИТЬ ВСЕ</code> внутри
+                        <code>ВТ_РасходыПоНКД</code> вынесены в отдельные временные таблицы
+                        с индексом по клиенту и купону связи.
+                    </li>
+                    <li class="leaf">
+                        <span class="name">Сборка ВТ_РасходыПоНКД</span>
+                        <span class="tag tag-chg">изменено</span>
+                    </li>
+                    <li class="note">
+                        Переводы НКД попадают в результат только через
+                        внутреннее соединение с <code>ОплаченныеКупоныЗаПериод</code>
+                        по паре (Клиент, Купон).
+                    </li>
+                    <li class="leaf">
+                        <span class="name">РасходыПоНКДПоВидуОбращаемости (один клиент)</span>
+                        <span class="tag tag-keep">не трогать</span>
+                    </li>
+                    <li class="note">Этот метод в расширении не перехвачен. Меняется только массовый запрос пачки.</li>
+                </ul>
+            </li>
+        </ul>
+    </li>
+</ul>
+</div>
+
+<div class="box out">
+    <b>Не делать</b>
+    Не вешать второй <code>&amp;ИзменениеИКонтроль</code> на тот же метод в другом расширении.
+    Если <code>NkdParam</code> и <code>NkdCoupon</code> живут вместе, у них разные методы:
+    Coupon правит <code>РасходыПоНКДПоКлиентамИДате</code>,
+    Param правит <code>РасходыПоНКДПоВидуОбращаемости</code>.
+    В типовой оба текста должны оказаться в своих процедурах.
+</div>
+
+<!-- ===================== PARAM ===================== -->
+<h2 id="param">3. Расширение IMDEV7330_NkdParam</h2>
+
+<h3>Какая проблема решается</h3>
+
+<p>Здесь две разные задачи в одном расширении.</p>
+
+<h3>Задача А. Долгое чтение кэша из сеанса</h3>
+
+<div class="box school">
+    <b>Простыми словами</b>
+    Кэш расходов НКД уже построен один раз на пачку и лежит в памяти обработки.
+    Типовой код перед каждым клиентом кладёт этот кэш в параметр сеанса
+    <code>ОбщиеЗначения</code> (тип <code>ХранилищеЗначения</code>).
+    Чтобы достать одну бумажку, программа каждый раз распаковывает весь сейф сеанса.
+    Это не SQL и не «медленный запрос». Это сериализация. На профиле потока
+    на это уходила почти половина собственного времени.
+</div>
+
+<p>
+Как надо: коробка с кэшем передаётся из рук в руки параметром,
+как уже сделано у документа по портфелю с кэшем оборотов.
+</p>
+<pre style="background:#1f2d3d;color:#e6edf3;padding:14px 16px;border-radius:5px;overflow-x:auto;font-family:Consolas,monospace;font-size:12.5px;line-height:1.45;">
+Обработка.СтруктураКэшНКД
+    СоздатьНачислениеНДФЛПоУК
+        РассчитатьНДФЛ(СтруктураКэшНКД)
+            Документ.Перем ВнешнийКэшНКД = параметр
+            ... до РасходыПоНКДПоВидуОбращаемости(..., ВнешнийКэшНКД)
+                lookup по ключу клиента и даты, без сеанса
+</pre>
+
+<h3>Задача Б. Неверный (плавающий) расчёт</h3>
+
+<div class="box school">
+    <b>Простыми словами</b>
+    Калькулятор иногда кладёт остаток суммы на «последнюю кучку» партий.
+    Если кучки каждый раз в разном порядке, остаток падает на другую партию.
+    Тогда часть сумм не находит свою пару и тихо выпадает из инвествычета.
+    Вторая дыра: для выбора ветки шкалы 13% / 15% программа смотрела
+    первую найденную строку кода дохода, а не сумму всех строк этого кода.
+    Третья: текущие начисления перед соединением с ранее начисленным налогом
+    не сворачивались, и строки размножались.
+</div>
+
+<p>Что делается:</p>
+<ol>
+    <li>Таблицу продаж и таблицу партий всегда сортировать одинаково (FIFO: дата партии, партия, актив, регистратор).</li>
+    <li>Ветку прогрессивной шкалы считать по итогу кода дохода, а не по первой строке <code>Найти</code>.</li>
+    <li>Перед соединением с ранее начисленным НДФЛ свернуть текущие начисления по ключу кода.</li>
+    <li>
+        Если после сопоставления партий сумма НКД в вычете меньше исходной,
+        записать в журнал регистрации событие
+        <code>IMDEV-7330.ОтразитьУКДиНКДВИнвестВычете</code>
+        уровнем <b>Информация</b> (не предупреждение).
+        Расхождение только по УКД в журнал не пишем: так типовая работала всегда, сообщений не было.
+    </li>
+</ol>
+
+<div class="box warn">
+    <b>Про сигнатуры</b>
+    Новый параметр кэша везде последний, тип <code>Соответствие</code> или <code>Неопределено</code>.
+    Если его не передали - работает старый путь с запросом (форма документа, тесты, расчёт одного клиента).
+    В релизе 2.8.7.5 у методов УК параметр <code>ВнешнийКэшНКД</code> уже есть в сигнатуре.
+    Второй раз его не добавлять. Переносить только тела: сейчас параметр объявлен, но не используется
+    (кэш по-прежнему читается из сеанса).
+</div>
+
+<h3>Дерево: что взять из расширения</h3>
+
+<div class="treebox">
+<ul class="objtree">
+    <li class="branch">
+        <span class="cap"><span class="toggle">[-]</span><span class="name">IMDEV7330_NkdParam</span><span class="tag tag-keep">Patch</span></span>
+        <ul>
+            <li class="branch">
+                <span class="cap"><span class="toggle">[-]</span><span class="name">Документ НачислениеНДФЛПоУправляющейКомпании / Ext/ObjectModule.bsl</span></span>
+                <ul>
+                    <li class="leaf">
+                        <span class="name">Перем ВнешнийКэшНКД</span>
+                        <span class="tag tag-new">новое</span>
+                    </li>
+                    <li class="note">Только модуль объекта. В модуль менеджера не класть.</li>
+                    <li class="leaf">
+                        <span class="name">РассчитатьНДФЛ</span>
+                        <span class="tag tag-chg">изменено</span>
+                    </li>
+                    <li class="note">
+                        Параметр <code>ВнешнийКэшНКДПараметр</code> кладётся в <code>Перем</code>.
+                        Три вызова сброса сеансового кэша убрать.
+                    </li>
+                    <li class="leaf">
+                        <span class="name">РасчетНДФЛ_ИнвестиционныйВычет</span>
+                        <span class="tag tag-chg">изменено</span>
+                    </li>
+                    <li class="note">
+                        В вызов менеджера добавить аргумент <code>ВнешнийКэшНКД</code>.
+                        Сигнатуру самой процедуры не менять: она читает <code>Перем</code> объекта.
+                    </li>
+                </ul>
+            </li>
+            <li class="branch">
+                <span class="cap"><span class="toggle">[-]</span><span class="name">Документ НачислениеНДФЛПоУправляющейКомпании / Ext/ManagerModule.bsl</span></span>
+                <ul>
+                    <li class="leaf">
+                        <span class="name">РезультатРасчетаИнвестиционногоВычета</span>
+                        <span class="tag tag-chg">изменено</span>
+                    </li>
+                    <li class="note">Проброс параметра кэша в <code>ОтразитьУКДиНКДВИнвестВычете</code>.</li>
+                    <li class="leaf">
+                        <span class="name">ОтразитьУКДиНКДВИнвестВычете</span>
+                        <span class="tag tag-chg">изменено</span>
+                    </li>
+                    <li class="note">
+                        Сортировка таблицы продаж. Проброс кэша в <code>ИнвестиционныйВычетУКД</code>.
+                        Журнал регистрации уровнем Информация, только если потерян НКД.
+                    </li>
+                    <li class="leaf">
+                        <span class="name">ИнвестиционныйВычетУКД</span>
+                        <span class="tag tag-chg">изменено</span>
+                    </li>
+                    <li class="note">Проброс кэша в <code>РасходыПоНКДПоВидуОбращаемости</code>.</li>
+                    <li class="leaf">
+                        <span class="name">РасходыПоНКДПоВидуОбращаемости</span>
+                        <span class="tag tag-chg">изменено</span>
+                    </li>
+                    <li class="note">
+                        Lookup кэша из параметра. Вызов
+                        <code>ПолучитьВнешнийКэшНКДРасходов</code> убрать.
+                    </li>
+                    <li class="leaf">
+                        <span class="name">РаспределитьПоПартиямСУчетомПродаж</span>
+                        <span class="tag tag-chg">изменено</span>
+                    </li>
+                    <li class="note">
+                        Перед раздачей остатка:
+                        <code>ТаблицаСПартиями.Сортировать("ДатаПартии, Партия, Актив, Регистратор")</code>.
+                    </li>
+                    <li class="leaf">
+                        <span class="name">РаспределитьПревышениеПоТипуДохода</span>
+                        <span class="tag tag-chg">изменено</span>
+                    </li>
+                    <li class="note">
+                        Ветку шкалы определять по сумме строк кода дохода, не по первой строке <code>Найти</code>.
+                    </li>
+                    <li class="leaf">
+                        <span class="name">РанееНачисленныйНДФЛ</span>
+                        <span class="tag tag-chg">изменено</span>
+                    </li>
+                    <li class="note">
+                        Во временной таблице текущих начислений добавить свёртку
+                        <code>СГРУППИРОВАТЬ ПО</code> коду дохода / вычета / типу / ставке
+                        до соединения с ранее начисленным.
+                    </li>
+                    <li class="leaf">
+                        <span class="name">УстановитьВнешнийКэшНКДРасходов</span>
+                        <span class="tag tag-del">удалить из типовой после влива</span>
+                    </li>
+                    <li class="leaf">
+                        <span class="name">ПолучитьВнешнийКэшНКДРасходов</span>
+                        <span class="tag tag-del">удалить из типовой после влива</span>
+                    </li>
+                    <li class="note">
+                        Расширение эти две процедуры удалить не может. После переноса тел
+                        поиск по CF: вызовов и ключа <code>"КэшНКД"</code> не осталось.
+                    </li>
+                    <li class="leaf">
+                        <span class="name">КлючКэшаНКД, ПолучитьРасходыПоНКДПоКлиентам</span>
+                        <span class="tag tag-keep">не трогать</span>
+                    </li>
+                </ul>
+            </li>
+            <li class="branch">
+                <span class="cap"><span class="toggle">[-]</span><span class="name">Обработка ФормированиеНачисленийНДФЛ / Ext/ObjectModule.bsl</span></span>
+                <ul>
+                    <li class="leaf">
+                        <span class="name">СоздатьНачислениеНДФЛПоУК</span>
+                        <span class="tag tag-chg">изменено</span>
+                    </li>
+                    <li class="note">
+                        Вместо трёх вызовов <code>УстановитьВнешнийКэшНКДРасходов</code>
+                        и обёртки <code>Попытка</code> ради сброса сеанса:
+                        <code>НачислениеНДФЛПоУК.РассчитатьНДФЛ(СтруктураКэшНКД)</code>.
+                    </li>
+                </ul>
+            </li>
+            <li class="leaf">
+                <span class="name">Форма документа УК, кнопка Рассчитать</span>
+                <span class="tag tag-keep">не трогать</span>
+            </li>
+            <li class="note">Вызов без аргумента должен остаться рабочим.</li>
+        </ul>
+    </li>
+</ul>
+</div>
+
+<div class="box out">
+    <b>Не делать</b>
+    <ul>
+        <li>Не писать кэш НКД в <code>ПараметрыСеанса.ОбщиеЗначения</code>.</li>
+        <li>Не копировать эту правку в документ «Начисление НДФЛ по портфелю» и в регистр инвестиционных вычетов без отдельного сценария.</li>
+        <li>Не добавлять параметр в <code>РасчетНДФЛ_ИнвестиционныйВычет</code>.</li>
+        <li>Не оставлять в журнале уровень «Предупреждение»: раньше сообщений не было, уровень - Информация.</li>
+    </ul>
+</div>
+
+<h2>Порядок влива в релиз 2.8.7.5</h2>
+<ol>
+    <li><code>IMDEV7330_Locks</code> - пауза между пачками, повтор запроса оборотов, вариант заполнения 4.</li>
+    <li><code>IMDEV7330_NkdCoupon</code> - текст массового запроса купонов.</li>
+    <li><code>IMDEV7330_NkdParam</code> - начать использовать уже объявленный параметр кэша и стабильный расчёт.</li>
+    <li>Удалить сеансовые процедуры <code>УстановитьВнешнийКэшНКДРасходов</code> и
+        <code>ПолучитьВнешнийКэшНКДРасходов</code>. Снять три расширения.</li>
+</ol>
+
+<p class="small">
+    Сборки CFE лежат рядом с XML: <code>Расширения/IMDEV7330_Locks.cfe</code>,
+    <code>IMDEV7330_NkdCoupon.cfe</code>, <code>IMDEV7330_NkdParam.cfe</code>.
+    Детальные ТЗ по отдельным расширениям можно не читать, если этого файла достаточно:
+    здесь полный состав для влива.
+</p>
+
+<footer>
+    IMDEV-7330. Влив в «Доверительное управление, редакция 2», релиз 2.8.7.5.
+    Без персональных данных. Журнал по потере НКД - уровень Информация.
+</footer>
+</div>
+
+<script>
+    document.querySelectorAll(".objtree .branch > .cap").forEach(function (cap) {
+        cap.addEventListener("click", function () {
+            var ul = this.nextElementSibling;
+            if (!ul) return;
+            var toggle = this.querySelector(".toggle");
+            if (ul.style.display === "none") {
+                ul.style.display = "block";
+                if (toggle) toggle.textContent = "[-]";
+            } else {
+                ul.style.display = "none";
+                if (toggle) toggle.textContent = "[+]";
+            }
+        });
+    });
+    document.querySelectorAll(".objtree .branch > ul").forEach(function (ul) {
+        ul.style.display = "block";
+        var t = ul.previousElementSibling.querySelector(".toggle");
+        if (t) t.textContent = "[-]";
+    });
+</script>
+</body>
+</html>
