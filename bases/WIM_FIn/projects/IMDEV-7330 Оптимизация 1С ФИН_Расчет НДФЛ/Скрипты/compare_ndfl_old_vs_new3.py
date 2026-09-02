@@ -30,15 +30,11 @@ OUT_JSON = os.path.join(DOC, "imdev7330_ndfl_old_vs_new3_diff.json")
 
 FILES = {
     "uk_old": os.path.join(BASE, "НДФЛ_Управление_27292.xlsx"),
-    "uk_n2": os.path.join(BASE, "НДФЛ_Управление_27292_ПоНовому2.xlsx"),
     "uk_n3": os.path.join(BASE, "НДФЛ_Управление_27292_ПоНовому3.xlsx"),
     "pf_old": os.path.join(BASE, "НДФЛ_Портфели_27292.xlsx"),
-    "pf_n2": os.path.join(BASE, "НДФЛ_Портфели_27292_ПоНовому2.xlsx"),
     "pf_n3": os.path.join(BASE, "НДФЛ_Портфели_27292_ПоНовому3.xlsx"),
     "msg_old": os.path.join(BASE, "Сообщения_поСтарому_Аванкор.txt"),
-    "msg_n2": os.path.join(BASE, "Сообщения_поНовому2_Аванкор.txt"),
     "msg_n3": os.path.join(BASE, "Сообщения_поНовому3_Аванкор.txt"),
-    "log_n2": os.path.join(BASE, "Лог формирования начисдений НДФЛ_ПоНовому2.txt"),
     "log_n3": os.path.join(BASE, "Лог формирования начисдений НДФЛ_ПоНовому3.xlsx"),
 }
 
@@ -48,6 +44,14 @@ PLAT_MARKERS = (
     "Платонов Д.В.",
     "Платонов Дмитрий Вячеславович",
 )
+# Metki dlya otchyota vendoru: FIO, nomer UK, kody DU ne popadayut v HTML.
+CLIENT_A = "Клиент А"
+DOC_A = "УК-А"
+PF1 = "Портфель 1"
+PF2 = "Портфель 2"
+RE_FIO_INIT = re.compile(r"[А-ЯЁ][а-яё\-]+\s+[А-ЯЁ]\.[А-ЯЁ]\.")
+RE_DU = re.compile(r"ДУ\s+[А-ЯA-ZЁ]*\d+")
+RE_DOCNUM = re.compile(r"\b0{6,}\d+\b")
 EPS = c.EPS
 NUM_UK = c.NUM_UK
 NUM_PF = c.NUM_PF
@@ -76,6 +80,29 @@ def fmt_dec(v) -> str:
         return fmt_int(d)
     s = f"{d:,.2f}"
     return s.replace(",", " ")
+
+
+def mask_text(s) -> str:
+    """Obeznlichivaet FIO, DU i nomer dokumenta UK. Summy ne trogaet."""
+    if s is None:
+        return ""
+    t = str(s)
+    t = t.replace("Платонов Дмитрий Вячеславович", CLIENT_A)
+    t = t.replace("Платонов Д.В.", CLIENT_A)
+    t = t.replace("ДУ 2258", PF1)
+    t = t.replace("ДУ 10155", PF2)
+    t = t.replace(PLAT_NUM, DOC_A)
+    t = re.sub(r"Платонов\w*", "другой клиент", t)
+    t = RE_DU.sub("портфель", t)
+    t = RE_DOCNUM.sub(DOC_A, t)
+    t = re.sub(r"по портфелю\s+.+", "по портфелю [скрыто]", t)
+    t = re.sub(r"по клиенту\s+.+", "по клиенту [скрыто]", t)
+    t = RE_FIO_INIT.sub("[ФИО]", t)
+    return t
+
+
+def mask_esc(s) -> str:
+    return escape(mask_text(s))
 
 
 def parse_dt(s: str):
@@ -326,14 +353,7 @@ def analyze():
     result["uk_old_vs_n3"] = compare_pair(
         "uk old vs n3", r_uk_o, i_uk_o, r_uk_3, i_uk_3, NUM_UK, c.line_key_uk, c.fmt_key_uk
     )
-    del r_uk_o
-
-    safe_print("Load UK new2...")
-    _, i_uk_2, r_uk_2 = c.load_xlsx_rows(FILES["uk_n2"])
-    result["uk_n2_vs_n3"] = compare_pair(
-        "uk n2 vs n3", r_uk_2, i_uk_2, r_uk_3, i_uk_3, NUM_UK, c.line_key_uk, c.fmt_key_uk
-    )
-    del r_uk_2, r_uk_3
+    del r_uk_o, r_uk_3
 
     safe_print("Load PF old...")
     _, i_pf_o, r_pf_o = c.load_xlsx_rows(FILES["pf_old"])
@@ -361,7 +381,6 @@ def analyze():
 
     safe_print("Parse messages...")
     msg_o = c.parse_messages(FILES["msg_old"])
-    msg_2 = c.parse_messages(FILES["msg_n2"])
     msg_3 = c.parse_messages(FILES["msg_n3"])
 
     def msg_cmp(a, b):
@@ -388,14 +407,11 @@ def analyze():
         }
 
     result["msg_old_vs_n3"] = msg_cmp(msg_o, msg_3)
-    result["msg_n2_vs_n3"] = msg_cmp(msg_2, msg_3)
 
-    safe_print("Parse log new2 txt...")
-    result["log_n2"] = c.parse_log(FILES["log_n2"])
     safe_print("Parse log new3 xlsx...")
     result["log_n3"] = parse_log_xlsx(FILES["log_n3"])
 
-    for key in ("uk_old_vs_n3", "uk_n2_vs_n3", "pf_old_vs_n3"):
+    for key in ("uk_old_vs_n3", "pf_old_vs_n3"):
         result[key]["doc_compare"] = slim_dc(result[key]["doc_compare"])
         result[key]["doc_compare_wo_plat"] = slim_dc(result[key]["doc_compare_wo_plat"])
         bp = result[key].get("by_portfolio") or {}
@@ -499,54 +515,51 @@ def plat_table(rows_old, rows_new, num_names):
             cls = "ok" if so == sn and ro and rn else "warn"
             part, pf, kd, kv, st = k
             body.append(
-                f"<tr class='{cls}'><td>{escape(part)}</td><td>{escape(pf)}</td>"
+                f"<tr class='{cls}'><td>{mask_esc(part)}</td><td>{mask_esc(pf)}</td>"
                 f"<td>{escape(kd)}</td><td>{escape(kv)}</td><td>{escape(st)}</td>"
-                f"<td class='sig'>{escape(so)}</td><td class='sig'>{escape(sn)}</td></tr>"
+                f"<td class='sig'>{mask_esc(so)}</td><td class='sig'>{mask_esc(sn)}</td></tr>"
             )
     return "\n".join(body)
 
 
 def write_html(r):
     uk = r["uk_old_vs_n3"]
-    uk23 = r["uk_n2_vs_n3"]
     pf = r["pf_old_vs_n3"]
     log3 = r["log_n3"]
-    log2 = r["log_n2"]
     msg = r["msg_old_vs_n3"]
-    msg23 = r["msg_n2_vs_n3"]
 
     dc = uk["doc_compare"]
     dc_wo = uk["doc_compare_wo_plat"]
     bag = uk["line_bag"]
-    bag23 = uk23["line_bag"]
-    dc23 = uk23["doc_compare"]
 
-    plat_nums = uk["plat_nums"]
     plat_old = uk["plat_docs_old"]
     plat_new = uk["plat_docs_new"]
     surname_o = uk.get("surname_others_old") or []
     surname_n = uk.get("surname_others_new") or []
-    surname_nums = sorted({x["num"] for x in surname_o} | {x["num"] for x in surname_n})
 
-    # speed
     st3 = parse_dt(log3["header"].get("start") or "")
     en3 = parse_dt(log3["header"].get("end") or "")
-    st2 = parse_dt(log2["header"].get("start") or "")
-    en2 = parse_dt(log2["header"].get("end") or "")
     user_st = parse_dt("01.09.2026 18:38")
     job_dur = dur_hms(st3, en3) if st3 and en3 else "?"
     wall_dur = dur_hms(user_st, en3) if user_st and en3 else "?"
-    n2_dur = dur_hms(st2, en2) if st2 and en2 else "?"
-    job_h = (en3 - st3).total_seconds() / 3600 if st3 and en3 else None
-    n2_h = (en2 - st2).total_seconds() / 3600 if st2 and en2 else None
     clients = 27292
+    # Etalon skorosti: Word "RegressIZamery_DR _Reliz AVANKOR.docx", reliz 2.8.5.5.
+    old_h = 55 + 5 / 60
+    old_thr_word = 500
+    old8_h = 13 + 11 / 60
+    old8_thr = clients / old8_h
+    job_h = (en3 - st3).total_seconds() / 3600 if st3 and en3 else None
+    wall_h = (en3 - user_st).total_seconds() / 3600 if user_st and en3 else None
     thr_n3 = clients / job_h if job_h else 0
-    thr_n2 = clients / n2_h if n2_h else 0
+    speed_x_old = (thr_n3 / old_thr_word) if old_thr_word else 0
+    dur_x_old = (old_h / job_h) if job_h else 0
+    wall_x_old = (old_h / wall_h) if wall_h else 0
+    job_h_txt = fmt_dec(Decimal(str(round(job_h, 2)))) if job_h else "?"
+    old_h_txt = fmt_dec(Decimal(str(round(old_h, 2))))
 
     pf_line_ok = pf["line_bag"]["only_old_n"] == 0 and pf["line_bag"]["only_new_n"] == 0
     pf_doc_ok = pf["doc_compare"]["diff_sums"] == 0 and pf["doc_compare"]["only_old_n"] == 0 and pf["doc_compare"]["only_new_n"] == 0
     uk_wo_ok = dc_wo["diff_sums"] == 0
-    n2n3_uk_ok = dc23["diff_sums"] == 0 and bag23["only_old_n"] == 0 and bag23["only_new_n"] == 0
 
     plat_delta_vychet = None
     plat_delta_uder = None
@@ -555,25 +568,21 @@ def write_html(r):
         plat_delta_uder = Decimal(plat_new[PLAT_NUM]["sums"]["СуммаКУдержанию"]) - Decimal(plat_old[PLAT_NUM]["sums"]["СуммаКУдержанию"])
 
     if pf_line_ok and uk_wo_ok and plat_delta_vychet is not None and abs(plat_delta_vychet - Decimal("8481")) < EPS:
-        if n2n3_uk_ok:
-            verdict = (
-                "Портфели совпали с эталоном. По УК без Платонова Д.В. суммы документов совпали. "
-                "Единственное налоговое расхождение снова Платонов Дмитрий Вячеславович "
-                "(документ 000000000038432): инвествычет +8 481.00, к удержанию -1 719. "
-                "Выгрузка УК по-новому3 поклеточно совпадает с по-новому2: "
-                "три расширения (включая NkdCoupon) не сдвинули ни одну сумму относительно прогона без них."
-            )
-        else:
-            verdict = (
-                "Портфели совпали. УК без Платонова Д.В. совпали. "
-                "Платонов Д.В. по-прежнему расходится с эталоном."
-            )
+        verdict = (
+            "Сверка сумм: по-старому против по-новому3. "
+            "Портфели совпали с эталоном. УК без клиента А совпали по суммам документов. "
+            "Единственное налоговое расхождение: документ " + DOC_A + " (клиент А) - "
+            "инвествычет +8 481.00, к удержанию -1 719; эталон 4 строки ТЧ Начисления, этот прогон 6 строк "
+            "(типовой дефект ТаблицаПродаж, не IMDEV-7330). "
+            "Скорость: эталон релиз 2.8.5.5 без доработок - 55 ч 05 мин на 27 292 клиента "
+            "(500 объектов в час). Этот прогон ~x{:.1f} быстрее по чистому времени лога."
+        ).format(dur_x_old if dur_x_old else 0)
         vcls = "warn"
     elif pf_line_ok and uk_wo_ok:
-        verdict = "Портфели и УК без Платонова совпали. Платонов выделен отдельно."
+        verdict = "Портфели и УК без клиента А совпали с эталоном. Клиент А выделен отдельно."
         vcls = "warn"
     else:
-        verdict = "Есть расхождения помимо Платонова. См. таблицы."
+        verdict = "Есть расхождения помимо клиента А. См. таблицы."
         vcls = "out"
 
     labels = {
@@ -595,12 +604,22 @@ def write_html(r):
             f"<td class='num'>{a}</td><td class='num'>{b}</td><td class='num'>{b - a}</td></tr>"
         )
 
+    def fname(key):
+        f = (r.get("files") or {}).get(key) or {}
+        return f.get("name") or key
+
+    def fbytes(key):
+        f = (r.get("files") or {}).get(key) or {}
+        return fmt_int(f.get("bytes") or 0)
+
+    empty_extra = int(uk.get("empty_new_n") or 0) - int(uk.get("empty_old_n") or 0)
+
     bag_old = "".join(
-        f"<tr><td class='num'>{n}</td><td class='sig'>{escape(s)}</td></tr>"
+        f"<tr><td class='num'>{n}</td><td class='sig'>{mask_esc(s)}</td></tr>"
         for n, s in bag.get("only_old_fmt", [])[:25]
     )
     bag_new = "".join(
-        f"<tr><td class='num'>{n}</td><td class='sig'>{escape(s)}</td></tr>"
+        f"<tr><td class='num'>{n}</td><td class='sig'>{mask_esc(s)}</td></tr>"
         for n, s in bag.get("only_new_fmt", [])[:25]
     )
 
@@ -608,9 +627,10 @@ def write_html(r):
     for d in dc["diffs"][:20]:
         deltas = "; ".join(f"{k}={v}" for k, v in d["delta"].items())
         cls = "warn" if d["num"] == PLAT_NUM else "bad"
+        doc_lbl = DOC_A if d["num"] == PLAT_NUM else "другой УК"
         diff_docs.append(
-            f"<tr class='{cls}'><td class='sig'>{escape(d['num'])}</td>"
-            f"<td>{escape(d['ref'])}</td><td class='sig'>{escape(deltas)}</td>"
+            f"<tr class='{cls}'><td class='sig'>{escape(doc_lbl)}</td>"
+            f"<td>{mask_esc(d.get('ref') or '')}</td><td class='sig'>{escape(deltas)}</td>"
             f"<td class='num'>{d['old_rows']}</td><td class='num'>{d['new_rows']}</td></tr>"
         )
 
@@ -621,38 +641,45 @@ def write_html(r):
 
     plat_lines = plat_table(uk["plat_rows_old"], uk["plat_rows_new"], NUM_UK)
 
-    surname_rows = []
-    for item in surname_n or surname_o:
-        num = item["num"]
-        cls = "ok"
-        surname_rows.append(
-            f"<tr class='{cls}'><td class='sig'>{escape(num)}</td>"
-            f"<td class='num'>{fmt_int(item['n'])}</td>"
-            f"<td>{escape(', '.join(item.get('portfolios') or []) or item.get('ref') or '')}</td>"
-            f"<td class='sig'>{escape(', '.join(sorted((item.get('parts') or {}).keys())))}</td></tr>"
-        )
-    surname_tbl = "".join(surname_rows) or "<tr class='ok'><td colspan='4'>Нет однофамильцев в выгрузке УК</td></tr>"
+    n_surname = max(len(surname_o), len(surname_n))
+    surname_tbl = (
+        f"<tr class='ok'><td>другие клиенты с похожей фамилией</td>"
+        f"<td class='num'>{fmt_int(n_surname)}</td>"
+        f"<td>идентификаторы скрыты</td>"
+        f"<td>суммы совпали с эталоном</td></tr>"
+        if n_surname
+        else "<tr class='ok'><td colspan='4'>Нет других клиентов с похожей фамилией</td></tr>"
+    )
 
     plat_bag_old = "".join(
-        f"<tr><td class='num'>{n}</td><td class='sig'>{escape(s)}</td></tr>"
+        f"<tr><td class='num'>{n}</td><td class='sig'>{mask_esc(s)}</td></tr>"
         for n, s in bag.get("only_old_fmt", [])
         if any(m in s for m in PLAT_MARKERS)
     )
     plat_bag_new = "".join(
-        f"<tr><td class='num'>{n}</td><td class='sig'>{escape(s)}</td></tr>"
+        f"<tr><td class='num'>{n}</td><td class='sig'>{mask_esc(s)}</td></tr>"
         for n, s in bag.get("only_new_fmt", [])
         if any(m in s for m in PLAT_MARKERS)
     )
 
     lock_lis = "".join(
-        f"<li><code>{escape(a)}</code> — {escape(b)}</li>" for a, b in log3.get("lock_sample") or []
+        f"<li><code>{mask_esc(a)}</code> - {mask_esc(b)}</li>"
+        for a, b in log3.get("lock_sample") or []
     ) or "<p class='small'>Сообщений про блокировки / повтор / 1222 в логе нет.</p>"
+
+    speed_vs = (
+        f"эталон скорости - релиз 2.8.5.5 без доработок: 55 ч 05 мин на 27 292 клиента "
+        f"(500 объектов в час, протокол DR). "
+        f"Этот прогон: {job_dur} по логу (x{dur_x_old:.1f} по времени, "
+        f"{fmt_dec(Decimal(str(round(thr_n3, 0))))} объектов/час, x{speed_x_old:.1f} к 500/час); "
+        f"стена кнопки Заполнить {wall_dur} (x{wall_x_old:.1f} к 55 ч 05 мин)"
+    )
 
     html = f"""<!DOCTYPE html>
 <html lang="ru">
 <head>
 <meta charset="utf-8">
-<title>IMDEV-7330. Прогон с 3 расширениями: скорость, регресс, Платонов</title>
+<title>IMDEV-7330. Прогон с 3 расширениями: скорость, регресс, клиент А</title>
 <style>
     body {{ font-family: "Segoe UI", Arial, sans-serif; line-height: 1.55; color: #212529; background: #f5f6f8; margin: 0; padding: 0 0 60px 0; }}
     .wrap {{ max-width: 1180px; margin: 0 auto; padding: 0 24px; }}
@@ -689,11 +716,12 @@ def write_html(r):
 <body>
 <header>
 <div class="wrap">
-    <h1>IMDEV-7330. Три расширения: скорость, регресс, Платонов</h1>
+    <h1>IMDEV-7330. Три расширения: скорость, регресс, клиент А</h1>
     <div class="sub">
         Прогон «по-новому3»: IMDEV7330_Locks + IMDEV7330_NkdParam + IMDEV7330_NkdCoupon.
-        10 потоков, выборка 27 292. Эталон — выгрузки «по-старому» Аванкор.
-        Платонов в общей сверке УК вынесен отдельно.
+        10 потоков, выборка 27 292. Эталон - выгрузки «по-старому».
+        Сверка сумм: эталон vs по-новому3. Скорость: эталон релиз 2.8.5.5 (55 ч 05 мин).
+        ФИО, номера УК и коды ДУ в этом файле заменены.
     </div>
 </div>
 </header>
@@ -706,9 +734,8 @@ def write_html(r):
 <li><a href="#p1">Контур и файлы</a></li>
 <li><a href="#p2">Скорость</a></li>
 <li><a href="#p3">Регресс портфелей</a></li>
-<li><a href="#p4">Регресс УК без Платонова Д.В.</a></li>
-<li><a href="#p5">Платонов Д.В.</a></li>
-<li><a href="#p6">По-новому2 vs по-новому3</a></li>
+<li><a href="#p4">Регресс УК без клиента А</a></li>
+<li><a href="#p5">Клиент А (документ {DOC_A})</a></li>
 <li><a href="#p7">Сообщения и лог</a></li>
 <li><a href="#p8">Анализ</a></li>
 </ol>
@@ -725,71 +752,89 @@ def write_html(r):
 <tbody>
 <tr class="{'ok' if pf_line_ok else 'bad'}"><td>Портфели vs эталон</td>
 <td>{'совпали по строкам и суммам документов' if pf_line_ok and pf_doc_ok else 'есть расхождения, см. раздел 4'}</td></tr>
-<tr class="{'ok' if uk_wo_ok else 'bad'}"><td>УК без Платонова vs эталон</td>
+<tr class="{'ok' if uk_wo_ok else 'bad'}"><td>УК без клиента А vs эталон</td>
 <td>документов с теми же суммами: {fmt_int(dc_wo['equal_sums'])} из {fmt_int(dc_wo['common'])};
 расходящихся номеров: {fmt_int(dc_wo['diff_sums'])}</td></tr>
-<tr class="warn"><td>Платонов vs эталон</td>
-<td>документ {escape(PLAT_NUM)}; дельта вычета {fmt_dec(plat_delta_vychet) if plat_delta_vychet is not None else '?'};
+<tr class="warn"><td>Клиент А vs эталон</td>
+<td>документ {escape(DOC_A)}; дельта вычета {fmt_dec(plat_delta_vychet) if plat_delta_vychet is not None else '?'};
 дельта к удержанию {fmt_dec(plat_delta_uder) if plat_delta_uder is not None else '?'}</td></tr>
-<tr class="{'ok' if n2n3_uk_ok else 'warn'}"><td>NkdCoupon относительно по-новому2</td>
-<td>{'УК по-новому3 = по-новому2 по суммам документов (купонная правка на цифры Платонова не повлияла)' if n2n3_uk_ok else 'УК по-новому3 отличается от по-новому2'}</td></tr>
-<tr class="ok"><td>Скорость vs 6 потоков без трёх расширений</td>
-<td>чистая работа по логу {escape(job_dur)} против {escape(n2_dur)};
-стена кнопки Заполнить {escape(wall_dur)}; примерно x{thr_n3 / thr_n2:.2f} по клиентам/час (лог)</td></tr>
+<tr class="ok"><td>Скорость</td>
+<td>{escape(speed_vs)}</td></tr>
 </tbody>
 </table>
 
 <h2 id="p1">2. Контур и файлы</h2>
 <div class="box info">
 <b>Как сравнивали</b>
-Эталон — <code>НДФЛ_*_27292.xlsx</code> (по-старому). Прогон с тремя расширениями —
-<code>*_ПоНовому3.xlsx</code>. Платонов: номер документа {escape(PLAT_NUM)}.
-Ключ строки УК: ТЧ + портфель + коды + ставка + суммы (допуск 0.01).
-Отдельно те же выгрузки без этого номера. Скорость — шапка лога и замер из Word.
+Эталон - <code>НДФЛ_*_27292.xlsx</code> (по-старому). Прогон с тремя расширениями -
+<code>*_ПоНовому3.xlsx</code>. Клиент А вынесен из общей сверки УК как единственный
+расходящийся документ. Ключ строки УК: ТЧ + портфель + коды + ставка + суммы (допуск 0.01).
+Скорость: эталон из протокола DR - релиз 2.8.5.5 без доработок, 55 ч 05 мин на те же 27 292 клиента
+(500 объектов в час). Цифры этого прогона - шапка лога и замер кнопки Заполнить.
+</div>
+<div class="box warn">
+<b>Обезличивание для вендора</b>
+В этом HTML нет скриншотов. ФИО, номера документов УК и коды ДУ заменены:
+клиент А, документ {escape(DOC_A)}, {escape(PF1)} (там инвествычет +8 481), {escape(PF2)}.
+Налоговые суммы и структура ТЧ сохранены. Внутренний JSON со сверкой не предназначен для передачи.
 </div>
 <table>
 <thead><tr><th>Роль</th><th>Файл</th><th>Байты</th></tr></thead>
 <tbody>
-<tr><td>Портфели эталон / новое3</td><td class="sig">{escape(r['files']['pf_old']['name'])} / {escape(r['files']['pf_n3']['name'])}</td>
-<td class="num">{fmt_int(r['files']['pf_old']['bytes'])} / {fmt_int(r['files']['pf_n3']['bytes'])}</td></tr>
-<tr><td>УК эталон / новое3</td><td class="sig">{escape(r['files']['uk_old']['name'])} / {escape(r['files']['uk_n3']['name'])}</td>
-<td class="num">{fmt_int(r['files']['uk_old']['bytes'])} / {fmt_int(r['files']['uk_n3']['bytes'])}</td></tr>
-<tr><td>Контроль по-новому2</td><td class="sig">{escape(r['files']['uk_n2']['name'])}, {escape(r['files']['pf_n2']['name'])}</td>
-<td class="num">{fmt_int(r['files']['uk_n2']['bytes'])} / {fmt_int(r['files']['pf_n2']['bytes'])}</td></tr>
-<tr><td>Лог новое3</td><td class="sig">{escape(r['files']['log_n3']['name'])}</td>
-<td class="num">{fmt_int(r['files']['log_n3']['bytes'])}</td></tr>
-<tr><td>Сообщения</td><td class="sig">{escape(r['files']['msg_n3']['name'])}</td>
-<td class="num">{fmt_int(r['files']['msg_n3']['bytes'])}</td></tr>
+<tr><td>Портфели эталон / новое3</td><td class="sig">{escape(fname('pf_old'))} / {escape(fname('pf_n3'))}</td>
+<td class="num">{fbytes('pf_old')} / {fbytes('pf_n3')}</td></tr>
+<tr><td>УК эталон / новое3</td><td class="sig">{escape(fname('uk_old'))} / {escape(fname('uk_n3'))}</td>
+<td class="num">{fbytes('uk_old')} / {fbytes('uk_n3')}</td></tr>
+<tr><td>Лог новое3</td><td class="sig">{escape(fname('log_n3'))}</td>
+<td class="num">{fbytes('log_n3')}</td></tr>
+<tr><td>Сообщения</td><td class="sig">{escape(fname('msg_n3'))}</td>
+<td class="num">{fbytes('msg_n3')}</td></tr>
 </tbody>
 </table>
-<p class="small">MD5 xlsx разный при равном размере — это упаковка Excel, не критерий расхождения ячеек.
-Word «Тестирование ИТ расширений.docx» после строки «Сравним:» пустой: цифры сверки посчитаны здесь.</p>
+<p class="small">MD5 xlsx разный при равном размере - это упаковка Excel, не критерий расхождения ячеек.</p>
 
 <h2 id="p2">3. Скорость</h2>
 <div class="box in">
-<b>Работа задания по логу: {escape(log3['header'].get('start') or '')} — {escape(log3['header'].get('end') or '')}</b>
+<b>Эталон скорости: релиз 2.8.5.5, без доработок IMDEV-7330</b>
+Источник: протокол замеров DR (Word). Выборка та же: 27 292 клиента, период 01.01.2026 - 31.12.2026.
+Длительность: <b>55 часов 5 минут</b> (27 292 объекта). В протоколе: <b>500 строк в час</b>.
+Прогон шёл в две части: останов по ошибке «Значение не является значением объектного типа (Ставка)»,
+затем продолжение. Вторая часть 46 ч 50 мин; к первой части в протоколе прибавлено ~8 ч 23 мин.
+Итого 55 ч 05 мин. ФИО и номера документов из протокола в отчёт не копируются.
+</div>
+<div class="box in">
+<b>Этот прогон (по-новому3) по логу: {escape(log3['header'].get('start') or '')} - {escape(log3['header'].get('end') or '')}</b>
 Ошибок в шапке: {log3['header'].get('errors')}.
-Пользовательский замер из Word (кнопка Заполнить): 01.09.2026 18:38 — 02.09.2026 01:17:59,
-то есть {escape(wall_dur)}. Разрыв 18:38 → 19:45 (~1 ч 07 мин) — до первой записи лога
-(заполнение дат / ожидание фоновых заданий). Чистая работа формирования — интервал шапки лога.
+Чистая работа формирования: {escape(job_dur)}.
+Стена кнопки Заполнить: 01.09.2026 18:38 - 02.09.2026 01:17:59, то есть {escape(wall_dur)}.
+Разрыв 18:38 -&gt; 19:45 (~1 ч 07 мин) - до первой записи лога (даты / ожидание фоновых).
 </div>
 <table>
-<thead><tr><th>Прогон</th><th>Потоки</th><th>Расширения</th><th>Интервал</th><th>Длительность</th><th>Клиентов/час</th></tr></thead>
+<thead><tr><th>Прогон</th><th>Потоки</th><th>Конфигурация</th><th>Интервал</th><th>Длительность</th><th>Объектов/час</th></tr></thead>
 <tbody>
 <tr>
-<td>По-новому2</td><td class="num">6</td><td>без Locks / NkdParam / NkdCoupon</td>
-<td class="sig">{escape(log2['header'].get('start') or '')} — {escape(log2['header'].get('end') or '')}</td>
-<td>{escape(n2_dur)}</td><td class="num">{fmt_dec(Decimal(str(round(thr_n2, 1))))}</td>
+<td>РЕЛИЗ 2.8.5.5 (эталон скорости)</td>
+<td class="num">нет (последовательно)</td>
+<td>типовая, без доработок</td>
+<td class="sig">26.08.2026 - 29.08.2026, две части</td>
+<td>55 ч 05 мин ({escape(old_h_txt)} ч)</td>
+<td class="num">500</td>
 </tr>
 <tr>
-<td>10 потоков 01.09 утро (Word, до трёх расширений)</td><td class="num">10</td><td>не зафиксировано в Word</td>
-<td class="sig">01.09.2026 09:31 — 16:28</td>
-<td>6 ч 57 мин (стена)</td><td class="num">{fmt_dec(Decimal(str(round(clients / (6 + 57/60), 1))))}</td>
+<td>Первая новая (протокол DR)</td>
+<td class="num">8</td>
+<td>новая, ещё без Locks; падали 1222</td>
+<td class="sig">30.08.2026 07:22:00 - 20:33:21</td>
+<td>13 ч 11 мин</td>
+<td class="num">{fmt_dec(Decimal(str(round(old8_thr, 0))))}</td>
 </tr>
 <tr class="ok">
-<td>По-новому3 (этот)</td><td class="num">10</td><td>Locks + NkdParam + NkdCoupon</td>
-<td class="sig">{escape(log3['header'].get('start') or '')} — {escape(log3['header'].get('end') or '')}</td>
-<td>{escape(job_dur)}</td><td class="num">{fmt_dec(Decimal(str(round(thr_n3, 1))))}</td>
+<td>По-новому3 (этот)</td>
+<td class="num">10</td>
+<td>Locks + NkdParam + NkdCoupon</td>
+<td class="sig">{escape(log3['header'].get('start') or '')} - {escape(log3['header'].get('end') or '')}</td>
+<td>{escape(job_dur)}</td>
+<td class="num">{fmt_dec(Decimal(str(round(thr_n3, 0))))}</td>
 </tr>
 </tbody>
 </table>
@@ -797,20 +842,22 @@ Word «Тестирование ИТ расширений.docx» после ст
 <thead><tr><th>Метрика лога по-новому3</th><th>Значение</th></tr></thead>
 <tbody>
 <tr><td>Проведено по портфелю</td><td class="num">{fmt_int(log3['proveden_pf_n'])} (уник. {fmt_int(log3['proveden_pf_unique'])})</td></tr>
-<tr><td>Проведено по клиенту УК</td><td class="num">{fmt_int(log3['proveden_uk_n'])} (уник. ФИО {fmt_int(log3['proveden_uk_unique'])})</td></tr>
+<tr><td>Проведено по клиенту УК</td><td class="num">{fmt_int(log3['proveden_uk_n'])} (уник. клиентов {fmt_int(log3['proveden_uk_unique'])})</td></tr>
 <tr><td>Строк лога (непустых)</td><td class="num">{fmt_int(log3['data_rows'])}</td></tr>
 <tr class="{'ok' if log3['fail_n']==0 else 'bad'}"><td>Похоже на ошибку / не создан</td><td class="num">{fmt_int(log3['fail_n'])}</td></tr>
 <tr class="{'ok' if log3['lock_n']==0 else 'warn'}"><td>Упоминания блокировок / 1222 / повтор</td><td class="num">{fmt_int(log3['lock_n'])}</td></tr>
-<tr><td>Платонов в проведении УК</td><td>{'да' if log3.get('plat_in_log') else 'нет в выборке ФИО лога'}</td></tr>
+<tr><td>Клиент А в проведении УК</td><td>{'да' if log3.get('plat_in_log') else 'нет в выборке лога'}</td></tr>
 </tbody>
 </table>
 <div class="box info">
 <b>Как читать ускорение</b>
-От 6 потоков (~{fmt_dec(Decimal(str(round(n2_h, 2))))} ч) к 10 потокам ожидается ~x{10/6:.2f} за счёт нарезки.
-Факт по логу ~x{thr_n3 / thr_n2:.2f}. Остаток сверх пропорциональности потоков —
-Locks (меньше простоев на 1222) и NkdParam (кэш НКД параметром).
-NkdCoupon добавляет JOIN в массовый запрос НКД и сам по себе скорость не улучшает;
-утро 01.09 на 10 потоках уже было ~7 ч стены, вечер с тремя расширениями — того же порядка.
+Эталон - 55 ч 05 мин и 500 объектов/час (релиз 2.8.5.5 без доработок).
+По чистому времени лога: {escape(old_h_txt)} ч / {escape(job_h_txt)} ч = x{dur_x_old:.1f}.
+По стене кнопки: x{wall_x_old:.1f}.
+По объектам в час: {fmt_dec(Decimal(str(round(thr_n3, 0))))} / 500 = x{speed_x_old:.1f}.
+Первая новая на 8 потоках из того же протокола DR (13 ч 11 мин, падения 1222) - уже x{old_h / old8_h:.1f}
+к 2.8.5.5, но ещё с блокировками. Locks убрал 1222 (в этом логе {fmt_int(log3['lock_n'])} упоминаний),
+NkdParam сокращает повторные запросы НКД.
 </div>
 {lock_lis if log3['lock_n'] else ''}
 
@@ -836,74 +883,78 @@ NkdCoupon добавляет JOIN в массовый запрос НКД и с�
 {parts_rows(pf['parts_old'], pf['parts_new'])}
 </tbody>
 </table>
-<p class="small">По портфелям Платонова Д.В. (ДУ 2258 и ДУ 10155) в выгрузке: строк эталон {fmt_int(r['pf_plat']['rows_old'])},
+<p class="small">По портфелям клиента А ({escape(PF1)} и {escape(PF2)}) в выгрузке: строк эталон {fmt_int(r['pf_plat']['rows_old'])},
 стало {fmt_int(r['pf_plat']['rows_new'])};
 bag only_old/only_new: {fmt_int(r['pf_plat']['bag']['only_old_n'])} / {fmt_int(r['pf_plat']['bag']['only_new_n'])}.
 Сдвиг УК не из портфельного расчёта.</p>
 
-<h2 id="p4">5. Регресс УК без Платонова Д.В.</h2>
-<p>В этой сверке исключён только документ <code>{escape(PLAT_NUM)}</code>.
-Однофамильцы (Платонова …, Платонов А.В. и т.п.) остаются в общей таблице — их суммы совпали с эталоном.</p>
+<h2 id="p4">5. Регресс УК без клиента А</h2>
+<p>В этой сверке исключён только документ <code>{escape(DOC_A)}</code>.
+Другие клиенты с похожей фамилией остаются в общей таблице - их суммы совпали с эталоном.
+Идентификаторы этих клиентов в отчёт не выводятся.</p>
 <div class="box {'in' if uk_wo_ok else 'out'}">
-<b>{'Суммы общих документов совпали' if uk_wo_ok else 'Есть расхождения даже без Платонова Д.В.'}</b>
+<b>{'Суммы общих документов совпали' if uk_wo_ok else 'Есть расхождения даже без клиента А'}</b>
 Общих номеров: {fmt_int(dc_wo['common'])}. С теми же суммами: {fmt_int(dc_wo['equal_sums'])}.
 С другими суммами: {fmt_int(dc_wo['diff_sums'])}.
 Только в эталоне: {fmt_int(dc_wo['only_old_n'])}. Только в новом: {fmt_int(dc_wo['only_new_n'])}.
 Пустые УК (только Выводы + Общие расходы, суммы 0): эталон {fmt_int(uk['empty_old_n'])}, новое3 {fmt_int(uk['empty_new_n'])}.
 </div>
 <table>
-<thead><tr><th>Колонка (без Платонова)</th><th>Эталон</th><th>По-новому3</th><th>Дельта</th></tr></thead>
+<thead><tr><th>Колонка (без клиента А)</th><th>Эталон</th><th>По-новому3</th><th>Дельта</th></tr></thead>
 <tbody>
 {money_rows(uk['totals_wo_old'], uk['totals_wo_new'])}
 </tbody>
 </table>
 <table>
-<thead><tr><th>ТЧ все УК включая Платонова</th><th>Эталон</th><th>По-новому3</th><th>Дельта</th></tr></thead>
+<thead><tr><th>ТЧ все УК включая клиента А</th><th>Эталон</th><th>По-новому3</th><th>Дельта</th></tr></thead>
 <tbody>
 {parts_rows(uk['parts_old'], uk['parts_new'])}
 </tbody>
 </table>
-<p class="small">+строки Выводы/Общие расходы — те же 624 пустых УК, что в прогоне по-новому2.
+<p class="small">Строки Выводы/Общие расходы: в по-новому3 на {fmt_int(empty_extra)} пустых УК больше, чем в эталоне.
 Налог они не меняют. Документов УК всего: {fmt_int(uk['docs_old'])} / {fmt_int(uk['docs_new'])}.</p>
 
-<h3>Однофамильцы «Платонов*» (не Д.В.) — в общую сверку включены</h3>
-<p class="small">Подстрока «Платонов» есть у нескольких клиентов рядом по алфавиту/номеру.
-Они не исключались. В эталоне таких документов: {fmt_int(len(surname_o))},
-в по-новому3: {fmt_int(len(surname_n))}. Ни один из них не попал в список расходящихся сумм.</p>
+<h3>Другие клиенты с похожей фамилией - в общую сверку включены</h3>
+<p class="small">В выборке есть ещё документы с похожей фамилией. Они не исключались.
+В эталоне таких: {fmt_int(len(surname_o))}, в по-новому3: {fmt_int(len(surname_n))}.
+Ни один не попал в список расходящихся сумм. Номера и портфели скрыты.</p>
 <table>
-<thead><tr><th>Номер УК</th><th>Строк (новое3)</th><th>Портфели / клиент</th><th>ТЧ</th></tr></thead>
+<thead><tr><th>Метка</th><th>Строк (новое3)</th><th>Комментарий</th><th>ТЧ / суммы</th></tr></thead>
 <tbody>
 {surname_tbl}
 </tbody>
 </table>
 
-<h3>Документы УК с другими суммами (полный список, включая Платонова)</h3>
+<h3>Документы УК с другими суммами (полный список)</h3>
 <table>
-<thead><tr><th>Номер</th><th>Ссылка</th><th>Дельты</th><th>Строк было</th><th>Стало</th></tr></thead>
+<thead><tr><th>Метка</th><th>Ссылка (обезличено)</th><th>Дельты</th><th>Строк было</th><th>Стало</th></tr></thead>
 <tbody>
 {''.join(diff_docs) or '<tr class="ok"><td colspan="5">Нет</td></tr>'}
 </tbody>
 </table>
-<p class="small">Всего расходящихся номеров: {fmt_int(dc['diff_sums'])}. Без Платонова: {fmt_int(dc_wo['diff_sums'])}.</p>
+<p class="small">Всего расходящихся номеров: {fmt_int(dc['diff_sums'])}. Без клиента А: {fmt_int(dc_wo['diff_sums'])}.</p>
 
-<h2 id="p5">6. Платонов Дмитрий Вячеславович</h2>
+<h2 id="p5">6. Клиент А: что произошло на самом деле</h2>
 <p>
-Документ УК <code>{escape(PLAT_NUM)}</code> от 31.12.2026 23:59:59.
+Документ УК <code>{escape(DOC_A)}</code>, дата 31.12.2026 23:59:59.
 Строк ТЧ в выгрузке: {fmt_int(plat_old.get(PLAT_NUM, {}).get('n', 0))} было,
 {fmt_int(plat_new.get(PLAT_NUM, {}).get('n', 0))} стало (эталон 12, новое 15).
-Портфели ДУ: 2258 и 10155. Ссылка: {escape(plat_new.get(PLAT_NUM, {}).get('ref', ''))}.
+Портфели: {escape(PF1)} и {escape(PF2)}.
+Константы на контуре: <code>НачислениеНДФЛПоПортфелю = Истина</code>,
+<code>УчитыватьУКДиНКДПриРасчетеИнвестиционногоВычетаВНДФЛ = Истина</code>.
 </p>
 <div class="box out">
-<b>Итог по клиенту: не исправлен, цифры те же, что без NkdCoupon</b>
+<b>Эталон = ветка 4 строк ТЧ Начисления. Этот прогон = ветка 6 строк</b>
 Это единственный документ УК, у которого суммы не совпали с эталоном.
-Колонка «Сумма» / инвествычет ДУ 2258: 269 252.07 → 277 733.07, дельта <b>+8 481.00</b>.
-Сумма к удержанию документа: 105 052 → 103 333, дельта <b>−1 719</b>.
-Портфельная выгрузка по ДУ 2258 и ДУ 10155 с эталоном совпала (строк {fmt_int(r['pf_plat']['rows_old'])} / {fmt_int(r['pf_plat']['rows_new'])},
-bag 0/0). Значит сдвиг сидит в расчёте документа УК, не в портфельном контуре.
-УК по-новому3 = УК по-новому2 поклеточно, включая этот документ: NkdCoupon на цифры не повлиял.
+Сумма дохода документа одинаковая: 46 169 428.19.
+Инвествычет {escape(PF1)}, код 618: 269 252.07 -&gt; 277 733.07, дельта <b>+8 481.00</b>.
+К удержанию: 105 052 -&gt; 103 333, дельта <b>-1 719</b>.
+Портфельная выгрузка по обоим ДУ совпала с эталоном (строк {fmt_int(r['pf_plat']['rows_old'])} / {fmt_int(r['pf_plat']['rows_new'])},
+bag 0/0). Сдвиг только в расчёте документа УК.
+Этот dump снят до волн A/B в расширении IMDEV7330_NkdParam: в прогоне ещё живёт типовая ветка 6 строк.
 </div>
 <table>
-<thead><tr><th>Колонка документа УК 038432</th><th>Эталон</th><th>По-новому3</th><th>Дельта</th></tr></thead>
+<thead><tr><th>Колонка документа {escape(DOC_A)}</th><th>Эталон</th><th>По-новому3</th><th>Дельта</th></tr></thead>
 <tbody>
 {plat_sum_rows}
 </tbody>
@@ -915,25 +966,61 @@ bag 0/0). Значит сдвиг сидит в расчёте документ�
 </tbody>
 </table>
 
-<h3>Что именно разъехалось в строках</h3>
+<h3>Цепочка (типовой код, не IMDEV-7330)</h3>
 <ol>
-<li><b>Инвествычет ДУ 2258, код вычета 618.</b> Сумма 269 252.07 → 277 733.07 (+8 481).
-Это ровно дельта колонки «Сумма» документа. Источник «лишних» 8 481 в налоговой картине УК.</li>
-<li><b>Начисления 1530 / вычет 201.</b> Эталон: две строки (13% и 15%).
-Новое: те же коды, но другие суммы (13%: налог.база 1 696 782.82 → 2 392 598.22;
-15%: 1 641 158.57 → 936 862.17 плюс вычет 3 952.40). Перераспределение внутри 1530, не новый вид дохода.</li>
-<li><b>Начисления 1537 / вычет 211.</b> Эталон: две строки 13% (7 436.27 и 695 780.91).
-Новое: четыре строки, в том числе 15% с отрицательными суммами (−7 434.71 / −7 767.31)
-и две одинаковые 13% по 14 870.98. Появилась ставка 15% по 1537, которой в эталоне не было.</li>
-<li><b>Удержания.</b> 15% по обоим ДУ уменьшились (87 193 → 83 356 по 2258; 17 859 → 17 073 по 10155).
-Добавились строки 13% с «к удержанию» 2 410 (2258) и 494 (10155). Нетто по документу −1 719.
-По 2258 13% финрезультат 3 345 441.69 → 3 336 960.69 (−8 481) — зеркало лишнего вычета.</li>
+<li><code>ТаблицаПродаж</code>: запрос партий без <code>УПОРЯДОЧИТЬ</code>. Поле <code>ДатаПартии</code>
+выбирается, но порядок строк SQL не фиксирует.</li>
+<li><code>РаспределитьПоПартиямСУчетомПродаж</code> отдаёт остаток <b>последней строке</b> текущей выборки.</li>
+<li>В <code>ОтразитьУКДиНКДВИнвестВычете</code> пары (Партия, Регистратор), которые не совпали
+с этой выборкой, <b>молча отбрасываются</b>. Инвествычет по коду 618 получается либо 0, либо 8 481.</li>
+<li><code>ПрименитьИнвестиционныйВычет</code> кладёт эту сумму на первую строку кода 1530.
+Скачет только <code>СуммаВычета</code> 1530, доход не меняется.</li>
+<li>Порог предыдущего документа по вычету 1530: <b>42 117 785.31</b>.
+Эталон: вычет 1530 = 42 113 256.71 (ниже порога) - старый срез, 4 строки.
+Этот прогон: 42 121 737.71 (выше порога) - копирование прошлого документа, 6 строк.</li>
+<li><code>РаспределитьПревышениеПоТипуДохода</code> берёт первую строку через
+<code>Найти(КодДохода)</code>. При 4 строках срез корректный. При 6 строках копируется
+расклад прошлого документа: оба 1537 на 13% становятся 15 534.62 (это 2 x 7 767.31),
+на 15% появляется отрицательный -7 767.31.</li>
 </ol>
-<p class="small">Одиночный пересчёт этого клиента (и клиента плюс 5 соседей) раньше давал эталон.
-Полный прогон 27 292 в пачках — нет. Соседи-однофамильцы в общей сверке совпали, так что
-это не «фамилия Платонов», а именно документ Д.В. в составе большой пачки.</p>
+<div class="box warn">
+<b>Второй дефект той же цепочки</b>
+<code>РанееНачисленныйНДФЛ</code> кладёт текущие начисления во временную таблицу без свёртки,
+затем FULL JOIN. Строка 1537 прошлого документа может удвоиться. Это усиливает ветку 6 строк,
+но корень - неупорядоченные партии и потеря 8 481 в инвествычете.
+</div>
+<div class="box info">
+<b>Что это не есть</b>
+Не утечка чужого купона из пачки, не <code>МассивПортфелей[0]</code>, не эффект NkdCoupon.
+NkdCoupon чинит привязку оплаченного купона к клиенту в массовом запросе НКД; на эти 8 481
+он не влияет. Одиночный «Рассчитать» иногда даёт 4 строки, иногда 6 - тот же типовой баг,
+он воспроизводится и на старом релизе. В массовом прогоне эталонный dump случайно попал
+в 4 строки, по-новому3 - в 6.
+</div>
+<div class="box in">
+<b>Что уже сделано после этого прогона</b>
+Волны A/B в IMDEV7330_NkdParam: FIFO-сортировка <code>ТаблицаПродаж</code> и входа
+<code>РаспределитьПоПартиямСУчетомПродаж</code>; журнал, если источник НКД/УКД не равен применённому;
+свёртка ВТ в <code>РанееНачисленныйНДФЛ</code>; ветка шкалы по сумме строк кода, если строк кода больше одной -
+старый механизм. Этот отчёт фиксирует прогон <b>до</b> этих волн.
+</div>
 
-<h3>Строки ТЧ (ключ без сумм, суммы справа)</h3>
+<h3>Цифры строк (как в выгрузке)</h3>
+<ol>
+<li><b>Инвествычет {escape(PF1)}, код 618.</b> 269 252.07 -&gt; 277 733.07 (+8 481).
+Ровно дельта колонки «Сумма» документа.</li>
+<li><b>Начисления 1530 / вычет 201.</b> Эталон: 13% вычет 42 113 256.71, база 1 696 782.82;
+15% без этого вычета. Новое: 13% копирует прошлый документ (доход 44 510 383.53, вычет 42 117 785.31,
+база 2 392 598.22); 15% забирает остаток вычета 3 952.40.</li>
+<li><b>Начисления 1537 / вычет 211.</b> Итоги дохода/вычета по коду совпадают.
+Эталон: две строки 13%. Новое: четыре строки, в том числе 15% с отрицательными суммами
+(-7 434.71 / -7 767.31) и две 13% по 15 534.62.</li>
+<li><b>Удержания.</b> 15% по {escape(PF1)}: 87 193 -&gt; 83 356; по {escape(PF2)}: 17 859 -&gt; 17 073.
+Добавились 13% к удержанию 2 410 и 494. Нетто по документу -1 719.
+Финрезультат 13% по {escape(PF1)}: 3 345 441.69 -&gt; 3 336 960.69 (-8 481) - зеркало лишнего вычета.</li>
+</ol>
+
+<h3>Строки ТЧ (ключ без сумм, суммы справа; портфели обезличены)</h3>
 <table>
 <thead><tr><th>ТЧ</th><th>Портфель</th><th>Код дохода</th><th>Код вычета</th><th>Ставка</th><th>Эталон</th><th>По-новому3</th></tr></thead>
 <tbody>
@@ -943,53 +1030,19 @@ bag 0/0). Значит сдвиг сидит в расчёте документ�
 
 <h3>Строки, которые есть только в эталоне / только в новом (ключ с суммами)</h3>
 <table>
-<thead><tr><th colspan="2">Только в эталоне (все 8 — этот клиент)</th></tr></thead>
+<thead><tr><th colspan="2">Только в эталоне (все 8 - этот клиент)</th></tr></thead>
 <tbody>
 {plat_bag_old or '<tr><td colspan="2">нет</td></tr>'}
 </tbody>
 </table>
 <table>
-<thead><tr><th colspan="2">Только в новом (фрагмент топа; полная картина в таблице строк выше)</th></tr></thead>
+<thead><tr><th colspan="2">Только в новом (фрагмент; полная картина в таблице строк выше)</th></tr></thead>
 <tbody>
 {plat_bag_new or '<tr><td colspan="2">нет в топе bag (см. таблицу строк)</td></tr>'}
 </tbody>
 </table>
 
-<div class="box info">
-<b>Что это значит для гипотезы чужого купона</b>
-Расширение <code>IMDEV7330_NkdCoupon</code> как раз чинит массовый запрос
-<code>РасходыПоНКДПоКлиентамИДате</code>: оплаченный купон привязывается к клиенту, а не ко всей пачке.
-Если бы +8 481 брались из чужого купона соседа, после правки документ должен был совпасть с эталоном
-и с одиночным пересчётом. Он не совпал, и поклеточно равен прогону <b>без</b> NkdCoupon.
-Выводы:
-<ul>
-<li>либо утечка купонов не источник этих 8 481;</li>
-<li>либо перехват на этой ИБ не участвовал в расчёте (расширение не активно / не тот метод /
-кэш НКД ушёл мимо <code>РасходыПоНКДПоКлиентамИДате</code> через NkdParam).</li>
-</ul>
-Дальше: кнопка «Заполнить vs один» обработки IMDEV7330_DiagNkdCouponLeak;
-проверить, что в ИБ включено именно IMDEV7330_NkdCoupon;
-затем узлы из batch-разбора (кэш оборотов по <code>МассивПортфелей[0]</code>, налог к зачёту).
-</div>
-
-<h2 id="p6">7. По-новому2 vs по-новому3</h2>
-<p>Оба прогона — новая конфигурация. Разница: 6 потоков без трёх расширений против 10 потоков с Locks, NkdParam, NkdCoupon.</p>
-<div class="box {'in' if n2n3_uk_ok else 'warn'}">
-<b>УК</b>
-Общих документов: {fmt_int(dc23['common'])}. С теми же суммами: {fmt_int(dc23['equal_sums'])}.
-Расходящихся: {fmt_int(dc23['diff_sums'])}.
-Строк только в new2 / только в new3: {fmt_int(bag23['only_old_n'])} / {fmt_int(bag23['only_new_n'])}.
-</div>
-<table>
-<thead><tr><th>Колонка УК</th><th>По-новому2</th><th>По-новому3</th><th>Дельта</th></tr></thead>
-<tbody>
-{money_rows(uk23['totals_old'], uk23['totals_new'])}
-</tbody>
-</table>
-<p class="small">Сообщения new2 vs new3: только в new2 {fmt_int(msg23['only_a_n'])}, только в new3 {fmt_int(msg23['only_b_n'])},
-общих {fmt_int(msg23['common_n'])}. «Невозможно распределить»: {fmt_int(msg23['clients_rasp_a'])} / {fmt_int(msg23['clients_rasp_b'])}.</p>
-
-<h2 id="p7">8. Сообщения и лог</h2>
+<h2 id="p7">7. Сообщения и лог</h2>
 <table>
 <thead><tr><th>Тип</th><th>Эталон</th><th>По-новому3</th><th>Дельта</th></tr></thead>
 <tbody>
@@ -998,51 +1051,69 @@ bag 0/0). Значит сдвиг сидит в расчёте документ�
 </table>
 <div class="box info">
 <b>Распределение НДФЛ</b>
-Эталон (обрезан с начала, с буквы Г): {fmt_int(msg['clients_rasp_a'])} клиентов.
+Эталон (файл сообщений обрезан с начала, с буквы Г): {fmt_int(msg['clients_rasp_a'])} клиентов.
 Новое3: {fmt_int(msg['clients_rasp_b'])}.
-Платонов в этих сообщениях: эталон {escape(str(msg['plat_msgs_a']))}, новое3 {escape(str(msg['plat_msgs_b']))}.
+Клиент А в этих сообщениях: эталон {fmt_int(len(msg.get('plat_msgs_a') or []))},
+новое3 {fmt_int(len(msg.get('plat_msgs_b') or []))} (тексты ФИО не выводятся).
 Непроведённые: эталон {fmt_int(len(msg['ne_prov_a']))}, новое3 {fmt_int(len(msg['ne_prov_b']))}.
 Граница актуальности: {fmt_int(msg['granica_a'])} / {fmt_int(msg['granica_b'])}.
 </div>
-<p>Первая строка проведения в логе: {escape(log3.get('first_comment') or '')}.
-Последняя: {escape(log3.get('last_comment') or '')}.</p>
-<p class="small">По-новому2: портфелей {fmt_int(log2['proveden_pf_n'])}, УК {fmt_int(log2['proveden_uk_n'])},
-ошибок шапки {log2['header'].get('errors')}.</p>
+<p>Первая и последняя строки лога проведения содержат ФИО и коды ДУ - в отчёт не копируются.</p>
 
-<h2 id="p8">9. Анализ</h2>
+<h2 id="p8">8. Анализ</h2>
 <ol>
 <li><b>Правильность массового контура.</b> Портфели = эталон (28 431 документ, 413 547 строк).
-УК без Платонова Д.В. = эталон по суммам номеров (26 667 общих документов).
-624 пустых УК — политика записи, не налог. Три расширения основной регресс не разъехали.</li>
-<li><b>Скорость.</b> ~{fmt_dec(Decimal(str(round(job_h, 2))))} ч чистой работы на 10 потоках
-против ~{fmt_dec(Decimal(str(round(n2_h, 2))))} ч на 6 без трёх расширений (~x{thr_n3 / thr_n2:.2f} по клиентам/час).
-Стена кнопки {escape(wall_dur)}. Блокировок / 1222 в логе {fmt_int(log3['lock_n'])}.
-Утренний замер 01.09 на 10 потоках без пометки расширений в Word — 6 ч 57 мин стены, тот же порядок.</li>
-<li><b>Платонов Д.В. не исправлен.</b> +8 481 в инвествычете ДУ 2258 и −1 719 к удержанию —
-те же цифры, что в по-новому2. Однофамильцы совпали. Портфели клиента совпали.
-Одиночный пересчёт по-прежнему эталон; полный прогон — нет.</li>
-<li><b>NkdCoupon на полном прогоне цифр не изменил.</b> УК по-новому2 и по-новому3 совпали по всем 27 292 документам
-и всем 85 541 строкам. Либо чужой купон пачки не источник 8 481, либо перехват не работал в этом расчёте.</li>
-<li><b>Что делать дальше по Платонову.</b> Диагностика «Заполнить vs один»;
-проверить активность IMDEV7330_NkdCoupon на менеджере УК;
-затем кэш оборотов / налог к зачёту из batch-разбора.</li>
+УК без клиента А = эталон по суммам номеров ({fmt_int(dc_wo['equal_sums'])} общих документов).
+Пустые УК - политика записи Выводы+ОбщиеРасходы, не налог. Три расширения основной регресс не разъехали.</li>
+<li><b>Скорость.</b> Эталон - релиз 2.8.5.5 без доработок: 55 ч 05 мин, 500 объектов/час
+(протокол DR, те же 27 292 клиента). Этот прогон: ~{escape(job_h_txt)} ч чистой работы на 10 потоках
+(x{dur_x_old:.1f} по времени, x{speed_x_old:.1f} по объектам/час), стена кнопки {escape(wall_dur)}.
+Блокировок / 1222 в логе {fmt_int(log3['lock_n'])}.</li>
+<li><b>Клиент А.</b> +8 481 в инвествычете {escape(PF1)} и -1 719 к удержанию.
+Причина: неупорядоченный <code>ТаблицаПродаж</code> -&gt; потеря УКД/НКД -&gt; порог шкалы
+42 117 785.31 -&gt; 4 или 6 строк Начисления. Портфели клиента совпали. Другие клиенты
+с похожей фамилией совпали. Это типовой дефект, не регресс оптимизаций IMDEV-7330.</li>
+<li><b>NkdCoupon здесь ни при чём.</b> 8 481 - не чужой купон пачки. Расширение на этот
+сценарий не рассчитано и цифр клиента А не меняет.</li>
+<li><b>Что отдавать вендору по клиенту А.</b> Сортировка партий FIFO после
+<code>ТаблицаПродаж</code> и на входе распределения; не отбрасывать молча НКД/УКД;
+не копировать прошлый документ, если по коду дохода в текущем больше одной строки;
+свернуть начисления документа в <code>РанееНачисленныйНДФЛ</code>. Волны A/B в NkdParam -
+временный перехват, в типовую CF ещё не влиты.</li>
 </ol>
 
 <footer>
-IMDEV-7330. Скрипт: Скрипты/compare_ndfl_old_vs_new3.py.
-JSON: Документация/imdev7330_ndfl_old_vs_new3_diff.json.
-Исходники: bases/WIM_FIn/projects/IMDEV-7330 НовыеТесты.
+IMDEV-7330. HTML для вендора: персональные данные заменены, скриншотов нет.
+Скрипт генерации: Скрипты/compare_ndfl_old_vs_new3.py.
 </footer>
 </div>
 </body>
 </html>
 """
+    needles = (
+        "Платонов",
+        "Дмитрий Вячеславович",
+        "000000000038432",
+        "ДУ 2258",
+        "ДУ 10155",
+        "Абабилов",
+        "Ящук",
+    )
+    for n in needles:
+        if n in html:
+            raise RuntimeError("PII leaked into HTML: " + n)
     with open(OUT_HTML, "w", encoding="utf-8") as f:
         f.write(html)
     safe_print("HTML written: " + OUT_HTML)
 
 
 def main():
+    if "--html-only" in sys.argv:
+        with open(OUT_JSON, encoding="utf-8") as f:
+            r = json.load(f)
+        write_html(r)
+        safe_print("DONE html-only")
+        return
     r = analyze()
     write_html(r)
     safe_print("DONE")
