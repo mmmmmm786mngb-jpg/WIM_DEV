@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<title>ACCOUNTING-6645: ОТС.РЕПО, отражение операций с маржин коллами</title>
+<style>
+    * { box-sizing: border-box; }
+    body {
+        font-family: Calibri, "Segoe UI", Arial, sans-serif;
+        font-size: 15px;
+        line-height: 1.55;
+        color: #222;
+        background: #f4f6f8;
+        margin: 0;
+        padding: 0;
+    }
+    .page {
+        max-width: 1140px;
+        margin: 0 auto;
+        background: #fff;
+        padding: 0 0 52px 0;
+        box-shadow: 0 0 18px rgba(0,0,0,0.08);
+    }
+    header.doc-head {
+        background: #1f3c88;
+        color: #fff;
+        padding: 32px 44px 26px 44px;
+    }
+    header.doc-head .kicker {
+        font-size: 13px;
+        letter-spacing: 1.2px;
+        text-transform: uppercase;
+        opacity: 0.85;
+        margin-bottom: 10px;
+    }
+    header.doc-head h1 {
+        margin: 0 0 14px 0;
+        font-size: 26px;
+        line-height: 1.28;
+        font-weight: 600;
+    }
+    header.doc-head .sub { font-size: 16px; opacity: 0.92; }
+    .meta { display: table; width: 100%; border-collapse: collapse; font-size: 14px; }
+    .meta td { border: 1px solid #dfe3e8; padding: 9px 14px; vertical-align: top; }
+    .meta td.k { background: #f0f3f7; width: 280px; font-weight: 600; color: #45536b; }
+    .content { padding: 0 44px; }
+    h2 {
+        font-size: 21px;
+        color: #1f3c88;
+        margin: 38px 0 14px 0;
+        padding-bottom: 8px;
+        border-bottom: 2px solid #e3e8ef;
+    }
+    h3 { font-size: 17px; color: #24365c; margin: 28px 0 10px 0; }
+    p { margin: 0 0 12px 0; }
+    ul, ol { margin: 0 0 14px 0; padding-left: 24px; }
+    li { margin-bottom: 7px; }
+    table.grid { width: 100%; border-collapse: collapse; margin: 14px 0 22px 0; font-size: 14px; }
+    table.grid th {
+        background: #eef2f7;
+        border: 1px solid #d5dbe3;
+        padding: 9px 11px;
+        text-align: left;
+        color: #26385c;
+        font-weight: 600;
+    }
+    table.grid td { border: 1px solid #d5dbe3; padding: 9px 11px; vertical-align: top; }
+    table.grid tr:nth-child(even) td { background: #fafbfc; }
+    .box {
+        border-left: 5px solid #17a2b8;
+        background: #eaf7fa;
+        padding: 14px 18px;
+        margin: 16px 0 22px 0;
+        border-radius: 0 4px 4px 0;
+    }
+    .box.warn { border-left-color: #ffc107; background: #fff8e1; }
+    .box.good { border-left-color: #28a745; background: #eaf7ec; }
+    .box .bt { font-weight: 700; display: block; margin-bottom: 6px; color: #1f3c88; }
+    .box.warn .bt { color: #8a6100; }
+    .box.good .bt { color: #1e7e34; }
+    figure {
+        margin: 14px 0 18px 0;
+        padding: 10px;
+        background: #f7f9fb;
+        border: 1px solid #e1e6ec;
+        border-radius: 4px;
+    }
+    figure img { max-width: 100%; height: auto; display: block; }
+    figcaption { font-size: 13px; color: #5c6570; margin-top: 8px; }
+    footer.doc-foot {
+        margin: 44px 44px 0 44px;
+        padding-top: 16px;
+        border-top: 2px solid #e3e8ef;
+        font-size: 13px;
+        color: #6b7480;
+    }
+    code {
+        font-family: Consolas, "Courier New", monospace;
+        font-size: 13.5px;
+        background: #f0f2f5;
+        padding: 1px 5px;
+        border-radius: 3px;
+        color: #1f3c88;
+    }
+</style>
+</head>
+<body>
+<div class="page">
+<header class="doc-head">
+    <div class="kicker">Confluence / постановка 2021 / выгрузка 02.09.2026</div>
+    <h1>ACCOUNTING-6645: ОТС.РЕПО, отражение операций с маржин коллами</h1>
+    <div class="sub">Исходная постановка старой задачи. Читаемая копия страницы Confluence. Оригинал выгрузки лежит в ОРИГИНАЛ (файл .doc на самом деле MHTML).</div>
+</header>
+
+<div class="content">
+<table class="meta">
+    <tr><td class="k">Задачи</td><td><a href="https://jira/browse/ACCOUNTING-6645">ACCOUNTING-6645</a>, связанные: 6646, 6647, 6649</td></tr>
+    <tr><td class="k">Источник</td><td>Exported From Confluence, 02.09.2026 14:21 MSK. Файл скачан как .doc</td></tr>
+    <tr><td class="k">Зачем здесь</td><td>Ответ на претензию 02.09.2026: типы «Маржинальный взнос к уплате / к получению» в «Операции с ДС» были в постановке 2021 года, не случайный занос в ПРОД</td></tr>
+</table>
+
+<div class="box good">
+    <span class="bt">Фраза, которая закрывает спор про «лишние типы»</span>
+    При проведении документа «Маржинальный взнос» должна автоматически создаваться связанная Операция с ДС
+    с новым типом «Маржинальный взнос к оплате» или «Маржинальный взнос к получению».
+    Отдельный документ МВ и новые типы в Операции с ДС в постановке идут вместе, не вместо друг друга.
+</div>
+
+<h2>БТ по задаче</h2>
+<ol>
+    <li>ИТ доработка — отражение операций с МС (новый документ «Маржинальный взнос» (МВ) на основании Сделки, которая в нем отражается и признается для ВУ основанием, по которому порождаются записи по требованиям/обязательствам в зависимости от направления МВ и их погашению, в т.ч. путем участия в неттинге при расчетах по сделкам).</li>
+    <li>ИТ доработка — для букирования трейдеров заводит на основании ранее заведенного БП ВНБ Сделка по РЕПО новое «событие» — МС с указанием всех параметров.</li>
+</ol>
+
+<h2>Основной сценарий использования</h2>
+<table class="grid">
+    <tr>
+        <th>Шаг</th>
+        <th>Описание</th>
+        <th>Как</th>
+        <th>Кто</th>
+        <th>Триггер / комментарий</th>
+    </tr>
+    <tr>
+        <td>1</td>
+        <td>Создание непроведенной операции Маржинальный взнос</td>
+        <td>Вручную</td>
+        <td>Трейдеры</td>
+        <td>Запрос на Маржинальный взнос к оплате от контрагента по сделке РЕПО</td>
+    </tr>
+    <tr>
+        <td>2</td>
+        <td>Статус МВ «Новый»</td>
+        <td>Автоматически</td>
+        <td>—</td>
+        <td></td>
+    </tr>
+    <tr>
+        <td>3</td>
+        <td>Проведение операции Маржинальный взнос</td>
+        <td>Вручную</td>
+        <td>Бэк-офис</td>
+        <td>Проверка корректности шага 1</td>
+    </tr>
+    <tr>
+        <td>4</td>
+        <td>Создание связанной непроведенной Операции с ДС</td>
+        <td>Автоматически</td>
+        <td>—</td>
+        <td>Здесь появляются новые типы операции с ДС</td>
+    </tr>
+    <tr>
+        <td>5</td>
+        <td>Статус МВ «Подтвержден»</td>
+        <td>Автоматически</td>
+        <td>—</td>
+        <td></td>
+    </tr>
+    <tr>
+        <td>6</td>
+        <td>Проведение Операции с ДС</td>
+        <td>Вручную</td>
+        <td>Бэк-офис</td>
+        <td>Перевод ДС контрагенту в рамках оплаты МВ. Вручную до ACCOUNTING-6647</td>
+    </tr>
+    <tr>
+        <td>7</td>
+        <td>Статус МВ «Оплачен»</td>
+        <td>Автоматически</td>
+        <td>—</td>
+        <td></td>
+    </tr>
+    <tr>
+        <td>8</td>
+        <td>Статус МВ «Возвращен»</td>
+        <td>Автоматически</td>
+        <td>—</td>
+        <td>Исполнение поручения ДЕПО по 2-й части РЕПО. В поручение ДЕПО ИЦ добавить поле «Сумма марж. взносов» (на 1-ю часть РЕПО может быть больше одного МВ). Поле «Сумма» корректировать с учетом взносов и направлений. Подсказка при ненулевой сумме марж. взносов. На структуру поручения в депозитарии не влияет.</td>
+    </tr>
+</table>
+
+<figure>
+    <img src="screenshots/accounting6645/6645_depo_instruction_margin_sum.png" alt="Поручение ДЕПО, поле сумма маржинальных взносов">
+    <figcaption>Скриншот из постановки (24.03.2021). Поручение ДЕПО на инвентарную операцию, шаг 8: сумма по 2-й части РЕПО с учетом маржинальных взносов.</figcaption>
+</figure>
+
+<h2>Функциональные требования</h2>
+<p>В 1С ИЦ создать новый документ «Маржинальный взнос». Доступ — через новый подраздел с таким названием в разделе «Операции с денежными средствами»:</p>
+<figure>
+    <img src="screenshots/accounting6645/6645_menu_cash_operations.png" alt="Меню Документы / Операции с денежными средствами">
+    <figcaption>Скриншот из постановки (10.03.2021). Раздел меню, куда должен был попасть подраздел «Маржинальный взнос».</figcaption>
+</figure>
+<p>Также создание МВ через «Создать на основании» в карточке БП ВнБ.</p>
+
+<h3>Поля документа «Маржинальный взнос»</h3>
+<figure>
+    <img src="screenshots/accounting6645/6645_toolbar_buttons.png" alt="Стандартные кнопки Провести и закрыть">
+    <figcaption>Стандартный набор кнопок документа 1С ИЦ.</figcaption>
+</figure>
+<ul>
+    <li><b>Номер</b> — строка, недоступно для редактирования, автонумерация с 000000001.</li>
+    <li><b>Дата возникновения</b> — дата/время, обязательное, по умолчанию текущие.</li>
+    <li><b>Основание</b> — ссылка на сделку по 1-й части РЕПО, обязательное, связь через структуру подчиненности.</li>
+    <li><b>Организация</b> — из сделки-основания.</li>
+    <li><b>Статус</b> — не редактируется: Новый, Подтвержден, Оплачен, Возвращен.</li>
+    <li><b>Дата оплаты</b> — дата, обязательное.</li>
+    <li><b>Биржа</b>, <b>Тип деятельности</b>, <b>Валюта</b> — из сделки-основания.</li>
+    <li><b>Вид</b> — «К оплате» / «К получению», по умолчанию «К оплате».</li>
+    <li><b>Сумма</b> — число, обязательное.</li>
+    <li><b>Сторона 1</b> (как в БП ВнБ): клиент/контрагент, договор/код клиента, портфель, банковский счет — из основания.</li>
+    <li><b>Сторона 2</b>: клиент/контрагент, договор/код клиента из основания; расчетный счет заполняется вручную.</li>
+    <li><b>Комментарий</b> — необязательное. Логика могла меняться в ACCOUNTING-6649.</li>
+</ul>
+
+<div class="box warn">
+    <span class="bt">Новые типы Операции с ДС — прямое требование, не самодеятельность</span>
+    Как в шагах 3-5: при проведении «Маржинальный взнос» автоматически создается связанная через структуру подчиненности
+    Операция с ДС с новым типом «Маржинальный взнос к оплате» или «Маржинальный взнос к получению».
+</div>
+
+<p>Пример автоматически созданной Операции с ДС с типом «Маржинальный взнос к оплате» и РС, на который перечисляются ДС контрагенту:</p>
+<figure>
+    <img src="screenshots/accounting6645/6645_operatsii_ds_mv_k_oplate.png" alt="Операции с ДС тип Маржинальный взнос к оплате">
+    <figcaption>Скриншот из постановки (10.03.2021). Документ 210126-00001, тип «Маржинальный взнос к оплате», брокерская, биржа ВНБ. Это тот самый «новый тип операции», на который ссылался Савельев (план тестирования п.18).</figcaption>
+</figure>
+
+<h2>Code review (из той же страницы)</h2>
+<table class="grid">
+    <tr><th>№</th><th>Замечание</th></tr>
+    <tr>
+        <td>1</td>
+        <td>
+            <figure>
+                <img src="screenshots/accounting6645/6645_codereview_function.png" alt="Проверка типов МВ в коде формы">
+                <figcaption>Проверка ТипОперации = МаржинальныйВзносКОплате или МаржинальныйВзносКПолучению.</figcaption>
+            </figure>
+            «Давайте через функцию ЭтоОперацияПоМаржианльномуВзносу(). Пока можно функцией на форме.»
+        </td>
+    </tr>
+    <tr>
+        <td>2</td>
+        <td>
+            <figure>
+                <img src="screenshots/accounting6645/6645_codereview_title.png" alt="Заголовок поля Р/счет клиента">
+                <figcaption>Элементы.БанковскийСчетКлиента.Заголовок = "Р/счет клиента"</figcaption>
+            </figure>
+            «Если заголовок привести к пустой строке, он будет выводить значение по умолчанию? Чтобы проще было.»
+        </td>
+    </tr>
+</table>
+</div>
+
+<footer class="doc-foot">
+    Читаемая копия выгрузки Confluence от 02.09.2026. Орфография оригинала («Функиональные», «Маржинальрный», «новго») не правилась.
+    Оригинал файла: Документация/ОРИГИНАЛ/ACCOUNTING-6645_+ОТС.РЕПО,+Отражений+операций+с+Маржин+коллами.doc
+</footer>
+</div>
+</body>
+</html>

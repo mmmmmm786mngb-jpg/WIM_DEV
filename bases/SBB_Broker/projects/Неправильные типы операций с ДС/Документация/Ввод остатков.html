@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Тип «Ввод остатков» в Операциях с ДС</title>
+<style>
+    * { box-sizing: border-box; }
+    body {
+        margin: 0;
+        padding: 0;
+        background: #f4f6f8;
+        font-family: Calibri, "Segoe UI", Arial, sans-serif;
+        font-size: 16px;
+        line-height: 1.55;
+        color: #1c2430;
+    }
+    .page {
+        max-width: 1180px;
+        margin: 28px auto;
+        background: #fff;
+        box-shadow: 0 0 18px rgba(0,0,0,0.08);
+    }
+    header {
+        background: #1f3c88;
+        color: #fff;
+        padding: 28px 44px;
+    }
+    header h1 {
+        margin: 0;
+        font-size: 26px;
+        font-weight: 600;
+        line-height: 1.3;
+    }
+    .content { padding: 28px 44px 44px 44px; }
+    p { margin: 0 0 14px 0; }
+    .box {
+        border-left: 5px solid #28a745;
+        background: #eaf7ec;
+        padding: 16px 20px;
+        margin: 0 0 22px 0;
+        border-radius: 0 4px 4px 0;
+    }
+    .box .bt { font-weight: 700; color: #1a7a32; margin: 0 0 8px 0; }
+    .box.warn {
+        border-left-color: #ffc107;
+        background: #fff8e1;
+        margin-top: 22px;
+    }
+    .box.warn .bt { color: #8a6100; }
+    table.grid {
+        width: 100%;
+        border-collapse: collapse;
+        margin: 8px 0 0 0;
+        font-size: 16px;
+    }
+    table.grid th {
+        background: #eef2f7;
+        border: 1px solid #d5dbe3;
+        padding: 12px 16px;
+        text-align: left;
+        color: #26385c;
+        font-weight: 600;
+    }
+    table.grid td {
+        border: 1px solid #d5dbe3;
+        padding: 12px 16px;
+        vertical-align: top;
+    }
+    table.grid td.q {
+        width: 280px;
+        background: #f7f9fb;
+        font-weight: 600;
+        color: #24365c;
+    }
+    table.grid tr:nth-child(even) td.a { background: #fafbfc; }
+    @media (max-width: 800px) {
+        .page { margin: 0; }
+        header, .content { padding: 18px 16px; }
+        table.grid td.q { width: auto; }
+    }
+</style>
+</head>
+<body>
+<div class="page">
+<header>
+    <h1>Зачем в «Операциях с ДС» тип «Ввод остатков»</h1>
+</header>
+<div class="content">
+<p>Поле «Тип операции» в документе «Операции с денежными средствами» содержит значение «Ввод остатков». Ниже — зачем оно там есть и чем отличается от обычного «Ввода».</p>
+
+<div class="box">
+    <div class="bt">Для чего</div>
+    <p style="margin:0 0 10px 0;">Чтобы <b>поставить в учете уже имеющиеся деньги клиента</b>, когда реальной выплаты / зачисления с банка не было.</p>
+    <p style="margin:0;">Типичные случаи: старт учета, перенос клиента в 1С ИЦ, разовая постановка входящего остатка ДС. Система должна показать, что на счете есть сумма, хотя через банк в этот день ничего не приходило.</p>
+</div>
+
+<p>Это служебная операция «так уже было на счете». Поручение клиента на ввод под нее не создается, валютный контроль к ней не относится.</p>
+
+<table class="grid">
+    <tr>
+        <th>Вопрос</th>
+        <th>Ответ</th>
+    </tr>
+    <tr>
+        <td class="q">Каких остатков</td>
+        <td class="a">Денежных средств клиента в 1С ИЦ (остаток ДС по счету / портфелю). Не бумаги, не отдельный «секретный» регистр.</td>
+    </tr>
+    <tr>
+        <td class="q">На основании чего формируется</td>
+        <td class="a">Сам по себе ниоткуда не появляется. Его заводят вручную, когда нужно поставить входящий остаток. Из поручения клиента этот тип не выбирается.</td>
+    </tr>
+    <tr>
+        <td class="q">Как исполняется</td>
+        <td class="a">Провели документ — остаток ДС в учете увеличился. Отдельного «платежа контрагенту» и цепочки как у вывода / маржинального взноса нет.</td>
+    </tr>
+    <tr>
+        <td class="q">Записи ВУ</td>
+        <td class="a">Та же карточка денег клиента, что и при обычном вводе: сумма встает на остаток. Разница только в смысле операции: «так уже было», а не «сегодня пришло».</td>
+    </tr>
+    <tr>
+        <td class="q">Брокерский отчет</td>
+        <td class="a">Если такой документ провели в периоде отчета, клиент увидит строку «Ввод остатков». Если документов не было — строки не будет.</td>
+    </tr>
+    <tr>
+        <td class="q">Регуляторная отчетность</td>
+        <td class="a">Отдельной графы «ввод остатков» нет. Учитывается только итог: сколько денег числится на клиенте. Если документ провели — остаток в формах будет больше на эту сумму.</td>
+    </tr>
+</table>
+
+<div class="box warn">
+    <div class="bt">Для ежедневной работы</div>
+    <p style="margin:0 0 8px 0;">Этот тип <b>не для текущих операций бэк-офиса</b>. Вводить и выводить деньги клиента нужно типами «Ввод» и «Вывод».</p>
+    <p style="margin:0;">Из системы его убирать нельзя: если когда-то такие документы уже проводили, удаление типа сломает историю. Если он мешает в списке — можно просто скрыть выбор на форме, не трогая учтенные документы.</p>
+</div>
+</div>
+</div>
+</body>
+</html>

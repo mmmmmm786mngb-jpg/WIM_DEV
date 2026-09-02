@@ -10,7 +10,7 @@
 
 | Папка в репо | Путь к исходникам (WORK) | Проекты в репо |
 |--------------|--------------------------|----------------|
-| **SBB_Broker** | `C:\1c\Cursor_1c\WORK\SBB_Broker` | example |
+| **SBB_Broker** | `C:\1c\Cursor_1c\WORK\SBB_Broker` | example; ACCOUNTING-18422 Форма 0420454 НКЛ; Неправильные типы операций с ДС |
 | **SBB_Depo**   | `C:\1c\Cursor_1c\WORK\SBB_Depo`   | example |
 | **NRB_Depo**   | `C:\1c\Cursor_1c\WORK\NRB_Depo`   | NRB_3451_cr |
 | **Wim_Du**     | `C:\1c\Cursor_1c\WORK\Wim_Du`     | example |
