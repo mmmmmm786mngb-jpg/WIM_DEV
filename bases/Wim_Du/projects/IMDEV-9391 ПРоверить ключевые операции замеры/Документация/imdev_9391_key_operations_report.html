@@ -1,0 +1,1371 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>IMDEV-9391 — Замеры ключевых операций и потребность в оптимизации</title>
+<style>
+:root {
+  --bg:#f5f7fa; --card:#fff; --text:#1a2332; --muted:#5a6a7a; --border:#d8dee6;
+  --accent:#1e5a8a; --ok:#28a745; --warn:#b8860b; --danger:#dc3545; --info:#17a2b8;
+}
+* { box-sizing:border-box; }
+body { margin:0; font-family:"Segoe UI", Tahoma, Geneva, Verdana, sans-serif; background:var(--bg); color:var(--text); line-height:1.55; }
+.wrap { max-width:1120px; margin:0 auto; padding:28px 20px 56px; }
+h1 { font-size:1.55rem; margin:0 0 8px; color:var(--accent); }
+h2 { font-size:1.25rem; margin:0 0 12px; padding-bottom:8px; border-bottom:2px solid var(--accent); }
+h3 { font-size:1.08rem; margin:18px 0 8px; color:#16324d; }
+h4 { font-size:0.98rem; margin:16px 0 8px; color:#2c3e50; }
+.meta { color:var(--muted); font-size:0.92rem; margin-bottom:18px; }
+.meta a { color:var(--accent); }
+.intro { background:#e8f4fc; border-left:4px solid var(--info); padding:14px 16px 12px; margin-bottom:20px; border-radius:0 6px 6px 0; }
+.intro h2 { font-size:1.05rem; margin:0 0 10px; padding:0; border:none; color:#0d5c63; }
+.ask-ops { margin:0 0 12px; padding-left:22px; }
+.ask-ops li { margin:3px 0; }
+.ask-qs { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin:0; }
+@media (max-width:800px) { .ask-qs { grid-template-columns:1fr; } }
+.ask-q { background:#fff; border:1px solid #b8e0e8; border-radius:6px; padding:8px 12px; }
+.ask-q .n { font-size:0.75rem; font-weight:700; color:var(--info); letter-spacing:.04em; text-transform:uppercase; }
+.card { background:var(--card); border:1px solid var(--border); border-radius:8px; padding:18px 20px; margin-bottom:22px; }
+.subcard { background:#fafbfc; border:1px dashed var(--border); border-radius:8px; padding:16px 16px 8px; margin:16px 0 8px; }
+.badge { display:inline-block; font-size:0.75rem; font-weight:600; padding:3px 10px; border-radius:4px; margin:0 6px 6px 0; }
+.b-epf { background:#e3f2fd; color:#1565c0; }
+.b-ok { background:#e8f5e9; color:#2e7d32; }
+.b-warn { background:#fff8e1; color:#f57f17; }
+.b-info { background:#e0f7fa; color:#006064; }
+code { background:#eef2f6; padding:1px 6px; border-radius:3px; font-size:0.88em; }
+pre { background:#1e1e1e; color:#f8f8f2; padding:12px 14px; border-radius:6px; overflow-x:auto; font-size:12.5px; line-height:1.4; }
+table { width:100%; border-collapse:collapse; margin:10px 0 14px; font-size:0.92rem; }
+th, td { border:1px solid var(--border); padding:7px 9px; text-align:left; vertical-align:top; }
+th { background:#f0f4f8; }
+td.num { text-align:right; white-space:nowrap; }
+ul.tight { margin:8px 0; padding-left:20px; }
+ul.tight li { margin-bottom:4px; }
+.muted { color:var(--muted); font-size:0.92rem; }
+.toc a { color:var(--accent); text-decoration:none; }
+.toc li { margin:4px 0; }
+.dashgrid { display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:12px; margin:12px 0 6px; }
+a.dash { display:block; text-decoration:none; color:inherit; border:1px solid var(--border); border-radius:8px; padding:12px 14px; background:#fff; }
+a.dash.ok { border-top:4px solid var(--ok); }
+a.dash.warn { border-top:4px solid var(--warn); }
+a.dash.bad { border-top:4px solid var(--danger); }
+.dash-num { font-size:0.75rem; color:var(--muted); font-weight:700; }
+.dash-title { font-weight:700; margin:4px 0; color:#16324d; }
+.dash-obj { font-size:0.8rem; color:var(--muted); margin-bottom:8px; }
+.dash-med { font-size:0.88rem; }
+.dash-ude { font-size:0.88rem; margin-top:4px; color:#16324d; }
+.dash-n { font-size:0.8rem; color:var(--muted); margin-top:4px; }
+.dash-v { margin-top:8px; font-weight:700; font-size:0.88rem; }
+a.dash.ok .dash-v { color:var(--ok); }
+a.dash.warn .dash-v { color:var(--warn); }
+a.dash.bad .dash-v { color:var(--danger); }
+.qgrid { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin:12px 0; }
+@media (max-width:800px) { .qgrid { grid-template-columns:1fr; } }
+.qbox { border-radius:8px; padding:12px 14px; }
+.qbox.ok { background:#e8f5e9; border-left:4px solid var(--ok); }
+.qbox.warn { background:#fff8e1; border-left:4px solid var(--warn); }
+.qbox.bad { background:#fdecea; border-left:4px solid var(--danger); }
+.qbox h3 { margin:4px 0 8px; }
+.qnum { font-size:0.75rem; font-weight:700; letter-spacing:.04em; text-transform:uppercase; color:var(--muted); }
+.kpis { display:grid; grid-template-columns:repeat(auto-fit,minmax(120px,1fr)); gap:8px; margin:10px 0 14px; }
+.kpi { background:#fff; border:1px solid var(--border); border-radius:6px; padding:8px 10px; }
+.kpi-l { font-size:0.75rem; color:var(--muted); }
+.kpi-v { font-size:1.05rem; font-weight:700; color:#16324d; }
+.chart { background:#fff; border:1px solid var(--border); border-radius:6px; padding:10px 8px 4px; margin:10px 0 14px; }
+.flow { background:#fff; border:1px dashed var(--border); padding:10px 14px; border-radius:6px; font-size:0.9rem; margin:10px 0; }
+.sources { font-size:0.88rem; color:var(--muted); margin-top:28px; padding-top:14px; border-top:1px solid var(--border); }
+nav.sticky { position:sticky; top:0; background:rgba(245,247,250,.96); padding:8px 0; margin-bottom:12px; z-index:2; border-bottom:1px solid var(--border); font-size:0.85rem; }
+nav.sticky a { color:var(--accent); margin-right:14px; text-decoration:none; }
+.final-lead { margin:0 0 16px; font-size:1.02rem; }
+.ans-pair { display:grid; grid-template-columns:1fr 1fr; gap:14px; margin:0 0 22px; }
+@media (max-width:800px) { .ans-pair { grid-template-columns:1fr; } }
+.ans-hero { border-radius:10px; padding:18px 20px; }
+.ans-hero.yes { background:#e8f5e9; border:1px solid #b7dfb9; }
+.ans-hero .q { font-size:0.78rem; font-weight:700; letter-spacing:.04em; text-transform:uppercase; color:#2e7d32; margin:0 0 6px; }
+.ans-hero .a { font-size:1.4rem; font-weight:700; color:#1b5e20; margin:0 0 8px; line-height:1.25; }
+.ans-hero p { margin:0; }
+.op-final { border:1px solid var(--border); border-radius:10px; padding:16px 18px 14px; margin:14px 0; background:#f7fafc; }
+.op-final .op-head { display:flex; gap:14px; align-items:flex-start; margin-bottom:12px; }
+.op-n { min-width:40px; height:40px; border-radius:10px; background:var(--accent); color:#fff; display:flex; align-items:center; justify-content:center; font-weight:700; font-size:1.05rem; }
+.op-head h3 { margin:0 0 4px; padding:0; border:none; font-size:1.12rem; }
+.op-epf { color:var(--muted); font-size:0.9rem; }
+.op-epf a { color:var(--accent); text-decoration:none; }
+.op-qgrid { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+@media (max-width:800px) { .op-qgrid { grid-template-columns:1fr; } }
+.op-q { background:#fff; border-radius:8px; padding:12px 14px; border:1px solid var(--border); }
+.op-q .ql { font-size:0.75rem; font-weight:700; letter-spacing:.03em; text-transform:uppercase; color:var(--muted); }
+.op-q .qa { font-size:1.08rem; font-weight:700; color:var(--ok); margin:4px 0 8px; }
+.op-q p { margin:0 0 8px; font-size:0.95rem; }
+.pair-nums { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin:4px 0 8px; }
+.pair-num { background:#eef3f7; border-radius:6px; padding:8px 10px; text-align:center; }
+.pair-num .l { font-size:0.75rem; color:var(--muted); }
+.pair-num .v { font-size:1.02rem; font-weight:700; color:#16324d; margin-top:2px; }
+.goal-meter { margin-top:4px; }
+.goal-meter-track { height:12px; background:#e8edf2; border-radius:6px; overflow:hidden; }
+.goal-meter-fill { height:100%; background:#2e7d32; border-radius:6px; }
+.goal-meter-cap { display:flex; justify-content:space-between; font-size:0.8rem; color:var(--muted); margin-top:4px; gap:8px; }
+.final-sum th { font-size:0.85rem; }
+</style>
+</head>
+<body>
+<div class="wrap">
+<nav class="sticky">
+  <a href="#dash">Сводка</a>
+  <a href="#sec-1">1. Сверка ДС</a>
+  <a href="#sec-2">2. Сверка ЕРС</a>
+  <a href="#sec-3">3. Котировки</a>
+  <a href="#sec-4">4. Контроль котировок</a>
+  <a href="#itogo">Ответы заказчику</a>
+</nav>
+
+<h1>IMDEV-9391 — Проверка ключевых операций: замеры и оптимизация</h1>
+<p class="meta">
+  Задача: <a href="https://jira/browse/IMDEV-9391">IMDEV-9391</a>
+  «Проверить ключевые операции на потребность в оптимизации».
+  Эпик: <a href="https://jira/browse/IMDEV-8633">IMDEV-8633</a>.
+  База: Wim_Du (AvancoreDU).<br>
+  Источник замеров: регистр <code>ЗамерыВремени</code>, файл <code>ЗамерыВремени.xlsx</code>
+  (26 273 строк, период по нашим КО:
+  28.07.2026 -
+  02.09.2026).
+</p>
+
+<div class="intro">
+  <h2>Что просил заказчик</h2>
+  <p style="margin:0 0 6px;"><strong>Что замеряем</strong> (пять ключевых операций):</p>
+  <ol class="ask-ops">
+    <li>Сверка денежных средств</li>
+    <li>Сверка денежных средств ЕРС</li>
+    <li>Загрузка котировок, 1-й сеанс за дату Т-1</li>
+    <li>Сверка загрузки котировок</li>
+    <li>Загрузка котировок, финальная за Т-1</li>
+  </ol>
+  <p style="margin:0 0 8px;"><strong>Что делаем</strong> по каждой операции:</p>
+  <div class="ask-qs">
+    <div class="ask-q">
+      <div class="n">Вопрос 1</div>
+      Проверить, что формируется замер времени
+    </div>
+    <div class="ask-q">
+      <div class="n">Вопрос 2</div>
+      Проанализировать потребность в оптимизации
+    </div>
+  </div>
+</div>
+
+<div class="card">
+  <h2>Методика</h2>
+  <p>Смотрим два источника: код обработок (есть ли вызов замера) и выгрузку регистра замеров времени из рабочей базы.</p>
+  <ul class="tight">
+    <li><strong>Как понять, что строка в Excel относится к нашей обработке.</strong>
+      В коде замер пишется коротким техническим именем, например
+      <code>ДУ.СверкаДенежныхСредств.Сверка.ФоновоеВыполнение</code>.
+      Если такой операции ещё нет в справочнике, платформа создаёт её сама и для экрана
+      разбивает имя на слова: получается
+      «Д у. сверка денежных средств. сверка. фоновое выполнение».
+      В Excel именно эта «человеческая» подпись. По ней мы и нашли все строки.</li>
+    <li><strong>Какое время считается нормальным.</strong>
+      Ориентир взят из таблицы ключевых операций ДУ (задача IMDEV-8927):
+      сверки денежных средств - не дольше <strong>6 минут</strong> (0,1 часа),
+      загрузка и контроль котировок - не дольше <strong>30 минут</strong> (0,5 часа).</li>
+    <li><strong>По каким запускам делаем вывод.</strong>
+      Главный контур - ночные и утренние регламентные задания (служебный пользователь),
+      а не ручные нажатия в форме. Оптимизация нужна, если типичный «тяжёлый» запуск
+      (95-й процентиль: почти все случаи, кроме самых редких выбросов) уже выше цели
+      либо цель превышается чаще чем в каждом десятом запуске.</li>
+    <li><strong>Два сеанса загрузки котировок.</strong>
+      Это не две разные операции в справочнике, а один и тот же код в ~09:00 и ~11:50.
+      Время слота считаем как сумму двух шагов за один запуск: получить котировки с Tibco
+      и записать документы. Сеансы в таблице различаем по часам, а не по имени.</li>
+  </ul>
+</div>
+
+<div class="card" id="dash">
+  <h2>Сводка по списку заказчика</h2>
+  <div class="dashgrid">
+        <a class="dash ok" href="#sec-1">
+          <div class="dash-num">1</div>
+          <div class="dash-title">Сверка денежных средств</div>
+          <div class="dash-obj">внСверкаДенежныхСредств_обр</div>
+          <div class="dash-med">медиана: <strong>203,2 с (3,4 мин)</strong> при цели 360 с</div>
+          <div class="dash-ude">удельный вес: <strong>0,0049 расхожд./с</strong></div>
+          <div class="dash-n">26 замеров (РЗ / циклов)</div>
+          <div class="dash-v">Оптимизация не нужна</div>
+        </a>
+        <a class="dash ok" href="#sec-2">
+          <div class="dash-num">2</div>
+          <div class="dash-title">Сверка денежных средств ЕРС</div>
+          <div class="dash-obj">внСверкаДенежныхСредствНаЕРС_обр</div>
+          <div class="dash-med">медиана: <strong>3,6 с</strong> при цели 360 с</div>
+          <div class="dash-ude">удельный вес: <strong>0,286 расхожд./с</strong></div>
+          <div class="dash-n">36 замеров (РЗ / циклов)</div>
+          <div class="dash-v">Оптимизация не нужна</div>
+        </a>
+        <a class="dash ok" href="#sec-3a">
+          <div class="dash-num">3a</div>
+          <div class="dash-title">Загрузка котировок, 1-й сеанс Т-1</div>
+          <div class="dash-obj">внЗагрузкаКотировокДУ ~09:00</div>
+          <div class="dash-med">медиана: <strong>197,8 с (3,3 мин)</strong> при цели 1800 с</div>
+          <div class="dash-ude">удельный вес: <strong>17,7 котировок/с</strong></div>
+          <div class="dash-n">37 замеров (РЗ / циклов)</div>
+          <div class="dash-v">Оптимизация не нужна</div>
+        </a>
+        <a class="dash ok" href="#sec-3b">
+          <div class="dash-num">3b</div>
+          <div class="dash-title">Загрузка котировок, финальная Т-1</div>
+          <div class="dash-obj">внЗагрузкаКотировокДУ ~11:50</div>
+          <div class="dash-med">медиана: <strong>161,1 с (2,7 мин)</strong> при цели 1800 с</div>
+          <div class="dash-ude">удельный вес: <strong>21,6 котировок/с</strong></div>
+          <div class="dash-n">36 замеров (РЗ / циклов)</div>
+          <div class="dash-v">Оптимизация не нужна</div>
+        </a>
+        <a class="dash ok" href="#sec-4">
+          <div class="dash-num">4</div>
+          <div class="dash-title">Сверка загрузки котировок</div>
+          <div class="dash-obj">внОтчетКонтрольКотировок</div>
+          <div class="dash-med">медиана: <strong>6,2 с</strong> при цели 1800 с</div>
+          <div class="dash-ude">удельный вес: <strong>48,8 строк/с</strong></div>
+          <div class="dash-n">26 замеров (РЗ / циклов)</div>
+          <div class="dash-v">Оптимизация не нужна</div>
+        </a></div>
+  <h4>Медиана длительности (рабочий контур)</h4>
+  <div class="chart"><svg viewBox="0 0 720 166" width="100%" role="img">
+<text x="0" y="23.84" font-size="12" fill="#334">Сверка ДС, РЗ</text>
+<rect x="260" y="8" width="380" height="22" rx="3" fill="#eef2f6"/>
+<rect x="260" y="8" width="380.0" height="22" rx="3" fill="#1e5a8a"/>
+<text x="648" y="23.84" font-size="12" fill="#1a2332">203,2 с (3,4 мин)</text>
+<text x="0" y="53.84" font-size="12" fill="#334">Сверка ДС ЕРС, РЗ</text>
+<rect x="260" y="38" width="380" height="22" rx="3" fill="#eef2f6"/>
+<rect x="260" y="38" width="6.708583212546419" height="22" rx="3" fill="#17a2b8"/>
+<text x="648" y="53.84" font-size="12" fill="#1a2332">3,6 с</text>
+<text x="0" y="83.84" font-size="12" fill="#334">Котировки 1-й сеанс, цикл</text>
+<rect x="260" y="68" width="380" height="22" rx="3" fill="#eef2f6"/>
+<rect x="260" y="68" width="369.92216318906986" height="22" rx="3" fill="#1565c0"/>
+<text x="648" y="83.84" font-size="12" fill="#1a2332">197,8 с (3,3 мин)</text>
+<text x="0" y="113.84" font-size="12" fill="#334">Котировки финал, цикл</text>
+<rect x="260" y="98" width="380" height="22" rx="3" fill="#eef2f6"/>
+<rect x="260" y="98" width="301.3167537398828" height="22" rx="3" fill="#6a1b9a"/>
+<text x="648" y="113.84" font-size="12" fill="#1a2332">161,1 с (2,7 мин)</text>
+<text x="0" y="143.84" font-size="12" fill="#334">Контроль котировок, РЗ</text>
+<rect x="260" y="128" width="380" height="22" rx="3" fill="#eef2f6"/>
+<rect x="260" y="128" width="11.539436415224811" height="22" rx="3" fill="#2e7d32"/>
+<text x="648" y="143.84" font-size="12" fill="#1a2332">6,2 с</text>
+</svg></div>
+  <h4>Удельный вес (единиц в секунду)</h4>
+  <table>
+    <tr>
+      <th>№</th>
+      <th>Операция</th>
+      <th>Замеров</th>
+      <th>Медиана времени</th>
+      <th>Цель</th>
+      <th>Удельный вес</th>
+    </tr>
+    <tr><td>1</td><td>Сверка денежных средств</td><td class='num'>26</td><td class='num'>203,2 с (3,4 мин)</td><td>360 с</td><td class='num'><strong>0,0049 расхожд./с</strong></td></tr>
+<tr><td>2</td><td>Сверка денежных средств ЕРС</td><td class='num'>36</td><td class='num'>3,6 с</td><td>360 с</td><td class='num'><strong>0,286 расхожд./с</strong></td></tr>
+<tr><td>3a</td><td>Загрузка котировок, 1-й сеанс Т-1</td><td class='num'>37</td><td class='num'>197,8 с (3,3 мин)</td><td>1800 с</td><td class='num'><strong>17,7 котировок/с</strong></td></tr>
+<tr><td>3b</td><td>Загрузка котировок, финальная Т-1</td><td class='num'>36</td><td class='num'>161,1 с (2,7 мин)</td><td>1800 с</td><td class='num'><strong>21,6 котировок/с</strong></td></tr>
+<tr><td>4</td><td>Сверка загрузки котировок</td><td class='num'>26</td><td class='num'>6,2 с</td><td>1800 с</td><td class='num'><strong>48,8 строк/с</strong></td></tr>
+  </table>
+  <p class="muted">
+    Удельный вес = вес замера / время (то же, что поле <code>УдельныйВес</code> в комментарии, об/с).
+    Для этих пяти операций это <strong>не договоры</strong>: сверка ДС и ЕРС пишут число расхождений
+    (часто 1, поэтому «штук в секунду» почти ничего не говорит о нагрузке);
+    загрузка котировок — число котировок за полный цикл Tibco + создание документов;
+    контроль — число строк отчёта. Сравнивать эти пять чисел между собой нельзя: единицы разные.
+  </p>
+</div>
+
+<!-- ===================== 1 ===================== -->
+<div class="card" id="sec-1">
+  <h2>1. Сверка денежных средств</h2>
+  <p>
+    <span class="badge b-epf">EPF</span>
+    <span class="badge b-ok">Замер в коде и в регистре</span>
+    <code>внСверкаДенежныхСредств_обр</code>, версия 1.07
+  </p>
+  <table>
+    <tr><th style="width:28%">Поле</th><th>Значение</th></tr>
+    <tr><td>Операция в Jira</td><td>Сверка денежных средств</td></tr>
+    <tr><td>Команда РЗ</td><td><code>ФоновоеВыполнение</code> — «Сверка денежных средств (фон.)»</td></tr>
+    <tr><td>Ключевая операция</td><td><code>ДУ.СверкаДенежныхСредств.Сверка.ФоновоеВыполнение</code></td></tr>
+    <tr><td>В Excel</td><td><code>Д у. сверка денежных средств. сверка. фоновое выполнение</code></td></tr>
+    <tr><td>Цель</td><td>360 с (0,1 ч)</td></tr>
+  </table>
+  <div class="flow">РЗ / форма → <code>ВыполнитьКоманду</code> (ставит контур) → <code>ВыполнитьСверку</code> (замер всего расчёта) → рассылка.</div>
+  
+    <div class="qgrid">
+      <div class="qbox ok">
+        <div class="qnum">Вопрос 1</div>
+        <h3>Формируется ли замер времени?</h3>
+        <p><strong>Да, замер формируется.</strong> Записей в регистре: <strong>292</strong>.</p>
+        
+        <ul class="tight">
+          <li>Код IMDEV-8927 в <code>ВыполнитьСверку()</code>: <code>НачатьЗамерВремени</code> / <code>ЗакончитьЗамерВремени</code>.</li>
+          <li>Имя: <code>ДУ.СверкаДенежныхСредств.Сверка.ФоновоеВыполнение</code> (контур РЗ) или <code>...Ручной</code>.</li>
+          <li>Вес = число строк с «Есть расхождения», минимум 1. Комментарий: <code>Расхождений</code>, <code>Ошибка</code>, <code>УдельныйВес</code>.</li>
+          <li>В Excel выгружается <em>наименование</em> справочника: <code>Д у. сверка денежных средств. сверка. фоновое выполнение</code>.</li>
+        </ul>
+      </div>
+      <div class="qbox ok">
+        <div class="qnum">Вопрос 2</div>
+        <h3>Нужна ли оптимизация?</h3>
+        <p><strong>Оптимизация не требуется.</strong> Медиана и P95 существенно ниже цели</p>
+        <p>Цель из таблицы ДУ-15: <strong>0,1 ч = 360 с</strong>. РЗ медиана 203,2 с (3,4 мин), P95 248,4 с (4,1 мин), max 301,7 с (5,0 мин), превышений 0. У ручных запусков есть единичные превышения 360 с (не регламент).</p>
+      </div>
+    </div>
+    
+  <h3>Регламентный запуск (основа для вердикта)</h3>
+  
+    <div class="kpis">
+      <div class="kpi"><div class="kpi-l">Замеров</div><div class="kpi-v">26</div></div>
+      <div class="kpi"><div class="kpi-l">Медиана</div><div class="kpi-v">203,2 с (3,4 мин)</div></div>
+      <div class="kpi"><div class="kpi-l">Среднее</div><div class="kpi-v">208,7 с (3,5 мин)</div></div>
+      <div class="kpi"><div class="kpi-l">P95</div><div class="kpi-v">248,4 с (4,1 мин)</div></div>
+      <div class="kpi"><div class="kpi-l">Максимум</div><div class="kpi-v">301,7 с (5,0 мин)</div></div>
+      <div class="kpi"><div class="kpi-l">Вес, медиана</div><div class="kpi-v">1,0</div></div>
+    </div>
+  <div class="chart"><svg viewBox="0 0 720 196" width="100%" role="img">
+<text x="0" y="23.84" font-size="12" fill="#334">РЗ, медиана</text>
+<rect x="160" y="8" width="480" height="22" rx="3" fill="#eef2f6"/>
+<rect x="160" y="8" width="270.90866666666665" height="22" rx="3" fill="#1e5a8a"/>
+<text x="648" y="23.84" font-size="12" fill="#1a2332">203,2 с (3,4 мин)</text>
+<text x="0" y="53.84" font-size="12" fill="#334">РЗ, P95</text>
+<rect x="160" y="38" width="480" height="22" rx="3" fill="#eef2f6"/>
+<rect x="160" y="38" width="331.224" height="22" rx="3" fill="#4e88b7"/>
+<text x="648" y="53.84" font-size="12" fill="#1a2332">248,4 с (4,1 мин)</text>
+<text x="0" y="83.84" font-size="12" fill="#334">РЗ, max</text>
+<rect x="160" y="68" width="480" height="22" rx="3" fill="#eef2f6"/>
+<rect x="160" y="68" width="402.2226666666666" height="22" rx="3" fill="#9bb8d0"/>
+<text x="648" y="83.84" font-size="12" fill="#1a2332">301,7 с (5,0 мин)</text>
+<text x="0" y="113.84" font-size="12" fill="#334">Ручной, медиана</text>
+<rect x="160" y="98" width="480" height="22" rx="3" fill="#eef2f6"/>
+<rect x="160" y="98" width="280.678" height="22" rx="3" fill="#b8860b"/>
+<text x="648" y="113.84" font-size="12" fill="#1a2332">210,5 с (3,5 мин)</text>
+<text x="0" y="143.84" font-size="12" fill="#334">Ручной, P95</text>
+<rect x="160" y="128" width="480" height="22" rx="3" fill="#eef2f6"/>
+<rect x="160" y="128" width="405.8813333333333" height="22" rx="3" fill="#d4a84b"/>
+<text x="648" y="143.84" font-size="12" fill="#1a2332">304,4 с (5,1 мин)</text>
+<text x="0" y="173.84" font-size="12" fill="#334">Цель 360 с</text>
+<rect x="160" y="158" width="480" height="22" rx="3" fill="#eef2f6"/>
+<rect x="160" y="158" width="480.0" height="22" rx="3" fill="#dc3545"/>
+<text x="648" y="173.84" font-size="12" fill="#1a2332">360 с (6,0 мин)</text>
+</svg></div>
+  <div class="chart"><svg viewBox="0 0 720 200" width="100%" role="img"><text x="44" y="12" font-size="11" fill="#5a6a7a">Медиана РЗ по дням, с</text><line x1="44" y1="164.0" x2="704" y2="164.0" stroke="#e6ebf0"/><text x="38" y="168.0" font-size="10" text-anchor="end" fill="#5a6a7a">0,0</text><line x1="44" y1="91.0" x2="704" y2="91.0" stroke="#e6ebf0"/><text x="38" y="95.0" font-size="10" text-anchor="end" fill="#5a6a7a">151</text><line x1="44" y1="18.0" x2="704" y2="18.0" stroke="#e6ebf0"/><text x="38" y="22.0" font-size="10" text-anchor="end" fill="#5a6a7a">302</text><path d="M44.0,60.9 L70.4,80.0 L96.8,66.3 L123.2,64.6 L149.6,18.0 L176.0,70.1 L202.4,57.1 L228.8,62.9 L255.2,80.7 L281.6,65.1 L308.0,66.2 L334.4,71.4 L360.8,71.7 L387.2,69.6 L413.6,64.7 L440.0,42.3 L466.4,72.7 L492.8,50.7 L519.2,69.7 L545.6,56.9 L572.0,64.7 L598.4,75.1 L624.8,52.0 L651.2,67.6 L677.6,68.3 L704.0,48.3" fill="none" stroke="#1e5a8a" stroke-width="2"/><circle cx="44.0" cy="60.9" r="3" fill="#1e5a8a"><title>2026-07-29: 212,9 с (3,5 мин)</title></circle><circle cx="70.4" cy="80.0" r="3" fill="#1e5a8a"><title>2026-07-30: 173,5 с (2,9 мин)</title></circle><circle cx="96.8" cy="66.3" r="3" fill="#1e5a8a"><title>2026-07-31: 201,8 с (3,4 мин)</title></circle><circle cx="123.2" cy="64.6" r="3" fill="#1e5a8a"><title>2026-08-03: 205,3 с (3,4 мин)</title></circle><circle cx="149.6" cy="18.0" r="3" fill="#1e5a8a"><title>2026-08-04: 301,7 с (5,0 мин)</title></circle><circle cx="176.0" cy="70.1" r="3" fill="#1e5a8a"><title>2026-08-05: 193,9 с (3,2 мин)</title></circle><circle cx="202.4" cy="57.1" r="3" fill="#1e5a8a"><title>2026-08-06: 220,9 с (3,7 мин)</title></circle><circle cx="228.8" cy="62.9" r="3" fill="#1e5a8a"><title>2026-08-07: 208,9 с (3,5 мин)</title></circle><circle cx="255.2" cy="80.7" r="3" fill="#1e5a8a"><title>2026-08-10: 172,1 с (2,9 мин)</title></circle><circle cx="281.6" cy="65.1" r="3" fill="#1e5a8a"><title>2026-08-11: 204,2 с (3,4 мин)</title></circle><circle cx="308.0" cy="66.2" r="3" fill="#1e5a8a"><title>2026-08-12: 202,1 с (3,4 мин)</title></circle><circle cx="334.4" cy="71.4" r="3" fill="#1e5a8a"><title>2026-08-13: 191,2 с (3,2 мин)</title></circle><circle cx="360.8" cy="71.7" r="3" fill="#1e5a8a"><title>2026-08-14: 190,8 с (3,2 мин)</title></circle><circle cx="387.2" cy="69.6" r="3" fill="#1e5a8a"><title>2026-08-17: 195,0 с (3,3 мин)</title></circle><circle cx="413.6" cy="64.7" r="3" fill="#1e5a8a"><title>2026-08-18: 205,2 с (3,4 мин)</title></circle><circle cx="440.0" cy="42.3" r="3" fill="#1e5a8a"><title>2026-08-19: 251,5 с (4,2 мин)</title></circle><circle cx="466.4" cy="72.7" r="3" fill="#1e5a8a"><title>2026-08-20: 188,7 с (3,1 мин)</title></circle><circle cx="492.8" cy="50.7" r="3" fill="#1e5a8a"><title>2026-08-21: 234,1 с (3,9 мин)</title></circle><circle cx="519.2" cy="69.7" r="3" fill="#1e5a8a"><title>2026-08-24: 194,8 с (3,2 мин)</title></circle><circle cx="545.6" cy="56.9" r="3" fill="#1e5a8a"><title>2026-08-25: 221,4 с (3,7 мин)</title></circle><circle cx="572.0" cy="64.7" r="3" fill="#1e5a8a"><title>2026-08-26: 205,2 с (3,4 мин)</title></circle><circle cx="598.4" cy="75.1" r="3" fill="#1e5a8a"><title>2026-08-27: 183,7 с (3,1 мин)</title></circle><circle cx="624.8" cy="52.0" r="3" fill="#1e5a8a"><title>2026-08-28: 231,5 с (3,9 мин)</title></circle><circle cx="651.2" cy="67.6" r="3" fill="#1e5a8a"><title>2026-08-31: 199,2 с (3,3 мин)</title></circle><circle cx="677.6" cy="68.3" r="3" fill="#1e5a8a"><title>2026-09-01: 197,7 с (3,3 мин)</title></circle><circle cx="704.0" cy="48.3" r="3" fill="#1e5a8a"><title>2026-09-02: 239,2 с (4,0 мин)</title></circle><text x="44.0" y="192" font-size="10" text-anchor="middle" fill="#5a6a7a">29.07</text><text x="123.2" y="192" font-size="10" text-anchor="middle" fill="#5a6a7a">03.08</text><text x="202.4" y="192" font-size="10" text-anchor="middle" fill="#5a6a7a">06.08</text><text x="281.6" y="192" font-size="10" text-anchor="middle" fill="#5a6a7a">11.08</text><text x="360.8" y="192" font-size="10" text-anchor="middle" fill="#5a6a7a">14.08</text><text x="440.0" y="192" font-size="10" text-anchor="middle" fill="#5a6a7a">19.08</text><text x="519.2" y="192" font-size="10" text-anchor="middle" fill="#5a6a7a">24.08</text><text x="598.4" y="192" font-size="10" text-anchor="middle" fill="#5a6a7a">27.08</text><text x="677.6" y="192" font-size="10" text-anchor="middle" fill="#5a6a7a">01.09</text><text x="704.0" y="192" font-size="10" text-anchor="middle" fill="#5a6a7a">02.09</text></svg></div>
+  <div class="chart"><svg viewBox="0 0 720 170" width="100%" role="img"><rect x="36.0" y="109.0" width="46.1" height="33.0" rx="2" fill="#1e5a8a"><title>172,1 с (2,9 мин) – 182,9 с (3,0 мин): 2</title></rect><rect x="92.2" y="76.0" width="46.1" height="66.0" rx="2" fill="#1e5a8a"><title>182,9 с (3,0 мин) – 193,7 с (3,2 мин): 4</title></rect><rect x="148.3" y="10.0" width="46.1" height="132.0" rx="2" fill="#1e5a8a"><title>193,7 с (3,2 мин) – 204,5 с (3,4 мин): 8</title></rect><rect x="204.5" y="59.5" width="46.1" height="82.5" rx="2" fill="#1e5a8a"><title>204,5 с (3,4 мин) – 215,3 с (3,6 мин): 5</title></rect><rect x="260.7" y="109.0" width="46.1" height="33.0" rx="2" fill="#1e5a8a"><title>215,3 с (3,6 мин) – 226,1 с (3,8 мин): 2</title></rect><rect x="316.8" y="109.0" width="46.1" height="33.0" rx="2" fill="#1e5a8a"><title>226,1 с (3,8 мин) – 236,9 с (3,9 мин): 2</title></rect><rect x="373.0" y="125.5" width="46.1" height="16.5" rx="2" fill="#1e5a8a"><title>236,9 с (3,9 мин) – 247,7 с (4,1 мин): 1</title></rect><rect x="429.2" y="125.5" width="46.1" height="16.5" rx="2" fill="#1e5a8a"><title>247,7 с (4,1 мин) – 258,5 с (4,3 мин): 1</title></rect><rect x="485.3" y="142.0" width="46.1" height="0.0" rx="2" fill="#1e5a8a"><title>258,5 с (4,3 мин) – 269,3 с (4,5 мин): 0</title></rect><rect x="541.5" y="142.0" width="46.1" height="0.0" rx="2" fill="#1e5a8a"><title>269,3 с (4,5 мин) – 280,1 с (4,7 мин): 0</title></rect><rect x="597.7" y="142.0" width="46.1" height="0.0" rx="2" fill="#1e5a8a"><title>280,1 с (4,7 мин) – 290,9 с (4,8 мин): 0</title></rect><rect x="653.8" y="125.5" width="46.1" height="16.5" rx="2" fill="#1e5a8a"><title>290,9 с (4,8 мин) – 301,7 с (5,0 мин): 1</title></rect><text x="36" y="164" font-size="10" fill="#5a6a7a">172,1 с (2,9 мин)</text><text x="710" y="164" font-size="10" text-anchor="end" fill="#5a6a7a">301,7 с (5,0 мин)</text></svg></div>
+  
+        <table>
+          <tr><th>Показатель</th><th>Значение</th></tr>
+          <tr><td>Период</td><td>29.07.2026 — 02.09.2026</td></tr>
+          <tr><td>Замеров / с ошибкой</td><td>26 / 0</td></tr>
+          <tr><td>Время, с: min / медиана / среднее / P95 / max</td>
+              <td class='num'>172,1 с (2,9 мин) / 203,2 с (3,4 мин) / 208,7 с (3,5 мин) / 248,4 с (4,1 мин) / 301,7 с (5,0 мин)</td></tr>
+          <tr><td>Целевое время</td><td class='num'>360 с (6,0 мин)</td></tr>
+          <tr><td>Превышений цели</td><td class='num'>0 из 26</td></tr>
+          <tr><td>Вес (число расхождений, минимум 1)</td>
+              <td class='num'>min 1 / мед. 1 / сред. 1,0 / max 1
+              (вес=1: 26; вес&gt;1: 0)</td></tr>
+          <tr><td>Удельно, с на единицу веса</td>
+              <td class='num'>медиана 203,181 с; взвеш. среднее 208,725</td></tr>
+          <tr><td>Пропускная способность</td>
+              <td class='num'>медиана 0,00 ед/с; взвеш. среднее 0,00</td></tr>
+          <tr><td>Пользователи</td><td>svc_avancore (26)</td></tr>
+        </table>
+        
+        <h4>Параметры из комментария замера</h4>
+        <table>
+          <tr><th>Поле</th><th>Медиана</th><th>Среднее</th><th>Min</th><th>Max</th></tr>
+          <tr><td>Расхождений</td><td class='num'>0,00</td><td class='num'>0,12</td><td class='num'>0,00</td><td class='num'>1,00</td></tr><tr><td>УдельныйВес</td><td class='num'>0,00</td><td class='num'>0,00</td><td class='num'>0,00</td><td class='num'>0,01</td></tr>
+        </table>
+        
+        <h4>Примеры комментариев</h4>
+        <table>
+          <tr><th>Время (лок.)</th><th>Длительность</th><th>Вес</th><th>Ошибка</th><th>ДопИнф</th></tr>
+          <tr><td>11.08.2026 14:33:25</td><td class='num'>204,2 с (3,4 мин)</td><td class='num'>1</td><td>Нет</td><td><code>Расхождений=0; Ошибка=Нет; УдельныйВес=0,00 об/с</code></td></tr><tr><td>04.08.2026 14:35:02</td><td class='num'>301,7 с (5,0 мин)</td><td class='num'>1</td><td>Нет</td><td><code>Расхождений=0; Ошибка=Нет; УдельныйВес=0,00 об/с</code></td></tr><tr><td>10.08.2026 14:32:53</td><td class='num'>172,1 с (2,9 мин)</td><td class='num'>1</td><td>Нет</td><td><code>Расхождений=0; Ошибка=Нет; УдельныйВес=0,01 об/с</code></td></tr><tr><td>30.07.2026 14:32:53</td><td class='num'>173,5 с (2,9 мин)</td><td class='num'>1</td><td>Нет</td><td><code>Расхождений=0; Ошибка=Нет; УдельныйВес=0,01 об/с</code></td></tr>
+        </table>
+    
+  <h3>Ручные запуски (справочно)</h3>
+  <p class="muted">266 записей <code>...Ручной</code>. На вердикт по регламенту не влияют, но показывают разброс интерактива.</p>
+  
+    <div class="kpis">
+      <div class="kpi"><div class="kpi-l">Замеров</div><div class="kpi-v">266</div></div>
+      <div class="kpi"><div class="kpi-l">Медиана</div><div class="kpi-v">210,5 с (3,5 мин)</div></div>
+      <div class="kpi"><div class="kpi-l">Среднее</div><div class="kpi-v">221,4 с (3,7 мин)</div></div>
+      <div class="kpi"><div class="kpi-l">P95</div><div class="kpi-v">304,4 с (5,1 мин)</div></div>
+      <div class="kpi"><div class="kpi-l">Максимум</div><div class="kpi-v">417,7 с (7,0 мин)</div></div>
+      <div class="kpi"><div class="kpi-l">Вес, медиана</div><div class="kpi-v">5,0</div></div>
+    </div>
+  
+        <table>
+          <tr><th>Показатель</th><th>Значение</th></tr>
+          <tr><td>Период</td><td>29.07.2026 — 02.09.2026</td></tr>
+          <tr><td>Замеров / с ошибкой</td><td>266 / 0</td></tr>
+          <tr><td>Время, с: min / медиана / среднее / P95 / max</td>
+              <td class='num'>141,5 с (2,4 мин) / 210,5 с (3,5 мин) / 221,4 с (3,7 мин) / 304,4 с (5,1 мин) / 417,7 с (7,0 мин)</td></tr>
+          <tr><td>Целевое время</td><td class='num'>360 с (6,0 мин)</td></tr>
+          <tr><td>Превышений цели</td><td class='num'>2 из 266</td></tr>
+          <tr><td>Вес (число расхождений, минимум 1)</td>
+              <td class='num'>min 1 / мед. 5 / сред. 44,3 / max 1116
+              (вес=1: 95; вес&gt;1: 171)</td></tr>
+          <tr><td>Удельно, с на единицу веса</td>
+              <td class='num'>медиана 46,608 с; взвеш. среднее 4,997</td></tr>
+          <tr><td>Пропускная способность</td>
+              <td class='num'>медиана 0,02 ед/с; взвеш. среднее 0,20</td></tr>
+          <tr><td>Пользователи</td><td>ВолковаО; Волкова Ольга Семеновна (62), ШилинД; Шилин Денис Олегович (43), ГорностаевД; Горностаев Денис Владимирович (35), ТюринаЕ; Тюрина Елена Анатольевна (34)</td></tr>
+        </table>
+        
+        <h4>Параметры из комментария замера</h4>
+        <table>
+          <tr><th>Поле</th><th>Медиана</th><th>Среднее</th><th>Min</th><th>Max</th></tr>
+          <tr><td>Расхождений</td><td class='num'>5,00</td><td class='num'>44,05</td><td class='num'>0,00</td><td class='num'>1116,00</td></tr><tr><td>УдельныйВес</td><td class='num'>0,02</td><td class='num'>0,22</td><td class='num'>0,00</td><td class='num'>6,01</td></tr>
+        </table>
+        
+        <h4>Примеры комментариев</h4>
+        <table>
+          <tr><th>Время (лок.)</th><th>Длительность</th><th>Вес</th><th>Ошибка</th><th>ДопИнф</th></tr>
+          <tr><td>13.08.2026 13:45:38</td><td class='num'>211,0 с (3,5 мин)</td><td class='num'>1</td><td>Нет</td><td><code>Расхождений=0; Ошибка=Нет; УдельныйВес=0,00 об/с</code></td></tr><tr><td>01.09.2026 12:09:08</td><td class='num'>417,7 с (7,0 мин)</td><td class='num'>1</td><td>Нет</td><td><code>Расхождений=0; Ошибка=Нет; УдельныйВес=0,00 об/с</code></td></tr><tr><td>03.08.2026 17:47:30</td><td class='num'>141,5 с (2,4 мин)</td><td class='num'>1</td><td>Нет</td><td><code>Расхождений=0; Ошибка=Нет; УдельныйВес=0,01 об/с</code></td></tr><tr><td>03.08.2026 10:29:37</td><td class='num'>149,0 с (2,5 мин)</td><td class='num'>24</td><td>Нет</td><td><code>Расхождений=24; Ошибка=Нет; УдельныйВес=0,16 об/с</code></td></tr>
+        </table>
+    
+  <p class="muted">Вес почти всегда 1: расхождений нет, обработка всё равно сканирует счета. Удельное время не отражает объём работы.</p>
+</div>
+
+<!-- ===================== 2 ===================== -->
+<div class="card" id="sec-2">
+  <h2>2. Сверка денежных средств на ЕРС</h2>
+  <p>
+    <span class="badge b-epf">EPF</span>
+    <span class="badge b-ok">Замер в коде и в регистре</span>
+    <code>внСверкаДенежныхСредствНаЕРС_обр</code>, версия 1.03
+  </p>
+  <table>
+    <tr><th style="width:28%">Поле</th><th>Значение</th></tr>
+    <tr><td>Операция в Jira</td><td>Сверка денежных средств ЕРС</td></tr>
+    <tr><td>Команда РЗ</td><td><code>ФоновоеВыполнение</code> — «Сверка денежных средств на ЕРС (фон.)»</td></tr>
+    <tr><td>Ключевая операция</td><td><code>ДУ.СверкаДенежныхСредствЕРС.Сверка.ФоновоеВыполнение</code></td></tr>
+    <tr><td>В Excel</td><td><code>Д у. сверка денежных средств е р с. сверка. фоновое выполнение</code></td></tr>
+    <tr><td>Цель</td><td>360 с (0,1 ч)</td></tr>
+  </table>
+  
+    <div class="qgrid">
+      <div class="qbox ok">
+        <div class="qnum">Вопрос 1</div>
+        <h3>Формируется ли замер времени?</h3>
+        <p><strong>Да, замер формируется.</strong> Записей в регистре: <strong>132</strong>.</p>
+        
+        <ul class="tight">
+          <li>Тот же шаблон замера в <code>ВыполнитьСверку()</code> обработки ЕРС.</li>
+          <li>Имя: <code>ДУ.СверкаДенежныхСредствЕРС.Сверка.ФоновоеВыполнение</code>. В Excel: <code>Д у. сверка денежных средств е р с. сверка. фоновое выполнение</code> (аббревиатура ЕРС распалась по буквам).</li>
+          <li>Вес = число счетов с расхождением остатков, минимум 1.</li>
+        </ul>
+      </div>
+      <div class="qbox ok">
+        <div class="qnum">Вопрос 2</div>
+        <h3>Нужна ли оптимизация?</h3>
+        <p><strong>Оптимизация не требуется.</strong> Медиана и P95 существенно ниже цели</p>
+        <p>Цель <strong>360 с</strong>. Фактическая медиана РЗ 3,6 с — на два порядка ниже.</p>
+      </div>
+    </div>
+    
+  <h3>Регламентный запуск</h3>
+  
+    <div class="kpis">
+      <div class="kpi"><div class="kpi-l">Замеров</div><div class="kpi-v">36</div></div>
+      <div class="kpi"><div class="kpi-l">Медиана</div><div class="kpi-v">3,6 с</div></div>
+      <div class="kpi"><div class="kpi-l">Среднее</div><div class="kpi-v">4,7 с</div></div>
+      <div class="kpi"><div class="kpi-l">P95</div><div class="kpi-v">13,0 с</div></div>
+      <div class="kpi"><div class="kpi-l">Максимум</div><div class="kpi-v">17,9 с</div></div>
+      <div class="kpi"><div class="kpi-l">Вес, медиана</div><div class="kpi-v">1,0</div></div>
+    </div>
+  <div class="chart"><svg viewBox="0 0 720 196" width="100%" role="img">
+<text x="0" y="23.84" font-size="12" fill="#334">РЗ, медиана</text>
+<rect x="160" y="8" width="480" height="22" rx="3" fill="#eef2f6"/>
+<rect x="160" y="8" width="4.782666666666667" height="22" rx="3" fill="#17a2b8"/>
+<text x="648" y="23.84" font-size="12" fill="#1a2332">3,6 с</text>
+<text x="0" y="53.84" font-size="12" fill="#334">РЗ, P95</text>
+<rect x="160" y="38" width="480" height="22" rx="3" fill="#eef2f6"/>
+<rect x="160" y="38" width="17.277" height="22" rx="3" fill="#5bc0de"/>
+<text x="648" y="53.84" font-size="12" fill="#1a2332">13,0 с</text>
+<text x="0" y="83.84" font-size="12" fill="#334">РЗ, max</text>
+<rect x="160" y="68" width="480" height="22" rx="3" fill="#eef2f6"/>
+<rect x="160" y="68" width="23.92533333333333" height="22" rx="3" fill="#a6e0ef"/>
+<text x="648" y="83.84" font-size="12" fill="#1a2332">17,9 с</text>
+<text x="0" y="113.84" font-size="12" fill="#334">Ручной, медиана</text>
+<rect x="160" y="98" width="480" height="22" rx="3" fill="#eef2f6"/>
+<rect x="160" y="98" width="2.766666666666667" height="22" rx="3" fill="#b8860b"/>
+<text x="648" y="113.84" font-size="12" fill="#1a2332">2,1 с</text>
+<text x="0" y="143.84" font-size="12" fill="#334">Ручной, P95</text>
+<rect x="160" y="128" width="480" height="22" rx="3" fill="#eef2f6"/>
+<rect x="160" y="128" width="12.225000000000003" height="22" rx="3" fill="#d4a84b"/>
+<text x="648" y="143.84" font-size="12" fill="#1a2332">9,2 с</text>
+<text x="0" y="173.84" font-size="12" fill="#334">Цель 360 с</text>
+<rect x="160" y="158" width="480" height="22" rx="3" fill="#eef2f6"/>
+<rect x="160" y="158" width="480.0" height="22" rx="3" fill="#dc3545"/>
+<text x="648" y="173.84" font-size="12" fill="#1a2332">360 с (6,0 мин)</text>
+</svg></div>
+  <div class="chart"><svg viewBox="0 0 720 200" width="100%" role="img"><text x="44" y="12" font-size="11" fill="#5a6a7a">Медиана РЗ ЕРС по дням, с</text><line x1="44" y1="164.0" x2="704" y2="164.0" stroke="#e6ebf0"/><text x="38" y="168.0" font-size="10" text-anchor="end" fill="#5a6a7a">0,0</text><line x1="44" y1="91.0" x2="704" y2="91.0" stroke="#e6ebf0"/><text x="38" y="95.0" font-size="10" text-anchor="end" fill="#5a6a7a">9,0</text><line x1="44" y1="18.0" x2="704" y2="18.0" stroke="#e6ebf0"/><text x="38" y="22.0" font-size="10" text-anchor="end" fill="#5a6a7a">18</text><path d="M44.0,136.1 L62.9,126.5 L81.7,141.7 L100.6,134.0 L119.4,146.8 L138.3,140.4 L157.1,136.9 L176.0,134.9 L194.9,140.0 L213.7,109.1 L232.6,131.3 L251.4,90.4 L270.3,68.4 L289.1,29.1 L308.0,129.6 L326.9,18.0 L345.7,140.2 L364.6,144.0 L383.4,148.7 L402.3,116.0 L421.1,141.9 L440.0,139.4 L458.9,125.6 L477.7,130.6 L496.6,146.2 L515.4,144.5 L534.3,134.6 L553.1,128.6 L572.0,136.4 L590.9,122.0 L609.7,134.7 L628.6,139.3 L647.4,148.8 L666.3,136.2 L685.1,121.8 L704.0,133.3" fill="none" stroke="#17a2b8" stroke-width="2"/><circle cx="44.0" cy="136.1" r="3" fill="#17a2b8"><title>2026-07-28: 3,4 с</title></circle><circle cx="62.9" cy="126.5" r="3" fill="#17a2b8"><title>2026-07-29: 4,6 с</title></circle><circle cx="81.7" cy="141.7" r="3" fill="#17a2b8"><title>2026-07-30: 2,7 с</title></circle><circle cx="100.6" cy="134.0" r="3" fill="#17a2b8"><title>2026-07-31: 3,7 с</title></circle><circle cx="119.4" cy="146.8" r="3" fill="#17a2b8"><title>2026-08-01: 2,1 с</title></circle><circle cx="138.3" cy="140.4" r="3" fill="#17a2b8"><title>2026-08-02: 2,9 с</title></circle><circle cx="157.1" cy="136.9" r="3" fill="#17a2b8"><title>2026-08-03: 3,3 с</title></circle><circle cx="176.0" cy="134.9" r="3" fill="#17a2b8"><title>2026-08-04: 3,6 с</title></circle><circle cx="194.9" cy="140.0" r="3" fill="#17a2b8"><title>2026-08-05: 2,9 с</title></circle><circle cx="213.7" cy="109.1" r="3" fill="#17a2b8"><title>2026-08-06: 6,7 с</title></circle><circle cx="232.6" cy="131.3" r="3" fill="#17a2b8"><title>2026-08-07: 4,0 с</title></circle><circle cx="251.4" cy="90.4" r="3" fill="#17a2b8"><title>2026-08-08: 9,1 с</title></circle><circle cx="270.3" cy="68.4" r="3" fill="#17a2b8"><title>2026-08-09: 11,8 с</title></circle><circle cx="289.1" cy="29.1" r="3" fill="#17a2b8"><title>2026-08-10: 16,6 с</title></circle><circle cx="308.0" cy="129.6" r="3" fill="#17a2b8"><title>2026-08-11: 4,2 с</title></circle><circle cx="326.9" cy="18.0" r="3" fill="#17a2b8"><title>2026-08-12: 17,9 с</title></circle><circle cx="345.7" cy="140.2" r="3" fill="#17a2b8"><title>2026-08-13: 2,9 с</title></circle><circle cx="364.6" cy="144.0" r="3" fill="#17a2b8"><title>2026-08-14: 2,5 с</title></circle><circle cx="383.4" cy="148.7" r="3" fill="#17a2b8"><title>2026-08-16: 1,9 с</title></circle><circle cx="402.3" cy="116.0" r="3" fill="#17a2b8"><title>2026-08-17: 5,9 с</title></circle><circle cx="421.1" cy="141.9" r="3" fill="#17a2b8"><title>2026-08-18: 2,7 с</title></circle><circle cx="440.0" cy="139.4" r="3" fill="#17a2b8"><title>2026-08-19: 3,0 с</title></circle><circle cx="458.9" cy="125.6" r="3" fill="#17a2b8"><title>2026-08-20: 4,7 с</title></circle><circle cx="477.7" cy="130.6" r="3" fill="#17a2b8"><title>2026-08-21: 4,1 с</title></circle><circle cx="496.6" cy="146.2" r="3" fill="#17a2b8"><title>2026-08-22: 2,2 с</title></circle><circle cx="515.4" cy="144.5" r="3" fill="#17a2b8"><title>2026-08-23: 2,4 с</title></circle><circle cx="534.3" cy="134.6" r="3" fill="#17a2b8"><title>2026-08-24: 3,6 с</title></circle><circle cx="553.1" cy="128.6" r="3" fill="#17a2b8"><title>2026-08-25: 4,3 с</title></circle><circle cx="572.0" cy="136.4" r="3" fill="#17a2b8"><title>2026-08-26: 3,4 с</title></circle><circle cx="590.9" cy="122.0" r="3" fill="#17a2b8"><title>2026-08-27: 5,2 с</title></circle><circle cx="609.7" cy="134.7" r="3" fill="#17a2b8"><title>2026-08-28: 3,6 с</title></circle><circle cx="628.6" cy="139.3" r="3" fill="#17a2b8"><title>2026-08-29: 3,0 с</title></circle><circle cx="647.4" cy="148.8" r="3" fill="#17a2b8"><title>2026-08-30: 1,9 с</title></circle><circle cx="666.3" cy="136.2" r="3" fill="#17a2b8"><title>2026-08-31: 3,4 с</title></circle><circle cx="685.1" cy="121.8" r="3" fill="#17a2b8"><title>2026-09-01: 5,2 с</title></circle><circle cx="704.0" cy="133.3" r="3" fill="#17a2b8"><title>2026-09-02: 3,8 с</title></circle><text x="44.0" y="192" font-size="10" text-anchor="middle" fill="#5a6a7a">28.07</text><text x="119.4" y="192" font-size="10" text-anchor="middle" fill="#5a6a7a">01.08</text><text x="194.9" y="192" font-size="10" text-anchor="middle" fill="#5a6a7a">05.08</text><text x="270.3" y="192" font-size="10" text-anchor="middle" fill="#5a6a7a">09.08</text><text x="345.7" y="192" font-size="10" text-anchor="middle" fill="#5a6a7a">13.08</text><text x="421.1" y="192" font-size="10" text-anchor="middle" fill="#5a6a7a">18.08</text><text x="496.6" y="192" font-size="10" text-anchor="middle" fill="#5a6a7a">22.08</text><text x="572.0" y="192" font-size="10" text-anchor="middle" fill="#5a6a7a">26.08</text><text x="647.4" y="192" font-size="10" text-anchor="middle" fill="#5a6a7a">30.08</text><text x="704.0" y="192" font-size="10" text-anchor="middle" fill="#5a6a7a">02.09</text></svg></div>
+  
+        <table>
+          <tr><th>Показатель</th><th>Значение</th></tr>
+          <tr><td>Период</td><td>28.07.2026 — 02.09.2026</td></tr>
+          <tr><td>Замеров / с ошибкой</td><td>36 / 0</td></tr>
+          <tr><td>Время, с: min / медиана / среднее / P95 / max</td>
+              <td class='num'>1,9 с / 3,6 с / 4,7 с / 13,0 с / 17,9 с</td></tr>
+          <tr><td>Целевое время</td><td class='num'>360 с (6,0 мин)</td></tr>
+          <tr><td>Превышений цели</td><td class='num'>0 из 36</td></tr>
+          <tr><td>Вес (число счетов с расхождением, минимум 1)</td>
+              <td class='num'>min 1 / мед. 1 / сред. 1,2 / max 3
+              (вес=1: 31; вес&gt;1: 5)</td></tr>
+          <tr><td>Удельно, с на единицу веса</td>
+              <td class='num'>медиана 3,503 с; взвеш. среднее 3,848</td></tr>
+          <tr><td>Пропускная способность</td>
+              <td class='num'>медиана 0,29 ед/с; взвеш. среднее 0,26</td></tr>
+          <tr><td>Пользователи</td><td>svc_avancore (36)</td></tr>
+        </table>
+        
+        <h4>Параметры из комментария замера</h4>
+        <table>
+          <tr><th>Поле</th><th>Медиана</th><th>Среднее</th><th>Min</th><th>Max</th></tr>
+          <tr><td>Расхождений</td><td class='num'>0,00</td><td class='num'>0,53</td><td class='num'>0,00</td><td class='num'>3,00</td></tr><tr><td>УдельныйВес</td><td class='num'>0,29</td><td class='num'>0,35</td><td class='num'>0,06</td><td class='num'>1,59</td></tr>
+        </table>
+        
+        <h4>Примеры комментариев</h4>
+        <table>
+          <tr><th>Время (лок.)</th><th>Длительность</th><th>Вес</th><th>Ошибка</th><th>ДопИнф</th></tr>
+          <tr><td>28.08.2026 17:00:04</td><td class='num'>3,6 с</td><td class='num'>1</td><td>Нет</td><td><code>Расхождений=0; УдельныйВес=0,28 об/с</code></td></tr><tr><td>12.08.2026 17:00:18</td><td class='num'>17,9 с</td><td class='num'>1</td><td>Нет</td><td><code>Расхождений=0; УдельныйВес=0,06 об/с</code></td></tr><tr><td>30.08.2026 17:00:02</td><td class='num'>1,9 с</td><td class='num'>2</td><td>Нет</td><td><code>Расхождений=2; УдельныйВес=1,07 об/с</code></td></tr><tr><td>16.08.2026 17:00:02</td><td class='num'>1,9 с</td><td class='num'>3</td><td>Нет</td><td><code>Расхождений=3; УдельныйВес=1,59 об/с</code></td></tr>
+        </table>
+    
+  <h3>Ручные запуски (справочно)</h3>
+  
+    <div class="kpis">
+      <div class="kpi"><div class="kpi-l">Замеров</div><div class="kpi-v">96</div></div>
+      <div class="kpi"><div class="kpi-l">Медиана</div><div class="kpi-v">2,1 с</div></div>
+      <div class="kpi"><div class="kpi-l">Среднее</div><div class="kpi-v">2,8 с</div></div>
+      <div class="kpi"><div class="kpi-l">P95</div><div class="kpi-v">9,2 с</div></div>
+      <div class="kpi"><div class="kpi-l">Максимум</div><div class="kpi-v">14,5 с</div></div>
+      <div class="kpi"><div class="kpi-l">Вес, медиана</div><div class="kpi-v">1,0</div></div>
+    </div>
+  
+        <table>
+          <tr><th>Показатель</th><th>Значение</th></tr>
+          <tr><td>Период</td><td>29.07.2026 — 02.09.2026</td></tr>
+          <tr><td>Замеров / с ошибкой</td><td>96 / 0</td></tr>
+          <tr><td>Время, с: min / медиана / среднее / P95 / max</td>
+              <td class='num'>0,470 с / 2,1 с / 2,8 с / 9,2 с / 14,5 с</td></tr>
+          <tr><td>Целевое время</td><td class='num'>360 с (6,0 мин)</td></tr>
+          <tr><td>Превышений цели</td><td class='num'>0 из 96</td></tr>
+          <tr><td>Вес (число счетов с расхождением, минимум 1)</td>
+              <td class='num'>min 1 / мед. 1 / сред. 1,1 / max 2
+              (вес=1: 91; вес&gt;1: 5)</td></tr>
+          <tr><td>Удельно, с на единицу веса</td>
+              <td class='num'>медиана 2,037 с; взвеш. среднее 2,627</td></tr>
+          <tr><td>Пропускная способность</td>
+              <td class='num'>медиана 0,49 ед/с; взвеш. среднее 0,38</td></tr>
+          <tr><td>Пользователи</td><td>ШилинД; Шилин Денис Олегович (50), ФилатоваМ; Филатова Мария Дмитриевна (45), КукушкинВ; Кукушкин Вадим Юрьевич (1)</td></tr>
+        </table>
+        
+        <h4>Параметры из комментария замера</h4>
+        <table>
+          <tr><th>Поле</th><th>Медиана</th><th>Среднее</th><th>Min</th><th>Max</th></tr>
+          <tr><td>Расхождений</td><td class='num'>0,00</td><td class='num'>0,45</td><td class='num'>0,00</td><td class='num'>2,00</td></tr><tr><td>УдельныйВес</td><td class='num'>0,49</td><td class='num'>0,54</td><td class='num'>0,07</td><td class='num'>2,13</td></tr>
+        </table>
+        
+        <h4>Примеры комментариев</h4>
+        <table>
+          <tr><th>Время (лок.)</th><th>Длительность</th><th>Вес</th><th>Ошибка</th><th>ДопИнф</th></tr>
+          <tr><td>02.09.2026 10:03:03</td><td class='num'>2,1 с</td><td class='num'>1</td><td>Нет</td><td><code>Расхождений=1; УдельныйВес=0,48 об/с</code></td></tr><tr><td>12.08.2026 10:32:17</td><td class='num'>14,5 с</td><td class='num'>1</td><td>Нет</td><td><code>Расхождений=0; УдельныйВес=0,07 об/с</code></td></tr><tr><td>01.09.2026 10:36:45</td><td class='num'>0,470 с</td><td class='num'>1</td><td>Нет</td><td><code>Расхождений=1; УдельныйВес=2,13 об/с</code></td></tr><tr><td>01.09.2026 10:25:03</td><td class='num'>0,528 с</td><td class='num'>1</td><td>Нет</td><td><code>Расхождений=1; УдельныйВес=1,89 об/с</code></td></tr>
+        </table>
+    
+</div>
+
+<!-- ===================== 3 ===================== -->
+<div class="card" id="sec-3">
+  <h2>3. Загрузка котировок</h2>
+  <p>
+    <span class="badge b-epf">EPF</span>
+    <span class="badge b-ok">Замер в коде и в регистре</span>
+    <span class="badge b-info">Два слота, одни имена КО</span>
+    <code>внЗагрузкаКотировокДУ</code>, версия 2.23
+  </p>
+  <p>
+    Операции Jira «1-й сеанс за дату Т-1» и «финальная за Т-1» — это <strong>два расписания одной команды</strong>
+    <code>ФоновоеВыполнение</code>. Дата загрузки в коде: вчера (в понедельник — пятница, −72 ч).
+    На запуск пишутся две ключевые операции:
+  </p>
+  <table>
+    <tr><th>Шаг</th><th>Имя в коде</th><th>Наименование в Excel</th></tr>
+    <tr><td>Получение с Tibco</td><td><code>ДУ.ЗагрузкаКотировок.ПолучениеTibco.ФоновоеВыполнение</code></td><td><code>Д у. загрузка котировок. получение tibco. фоновое выполнение</code></td></tr>
+    <tr><td>Создание документов</td><td><code>ДУ.ЗагрузкаКотировок.СозданиеКотировок.ФоновоеВыполнение</code></td><td><code>Д у. загрузка котировок. создание котировок. фоновое выполнение</code></td></tr>
+  </table>
+  <div class="flow">
+    РЗ 09:00 (сеанс 1) или 11:50 (финал) → <code>ЗагрузитьОбъекты</code> (замер Tibco) →
+    <code>СоздатьОбъекты</code> (замер записи документов). Вес Tibco = число котировок;
+    вес создания = число проведённых документов. Комментарий: <code>Котировок</code>,
+    <code>КСозданию</code>, <code>Создано</code>, <code>Отказ</code>/<code>Ошибок</code>, <code>УдельныйВес</code>.
+  </div>
+  <p class="muted">
+    Фактические часы в регистре: первый сеанс <strong>09:00–09:04</strong> (редко 09:18),
+    финал <strong>11:50–11:53</strong>. В старой таблице ДУ-15 стояло 11:00 / 14:00 — это не совпадает с продом.
+  </p>
+  <div class="chart"><svg viewBox="0 0 720 166" width="100%" role="img">
+<text x="0" y="23.84" font-size="12" fill="#334">1-й сеанс, цикл медиана</text>
+<rect x="200" y="8" width="440" height="22" rx="3" fill="#eef2f6"/>
+<rect x="200" y="8" width="48.349399999999996" height="22" rx="3" fill="#1565c0"/>
+<text x="648" y="23.84" font-size="12" fill="#1a2332">197,8 с (3,3 мин)</text>
+<text x="0" y="53.84" font-size="12" fill="#334">1-й сеанс, цикл P95</text>
+<rect x="200" y="38" width="440" height="22" rx="3" fill="#eef2f6"/>
+<rect x="200" y="38" width="61.7800088888889" height="22" rx="3" fill="#4e88b7"/>
+<text x="648" y="53.84" font-size="12" fill="#1a2332">252,7 с (4,2 мин)</text>
+<text x="0" y="83.84" font-size="12" fill="#334">Финал, цикл медиана</text>
+<rect x="200" y="68" width="440" height="22" rx="3" fill="#eef2f6"/>
+<rect x="200" y="68" width="39.38256666666666" height="22" rx="3" fill="#6a1b9a"/>
+<text x="648" y="83.84" font-size="12" fill="#1a2332">161,1 с (2,7 мин)</text>
+<text x="0" y="113.84" font-size="12" fill="#334">Финал, цикл P95</text>
+<rect x="200" y="98" width="440" height="22" rx="3" fill="#eef2f6"/>
+<rect x="200" y="98" width="47.29181111111111" height="22" rx="3" fill="#9c7bb8"/>
+<text x="648" y="113.84" font-size="12" fill="#1a2332">193,5 с (3,2 мин)</text>
+<text x="0" y="143.84" font-size="12" fill="#334">Цель слота 1800 с</text>
+<rect x="200" y="128" width="440" height="22" rx="3" fill="#eef2f6"/>
+<rect x="200" y="128" width="440.0" height="22" rx="3" fill="#dc3545"/>
+<text x="648" y="143.84" font-size="12" fill="#1a2332">1800 с (30,0 мин)</text>
+</svg></div>
+
+  
+        <div class="subcard" id="sec-3a">
+          <h3>3.1. Загрузка котировок, 1-й сеанс за дату Т-1</h3>
+          <p class="muted">локальное время до 10:30, фактически ~09:00. Команда: <code>ФоновоеВыполнение</code>. Пользователь РЗ: <code>svc_avancore</code>.</p>
+          
+    <div class="qgrid">
+      <div class="qbox ok">
+        <div class="qnum">Вопрос 1</div>
+        <h3>Формируется ли замер времени?</h3>
+        <p><strong>Да, замер формируется.</strong> Записей в регистре: <strong>74</strong>.</p>
+        
+        <ul class="tight">
+          <li>Та же обработка и та же команда <code>ФоновоеВыполнение</code>, что и у второго сеанса.</li>
+          <li>На один запуск пишутся две КО: <code>ПолучениеTibco</code> и <code>СозданиеКотировок</code>.</li>
+          <li>Сеанс в отчёте выделен по локальному времени замера: локальное время до 10:30, фактически ~09:00.</li>
+          <li>Парных циклов Tibco+создание: <strong>37</strong>; шагов Tibco: 37, создание: 37.</li>
+        </ul>
+      </div>
+      <div class="qbox ok">
+        <div class="qnum">Вопрос 2</div>
+        <h3>Нужна ли оптимизация?</h3>
+        <p><strong>Оптимизация не требуется.</strong> Полный цикл (Tibco + создание) далеко от цели 1800 с</p>
+        <p>Цель слота <strong>0,5 ч = 1800 с</strong>. Полный цикл медиана 197,8 с (3,3 мин), P95 252,7 с (4,2 мин), max 302,4 с (5,0 мин). Превышений 1800 с: 0.</p><p class='muted'>Объём Tibco: медиана 3582 котировок (max 3602). Есть короткие запуски по 12 котировок в 09:00 / 11:50 (типично воскресенье) на 4-7 с; основной прогон ~09:03 / ~11:52 идёт около 3 мин на ~3600 котировок. Оба варианта далеко от цели 1800 с.</p>
+      </div>
+    </div>
+    
+          <h4>Полный цикл загрузки (сумма двух шагов)</h4>
+          
+    <div class="kpis">
+      <div class="kpi"><div class="kpi-l">Замеров</div><div class="kpi-v">37</div></div>
+      <div class="kpi"><div class="kpi-l">Медиана</div><div class="kpi-v">197,8 с (3,3 мин)</div></div>
+      <div class="kpi"><div class="kpi-l">Среднее</div><div class="kpi-v">175,9 с (2,9 мин)</div></div>
+      <div class="kpi"><div class="kpi-l">P95</div><div class="kpi-v">252,7 с (4,2 мин)</div></div>
+      <div class="kpi"><div class="kpi-l">Максимум</div><div class="kpi-v">302,4 с (5,0 мин)</div></div>
+      <div class="kpi"><div class="kpi-l">Вес, медиана</div><div class="kpi-v">3582</div></div>
+    </div>
+          <div class="chart"><svg viewBox="0 0 720 196" width="100%" role="img">
+<text x="0" y="23.84" font-size="12" fill="#334">Цикл, медиана</text>
+<rect x="180" y="8" width="460" height="22" rx="3" fill="#eef2f6"/>
+<rect x="180" y="8" width="50.5471" height="22" rx="3" fill="#1565c0"/>
+<text x="648" y="23.84" font-size="12" fill="#1a2332">197,8 с (3,3 мин)</text>
+<text x="0" y="53.84" font-size="12" fill="#334">Цикл, P95</text>
+<rect x="180" y="38" width="460" height="22" rx="3" fill="#eef2f6"/>
+<rect x="180" y="38" width="64.58819111111113" height="22" rx="3" fill="#6a1b9a"/>
+<text x="648" y="53.84" font-size="12" fill="#1a2332">252,7 с (4,2 мин)</text>
+<text x="0" y="83.84" font-size="12" fill="#334">Цикл, max</text>
+<rect x="180" y="68" width="460" height="22" rx="3" fill="#eef2f6"/>
+<rect x="180" y="68" width="77.27105555555555" height="22" rx="3" fill="#9c7bb8"/>
+<text x="648" y="83.84" font-size="12" fill="#1a2332">302,4 с (5,0 мин)</text>
+<text x="0" y="113.84" font-size="12" fill="#334">Tibco, медиана</text>
+<rect x="180" y="98" width="460" height="22" rx="3" fill="#eef2f6"/>
+<rect x="180" y="98" width="46.268588888888885" height="22" rx="3" fill="#1e5a8a"/>
+<text x="648" y="113.84" font-size="12" fill="#1a2332">181,1 с (3,0 мин)</text>
+<text x="0" y="143.84" font-size="12" fill="#334">Создание, медиана</text>
+<rect x="180" y="128" width="460" height="22" rx="3" fill="#eef2f6"/>
+<rect x="180" y="128" width="3.3554444444444447" height="22" rx="3" fill="#2e7d32"/>
+<text x="648" y="143.84" font-size="12" fill="#1a2332">13,1 с</text>
+<text x="0" y="173.84" font-size="12" fill="#334">Цель 1800 с</text>
+<rect x="180" y="158" width="460" height="22" rx="3" fill="#eef2f6"/>
+<rect x="180" y="158" width="460.0" height="22" rx="3" fill="#dc3545"/>
+<text x="648" y="173.84" font-size="12" fill="#1a2332">1800 с (30,0 мин)</text>
+</svg></div>
+          <h4>Шаг ПолучениеTibco</h4>
+          
+    <div class="kpis">
+      <div class="kpi"><div class="kpi-l">Замеров</div><div class="kpi-v">37</div></div>
+      <div class="kpi"><div class="kpi-l">Медиана</div><div class="kpi-v">181,1 с (3,0 мин)</div></div>
+      <div class="kpi"><div class="kpi-l">Среднее</div><div class="kpi-v">159,8 с (2,7 мин)</div></div>
+      <div class="kpi"><div class="kpi-l">P95</div><div class="kpi-v">232,1 с (3,9 мин)</div></div>
+      <div class="kpi"><div class="kpi-l">Максимум</div><div class="kpi-v">249,5 с (4,2 мин)</div></div>
+      <div class="kpi"><div class="kpi-l">Вес, медиана</div><div class="kpi-v">3582</div></div>
+    </div>
+          
+        <table>
+          <tr><th>Показатель</th><th>Значение</th></tr>
+          <tr><td>Период</td><td>29.07.2026 — 02.09.2026</td></tr>
+          <tr><td>Замеров / с ошибкой</td><td>37 / 0</td></tr>
+          <tr><td>Время, с: min / медиана / среднее / P95 / max</td>
+              <td class='num'>3,5 с / 181,1 с (3,0 мин) / 159,8 с (2,7 мин) / 232,1 с (3,9 мин) / 249,5 с (4,2 мин)</td></tr>
+          <tr><td>Целевое время</td><td class='num'>1800 с (30,0 мин)</td></tr>
+          <tr><td>Превышений цели</td><td class='num'>0 из 37</td></tr>
+          <tr><td>Вес (число котировок из Tibco)</td>
+              <td class='num'>min 12 / мед. 3582 / сред. 3056,8 / max 3602
+              (вес=1: 0; вес&gt;1: 37)</td></tr>
+          <tr><td>Удельно, с на единицу веса</td>
+              <td class='num'>медиана 0,052 с; взвеш. среднее 0,052</td></tr>
+          <tr><td>Пропускная способность</td>
+              <td class='num'>медиана 19,09 ед/с; взвеш. среднее 19,12</td></tr>
+          <tr><td>Пользователи</td><td>svc_avancore (36), ЛоевецЭ; Лоевец Эвелина Руслановна (1)</td></tr>
+        </table>
+        
+        <h4>Параметры из комментария замера</h4>
+        <table>
+          <tr><th>Поле</th><th>Медиана</th><th>Среднее</th><th>Min</th><th>Max</th></tr>
+          <tr><td>Котировок</td><td class='num'>3582</td><td class='num'>3056,8</td><td class='num'>12</td><td class='num'>3602</td></tr><tr><td>УдельныйВес</td><td class='num'>19</td><td class='num'>17,3</td><td class='num'>2</td><td class='num'>27</td></tr>
+        </table>
+        
+        <h4>Примеры комментариев</h4>
+        <table>
+          <tr><th>Время (лок.)</th><th>Длительность</th><th>Вес</th><th>Ошибка</th><th>ДопИнф</th></tr>
+          <tr><td>19.08.2026 09:03:01</td><td class='num'>181,1 с (3,0 мин)</td><td class='num'>3584</td><td>Нет</td><td><code>Котировок=3 584; Отказ=Нет; УдельныйВес=19,80 об/с</code></td></tr><tr><td>14.08.2026 09:04:10</td><td class='num'>249,5 с (4,2 мин)</td><td class='num'>3585</td><td>Нет</td><td><code>Котировок=3 585; Отказ=Нет; УдельныйВес=14,37 об/с</code></td></tr><tr><td>09.08.2026 09:00:11</td><td class='num'>3,5 с</td><td class='num'>12</td><td>Нет</td><td><code>Котировок=12; Отказ=Нет; УдельныйВес=3,46 об/с</code></td></tr><tr><td>23.08.2026 09:00:19</td><td class='num'>4,0 с</td><td class='num'>12</td><td>Нет</td><td><code>Котировок=12; Отказ=Нет; УдельныйВес=2,97 об/с</code></td></tr>
+        </table>
+    
+          <div class="chart"><svg viewBox="0 0 720 170" width="100%" role="img"><rect x="36.0" y="82.0" width="46.1" height="60.0" rx="2" fill="#1e5a8a"><title>3,5 с – 24,0 с: 5</title></rect><rect x="92.2" y="142.0" width="46.1" height="0.0" rx="2" fill="#1e5a8a"><title>24,0 с – 44,5 с: 0</title></rect><rect x="148.3" y="142.0" width="46.1" height="0.0" rx="2" fill="#1e5a8a"><title>44,5 с – 65,0 с (1,1 мин): 0</title></rect><rect x="204.5" y="142.0" width="46.1" height="0.0" rx="2" fill="#1e5a8a"><title>65,0 с (1,1 мин) – 85,5 с (1,4 мин): 0</title></rect><rect x="260.7" y="142.0" width="46.1" height="0.0" rx="2" fill="#1e5a8a"><title>85,5 с (1,4 мин) – 106,0 с (1,8 мин): 0</title></rect><rect x="316.8" y="142.0" width="46.1" height="0.0" rx="2" fill="#1e5a8a"><title>106,0 с (1,8 мин) – 126,5 с (2,1 мин): 0</title></rect><rect x="373.0" y="118.0" width="46.1" height="24.0" rx="2" fill="#1e5a8a"><title>126,5 с (2,1 мин) – 147,0 с (2,4 мин): 2</title></rect><rect x="429.2" y="58.0" width="46.1" height="84.0" rx="2" fill="#1e5a8a"><title>147,0 с (2,4 мин) – 167,5 с (2,8 мин): 7</title></rect><rect x="485.3" y="10.0" width="46.1" height="132.0" rx="2" fill="#1e5a8a"><title>167,5 с (2,8 мин) – 188,0 с (3,1 мин): 11</title></rect><rect x="541.5" y="58.0" width="46.1" height="84.0" rx="2" fill="#1e5a8a"><title>188,0 с (3,1 мин) – 208,5 с (3,5 мин): 7</title></rect><rect x="597.7" y="106.0" width="46.1" height="36.0" rx="2" fill="#1e5a8a"><title>208,5 с (3,5 мин) – 229,0 с (3,8 мин): 3</title></rect><rect x="653.8" y="118.0" width="46.1" height="24.0" rx="2" fill="#1e5a8a"><title>229,0 с (3,8 мин) – 249,5 с (4,2 мин): 2</title></rect><text x="36" y="164" font-size="10" fill="#5a6a7a">3,5 с</text><text x="710" y="164" font-size="10" text-anchor="end" fill="#5a6a7a">249,5 с (4,2 мин)</text></svg></div>
+          <div class="chart"><svg viewBox="0 0 720 200" width="100%" role="img"><text x="44" y="12" font-size="11" fill="#5a6a7a">Медиана Tibco по дням, с</text><line x1="44" y1="164.0" x2="704" y2="164.0" stroke="#e6ebf0"/><text x="38" y="168.0" font-size="10" text-anchor="end" fill="#5a6a7a">0,0</text><line x1="44" y1="91.0" x2="704" y2="91.0" stroke="#e6ebf0"/><text x="38" y="95.0" font-size="10" text-anchor="end" fill="#5a6a7a">125</text><line x1="44" y1="18.0" x2="704" y2="18.0" stroke="#e6ebf0"/><text x="38" y="22.0" font-size="10" text-anchor="end" fill="#5a6a7a">250</text><path d="M44.0,55.2 L62.9,30.7 L81.7,64.2 L100.6,55.0 L119.4,161.6 L138.3,47.6 L157.1,68.5 L176.0,70.4 L194.9,55.2 L213.7,41.6 L232.6,47.9 L251.4,162.0 L270.3,48.1 L289.1,67.3 L308.0,50.7 L326.9,47.6 L345.7,18.0 L364.6,57.1 L383.4,159.8 L402.3,55.6 L421.1,52.3 L440.0,58.1 L458.9,18.4 L477.7,60.1 L496.6,74.1 L515.4,161.6 L534.3,71.4 L553.1,49.2 L572.0,87.3 L590.9,60.5 L609.7,71.5 L628.6,61.4 L647.4,161.5 L666.3,73.3 L685.1,40.3 L704.0,54.6" fill="none" stroke="#1e5a8a" stroke-width="2"/><circle cx="44.0" cy="55.2" r="3" fill="#1e5a8a"><title>2026-07-29: 185,9 с (3,1 мин)</title></circle><circle cx="62.9" cy="30.7" r="3" fill="#1e5a8a"><title>2026-07-30: 227,9 с (3,8 мин)</title></circle><circle cx="81.7" cy="64.2" r="3" fill="#1e5a8a"><title>2026-07-31: 170,5 с (2,8 мин)</title></circle><circle cx="100.6" cy="55.0" r="3" fill="#1e5a8a"><title>2026-08-01: 186,2 с (3,1 мин)</title></circle><circle cx="119.4" cy="161.6" r="3" fill="#1e5a8a"><title>2026-08-02: 4,1 с</title></circle><circle cx="138.3" cy="47.6" r="3" fill="#1e5a8a"><title>2026-08-03: 198,9 с (3,3 мин)</title></circle><circle cx="157.1" cy="68.5" r="3" fill="#1e5a8a"><title>2026-08-04: 163,2 с (2,7 мин)</title></circle><circle cx="176.0" cy="70.4" r="3" fill="#1e5a8a"><title>2026-08-05: 160,0 с (2,7 мин)</title></circle><circle cx="194.9" cy="55.2" r="3" fill="#1e5a8a"><title>2026-08-06: 185,9 с (3,1 мин)</title></circle><circle cx="213.7" cy="41.6" r="3" fill="#1e5a8a"><title>2026-08-07: 209,2 с (3,5 мин)</title></circle><circle cx="232.6" cy="47.9" r="3" fill="#1e5a8a"><title>2026-08-08: 198,4 с (3,3 мин)</title></circle><circle cx="251.4" cy="162.0" r="3" fill="#1e5a8a"><title>2026-08-09: 3,5 с</title></circle><circle cx="270.3" cy="48.1" r="3" fill="#1e5a8a"><title>2026-08-10: 198,0 с (3,3 мин)</title></circle><circle cx="289.1" cy="67.3" r="3" fill="#1e5a8a"><title>2026-08-11: 165,2 с (2,8 мин)</title></circle><circle cx="308.0" cy="50.7" r="3" fill="#1e5a8a"><title>2026-08-12: 193,7 с (3,2 мин)</title></circle><circle cx="326.9" cy="47.6" r="3" fill="#1e5a8a"><title>2026-08-13: 198,9 с (3,3 мин)</title></circle><circle cx="345.7" cy="18.0" r="3" fill="#1e5a8a"><title>2026-08-14: 249,5 с (4,2 мин)</title></circle><circle cx="364.6" cy="57.1" r="3" fill="#1e5a8a"><title>2026-08-15: 182,7 с (3,0 мин)</title></circle><circle cx="383.4" cy="159.8" r="3" fill="#1e5a8a"><title>2026-08-16: 7,2 с</title></circle><circle cx="402.3" cy="55.6" r="3" fill="#1e5a8a"><title>2026-08-17: 185,3 с (3,1 мин)</title></circle><circle cx="421.1" cy="52.3" r="3" fill="#1e5a8a"><title>2026-08-18: 190,8 с (3,2 мин)</title></circle><circle cx="440.0" cy="58.1" r="3" fill="#1e5a8a"><title>2026-08-19: 181,1 с (3,0 мин)</title></circle><circle cx="458.9" cy="18.4" r="3" fill="#1e5a8a"><title>2026-08-20: 248,8 с (4,1 мин)</title></circle><circle cx="477.7" cy="60.1" r="3" fill="#1e5a8a"><title>2026-08-21: 177,5 с (3,0 мин)</title></circle><circle cx="496.6" cy="74.1" r="3" fill="#1e5a8a"><title>2026-08-22: 153,6 с (2,6 мин)</title></circle><circle cx="515.4" cy="161.6" r="3" fill="#1e5a8a"><title>2026-08-23: 4,0 с</title></circle><circle cx="534.3" cy="71.4" r="3" fill="#1e5a8a"><title>2026-08-24: 158,3 с (2,6 мин)</title></circle><circle cx="553.1" cy="49.2" r="3" fill="#1e5a8a"><title>2026-08-25: 196,2 с (3,3 мин)</title></circle><circle cx="572.0" cy="87.3" r="3" fill="#1e5a8a"><title>2026-08-26: 131,1 с (2,2 мин)</title></circle><circle cx="590.9" cy="60.5" r="3" fill="#1e5a8a"><title>2026-08-27: 176,8 с (2,9 мин)</title></circle><circle cx="609.7" cy="71.5" r="3" fill="#1e5a8a"><title>2026-08-28: 158,1 с (2,6 мин)</title></circle><circle cx="628.6" cy="61.4" r="3" fill="#1e5a8a"><title>2026-08-29: 175,3 с (2,9 мин)</title></circle><circle cx="647.4" cy="161.5" r="3" fill="#1e5a8a"><title>2026-08-30: 4,3 с</title></circle><circle cx="666.3" cy="73.3" r="3" fill="#1e5a8a"><title>2026-08-31: 155,0 с (2,6 мин)</title></circle><circle cx="685.1" cy="40.3" r="3" fill="#1e5a8a"><title>2026-09-01: 211,4 с (3,5 мин)</title></circle><circle cx="704.0" cy="54.6" r="3" fill="#1e5a8a"><title>2026-09-02: 186,9 с (3,1 мин)</title></circle><text x="44.0" y="192" font-size="10" text-anchor="middle" fill="#5a6a7a">29.07</text><text x="119.4" y="192" font-size="10" text-anchor="middle" fill="#5a6a7a">02.08</text><text x="194.9" y="192" font-size="10" text-anchor="middle" fill="#5a6a7a">06.08</text><text x="270.3" y="192" font-size="10" text-anchor="middle" fill="#5a6a7a">10.08</text><text x="345.7" y="192" font-size="10" text-anchor="middle" fill="#5a6a7a">14.08</text><text x="421.1" y="192" font-size="10" text-anchor="middle" fill="#5a6a7a">18.08</text><text x="496.6" y="192" font-size="10" text-anchor="middle" fill="#5a6a7a">22.08</text><text x="572.0" y="192" font-size="10" text-anchor="middle" fill="#5a6a7a">26.08</text><text x="647.4" y="192" font-size="10" text-anchor="middle" fill="#5a6a7a">30.08</text><text x="704.0" y="192" font-size="10" text-anchor="middle" fill="#5a6a7a">02.09</text></svg></div>
+          <h4>Шаг СозданиеКотировок</h4>
+          
+    <div class="kpis">
+      <div class="kpi"><div class="kpi-l">Замеров</div><div class="kpi-v">37</div></div>
+      <div class="kpi"><div class="kpi-l">Медиана</div><div class="kpi-v">13,1 с</div></div>
+      <div class="kpi"><div class="kpi-l">Среднее</div><div class="kpi-v">16,1 с</div></div>
+      <div class="kpi"><div class="kpi-l">P95</div><div class="kpi-v">47,9 с</div></div>
+      <div class="kpi"><div class="kpi-l">Максимум</div><div class="kpi-v">58,1 с</div></div>
+      <div class="kpi"><div class="kpi-l">Вес, медиана</div><div class="kpi-v">22</div></div>
+    </div>
+          
+        <table>
+          <tr><th>Показатель</th><th>Значение</th></tr>
+          <tr><td>Период</td><td>29.07.2026 — 02.09.2026</td></tr>
+          <tr><td>Замеров / с ошибкой</td><td>37 / 0</td></tr>
+          <tr><td>Время, с: min / медиана / среднее / P95 / max</td>
+              <td class='num'>0,572 с / 13,1 с / 16,1 с / 47,9 с / 58,1 с</td></tr>
+          <tr><td>Целевое время</td><td class='num'>1800 с (30,0 мин)</td></tr>
+          <tr><td>Превышений цели</td><td class='num'>0 из 37</td></tr>
+          <tr><td>Вес (число записанных документов котировок)</td>
+              <td class='num'>min 3 / мед. 22 / сред. 19,3 / max 23
+              (вес=1: 0; вес&gt;1: 37)</td></tr>
+          <tr><td>Удельно, с на единицу веса</td>
+              <td class='num'>медиана 0,601 с; взвеш. среднее 0,834</td></tr>
+          <tr><td>Пропускная способность</td>
+              <td class='num'>медиана 1,66 ед/с; взвеш. среднее 1,20</td></tr>
+          <tr><td>Пользователи</td><td>svc_avancore (36), ЛоевецЭ; Лоевец Эвелина Руслановна (1)</td></tr>
+        </table>
+        
+        <h4>Параметры из комментария замера</h4>
+        <table>
+          <tr><th>Поле</th><th>Медиана</th><th>Среднее</th><th>Min</th><th>Max</th></tr>
+          <tr><td>КСозданию</td><td class='num'>3582</td><td class='num'>3056,8</td><td class='num'>12</td><td class='num'>3602</td></tr><tr><td>Создано</td><td class='num'>22</td><td class='num'>19,3</td><td class='num'>3</td><td class='num'>23</td></tr><tr><td>УдельныйВес</td><td class='num'>1,66</td><td class='num'>1,77</td><td class='num'>0,38</td><td class='num'>5,24</td></tr>
+        </table>
+        
+        <h4>Примеры комментариев</h4>
+        <table>
+          <tr><th>Время (лок.)</th><th>Длительность</th><th>Вес</th><th>Ошибка</th><th>ДопИнф</th></tr>
+          <tr><td>29.07.2026 09:03:19</td><td class='num'>13,1 с</td><td class='num'>22</td><td>Нет</td><td><code>КСозданию=3 585; Создано=22; Ошибок=Нет; УдельныйВес=1,68 об/с</code></td></tr><tr><td>18.08.2026 09:04:09</td><td class='num'>58,1 с</td><td class='num'>22</td><td>Нет</td><td><code>КСозданию=3 580; Создано=22; Ошибок=Нет; УдельныйВес=0,38 об/с</code></td></tr><tr><td>23.08.2026 09:00:20</td><td class='num'>0,572 с</td><td class='num'>3</td><td>Нет</td><td><code>КСозданию=12; Создано=3; Ошибок=Нет; УдельныйВес=5,24 об/с</code></td></tr><tr><td>30.08.2026 09:00:06</td><td class='num'>0,645 с</td><td class='num'>3</td><td>Нет</td><td><code>КСозданию=12; Создано=3; Ошибок=Нет; УдельныйВес=4,65 об/с</code></td></tr>
+        </table>
+    
+          <div class="chart"><svg viewBox="0 0 720 170" width="100%" role="img"><rect x="36.0" y="103.2" width="46.1" height="38.8" rx="2" fill="#2e7d32"><title>0,572 с – 5,4 с: 5</title></rect><rect x="92.2" y="134.2" width="46.1" height="7.8" rx="2" fill="#2e7d32"><title>5,4 с – 10,2 с: 1</title></rect><rect x="148.3" y="10.0" width="46.1" height="132.0" rx="2" fill="#2e7d32"><title>10,2 с – 15,0 с: 17</title></rect><rect x="204.5" y="87.6" width="46.1" height="54.4" rx="2" fill="#2e7d32"><title>15,0 с – 19,7 с: 7</title></rect><rect x="260.7" y="118.7" width="46.1" height="23.3" rx="2" fill="#2e7d32"><title>19,7 с – 24,5 с: 3</title></rect><rect x="316.8" y="142.0" width="46.1" height="0.0" rx="2" fill="#2e7d32"><title>24,5 с – 29,3 с: 0</title></rect><rect x="373.0" y="142.0" width="46.1" height="0.0" rx="2" fill="#2e7d32"><title>29,3 с – 34,1 с: 0</title></rect><rect x="429.2" y="134.2" width="46.1" height="7.8" rx="2" fill="#2e7d32"><title>34,1 с – 38,9 с: 1</title></rect><rect x="485.3" y="142.0" width="46.1" height="0.0" rx="2" fill="#2e7d32"><title>38,9 с – 43,7 с: 0</title></rect><rect x="541.5" y="134.2" width="46.1" height="7.8" rx="2" fill="#2e7d32"><title>43,7 с – 48,5 с: 1</title></rect><rect x="597.7" y="142.0" width="46.1" height="0.0" rx="2" fill="#2e7d32"><title>48,5 с – 53,3 с: 0</title></rect><rect x="653.8" y="126.5" width="46.1" height="15.5" rx="2" fill="#2e7d32"><title>53,3 с – 58,1 с: 2</title></rect><text x="36" y="164" font-size="10" fill="#5a6a7a">0,572 с</text><text x="710" y="164" font-size="10" text-anchor="end" fill="#5a6a7a">58,1 с</text></svg></div>
+        </div>
+        
+  
+        <div class="subcard" id="sec-3b">
+          <h3>3.2. Загрузка котировок, финальная за Т-1</h3>
+          <p class="muted">локальное время 10:30–13:00, фактически ~11:50. Команда: <code>ФоновоеВыполнение</code>. Пользователь РЗ: <code>svc_avancore</code>.</p>
+          
+    <div class="qgrid">
+      <div class="qbox ok">
+        <div class="qnum">Вопрос 1</div>
+        <h3>Формируется ли замер времени?</h3>
+        <p><strong>Да, замер формируется.</strong> Записей в регистре: <strong>72</strong>.</p>
+        
+        <ul class="tight">
+          <li>Та же обработка и та же команда <code>ФоновоеВыполнение</code>, что и у второго сеанса.</li>
+          <li>На один запуск пишутся две КО: <code>ПолучениеTibco</code> и <code>СозданиеКотировок</code>.</li>
+          <li>Сеанс в отчёте выделен по локальному времени замера: локальное время 10:30–13:00, фактически ~11:50.</li>
+          <li>Парных циклов Tibco+создание: <strong>36</strong>; шагов Tibco: 36, создание: 36.</li>
+        </ul>
+      </div>
+      <div class="qbox ok">
+        <div class="qnum">Вопрос 2</div>
+        <h3>Нужна ли оптимизация?</h3>
+        <p><strong>Оптимизация не требуется.</strong> Полный цикл (Tibco + создание) далеко от цели 1800 с</p>
+        <p>Цель слота <strong>0,5 ч = 1800 с</strong>. Полный цикл медиана 161,1 с (2,7 мин), P95 193,5 с (3,2 мин), max 196,7 с (3,3 мин). Превышений 1800 с: 0.</p><p class='muted'>Объём Tibco: медиана 3582 котировок (max 3602). Есть короткие запуски по 12 котировок в 09:00 / 11:50 (типично воскресенье) на 4-7 с; основной прогон ~09:03 / ~11:52 идёт около 3 мин на ~3600 котировок. Оба варианта далеко от цели 1800 с.</p>
+      </div>
+    </div>
+    
+          <h4>Полный цикл загрузки (сумма двух шагов)</h4>
+          
+    <div class="kpis">
+      <div class="kpi"><div class="kpi-l">Замеров</div><div class="kpi-v">36</div></div>
+      <div class="kpi"><div class="kpi-l">Медиана</div><div class="kpi-v">161,1 с (2,7 мин)</div></div>
+      <div class="kpi"><div class="kpi-l">Среднее</div><div class="kpi-v">141,6 с (2,4 мин)</div></div>
+      <div class="kpi"><div class="kpi-l">P95</div><div class="kpi-v">193,5 с (3,2 мин)</div></div>
+      <div class="kpi"><div class="kpi-l">Максимум</div><div class="kpi-v">196,7 с (3,3 мин)</div></div>
+      <div class="kpi"><div class="kpi-l">Вес, медиана</div><div class="kpi-v">3582</div></div>
+    </div>
+          <div class="chart"><svg viewBox="0 0 720 196" width="100%" role="img">
+<text x="0" y="23.84" font-size="12" fill="#334">Цикл, медиана</text>
+<rect x="180" y="8" width="460" height="22" rx="3" fill="#eef2f6"/>
+<rect x="180" y="8" width="41.17268333333333" height="22" rx="3" fill="#1565c0"/>
+<text x="648" y="23.84" font-size="12" fill="#1a2332">161,1 с (2,7 мин)</text>
+<text x="0" y="53.84" font-size="12" fill="#334">Цикл, P95</text>
+<rect x="180" y="38" width="460" height="22" rx="3" fill="#eef2f6"/>
+<rect x="180" y="38" width="49.44143888888889" height="22" rx="3" fill="#6a1b9a"/>
+<text x="648" y="53.84" font-size="12" fill="#1a2332">193,5 с (3,2 мин)</text>
+<text x="0" y="83.84" font-size="12" fill="#334">Цикл, max</text>
+<rect x="180" y="68" width="460" height="22" rx="3" fill="#eef2f6"/>
+<rect x="180" y="68" width="50.27135555555556" height="22" rx="3" fill="#9c7bb8"/>
+<text x="648" y="83.84" font-size="12" fill="#1a2332">196,7 с (3,3 мин)</text>
+<text x="0" y="113.84" font-size="12" fill="#334">Tibco, медиана</text>
+<rect x="180" y="98" width="460" height="22" rx="3" fill="#eef2f6"/>
+<rect x="180" y="98" width="37.08481666666667" height="22" rx="3" fill="#1e5a8a"/>
+<text x="648" y="113.84" font-size="12" fill="#1a2332">145,1 с (2,4 мин)</text>
+<text x="0" y="143.84" font-size="12" fill="#334">Создание, медиана</text>
+<rect x="180" y="128" width="460" height="22" rx="3" fill="#eef2f6"/>
+<rect x="180" y="128" width="3.5280722222222223" height="22" rx="3" fill="#2e7d32"/>
+<text x="648" y="143.84" font-size="12" fill="#1a2332">13,8 с</text>
+<text x="0" y="173.84" font-size="12" fill="#334">Цель 1800 с</text>
+<rect x="180" y="158" width="460" height="22" rx="3" fill="#eef2f6"/>
+<rect x="180" y="158" width="460.0" height="22" rx="3" fill="#dc3545"/>
+<text x="648" y="173.84" font-size="12" fill="#1a2332">1800 с (30,0 мин)</text>
+</svg></div>
+          <h4>Шаг ПолучениеTibco</h4>
+          
+    <div class="kpis">
+      <div class="kpi"><div class="kpi-l">Замеров</div><div class="kpi-v">36</div></div>
+      <div class="kpi"><div class="kpi-l">Медиана</div><div class="kpi-v">145,1 с (2,4 мин)</div></div>
+      <div class="kpi"><div class="kpi-l">Среднее</div><div class="kpi-v">128,5 с (2,1 мин)</div></div>
+      <div class="kpi"><div class="kpi-l">P95</div><div class="kpi-v">174,7 с (2,9 мин)</div></div>
+      <div class="kpi"><div class="kpi-l">Максимум</div><div class="kpi-v">179,3 с (3,0 мин)</div></div>
+      <div class="kpi"><div class="kpi-l">Вес, медиана</div><div class="kpi-v">3582</div></div>
+    </div>
+          
+        <table>
+          <tr><th>Показатель</th><th>Значение</th></tr>
+          <tr><td>Период</td><td>29.07.2026 — 02.09.2026</td></tr>
+          <tr><td>Замеров / с ошибкой</td><td>36 / 0</td></tr>
+          <tr><td>Время, с: min / медиана / среднее / P95 / max</td>
+              <td class='num'>4,5 с / 145,1 с (2,4 мин) / 128,5 с (2,1 мин) / 174,7 с (2,9 мин) / 179,3 с (3,0 мин)</td></tr>
+          <tr><td>Целевое время</td><td class='num'>1800 с (30,0 мин)</td></tr>
+          <tr><td>Превышений цели</td><td class='num'>0 из 36</td></tr>
+          <tr><td>Вес (число котировок из Tibco)</td>
+              <td class='num'>min 12 / мед. 3582 / сред. 3052,9 / max 3602
+              (вес=1: 0; вес&gt;1: 36)</td></tr>
+          <tr><td>Удельно, с на единицу веса</td>
+              <td class='num'>медиана 0,043 с; взвеш. среднее 0,042</td></tr>
+          <tr><td>Пропускная способность</td>
+              <td class='num'>медиана 23,46 ед/с; взвеш. среднее 23,75</td></tr>
+          <tr><td>Пользователи</td><td>svc_avancore (36)</td></tr>
+        </table>
+        
+        <h4>Параметры из комментария замера</h4>
+        <table>
+          <tr><th>Поле</th><th>Медиана</th><th>Среднее</th><th>Min</th><th>Max</th></tr>
+          <tr><td>Котировок</td><td class='num'>3582</td><td class='num'>3052,9</td><td class='num'>12</td><td class='num'>3602</td></tr><tr><td>УдельныйВес</td><td class='num'>23</td><td class='num'>21,1</td><td class='num'>2</td><td class='num'>30</td></tr>
+        </table>
+        
+        <h4>Примеры комментариев</h4>
+        <table>
+          <tr><th>Время (лок.)</th><th>Длительность</th><th>Вес</th><th>Ошибка</th><th>ДопИнф</th></tr>
+          <tr><td>19.08.2026 11:52:26</td><td class='num'>146,1 с (2,4 мин)</td><td class='num'>3584</td><td>Нет</td><td><code>Котировок=3 584; Отказ=Нет; УдельныйВес=24,52 об/с</code></td></tr><tr><td>12.08.2026 11:52:59</td><td class='num'>179,3 с (3,0 мин)</td><td class='num'>3585</td><td>Нет</td><td><code>Котировок=3 585; Отказ=Нет; УдельныйВес=20,00 об/с</code></td></tr><tr><td>30.08.2026 11:50:05</td><td class='num'>4,5 с</td><td class='num'>12</td><td>Нет</td><td><code>Котировок=12; Отказ=Нет; УдельныйВес=2,68 об/с</code></td></tr><tr><td>23.08.2026 11:50:12</td><td class='num'>4,7 с</td><td class='num'>12</td><td>Нет</td><td><code>Котировок=12; Отказ=Нет; УдельныйВес=2,54 об/с</code></td></tr>
+        </table>
+    
+          <div class="chart"><svg viewBox="0 0 720 170" width="100%" role="img"><rect x="36.0" y="76.0" width="46.1" height="66.0" rx="2" fill="#1e5a8a"><title>4,5 с – 19,0 с: 5</title></rect><rect x="92.2" y="142.0" width="46.1" height="0.0" rx="2" fill="#1e5a8a"><title>19,0 с – 33,6 с: 0</title></rect><rect x="148.3" y="142.0" width="46.1" height="0.0" rx="2" fill="#1e5a8a"><title>33,6 с – 48,2 с: 0</title></rect><rect x="204.5" y="142.0" width="46.1" height="0.0" rx="2" fill="#1e5a8a"><title>48,2 с – 62,7 с (1,0 мин): 0</title></rect><rect x="260.7" y="142.0" width="46.1" height="0.0" rx="2" fill="#1e5a8a"><title>62,7 с (1,0 мин) – 77,3 с (1,3 мин): 0</title></rect><rect x="316.8" y="142.0" width="46.1" height="0.0" rx="2" fill="#1e5a8a"><title>77,3 с (1,3 мин) – 91,9 с (1,5 мин): 0</title></rect><rect x="373.0" y="142.0" width="46.1" height="0.0" rx="2" fill="#1e5a8a"><title>91,9 с (1,5 мин) – 106,4 с (1,8 мин): 0</title></rect><rect x="429.2" y="115.6" width="46.1" height="26.4" rx="2" fill="#1e5a8a"><title>106,4 с (1,8 мин) – 121,0 с (2,0 мин): 2</title></rect><rect x="485.3" y="76.0" width="46.1" height="66.0" rx="2" fill="#1e5a8a"><title>121,0 с (2,0 мин) – 135,6 с (2,3 мин): 5</title></rect><rect x="541.5" y="10.0" width="46.1" height="132.0" rx="2" fill="#1e5a8a"><title>135,6 с (2,3 мин) – 150,2 с (2,5 мин): 10</title></rect><rect x="597.7" y="36.4" width="46.1" height="105.6" rx="2" fill="#1e5a8a"><title>150,2 с (2,5 мин) – 164,7 с (2,7 мин): 8</title></rect><rect x="653.8" y="62.8" width="46.1" height="79.2" rx="2" fill="#1e5a8a"><title>164,7 с (2,7 мин) – 179,3 с (3,0 мин): 6</title></rect><text x="36" y="164" font-size="10" fill="#5a6a7a">4,5 с</text><text x="710" y="164" font-size="10" text-anchor="end" fill="#5a6a7a">179,3 с (3,0 мин)</text></svg></div>
+          <div class="chart"><svg viewBox="0 0 720 200" width="100%" role="img"><text x="44" y="12" font-size="11" fill="#5a6a7a">Медиана Tibco по дням, с</text><line x1="44" y1="164.0" x2="704" y2="164.0" stroke="#e6ebf0"/><text x="38" y="168.0" font-size="10" text-anchor="end" fill="#5a6a7a">0,0</text><line x1="44" y1="91.0" x2="704" y2="91.0" stroke="#e6ebf0"/><text x="38" y="95.0" font-size="10" text-anchor="end" fill="#5a6a7a">90</text><line x1="44" y1="18.0" x2="704" y2="18.0" stroke="#e6ebf0"/><text x="38" y="22.0" font-size="10" text-anchor="end" fill="#5a6a7a">179</text><path d="M44.0,43.8 L62.9,49.7 L81.7,40.9 L100.6,54.9 L119.4,159.6 L138.3,36.7 L157.1,42.9 L176.0,36.1 L194.9,49.6 L213.7,26.2 L232.6,39.7 L251.4,158.4 L270.3,38.6 L289.1,40.4 L308.0,18.0 L326.9,48.5 L345.7,25.8 L364.6,48.0 L383.4,159.6 L402.3,37.2 L421.1,27.1 L440.0,45.0 L458.9,43.3 L477.7,37.3 L496.6,70.0 L515.4,160.1 L534.3,22.4 L553.1,55.0 L572.0,66.5 L590.9,49.1 L609.7,56.1 L628.6,63.3 L647.4,160.4 L666.3,46.7 L685.1,19.6 L704.0,59.6" fill="none" stroke="#1e5a8a" stroke-width="2"/><circle cx="44.0" cy="43.8" r="3" fill="#1e5a8a"><title>2026-07-29: 147,5 с (2,5 мин)</title></circle><circle cx="62.9" cy="49.7" r="3" fill="#1e5a8a"><title>2026-07-30: 140,4 с (2,3 мин)</title></circle><circle cx="81.7" cy="40.9" r="3" fill="#1e5a8a"><title>2026-07-31: 151,1 с (2,5 мин)</title></circle><circle cx="100.6" cy="54.9" r="3" fill="#1e5a8a"><title>2026-08-01: 134,0 с (2,2 мин)</title></circle><circle cx="119.4" cy="159.6" r="3" fill="#1e5a8a"><title>2026-08-02: 5,4 с</title></circle><circle cx="138.3" cy="36.7" r="3" fill="#1e5a8a"><title>2026-08-03: 156,3 с (2,6 мин)</title></circle><circle cx="157.1" cy="42.9" r="3" fill="#1e5a8a"><title>2026-08-04: 148,7 с (2,5 мин)</title></circle><circle cx="176.0" cy="36.1" r="3" fill="#1e5a8a"><title>2026-08-05: 157,0 с (2,6 мин)</title></circle><circle cx="194.9" cy="49.6" r="3" fill="#1e5a8a"><title>2026-08-06: 140,5 с (2,3 мин)</title></circle><circle cx="213.7" cy="26.2" r="3" fill="#1e5a8a"><title>2026-08-07: 169,2 с (2,8 мин)</title></circle><circle cx="232.6" cy="39.7" r="3" fill="#1e5a8a"><title>2026-08-08: 152,6 с (2,5 мин)</title></circle><circle cx="251.4" cy="158.4" r="3" fill="#1e5a8a"><title>2026-08-09: 6,9 с</title></circle><circle cx="270.3" cy="38.6" r="3" fill="#1e5a8a"><title>2026-08-10: 154,0 с (2,6 мин)</title></circle><circle cx="289.1" cy="40.4" r="3" fill="#1e5a8a"><title>2026-08-11: 151,7 с (2,5 мин)</title></circle><circle cx="308.0" cy="18.0" r="3" fill="#1e5a8a"><title>2026-08-12: 179,3 с (3,0 мин)</title></circle><circle cx="326.9" cy="48.5" r="3" fill="#1e5a8a"><title>2026-08-13: 141,9 с (2,4 мин)</title></circle><circle cx="345.7" cy="25.8" r="3" fill="#1e5a8a"><title>2026-08-14: 169,7 с (2,8 мин)</title></circle><circle cx="364.6" cy="48.0" r="3" fill="#1e5a8a"><title>2026-08-15: 142,5 с (2,4 мин)</title></circle><circle cx="383.4" cy="159.6" r="3" fill="#1e5a8a"><title>2026-08-16: 5,3 с</title></circle><circle cx="402.3" cy="37.2" r="3" fill="#1e5a8a"><title>2026-08-17: 155,7 с (2,6 мин)</title></circle><circle cx="421.1" cy="27.1" r="3" fill="#1e5a8a"><title>2026-08-18: 168,1 с (2,8 мин)</title></circle><circle cx="440.0" cy="45.0" r="3" fill="#1e5a8a"><title>2026-08-19: 146,1 с (2,4 мин)</title></circle><circle cx="458.9" cy="43.3" r="3" fill="#1e5a8a"><title>2026-08-20: 148,2 с (2,5 мин)</title></circle><circle cx="477.7" cy="37.3" r="3" fill="#1e5a8a"><title>2026-08-21: 155,6 с (2,6 мин)</title></circle><circle cx="496.6" cy="70.0" r="3" fill="#1e5a8a"><title>2026-08-22: 115,5 с (1,9 мин)</title></circle><circle cx="515.4" cy="160.1" r="3" fill="#1e5a8a"><title>2026-08-23: 4,7 с</title></circle><circle cx="534.3" cy="22.4" r="3" fill="#1e5a8a"><title>2026-08-24: 173,8 с (2,9 мин)</title></circle><circle cx="553.1" cy="55.0" r="3" fill="#1e5a8a"><title>2026-08-25: 133,9 с (2,2 мин)</title></circle><circle cx="572.0" cy="66.5" r="3" fill="#1e5a8a"><title>2026-08-26: 119,7 с (2,0 мин)</title></circle><circle cx="590.9" cy="49.1" r="3" fill="#1e5a8a"><title>2026-08-27: 141,1 с (2,4 мин)</title></circle><circle cx="609.7" cy="56.1" r="3" fill="#1e5a8a"><title>2026-08-28: 132,6 с (2,2 мин)</title></circle><circle cx="628.6" cy="63.3" r="3" fill="#1e5a8a"><title>2026-08-29: 123,6 с (2,1 мин)</title></circle><circle cx="647.4" cy="160.4" r="3" fill="#1e5a8a"><title>2026-08-30: 4,5 с</title></circle><circle cx="666.3" cy="46.7" r="3" fill="#1e5a8a"><title>2026-08-31: 144,1 с (2,4 мин)</title></circle><circle cx="685.1" cy="19.6" r="3" fill="#1e5a8a"><title>2026-09-01: 177,4 с (3,0 мин)</title></circle><circle cx="704.0" cy="59.6" r="3" fill="#1e5a8a"><title>2026-09-02: 128,3 с (2,1 мин)</title></circle><text x="44.0" y="192" font-size="10" text-anchor="middle" fill="#5a6a7a">29.07</text><text x="119.4" y="192" font-size="10" text-anchor="middle" fill="#5a6a7a">02.08</text><text x="194.9" y="192" font-size="10" text-anchor="middle" fill="#5a6a7a">06.08</text><text x="270.3" y="192" font-size="10" text-anchor="middle" fill="#5a6a7a">10.08</text><text x="345.7" y="192" font-size="10" text-anchor="middle" fill="#5a6a7a">14.08</text><text x="421.1" y="192" font-size="10" text-anchor="middle" fill="#5a6a7a">18.08</text><text x="496.6" y="192" font-size="10" text-anchor="middle" fill="#5a6a7a">22.08</text><text x="572.0" y="192" font-size="10" text-anchor="middle" fill="#5a6a7a">26.08</text><text x="647.4" y="192" font-size="10" text-anchor="middle" fill="#5a6a7a">30.08</text><text x="704.0" y="192" font-size="10" text-anchor="middle" fill="#5a6a7a">02.09</text></svg></div>
+          <h4>Шаг СозданиеКотировок</h4>
+          
+    <div class="kpis">
+      <div class="kpi"><div class="kpi-l">Замеров</div><div class="kpi-v">36</div></div>
+      <div class="kpi"><div class="kpi-l">Медиана</div><div class="kpi-v">13,8 с</div></div>
+      <div class="kpi"><div class="kpi-l">Среднее</div><div class="kpi-v">13,1 с</div></div>
+      <div class="kpi"><div class="kpi-l">P95</div><div class="kpi-v">19,6 с</div></div>
+      <div class="kpi"><div class="kpi-l">Максимум</div><div class="kpi-v">22,7 с</div></div>
+      <div class="kpi"><div class="kpi-l">Вес, медиана</div><div class="kpi-v">22</div></div>
+    </div>
+          
+        <table>
+          <tr><th>Показатель</th><th>Значение</th></tr>
+          <tr><td>Период</td><td>29.07.2026 — 02.09.2026</td></tr>
+          <tr><td>Замеров / с ошибкой</td><td>36 / 0</td></tr>
+          <tr><td>Время, с: min / медиана / среднее / P95 / max</td>
+              <td class='num'>0,267 с / 13,8 с / 13,1 с / 19,6 с / 22,7 с</td></tr>
+          <tr><td>Целевое время</td><td class='num'>1800 с (30,0 мин)</td></tr>
+          <tr><td>Превышений цели</td><td class='num'>0 из 36</td></tr>
+          <tr><td>Вес (число записанных документов котировок)</td>
+              <td class='num'>min 3 / мед. 22 / сред. 19,2 / max 23
+              (вес=1: 0; вес&gt;1: 36)</td></tr>
+          <tr><td>Удельно, с на единицу веса</td>
+              <td class='num'>медиана 0,629 с; взвеш. среднее 0,681</td></tr>
+          <tr><td>Пропускная способность</td>
+              <td class='num'>медиана 1,59 ед/с; взвеш. среднее 1,47</td></tr>
+          <tr><td>Пользователи</td><td>svc_avancore (36)</td></tr>
+        </table>
+        
+        <h4>Параметры из комментария замера</h4>
+        <table>
+          <tr><th>Поле</th><th>Медиана</th><th>Среднее</th><th>Min</th><th>Max</th></tr>
+          <tr><td>КСозданию</td><td class='num'>3582</td><td class='num'>3052,9</td><td class='num'>12</td><td class='num'>3602</td></tr><tr><td>Создано</td><td class='num'>22</td><td class='num'>19,2</td><td class='num'>3</td><td class='num'>23</td></tr><tr><td>УдельныйВес</td><td class='num'>1,59</td><td class='num'>2,68</td><td class='num'>0,97</td><td class='num'>11,24</td></tr>
+        </table>
+        
+        <h4>Примеры комментариев</h4>
+        <table>
+          <tr><th>Время (лок.)</th><th>Длительность</th><th>Вес</th><th>Ошибка</th><th>ДопИнф</th></tr>
+          <tr><td>18.08.2026 11:53:03</td><td class='num'>13,8 с</td><td class='num'>22</td><td>Нет</td><td><code>КСозданию=3 580; Создано=22; Ошибок=Нет; УдельныйВес=1,59 об/с</code></td></tr><tr><td>25.08.2026 11:52:37</td><td class='num'>22,7 с</td><td class='num'>22</td><td>Нет</td><td><code>КСозданию=3 584; Создано=22; Ошибок=Нет; УдельныйВес=0,97 об/с</code></td></tr><tr><td>09.08.2026 11:50:07</td><td class='num'>0,267 с</td><td class='num'>3</td><td>Нет</td><td><code>КСозданию=12; Создано=3; Ошибок=Нет; УдельныйВес=11,24 об/с</code></td></tr><tr><td>02.08.2026 11:50:06</td><td class='num'>0,270 с</td><td class='num'>3</td><td>Нет</td><td><code>КСозданию=12; Создано=3; Ошибок=Нет; УдельныйВес=11,15 об/с</code></td></tr>
+        </table>
+    
+          <div class="chart"><svg viewBox="0 0 720 170" width="100%" role="img"><rect x="36.0" y="82.0" width="46.1" height="60.0" rx="2" fill="#2e7d32"><title>0,267 с – 2,1 с: 5</title></rect><rect x="92.2" y="142.0" width="46.1" height="0.0" rx="2" fill="#2e7d32"><title>2,1 с – 4,0 с: 0</title></rect><rect x="148.3" y="142.0" width="46.1" height="0.0" rx="2" fill="#2e7d32"><title>4,0 с – 5,9 с: 0</title></rect><rect x="204.5" y="142.0" width="46.1" height="0.0" rx="2" fill="#2e7d32"><title>5,9 с – 7,7 с: 0</title></rect><rect x="260.7" y="142.0" width="46.1" height="0.0" rx="2" fill="#2e7d32"><title>7,7 с – 9,6 с: 0</title></rect><rect x="316.8" y="118.0" width="46.1" height="24.0" rx="2" fill="#2e7d32"><title>9,6 с – 11,5 с: 2</title></rect><rect x="373.0" y="70.0" width="46.1" height="72.0" rx="2" fill="#2e7d32"><title>11,5 с – 13,4 с: 6</title></rect><rect x="429.2" y="10.0" width="46.1" height="132.0" rx="2" fill="#2e7d32"><title>13,4 с – 15,2 с: 11</title></rect><rect x="485.3" y="94.0" width="46.1" height="48.0" rx="2" fill="#2e7d32"><title>15,2 с – 17,1 с: 4</title></rect><rect x="541.5" y="106.0" width="46.1" height="36.0" rx="2" fill="#2e7d32"><title>17,1 с – 19,0 с: 3</title></rect><rect x="597.7" y="94.0" width="46.1" height="48.0" rx="2" fill="#2e7d32"><title>19,0 с – 20,8 с: 4</title></rect><rect x="653.8" y="130.0" width="46.1" height="12.0" rx="2" fill="#2e7d32"><title>20,8 с – 22,7 с: 1</title></rect><text x="36" y="164" font-size="10" fill="#5a6a7a">0,267 с</text><text x="710" y="164" font-size="10" text-anchor="end" fill="#5a6a7a">22,7 с</text></svg></div>
+        </div>
+        
+
+  <h3>Смежные контуры той же обработки (не в списке Jira 9391)</h3>
+  <table>
+    <tr><th>Контур</th><th>Замеров</th><th>Медиана Tibco / создания</th><th>Комментарий</th></tr>
+    <tr>
+      <td><code>ФоновоеВыполнениеVTBAMПИФ</code></td>
+      <td class="num">217 + 217</td>
+      <td class="num">14,5 с / 5,2 с</td>
+      <td>Отдельная команда, отдельные имена КО (суффикс «v t b a m п и ф» в Excel).</td>
+    </tr>
+    <tr>
+      <td><code>ФоновоеВыполнениеCBONDS</code></td>
+      <td class="num">0</td>
+      <td class="num">—</td>
+      <td>Замер в коде есть (<code>ЗагрузкаCbonds</code>), в выгрузке регистра записей нет.</td>
+    </tr>
+    <tr>
+      <td>Ручной запуск формы</td>
+      <td class="num">4 + 1</td>
+      <td class="num">13,8 с / 8,8 с</td>
+      <td>Единичные прогоны; в одном создании <code>КСозданию</code> до тысяч строк — это не объём РЗ.</td>
+    </tr>
+  </table>
+</div>
+
+<!-- ===================== 4 ===================== -->
+<div class="card" id="sec-4">
+  <h2>4. Сверка загрузки котировок (отчёт контроль)</h2>
+  <p>
+    <span class="badge b-epf">EPF</span>
+    <span class="badge b-ok">Замер в коде и в регистре</span>
+    <code>внОтчетКонтрольКотировок</code>, версия 1.07
+  </p>
+  <table>
+    <tr><th style="width:28%">Поле</th><th>Значение</th></tr>
+    <tr><td>Операция в Jira</td><td>Сверка загрузки котировок</td></tr>
+    <tr><td>Команда РЗ</td><td><code>ФоновоеВыполнение</code> — «Отчет контроль котировок (фон.)»</td></tr>
+    <tr><td>Ключевая операция</td><td><code>ДУ.КонтрольКотировок.Отчет.ФоновоеВыполнение</code></td></tr>
+    <tr><td>В Excel</td><td><code>Д у. контроль котировок. отчет. фоновое выполнение</code></td></tr>
+    <tr><td>Цель</td><td>1800 с (0,5 ч)</td></tr>
+  </table>
+  <div class="flow">РЗ → <code>ПроверкаСниженияСЧА</code> (замер всего: отчёт + рассылка). Вес = число строк отчёта. Ручной контур <code>...Ручной</code> в регистре не появляется: форма не вызывает этот метод.</div>
+  
+    <div class="qgrid">
+      <div class="qbox ok">
+        <div class="qnum">Вопрос 1</div>
+        <h3>Формируется ли замер времени?</h3>
+        <p><strong>Да, замер формируется.</strong> Записей в регистре: <strong>26</strong>.</p>
+        
+        <ul class="tight">
+          <li>Замер охватывает формирование отчёта и отправку письма.</li>
+          <li>Комментарий: <code>СтрокОтчета</code>, <code>УдельныйВес</code>.</li>
+        </ul>
+      </div>
+      <div class="qbox ok">
+        <div class="qnum">Вопрос 2</div>
+        <h3>Нужна ли оптимизация?</h3>
+        <p><strong>Оптимизация не требуется.</strong> Медиана и P95 существенно ниже цели</p>
+        <p>Цель <strong>1800 с</strong>. Медиана 6,2 с, P95 8,1 с, max 19,8 с, превышений 0.</p>
+      </div>
+    </div>
+    
+  
+    <div class="kpis">
+      <div class="kpi"><div class="kpi-l">Замеров</div><div class="kpi-v">26</div></div>
+      <div class="kpi"><div class="kpi-l">Медиана</div><div class="kpi-v">6,2 с</div></div>
+      <div class="kpi"><div class="kpi-l">Среднее</div><div class="kpi-v">6,6 с</div></div>
+      <div class="kpi"><div class="kpi-l">P95</div><div class="kpi-v">8,1 с</div></div>
+      <div class="kpi"><div class="kpi-l">Максимум</div><div class="kpi-v">19,8 с</div></div>
+      <div class="kpi"><div class="kpi-l">Вес, медиана</div><div class="kpi-v">302</div></div>
+    </div>
+  <div class="chart"><svg viewBox="0 0 720 136" width="100%" role="img">
+<text x="0" y="23.84" font-size="12" fill="#334">РЗ, медиана</text>
+<rect x="160" y="8" width="480" height="22" rx="3" fill="#eef2f6"/>
+<rect x="160" y="8" width="1.6453333333333333" height="22" rx="3" fill="#2e7d32"/>
+<text x="648" y="23.84" font-size="12" fill="#1a2332">6,2 с</text>
+<text x="0" y="53.84" font-size="12" fill="#334">РЗ, P95</text>
+<rect x="160" y="38" width="480" height="22" rx="3" fill="#eef2f6"/>
+<rect x="160" y="38" width="2.168533333333334" height="22" rx="3" fill="#66bb6a"/>
+<text x="648" y="53.84" font-size="12" fill="#1a2332">8,1 с</text>
+<text x="0" y="83.84" font-size="12" fill="#334">РЗ, max</text>
+<rect x="160" y="68" width="480" height="22" rx="3" fill="#eef2f6"/>
+<rect x="160" y="68" width="5.285066666666666" height="22" rx="3" fill="#a5d6a7"/>
+<text x="648" y="83.84" font-size="12" fill="#1a2332">19,8 с</text>
+<text x="0" y="113.84" font-size="12" fill="#334">Цель 1800 с</text>
+<rect x="160" y="98" width="480" height="22" rx="3" fill="#eef2f6"/>
+<rect x="160" y="98" width="480.0" height="22" rx="3" fill="#dc3545"/>
+<text x="648" y="113.84" font-size="12" fill="#1a2332">1800 с (30,0 мин)</text>
+</svg></div>
+  <div class="chart"><svg viewBox="0 0 720 200" width="100%" role="img"><text x="44" y="12" font-size="11" fill="#5a6a7a">Медиана контроля котировок по дням, с</text><line x1="44" y1="164.0" x2="704" y2="164.0" stroke="#e6ebf0"/><text x="38" y="168.0" font-size="10" text-anchor="end" fill="#5a6a7a">0,0</text><line x1="44" y1="91.0" x2="704" y2="91.0" stroke="#e6ebf0"/><text x="38" y="95.0" font-size="10" text-anchor="end" fill="#5a6a7a">9,9</text><line x1="44" y1="18.0" x2="704" y2="18.0" stroke="#e6ebf0"/><text x="38" y="22.0" font-size="10" text-anchor="end" fill="#5a6a7a">20</text><path d="M44.0,112.7 L70.4,120.9 L96.8,117.7 L123.2,129.0 L149.6,124.9 L176.0,123.6 L202.4,120.9 L228.8,127.8 L255.2,124.1 L281.6,123.6 L308.0,118.6 L334.4,115.6 L360.8,122.8 L387.2,18.0 L413.6,111.1 L440.0,116.7 L466.4,116.3 L492.8,123.0 L519.2,124.5 L545.6,118.5 L572.0,119.9 L598.4,117.9 L624.8,108.5 L651.2,116.5 L677.6,117.3 L704.0,102.6" fill="none" stroke="#2e7d32" stroke-width="2"/><circle cx="44.0" cy="112.7" r="3" fill="#2e7d32"><title>2026-07-29: 7,0 с</title></circle><circle cx="70.4" cy="120.9" r="3" fill="#2e7d32"><title>2026-07-30: 5,8 с</title></circle><circle cx="96.8" cy="117.7" r="3" fill="#2e7d32"><title>2026-07-31: 6,3 с</title></circle><circle cx="123.2" cy="129.0" r="3" fill="#2e7d32"><title>2026-08-03: 4,7 с</title></circle><circle cx="149.6" cy="124.9" r="3" fill="#2e7d32"><title>2026-08-04: 5,3 с</title></circle><circle cx="176.0" cy="123.6" r="3" fill="#2e7d32"><title>2026-08-05: 5,5 с</title></circle><circle cx="202.4" cy="120.9" r="3" fill="#2e7d32"><title>2026-08-06: 5,8 с</title></circle><circle cx="228.8" cy="127.8" r="3" fill="#2e7d32"><title>2026-08-07: 4,9 с</title></circle><circle cx="255.2" cy="124.1" r="3" fill="#2e7d32"><title>2026-08-10: 5,4 с</title></circle><circle cx="281.6" cy="123.6" r="3" fill="#2e7d32"><title>2026-08-11: 5,5 с</title></circle><circle cx="308.0" cy="118.6" r="3" fill="#2e7d32"><title>2026-08-12: 6,2 с</title></circle><circle cx="334.4" cy="115.6" r="3" fill="#2e7d32"><title>2026-08-13: 6,6 с</title></circle><circle cx="360.8" cy="122.8" r="3" fill="#2e7d32"><title>2026-08-14: 5,6 с</title></circle><circle cx="387.2" cy="18.0" r="3" fill="#2e7d32"><title>2026-08-17: 19,8 с</title></circle><circle cx="413.6" cy="111.1" r="3" fill="#2e7d32"><title>2026-08-18: 7,2 с</title></circle><circle cx="440.0" cy="116.7" r="3" fill="#2e7d32"><title>2026-08-19: 6,4 с</title></circle><circle cx="466.4" cy="116.3" r="3" fill="#2e7d32"><title>2026-08-20: 6,5 с</title></circle><circle cx="492.8" cy="123.0" r="3" fill="#2e7d32"><title>2026-08-21: 5,6 с</title></circle><circle cx="519.2" cy="124.5" r="3" fill="#2e7d32"><title>2026-08-24: 5,4 с</title></circle><circle cx="545.6" cy="118.5" r="3" fill="#2e7d32"><title>2026-08-25: 6,2 с</title></circle><circle cx="572.0" cy="119.9" r="3" fill="#2e7d32"><title>2026-08-26: 6,0 с</title></circle><circle cx="598.4" cy="117.9" r="3" fill="#2e7d32"><title>2026-08-27: 6,3 с</title></circle><circle cx="624.8" cy="108.5" r="3" fill="#2e7d32"><title>2026-08-28: 7,5 с</title></circle><circle cx="651.2" cy="116.5" r="3" fill="#2e7d32"><title>2026-08-31: 6,5 с</title></circle><circle cx="677.6" cy="117.3" r="3" fill="#2e7d32"><title>2026-09-01: 6,3 с</title></circle><circle cx="704.0" cy="102.6" r="3" fill="#2e7d32"><title>2026-09-02: 8,3 с</title></circle><text x="44.0" y="192" font-size="10" text-anchor="middle" fill="#5a6a7a">29.07</text><text x="123.2" y="192" font-size="10" text-anchor="middle" fill="#5a6a7a">03.08</text><text x="202.4" y="192" font-size="10" text-anchor="middle" fill="#5a6a7a">06.08</text><text x="281.6" y="192" font-size="10" text-anchor="middle" fill="#5a6a7a">11.08</text><text x="360.8" y="192" font-size="10" text-anchor="middle" fill="#5a6a7a">14.08</text><text x="440.0" y="192" font-size="10" text-anchor="middle" fill="#5a6a7a">19.08</text><text x="519.2" y="192" font-size="10" text-anchor="middle" fill="#5a6a7a">24.08</text><text x="598.4" y="192" font-size="10" text-anchor="middle" fill="#5a6a7a">27.08</text><text x="677.6" y="192" font-size="10" text-anchor="middle" fill="#5a6a7a">01.09</text><text x="704.0" y="192" font-size="10" text-anchor="middle" fill="#5a6a7a">02.09</text></svg></div>
+  <div class="chart"><svg viewBox="0 0 720 170" width="100%" role="img"><rect x="36.0" y="10.0" width="46.1" height="132.0" rx="2" fill="#2e7d32"><title>4,7 с – 6,0 с: 12</title></rect><rect x="92.2" y="21.0" width="46.1" height="121.0" rx="2" fill="#2e7d32"><title>6,0 с – 7,3 с: 11</title></rect><rect x="148.3" y="120.0" width="46.1" height="22.0" rx="2" fill="#2e7d32"><title>7,3 с – 8,5 с: 2</title></rect><rect x="204.5" y="142.0" width="46.1" height="0.0" rx="2" fill="#2e7d32"><title>8,5 с – 9,8 с: 0</title></rect><rect x="260.7" y="142.0" width="46.1" height="0.0" rx="2" fill="#2e7d32"><title>9,8 с – 11,0 с: 0</title></rect><rect x="316.8" y="142.0" width="46.1" height="0.0" rx="2" fill="#2e7d32"><title>11,0 с – 12,3 с: 0</title></rect><rect x="373.0" y="142.0" width="46.1" height="0.0" rx="2" fill="#2e7d32"><title>12,3 с – 13,5 с: 0</title></rect><rect x="429.2" y="142.0" width="46.1" height="0.0" rx="2" fill="#2e7d32"><title>13,5 с – 14,8 с: 0</title></rect><rect x="485.3" y="142.0" width="46.1" height="0.0" rx="2" fill="#2e7d32"><title>14,8 с – 16,1 с: 0</title></rect><rect x="541.5" y="142.0" width="46.1" height="0.0" rx="2" fill="#2e7d32"><title>16,1 с – 17,3 с: 0</title></rect><rect x="597.7" y="142.0" width="46.1" height="0.0" rx="2" fill="#2e7d32"><title>17,3 с – 18,6 с: 0</title></rect><rect x="653.8" y="131.0" width="46.1" height="11.0" rx="2" fill="#2e7d32"><title>18,6 с – 19,8 с: 1</title></rect><text x="36" y="164" font-size="10" fill="#5a6a7a">4,7 с</text><text x="710" y="164" font-size="10" text-anchor="end" fill="#5a6a7a">19,8 с</text></svg></div>
+  
+        <table>
+          <tr><th>Показатель</th><th>Значение</th></tr>
+          <tr><td>Период</td><td>29.07.2026 — 02.09.2026</td></tr>
+          <tr><td>Замеров / с ошибкой</td><td>26 / 0</td></tr>
+          <tr><td>Время, с: min / медиана / среднее / P95 / max</td>
+              <td class='num'>4,7 с / 6,2 с / 6,6 с / 8,1 с / 19,8 с</td></tr>
+          <tr><td>Целевое время</td><td class='num'>1800 с (30,0 мин)</td></tr>
+          <tr><td>Превышений цели</td><td class='num'>0 из 26</td></tr>
+          <tr><td>Вес (число строк отчёта, минимум 1)</td>
+              <td class='num'>min 281 / мед. 302 / сред. 302,0 / max 309
+              (вес=1: 0; вес&gt;1: 26)</td></tr>
+          <tr><td>Удельно, с на единицу веса</td>
+              <td class='num'>медиана 0,020 с; взвеш. среднее 0,022</td></tr>
+          <tr><td>Пропускная способность</td>
+              <td class='num'>медиана 48,80 ед/с; взвеш. среднее 45,52</td></tr>
+          <tr><td>Пользователи</td><td>svc_avancore (26)</td></tr>
+        </table>
+        
+        <h4>Параметры из комментария замера</h4>
+        <table>
+          <tr><th>Поле</th><th>Медиана</th><th>Среднее</th><th>Min</th><th>Max</th></tr>
+          <tr><td>СтрокОтчета</td><td class='num'>302</td><td class='num'>302,0</td><td class='num'>281</td><td class='num'>309</td></tr><tr><td>УдельныйВес</td><td class='num'>49</td><td class='num'>48,9</td><td class='num'>16</td><td class='num'>64</td></tr>
+        </table>
+        
+        <h4>Примеры комментариев</h4>
+        <table>
+          <tr><th>Время (лок.)</th><th>Длительность</th><th>Вес</th><th>Ошибка</th><th>ДопИнф</th></tr>
+          <tr><td>25.08.2026 09:15:06</td><td class='num'>6,2 с</td><td class='num'>299</td><td>Нет</td><td><code>СтрокОтчета=299; УдельныйВес=48,37 об/с</code></td></tr><tr><td>17.08.2026 09:15:20</td><td class='num'>19,8 с</td><td class='num'>309</td><td>Нет</td><td><code>СтрокОтчета=309; УдельныйВес=15,59 об/с</code></td></tr><tr><td>03.08.2026 09:15:05</td><td class='num'>4,7 с</td><td class='num'>304</td><td>Нет</td><td><code>СтрокОтчета=304; УдельныйВес=64,05 об/с</code></td></tr><tr><td>07.08.2026 09:15:05</td><td class='num'>4,9 с</td><td class='num'>303</td><td>Нет</td><td><code>СтрокОтчета=303; УдельныйВес=61,71 об/с</code></td></tr>
+        </table>
+    
+</div>
+
+
+<div class="card" id="itogo">
+  <h2>Итоговые ответы заказчику</h2>
+  <p class="final-lead">
+    По каждой из пяти операций заказчик задал два вопроса.
+    Сначала — ответы на всю пятёрку сразу, затем карточка по каждой операции:
+    слева замер, справа оптимизация, внизу типичное время рядом с пределом.
+    Период регистра: <strong>28.07.2026 по 02.09.2026</strong>.
+    Вывод по оптимизации — по регламентным заданиям, не по ручным запускам из формы.
+  </p>
+  <div class="ans-pair">
+    <div class="ans-hero yes">
+      <div class="q">Вопрос 1</div>
+      <div class="a">Замер времени формируется по всем пяти операциям</div>
+      <p>Во всех четырёх внешних обработках код замера работает, в регистре есть записи.
+      Первый и финальный сеансы загрузки котировок — одна обработка, в отчёте разделены по времени запуска.</p>
+    </div>
+    <div class="ans-hero yes">
+      <div class="q">Вопрос 2</div>
+      <div class="a">Оптимизация не нужна ни по одной операции</div>
+      <p>Типичное время рабочего контура много ниже цели:
+      сверки денежных средств — не дольше 6 минут, загрузка и контроль котировок — не дольше 30 минут.</p>
+    </div>
+  </div>
+  
+        <article class="op-final">
+          <div class="op-head">
+            <div class="op-n">1</div>
+            <div>
+              <h3>Сверка денежных средств</h3>
+              <div class="op-epf">Внешняя обработка: <code>внСверкаДенежныхСредств_обр</code>
+              · <a href="#sec-1">открыть подробности</a></div>
+            </div>
+          </div>
+          <div class="op-qgrid">
+            <div class="op-q">
+              <div class="ql">Вопрос 1. Формируется ли замер времени?</div>
+              <div class="qa">Да, замер есть</div>
+              <p>Замер встроен в код обработки и пишется в регистр. За период с 28.07.2026 по 02.09.2026 в регистре 26 запусков регламентным заданием (по ним делаем вывод) и 266 ручных запусков из формы.</p>
+            </div>
+            <div class="op-q">
+              <div class="ql">Вопрос 2. Нужна ли оптимизация?</div>
+              <div class="qa">Нет, не нужна</div>
+              <p>Вердикт — по регламентным заданиям. Почти все запуски (95 из 100) укладываются в 4 минуты 8 секунд. Самый долгий за период: 5 минут 2 секунды. Целевое время ни разу не превышено.</p>
+              
+              <div class="pair-nums">
+                <div class="pair-num">
+                  <div class="l">Типичное время</div>
+                  <div class="v">3 минуты 23 секунды</div>
+                </div>
+                <div class="pair-num">
+                  <div class="l">Допустимо не дольше</div>
+                  <div class="v">6 минут</div>
+                </div>
+              </div>
+              <div class="goal-meter">
+                <div class="goal-meter-track">
+                  <div class="goal-meter-fill" style="width:56.44%"></div>
+                </div>
+                <div class="goal-meter-cap">
+                  <span>занято 56% от предела</span>
+                  <span>весь серый ряд — допустимое время</span>
+                </div>
+              </div>
+        
+              
+            </div>
+          </div>
+        </article>
+        
+  
+        <article class="op-final">
+          <div class="op-head">
+            <div class="op-n">2</div>
+            <div>
+              <h3>Сверка денежных средств ЕРС (единый расчётный счёт)</h3>
+              <div class="op-epf">Внешняя обработка: <code>внСверкаДенежныхСредствНаЕРС_обр</code>
+              · <a href="#sec-2">открыть подробности</a></div>
+            </div>
+          </div>
+          <div class="op-qgrid">
+            <div class="op-q">
+              <div class="ql">Вопрос 1. Формируется ли замер времени?</div>
+              <div class="qa">Да, замер есть</div>
+              <p>Замер встроен в код обработки и пишется в регистр. За период с 28.07.2026 по 02.09.2026 в регистре 36 запусков регламентным заданием и 96 ручных запусков из формы.</p>
+            </div>
+            <div class="op-q">
+              <div class="ql">Вопрос 2. Нужна ли оптимизация?</div>
+              <div class="qa">Нет, не нужна</div>
+              <p>Вердикт — по регламентным заданиям. Почти все запуски (95 из 100) укладываются в 13 секунд. Самый долгий за период: 17,9 секунды. Целевое время ни разу не превышено.</p>
+              
+              <div class="pair-nums">
+                <div class="pair-num">
+                  <div class="l">Типичное время</div>
+                  <div class="v">3,6 секунды</div>
+                </div>
+                <div class="pair-num">
+                  <div class="l">Допустимо не дольше</div>
+                  <div class="v">6 минут</div>
+                </div>
+              </div>
+              <div class="goal-meter">
+                <div class="goal-meter-track">
+                  <div class="goal-meter-fill" style="width:1.00%"></div>
+                </div>
+                <div class="goal-meter-cap">
+                  <span>занято 1,0% от предела</span>
+                  <span>весь серый ряд — допустимое время</span>
+                </div>
+              </div>
+        
+              
+            </div>
+          </div>
+        </article>
+        
+  
+        <article class="op-final">
+          <div class="op-head">
+            <div class="op-n">3</div>
+            <div>
+              <h3>Загрузка котировок, первый сеанс за предыдущий день (дата Т минус 1)</h3>
+              <div class="op-epf">Внешняя обработка: <code>внЗагрузкаКотировокДУ</code>
+              · <a href="#sec-3a">открыть подробности</a></div>
+            </div>
+          </div>
+          <div class="op-qgrid">
+            <div class="op-q">
+              <div class="ql">Вопрос 1. Формируется ли замер времени?</div>
+              <div class="qa">Да, замер есть</div>
+              <p>Обработка пишет два замера на один запуск: получение котировок и запись документов. Первый и финальный сеансы в справочнике не разделены — это одна обработка и одни и те же имена. Первый сеанс отобран по времени запуска около 09:00. За период с 28.07.2026 по 02.09.2026 собрано 37 полных циклов (оба шага в один день).</p>
+            </div>
+            <div class="op-q">
+              <div class="ql">Вопрос 2. Нужна ли оптимизация?</div>
+              <div class="qa">Нет, не нужна</div>
+              <p>Время сеанса — сумма двух шагов. Почти все запуски (95 из 100) укладываются в 4 минуты 13 секунд. Самый долгий за период: 5 минут 2 секунды. Целевое время ни разу не превышено.</p>
+              
+              <div class="pair-nums">
+                <div class="pair-num">
+                  <div class="l">Типичное время</div>
+                  <div class="v">3 минуты 18 секунд</div>
+                </div>
+                <div class="pair-num">
+                  <div class="l">Допустимо не дольше</div>
+                  <div class="v">30 минут</div>
+                </div>
+              </div>
+              <div class="goal-meter">
+                <div class="goal-meter-track">
+                  <div class="goal-meter-fill" style="width:10.99%"></div>
+                </div>
+                <div class="goal-meter-cap">
+                  <span>занято 11% от предела</span>
+                  <span>весь серый ряд — допустимое время</span>
+                </div>
+              </div>
+        
+              <p>Удельный вес: 17,7 котировок в секунду (около 3 582 котировок за типичный цикл).</p>
+            </div>
+          </div>
+        </article>
+        
+  
+        <article class="op-final">
+          <div class="op-head">
+            <div class="op-n">4</div>
+            <div>
+              <h3>Сверка загрузки котировок</h3>
+              <div class="op-epf">Внешняя обработка: <code>внОтчетКонтрольКотировок</code>
+              · <a href="#sec-4">открыть подробности</a></div>
+            </div>
+          </div>
+          <div class="op-qgrid">
+            <div class="op-q">
+              <div class="ql">Вопрос 1. Формируется ли замер времени?</div>
+              <div class="qa">Да, замер есть</div>
+              <p>Замер встроен в код обработки и пишется в регистр. За период с 28.07.2026 по 02.09.2026 в регистре 26 запусков регламентным заданием. Ручных запусков с замером в этой выгрузке нет.</p>
+            </div>
+            <div class="op-q">
+              <div class="ql">Вопрос 2. Нужна ли оптимизация?</div>
+              <div class="qa">Нет, не нужна</div>
+              <p>Вердикт — по регламентным заданиям. Почти все запуски (95 из 100) укладываются в 8,1 секунды. Самый долгий за период: 19,8 секунды. Целевое время ни разу не превышено.</p>
+              
+              <div class="pair-nums">
+                <div class="pair-num">
+                  <div class="l">Типичное время</div>
+                  <div class="v">6,2 секунды</div>
+                </div>
+                <div class="pair-num">
+                  <div class="l">Допустимо не дольше</div>
+                  <div class="v">30 минут</div>
+                </div>
+              </div>
+              <div class="goal-meter">
+                <div class="goal-meter-track">
+                  <div class="goal-meter-fill" style="width:0.34%"></div>
+                </div>
+                <div class="goal-meter-cap">
+                  <span>занято 0,3% от предела</span>
+                  <span>весь серый ряд — допустимое время</span>
+                </div>
+              </div>
+        
+              <p>Удельный вес: 48,8 строк отчёта в секунду.</p>
+            </div>
+          </div>
+        </article>
+        
+  
+        <article class="op-final">
+          <div class="op-head">
+            <div class="op-n">5</div>
+            <div>
+              <h3>Загрузка котировок, финальная за предыдущий день (дата Т минус 1)</h3>
+              <div class="op-epf">Внешняя обработка: <code>внЗагрузкаКотировокДУ</code>
+              · <a href="#sec-3b">открыть подробности</a></div>
+            </div>
+          </div>
+          <div class="op-qgrid">
+            <div class="op-q">
+              <div class="ql">Вопрос 1. Формируется ли замер времени?</div>
+              <div class="qa">Да, замер есть</div>
+              <p>Та же обработка и те же имена в справочнике, что у первого сеанса. Финальный сеанс отобран по времени запуска около 11:50. За период с 28.07.2026 по 02.09.2026 собрано 36 полных циклов (получение котировок плюс запись документов).</p>
+            </div>
+            <div class="op-q">
+              <div class="ql">Вопрос 2. Нужна ли оптимизация?</div>
+              <div class="qa">Нет, не нужна</div>
+              <p>Время сеанса — сумма двух шагов. Почти все запуски (95 из 100) укладываются в 3 минуты 13 секунд. Самый долгий за период: 3 минуты 17 секунд. Целевое время ни разу не превышено.</p>
+              
+              <div class="pair-nums">
+                <div class="pair-num">
+                  <div class="l">Типичное время</div>
+                  <div class="v">2 минуты 41 секунда</div>
+                </div>
+                <div class="pair-num">
+                  <div class="l">Допустимо не дольше</div>
+                  <div class="v">30 минут</div>
+                </div>
+              </div>
+              <div class="goal-meter">
+                <div class="goal-meter-track">
+                  <div class="goal-meter-fill" style="width:8.95%"></div>
+                </div>
+                <div class="goal-meter-cap">
+                  <span>занято 9% от предела</span>
+                  <span>весь серый ряд — допустимое время</span>
+                </div>
+              </div>
+        
+              <p>Удельный вес: 21,6 котировок в секунду (около 3 582 котировок за типичный цикл).</p>
+            </div>
+          </div>
+        </article>
+        
+  <h3>Сводка одним взглядом</h3>
+  <table class="final-sum">
+    <tr>
+      <th>№</th>
+      <th>Операция из задачи</th>
+      <th>Замер времени</th>
+      <th>Типичное время</th>
+      <th>Допустимо не дольше</th>
+      <th>Оптимизация</th>
+    </tr>
+    <tr>
+      <td>1</td>
+      <td>Сверка денежных средств</td>
+      <td>Есть. 26 регламентных и 266 ручных запусков</td>
+      <td>3 минуты 23 секунды</td>
+      <td>6 минут</td>
+      <td><strong>Не нужна</strong></td>
+    </tr>
+    <tr>
+      <td>2</td>
+      <td>Сверка денежных средств ЕРС</td>
+      <td>Есть. 36 регламентных и 96 ручных запусков</td>
+      <td>3,6 секунды</td>
+      <td>6 минут</td>
+      <td><strong>Не нужна</strong></td>
+    </tr>
+    <tr>
+      <td>3</td>
+      <td>Загрузка котировок, первый сеанс за предыдущий день</td>
+      <td>Есть. 37 полных циклов около 09:00</td>
+      <td>3 минуты 18 секунд</td>
+      <td>30 минут</td>
+      <td><strong>Не нужна</strong></td>
+    </tr>
+    <tr>
+      <td>4</td>
+      <td>Сверка загрузки котировок</td>
+      <td>Есть. 26 регламентных запусков</td>
+      <td>6,2 секунды</td>
+      <td>30 минут</td>
+      <td><strong>Не нужна</strong></td>
+    </tr>
+    <tr>
+      <td>5</td>
+      <td>Загрузка котировок, финальная за предыдущий день</td>
+      <td>Есть. 36 полных циклов около 11:50</td>
+      <td>2 минуты 41 секунда</td>
+      <td>30 минут</td>
+      <td><strong>Не нужна</strong></td>
+    </tr>
+  </table>
+</div>
+
+
+<div class="sources">
+  Источники: IMDEV-9391.doc; ЗаданиеAI_9391.txt; ЗамерыВремени.xlsx;
+  IMDEV-8927 (таблица ДУ-15, целевые 0,1 / 0,5 ч);
+  модуль БСП <code>ОценкаПроизводительности</code> / <code>РазложитьСтрокуПоСловам</code>;
+  внешние обработки ДУ с замерами IMDEV-8927.
+  Отчёт собран 03.09.2026 08:10.
+</div>
+</div>
+</body>
+</html>
