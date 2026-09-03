@@ -204,6 +204,15 @@ def typical_weight(picked):
 
 def start_time(picked, method):
     """Типичное время начала операции: медиана момента старта по замерам."""
+    moments = [minute for _day, minute in schedule_moments(picked, method)]
+    if not moments:
+        return None
+    middle = int(statistics.median(sorted(moments)))
+    return '%d:%02d' % (middle // 60, middle % 60)
+
+
+def schedule_moments(picked, method):
+    """Минуты от полуночи для старта каждого прогона."""
     moments = []
     source = build_cycles(picked) if method in ('cycle', 'span') else [[r] for r in picked]
     for cycle in source:
@@ -211,11 +220,62 @@ def start_time(picked, method):
         if first is None:
             continue
         began = first['local'] - datetime.timedelta(seconds=first['sec'])
-        moments.append(began.hour * 60 + began.minute)
+        moments.append((began.date(), began.hour * 60 + began.minute))
+    return moments
+
+
+def fmt_hhmm(minutes):
+    minutes = int(round(minutes)) % (24 * 60)
+    return '%d:%02d' % (minutes // 60, minutes % 60)
+
+
+def schedule_from_picked(picked, method, override=None):
+    """Расписание запусков: первое время, частота, последнее время.
+
+    Параметры:
+        picked   - отобранные замеры
+        method   - метод агрегации операции
+        override - готовая строка из реестра, если задана явно
+
+    Возвращаемое значение:
+        Строка вида "22:00, 1 раз, 22:00" или "15:00, 10 мин, 23:50".
+    """
+    if override:
+        return override
+    moments = schedule_moments(picked, method)
     if not moments:
         return None
-    middle = int(statistics.median(sorted(moments)))
-    return '%d:%02d' % (middle // 60, middle % 60)
+
+    by_day = collections.defaultdict(list)
+    for day, minute in moments:
+        by_day[day].append(minute)
+
+    firsts, lasts, gaps = [], [], []
+    for day_minutes in by_day.values():
+        ordered = sorted(day_minutes)
+        firsts.append(ordered[0])
+        lasts.append(ordered[-1])
+        for left, right in zip(ordered, ordered[1:]):
+            delta = right - left
+            if delta > 0:
+                gaps.append(delta)
+
+    first = fmt_hhmm(statistics.median(firsts))
+    last = fmt_hhmm(statistics.median(lasts))
+    runs_per_day = statistics.median([len(v) for v in by_day.values()])
+    # Один типичный прогон в день - частота "1 раз", даже если в выборке
+    # есть отдельные повторные запуски в другие часы.
+    if runs_per_day <= 1.5 or not gaps:
+        freq = '1 раз'
+        last = first
+    else:
+        gap = int(round(statistics.median(gaps)))
+        for step in (5, 10, 15, 30, 60, 120):
+            if abs(gap - step) <= step * 0.35:
+                gap = step
+                break
+        freq = '%d мин' % gap
+    return '%s, %s, %s' % (first, freq, last)
 
 
 # --------------------------------------------------------------------------- #
@@ -414,6 +474,13 @@ def main():
             if not seconds / 2.5 <= predicted <= seconds * 2.5:
                 model = None
 
+        # Время запуска можно брать из другого контура (например длительность с
+        # разработческой базы, а расписание - с ПРОД, где часы старта достоверны).
+        schedule_records = prod if spec.get('schedule_source') == 'prod' else records
+        schedule_picked = (
+            select(schedule_records, spec)
+            if spec.get('schedule_source') == 'prod' else picked)
+
         row = {
             'kind': 'op',
             'id': spec['id'],
@@ -433,13 +500,19 @@ def main():
             'window_note': spec.get('window_note', ''),
             'comment': spec.get('comment', ''),
             'estimate': spec.get('estimate', False),
+            'no_measurement': spec.get('no_measurement', False),
             'analog_note': spec.get('analog_note', ''),
             'measurements': count,
             'how': how,
             'weight_typical': weight,
             'sec_now': seconds,
             'min_now': seconds / 60.0 if seconds else None,
-            'start_time': start_time(picked, spec.get('method')) if picked else None,
+            'min_max': None,
+            'start_time': (start_time(schedule_picked, spec.get('method'))
+                           if schedule_picked else None),
+            'schedule': schedule_from_picked(
+                schedule_picked, spec.get('method'), spec.get('schedule'))
+                if schedule_picked or spec.get('schedule') else None,
             'model': model,
             'unit_sec': (unit_cost(picked, spec.get('unit_is_run', False))
                          if spec.get('method') == 'unit' else None),
@@ -449,14 +522,28 @@ def main():
         if values:
             row['sec_min'] = min(values)
             row['sec_max'] = max(values)
+            row['min_max'] = max(values) / 60.0
+        # Замер в код не вставлен: ничего не подставляем, в отчёте будет прочерк.
+        if row['no_measurement']:
+            row['sec_now'] = None
+            row['min_now'] = None
+            row['min_max'] = None
+            row['how'] = 'замер в код не вставлен'
+            row['unit_sec'] = None
+            row['unit_donor'] = None
+            row['analog_id'] = None
+            row['model'] = None
+            row['schedule'] = None
         result.append(row)
         by_id[spec['id']] = row
 
     # Операции без массового прогона: разворачиваем удельную стоимость договора
-    # на всю базу с учётом числа потоков. Удельную стоимость берём либо из своих
-    # замеров на единичных договорах, либо у операции-донора того же процесса.
+    # на всю базу с учётом числа потоков. Только если замер в коде есть
+    # (свои ключи), но массового прогона в выгрузке нет.
     for row in result:
         if row.get('kind') != 'op' or row.get('sec_now') is not None:
+            continue
+        if row.get('no_measurement'):
             continue
         unit = row.get('unit_sec')
         if unit is None and row.get('unit_donor'):
@@ -484,10 +571,12 @@ def main():
         }
         row['volume_unit'] = 'договоров'
 
-    # Операции, у которых замера нет и удельную стоимость взять негде,
-    # оцениваем по операции того же класса.
+    # Аналогия по классу операций - только если замер в коде есть, но данных нет.
+    # Если замера в коде нет (no_measurement) - не подставляем чужие цифры.
     for row in result:
         if row.get('kind') != 'op' or row.get('sec_now') is not None:
+            continue
+        if row.get('no_measurement'):
             continue
         donor = by_id.get(row.get('analog_id'))
         if not donor or not donor.get('sec_now'):
@@ -502,6 +591,7 @@ def main():
 
     # Прогноз на 250 000 договоров: две оценки рядом - линейная x10 по просьбе
     # руководителя и расчётная по предельной стоимости договора.
+    # Операции, не зависящие от числа договоров (в т.ч. сделки), не масштабируем.
     for row in result:
         if row.get('kind') != 'op' or not row.get('sec_now'):
             continue

@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>IMDEV-7330. Сверка эталон vs ПоНовому5</title>
+<style>
+    body { font-family: "Segoe UI", Arial, sans-serif; line-height: 1.55; color: #212529; background: #f5f6f8; margin: 0; padding: 0 0 60px 0; }
+    .wrap { max-width: 1180px; margin: 0 auto; padding: 0 24px; }
+    header { background: #1f2d3d; color: #fff; padding: 28px 0 22px 0; margin-bottom: 28px; }
+    header h1 { margin: 0 0 8px 0; font-size: 24px; }
+    header .sub { color: #b8c4d0; font-size: 14px; }
+    h2 { font-size: 20px; margin: 32px 0 12px 0; padding-bottom: 8px; border-bottom: 2px solid #17a2b8; }
+    p { margin: 10px 0; }
+    table { width: 100%; border-collapse: collapse; background: #fff; margin: 12px 0; font-size: 13.5px; }
+    th { background: #1f2d3d; color: #fff; text-align: left; padding: 8px 10px; }
+    td { padding: 7px 10px; border-bottom: 1px solid #e3e6ea; vertical-align: top; }
+    tbody tr:nth-child(even) { background: #fafbfc; }
+    tr.ok td { background: #eefaf1; }
+    tr.bad td { background: #fdf0f1; }
+    tr.warn td { background: #fff9e6; }
+    .num { text-align: right; font-family: Consolas, monospace; white-space: nowrap; }
+    .sig { font-family: Consolas, "Courier New", monospace; font-size: 12px; }
+    .box { padding: 14px 18px; border-radius: 5px; margin: 14px 0; border-left: 5px solid; }
+    .in { background: #eefaf1; border-color: #28a745; }
+    .out { background: #fdf0f1; border-color: #dc3545; }
+    .warn { background: #fff9e6; border-color: #f0ad4e; }
+    .info { background: #eaf7fa; border-color: #17a2b8; }
+    .small { font-size: 13px; color: #6c757d; }
+    footer { margin-top: 36px; padding-top: 12px; border-top: 1px solid #dee2e6; font-size: 13px; color: #6c757d; }
+</style>
+</head>
+<body>
+<header>
+<div class="wrap">
+    <h1>IMDEV-7330. Сверка эталон 27292 vs ПоНовому5</h1>
+    <div class="sub">
+        Три расширения: IMDEV7330_Locks + IMDEV7330_NkdCoupon + IMDEV7330_NkdParam.
+        Эталон: НДФЛ_Портфели_27292.xlsx и НДФЛ_Управление_27292.xlsx.
+        ФИО в таблицах скрыты.
+    </div>
+</div>
+</header>
+<div class="wrap">
+
+<div class="box in"><b>Вывод</b>
+Все денежные поля совпали с эталоном 27292: портфели (28 431 документ, включая Платонова), документ УК Платонова (инвествычет 618 = 269 252.07) и все остальные УК. Денежных расхождений 0.
+В ПоНовому4 расходились 61 УК (Платонов +8 481, Бабарыкин доход -836 млн и ещё 59). В ПоНовому5 эти 61 документ совпали с эталоном.
+Не денежные отличия: эталонная выгрузка УК не содержит 624 пустых документа (13 145 vs 13 769); у 90 УК больше строк ТЧ Выводы/ОбщиеРасходы при тех же суммах и том же числе Начисления/Удержания/инвествычета. MD5 файлов разный из-за Excel, содержимое портфелей построчно совпало.
+</div>
+
+<div class="box info">
+<b>Сверка с ПоНовому4</b>
+ПоНовому4: 61 УК с денежным расхождением, портфели уже совпадали с эталоном.
+ПоНовому5: 0 УК с денежным расхождением. Начисления УК 17 943 / 17 943, Удержания 4 897 / 4 897, инвествычет 491 / 491.
+</div>
+
+<div class="box info">
+<b>Прогон</b>
+ИТ-протокол (Word): 13 потоков, 27 292 клиентов, старт 6:41, финиш 03.09.2026 11:59:27 (около 5 ч 18 мин).
+Лог формирования: 03.09.2026 07:13:32 — 03.09.2026 11:37:09
+(4 ч 23 мин 37 с (4.39 ч)). Ошибок в шапке лога: 0.
+Проведено по портфелям: 28 431,
+по клиентам УК: 27 292.
+Блокировок в логе: 0.
+Портфели: строки и суммы портфелей.
+</div>
+
+<h2>1. Файлы</h2>
+<table>
+<thead><tr><th>Роль</th><th>Файл</th><th>Байт</th><th>MD5</th></tr></thead>
+<tbody>
+<tr><td>УК эталон</td><td>НДФЛ_Управление_27292.xlsx</td><td class="num">6 961 734</td><td class="sig">bf31ed6acf718bbb365be46096307921</td></tr>
+<tr><td>УК новое5</td><td>НДФЛ_Управление_27292_ПоНовому5.xlsx</td><td class="num">7 074 193</td><td class="sig">b1c66daf4002cca9d1812f410656e188</td></tr>
+<tr><td>Портфели эталон</td><td>НДФЛ_Портфели_27292.xlsx</td><td class="num">26 018 059</td><td class="sig">57fe65d00c21a26f2edcf49ce2c51e75</td></tr>
+<tr><td>Портфели новое5</td><td>НДФЛ_Портфели_27292_ПоНовому5.xlsx</td><td class="num">26 018 059</td><td class="sig">04f32c96b7da8ac2745c43d51bd15e91</td></tr>
+</tbody>
+</table>
+
+<h2>2. Портфели</h2>
+<p>Идентичны по MD5: <b>нет</b>.</p>
+
+<table>
+<thead><tr><th>Показатель</th><th>Эталон</th><th>Новое5</th><th>Дельта</th></tr></thead>
+<tbody>
+<tr><td>Строк</td><td class="num">413 547</td><td class="num">413 547</td><td class="num">0</td></tr>
+<tr><td>Документов</td><td class="num">28 431</td><td class="num">28 431</td><td></td></tr>
+<tr><td>Денежных расхождений документов</td><td colspan="3">0</td></tr>
+<tr><td>Строк только в эталоне / только в новом</td><td class="num">0</td><td class="num">0</td><td></td></tr>
+</tbody></table>
+<table><thead><tr><th>Поле</th><th>Эталон</th><th>Новое5</th><th>Дельта</th></tr></thead><tbody><tr class='ok'><td>НалогооблагаемаяCумма</td><td class='num'>9 461 241 048.22</td><td class='num'>9 461 241 048.22</td><td class='num'>0</td></tr><tr class='ok'><td>СуммаВычета</td><td class='num'>28 117 530 732.98</td><td class='num'>28 117 530 732.98</td><td class='num'>0</td></tr><tr class='ok'><td>СуммаДохода</td><td class='num'>74 373 506 176.78</td><td class='num'>74 373 506 176.78</td><td class='num'>0</td></tr><tr class='ok'><td>СуммаРанееУдержанногоНДФЛ</td><td class='num'>143 572 863</td><td class='num'>143 572 863</td><td class='num'>0</td></tr><tr class='ok'><td>СуммаКУдержанию</td><td class='num'>1 089 408 644</td><td class='num'>1 089 408 644</td><td class='num'>0</td></tr><tr class='ok'><td>СуммаИсчисленногоНалога</td><td class='num'>1 231 714 768</td><td class='num'>1 231 714 768</td><td class='num'>0</td></tr><tr class='ok'><td>УплаченныйНДФЛ</td><td class='num'>0</td><td class='num'>0</td><td class='num'>0</td></tr><tr class='ok'><td>Сумма</td><td class='num'>822 753 611.48</td><td class='num'>822 753 611.48</td><td class='num'>0</td></tr></tbody></table>
+
+
+<h2>3. УК: итог по всем клиентам</h2>
+<table>
+<thead><tr><th>Показатель</th><th>Эталон</th><th>Новое5</th></tr></thead>
+<tbody>
+<tr><td>Строк выгрузки</td><td class="num">84 056</td><td class="num">85 538</td></tr>
+<tr><td>Документов</td><td class="num">26 668</td><td class="num">27 292</td></tr>
+<tr><td>Пустых документов</td><td class="num">13 145</td><td class="num">13 769</td></tr>
+<tr class="ok"><td>Документов с денежным расхождением</td><td colspan="2" class="num">0</td></tr>
+<tr class="ok"><td>из них не Платонов</td><td colspan="2" class="num">0</td></tr>
+<tr class="ok"><td>из них Платонов</td><td colspan="2" class="num">0</td></tr>
+<tr><td>Только структура (суммы те же)</td><td colspan="2" class="num">90</td></tr>
+<tr><td>Только в эталоне / только в новом (номера)</td><td class="num">0</td><td class="num">624</td></tr>
+<tr><td>Строки bag только эталон / только новое</td><td class="num">0</td><td class="num">1 482</td></tr>
+</tbody>
+</table>
+<table>
+<thead><tr><th>Поле</th><th>Эталон</th><th>Новое5</th><th>Дельта</th></tr></thead>
+<tbody><tr class='ok'><td>СуммаВывода</td><td class='num'>0</td><td class='num'>0</td><td class='num'>0</td></tr><tr class='ok'><td>НалогооблагаемаяCумма</td><td class='num'>17 575 193 511.27</td><td class='num'>17 575 193 511.27</td><td class='num'>0</td></tr><tr class='ok'><td>СуммаВычета</td><td class='num'>29 803 463 261.93</td><td class='num'>29 803 463 261.93</td><td class='num'>0</td></tr><tr class='ok'><td>СуммаДохода</td><td class='num'>71 457 746 146.79</td><td class='num'>71 457 746 146.79</td><td class='num'>0</td></tr><tr class='ok'><td>СуммаКЗачету</td><td class='num'>0</td><td class='num'>0</td><td class='num'>0</td></tr><tr class='ok'><td>СуммаКУдержанию</td><td class='num'>804 906 165</td><td class='num'>804 906 165</td><td class='num'>0</td></tr><tr class='ok'><td>СуммаРанееУдержанногоНДФЛ</td><td class='num'>508 915 258</td><td class='num'>508 915 258</td><td class='num'>0</td></tr><tr class='ok'><td>ФинансовыйРезультат</td><td class='num'>8 666 454 067.81</td><td class='num'>8 666 454 067.81</td><td class='num'>0</td></tr><tr class='ok'><td>ИзменениеФинРезультата</td><td class='num'>0</td><td class='num'>0</td><td class='num'>0</td></tr><tr class='ok'><td>Пропорция</td><td class='num'>3 407.11</td><td class='num'>3 407.11</td><td class='num'>0</td></tr><tr class='ok'><td>Сумма</td><td class='num'>255 762 321.49</td><td class='num'>255 762 321.49</td><td class='num'>0</td></tr></tbody>
+</table>
+<table>
+<thead><tr><th>ТЧ УК</th><th>Эталон</th><th>Новое5</th><th>Дельта</th></tr></thead>
+<tbody>
+<tr class="ok"><td>Начисления</td><td class="num">17 943</td><td class="num">17 943</td><td class="num">0</td></tr>
+<tr class="ok"><td>Удержания</td><td class="num">4 897</td><td class="num">4 897</td><td class="num">0</td></tr>
+<tr class="ok"><td>ИнвестиционныйВычетПоПортфелям</td><td class="num">491</td><td class="num">491</td><td class="num">0</td></tr>
+<tr class="warn"><td>Выводы</td><td class="num">29 770</td><td class="num">30 511</td><td class="num">741</td></tr>
+<tr class="warn"><td>ОбщиеРасходы</td><td class="num">30 955</td><td class="num">31 696</td><td class="num">741</td></tr>
+</tbody>
+</table>
+<p class="small">624 документа только в новой выгрузке — это пустые УК (13 769 − 13 145). 90 документов с другой структурой: только дополнительные строки Выводы и ОбщиеРасходы, Начисления/Удержания/вычет 618 не менялись.</p>
+
+<h2>4. Платонов (УК 000000000038432)</h2>
+<table>
+<thead><tr><th>Поле</th><th>Эталон</th><th>Новое5</th><th>Дельта</th></tr></thead>
+<tbody><tr class='ok'><td>СуммаВывода</td><td class='num'>0</td><td class='num'>0</td><td class='num'>0</td></tr><tr class='ok'><td>НалогооблагаемаяCумма</td><td class='num'>7 655 788.30</td><td class='num'>7 655 788.30</td><td class='num'>0</td></tr><tr class='ok'><td>СуммаВычета</td><td class='num'>42 128 269.62</td><td class='num'>42 128 269.62</td><td class='num'>0</td></tr><tr class='ok'><td>СуммаДохода</td><td class='num'>91 628 393.60</td><td class='num'>91 628 393.60</td><td class='num'>0</td></tr><tr class='ok'><td>СуммаКЗачету</td><td class='num'>0</td><td class='num'>0</td><td class='num'>0</td></tr><tr class='ok'><td>СуммаКУдержанию</td><td class='num'>105 052</td><td class='num'>105 052</td><td class='num'>0</td></tr><tr class='ok'><td>СуммаРанееУдержанногоНДФЛ</td><td class='num'>453 122</td><td class='num'>453 122</td><td class='num'>0</td></tr><tr class='ok'><td>ФинансовыйРезультат</td><td class='num'>3 345 441.69</td><td class='num'>3 345 441.69</td><td class='num'>0</td></tr><tr class='ok'><td>ИзменениеФинРезультата</td><td class='num'>0</td><td class='num'>0</td><td class='num'>0</td></tr><tr class='ok'><td>Пропорция</td><td class='num'>1.83</td><td class='num'>1.83</td><td class='num'>0</td></tr><tr class='ok'><td>Сумма</td><td class='num'>269 252.07</td><td class='num'>269 252.07</td><td class='num'>0</td></tr></tbody>
+</table>
+<tr class='ok'><td>Выводы</td><td>Портфель 2 (Клиент А)</td><td></td><td></td><td></td><td class='sig'></td><td class='sig'></td></tr>
+<tr class='ok'><td>Выводы</td><td>Портфель 1 (Клиент А)</td><td></td><td></td><td></td><td class='sig'></td><td class='sig'></td></tr>
+<tr class='ok'><td>ИнвестиционныйВычетПоПортфелям</td><td>Портфель 1 (Клиент А)</td><td></td><td>618</td><td></td><td class='sig'>Сумма=269 252.07</td><td class='sig'>Сумма=269 252.07</td></tr>
+<tr class='ok'><td>Начисления</td><td>Клиент А</td><td>1530</td><td>201</td><td>13%</td><td class='sig'>НалогооблагаемаяCумма=1 696 782.82; СуммаВычета=42 113 256.71; СуммаДохода=43 810 039.53</td><td class='sig'>НалогооблагаемаяCумма=1 696 782.82; СуммаВычета=42 113 256.71; СуммаДохода=43 810 039.53</td></tr>
+<tr class='ok'><td>Начисления</td><td>Клиент А</td><td>1530</td><td>201</td><td>15%</td><td class='sig'>НалогооблагаемаяCумма=1 641 158.57; СуммаДохода=1 641 158.57</td><td class='sig'>НалогооблагаемаяCумма=1 641 158.57; СуммаДохода=1 641 158.57</td></tr>
+<tr class='ok'><td>Начисления</td><td>Клиент А</td><td>1537</td><td>211</td><td>13%</td><td class='sig'>НалогооблагаемаяCумма=7 436.27; СуммаВычета=331.04; СуммаДохода=7 767.31</td><td class='sig'>НалогооблагаемаяCумма=7 436.27; СуммаВычета=331.04; СуммаДохода=7 767.31</td></tr>
+<tr class='ok'><td>Начисления</td><td>Клиент А</td><td>1537</td><td>211</td><td>13%</td><td class='sig'>НалогооблагаемаяCумма=695 780.91; СуммаВычета=14 681.87; СуммаДохода=710 462.78</td><td class='sig'>НалогооблагаемаяCумма=695 780.91; СуммаВычета=14 681.87; СуммаДохода=710 462.78</td></tr>
+<tr class='ok'><td>ОбщиеРасходы</td><td>Портфель 2 (Клиент А)</td><td></td><td></td><td></td><td class='sig'></td><td class='sig'></td></tr>
+<tr class='ok'><td>ОбщиеРасходы</td><td>Портфель 1 (Клиент А)</td><td></td><td></td><td></td><td class='sig'></td><td class='sig'></td></tr>
+<tr class='ok'><td>Удержания</td><td>Портфель 2 (Клиент А)</td><td></td><td></td><td>15%</td><td class='sig'>СуммаКУдержанию=17 859</td><td class='sig'>СуммаКУдержанию=17 859</td></tr>
+<tr class='ok'><td>Удержания</td><td>Портфель 1 (Клиент А)</td><td></td><td></td><td>13%</td><td class='sig'>НалогооблагаемаяCумма=3 614 629.73; СуммаДохода=45 458 965.41</td><td class='sig'>НалогооблагаемаяCумма=3 614 629.73; СуммаДохода=45 458 965.41</td></tr>
+<tr class='ok'><td>Удержания</td><td>Портфель 1 (Клиент А)</td><td></td><td></td><td>15%</td><td class='sig'>СуммаКУдержанию=87 193</td><td class='sig'>СуммаКУдержанию=87 193</td></tr>
+
+<h2>5. Другие УК с денежным расхождением</h2>
+<table>
+<thead><tr><th>Номер</th><th>Ссылка</th><th>Дельта</th><th>Строк эталон</th><th>Строк новое</th></tr></thead>
+<tbody><tr class='ok'><td colspan='5'>Нет</td></tr></tbody>
+</table>
+
+<h2>6. Сообщения</h2>
+<table>
+<thead><tr><th>Тип</th><th>Эталон</th><th>Новое5</th><th>Дельта</th></tr></thead>
+<tbody><tr class='warn'><td>Граница актуальности сдвинута</td><td class='num'>107</td><td class='num'>0</td><td class='num'>-107</td></tr><tr class='warn'><td>Документ не проведен</td><td class='num'>7</td><td class='num'>8</td><td class='num'>1</td></tr><tr class='warn'><td>Невозможно распределить НДФЛ</td><td class='num'>361</td><td class='num'>438</td><td class='num'>77</td></tr></tbody>
+</table>
+<p>Клиентов «невозможно распределить»: эталон 361, новое5 438 (как в ПоНовому4 было 439; в ПоНовому5 пропало сообщение по Ярынкину Д.В., которое в эталоне есть).</p>
+<p>Уникальных строк только в эталоне: 108, только в новом: 79. Сообщения «Граница актуальности сдвинута» в новом прогоне нет (в эталоне 107) — тот же паттерн, что в ПоНовому4.</p>
+
+<h2>7. Блокировки в логе</h2>
+<p class='small'>Сообщений про блокировки / повтор / 1222 в логе нет.</p>
+
+<footer>Скрипт compare_ndfl_old_vs_new5.py. JSON рядом с этим HTML.</footer>
+</div>
+</body>
+</html>
