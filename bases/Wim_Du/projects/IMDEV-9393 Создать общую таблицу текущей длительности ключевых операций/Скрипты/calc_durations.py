@@ -164,6 +164,26 @@ def duration_stats(picked, method):
         # и разворачиваем её на текущую базу с учётом числа потоков.
         return None, None, len(picked), 'пересчёт от удельной стоимости договора'
 
+    if method == 'fixed':
+        # Длительность задана внешним замером (например отчёт по другой задаче).
+        return None, None, 0, 'фиксированный замер'
+
+    if method == 'daily_sum':
+        # Поштучные замеры: сумма секунд и число договоров за календарный день,
+        # затем среднее по дням. Это ежедневный поток (не полный квартальный прогон).
+        per_day = collections.defaultdict(lambda: {'sec': 0.0, 'n': 0.0})
+        for record in picked:
+            if not record.get('local') or record['sec'] <= 0:
+                continue
+            day = record['local'].date()
+            per_day[day]['sec'] += record['sec']
+            per_day[day]['n'] += record['weight'] if record['weight'] > 0 else 1.0
+        if not per_day:
+            return None, None, 0, ''
+        values = sorted(v['sec'] for v in per_day.values())
+        return (statistics.mean(values), values, len(values),
+                'средняя сумма за день по %d дням (поштучные отчёты)' % len(values))
+
     if method == 'cycle':
         cycles = build_cycles(picked)
         per_day = collections.defaultdict(float)
@@ -197,9 +217,33 @@ def duration_stats(picked, method):
     return None, None, 0, ''
 
 
-def typical_weight(picked):
+def typical_weight(picked, mode='median'):
+    """Типовой объём замера: медиана или среднее по весу.
+
+    Параметры:
+        picked - отобранные замеры
+        mode   - 'median' или 'mean'
+
+    Возвращаемое значение:
+        Число либо Неопределено, если весов нет.
+    """
     weights = [r['weight'] for r in picked if r['weight'] > 0]
-    return statistics.median(weights) if weights else None
+    if not weights:
+        return None
+    return statistics.mean(weights) if mode == 'mean' else statistics.median(weights)
+
+
+def daily_avg_contracts(picked):
+    """Среднее число договоров (весов) за календарный день по поштучным замерам."""
+    per_day = collections.defaultdict(float)
+    for record in picked:
+        if not record.get('local'):
+            continue
+        per_day[record['local'].date()] += (
+            record['weight'] if record['weight'] > 0 else 1.0)
+    if not per_day:
+        return None
+    return statistics.mean(per_day.values())
 
 
 def start_time(picked, method):
@@ -404,9 +448,10 @@ def unit_cost(picked, unit_is_run=False):
 def target_volume(row):
     """Объём работы операции при целевой клиентской базе.
 
-    Если вес замера - это договоры, целевой объём известен точно. Для прочих
-    единиц (сделки, платежи, строки отчёта) объём считается пропорциональным
-    числу договоров и растёт с той же кратностью.
+    Если вес замера - это договоры целиком, целевой объём = DOGOVOROV_PLAN.
+    Если операция работает по потоку новинок (scale_by_weight), целевой объём -
+    средний вес, умноженный на кратность роста базы.
+    Для прочих единиц объём считается пропорциональным числу договоров.
 
     Параметры:
         row - рассчитанная строка таблицы
@@ -414,9 +459,11 @@ def target_volume(row):
     Возвращаемое значение:
         Число единиц объёма либо Неопределено, если типовой объём неизвестен.
     """
+    weight = row.get('weight_typical')
+    if row.get('scale_by_weight') and weight:
+        return weight * KRATNOST
     if row.get('volume_unit') == 'договоров':
         return DOGOVOROV_PLAN
-    weight = row.get('weight_typical')
     return weight * KRATNOST if weight else None
 
 
@@ -463,16 +510,56 @@ def main():
         records = dev if spec.get('source') == 'dev' else prod
         picked = select(records, spec)
         seconds, values, count, how = duration_stats(picked, spec.get('method'))
-        weight = typical_weight(picked)
+        weight = typical_weight(picked, spec.get('weight_stat', 'median'))
+        if spec.get('method') == 'daily_sum' and picked:
+            weight = daily_avg_contracts(picked)
         model = fit_model(records, spec) if seconds else None
+
+        # Фиксированный замер из внешнего отчёта (не из выгрузки ЗамерыВремени).
+        if spec.get('method') == 'fixed' and spec.get('fixed_sec'):
+            seconds = float(spec['fixed_sec'])
+            values = [seconds]
+            count = 1
+            weight = float(spec.get('fixed_weight') or DOGOVOROV_SEYCHAS)
+            how = 'замер полного объёма: %s' % spec.get('fixed_note', 'внешний отчёт')
+            per_unit = seconds / weight if weight > 0 else 0.0
+            model = {
+                'const_sec': 0.0,
+                'per_unit_sec': per_unit,
+                'unit': spec.get('volume_unit', 'договоров'),
+                'points': 1,
+                'note': 'удельная стоимость по замеру полного объёма: '
+                        '%.0f договоров -> %.0f с (%.4f с на договор)'
+                        % (weight, seconds, per_unit),
+            }
+
         # Контроль состоятельности: модель, посчитанная на текущем объёме, должна
         # воспроизводить измеренную сейчас длительность. Если расходится в разы,
         # значит отобранные для длительности замеры и точки подгонки описывают
         # разные режимы работы - такой модели доверять нельзя.
-        if model and weight:
+        if model and weight and seconds and spec.get('method') != 'fixed':
             predicted = model['const_sec'] + model['per_unit_sec'] * weight
             if not seconds / 2.5 <= predicted <= seconds * 2.5:
                 model = None
+
+        # Поток новинок (только новые договоры): модель от среднего веса замера.
+        # Прогноз = (длительность / средний_вес) * (средний_вес * 10).
+        if (spec.get('scale_by_weight') and seconds and weight and weight > 0
+                and model is None):
+            per_unit = seconds / weight
+            model = {
+                'const_sec': 0.0,
+                'per_unit_sec': per_unit,
+                'unit': spec.get('volume_unit', 'ед.'),
+                'points': count,
+                'note': 'поток новинок: средний вес замера %.2f %s, '
+                        '%.2f с на единицу; прогноз на средний вес x%.0f = %.2f'
+                        % (weight, spec.get('volume_unit', 'ед.'), per_unit,
+                           KRATNOST, weight * KRATNOST),
+            }
+            how = ((how + '; ') if how else '') + (
+                'средний вес замера %.2f, прогноз от веса x%.0f'
+                % (weight, KRATNOST))
 
         # Время запуска можно брать из другого контура (например длительность с
         # разработческой базы, а расписание - с ПРОД, где часы старта достоверны).
@@ -481,13 +568,21 @@ def main():
             select(schedule_records, spec)
             if spec.get('schedule_source') == 'prod' else picked)
 
+        if spec.get('source_name'):
+            source_label = spec['source_name']
+        elif spec.get('source') == 'dev':
+            source_label = 'Разработческая база'
+        else:
+            source_label = 'ПРОД'
+
         row = {
             'kind': 'op',
             'id': spec['id'],
             'name': spec['name'],
+            'real_name': spec.get('real_name', ''),
             'periodicity': spec['periodicity'],
             'object': spec['object'],
-            'source': 'Разработческая база' if spec.get('source') == 'dev' else 'ПРОД',
+            'source': source_label,
             'keys': spec['keys'],
             'threads_now': spec['threads_now'],
             'threads_max': spec['threads_max'],
@@ -495,12 +590,14 @@ def main():
             'threads_reserve': spec.get('threads_reserve', ''),
             'depends': spec.get('depends', False),
             'depends_note': spec.get('depends_note', ''),
+            'scale_by_weight': spec.get('scale_by_weight', False),
             'volume_unit': spec.get('volume_unit', ''),
             'window_min': spec['window_min'],
             'window_note': spec.get('window_note', ''),
             'comment': spec.get('comment', ''),
             'estimate': spec.get('estimate', False),
             'no_measurement': spec.get('no_measurement', False),
+            'no_forecast': spec.get('no_forecast', False),
             'analog_note': spec.get('analog_note', ''),
             'measurements': count,
             'how': how,
@@ -523,6 +620,34 @@ def main():
             row['sec_min'] = min(values)
             row['sec_max'] = max(values)
             row['min_max'] = max(values) / 60.0
+
+        # Ожидаемое ускорение после доработки, уже подтверждённой на соседней операции
+        # (например IMDEV-8863.1 на вечерних -> тот же эффект на утренних).
+        speedup = float(spec.get('speedup_factor') or 1.0)
+        if speedup > 1.0 and row.get('sec_now'):
+            before = row['sec_now']
+            row['sec_now'] = before / speedup
+            row['min_now'] = row['sec_now'] / 60.0
+            if row.get('sec_min') is not None:
+                row['sec_min'] = row['sec_min'] / speedup
+            if row.get('sec_max') is not None:
+                row['sec_max'] = row['sec_max'] / speedup
+                row['min_max'] = row['sec_max'] / 60.0
+            if row.get('model'):
+                row['model'] = dict(row['model'])
+                row['model']['const_sec'] = row['model']['const_sec'] / speedup
+                row['model']['per_unit_sec'] = row['model']['per_unit_sec'] / speedup
+                note = row['model'].get('note', '')
+                row['model']['note'] = (
+                    (note + ' ') if note else '') + (
+                    'учтено ускорение x%.1f: %s' % (speedup, spec.get('speedup_note', '')))
+            row['estimate'] = True
+            row['how'] = ((row.get('how') or '') +
+                          ('; ' if row.get('how') else '') +
+                          'с ускорением x%.1f (%s)' % (speedup, spec.get('speedup_note', '')))
+            row['speedup_factor'] = speedup
+            row['speedup_before_min'] = before / 60.0
+
         # Замер в код не вставлен: ничего не подставляем, в отчёте будет прочерк.
         if row['no_measurement']:
             row['sec_now'] = None
@@ -590,7 +715,7 @@ def main():
         row['start_time'] = row.get('start_time') or donor.get('start_time')
 
     # Прогноз на 250 000 договоров: две оценки рядом - линейная x10 по просьбе
-    # руководителя и расчётная по предельной стоимости договора.
+    # технического архитектора и расчётная по предельной стоимости договора.
     # Операции, не зависящие от числа договоров (в т.ч. сделки), не масштабируем.
     for row in result:
         if row.get('kind') != 'op' or not row.get('sec_now'):
@@ -612,6 +737,32 @@ def main():
         worst = max(v for v in (row['sec_linear'], row['sec_model']) if v)
         row['hours_worst'] = worst / 3600.0
         row['limit_contracts'] = contracts_limit(row)
+
+        # Без массового квартального замера прогноз и предел не публикуем.
+        # Текущую длительность оставляем: среднее за день + ср. число договоров.
+        if row.get('no_forecast'):
+            row['sec_linear'] = None
+            row['sec_model'] = None
+            row['min_linear'] = None
+            row['min_model'] = None
+            row['hours_worst'] = None
+            row['limit_contracts'] = None
+            row['target_volume'] = None
+            # Не разворачиваем unit-оценку на всю базу: sec_now уже среднее за день.
+            if row.get('sec_now'):
+                contracts = row.get('weight_typical')
+                row['how'] = (
+                    'среднее за день: %.1f мин, среднее к-во договоров/день: %s; '
+                    'полный квартальный прогон в выгрузке отсутствует - прогноз не публикуется'
+                    % (row['sec_now'] / 60.0,
+                       ('%.0f' % contracts if contracts else '-')))
+                row['comment'] = (
+                    'Показано среднее за день по поштучным замерам (не полный квартальный '
+                    'прогон). Ср. %.1f мин/день, ср. %s договоров/день. Прогноз и предел '
+                    'не указываются до квартальной выгрузки массового ключа '
+                    '("Отчет Управляющего ДУ 482П РозничноеДУ выгрузка").'
+                    % (row['sec_now'] / 60.0,
+                       ('%.0f' % contracts if contracts else '-')))
 
     payload = {
         'meta': {

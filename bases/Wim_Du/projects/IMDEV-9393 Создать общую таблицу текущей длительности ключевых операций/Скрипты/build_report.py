@@ -65,10 +65,13 @@ def verdict(row):
         row - строка таблицы из результата расчёта
 
     Возвращаемое значение:
-        Строка: 'crit', 'warn', 'ok' либо 'none' (нет замера в коде).
+        Строка: 'crit', 'warn', 'ok', 'none' (нет замера в коде)
+        либо 'pending' (нет квартальной выгрузки - прогноз не публикуем).
     """
     if row.get('no_measurement') and row.get('sec_now') is None:
         return 'none'
+    if row.get('no_forecast'):
+        return 'pending'
     if not row.get('depends'):
         return 'ok'
     limit = row.get('limit_contracts')
@@ -93,11 +96,9 @@ def fmt_min(value):
 
 def fmt_limit(row):
     """Предел по числу договоров в тысячах, с отсечкой заведомо больших значений."""
-    if row.get('no_measurement'):
+    if row.get('no_measurement') or row.get('no_forecast'):
         return '-'
     if not row.get('depends'):
-        if row.get('volume_unit') == 'сделок':
-            return 'от сделок'
         return 'не зависит'
     limit = row.get('limit_contracts')
     if limit is None:
@@ -111,19 +112,20 @@ def fmt_depends(row):
     if row.get('no_measurement') and row.get('sec_now') is None:
         return 'Да' if row.get('depends') else 'Нет'
     if not row.get('depends'):
-        if row.get('volume_unit') == 'сделок':
-            return 'Нет (от сделок)'
         return 'Нет'
+    if row.get('volume_unit') == 'сделок':
+        return 'Да (через сделки)'
     return 'Да'
 
 
 def cell_values(row, number):
     """Готовит список значений строки в порядке COLUMNS."""
+    name = row['name']
     if row.get('no_measurement') and row.get('sec_now') is None:
         dash = 'нет замеров'
         return [
             number,
-            row['name'],
+            name,
             row['periodicity'],
             '-',
             row['object'],
@@ -139,9 +141,33 @@ def cell_values(row, number):
             '%.0f' % row['window_min'] if row.get('window_min') is not None else '-',
             row.get('comment', ''),
         ]
+    if row.get('no_forecast'):
+        contracts = row.get('weight_typical')
+        now_text = fmt_min(row.get('min_now'))
+        if row.get('min_now') is not None and contracts:
+            now_text = '%s (ср. %.0f дог./день)' % (now_text, contracts)
+        max_text = fmt_min(row.get('min_max'))
+        return [
+            number,
+            name,
+            row['periodicity'],
+            row.get('schedule') or '-',
+            row['object'],
+            row['source'],
+            row['threads_now'],
+            row['threads_max'],
+            now_text,
+            max_text,
+            '-',
+            '-',
+            fmt_depends(row),
+            '-',
+            '%.0f' % row['window_min'] if row.get('window_min') is not None else '-',
+            row.get('comment', ''),
+        ]
     return [
         number,
-        row['name'],
+        name,
         row['periodicity'],
         row.get('schedule') or '-',
         row['object'],
@@ -230,13 +256,18 @@ HTML_HEAD = """<!DOCTYPE html>
  tr.crit td.mark {background: #fdecea; border-left: 3px solid #dc3545;}
  tr.warn td.mark {background: #fff8e1; border-left: 3px solid #ffc107;}
  tr.ok   td.mark {background: #eaf7ee; border-left: 3px solid #28a745;}
+ tr.pending td {background: #ffe0b2;}
+ tr.pending td.mark {background: #ffcc80; border-left: 3px solid #ef6c00;}
  td.num {text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums;}
  td.name {font-weight: 600;}
+ .real-name {display: block; font-weight: 400; font-size: 11px; color: #5c6b7a;
+             margin-top: 2px;}
  .tag {display: inline-block; padding: 1px 7px; border-radius: 9px; font-size: 10.5px;
        font-weight: 600; white-space: nowrap;}
  .tag.est {background: #fff3cd; color: #856404; border: 1px solid #ffe08a;}
  .tag.dev {background: #f3e9fa; color: #5c3480; border: 1px solid #d9c2ec;}
  .tag.nom {background: #e9ecef; color: #495057; border: 1px solid #ced4da;}
+ .tag.pending {background: #ef6c00; color: #fff;}
  .tag.crit {background: #dc3545; color: #fff;}
  .tag.warn {background: #ffc107; color: #4d3b00;}
  .tag.ok {background: #28a745; color: #fff;}
@@ -293,30 +324,30 @@ def build_html(payload):
     out.append("""
 <h2>1. Задача и что сделано</h2>
 <div class="box">
- <p>Руководитель запросил единую таблицу по образцу таблицы МО Розница: по каждой
+ <p>Технический архитектор запросил единую таблицу по образцу таблицы МО Розница: по каждой
  ключевой операции Розничного ДУ показать текущую длительность, число потоков сейчас
  и максимально возможное, прогноз длительности при росте клиентской базы в 10 раз
  и предельное число договоров, которое операция выдерживает в своём окне.</p>
- <p>В таблице %(ops)d операций: 17 из списка руководителя и %(extra)d операций,
+ <p>В таблице %(ops)d операций: 17 из списка технического архитектора и %(extra)d операций,
  выявленных дополнительно при разборе выгрузки замеров и кода.</p>
 </div>
 <div class="box blue">
  <b>Источники данных</b>
  <ul>
-  <li><b>ПРОД, регистр ЗамерыВремени</b> &mdash; <code>%(prod)s</code>.
+  <li><b>ПРОД, регистр ЗамерыВремени</b> &mdash; выгрузка по задаче IMDEV-9391.
       В выгрузке %(prod_ops)d различных ключевых операций.</li>
-  <li><b>Разработческая база</b> &mdash; <code>%(dev)s</code>.
+  <li><b>Разработческая база</b> &mdash; замеры вечерних регламентов после оптимизации.
       Используется только для вечерних регламентов: там уже стоит оптимизация,
       которая скоро уйдёт на ПРОД.</li>
-  <li><b>Исходный код конфигурации</b> &mdash; <code>C:\\1c\\Cursor_1c\\WORK\\Wim_Du\\SRC</code>.
-      Из него взято фактическое и предельное число потоков по каждому объекту.</li>
+  <li><b>IMDEV-9153 (DR)</b> &mdash; замер полного объёма начисления вознаграждения
+      (параллельная версия).</li>
+  <li><b>Исходный код конфигурации Wim_Du</b> &mdash; из него взято фактическое
+      и предельное число потоков по каждому объекту.</li>
  </ul>
 </div>
 """ % {
         'ops': len(ops),
         'extra': len(ops) - 17,
-        'prod': html_escape(meta['prod_source']),
-        'dev': html_escape(meta['dev_source']),
         'prod_ops': meta['prod_ops'],
     })
 
@@ -358,7 +389,7 @@ def build_html(payload):
  <p>В таблице сознательно две колонки прогноза, потому что они отвечают на разные вопросы.</p>
  <ul>
   <li><b>Прогноз x10 линейный</b> &mdash; текущая длительность, умноженная на 10, как
-      просил руководитель. Простая и проверяемая цифра.</li>
+      просил технический архитектор. Простая и проверяемая цифра.</li>
   <li><b>Прогноз расчётный</b> &mdash; линейная модель по фактическим замерам:
       <code>Длительность = ПостояннаяЧасть + СтоимостьДоговора * ЧислоДоговоров</code>.
       Наклон берётся по <b>двум самым крупным уровням объёма</b>, а не по всему диапазону:
@@ -396,11 +427,15 @@ def build_html(payload):
  <p>Подсветка строк: <span class="tag crit">красный</span> предел ниже целевых
  250 тыс. договоров, <span class="tag warn">жёлтый</span> предел от 250 до 500 тыс.
  (запас менее двукратного), <span class="tag ok">зелёный</span> запас достаточный
- либо операция не зависит от числа клиентов, <span class="tag nom">серый</span>
+ либо операция не зависит от числа клиентов,
+ <span class="tag pending">оранжевый</span> нет квартальной выгрузки
+ (показано среднее за день, прогноз полного прогона не публикуется),
+ <span class="tag nom">серый</span>
  замер в код не вставлен (прочерк, без расчёта).</p>
- <p><b>Загрузка и исполнение сделок</b> слабо зависят от числа договоров: объём
- задаёт число сделок. Прогноз x10 по договорам к ним не применяется. Для исполнения
- сделок окно: не более 2 часов на 200 тыс. сделок.</p>
+ <p><b>Загрузка и исполнение сделок</b> зависят от числа сделок. Допущение для прогноза:
+ средняя интенсивность сделок на договор постоянна, поэтому при росте базы x10 объём
+ сделок тоже x10 (прогноз x10 применяется). Для исполнения сделок окно: не более
+ 2 часов на 200 тыс. сделок.</p>
 </div>
 """)
 
@@ -442,8 +477,13 @@ def build_html(payload):
                 css.append('name')
             text = html_escape(value)
             if key == 'name':
+                if row.get('real_name'):
+                    text += ('<span class="real-name">реальное название: %s</span>'
+                             % html_escape(row['real_name']))
                 if row.get('no_measurement'):
                     text += ' <span class="tag nom">нет замеров</span>'
+                elif row.get('no_forecast'):
+                    text += ' <span class="tag pending">нет квартальной выгрузки</span>'
                 elif row.get('estimate'):
                     text += ' <span class="tag est">оценка</span>'
                 if row.get('source') == 'Разработческая база':
@@ -480,21 +520,28 @@ def build_html(payload):
                       html_escape(row.get('threads_note', ''))))
     out.append('</ul></div>\n')
 
-    deals = [r for r in independent if r.get('volume_unit') == 'сделок']
-    other_indep = [r for r in independent if r.get('volume_unit') != 'сделок']
+    deals = [r for r in ops if r.get('volume_unit') == 'сделок' and r.get('depends')
+             and not r.get('no_measurement')]
+    other_indep = independent
     out.append('<div class="box ok" style="background:#eaf7ee;border-left:4px solid #28a745">'
                '<b>Не зависят от числа клиентов (%d)</b>'
                '<p>Прогноз x10 по договорам к ним не применяется.</p><ul>' % len(independent))
-    if deals:
-        out.append('<li><b>Зависят от числа сделок (не договоров):</b> ')
-        out.append(', '.join('<b>%s</b> (%s мин)' % (html_escape(r['name']), fmt_min(r.get('min_now')))
-                             for r in deals))
-        out.append('. Для исполнения сделок окно: не более 2 часов на 200 тыс. сделок.</li>')
     for row in other_indep:
         out.append('<li><b>%s</b> &mdash; %s мин. %s</li>'
                    % (html_escape(row['name']), fmt_min(row.get('min_now')),
                       html_escape(row.get('depends_note', ''))))
     out.append('</ul></div>\n')
+    if deals:
+        out.append('<div class="box blue"><b>Зависят от числа сделок '
+                   '(прогноз через интенсивность на договор)</b>'
+                   '<p>Допущение: сделок на договор не меняется, база x10 -> сделки x10. '
+                   'Для исполнения окно: не более 2 часов на 200 тыс. сделок.</p><ul>')
+        for row in deals:
+            out.append('<li><b>%s</b> &mdash; сейчас %s мин, x10 %s мин, предел %s тыс. %s</li>'
+                       % (html_escape(row['name']), fmt_min(row.get('min_now')),
+                          fmt_min(row.get('min_linear')), fmt_limit(row),
+                          html_escape(row.get('depends_note', ''))))
+        out.append('</ul></div>\n')
 
     out.append('<h2>6. Что требует замера</h2>\n')
     if no_meas:
@@ -522,18 +569,25 @@ def build_html(payload):
             continue
         number += 1
         mark = verdict(row)
-        tag = {'crit': 'crit', 'warn': 'warn', 'ok': 'ok', 'none': 'nom'}[mark]
+        tag = {'crit': 'crit', 'warn': 'warn', 'ok': 'ok', 'none': 'nom',
+               'pending': 'pending'}[mark]
         label = {'crit': 'не выдержит 250 тыс.',
                  'warn': 'запас менее двукратного',
                  'ok': 'запас достаточный',
-                 'none': 'нет замеров'}[mark]
+                 'none': 'нет замеров',
+                 'pending': 'нет квартальной выгрузки'}[mark]
         extra = ''
         if row.get('no_measurement'):
             extra = ' <span class="tag nom">нет замеров</span>'
+        elif row.get('no_forecast'):
+            extra = ' <span class="tag pending">прогноз не публикуется</span>'
         elif row.get('estimate'):
             extra = ' <span class="tag est">оценка</span>'
         out.append('<div class="box"><h3>%d. %s <span class="tag %s">%s</span>%s</h3>'
                    % (number, html_escape(row['name']), tag, label, extra))
+        if row.get('real_name'):
+            out.append('<p class="det"><b>Реальное название:</b> %s</p>'
+                       % html_escape(row['real_name']))
         out.append('<p class="det"><b>Объект:</b> %s &nbsp;|&nbsp; '
                    '<b>Периодичность:</b> %s &nbsp;|&nbsp; <b>Запуск:</b> %s &nbsp;|&nbsp; '
                    '<b>Источник:</b> %s &nbsp;|&nbsp; '
@@ -541,13 +595,25 @@ def build_html(payload):
                    % (html_escape(row['object']), html_escape(row['periodicity']),
                       html_escape(row.get('schedule') or '-'),
                       html_escape(row['source']), row['threads_now'], row['threads_max']))
-        out.append('<p class="det"><b>Сейчас:</b> %s мин &nbsp;|&nbsp; '
-                   '<b>Макс из замеров:</b> %s мин &nbsp;|&nbsp; '
-                   '<b>x10 линейно:</b> %s мин &nbsp;|&nbsp; <b>расчётно:</b> %s мин '
-                   '&nbsp;|&nbsp; <b>предел:</b> %s тыс. договоров при окне %s мин</p>'
-                   % (fmt_min(row.get('min_now')), fmt_min(row.get('min_max')),
-                      fmt_min(row.get('min_linear')), fmt_min(row.get('min_model')),
-                      fmt_limit(row), '%.0f' % row['window_min']))
+        if row.get('no_forecast'):
+            contracts = row.get('weight_typical')
+            out.append('<p class="det"><b>Сейчас (ср. за день):</b> %s мин '
+                       '&nbsp;|&nbsp; <b>Ср. договоров/день:</b> %s '
+                       '&nbsp;|&nbsp; <b>Макс за день:</b> %s мин '
+                       '&nbsp;|&nbsp; <b>Прогноз / предел:</b> не публикуются '
+                       '(нет квартальной выгрузки) при окне %s мин</p>'
+                       % (fmt_min(row.get('min_now')),
+                          ('%.0f' % contracts if contracts else '-'),
+                          fmt_min(row.get('min_max')),
+                          '%.0f' % row['window_min']))
+        else:
+            out.append('<p class="det"><b>Сейчас:</b> %s мин &nbsp;|&nbsp; '
+                       '<b>Макс из замеров:</b> %s мин &nbsp;|&nbsp; '
+                       '<b>x10 линейно:</b> %s мин &nbsp;|&nbsp; <b>расчётно:</b> %s мин '
+                       '&nbsp;|&nbsp; <b>предел:</b> %s тыс. договоров при окне %s мин</p>'
+                       % (fmt_min(row.get('min_now')), fmt_min(row.get('min_max')),
+                          fmt_min(row.get('min_linear')), fmt_min(row.get('min_model')),
+                          fmt_limit(row), '%.0f' % row['window_min']))
         out.append('<p class="det">%s</p>' % html_escape(methodics(row)))
         if row.get('comment'):
             out.append('<p class="det"><b>Комментарий:</b> %s</p>'
@@ -572,6 +638,7 @@ FILL = {
     'warn': PatternFill('solid', fgColor='FFF8E1'),
     'ok': PatternFill('solid', fgColor='EAF7EE'),
     'none': PatternFill('solid', fgColor='E9ECEF'),
+    'pending': PatternFill('solid', fgColor='FFE0B2'),
     'grp': PatternFill('solid', fgColor='D6E2F0'),
     'head': PatternFill('solid', fgColor='17365D'),
 }
@@ -621,10 +688,23 @@ def build_xlsx(payload):
         values = cell_values(row, number)
         for index, ((key, _t, _w), value) in enumerate(zip(COLUMNS, values), start=1):
             # Числовые колонки пишем числами, чтобы работали сортировка и фильтры.
-            if key in ('min_now', 'min_max', 'min_linear', 'min_model') and value not in ('-', 'нет замеров'):
+            # Для no_forecast в "сейчас" текст вида "4.7 (ср. 20 дог./день)" - оставляем строкой.
+            if (key in ('min_now', 'min_max', 'min_linear', 'min_model')
+                    and value not in ('-', 'нет замеров')
+                    and not isinstance(value, str)):
                 value = float(value)
+            elif (key in ('min_now', 'min_max', 'min_linear', 'min_model')
+                  and isinstance(value, str)
+                  and value not in ('-', 'нет замеров')
+                  and 'дог' not in value):
+                try:
+                    value = float(value)
+                except ValueError:
+                    pass
             elif key == 'limit' and value not in ('не зависит', 'нужен замер', '> 1 000', '-', 'от сделок', 'нет замеров'):
                 value = float(value)
+            if key == 'name' and row.get('real_name'):
+                value = '%s\nреальное название: %s' % (row['name'], row['real_name'])
             cell = sheet.cell(row=line, column=index, value=value)
             cell.fill = FILL[mark]
             cell.border = BORDER
@@ -669,6 +749,8 @@ def build_xlsx(payload):
         ('Красный', 'Предел ниже целевых 250 тыс. договоров - операция не выдержит рост базы.'),
         ('Жёлтый', 'Предел от 250 до 500 тыс. договоров - запас менее двукратного.'),
         ('Зелёный', 'Запас достаточный либо операция не зависит от числа клиентов.'),
+        ('Оранжевый', 'Нет квартальной выгрузки массового прогона: показано среднее за день '
+         'и среднее число договоров/день; прогноз и предел не публикуются.'),
         ('Серый', 'Замер в код не вставлен: длительность и прогноз не рассчитываются (прочерк).'),
         ('', ''),
         ('Колонки', ''),
@@ -681,8 +763,9 @@ def build_xlsx(payload):
          'По фактическим замерам: первое типичное время старта за день, частота запусков, '
          'последнее типичное время старта. Формат: ЧЧ:ММ, N мин (или 1 раз), ЧЧ:ММ.'),
         ('Прогноз x10 линейный',
-         'Текущая длительность, умноженная на 10. Не применяется к операциям, '
-         'не зависящим от числа договоров (котировки, счета ЕРС, загрузка/исполнение сделок).'),
+         'Текущая длительность, умноженная на 10. Для загрузки/исполнения сделок '
+         'применяется по допущению: интенсивность сделок на договор постоянна. '
+         'Не применяется к операциям, не зависящим от числа договоров (котировки, счета ЕРС).'),
         ('Прогноз расчётный',
          'Линейная модель ПостояннаяЧасть + СтоимостьЕдиницы * Объём. '
          'Наклон по двум самым крупным уровням объёма из фактических замеров.'),
@@ -692,7 +775,8 @@ def build_xlsx(payload):
          'максимум приравнен к текущему значению, а резерв описан на листе "Методика и детали".'),
         ('Предел, тыс. договоров',
          'Число договоров, при котором операция упирается в своё окно выполнения. '
-         'Для загрузки/исполнения сделок - "от сделок" (окно исполнения: 2 ч на 200 тыс. сделок).'),
+         'Для сделок - через пересчёт объёма сделок при постоянной интенсивности на договор '
+         '(окно исполнения: 2 ч на 200 тыс. сделок).'),
         ('Пометка "оценка"',
          'Массового прогона в выгрузке нет, цифра получена пересчётом от удельной '
          'стоимости договора. Требуется замер массового прогона.'),
@@ -707,7 +791,8 @@ def build_xlsx(payload):
         text.alignment = Alignment(wrap_text=True, vertical='top')
         text.font = Font(size=10)
     for name, color in (('Красный', 'FDECEA'), ('Жёлтый', 'FFF8E1'),
-                        ('Зелёный', 'EAF7EE'), ('Серый', 'E9ECEF')):
+                        ('Зелёный', 'EAF7EE'), ('Оранжевый', 'FFE0B2'),
+                        ('Серый', 'E9ECEF')):
         for index in range(1, len(rows_legend) + 1):
             if legend.cell(row=index, column=1).value == name:
                 legend.cell(row=index, column=1).fill = PatternFill('solid', fgColor=color)
