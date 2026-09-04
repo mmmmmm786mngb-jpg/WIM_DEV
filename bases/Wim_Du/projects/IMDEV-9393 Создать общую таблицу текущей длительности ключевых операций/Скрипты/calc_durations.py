@@ -217,6 +217,58 @@ def duration_stats(picked, method):
     return None, None, 0, ''
 
 
+def weight_at_max_duration(picked, method):
+    """Вес (объём) замера с максимальной длительностью.
+
+    Для method=single берётся замер с наибольшим sec.
+    Для cycle - вес в самом длинном цикле: максимум по этапам (не сумма),
+    чтобы не удваивать сделки на получении и создании.
+    Для span - сумма весов за день с максимальным календарным окном.
+
+    Параметры:
+        picked - отобранные замеры
+        method - метод агрегации длительности
+
+    Возвращаемое значение:
+        Число либо Неопределено.
+    """
+    if not picked:
+        return None
+    if method == 'cycle':
+        cycles = build_cycles(picked)
+        if not cycles:
+            return None
+        best = max(cycles, key=lambda cycle: sum(r['sec'] for r in cycle))
+        weights = [r['weight'] for r in best if r.get('weight')]
+        return max(weights) if weights else None
+    if method == 'span':
+        per_day = collections.defaultdict(list)
+        for record in picked:
+            if record.get('local'):
+                per_day[record['local'].date()].append(record)
+        best_weight = None
+        best_span = -1.0
+        for day_records in per_day.values():
+            starts = [r['start'] for r in day_records if r.get('start')]
+            finishes = [r['finish'] for r in day_records if r.get('finish')]
+            if not starts or not finishes:
+                continue
+            span = (max(finishes) - min(starts)).total_seconds()
+            if span <= best_span:
+                continue
+            best_span = span
+            weights = [r['weight'] for r in day_records if r.get('weight')]
+            best_weight = max(weights) if weights else None
+        return best_weight
+    best = None
+    for record in picked:
+        if record.get('sec', 0) <= 0:
+            continue
+        if best is None or record['sec'] > best['sec']:
+            best = record
+    return best['weight'] if best and best.get('weight') else None
+
+
 def typical_weight(picked, mode='median'):
     """Типовой объём замера: медиана или среднее по весу.
 
@@ -479,6 +531,12 @@ def contracts_limit(row):
     if not row.get('depends') or not row.get('sec_now'):
         return None
     window_sec = float(row['window_min']) * 60.0
+
+    # 1 единица объёма = 1 договор: предел от объёма на худшем замере.
+    if (row.get('volume_as_contracts') and row.get('weight_at_max')
+            and row.get('sec_max') and row['sec_max'] > 0):
+        return row['weight_at_max'] * window_sec / row['sec_max']
+
     model = row.get('model')
     if model and model['per_unit_sec'] > 0:
         # Сколько единиц объёма влезает в окно.
@@ -513,6 +571,7 @@ def main():
         weight = typical_weight(picked, spec.get('weight_stat', 'median'))
         if spec.get('method') == 'daily_sum' and picked:
             weight = daily_avg_contracts(picked)
+        weight_max = weight_at_max_duration(picked, spec.get('method'))
         model = fit_model(records, spec) if seconds else None
 
         # Фиксированный замер из внешнего отчёта (не из выгрузки ЗамерыВремени).
@@ -521,6 +580,7 @@ def main():
             values = [seconds]
             count = 1
             weight = float(spec.get('fixed_weight') or DOGOVOROV_SEYCHAS)
+            weight_max = weight
             how = 'замер полного объёма: %s' % spec.get('fixed_note', 'внешний отчёт')
             per_unit = seconds / weight if weight > 0 else 0.0
             model = {
@@ -602,6 +662,8 @@ def main():
             'measurements': count,
             'how': how,
             'weight_typical': weight,
+            'weight_at_max': weight_max,
+            'volume_as_contracts': bool(spec.get('volume_as_contracts')),
             'sec_now': seconds,
             'min_now': seconds / 60.0 if seconds else None,
             'min_max': None,

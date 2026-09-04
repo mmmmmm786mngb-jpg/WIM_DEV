@@ -1,11 +1,15 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""IMDEV-9393: интерактивная копия Excel для сценария по потокам.
+"""IMDEV-9393: интерактивный What-If Excel (вариант от худшего замера).
 
-Копия таблицы ключевых операций, где:
-  - колонка "Потоков макс" заменена на "БУДЕТ ПОТОКОВ" (яркая, редактируемая);
-  - после предела по договорам добавлены расчётные колонки (голубые) с формулами Excel:
-    при изменении БУДЕТ ПОТОКОВ пересчитываются КВО и связанные показатели.
+Файл KeyOperationsDuration_WhatIf_Max.xlsx:
+  - колонка "Прогноз расчётный" отсутствует;
+  - все масштабирования от "Длительность макс, мин";
+  - "Длительность сейчас" серая, только справочно;
+  - "Окно, мин" и "БУДЕТ ПОТОКОВ" - жёлтые, редактируемые;
+  - "Предел при текущих потоках" - голубая формула:
+        Предел_тыс = (база_сейчас_тыс) * Окно / Длительность_макс
+    (линейная пропорция; пересчитывается при смене окна).
 
 Запуск из корня репозитория:
     python "bases\\Wim_Du\\projects\\IMDEV-9393 ...\\Скрипты\\build_whatif_xlsx.py"
@@ -22,19 +26,23 @@ from openpyxl.utils import get_column_letter
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from build_report import (  # noqa: E402
-    cell_values, fmt_limit, verdict,
+    cell_values, verdict,
 )
-from operations_registry import DOGOVOROV_PLAN  # noqa: E402
+from operations_registry import (  # noqa: E402
+    DOGOVOROV_PLAN, DOGOVOROV_SEYCHAS,
+)
 
 PROJECT = os.path.join(
     'bases', 'Wim_Du', 'projects',
     'IMDEV-9393 Создать общую таблицу текущей длительности ключевых операций')
 IN_JSON = os.path.join(PROJECT, 'Тестирование', 'reports', 'durations_9393.json')
-OUT_XLSX = os.path.join(PROJECT, 'Документация', 'KeyOperationsDuration_WhatIf.xlsx')
+OUT_XLSX = os.path.join(
+    PROJECT, 'Документация', 'KeyOperationsDuration_WhatIf_Max.xlsx')
 
 TARGET_K = DOGOVOROV_PLAN / 1000.0  # 250
+BASE_K = DOGOVOROV_SEYCHAS / 1000.0  # 25
 
-# Базовые колонки (как в основном отчёте, но threads_max -> БУДЕТ ПОТОКОВ).
+# Базовые колонки: без прогноза расчётного; предел и x10 - формулами.
 BASE_COLUMNS = [
     ('no', '#', 4),
     ('name', 'Ключевая операция', 40),
@@ -47,7 +55,6 @@ BASE_COLUMNS = [
     ('min_now', 'Длительность сейчас, мин', 11),
     ('min_max', 'Длительность макс, мин', 10),
     ('min_linear', 'Прогноз x10 линейный, мин', 11),
-    ('min_model', 'Прогноз расчётный, мин', 10),
     ('depends', 'Зависит от клиентов', 10),
     ('limit', 'Предел при текущих потоках, тыс.', 12),
     ('window', 'Окно, мин', 8),
@@ -65,6 +72,9 @@ CALC_COLUMNS = [
 
 COMMENT_COL = ('comment', 'Комментарий', 45)
 
+# Предел и x10 тоже голубые (формулы от макс / окна).
+FORMULA_BASE_KEYS = {'min_linear', 'limit'}
+
 FILL = {
     'crit': PatternFill('solid', fgColor='FDECEA'),
     'warn': PatternFill('solid', fgColor='FFF8E1'),
@@ -78,7 +88,7 @@ FILL = {
     'will': PatternFill('solid', fgColor='FFEB3B'),
     'will_lock': PatternFill('solid', fgColor='FFF9C4'),
     'calc': PatternFill('solid', fgColor='B3E5FC'),
-    'calc_head_row': PatternFill('solid', fgColor='E1F5FE'),
+    'ref': PatternFill('solid', fgColor='BDBDBD'),
 }
 THIN = Side(style='thin', color='C8D0DA')
 BORDER = Border(left=THIN, right=THIN, top=THIN, bottom=THIN)
@@ -91,19 +101,29 @@ def scales_with_threads(row):
         row - строка операции из JSON
 
     Возвращаемое значение:
-        Булево - Истина, если потоков сейчас > 1 (есть пул) или в коде
-        есть запас по потокам; иначе строка однопоточная.
+        Булево - Истина, если есть пул потоков или запас в коде.
     """
     if row.get('no_measurement') or row.get('no_forecast'):
         return False
     if not row.get('depends'):
         return False
-    if row.get('limit_contracts') is None:
-        return False
     now = int(row.get('threads_now') or 1)
     maximum = int(row.get('threads_max') or now)
     reserve = bool(row.get('threads_reserve'))
     return now > 1 or maximum > now or reserve
+
+
+def has_limit_inputs(row, min_max_value, window_value):
+    """Есть ли данные для линейного предела от макс-длительности."""
+    if row.get('no_measurement') or row.get('no_forecast'):
+        return False
+    if not row.get('depends'):
+        return False
+    if not isinstance(min_max_value, (int, float)) or min_max_value <= 0:
+        return False
+    if not isinstance(window_value, (int, float)) or window_value <= 0:
+        return False
+    return True
 
 
 def to_number(value, numeric_keys, key):
@@ -134,30 +154,36 @@ def build():
 
     book = openpyxl.Workbook()
     sheet = book.active
-    sheet.title = 'Сценарий по потокам'
+    sheet.title = 'Сценарий по потокам (макс)'
 
     total_cols = len(all_cols)
     sheet.merge_cells(start_row=1, start_column=1, end_row=1, end_column=total_cols)
     sheet['A1'] = (
-        'IMDEV-9393. Интерактивный сценарий по потокам. '
-        'Меняйте жёлтую колонку "БУДЕТ ПОТОКОВ" - голубые колонки пересчитаются формулами. '
-        'Цель: %.0f тыс. договоров. Сформировано %s.'
+        'IMDEV-9393. What-If от ХУДШЕГО замера (Длительность макс). '
+        'Жёлтые: "БУДЕТ ПОТОКОВ", "Окно, мин" и "Длительность макс". Голубые - формулы. '
+        'Серая "Длительность сейчас" - справочно. Цель: %.0f тыс. договоров. '
+        'Сформировано %s.'
         % (TARGET_K, meta['built']))
     sheet['A1'].font = Font(bold=True, size=12, color='17365D')
 
     sheet.merge_cells(start_row=2, start_column=1, end_row=2, end_column=total_cols)
     sheet['A2'] = (
-        'Формулы (для строк с пулом потоков): '
+        'Формулы: '
+        'Предел_тыс = база_тыс × Окно / Длительность_макс '
+        '(база обычно %.0f; для загрузки/исполнения сделок - сделки на худшем '
+        'замере/1000, допущение база x10 -> сделки x10, 1 сделка = 1 договор); '
+        'Прогноз x10 = Длительность_макс × 10; '
         'КВО = Предел × (БУДЕТ ПОТОКОВ / Потоков сейчас); '
-        'Длительность = Сейчас × (Потоков сейчас / БУДЕТ ПОТОКОВ); '
+        'Длительность при БУДЕТ = Длительность_макс × (Потоков сейчас / БУДЕТ); '
         'Ускорение = БУДЕТ / Сейчас; '
-        'Запас = Окно − Длительность; '
+        'Запас = Окно − Длительность при БУДЕТ; '
         'Выдержит 250 тыс. = КВО >= 250; '
-        'Нужно потоков для 250 тыс. = ОКILING(Потоков сейчас × 250 / Предел). '
-        'Однопоточные и строки без предела: КВО = предел (или прочерк), смена потоков не ускоряет.')
+        'Нужно потоков = CEILING(Потоков сейчас × 250 / Предел). '
+        'Смена окна или длительности макс сразу пересчитывает предел и связанные колонки.'
+        % BASE_K)
     sheet['A2'].font = Font(size=9, color='455A64')
     sheet['A2'].alignment = Alignment(wrap_text=True)
-    sheet.row_dimensions[2].height = 48
+    sheet.row_dimensions[2].height = 56
 
     header = 4
     for index, (key, title, width) in enumerate(all_cols, start=1):
@@ -165,10 +191,12 @@ def build():
         cell.font = Font(bold=True, color='FFFFFF', size=10)
         cell.alignment = Alignment(wrap_text=True, vertical='bottom')
         cell.border = BORDER
-        if key == 'threads_will':
+        if key in ('threads_will', 'window', 'min_max'):
             cell.fill = FILL['head_will']
-        elif key in {k for k, _t, _w in CALC_COLUMNS}:
+        elif key in FORMULA_BASE_KEYS or key in {k for k, _t, _w in CALC_COLUMNS}:
             cell.fill = FILL['head_calc']
+        elif key == 'min_now':
+            cell.fill = PatternFill('solid', fgColor='616161')
         else:
             cell.fill = FILL['head']
         sheet.column_dimensions[get_column_letter(index)].width = width
@@ -176,12 +204,12 @@ def build():
     sheet.row_dimensions[header].height = 36
 
     numeric_base = {
-        'threads_now', 'min_now', 'min_max', 'min_linear', 'min_model', 'limit', 'window',
+        'threads_now', 'min_now', 'min_max', 'window',
     }
 
     line = header
     number = 0
-    data_rows = []  # (excel_row, scales, has_limit_number)
+    data_rows = []
 
     for row in rows:
         line += 1
@@ -199,9 +227,9 @@ def build():
         mark = verdict(row)
         scales = scales_with_threads(row)
         values = cell_values(row, number)
-        # cell_values order matches original COLUMNS; map to our base keys.
-        # Original: no,name,periodicity,schedule,object,source,threads_now,threads_max,
-        #           min_now,min_max,min_linear,min_model,depends,limit,window,comment
+        # Original cell_values: no,name,periodicity,schedule,object,source,
+        # threads_now,threads_max,min_now,min_max,min_linear,min_model,depends,
+        # limit,window,comment
         mapping = {
             'no': values[0],
             'name': values[1],
@@ -210,35 +238,59 @@ def build():
             'object': values[4],
             'source': values[5],
             'threads_now': values[6],
-            'threads_will': values[7],  # стартовое = бывший макс / сейчас
+            'threads_will': int(row.get('threads_now') or 1),
             'min_now': values[8],
             'min_max': values[9],
-            'min_linear': values[10],
-            'min_model': values[11],
             'depends': values[12],
-            'limit': values[13],
             'window': values[14],
             'comment': values[15],
         }
         if row.get('real_name'):
             mapping['name'] = '%s\nреальное название: %s' % (row['name'], row['real_name'])
 
-        # Стартовое БУДЕТ ПОТОКОВ = потоков сейчас (сценарий "без изменений").
-        # Для масштабируемых можно подставить threads_max как подсказку кода - нет,
-        # архитектор сам вводит; стартуем от текущего факта.
-        mapping['threads_will'] = int(row.get('threads_now') or 1)
+        min_max_num = to_number(mapping['min_max'], {'min_max'}, 'min_max')
+        window_num = to_number(mapping['window'], {'window'}, 'window')
+        can_limit = has_limit_inputs(row, min_max_num, window_num)
 
-        limit_num = to_number(mapping['limit'], {'limit'}, 'limit')
-        has_limit = isinstance(limit_num, (int, float))
+        # База для линейного предела, тыс.:
+        # - при volume_as_contracts: объём на худшем замере (1 ед. = 1 договор);
+        # - иначе текущая клиентская база 25 тыс.
+        if (row.get('volume_as_contracts') and row.get('weight_at_max')
+                and float(row['weight_at_max']) > 0):
+            base_k_row = float(row['weight_at_max']) / 1000.0
+        else:
+            base_k_row = BASE_K
+
+        r = line
+        c_now = get_column_letter(col_index['threads_now'])
+        c_will = get_column_letter(col_index['threads_will'])
+        c_max = get_column_letter(col_index['min_max'])
+        c_lim = get_column_letter(col_index['limit'])
+        c_win = get_column_letter(col_index['window'])
+        c_dur_will = get_column_letter(col_index['dur_will'])
+        c_quota = get_column_letter(col_index['quota'])
 
         for key, _title, _w in BASE_COLUMNS:
-            value = mapping[key]
-            if key in numeric_base:
-                value = to_number(value, numeric_base, key)
-            if key == 'limit' and has_limit:
-                value = float(limit_num)
-            elif key == 'limit' and not has_limit:
-                value = mapping['limit']  # текст прочерка
+            if key == 'min_linear':
+                if isinstance(min_max_num, (int, float)):
+                    value = '=IF(ISNUMBER({m}{r}),{m}{r}*10,"-")'.format(m=c_max, r=r)
+                else:
+                    value = '-'
+            elif key == 'limit':
+                if can_limit:
+                    # Линейный предел: база_тыс * окно / длительность_макс
+                    value = (
+                        '=IF(AND(ISNUMBER({m}{r}),ISNUMBER({w}{r}),{m}{r}>0),'
+                        '{base}*{w}{r}/{m}{r},"-")'
+                        .format(m=c_max, w=c_win, r=r, base=base_k_row)
+                    )
+                else:
+                    value = '-'
+            else:
+                value = mapping[key]
+                if key in numeric_base:
+                    value = to_number(value, numeric_base, key)
+
             cell = sheet.cell(row=line, column=col_index[key], value=value)
             cell.border = BORDER
             cell.alignment = Alignment(
@@ -246,49 +298,52 @@ def build():
                 vertical='top',
                 horizontal='right' if key in (
                     'no', 'threads_now', 'threads_will', 'min_now', 'min_max',
-                    'min_linear', 'min_model', 'limit', 'window') else 'left')
+                    'min_linear', 'limit', 'window') else 'left')
+
             if key == 'threads_will':
                 cell.fill = FILL['will'] if scales else FILL['will_lock']
                 cell.font = Font(bold=True, size=11, color='E65100')
                 cell.number_format = '0'
+            elif key in ('window', 'min_max'):
+                cell.fill = FILL['will']
+                cell.font = Font(bold=True, size=11, color='E65100')
+                if key == 'window' and isinstance(value, (int, float)):
+                    cell.number_format = '0'
+                if key == 'min_max' and isinstance(value, float):
+                    cell.number_format = '0.0'
+            elif key == 'min_now':
+                cell.fill = FILL['ref']
+                cell.font = Font(size=10, color='424242', italic=True)
+                if isinstance(value, float):
+                    cell.number_format = '0.0'
+            elif key in FORMULA_BASE_KEYS:
+                cell.fill = FILL['calc']
+                cell.font = Font(size=10, color='01579B')
+                cell.number_format = '0.0'
             elif key == 'name':
                 cell.fill = FILL[mark]
                 cell.font = Font(bold=True, size=10)
             else:
                 cell.fill = FILL[mark]
                 cell.font = Font(size=10)
-            if key in ('min_now', 'min_max', 'min_linear', 'min_model') and isinstance(value, float):
-                cell.number_format = '0.0'
-            if key == 'limit' and has_limit:
-                cell.number_format = '0.0'
 
-        # --- Формулы расчётных колонок ---
-        r = line
-        c_now = get_column_letter(col_index['threads_now'])
-        c_will = get_column_letter(col_index['threads_will'])
-        c_dur = get_column_letter(col_index['min_now'])
-        c_lim = get_column_letter(col_index['limit'])
-        c_win = get_column_letter(col_index['window'])
-
-        # Условие: есть числовой предел и потоки > 0
         ok_scale = (
             'AND(ISNUMBER({lim}{r}),ISNUMBER({now}{r}),ISNUMBER({will}{r}),'
             '{now}{r}>0,{will}{r}>0)'
             .format(lim=c_lim, now=c_now, will=c_will, r=r))
 
+        # Длительность и масштаб - от Длительность макс.
         formulas = {
-            # КВО = предел * будет / сейчас (только если операция масштабируется потоками)
             'quota': (
                 '=IF({ok},{lim}{r}*{will}{r}/{now}{r},IF(ISNUMBER({lim}{r}),{lim}{r},"-"))'
                 if scales else
                 '=IF(ISNUMBER({lim}{r}),{lim}{r},"-")'
             ).format(ok=ok_scale, lim=c_lim, will=c_will, now=c_now, r=r),
-            # Длительность падает пропорционально потокам
             'dur_will': (
-                '=IF({ok},{dur}{r}*{now}{r}/{will}{r},IF(ISNUMBER({dur}{r}),{dur}{r},"-"))'
+                '=IF({ok},{mx}{r}*{now}{r}/{will}{r},IF(ISNUMBER({mx}{r}),{mx}{r},"-"))'
                 if scales else
-                '=IF(ISNUMBER({dur}{r}),{dur}{r},"-")'
-            ).format(ok=ok_scale, dur=c_dur, now=c_now, will=c_will, r=r),
+                '=IF(ISNUMBER({mx}{r}),{mx}{r},"-")'
+            ).format(ok=ok_scale, mx=c_max, now=c_now, will=c_will, r=r),
             'speedup': (
                 '=IF({ok},{will}{r}/{now}{r},1)'
                 if scales else
@@ -296,11 +351,11 @@ def build():
             ).format(ok=ok_scale, will=c_will, now=c_now, r=r),
             'slack': (
                 '=IF(AND(ISNUMBER({win}{r}),ISNUMBER({dw}{r})),{win}{r}-{dw}{r},"-")'
-                .format(win=c_win, dw=get_column_letter(col_index['dur_will']), r=r)
+                .format(win=c_win, dw=c_dur_will, r=r)
             ),
             'ok250': (
                 '=IF(ISNUMBER({q}{r}),IF({q}{r}>={tgt},"Да","Нет"),"-")'
-                .format(q=get_column_letter(col_index['quota']), r=r, tgt=TARGET_K)
+                .format(q=c_quota, r=r, tgt=TARGET_K)
             ),
             'need250': (
                 '=IF({ok},ROUNDUP({now}{r}*{tgt}/{lim}{r},0),"-")'
@@ -309,13 +364,7 @@ def build():
             ).format(ok=ok_scale, now=c_now, lim=c_lim, r=r, tgt=TARGET_K),
         }
 
-        # slack ссылается на dur_will - нужно писать dur_will до slack.
-        # Уже так в dict order for py3.7+ but slack formula uses col letter of dur_will
-        # which exists. Order of writing cells:
-        write_order = ['quota', 'dur_will', 'speedup', 'slack', 'ok250', 'need250']
-        # Fix slack formula after we know dur_will column - already uses col_index
-
-        for key in write_order:
+        for key in ['quota', 'dur_will', 'speedup', 'slack', 'ok250', 'need250']:
             cell = sheet.cell(row=line, column=col_index[key], value=formulas[key])
             cell.fill = FILL['calc']
             cell.border = BORDER
@@ -331,13 +380,12 @@ def build():
         comment_cell.alignment = Alignment(wrap_text=True, vertical='top')
         comment_cell.font = Font(size=9)
 
-        data_rows.append((line, scales, has_limit))
+        data_rows.append((line, scales, can_limit))
 
     last_data = line
     sheet.auto_filter.ref = 'A%d:%s%d' % (
         header, get_column_letter(total_cols), last_data)
 
-    # Условное форматирование: Выдержит 250 тыс. = Нет -> красный
     ok250_letter = get_column_letter(col_index['ok250'])
     ok_range = '%s%d:%s%d' % (ok250_letter, header + 1, ok250_letter, last_data)
     sheet.conditional_formatting.add(
@@ -356,35 +404,33 @@ def build():
     legend.column_dimensions['A'].width = 28
     legend.column_dimensions['B'].width = 110
     blocks = [
-        ('Интерактивный файл',
-         'Это копия таблицы IMDEV-9393 для сценария "что будет, если увеличить потоки". '
-         'Основной отчёт KeyOperationsDuration.xlsx не меняйте - правки только здесь.'),
-        ('Жёлтая колонка БУДЕТ ПОТОКОВ',
-         'Редактируйте число потоков в строке операции. Стартовое значение = "Потоков сейчас". '
-         'Для однопоточных операций ячейка бледно-жёлтая: смена потоков физически не ускорит '
-         '(в коде нет пула), формулы КВО остаются на уровне текущего предела.'),
-        ('Голубые расчётные колонки',
-         'Пересчитываются формулами Excel автоматически при изменении БУДЕТ ПОТОКОВ.'),
-        ('РАСЧЕТНОЕ КВО, тыс. договоров',
-         'Предел при текущих потоках × (БУДЕТ ПОТОКОВ / Потоков сейчас). '
-         'Допущение: длительность обратно пропорциональна числу потоков.'),
-        ('Длительность при БУДЕТ ПОТОКОВ, мин',
-         'Длительность сейчас × (Потоков сейчас / БУДЕТ ПОТОКОВ).'),
-        ('Ускорение, раз',
-         'БУДЕТ ПОТОКОВ / Потоков сейчас.'),
-        ('Запас до окна, мин',
-         'Окно − длительность при БУДЕТ ПОТОКОВ. Отрицательное = не укладывается в окно '
-         'уже на текущем объёме базы.'),
+        ('Вариант Max',
+         'Этот файл считает сценарий от ХУДШЕГО замера (колонка "Длительность макс"). '
+         'Исходный KeyOperationsDuration_WhatIf.xlsx не меняется.'),
+        ('Жёлтые колонки',
+         'Редактируйте "БУДЕТ ПОТОКОВ", "Окно, мин" и "Длительность макс". '
+         'Смена окна или макс-длительности сразу пересчитывает предел и все голубые колонки.'),
+        ('Серая колонка',
+         '"Длительность сейчас" - справочно (медиана). В расчёты What-If не входит.'),
+        ('Предел при текущих потоках, тыс.',
+         'Формула: база_тыс × Окно / Длительность_макс. '
+         'Обычные операции: база = %.0f тыс. договоров. '
+         'Загрузка и исполнение сделок: база = сделки на худшем замере / 1000 '
+         '(допущение: база x10 -> сделки x10, 1 сделка = 1 договор).'
+         % BASE_K),
+        ('Прогноз x10 линейный',
+         'Длительность_макс × 10.'),
+        ('РАСЧЕТНОЕ КВО',
+         'Предел × (БУДЕТ ПОТОКОВ / Потоков сейчас).'),
+        ('Длительность при БУДЕТ ПОТОКОВ',
+         'Длительность_макс × (Потоков сейчас / БУДЕТ ПОТОКОВ).'),
         ('Выдержит 250 тыс.?',
-         'Да, если РАСЧЕТНОЕ КВО >= 250. Подсветка: зелёный / красный.'),
-        ('Нужно потоков для 250 тыс.',
-         'Сколько потоков нужно, чтобы предел стал не ниже 250 тыс. договоров '
-         '(округлено вверх). Для однопоточных - прочерк.'),
+         'Да, если РАСЧЕТНОЕ КВО >= 250.'),
         ('Важно',
-         'Это оценочная модель для обсуждения с архитектором. Реальное ускорение от потоков '
-         'нужно подтверждать замером: упираются блокировки, SQL, внешние сервисы.'),
+         'Оценочная модель для обсуждения. Реальное ускорение от потоков нужно '
+         'подтверждать замером.'),
     ]
-    legend['A1'] = 'Как пользоваться интерактивным файлом'
+    legend['A1'] = 'Как пользоваться (вариант от макс-длительности)'
     legend['A1'].font = Font(bold=True, size=14, color='0277BD')
     line = 2
     for title, text in blocks:
@@ -400,9 +446,10 @@ def build():
 
     os.makedirs(os.path.dirname(OUT_XLSX), exist_ok=True)
     book.save(OUT_XLSX)
-    print('What-if XLSX ->', OUT_XLSX)
+    print('What-if Max XLSX ->', OUT_XLSX)
     print('Data rows:', len(data_rows),
-          'scalable:', sum(1 for _r, s, _h in data_rows if s))
+          'scalable:', sum(1 for _r, s, _h in data_rows if s),
+          'with limit formula:', sum(1 for _r, _s, h in data_rows if h))
 
 
 if __name__ == '__main__':
