@@ -12,11 +12,14 @@
 2. Запускать группу 3 **после** полного завершения вечерних операций по всем договорам отбора.
 3. Считать показатели **пакетно** по группам договоров с одинаковой сигнатурой параметров (вариант A+D1).
 
+Группу 3 и перенос пяти операций на информационной базе делает **внешняя обработка для поддержки**, не код расширения.
+
 ## Документы
 
 | Файл | Назначение |
 |---|---|
-| [prompt_imdev8663_2_extension.html](prompt_imdev8663_2_extension.html) | **Промпт на реализацию**: новое расширение IM86632 над базой после переноса 8663.1 вендором |
+| [prompt_imdev8663_2_extension_cf_152910.html](prompt_imdev8663_2_extension_cf_152910.html) | **Актуальный промпт (ревизия 07.09.2026)**: CF 1.5.29.10, расширение IM86632 и обработка поддержки для группы 3 |
+| [prompt_imdev8663_2_extension.html](prompt_imdev8663_2_extension.html) | Предыдущая редакция промпта (до сверки с фактической CF) |
 | [proposal_scha_rsa_batch_calculation.html](proposal_scha_rsa_batch_calculation.html) | Полное предложение для бизнеса и разработки |
 | [presentation_scha_rsa.html](presentation_scha_rsa.html) | Презентация 16:9 (HTML) |
 | [presentation_scha_rsa.pdf](presentation_scha_rsa.pdf) | PDF |
