@@ -37,7 +37,7 @@ PROJECT = os.path.join(
     'IMDEV-9393 Создать общую таблицу текущей длительности ключевых операций')
 IN_JSON = os.path.join(PROJECT, 'Тестирование', 'reports', 'durations_9393.json')
 OUT_XLSX = os.path.join(
-    PROJECT, 'Документация', 'KeyOperationsDuration_WhatIf_Max.xlsx')
+    PROJECT, 'Документация', 'KeyOperationsDuration_WhatIf_Max_07092026.xlsx')
 
 TARGET_K = DOGOVOROV_PLAN / 1000.0  # 250
 BASE_K = DOGOVOROV_SEYCHAS / 1000.0  # 25
@@ -54,7 +54,9 @@ BASE_COLUMNS = [
     ('threads_will', 'БУДЕТ ПОТОКОВ', 10),
     ('min_now', 'Длительность сейчас, мин', 11),
     ('min_max', 'Длительность макс, мин', 10),
-    ('min_linear', 'Прогноз x10 линейный, мин', 11),
+    ('volume_obj_k', 'Объём при макс, тыс. объектов', 10),
+    ('to_coef', 'Коэф. к договорам (объект/договор)', 11),
+    ('min_linear', 'Прогноз на 250 тыс., мин', 11),
     ('depends', 'Зависит от клиентов', 10),
     ('limit', 'Предел при текущих потоках, тыс.', 12),
     ('window', 'Окно, мин', 8),
@@ -72,8 +74,12 @@ CALC_COLUMNS = [
 
 COMMENT_COL = ('comment', 'Комментарий', 45)
 
-# Предел и x10 тоже голубые (формулы от макс / окна).
+# Голубые формулы.
 FORMULA_BASE_KEYS = {'min_linear', 'limit'}
+# Жёлтые редактируемые.
+YELLOW_KEYS = {'threads_will', 'window', 'min_max', 'to_coef'}
+# Серые справочные.
+REF_KEYS = {'min_now', 'volume_obj_k'}
 
 FILL = {
     'crit': PatternFill('solid', fgColor='FDECEA'),
@@ -159,28 +165,23 @@ def build():
     total_cols = len(all_cols)
     sheet.merge_cells(start_row=1, start_column=1, end_row=1, end_column=total_cols)
     sheet['A1'] = (
-        'IMDEV-9393. What-If от ХУДШЕГО замера (Длительность макс). '
-        'Жёлтые: "БУДЕТ ПОТОКОВ", "Окно, мин" и "Длительность макс". Голубые - формулы. '
-        'Серая "Длительность сейчас" - справочно. Цель: %.0f тыс. договоров. '
-        'Сформировано %s.'
+        'IMDEV-9393. What-If от ХУДШЕГО замера. '
+        'Жёлтые: БУДЕТ ПОТОКОВ, Окно, Длительность макс, Коэф. к договорам. '
+        'Серые: Длительность сейчас и Объём при макс - справочно. '
+        'Голубые - формулы. Цель: %.0f тыс. договоров. Сформировано %s.'
         % (TARGET_K, meta['built']))
     sheet['A1'].font = Font(bold=True, size=12, color='17365D')
 
     sheet.merge_cells(start_row=2, start_column=1, end_row=2, end_column=total_cols)
     sheet['A2'] = (
         'Формулы: '
-        'Предел_тыс = база_тыс × Окно / Длительность_макс '
-        '(база обычно %.0f; для загрузки/исполнения сделок - сделки на худшем '
-        'замере/1000, допущение база x10 -> сделки x10, 1 сделка = 1 договор); '
-        'Прогноз x10 = Длительность_макс × 10; '
-        'КВО = Предел × (БУДЕТ ПОТОКОВ / Потоков сейчас); '
-        'Длительность при БУДЕТ = Длительность_макс × (Потоков сейчас / БУДЕТ); '
-        'Ускорение = БУДЕТ / Сейчас; '
-        'Запас = Окно − Длительность при БУДЕТ; '
-        'Выдержит 250 тыс. = КВО >= 250; '
-        'Нужно потоков = CEILING(Потоков сейчас × 250 / Предел). '
-        'Смена окна или длительности макс сразу пересчитывает предел и связанные колонки.'
-        % BASE_K)
+        'Договоры_при_макс_тыс = Объём_при_макс_тыс / Коэф; '
+        'Предел_тыс = Договоры_при_макс_тыс × Окно / Длительность_макс; '
+        'Прогноз_250 = Длительность_макс × (250 × Коэф / Объём_при_макс_тыс); '
+        'КВО = Предел × (БУДЕТ / Потоков сейчас); '
+        'Длительность при БУДЕТ = Длительность_макс × (Потоков сейчас / БУДЕТ). '
+        'Коэф = объектов на 1 договор (для сделок: медиана сделки/договоры_дня). '
+        'Смена Коэф / Окна / Макс пересчитывает предел и прогноз.')
     sheet['A2'].font = Font(size=9, color='455A64')
     sheet['A2'].alignment = Alignment(wrap_text=True)
     sheet.row_dimensions[2].height = 56
@@ -191,11 +192,11 @@ def build():
         cell.font = Font(bold=True, color='FFFFFF', size=10)
         cell.alignment = Alignment(wrap_text=True, vertical='bottom')
         cell.border = BORDER
-        if key in ('threads_will', 'window', 'min_max'):
+        if key in YELLOW_KEYS:
             cell.fill = FILL['head_will']
         elif key in FORMULA_BASE_KEYS or key in {k for k, _t, _w in CALC_COLUMNS}:
             cell.fill = FILL['head_calc']
-        elif key == 'min_now':
+        elif key in REF_KEYS:
             cell.fill = PatternFill('solid', fgColor='616161')
         else:
             cell.fill = FILL['head']
@@ -204,7 +205,7 @@ def build():
     sheet.row_dimensions[header].height = 36
 
     numeric_base = {
-        'threads_now', 'min_now', 'min_max', 'window',
+        'threads_now', 'min_now', 'min_max', 'window', 'to_coef', 'volume_obj_k',
     }
 
     line = header
@@ -252,19 +253,26 @@ def build():
         window_num = to_number(mapping['window'], {'window'}, 'window')
         can_limit = has_limit_inputs(row, min_max_num, window_num)
 
-        # База для линейного предела, тыс.:
-        # - при volume_as_contracts: объём на худшем замере (1 ед. = 1 договор);
-        # - иначе текущая клиентская база 25 тыс.
+        # Объём на худшем замере (тыс. объектов) и коэф. приведения к договорам.
         if (row.get('volume_as_contracts') and row.get('weight_at_max')
                 and float(row['weight_at_max']) > 0):
-            base_k_row = float(row['weight_at_max']) / 1000.0
+            volume_obj_k = float(row['weight_at_max']) / 1000.0
+        elif can_limit:
+            volume_obj_k = BASE_K
         else:
-            base_k_row = BASE_K
+            volume_obj_k = None
+        to_coef = float(row.get('to_contracts_coef') or 1.0)
+        if to_coef <= 0:
+            to_coef = 1.0
+        mapping['volume_obj_k'] = volume_obj_k if volume_obj_k is not None else '-'
+        mapping['to_coef'] = to_coef if can_limit else '-'
 
         r = line
         c_now = get_column_letter(col_index['threads_now'])
         c_will = get_column_letter(col_index['threads_will'])
         c_max = get_column_letter(col_index['min_max'])
+        c_vol = get_column_letter(col_index['volume_obj_k'])
+        c_coef = get_column_letter(col_index['to_coef'])
         c_lim = get_column_letter(col_index['limit'])
         c_win = get_column_letter(col_index['window'])
         c_dur_will = get_column_letter(col_index['dur_will'])
@@ -272,17 +280,23 @@ def build():
 
         for key, _title, _w in BASE_COLUMNS:
             if key == 'min_linear':
-                if isinstance(min_max_num, (int, float)):
-                    value = '=IF(ISNUMBER({m}{r}),{m}{r}*10,"-")'.format(m=c_max, r=r)
+                # Прогноз на 250 тыс.: макс * (250 * K / объём_объектов_тыс)
+                if can_limit and volume_obj_k:
+                    value = (
+                        '=IF(AND(ISNUMBER({m}{r}),ISNUMBER({v}{r}),ISNUMBER({c}{r}),'
+                        '{v}{r}>0,{c}{r}>0),{m}{r}*({tgt}*{c}{r}/{v}{r}),"-")'
+                        .format(m=c_max, v=c_vol, c=c_coef, r=r, tgt=TARGET_K)
+                    )
                 else:
                     value = '-'
             elif key == 'limit':
-                if can_limit:
-                    # Линейный предел: база_тыс * окно / длительность_макс
+                # Предел_тыс = (объём_тыс / K) * окно / макс
+                if can_limit and volume_obj_k:
                     value = (
-                        '=IF(AND(ISNUMBER({m}{r}),ISNUMBER({w}{r}),{m}{r}>0),'
-                        '{base}*{w}{r}/{m}{r},"-")'
-                        .format(m=c_max, w=c_win, r=r, base=base_k_row)
+                        '=IF(AND(ISNUMBER({m}{r}),ISNUMBER({w}{r}),ISNUMBER({v}{r}),'
+                        'ISNUMBER({c}{r}),{m}{r}>0,{c}{r}>0),'
+                        '({v}{r}/{c}{r})*{w}{r}/{m}{r},"-")'
+                        .format(m=c_max, w=c_win, v=c_vol, c=c_coef, r=r)
                     )
                 else:
                     value = '-'
@@ -298,24 +312,29 @@ def build():
                 vertical='top',
                 horizontal='right' if key in (
                     'no', 'threads_now', 'threads_will', 'min_now', 'min_max',
-                    'min_linear', 'limit', 'window') else 'left')
+                    'volume_obj_k', 'to_coef', 'min_linear', 'limit', 'window'
+                ) else 'left')
 
             if key == 'threads_will':
                 cell.fill = FILL['will'] if scales else FILL['will_lock']
                 cell.font = Font(bold=True, size=11, color='E65100')
                 cell.number_format = '0'
-            elif key in ('window', 'min_max'):
-                cell.fill = FILL['will']
+            elif key in ('window', 'min_max', 'to_coef'):
+                cell.fill = FILL['will'] if can_limit or key != 'to_coef' else FILL['will_lock']
+                if key == 'to_coef' and not can_limit:
+                    cell.fill = FILL['will_lock']
                 cell.font = Font(bold=True, size=11, color='E65100')
                 if key == 'window' and isinstance(value, (int, float)):
                     cell.number_format = '0'
                 if key == 'min_max' and isinstance(value, float):
                     cell.number_format = '0.0'
-            elif key == 'min_now':
+                if key == 'to_coef' and isinstance(value, float):
+                    cell.number_format = '0.000'
+            elif key in REF_KEYS:
                 cell.fill = FILL['ref']
                 cell.font = Font(size=10, color='424242', italic=True)
                 if isinstance(value, float):
-                    cell.number_format = '0.0'
+                    cell.number_format = '0.000' if key == 'volume_obj_k' else '0.0'
             elif key in FORMULA_BASE_KEYS:
                 cell.fill = FILL['calc']
                 cell.font = Font(size=10, color='01579B')
@@ -408,18 +427,18 @@ def build():
          'Этот файл считает сценарий от ХУДШЕГО замера (колонка "Длительность макс"). '
          'Исходный KeyOperationsDuration_WhatIf.xlsx не меняется.'),
         ('Жёлтые колонки',
-         'Редактируйте "БУДЕТ ПОТОКОВ", "Окно, мин" и "Длительность макс". '
-         'Смена окна или макс-длительности сразу пересчитывает предел и все голубые колонки.'),
-        ('Серая колонка',
-         '"Длительность сейчас" - справочно (медиана). В расчёты What-If не входит.'),
+         'Редактируйте "БУДЕТ ПОТОКОВ", "Окно, мин", "Длительность макс" и '
+         '"Коэф. к договорам". Смена Коэф/окна/макс пересчитывает предел и прогноз.'),
+        ('Серые колонки',
+         '"Длительность сейчас" и "Объём при макс, тыс. объектов" - справочно.'),
+        ('Коэф. к договорам',
+         'Сколько объектов замера приходится на 1 договор базы. '
+         'Для исполнения сделок медиана 0,865; для загрузки (создание) 0,251; '
+         'для операций в договорах = 1. Договоры = Объём_объектов / Коэф.'),
         ('Предел при текущих потоках, тыс.',
-         'Формула: база_тыс × Окно / Длительность_макс. '
-         'Обычные операции: база = %.0f тыс. договоров. '
-         'Загрузка и исполнение сделок: база = сделки на худшем замере / 1000 '
-         '(допущение: база x10 -> сделки x10, 1 сделка = 1 договор).'
-         % BASE_K),
-        ('Прогноз x10 линейный',
-         'Длительность_макс × 10.'),
+         'Формула: (Объём_при_макс_тыс / Коэф) × Окно / Длительность_макс.'),
+        ('Прогноз на 250 тыс.',
+         'Длительность_макс × (250 × Коэф / Объём_при_макс_тыс).'),
         ('РАСЧЕТНОЕ КВО',
          'Предел × (БУДЕТ ПОТОКОВ / Потоков сейчас).'),
         ('Длительность при БУДЕТ ПОТОКОВ',

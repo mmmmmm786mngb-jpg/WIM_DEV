@@ -29,9 +29,11 @@ from operations_registry import (  # noqa: E402
 PROJECT = os.path.join(
     'bases', 'Wim_Du', 'projects',
     'IMDEV-9393 Создать общую таблицу текущей длительности ключевых операций')
+# Актуальная выгрузка ЗамерыВремени (07.09.2026).
 PROD_XLSX = os.path.join(
-    'bases', 'Wim_Du', 'projects',
-    'IMDEV-9391 ПРоверить ключевые операции замеры', 'ЗамерыВремени.xlsx')
+    PROJECT, 'ЗамерыВечернихРегламентовРазработчика_07092026.xlsx')
+# Доп. замеры (Оплата КЗ и др.) с разработческой/тестовой базы.
+EXTRA_XLSX = os.path.join(PROJECT, 'ЗамерыРазраб.xlsx')
 DEV_XLSX = os.path.join(PROJECT, 'ЗамерыВечернихРегламентовРазработчика.xlsx')
 OUT_JSON = os.path.join(PROJECT, 'Тестирование', 'reports', 'durations_9393.json')
 
@@ -73,6 +75,13 @@ def dop_inf(comment):
     except (ValueError, AttributeError):
         found = re.search(r'"ДопИнф"\s*:\s*"(.*?)"', str(comment))
         return found.group(1) if found else str(comment)[:200]
+
+
+def merge_records(base, extra):
+    """Дописывает замеры из extra в base (по ключу операции)."""
+    for key, items in extra.items():
+        base[key].extend(items)
+    return base
 
 
 def load(path):
@@ -217,17 +226,20 @@ def duration_stats(picked, method):
     return None, None, 0, ''
 
 
-def weight_at_max_duration(picked, method):
+def weight_at_max_duration(picked, method, prefer_key_substr=None):
     """Вес (объём) замера с максимальной длительностью.
 
     Для method=single берётся замер с наибольшим sec.
     Для cycle - вес в самом длинном цикле: максимум по этапам (не сумма),
     чтобы не удваивать сделки на получении и создании.
+    Если задан prefer_key_substr - берём вес этапа, имя которого содержит подстроку
+    (например "создание сделок").
     Для span - сумма весов за день с максимальным календарным окном.
 
     Параметры:
         picked - отобранные замеры
         method - метод агрегации длительности
+        prefer_key_substr - необязательная подстрока имени ключевой операции
 
     Возвращаемое значение:
         Число либо Неопределено.
@@ -239,6 +251,13 @@ def weight_at_max_duration(picked, method):
         if not cycles:
             return None
         best = max(cycles, key=lambda cycle: sum(r['sec'] for r in cycle))
+        if prefer_key_substr:
+            preferred = [
+                r['weight'] for r in best
+                if prefer_key_substr in (r.get('key') or '') and r.get('weight')
+            ]
+            if preferred:
+                return max(preferred)
         weights = [r['weight'] for r in best if r.get('weight')]
         return max(weights) if weights else None
     if method == 'span':
@@ -532,10 +551,15 @@ def contracts_limit(row):
         return None
     window_sec = float(row['window_min']) * 60.0
 
-    # 1 единица объёма = 1 договор: предел от объёма на худшем замере.
+    # Объём в «чужих» единицах (сделки и т.п.): договоры = объём / K,
+    # K = to_contracts_coef (объектов на 1 договор базы).
     if (row.get('volume_as_contracts') and row.get('weight_at_max')
             and row.get('sec_max') and row['sec_max'] > 0):
-        return row['weight_at_max'] * window_sec / row['sec_max']
+        coef = float(row.get('to_contracts_coef') or 1.0)
+        if coef <= 0:
+            coef = 1.0
+        contracts_at_max = row['weight_at_max'] / coef
+        return contracts_at_max * window_sec / row['sec_max']
 
     model = row.get('model')
     if model and model['per_unit_sec'] > 0:
@@ -556,6 +580,9 @@ def contracts_limit(row):
 
 def main():
     prod = load(PROD_XLSX)
+    if os.path.isfile(EXTRA_XLSX):
+        merge_records(prod, load(EXTRA_XLSX))
+        print('Доп. замеры:', EXTRA_XLSX)
     dev = load(DEV_XLSX)
     print('ПРОД: %d ключевых операций, разработческая база: %d' % (len(prod), len(dev)))
 
@@ -571,7 +598,8 @@ def main():
         weight = typical_weight(picked, spec.get('weight_stat', 'median'))
         if spec.get('method') == 'daily_sum' and picked:
             weight = daily_avg_contracts(picked)
-        weight_max = weight_at_max_duration(picked, spec.get('method'))
+        weight_max = weight_at_max_duration(
+            picked, spec.get('method'), spec.get('volume_weight_key'))
         model = fit_model(records, spec) if seconds else None
 
         # Фиксированный замер из внешнего отчёта (не из выгрузки ЗамерыВремени).
@@ -664,6 +692,7 @@ def main():
             'weight_typical': weight,
             'weight_at_max': weight_max,
             'volume_as_contracts': bool(spec.get('volume_as_contracts')),
+            'to_contracts_coef': float(spec.get('to_contracts_coef') or 1.0),
             'sec_now': seconds,
             'min_now': seconds / 60.0 if seconds else None,
             'min_max': None,
@@ -787,7 +816,18 @@ def main():
             row['sec_linear'] = base
             row['sec_model'] = base
         else:
-            row['sec_linear'] = base * KRATNOST
+            # Если длительность снята не на полной базе 25 тыс., а на своём
+            # объёме (сделки / оплата КЗ), линейный прогноз на 250 тыс.:
+            # объекты@250к = 250000 * K, scale = объекты@250к / вес_замера.
+            if (row.get('volume_as_contracts') and row.get('weight_at_max')
+                    and float(row['weight_at_max']) > 0):
+                coef = float(row.get('to_contracts_coef') or 1.0)
+                if coef <= 0:
+                    coef = 1.0
+                objects_at_plan = DOGOVOROV_PLAN * coef
+                row['sec_linear'] = base * (objects_at_plan / float(row['weight_at_max']))
+            else:
+                row['sec_linear'] = base * KRATNOST
             model = row.get('model')
             volume = target_volume(row)
             row['sec_model'] = (
@@ -833,6 +873,7 @@ def main():
             'dogovorov_plan': DOGOVOROV_PLAN,
             'kratnost': KRATNOST,
             'prod_source': PROD_XLSX,
+            'extra_source': EXTRA_XLSX if os.path.isfile(EXTRA_XLSX) else '',
             'dev_source': DEV_XLSX,
             'prod_ops': len(prod),
         },
