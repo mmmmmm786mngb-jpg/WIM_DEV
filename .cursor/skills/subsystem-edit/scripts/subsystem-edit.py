@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# subsystem-edit v1.5 — Edit existing 1C subsystem XML
+# subsystem-edit v1.25 — Edit existing 1C subsystem XML (+тип Bot; cfe-diff/cfe-borrow: недостающие типы)
 # Source: https://github.com/Nikolay-Shirokov/cc-1c-skills
 
 import argparse
@@ -10,6 +10,127 @@ import subprocess
 import sys
 import uuid
 from lxml import etree
+
+# Регистронезависимый ввод — паритет с PS1: в PowerShell имена параметров и [ValidateSet]
+# регистр не различают, в argparse совпадение точное.
+
+def parse_json_input(text, source, expected=None, inline=False):
+    """Разбор пользовательского JSON: одна строка в stderr вместо traceback (issue #80).
+
+    expected заполняем только для полиморфного входа: у файла подсказка
+    была бы наполнителем — имя файла и текст парсера самодостаточны. inline печатает ещё и то,
+    что доехало: у файла такого вопроса нет, он лежит на диске и его видно целиком.
+
+    Импорты внутри тела: копия функции живёт в навыках с разными именами модулей
+    (skd-decompile импортирует json локально как _json), а тело обязано быть одинаковым.
+    """
+    import json as _pj
+    import sys as _psys
+    try:
+        if not str(text).strip():
+            raise ValueError("input is empty")
+        return _pj.loads(text)
+    except ValueError as exc:
+        what = "%s expects %s" % (source, expected) if expected else "Invalid JSON in %s" % source
+        if inline:
+            got = " ".join(str(text).split())
+            label = "got"
+            if not got:
+                got = "(empty)"
+            elif len(got) > 60:
+                label = "got (first 60 chars)"
+                got = got[:60]
+            what = "%s, %s: %s" % (what, label, got)
+        print("[ERROR] %s (%s)" % (what, exc), file=_psys.stderr)
+        _psys.exit(1)
+
+
+def read_json_file(path):
+    """Чтение входного JSON-файла с кодировкой из BOM (issue #80).
+
+    BOM — объявление самого файла, поэтому ему верим; без BOM ждём строгий UTF-8. Кодовую
+    страницу не подбираем: угаданное имя уехало бы в метаданные молча.
+    """
+    import os as _pos
+    import sys as _psys
+    if not _pos.path.exists(path):
+        print("[ERROR] File not found: %s" % path, file=_psys.stderr)
+        _psys.exit(1)
+    if _pos.path.isdir(path):
+        print("[ERROR] Expected a JSON file, got a directory: %s" % path, file=_psys.stderr)
+        _psys.exit(1)
+    with open(path, "rb") as _fh:
+        data = _fh.read()
+    if data[:3] == b"\xef\xbb\xbf":
+        return data[3:].decode("utf-8")
+    if data[:2] == b"\xff\xfe":
+        return data[2:].decode("utf-16-le")
+    if data[:2] == b"\xfe\xff":
+        return data[2:].decode("utf-16-be")
+    try:
+        return data.decode("utf-8")
+    except UnicodeDecodeError as exc:
+        print("[ERROR] %s is not valid UTF-8: %s - save the file as UTF-8, or add a BOM if it is UTF-16"
+              % (path, exc), file=_psys.stderr)
+        _psys.exit(1)
+
+
+class CIDict(dict):
+    # Ключи храним КАК ЕСТЬ: часть из них — имена объектов (табличные части, стандартные
+    # реквизиты), они попадают в XML. Регистронезависим только поиск. Порядок вставки
+    # сохраняется — от него зависит порядок эмиссии.
+    def _actual(self, key):
+        if not isinstance(key, str) or dict.__contains__(self, key):
+            return key
+        ci = self.__dict__.get('_ci')
+        if ci is None or len(ci) != len(self):
+            ci = {k.lower(): k for k in self if isinstance(k, str)}
+            self.__dict__['_ci'] = ci
+        return ci.get(key.lower(), key)
+
+    def __getitem__(self, key):
+        return dict.__getitem__(self, self._actual(key))
+
+    def __contains__(self, key):
+        return dict.__contains__(self, self._actual(key))
+
+    def get(self, key, default=None):
+        return dict.get(self, self._actual(key), default)
+
+    def pop(self, key, *default):
+        return dict.pop(self, self._actual(key), *default)
+
+    def __setitem__(self, key, value):
+        # запись по ключу, отличающемуся регистром, обновляет существующий, а не плодит дубль
+        dict.__setitem__(self, self._actual(key), value)
+
+def ci_json(obj):
+    """Рекурсивно оборачивает разобранный JSON: словари → CIDict, списки обходятся."""
+    if isinstance(obj, dict):
+        return CIDict((k, ci_json(v)) for k, v in obj.items())
+    if isinstance(obj, list):
+        return [ci_json(v) for v in obj]
+    return obj
+
+def ci_parse_args(parser, argv=None):
+    """parse_args по правилам PS: имена параметров и значения choices регистронезависимы."""
+    argv = list(sys.argv[1:] if argv is None else argv)
+    names = {s.lower(): s for a in parser._actions for s in a.option_strings}
+    for i, tok in enumerate(argv):
+        if tok.startswith('-') and tok.lower() in names:
+            argv[i] = names[tok.lower()]
+    # choices — зеркало [ValidateSet]; канонизируем ДО разбора, иначе argparse отвергнет регистр
+    choice_map = {}
+    for a in parser._actions:
+        if a.choices:
+            for s in a.option_strings:
+                choice_map[s] = {str(c).lower(): c for c in a.choices}
+    for i in range(len(argv) - 1):
+        m = choice_map.get(argv[i])
+        if m and argv[i + 1].lower() in m:
+            argv[i + 1] = m[argv[i + 1].lower()]
+    return parser.parse_args(argv)
+
 
 
 # ============================================================
@@ -31,6 +152,18 @@ def _sg_root_uuid(xml_path):
         return None
     return None
 
+
+def _sg_is_external_root(xml_path):
+    if not os.path.isfile(xml_path):
+        return False
+    try:
+        mx = etree.parse(xml_path).getroot()
+        for child in mx:
+            if isinstance(child.tag, str):
+                return child.tag.split("}")[-1] in ("ExternalDataProcessor", "ExternalReport")
+    except Exception:
+        return False
+    return False
 
 def _sg_find_v8project(start_dir):
     d = start_dir
@@ -71,6 +204,9 @@ def _sg_get_edit_mode(cfg_dir):
 def assert_edit_allowed(target_path, require):
     try:
         rp = os.path.abspath(target_path)
+        # Autonomous external object (EPF/ERF): never part of a config on support (issue #39).
+        if _sg_is_external_root(rp):
+            return
         elem_uuid = _sg_root_uuid(rp)
         cfg_dir = None
         bin_path = None
@@ -78,6 +214,8 @@ def assert_edit_allowed(target_path, require):
         for _ in range(12):
             if not d:
                 break
+            if _sg_is_external_root(d + ".xml"):
+                return
             if not elem_uuid:
                 elem_uuid = _sg_root_uuid(d + ".xml")
             if not cfg_dir:
@@ -176,41 +314,72 @@ def new_uuid():
 
 
 def esc_xml(s):
+    # Эскейп ЗНАЧЕНИЯ АТРИБУТА: & < > и кавычка — внутри "..." литеральная " невалидна.
     return s.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;').replace('"', '&quot;')
 
 
+def esc_xml_text(s):
+    """Экранирование ТЕКСТА элемента: только & < > . Кавычки платформа в тексте не экранирует
+    (92142 сырых кавычки на корпус, ни одной &quot;); &quot; она принимает, но нормализует обратно."""
+    return s.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
+
+
 def write_utf8_bom(path, content):
+    # newline='' — без трансляции: иначе текстовый режим Python дал бы CRLF на Windows
+    # и LF на macOS, то есть вывод навыка зависел бы от ОС.
     with open(path, 'w', encoding='utf-8-sig', newline='') as f:
         f.write(content)
+
+
+
+# Объявления пространств имён — одной переменной: место эмиссии её только подставляет.
+# Правки шапки (как xmlns:pal в формате 2.21) делаются в одном месте, в main.
+XMLNS_DECL = (
+    'xmlns="http://v8.1c.ru/8.3/MDClasses"'
+    ' xmlns:app="http://v8.1c.ru/8.2/managed-application/core"'
+    ' xmlns:cfg="http://v8.1c.ru/8.1/data/enterprise/current-config"'
+    ' xmlns:cmi="http://v8.1c.ru/8.2/managed-application/cmi"'
+    ' xmlns:ent="http://v8.1c.ru/8.1/data/enterprise"'
+    ' xmlns:lf="http://v8.1c.ru/8.2/managed-application/logform"'
+    ' xmlns:style="http://v8.1c.ru/8.1/data/ui/style"'
+    ' xmlns:sys="http://v8.1c.ru/8.1/data/ui/fonts/system"'
+    ' xmlns:v8="http://v8.1c.ru/8.1/data/core"'
+    ' xmlns:v8ui="http://v8.1c.ru/8.1/data/ui"'
+    ' xmlns:web="http://v8.1c.ru/8.1/data/ui/colors/web"'
+    ' xmlns:win="http://v8.1c.ru/8.1/data/ui/colors/windows"'
+    ' xmlns:xen="http://v8.1c.ru/8.3/xcf/enums"'
+    ' xmlns:xpr="http://v8.1c.ru/8.3/xcf/predef"'
+    ' xmlns:xr="http://v8.1c.ru/8.3/xcf/readable"'
+    ' xmlns:xs="http://www.w3.org/2001/XMLSchema"'
+    ' xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"'
+)
+
+
+def format_rank(ver):
+    """"2.20" → 220, "2.9" → 209. Строковое сравнение неверно ("2.9" > "2.17")."""
+    m = re.match(r'^(\d+)\.(\d+)$', ver or '')
+    return int(m.group(1)) * 100 + int(m.group(2)) if m else 0
+
+
+def apply_pal_ns(format_version):
+    """2.21 (8.5) добавила в шапку пространство палитры — ради <Color> у значений перечисления.
+    Вставляем НА МЕСТО (после lf, перед style): платформа держит объявления по алфавиту,
+    дописать в конец нельзя."""
+    global XMLNS_DECL
+    if format_rank(format_version) >= 221:
+        XMLNS_DECL = XMLNS_DECL.replace(
+            ' xmlns:style=',
+            ' xmlns:pal="http://v8.1c.ru/8.1/data/ui/colors/palette" xmlns:style=')
 
 
 def write_child_subsystem_stub(child_path, child_name, format_version):
     child_uuid = new_uuid()
     lines = []
     lines.append('<?xml version="1.0" encoding="UTF-8"?>')
-    lines.append(
-        '<MetaDataObject xmlns="http://v8.1c.ru/8.3/MDClasses" '
-        'xmlns:app="http://v8.1c.ru/8.2/managed-application/core" '
-        'xmlns:cfg="http://v8.1c.ru/8.1/data/enterprise/current-config" '
-        'xmlns:cmi="http://v8.1c.ru/8.2/managed-application/cmi" '
-        'xmlns:ent="http://v8.1c.ru/8.1/data/enterprise" '
-        'xmlns:lf="http://v8.1c.ru/8.2/managed-application/logform" '
-        'xmlns:style="http://v8.1c.ru/8.1/data/ui/style" '
-        'xmlns:sys="http://v8.1c.ru/8.1/data/ui/fonts/system" '
-        'xmlns:v8="http://v8.1c.ru/8.1/data/core" '
-        'xmlns:v8ui="http://v8.1c.ru/8.1/data/ui" '
-        'xmlns:web="http://v8.1c.ru/8.1/data/ui/colors/web" '
-        'xmlns:win="http://v8.1c.ru/8.1/data/ui/colors/windows" '
-        'xmlns:xen="http://v8.1c.ru/8.3/xcf/enums" '
-        'xmlns:xpr="http://v8.1c.ru/8.3/xcf/predef" '
-        'xmlns:xr="http://v8.1c.ru/8.3/xcf/readable" '
-        'xmlns:xs="http://www.w3.org/2001/XMLSchema" '
-        'xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" '
-        f'version="{format_version}">'
-    )
+    lines.append(f'<MetaDataObject {XMLNS_DECL} version="{format_version}">')
     lines.append(f'\t<Subsystem uuid="{child_uuid}">')
     lines.append('\t\t<Properties>')
-    lines.append(f'\t\t\t<Name>{esc_xml(child_name)}</Name>')
+    lines.append(f'\t\t\t<Name>{esc_xml_text(child_name)}</Name>')
     lines.append('\t\t\t<Synonym/>')
     lines.append('\t\t\t<Comment/>')
     lines.append('\t\t\t<IncludeHelpInContents>true</IncludeHelpInContents>')
@@ -223,7 +392,7 @@ def write_child_subsystem_stub(child_path, child_name, format_version):
     lines.append('\t\t<ChildObjects/>')
     lines.append('\t</Subsystem>')
     lines.append('</MetaDataObject>')
-    write_utf8_bom(child_path, '\n'.join(lines) + '\n')
+    write_utf8_bom(child_path, '\r\n'.join(lines))
 
 MD_NS = "http://v8.1c.ru/8.3/MDClasses"
 XR_NS = "http://v8.1c.ru/8.3/xcf/readable"
@@ -262,6 +431,7 @@ CONTENT_TYPE_MAP = {
     'DefinedTypes': 'DefinedType', 'DocumentNumerators': 'DocumentNumerator',
     'Sequences': 'Sequence', 'Subsystems': 'Subsystem',
     'StyleItems': 'StyleItem', 'IntegrationServices': 'IntegrationService',
+    'Bots': 'Bot', 'Bot': 'Bot',
     # Russian singular
     'Справочник': 'Catalog', 'Каталог': 'Catalog', 'Документ': 'Document',
     'Перечисление': 'Enum', 'Константа': 'Constant',
@@ -407,22 +577,59 @@ def import_fragment(xml_string, doc_root):
     return nodes
 
 
-def parse_value_list(val):
+def parse_value_list(val, op_name):
     """Parse a string or JSON array into a list of strings."""
     val = val.strip()
     if val.startswith("["):
-        arr = json.loads(val)
+        arr = ci_json(parse_json_input(val, "-Value for operation '%s'" % op_name, "a JSON array of object names", inline=True))
         return [str(item) for item in arr]
     return [val]
 
 
-def save_xml_bom(tree, path):
-    xml_bytes = etree.tostring(tree, xml_declaration=True, encoding="UTF-8")
-    xml_bytes = xml_bytes.replace(b"<?xml version='1.0' encoding='UTF-8'?>", b'<?xml version="1.0" encoding="utf-8"?>')
-    if not xml_bytes.endswith(b"\n"):
+def _detect_xml_style(path):
+    """Стиль существующего файла для round-trip-сохранения: BOM / EOL / регистр encoding /
+    финальный перенос. None → файл новый (сохранить текущее поведение)."""
+    try:
+        raw = open(path, "rb").read()
+    except OSError:
+        return None
+    bom = raw.startswith(b"\xef\xbb\xbf")
+    body = raw[3:] if bom else raw
+    crlf = b"\r\n" in body
+    m = re.search(rb'encoding="([^"]+)"', body[:200])
+    enc = m.group(1).decode("ascii") if m else "utf-8"
+    final_nl = body.endswith(b"\n")
+    return {"bom": bom, "crlf": crlf, "enc": enc, "final_nl": final_nl}
+
+
+def _finalize_xml_bytes(xml_bytes, style):
+    """Привести байты к стилю оригинала; для НОВОГО файла (style is None) — к канону
+    выгрузки Конфигуратора: encoding="UTF-8", CRLF в разделителях, без перевода в конце."""
+    enc_decl = style["enc"] if style else "UTF-8"
+    xml_bytes = xml_bytes.replace(
+        b"<?xml version='1.0' encoding='UTF-8'?>",
+        b'<?xml version="1.0" encoding="' + enc_decl.encode("ascii") + b'"?>')
+    # Канонизировать переносы к LF (убирает &#13; от \r в tail'ах)
+    xml_bytes = (xml_bytes.replace(b"&#13;\n", b"\n").replace(b"&#13;", b"")
+                 .replace(b"\r\n", b"\n").replace(b"\r", b"\n"))
+    # Финальный перенос — как в оригинале (новый файл → нет, канон #57)
+    want_final_nl = style["final_nl"] if style else False
+    xml_bytes = xml_bytes.rstrip(b"\n")
+    if want_final_nl:
         xml_bytes += b"\n"
+    # EOL — как в оригинале (новый файл → CRLF, канон #57)
+    if (style["crlf"] if style else True):
+        xml_bytes = xml_bytes.replace(b"\n", b"\r\n")
+    return xml_bytes
+
+
+def save_xml_bom(tree, path):
+    style = _detect_xml_style(path)
+    xml_bytes = etree.tostring(tree, xml_declaration=True, encoding="UTF-8")
+    xml_bytes = _finalize_xml_bytes(xml_bytes, style)
     with open(path, "wb") as f:
-        f.write(b"\xef\xbb\xbf")
+        if style is None or style["bom"]:
+            f.write(b"\xef\xbb\xbf")
         f.write(xml_bytes)
 
 
@@ -435,7 +642,7 @@ def main():
     parser.add_argument("-Operation", default=None, choices=["add-content", "remove-content", "add-child", "remove-child", "set-property"])
     parser.add_argument("-Value", default=None)
     parser.add_argument("-NoValidate", action="store_true")
-    args = parser.parse_args()
+    args = ci_parse_args(parser)
 
     # --- Mode validation ---
     if args.DefinitionFile and args.Operation:
@@ -483,6 +690,7 @@ def main():
     tree = etree.parse(resolved_path, xml_parser)
     xml_root = tree.getroot()
     format_version = xml_root.get("version") or "2.17"
+    apply_pal_ns(format_version)
 
     add_count = 0
     remove_count = 0
@@ -631,7 +839,8 @@ def main():
 
     def do_set_property(json_val):
         nonlocal modify_count
-        prop_def = json.loads(json_val)
+        prop_def = ci_json(parse_json_input(
+            json_val, "-Value for operation 'set-property'", "a JSON object {name, value}", inline=True))
         prop_name = str(prop_def["name"])
         prop_value = str(prop_def.get("value", ""))
 
@@ -685,7 +894,7 @@ def main():
                 info(f'Set {prop_name} = "{prop_value}"')
             return
 
-        if prop_name == "Comment":
+        if prop_key == "comment":
             for ch in list(prop_el):
                 prop_el.remove(ch)
             if not prop_value:
@@ -696,7 +905,7 @@ def main():
             info(f'Set Comment = "{prop_value}"')
             return
 
-        if prop_name == "Picture":
+        if prop_key == "picture":
             for ch in list(prop_el):
                 prop_el.remove(ch)
             if not prop_value:
@@ -727,8 +936,7 @@ def main():
         def_file = args.DefinitionFile
         if not os.path.isabs(def_file):
             def_file = os.path.join(os.getcwd(), def_file)
-        with open(def_file, "r", encoding="utf-8-sig") as fh:
-            ops = json.loads(fh.read())
+        ops = ci_json(parse_json_input(read_json_file(def_file), def_file))
         if isinstance(ops, list):
             operations = ops
         else:
@@ -738,17 +946,19 @@ def main():
 
     for op in operations:
         op_name = op.get("operation", args.Operation or "")
+        # PS сравнивает имя операции через switch, а он регистронезависим.
+        op_key = str(op_name).lower()
         op_value = op.get("value", args.Value or "")
 
-        if op_name == "add-content":
-            do_add_content(parse_value_list(op_value))
-        elif op_name == "remove-content":
-            do_remove_content(parse_value_list(op_value))
-        elif op_name == "add-child":
+        if op_key == "add-content":
+            do_add_content(parse_value_list(op_value, op_name))
+        elif op_key == "remove-content":
+            do_remove_content(parse_value_list(op_value, op_name))
+        elif op_key == "add-child":
             do_add_child(op_value)
-        elif op_name == "remove-child":
+        elif op_key == "remove-child":
             do_remove_child(op_value)
-        elif op_name == "set-property":
+        elif op_key == "set-property":
             do_set_property(op_value)
         else:
             print(f"Unknown operation: {op_name}", file=sys.stderr)

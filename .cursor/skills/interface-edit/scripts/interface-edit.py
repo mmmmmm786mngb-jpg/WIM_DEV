@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# interface-edit v1.6 — Edit 1C CommandInterface.xml
+# interface-edit v1.22 — Edit 1C CommandInterface.xml (+русские алиасы типов: формы с ё и без)
 # Source: https://github.com/Nikolay-Shirokov/cc-1c-skills
 
 import argparse
@@ -9,6 +9,65 @@ import re
 import subprocess
 import sys
 from lxml import etree
+
+# Регистронезависимый ввод — паритет с PS1: в PowerShell имена параметров и [ValidateSet]
+# регистр не различают, в argparse совпадение точное.
+class CIDict(dict):
+    # Ключи храним КАК ЕСТЬ: часть из них — имена объектов (табличные части, стандартные
+    # реквизиты), они попадают в XML. Регистронезависим только поиск. Порядок вставки
+    # сохраняется — от него зависит порядок эмиссии.
+    def _actual(self, key):
+        if not isinstance(key, str) or dict.__contains__(self, key):
+            return key
+        ci = self.__dict__.get('_ci')
+        if ci is None or len(ci) != len(self):
+            ci = {k.lower(): k for k in self if isinstance(k, str)}
+            self.__dict__['_ci'] = ci
+        return ci.get(key.lower(), key)
+
+    def __getitem__(self, key):
+        return dict.__getitem__(self, self._actual(key))
+
+    def __contains__(self, key):
+        return dict.__contains__(self, self._actual(key))
+
+    def get(self, key, default=None):
+        return dict.get(self, self._actual(key), default)
+
+    def pop(self, key, *default):
+        return dict.pop(self, self._actual(key), *default)
+
+    def __setitem__(self, key, value):
+        # запись по ключу, отличающемуся регистром, обновляет существующий, а не плодит дубль
+        dict.__setitem__(self, self._actual(key), value)
+
+def ci_json(obj):
+    """Рекурсивно оборачивает разобранный JSON: словари → CIDict, списки обходятся."""
+    if isinstance(obj, dict):
+        return CIDict((k, ci_json(v)) for k, v in obj.items())
+    if isinstance(obj, list):
+        return [ci_json(v) for v in obj]
+    return obj
+
+def ci_parse_args(parser, argv=None):
+    """parse_args по правилам PS: имена параметров и значения choices регистронезависимы."""
+    argv = list(sys.argv[1:] if argv is None else argv)
+    names = {s.lower(): s for a in parser._actions for s in a.option_strings}
+    for i, tok in enumerate(argv):
+        if tok.startswith('-') and tok.lower() in names:
+            argv[i] = names[tok.lower()]
+    # choices — зеркало [ValidateSet]; канонизируем ДО разбора, иначе argparse отвергнет регистр
+    choice_map = {}
+    for a in parser._actions:
+        if a.choices:
+            for s in a.option_strings:
+                choice_map[s] = {str(c).lower(): c for c in a.choices}
+    for i in range(len(argv) - 1):
+        m = choice_map.get(argv[i])
+        if m and argv[i + 1].lower() in m:
+            argv[i + 1] = m[argv[i + 1].lower()]
+    return parser.parse_args(argv)
+
 
 
 # ============================================================
@@ -30,6 +89,18 @@ def _sg_root_uuid(xml_path):
         return None
     return None
 
+
+def _sg_is_external_root(xml_path):
+    if not os.path.isfile(xml_path):
+        return False
+    try:
+        mx = etree.parse(xml_path).getroot()
+        for child in mx:
+            if isinstance(child.tag, str):
+                return child.tag.split("}")[-1] in ("ExternalDataProcessor", "ExternalReport")
+    except Exception:
+        return False
+    return False
 
 def _sg_find_v8project(start_dir):
     d = start_dir
@@ -70,6 +141,9 @@ def _sg_get_edit_mode(cfg_dir):
 def assert_edit_allowed(target_path, require):
     try:
         rp = os.path.abspath(target_path)
+        # Autonomous external object (EPF/ERF): never part of a config on support (issue #39).
+        if _sg_is_external_root(rp):
+            return
         elem_uuid = _sg_root_uuid(rp)
         cfg_dir = None
         bin_path = None
@@ -77,6 +151,8 @@ def assert_edit_allowed(target_path, require):
         for _ in range(12):
             if not d:
                 break
+            if _sg_is_external_root(d + ".xml"):
+                return
             if not elem_uuid:
                 elem_uuid = _sg_root_uuid(d + ".xml")
             if not cfg_dir:
@@ -172,6 +248,16 @@ def assert_edit_allowed(target_path, require):
 
 def detect_format_version(d):
     while d:
+        # Автономная внешняя обработка/отчёт: своего Configuration.xml у неё нет, версию несёт
+        # корень самой обработки. Без этого форма и макет внутри обработки 2.21 писались бы 2.17.
+        ext_path = d + ".xml"
+        if os.path.isfile(ext_path):
+            with open(ext_path, "r", encoding="utf-8-sig") as f:
+                ext_head = f.read(2000)
+            if re.search(r'<(ExternalDataProcessor|ExternalReport)[ >]', ext_head):
+                m = re.search(r'<MetaDataObject[^>]+version="(\d+\.\d+)"', ext_head)
+                if m:
+                    return m.group(1)
         cfg_path = os.path.join(d, "Configuration.xml")
         if os.path.isfile(cfg_path):
             with open(cfg_path, "r", encoding="utf-8-sig") as f:
@@ -262,21 +348,119 @@ def import_ci_fragment(xml_string):
     return nodes
 
 
-def parse_value_list(val):
+def parse_json_input(text, source, expected=None, inline=False):
+    """Разбор пользовательского JSON: одна строка в stderr вместо traceback (issue #80).
+
+    expected заполняем только для полиморфного входа: у файла подсказка
+    была бы наполнителем — имя файла и текст парсера самодостаточны. inline печатает ещё и то,
+    что доехало: у файла такого вопроса нет, он лежит на диске и его видно целиком.
+
+    Импорты внутри тела: копия функции живёт в навыках с разными именами модулей
+    (skd-decompile импортирует json локально как _json), а тело обязано быть одинаковым.
+    """
+    import json as _pj
+    import sys as _psys
+    try:
+        if not str(text).strip():
+            raise ValueError("input is empty")
+        return _pj.loads(text)
+    except ValueError as exc:
+        what = "%s expects %s" % (source, expected) if expected else "Invalid JSON in %s" % source
+        if inline:
+            got = " ".join(str(text).split())
+            label = "got"
+            if not got:
+                got = "(empty)"
+            elif len(got) > 60:
+                label = "got (first 60 chars)"
+                got = got[:60]
+            what = "%s, %s: %s" % (what, label, got)
+        print("[ERROR] %s (%s)" % (what, exc), file=_psys.stderr)
+        _psys.exit(1)
+
+
+def read_json_file(path):
+    """Чтение входного JSON-файла с кодировкой из BOM (issue #80).
+
+    BOM — объявление самого файла, поэтому ему верим; без BOM ждём строгий UTF-8. Кодовую
+    страницу не подбираем: угаданное имя уехало бы в метаданные молча.
+    """
+    import os as _pos
+    import sys as _psys
+    if not _pos.path.exists(path):
+        print("[ERROR] File not found: %s" % path, file=_psys.stderr)
+        _psys.exit(1)
+    if _pos.path.isdir(path):
+        print("[ERROR] Expected a JSON file, got a directory: %s" % path, file=_psys.stderr)
+        _psys.exit(1)
+    with open(path, "rb") as _fh:
+        data = _fh.read()
+    if data[:3] == b"\xef\xbb\xbf":
+        return data[3:].decode("utf-8")
+    if data[:2] == b"\xff\xfe":
+        return data[2:].decode("utf-16-le")
+    if data[:2] == b"\xfe\xff":
+        return data[2:].decode("utf-16-be")
+    try:
+        return data.decode("utf-8")
+    except UnicodeDecodeError as exc:
+        print("[ERROR] %s is not valid UTF-8: %s - save the file as UTF-8, or add a BOM if it is UTF-16"
+              % (path, exc), file=_psys.stderr)
+        _psys.exit(1)
+
+
+def parse_value_list(val, op_name):
     val = val.strip()
     if val.startswith("["):
-        arr = json.loads(val)
+        arr = ci_json(parse_json_input(val, "-Value for operation '%s'" % op_name, "a JSON array of command names", inline=True))
         return [str(item) for item in arr]
     return [val]
 
 
-def save_xml_bom(tree, path):
-    xml_bytes = etree.tostring(tree, xml_declaration=True, encoding="UTF-8")
-    xml_bytes = xml_bytes.replace(b"<?xml version='1.0' encoding='UTF-8'?>", b'<?xml version="1.0" encoding="utf-8"?>')
-    if not xml_bytes.endswith(b"\n"):
+def _detect_xml_style(path):
+    """Стиль существующего файла для round-trip-сохранения: BOM / EOL / регистр encoding /
+    финальный перенос. None → файл новый (сохранить текущее поведение)."""
+    try:
+        raw = open(path, "rb").read()
+    except OSError:
+        return None
+    bom = raw.startswith(b"\xef\xbb\xbf")
+    body = raw[3:] if bom else raw
+    crlf = b"\r\n" in body
+    m = re.search(rb'encoding="([^"]+)"', body[:200])
+    enc = m.group(1).decode("ascii") if m else "utf-8"
+    final_nl = body.endswith(b"\n")
+    return {"bom": bom, "crlf": crlf, "enc": enc, "final_nl": final_nl}
+
+
+def _finalize_xml_bytes(xml_bytes, style):
+    """Привести байты к стилю оригинала; для НОВОГО файла (style is None) — к канону
+    выгрузки Конфигуратора: encoding="UTF-8", CRLF в разделителях, без перевода в конце."""
+    enc_decl = style["enc"] if style else "UTF-8"
+    xml_bytes = xml_bytes.replace(
+        b"<?xml version='1.0' encoding='UTF-8'?>",
+        b'<?xml version="1.0" encoding="' + enc_decl.encode("ascii") + b'"?>')
+    # Канонизировать переносы к LF (убирает &#13; от \r в tail'ах)
+    xml_bytes = (xml_bytes.replace(b"&#13;\n", b"\n").replace(b"&#13;", b"")
+                 .replace(b"\r\n", b"\n").replace(b"\r", b"\n"))
+    # Финальный перенос — как в оригинале (новый файл → нет, канон #57)
+    want_final_nl = style["final_nl"] if style else False
+    xml_bytes = xml_bytes.rstrip(b"\n")
+    if want_final_nl:
         xml_bytes += b"\n"
+    # EOL — как в оригинале (новый файл → CRLF, канон #57)
+    if (style["crlf"] if style else True):
+        xml_bytes = xml_bytes.replace(b"\n", b"\r\n")
+    return xml_bytes
+
+
+def save_xml_bom(tree, path):
+    style = _detect_xml_style(path)
+    xml_bytes = etree.tostring(tree, xml_declaration=True, encoding="UTF-8")
+    xml_bytes = _finalize_xml_bytes(xml_bytes, style)
     with open(path, "wb") as f:
-        f.write(b"\xef\xbb\xbf")
+        if style is None or style["bom"]:
+            f.write(b"\xef\xbb\xbf")
         f.write(xml_bytes)
 
 
@@ -304,6 +488,10 @@ TYPE_NORM_MAP = {
     'ПланОбмена': 'ExchangePlan', 'ЖурналДокументов': 'DocumentJournal',
     'ОбщийМодуль': 'CommonModule', 'ОбщаяКоманда': 'CommonCommand',
     'ОбщаяФорма': 'CommonForm', 'Подсистема': 'Subsystem',
+    'РегистрРасчёта': 'CalculationRegister', 'РегистрРасчета': 'CalculationRegister',
+    'ПланВидовРасчёта': 'ChartOfCalculationTypes', 'ПланВидовРасчета': 'ChartOfCalculationTypes',
+    'Роль': 'Role', 'ОбщийМакет': 'CommonTemplate', 'ЭлементСтиля': 'StyleItem',
+    'ОбщийРеквизит': 'CommonAttribute', 'ГруппаКоманд': 'CommandGroup',
     # Russian plural
     'Справочники': 'Catalog', 'Документы': 'Document', 'Перечисления': 'Enum',
     'Константы': 'Constant', 'Отчёты': 'Report', 'Отчеты': 'Report', 'Обработки': 'DataProcessor',
@@ -313,6 +501,10 @@ TYPE_NORM_MAP = {
     'БизнесПроцессы': 'BusinessProcess', 'Задачи': 'Task',
     'ПланыОбмена': 'ExchangePlan', 'ЖурналыДокументов': 'DocumentJournal',
     'Подсистемы': 'Subsystem',
+    'РегистрыРасчёта': 'CalculationRegister', 'РегистрыРасчета': 'CalculationRegister',
+    'ПланыВидовРасчёта': 'ChartOfCalculationTypes', 'ПланыВидовРасчета': 'ChartOfCalculationTypes',
+    'Роли': 'Role', 'ОбщиеМакеты': 'CommonTemplate', 'ЭлементыСтиля': 'StyleItem',
+    'ОбщиеРеквизиты': 'CommonAttribute', 'ГруппыКоманд': 'CommandGroup',
 }
 
 
@@ -348,7 +540,7 @@ def main():
     parser.add_argument("-Value", default=None)
     parser.add_argument("-CreateIfMissing", action="store_true")
     parser.add_argument("-NoValidate", action="store_true")
-    args = parser.parse_args()
+    args = ci_parse_args(parser)
 
     # --- Mode validation ---
     if args.DefinitionFile and args.Operation:
@@ -385,7 +577,12 @@ def main():
                 f'\tversion="{format_version}">\n'
                 f'</CommandInterface>'
             )
-            with open(ci_path, "w", encoding="utf-8-sig") as fh:
+            # Файл СОЗДАЁМ — пишем канон выгрузки: CRLF в разделителях. (Правка
+            # существующего файла, наоборот, наследует его стиль — это делает
+            # save_xml_bom через _detect_xml_style.) newline="" обязателен: без него
+            # текстовый режим дал бы CRLF на Windows и LF на macOS.
+            empty_ci = empty_ci.replace("\r\n", "\n").replace("\n", "\r\n").rstrip("\r\n")
+            with open(ci_path, "w", encoding="utf-8-sig", newline="") as fh:
                 fh.write(empty_ci)
             print(f"[INFO] Created new CommandInterface.xml: {ci_path}")
         else:
@@ -511,7 +708,8 @@ def main():
 
     def do_place(json_val):
         nonlocal add_count, modify_count
-        defn = json_val if isinstance(json_val, dict) else json.loads(json_val)
+        defn = ci_json(json_val if isinstance(json_val, dict) else parse_json_input(
+            json_val, "-Value for operation 'place'", "a JSON object {command, group}", inline=True))
         cmd_name = normalize_cmd_name(str(defn["command"]))
         group_name = str(defn["group"])
         if not cmd_name or not group_name:
@@ -539,7 +737,8 @@ def main():
 
     def do_order(json_val):
         nonlocal add_count, remove_count
-        defn = json_val if isinstance(json_val, dict) else json.loads(json_val)
+        defn = ci_json(json_val if isinstance(json_val, dict) else parse_json_input(
+            json_val, "-Value for operation 'order'", "a JSON object {group, commands:[...]}", inline=True))
         group_name = str(defn["group"])
         commands = [normalize_cmd_name(str(c)) for c in defn["commands"]]
         if not group_name or not commands:
@@ -573,7 +772,8 @@ def main():
 
     def do_subsystem_order(json_val):
         nonlocal add_count, remove_count
-        parsed = json_val if isinstance(json_val, list) else json.loads(json_val)
+        parsed = ci_json(json_val if isinstance(json_val, list) else parse_json_input(
+            json_val, "-Value for operation 'subsystem-order'", "a JSON array of subsystem paths", inline=True))
         subsystems = [str(s) for s in parsed]
         if not subsystems:
             print("subsystem-order requires array of subsystem paths", file=sys.stderr)
@@ -598,7 +798,8 @@ def main():
 
     def do_group_order(json_val):
         nonlocal add_count, remove_count
-        parsed = json_val if isinstance(json_val, list) else json.loads(json_val)
+        parsed = ci_json(json_val if isinstance(json_val, list) else parse_json_input(
+            json_val, "-Value for operation 'group-order'", "a JSON array of group names", inline=True))
         groups = [str(g) for g in parsed]
         if not groups:
             print("group-order requires array of group names", file=sys.stderr)
@@ -627,8 +828,7 @@ def main():
         def_file = args.DefinitionFile
         if not os.path.isabs(def_file):
             def_file = os.path.join(os.getcwd(), def_file)
-        with open(def_file, "r", encoding="utf-8-sig") as fh:
-            ops = json.loads(fh.read())
+        ops = ci_json(parse_json_input(read_json_file(def_file), def_file))
         if isinstance(ops, list):
             operations = ops
         else:
@@ -638,19 +838,21 @@ def main():
 
     for op in operations:
         op_name = op.get("operation", args.Operation or "")
+        # PS сравнивает имя операции через switch, а он регистронезависим.
+        op_key = str(op_name).lower()
         op_value = op.get("value", args.Value or "")
 
-        if op_name == "hide":
-            do_hide(parse_value_list(op_value))
-        elif op_name == "show":
-            do_show(parse_value_list(op_value))
-        elif op_name == "place":
+        if op_key == "hide":
+            do_hide(parse_value_list(op_value, op_name))
+        elif op_key == "show":
+            do_show(parse_value_list(op_value, op_name))
+        elif op_key == "place":
             do_place(op_value)
-        elif op_name == "order":
+        elif op_key == "order":
             do_order(op_value)
-        elif op_name == "subsystem-order":
+        elif op_key == "subsystem-order":
             do_subsystem_order(op_value)
-        elif op_name == "group-order":
+        elif op_key == "group-order":
             do_group_order(op_value)
         else:
             print(f"Unknown operation: {op_name}", file=sys.stderr)

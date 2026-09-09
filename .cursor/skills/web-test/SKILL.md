@@ -57,8 +57,10 @@ node $RUN run <url> script.js   # exits when done, no session
 ### Interactive mode (step-by-step development)
 
 ```bash
-# 1. Start session (run_in_background=true, prints JSON when ready)
-node $RUN start <url>
+# 1. Start session in the background — `start` stays running as the server, so don't wait on
+#    its stdout. Poll `status` instead: it exits 0 only once the session is loaded and live.
+node $RUN start <url>            # run_in_background=true
+until node $RUN status >/dev/null 2>&1; do sleep 2; done   # exit 0 = ready
 
 # 2. Execute scripts against running session
 cat <<'SCRIPT' | node $RUN exec -
@@ -127,7 +129,7 @@ Switch to an already-open tab/window (fuzzy match).
 
 ### Reading form state
 
-#### `getFormState()` → `{ form, formCount, openForms, fields, buttons, tabs, navigation?, table, tables, filters, reportSettings? }`
+#### `getFormState()` → `{ form, formCount, openForms, title, fields, buttons, tabs, navigation?, table, tables, filters, reportSettings? }`
 Returns current form structure. This is the primary way to understand what's on screen.
 
 **form** — active form number, or `null` when no form is open (desktop).
@@ -140,9 +142,25 @@ Returns current form structure. This is the primary way to understand what's on 
 
 **openTabs** — array of `{ name, active? }` from the open-windows tab bar. Only present when the tab bar is enabled in 1C settings. Do NOT rely on this — use `formCount`/`openForms` instead.
 
-**fields** — each field has: `name`, `value`, `label?`, `actions?` (select, clear, open), `required?` (true for unfilled mandatory fields)
+**title** — caption of the active form (`"Контрагенты"`, `"Заказ поставщику ТД00-000052 от 05.07.2022"`). Read from the form's own header, which does not depend on the open-windows tab bar; when the form shows no header, falls back to the active tab's caption, and is `null` when neither is available.
+
+**fields** — each field has: `name`, `value`, `label?`, `actions?` (select, clear, open), `required?` (true for unfilled mandatory fields), `disabled?` (control is unavailable). `buttons[]` carry `disabled?` too.
 
 **navigation** — form navigation panel links (for objects with subordinate catalogs): `[{ name, active? }]`. Clickable via `clickElement()`. Only present when the form has a navigation panel (e.g. "Основное", "Объекты метаданных", "Подсистемы").
+
+**groups** — collapsible and pop-up form groups: `[{ name, title, collapsed, behavior? }]`. `collapsed: true` means the group's content is hidden — part of the form is not shown until you expand it (common on settings pages like "Администрирование → Интернет-поддержка и сервисы"). `behavior: 'popup'` marks a pop-up group (content shows in a floating panel); absent for ordinary collapsible groups. Expand/collapse (or open/close a pop-up) by the group title with `clickElement`, same vocabulary as tree nodes: `{ expand: true }` reveals (idempotent), `{ expand: false }` hides, `{ toggle: true }` flips. After expanding, the group's content becomes readable in the next `getFormState()` (its fields/hyperlinks/texts appear). Plain (non-collapsible) groups are not listed.
+A group's title is not a stable key: the same caption repeats across blocks of a form, and a
+group may swap it when expanded ("Показать детализацию" ↔ "Скрыть детализацию"), after which a
+click by the old caption fails with "not found". The click result therefore reports `group` (the
+group's technical name, which never changes and is accepted by `clickElement`) and `title` (its
+caption right now) — use `group` when you plan to click the same group again.
+```js
+const form = await getFormState();
+// form.groups = [{ name: "ГруппаНовости", title: "Новости", collapsed: true }, ...]
+const r = await clickElement('Новости', { expand: true });   // reveal the group's content
+// r.clicked = { kind: 'formGroup', name: 'Новости', group: 'ГруппаНовости', title: 'Новости', toggled: true }
+await clickElement(r.clicked.group, { expand: false });      // stable key — safe to reuse
+```
 
 **tables** — array of all visible grids: `[{ name, columns, rowCount, label? }]`. `label` is the visual group title shown on screen (e.g. "Входящие"), absent when grid has no visible title. Use `readTable()` for actual data.
 
@@ -161,7 +179,7 @@ const form = await getFormState();
 
 **confirmation** — if present, a Yes/No dialog is shown. Call `clickElement('Да')` or `clickElement('Нет')`.
 
-**errors.stateText** — array of SpreadsheetDocument state messages (e.g. `"Не установлено значение параметра \"X\""`, `"Отчет не сформирован..."`, `"Изменились настройки..."`). Present when the report area shows an info bar instead of data.
+**errors.stateText** — array of SpreadsheetDocument state messages (e.g. `"Не установлено значение параметра \"X\""`, `"Отчет не сформирован..."`, `"Изменились настройки..."`). Present when the report area shows an info bar instead of data. The same info bar carries `"Поиск..."` while a list is still searching — actions do not return while it is up, so a filtered list never hands you the previous rows.
 
 ### Reading data
 
@@ -180,6 +198,8 @@ if (t.rows[0]['Присоединенные файлы']) { /* has an attached f
 t.rows[0]['ЭДО'] === 'pic:1';   // connected to 1С-ЭДО ('pic:0' = not)
 ```
 
+**Grouped headers.** Columns merged under a group caption are reported with that caption: `'Цена / План'`, `'Цена / Факт'` — the caption alone is not a data column. Such names also work in `clickElement({row, column})` and `fillTableRow`; a short name (`'Факт'`) resolves too, picking the leftmost match.
+
 Special row fields:
 - `_kind: 'group'` — hierarchical group row
 - `_kind: 'parent'` — parent row in hierarchy
@@ -188,6 +208,22 @@ Special row fields:
 - `_selected: true` — row is selected (highlighted). Use with `clickElement({ modifier: 'ctrl'|'shift' })` to verify multi-selection
 - `hierarchical: true` — list has groups (on result object)
 - `viewMode: 'tree'` — tree view active (on result object)
+
+Row state — in object lists, decoded from the row's state icon (no need to add a column to the list):
+- `_deleted: true|false` — marked for deletion (catalogs, documents, tasks, business processes, charts of accounts/calculation types)
+- `_posted: true|false` — documents
+- `_predefined: true|false` — catalogs, charts of accounts/calculation types
+- `_completed: true|false` — tasks
+- `_started`, `_finished` — business processes
+- `_rowPic: '<icon>:<N>'` — raw icon id, for diagnostics
+
+```js
+const t = await readTable();
+const doc = t.rows.find(r => r['Номер'] === 'ТД00-000005');
+if (doc._deleted === true) { /* marked for deletion */ }
+```
+
+**A missing state field means "unknown", never `false`** — the property may not apply (documents have no `_predefined`), or the icon may be unrecognised. So `if (!row._deleted)` is unsafe: it reads "unknown" as "not deleted". Compare explicitly (`=== true` / `=== false`) and treat `undefined` as a third outcome. Rows outside object lists (form tabular sections, value lists) have no state fields at all. If `_rowPic` is present but the booleans aren't, report its value — that icon needs decoding support.
 
 **`total` is misleading for long lists.** 1С virtualizes both dynamic lists and form tabular sections — the DOM holds only a window of visible rows. `total` / `shown` count what's *loaded right now*, not the size of the underlying collection. Use **`hasMore`** to know if there's more data outside the window:
 
@@ -239,6 +275,8 @@ Sections + all open tabs.
 
 #### `clickElement(text, { dblclick?, table?, expand?, modifier?, scroll? })` → form state
 Click button, hyperlink, tab, navigation panel link, or grid row (fuzzy match).
+
+**Disabled controls throw.** `clickElement`, `fillFields`, and `selectValue` throw `"X" is disabled` on an unavailable control instead of reporting a fake success — check `getFormState().buttons[].disabled` / `fields[].disabled` first.
 
 - `table` — scope button search to a specific grid's command panel (by name from `tables[]`):
   ```js

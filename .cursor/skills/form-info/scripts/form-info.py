@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# form-info v1.4 — Analyze 1C managed form structure
+# form-info v1.8 — Analyze 1C managed form structure
 # Source: https://github.com/Nikolay-Shirokov/cc-1c-skills
 
 import argparse
@@ -7,6 +7,28 @@ import os
 import re
 import sys
 from lxml import etree
+
+# Регистронезависимый ввод — паритет с PS1: в PowerShell имена параметров и [ValidateSet]
+# регистр не различают, в argparse совпадение точное.
+def ci_parse_args(parser, argv=None):
+    """parse_args по правилам PS: имена параметров и значения choices регистронезависимы."""
+    argv = list(sys.argv[1:] if argv is None else argv)
+    names = {s.lower(): s for a in parser._actions for s in a.option_strings}
+    for i, tok in enumerate(argv):
+        if tok.startswith('-') and tok.lower() in names:
+            argv[i] = names[tok.lower()]
+    # choices — зеркало [ValidateSet]; канонизируем ДО разбора, иначе argparse отвергнет регистр
+    choice_map = {}
+    for a in parser._actions:
+        if a.choices:
+            for s in a.option_strings:
+                choice_map[s] = {str(c).lower(): c for c in a.choices}
+    for i in range(len(argv) - 1):
+        m = choice_map.get(argv[i])
+        if m and argv[i + 1].lower() in m:
+            argv[i + 1] = m[argv[i + 1].lower()]
+    return parser.parse_args(argv)
+
 
 # --- Namespace map ---
 
@@ -353,14 +375,29 @@ def get_support_status_for_path(target_path):
             except Exception:
                 pass
             return None
+        def _sg_is_external_root(xml_path):
+            if not os.path.isfile(xml_path):
+                return False
+            try:
+                mx = etree.parse(xml_path).getroot()
+                for child in mx:
+                    if isinstance(child.tag, str):
+                        return child.tag.split("}")[-1] in ("ExternalDataProcessor", "ExternalReport")
+            except Exception:
+                return False
+            return False
         rp = os.path.abspath(target_path)
         # The target file itself may be the element meta-xml (e.g. Subsystems/X.xml).
         elem_uuid = root_uuid(rp)
+        if _sg_is_external_root(rp):
+            return None
         bin_path = None
         d = os.path.dirname(rp)
         for _ in range(12):
             if not d:
                 break
+            if _sg_is_external_root(d + ".xml"):
+                return None
             if not elem_uuid:
                 elem_uuid = root_uuid(d + ".xml")
             if not bin_path:
@@ -418,7 +455,7 @@ def main():
     parser.add_argument("-Limit", type=int, default=150, help="Max lines to show")
     parser.add_argument("-Offset", type=int, default=0, help="Line offset for pagination")
     parser.add_argument("-Expand", default="", help="Expand collapsed section by name, or * for all")
-    args = parser.parse_args()
+    args = ci_parse_args(parser)
 
     form_path = args.FormPath
     limit = args.Limit
@@ -513,7 +550,9 @@ def main():
         header += f" ({object_context})"
     header += " ==="
     lines.append(header)
-    lines.append(f"Поддержка: {get_support_status_for_path(form_path)}")
+    _support = get_support_status_for_path(form_path)
+    if _support is not None:
+        lines.append(f"Поддержка: {_support}")
 
     # --- Form properties (Title excluded -- shown in header) ---
     prop_names = [

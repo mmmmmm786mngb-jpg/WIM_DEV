@@ -1,11 +1,95 @@
 #!/usr/bin/env python3
-# skd-decompile v0.90 — Decompile 1C DCS Template.xml to JSON DSL (draft)
+# skd-decompile v0.96 — Decompile 1C DCS Template.xml to JSON DSL (draft)
 # Source: https://github.com/Nikolay-Shirokov/cc-1c-skills
 import argparse
 import os
 import re
 import sys
 import xml.etree.ElementTree as ET
+
+# Регистронезависимый ввод — паритет с PS1: в PowerShell имена параметров и [ValidateSet]
+# регистр не различают, в argparse совпадение точное.
+
+def parse_json_input(text, source, expected=None, inline=False):
+    """Разбор пользовательского JSON: одна строка в stderr вместо traceback (issue #80).
+
+    expected заполняем только для полиморфного входа: у файла подсказка
+    была бы наполнителем — имя файла и текст парсера самодостаточны. inline печатает ещё и то,
+    что доехало: у файла такого вопроса нет, он лежит на диске и его видно целиком.
+
+    Импорты внутри тела: копия функции живёт в навыках с разными именами модулей
+    (skd-decompile импортирует json локально как _json), а тело обязано быть одинаковым.
+    """
+    import json as _pj
+    import sys as _psys
+    try:
+        if not str(text).strip():
+            raise ValueError("input is empty")
+        return _pj.loads(text)
+    except ValueError as exc:
+        what = "%s expects %s" % (source, expected) if expected else "Invalid JSON in %s" % source
+        if inline:
+            got = " ".join(str(text).split())
+            label = "got"
+            if not got:
+                got = "(empty)"
+            elif len(got) > 60:
+                label = "got (first 60 chars)"
+                got = got[:60]
+            what = "%s, %s: %s" % (what, label, got)
+        print("[ERROR] %s (%s)" % (what, exc), file=_psys.stderr)
+        _psys.exit(1)
+
+
+def read_json_file(path):
+    """Чтение входного JSON-файла с кодировкой из BOM (issue #80).
+
+    BOM — объявление самого файла, поэтому ему верим; без BOM ждём строгий UTF-8. Кодовую
+    страницу не подбираем: угаданное имя уехало бы в метаданные молча.
+    """
+    import os as _pos
+    import sys as _psys
+    if not _pos.path.exists(path):
+        print("[ERROR] File not found: %s" % path, file=_psys.stderr)
+        _psys.exit(1)
+    if _pos.path.isdir(path):
+        print("[ERROR] Expected a JSON file, got a directory: %s" % path, file=_psys.stderr)
+        _psys.exit(1)
+    with open(path, "rb") as _fh:
+        data = _fh.read()
+    if data[:3] == b"\xef\xbb\xbf":
+        return data[3:].decode("utf-8")
+    if data[:2] == b"\xff\xfe":
+        return data[2:].decode("utf-16-le")
+    if data[:2] == b"\xfe\xff":
+        return data[2:].decode("utf-16-be")
+    try:
+        return data.decode("utf-8")
+    except UnicodeDecodeError as exc:
+        print("[ERROR] %s is not valid UTF-8: %s - save the file as UTF-8, or add a BOM if it is UTF-16"
+              % (path, exc), file=_psys.stderr)
+        _psys.exit(1)
+
+
+def ci_parse_args(parser, argv=None):
+    """parse_args по правилам PS: имена параметров и значения choices регистронезависимы."""
+    argv = list(sys.argv[1:] if argv is None else argv)
+    names = {s.lower(): s for a in parser._actions for s in a.option_strings}
+    for i, tok in enumerate(argv):
+        if tok.startswith('-') and tok.lower() in names:
+            argv[i] = names[tok.lower()]
+    # choices — зеркало [ValidateSet]; канонизируем ДО разбора, иначе argparse отвергнет регистр
+    choice_map = {}
+    for a in parser._actions:
+        if a.choices:
+            for s in a.option_strings:
+                choice_map[s] = {str(c).lower(): c for c in a.choices}
+    for i in range(len(argv) - 1):
+        m = choice_map.get(argv[i])
+        if m and argv[i + 1].lower() in m:
+            argv[i + 1] = m[argv[i + 1].lower()]
+    return parser.parse_args(argv)
+
 
 # --- 1. Namespace manager ---
 
@@ -281,7 +365,7 @@ def main():
     parser = argparse.ArgumentParser(description='Decompile 1C DCS Template.xml to JSON DSL', allow_abbrev=False)
     parser.add_argument('-TemplatePath', '-Path', dest='TemplatePath', type=str, required=True)
     parser.add_argument('-OutputPath', type=str, default=None)
-    args = parser.parse_args()
+    args = ci_parse_args(parser)
 
     global TemplatePath, OutputPath
     TemplatePath = args.TemplatePath
@@ -1340,9 +1424,7 @@ def load_user_styles(dir_path):
     styles_path = os.path.join(dir_path, 'skd-styles.json')
     if not os.path.exists(styles_path):
         return
-    import json as _json
-    with open(styles_path, 'r', encoding='utf-8-sig') as f:
-        raw = _json.load(f)
+    raw = parse_json_input(read_json_file(styles_path), styles_path)
     existing_user_presets_raw = raw
     for prop_name, prop_value in raw.items():
         preset = {}
@@ -2327,16 +2409,14 @@ def build_table_axis_block(node, loc, include_name=False):
         for fc in f_node.select_nodes("dcsset:item"):
             fa.append(build_filter_item(fc, "%s/filter" % loc))
         entry['filter'] = fa
+    # order/selection — всегда явные ([Auto] как есть, отсутствие/пустоту как []): иначе compile
+    # впаяет дефолтный Auto → round-trip рвётся на осях без выбора (напр. ветки use=false).
     ord_node = node.select_single_node("dcsset:order")
-    if ord_node:
-        ord_items = build_order(ord_node, "%s/order" % loc)
-        if len(ord_items) > 0:
-            entry['order'] = ord_items
+    ord_items = build_order(ord_node, "%s/order" % loc) if ord_node else []
+    entry['order'] = ord_items if len(ord_items) > 0 else []
     sel_node = node.select_single_node("dcsset:selection")
-    if sel_node:
-        sel_items = build_selection(sel_node, "%s/selection" % loc)
-        if len(sel_items) > 0:
-            entry['selection'] = sel_items
+    sel_items = build_selection(sel_node, "%s/selection" % loc) if sel_node else []
+    entry['selection'] = sel_items if len(sel_items) > 0 else []
     ca_n = node.select_single_node("dcsset:conditionalAppearance")
     if ca_n:
         ca = build_conditional_appearance(ca_n, "%s/ca" % loc)
@@ -2485,11 +2565,10 @@ def build_structure(node, loc):
                     s_arr.append(build_table_axis_block(s, "%s/%d/series[%d]" % (loc, idx, si)))
                     si += 1
                 entry['series'] = s_arr
+            # chart-level selection — всегда явно ([] при отсутствии/пустоте, иначе compile впаяет Auto)
             sel_n = it.select_single_node("dcsset:selection")
-            if sel_n:
-                sel_i = build_selection(sel_n, "%s/%d/selection" % (loc, idx))
-                if len(sel_i) > 0:
-                    entry['selection'] = sel_i
+            sel_i = build_selection(sel_n, "%s/%d/selection" % (loc, idx)) if sel_n else []
+            entry['selection'] = sel_i if len(sel_i) > 0 else []
             op_n = it.select_single_node("dcsset:outputParameters")
             op = build_output_parameters(op_n)
             if op and len(op) > 0:
@@ -2532,16 +2611,16 @@ def build_structure(node, loc):
         if len(g_fields) > 0:
             entry['groupFields'] = g_fields
 
+        # Local selection/order — всегда явные ([Auto] как есть, отсутствие/пустоту как []): иначе
+        # compile впаяет дефолтный Auto → round-trip рвётся на группах без выбора (напр. use=false).
+        # [] не Auto-only → try_structure_shorthand не свернёт такую группу в shorthand (без Auto).
         sel_node = it.select_single_node("dcsset:selection")
-        if sel_node:
-            sel_items = build_selection(sel_node, "%s/selection" % loc)
-            if len(sel_items) > 0:
-                entry['selection'] = sel_items
+        sel_items = build_selection(sel_node, "%s/selection" % loc) if sel_node else []
+        entry['selection'] = sel_items if len(sel_items) > 0 else []
         ord_node = it.select_single_node("dcsset:order")
+        ord_items = build_order(ord_node, "%s/order" % loc) if ord_node else []
+        entry['order'] = ord_items if len(ord_items) > 0 else []
         if ord_node:
-            ord_items = build_order(ord_node, "%s/order" % loc)
-            if len(ord_items) > 0:
-                entry['order'] = ord_items
             for ch in ord_node.child_nodes:
                 if ch.namespace_uri != NS_SET:
                     continue

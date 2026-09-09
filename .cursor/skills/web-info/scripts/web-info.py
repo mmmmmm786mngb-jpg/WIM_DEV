@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# web-info v1.0 — Apache & 1C publication status
+# web-info v1.5 — Apache & 1C publication status
 # Source: https://github.com/Nikolay-Shirokov/cc-1c-skills
 
 """
@@ -11,9 +11,32 @@
 import argparse
 import os
 import re
+import socket
 import sys
 
 import psutil
+
+# Регистронезависимый ввод — паритет с PS1: в PowerShell имена параметров и [ValidateSet]
+# регистр не различают, в argparse совпадение точное.
+def ci_parse_args(parser, argv=None):
+    """parse_args по правилам PS: имена параметров и значения choices регистронезависимы."""
+    argv = list(sys.argv[1:] if argv is None else argv)
+    names = {s.lower(): s for a in parser._actions for s in a.option_strings}
+    for i, tok in enumerate(argv):
+        if tok.startswith('-') and tok.lower() in names:
+            argv[i] = names[tok.lower()]
+    # choices — зеркало [ValidateSet]; канонизируем ДО разбора, иначе argparse отвергнет регистр
+    choice_map = {}
+    for a in parser._actions:
+        if a.choices:
+            for s in a.option_strings:
+                choice_map[s] = {str(c).lower(): c for c in a.choices}
+    for i in range(len(argv) - 1):
+        m = choice_map.get(argv[i])
+        if m and argv[i + 1].lower() in m:
+            argv[i + 1] = m[argv[i + 1].lower()]
+    return parser.parse_args(argv)
+
 
 
 def get_httpd_by_exe(httpd_exe_norm):
@@ -37,7 +60,7 @@ def main():
     sys.stderr.reconfigure(encoding="utf-8")
     parser = argparse.ArgumentParser(description='Apache & 1C publication status', allow_abbrev=False)
     parser.add_argument('-ApachePath', type=str, default='', help='Apache root (default: tools\\apache24)')
-    args = parser.parse_args()
+    args = ci_parse_args(parser)
 
     # --- Resolve ApachePath ---
     apache_path = args.ApachePath
@@ -92,7 +115,15 @@ def main():
     m = re.search(r'(?m)^Listen\s+(\d+)', conf_content)
     if m:
         port = m.group(1)
-    print(f'Port:   {port}')
+    # Проверяем именно TCP-порт: запрос к публикации поднял бы сеанс 1С и занял лицензию
+    port_state = ''
+    if port != '—':
+        try:
+            with socket.create_connection(('127.0.0.1', int(port)), timeout=1):
+                port_state = ' (слушается)'
+        except OSError:
+            port_state = ' (не отвечает)'
+    print(f'Port:   {port}{port_state}')
 
     # Extract wsap24 path
     m = re.search(r'LoadModule\s+_1cws_module\s+"([^"]+)"', conf_content)
@@ -124,11 +155,18 @@ def main():
             # Detect published services
             svc_tags = []
             if vrd_content:
-                if re.search(r'<ws\s', vrd_content):
-                    svc_tags.append('WS')
-                if re.search(r'<httpServices\s', vrd_content):
-                    svc_tags.append('HTTP')
-                if re.search(r'enableStandardOdata\s*=\s*"true"', vrd_content):
+                # "+ext" — publishExtensionsByDefault: сервисы расширений тоже опубликованы
+                m_ws = re.search(r'<ws\s[^>]*>', vrd_content)
+                if m_ws:
+                    svc_tags.append('WS+ext' if re.search(
+                        r'publishExtensionsByDefault\s*=\s*"true"', m_ws.group(0)) else 'WS')
+                m_hs = re.search(r'<httpServices\s[^>]*>', vrd_content)
+                if m_hs:
+                    svc_tags.append('HTTP+ext' if re.search(
+                        r'publishExtensionsByDefault\s*=\s*"true"', m_hs.group(0)) else 'HTTP')
+                # Актуальная форма — <standardOdata enable="true"/>; enableStandardOdata — до 8.3.9
+                if (re.search(r'<standardOdata\s[^>]*enable\s*=\s*"true"', vrd_content)
+                        or re.search(r'enableStandardOdata\s*=\s*"true"', vrd_content)):
                     svc_tags.append('OData')
             svc_label = '   [' + ' '.join(svc_tags) + ']' if svc_tags else ''
 
@@ -139,17 +177,33 @@ def main():
     print('')
     print('=== Последние ошибки ===')
 
-    error_log = os.path.join(apache_path, 'logs', 'error.log')
-    if os.path.exists(error_log):
+    # Имя файла берём из httpd.conf: сборки Apache расходятся (error.log / error_log)
+    error_log = None
+    m_log = re.search(r'(?m)^\s*ErrorLog\s+"?([^"\r\n]+)"?', conf_content)
+    if m_log:
+        log_path = m_log.group(1).strip()
+        error_log = os.path.normpath(
+            log_path if os.path.isabs(log_path) else os.path.join(apache_path, log_path))
+    if not error_log or not os.path.exists(error_log):
+        error_log = next((p for p in (os.path.join(apache_path, 'logs', n)
+                                      for n in ('error_log', 'error.log'))
+                          if os.path.exists(p)), None)
+
+    if error_log and os.path.exists(error_log):
+        print(f'Журнал: {error_log}')
         try:
             with open(error_log, 'r', encoding='utf-8-sig', errors='replace') as f:
                 all_lines = f.readlines()
-            tail_lines = all_lines[-5:] if len(all_lines) >= 5 else all_lines
-            if tail_lines:
-                for line in tail_lines:
+            # Только error и выше: warn забит штатным шумом winnt_accept, notice — строки старта.
+            # AH02538 — след нашего же рестарта (родитель убит), пишется как crit при каждой публикации
+            err_lines = [ln for ln in all_lines
+                         if re.search(r'\[[a-z_]+:(error|crit|alert|emerg)\]', ln)
+                         and 'AH02538' not in ln]
+            if err_lines:
+                for line in err_lines[-5:]:
                     print(f'  {line.rstrip()}')
             else:
-                print('(пусто)')
+                print('(ошибок нет)')
         except Exception:
             print('(ошибка чтения)')
     else:

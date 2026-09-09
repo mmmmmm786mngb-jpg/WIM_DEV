@@ -1,4 +1,4 @@
-# form-edit v1.3 — Edit 1C managed form elements (Python port)
+# form-edit v1.18 — Edit 1C managed form elements (Python port) (+esc_xml/esc_xml_text: разное экранирование атрибута и текста)
 # Source: https://github.com/Nikolay-Shirokov/cc-1c-skills
 import argparse
 import json
@@ -10,6 +10,127 @@ from lxml import etree
 
 sys.stdout.reconfigure(encoding="utf-8")
 sys.stderr.reconfigure(encoding="utf-8")
+
+# Регистронезависимый ввод — паритет с PS1: в PowerShell имена параметров и [ValidateSet]
+# регистр не различают, в argparse совпадение точное.
+
+def parse_json_input(text, source, expected=None, inline=False):
+    """Разбор пользовательского JSON: одна строка в stderr вместо traceback (issue #80).
+
+    expected заполняем только для полиморфного входа: у файла подсказка
+    была бы наполнителем — имя файла и текст парсера самодостаточны. inline печатает ещё и то,
+    что доехало: у файла такого вопроса нет, он лежит на диске и его видно целиком.
+
+    Импорты внутри тела: копия функции живёт в навыках с разными именами модулей
+    (skd-decompile импортирует json локально как _json), а тело обязано быть одинаковым.
+    """
+    import json as _pj
+    import sys as _psys
+    try:
+        if not str(text).strip():
+            raise ValueError("input is empty")
+        return _pj.loads(text)
+    except ValueError as exc:
+        what = "%s expects %s" % (source, expected) if expected else "Invalid JSON in %s" % source
+        if inline:
+            got = " ".join(str(text).split())
+            label = "got"
+            if not got:
+                got = "(empty)"
+            elif len(got) > 60:
+                label = "got (first 60 chars)"
+                got = got[:60]
+            what = "%s, %s: %s" % (what, label, got)
+        print("[ERROR] %s (%s)" % (what, exc), file=_psys.stderr)
+        _psys.exit(1)
+
+
+def read_json_file(path):
+    """Чтение входного JSON-файла с кодировкой из BOM (issue #80).
+
+    BOM — объявление самого файла, поэтому ему верим; без BOM ждём строгий UTF-8. Кодовую
+    страницу не подбираем: угаданное имя уехало бы в метаданные молча.
+    """
+    import os as _pos
+    import sys as _psys
+    if not _pos.path.exists(path):
+        print("[ERROR] File not found: %s" % path, file=_psys.stderr)
+        _psys.exit(1)
+    if _pos.path.isdir(path):
+        print("[ERROR] Expected a JSON file, got a directory: %s" % path, file=_psys.stderr)
+        _psys.exit(1)
+    with open(path, "rb") as _fh:
+        data = _fh.read()
+    if data[:3] == b"\xef\xbb\xbf":
+        return data[3:].decode("utf-8")
+    if data[:2] == b"\xff\xfe":
+        return data[2:].decode("utf-16-le")
+    if data[:2] == b"\xfe\xff":
+        return data[2:].decode("utf-16-be")
+    try:
+        return data.decode("utf-8")
+    except UnicodeDecodeError as exc:
+        print("[ERROR] %s is not valid UTF-8: %s - save the file as UTF-8, or add a BOM if it is UTF-16"
+              % (path, exc), file=_psys.stderr)
+        _psys.exit(1)
+
+
+class CIDict(dict):
+    # Ключи храним КАК ЕСТЬ: часть из них — имена объектов (табличные части, стандартные
+    # реквизиты), они попадают в XML. Регистронезависим только поиск. Порядок вставки
+    # сохраняется — от него зависит порядок эмиссии.
+    def _actual(self, key):
+        if not isinstance(key, str) or dict.__contains__(self, key):
+            return key
+        ci = self.__dict__.get('_ci')
+        if ci is None or len(ci) != len(self):
+            ci = {k.lower(): k for k in self if isinstance(k, str)}
+            self.__dict__['_ci'] = ci
+        return ci.get(key.lower(), key)
+
+    def __getitem__(self, key):
+        return dict.__getitem__(self, self._actual(key))
+
+    def __contains__(self, key):
+        return dict.__contains__(self, self._actual(key))
+
+    def get(self, key, default=None):
+        return dict.get(self, self._actual(key), default)
+
+    def pop(self, key, *default):
+        return dict.pop(self, self._actual(key), *default)
+
+    def __setitem__(self, key, value):
+        # запись по ключу, отличающемуся регистром, обновляет существующий, а не плодит дубль
+        dict.__setitem__(self, self._actual(key), value)
+
+def ci_json(obj):
+    """Рекурсивно оборачивает разобранный JSON: словари → CIDict, списки обходятся."""
+    if isinstance(obj, dict):
+        return CIDict((k, ci_json(v)) for k, v in obj.items())
+    if isinstance(obj, list):
+        return [ci_json(v) for v in obj]
+    return obj
+
+def ci_parse_args(parser, argv=None):
+    """parse_args по правилам PS: имена параметров и значения choices регистронезависимы."""
+    argv = list(sys.argv[1:] if argv is None else argv)
+    names = {s.lower(): s for a in parser._actions for s in a.option_strings}
+    for i, tok in enumerate(argv):
+        if tok.startswith('-') and tok.lower() in names:
+            argv[i] = names[tok.lower()]
+    # choices — зеркало [ValidateSet]; канонизируем ДО разбора, иначе argparse отвергнет регистр
+    choice_map = {}
+    for a in parser._actions:
+        if a.choices:
+            for s in a.option_strings:
+                choice_map[s] = {str(c).lower(): c for c in a.choices}
+    for i in range(len(argv) - 1):
+        m = choice_map.get(argv[i])
+        if m and argv[i + 1].lower() in m:
+            argv[i + 1] = m[argv[i + 1].lower()]
+    return parser.parse_args(argv)
+
 
 # ============================================================
 # Support guard (Ext/ParentConfigurations.bin) — see docs/1c-support-state-spec.md
@@ -30,6 +151,18 @@ def _sg_root_uuid(xml_path):
         return None
     return None
 
+
+def _sg_is_external_root(xml_path):
+    if not os.path.isfile(xml_path):
+        return False
+    try:
+        mx = etree.parse(xml_path).getroot()
+        for child in mx:
+            if isinstance(child.tag, str):
+                return child.tag.split("}")[-1] in ("ExternalDataProcessor", "ExternalReport")
+    except Exception:
+        return False
+    return False
 
 def _sg_find_v8project(start_dir):
     d = start_dir
@@ -70,6 +203,9 @@ def _sg_get_edit_mode(cfg_dir):
 def assert_edit_allowed(target_path, require):
     try:
         rp = os.path.abspath(target_path)
+        # Autonomous external object (EPF/ERF): never part of a config on support (issue #39).
+        if _sg_is_external_root(rp):
+            return
         elem_uuid = _sg_root_uuid(rp)
         cfg_dir = None
         bin_path = None
@@ -77,6 +213,8 @@ def assert_edit_allowed(target_path, require):
         for _ in range(12):
             if not d:
                 break
+            if _sg_is_external_root(d + ".xml"):
+                return
             if not elem_uuid:
                 elem_uuid = _sg_root_uuid(d + ".xml")
             if not cfg_dir:
@@ -175,7 +313,7 @@ def assert_edit_allowed(target_path, require):
 parser = argparse.ArgumentParser(allow_abbrev=False)
 parser.add_argument("-FormPath", "-Path", required=True)
 parser.add_argument("-JsonPath", required=True)
-args = parser.parse_args()
+args = ci_parse_args(parser)
 
 form_path = args.FormPath
 json_path = args.JsonPath
@@ -209,7 +347,14 @@ def local_name(node):
 # ── helpers ──────────────────────────────────────────────────
 
 def esc_xml(s):
+    # Эскейп ЗНАЧЕНИЯ АТРИБУТА: & < > и кавычка — внутри "..." литеральная " невалидна.
     return s.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;').replace('"', '&quot;')
+
+
+def esc_xml_text(s):
+    """Экранирование ТЕКСТА элемента: только & < > . Кавычки платформа в тексте не экранирует
+    (92142 сырых кавычки на корпус, ни одной &quot;); &quot; она принимает, но нормализует обратно."""
+    return s.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
 
 
 # ── 1. Load Form.xml ────────────────────────────────────────
@@ -234,8 +379,7 @@ root = tree.getroot()
 
 # ── 2. Load JSON ────────────────────────────────────────────
 
-with open(json_path, "r", encoding="utf-8-sig") as f:
-    defn = json.load(f)
+defn = ci_json(parse_json_input(read_json_file(json_path), json_path))
 
 # ── 3. Form name + header ───────────────────────────────────
 
@@ -367,23 +511,48 @@ _FORM_TYPE_SYNONYMS = {
 }
 
 
+# Алиас на локальный словарь: тело resolve_type_str ниже — общая реализация,
+# одинаковая во всех навыках (реестр в tests/skills/check-inline-drift.mjs).
+TYPE_SYNONYMS = _FORM_TYPE_SYNONYMS
+
+
 def resolve_type_str(type_str):
     if not type_str:
         return type_str
+    # Прощающий ввод: ведущий префикс приходит копипастой из выгрузки. Без срезания он ломает
+    # поиск в словаре — русское имя типа остаётся непереведённым, и платформа отвечает
+    # «Неизвестное имя типа». cfg: снимаем всегда — он однозначно означает текущую конфигурацию.
+    # Сгенерированный dNpM: (в корпусе на этом URI встречаются d4p1, d5p1, d6p1 — имя префикса
+    # платформа выдаёт по порядку объявления) снимаем ТОЛЬКО у ссылочных типов, с точкой:
+    # сам по себе префикс многозначен — в формах d5p1:Chart, d5p1:TextDocument,
+    # d5p1:GeographicalSchema адресуют чужие пространства имён, и там он часть значения.
+    if type_str.startswith('cfg:'):
+        type_str = type_str[4:]
+    elif '.' in type_str and re.match(r'^d\d+p\d+:', type_str):
+        type_str = type_str[type_str.index(':') + 1:]
+    # Параметризованные типы: Number(15,2), Строка(100)
     m = re.match(r'^([^(]+)\((.+)\)$', type_str)
     if m:
-        base, params = m.group(1).strip(), m.group(2)
-        r = _FORM_TYPE_SYNONYMS.get(base.lower())
-        return f"{r}({params})" if r else type_str
+        base_name = m.group(1).strip()
+        params = m.group(2)
+        resolved = TYPE_SYNONYMS.get(base_name.lower())
+        if resolved:
+            return f'{resolved}({params})'
+        return type_str
+    # Ссылочные типы: СправочникСсылка.Организации -> CatalogRef.Организации
     if '.' in type_str:
-        i = type_str.index('.')
-        prefix, suffix = type_str[:i], type_str[i:]
-        r = _FORM_TYPE_SYNONYMS.get(prefix.lower())
-        return f"{r}{suffix}" if r else type_str
-    r = _FORM_TYPE_SYNONYMS.get(type_str.lower())
-    return r if r else type_str
-
-
+        dot_idx = type_str.index('.')
+        prefix = type_str[:dot_idx]
+        suffix = type_str[dot_idx:]  # includes the dot
+        resolved = TYPE_SYNONYMS.get(prefix.lower())
+        if resolved:
+            return f'{resolved}{suffix}'
+        return type_str
+    # Простое имя
+    resolved = TYPE_SYNONYMS.get(type_str.lower())
+    if resolved:
+        return resolved
+    return type_str
 def emit_type(type_str, indent):
     if not type_str:
         X(f"{indent}<Type/>")
@@ -477,7 +646,7 @@ def emit_mltext(tag, text, indent):
     X(f"{indent}<{tag}>")
     X(f"{indent}\t<v8:item>")
     X(f"{indent}\t\t<v8:lang>ru</v8:lang>")
-    X(f"{indent}\t\t<v8:content>{esc_xml(text)}</v8:content>")
+    X(f"{indent}\t\t<v8:content>{esc_xml_text(text)}</v8:content>")
     X(f"{indent}\t</v8:item>")
     X(f"{indent}</{tag}>")
 
@@ -705,7 +874,7 @@ def emit_label(el, name, _id, indent):
         X(f'{inner}<Title formatted="{formatted}">')
         X(f"{inner}\t<v8:item>")
         X(f"{inner}\t\t<v8:lang>ru</v8:lang>")
-        X(f"{inner}\t\t<v8:content>{esc_xml(str(el['title']))}</v8:content>")
+        X(f"{inner}\t\t<v8:content>{esc_xml_text(str(el['title']))}</v8:content>")
         X(f"{inner}\t</v8:item>")
         X(f"{inner}</Title>")
     emit_common_flags(el, inner)
@@ -1458,14 +1627,40 @@ if elem_events_list:
 
 # ── 13. Save ────────────────────────────────────────────────
 
+# Round-trip: определить стиль исходного файла (на диске он ещё не перезаписан).
+try:
+    _fe_raw = open(resolved_form_path, "rb").read()
+except OSError:
+    _fe_raw = None
+if _fe_raw is not None:
+    _fe_bom = _fe_raw.startswith(b"\xef\xbb\xbf")
+    _fe_body = _fe_raw[3:] if _fe_bom else _fe_raw
+    _fe_crlf = b"\r\n" in _fe_body
+    _fe_enc_m = re.search(rb'encoding="([^"]+)"', _fe_body[:200])
+    _fe_enc = _fe_enc_m.group(1).decode("ascii") if _fe_enc_m else "utf-8"
+    _fe_final_nl = _fe_body.endswith(b"\n")
+else:
+    _fe_bom, _fe_crlf, _fe_enc, _fe_final_nl = True, False, "utf-8", True
+
 xml_bytes = etree.tostring(tree, xml_declaration=True, encoding="UTF-8")
-# Fix XML declaration quotes
-xml_bytes = xml_bytes.replace(b"<?xml version='1.0' encoding='UTF-8'?>", b'<?xml version="1.0" encoding="utf-8"?>')
-if not xml_bytes.endswith(b"\n"):
+# Восстановить регистр encoding как в оригинале.
+xml_bytes = xml_bytes.replace(
+    b"<?xml version='1.0' encoding='UTF-8'?>",
+    b'<?xml version="1.0" encoding="' + _fe_enc.encode("ascii") + b'"?>')
+# Канонизировать переносы к LF (убирает &#13; от \r в tail'ах).
+xml_bytes = (xml_bytes.replace(b"&#13;\n", b"\n").replace(b"&#13;", b"")
+             .replace(b"\r\n", b"\n").replace(b"\r", b"\n"))
+# Финальный перенос — как в оригинале.
+xml_bytes = xml_bytes.rstrip(b"\n")
+if _fe_final_nl:
     xml_bytes += b"\n"
-# Write with BOM
+# EOL — как в оригинале.
+if _fe_crlf:
+    xml_bytes = xml_bytes.replace(b"\n", b"\r\n")
+# Write preserving BOM as in original.
 with open(resolved_form_path, "wb") as f:
-    f.write(b'\xef\xbb\xbf')
+    if _fe_bom:
+        f.write(b'\xef\xbb\xbf')
     f.write(xml_bytes)
 
 # ── 14. Summary ─────────────────────────────────────────────

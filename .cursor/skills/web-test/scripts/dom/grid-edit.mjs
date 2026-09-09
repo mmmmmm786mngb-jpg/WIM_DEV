@@ -1,7 +1,7 @@
-// web-test dom/grid-edit v1.2 — DOM scripts for row-fill (grid edit-time operations)
+// web-test dom/grid-edit v1.4 — DOM scripts for row-fill (grid edit-time operations)
 // Source: https://github.com/Nikolay-Shirokov/cc-1c-skills
 //
-import { HEADERLESS_GRID_FN } from './_shared.mjs';
+import { COLUMN_MODEL_FN } from './_shared.mjs';
 //
 // All helpers below accept an optional `gridSelector`. When passed, they target
 // that exact grid; when null/undefined they pick the LAST visible `.grid` on
@@ -26,23 +26,16 @@ function gridResolver(gridSelector) {
  */
 export function sortFieldKeysByColindexScript(gridSelector, fieldKeys) {
   return `(() => {
-    ${HEADERLESS_GRID_FN}
+    ${COLUMN_MODEL_FN}
     const grid = ${gridResolver(gridSelector)};
     if (!grid) return null;
-    const head = grid.querySelector('.gridHead');
+    // Names come from the shared model (headed and headerless alike), so a key written the way
+    // readTable reports it — «Цена / Факт» — sorts into its real position instead of the tail.
     const cols = [];
-    if (head) {
-      const headLine = head.querySelector('.gridLine') || head;
-      [...headLine.children].forEach(box => {
-        if (box.offsetWidth === 0) return;
-        const t = ((box.querySelector('.gridBoxText') || box).innerText?.trim() || '').toLowerCase();
-        const ci = parseInt(box.getAttribute('colindex') || '-1');
-        if (t) cols.push({ text: t, colindex: ci });
-      });
-    } else {
-      // Headerless: synthesized columns (КолонкаN/(checkbox)) ordered by colindex
-      synthHeaderlessColumns(grid).forEach(c => cols.push({ text: c.name.toLowerCase(), colindex: parseInt(c.colindex) }));
-    }
+    buildColumnModel(grid).columns.forEach(c => {
+      if (!c.name) return;
+      cols.push({ text: c.name.toLowerCase(), colindex: c.ci != null ? parseInt(c.ci) : 999 });
+    });
     const keys = ${JSON.stringify(fieldKeys)};
     const mapped = keys.map(k => {
       const exact = cols.find(c => c.text === k);
@@ -67,45 +60,28 @@ export function sortFieldKeysByColindexScript(gridSelector, fieldKeys) {
  */
 export function findCellCoordsByFieldsScript(gridSelector, row, fieldKeys) {
   return `(() => {
-    ${HEADERLESS_GRID_FN}
+    ${COLUMN_MODEL_FN}
     const grid = ${gridResolver(gridSelector)};
     if (!grid) return { error: 'no_grid' };
-    const head = grid.querySelector('.gridHead');
     const body = grid.querySelector('.gridBody');
     if (!body) return { error: 'no_grid_body' };
 
-    // Read columns to find target colindex (+ subTarget for headerless split mark-boxes)
-    const cols = [];
-    if (head) {
-      const headLine = head.querySelector('.gridLine') || head;
-      [...headLine.children].forEach(box => {
-        if (box.offsetWidth === 0) return;
-        const t = box.querySelector('.gridBoxText');
-        const ci = box.getAttribute('colindex');
-        cols.push({ colindex: ci, text: ((t || box).innerText?.trim() || '').toLowerCase(), subTarget: null });
-      });
-    } else {
-      synthHeaderlessColumns(grid).forEach(c => cols.push({ colindex: c.colindex, text: c.name.toLowerCase(), subTarget: c.subTarget }));
-    }
-
+    // Column resolution — shared model (dom/_shared.mjs): same names and same physical cell
+    // as readTable/click report, including «Имя 1/2/3» of an expanded merged header.
+    const model = buildColumnModel(grid);
     const keys = ${JSON.stringify(fieldKeys)};
-    let targetColindex = null, targetSub = null;
+    let targetCol = null;
     for (const key of keys) {
-      const exact = cols.find(c => c.text === key);
-      if (exact) { targetColindex = exact.colindex; targetSub = exact.subTarget; break; }
-      const inc = cols.find(c => c.text.includes(key) || key.includes(c.text));
-      if (inc) { targetColindex = inc.colindex; targetSub = inc.subTarget; break; }
+      targetCol = resolveColumnByName(model, key);
+      if (targetCol) break;
     }
+    const targetSub = targetCol ? (targetCol.subTarget || null) : null;
 
     const rows = [...body.querySelectorAll('.gridLine')];
     if (${row} >= rows.length) return { error: 'row_out_of_range', total: rows.length };
     const line = rows[${row}];
 
-    // Find body cell by colindex (reliable across merged headers)
-    let box = null;
-    if (targetColindex != null) {
-      box = [...line.children].find(b => b.offsetWidth > 0 && b.getAttribute('colindex') === targetColindex);
-    }
+    let box = targetCol ? cellForColumn(model, line, targetCol) : null;
     // Fallback: second visible box (skip checkbox/N column)
     if (!box) {
       const boxes = [...line.children].filter(b => b.offsetWidth > 0 && !b.classList.contains('gridBoxComp'));
@@ -134,39 +110,30 @@ export function findCellCoordsByFieldsScript(gridSelector, row, fieldKeys) {
  */
 export function findNextCellCoordsByKeyScript(gridSelector, row, key) {
   return `(() => {
-    ${HEADERLESS_GRID_FN}
+    ${COLUMN_MODEL_FN}
     const grid = ${gridResolver(gridSelector)};
     if (!grid) return null;
-    const head = grid.querySelector('.gridHead');
     const body = grid.querySelector('.gridBody');
     if (!body) return null;
-    const cols = [];
-    if (head) {
-      const headLine = head.querySelector('.gridLine') || head;
-      [...headLine.children].forEach(box => {
-        if (box.offsetWidth === 0) return;
-        const t = box.querySelector('.gridBoxText');
-        const ci = box.getAttribute('colindex');
-        cols.push({ colindex: ci, text: ((t || box).innerText?.trim() || '').toLowerCase(), subTarget: null });
-      });
-    } else {
-      synthHeaderlessColumns(grid).forEach(c => cols.push({ colindex: c.colindex, text: c.name.toLowerCase(), subTarget: c.subTarget }));
-    }
+    const model = buildColumnModel(grid);
     const kl = ${JSON.stringify(key.toLowerCase())};
-    const klNoSpace = kl.replace(/[\\s\\-]+/g, '');
-    let targetColindex = null, targetSub = null;
-    const exact = cols.find(c => c.text === kl);
-    if (exact) { targetColindex = exact.colindex; targetSub = exact.subTarget; }
-    else {
-      const inc = cols.find(c => c.text.includes(kl) || kl.includes(c.text)
-        || c.text.includes(klNoSpace) || klNoSpace.includes(c.text));
-      if (inc) { targetColindex = inc.colindex; targetSub = inc.subTarget; }
+    // Extra "no-space/no-dash" fuzz on top of the shared resolver: header «Группа Контрагентов»
+    // must match the key «ГруппаКонтрагентов».
+    let targetCol = resolveColumnByName(model, kl);
+    if (!targetCol) {
+      const squash = s => (s || '').toLowerCase().replace(/ё/g, 'е').replace(/[\\s\\-]+/g, '');
+      const klNoSpace = squash(kl);
+      targetCol = model.columns.find(c => {
+        const t = squash(c.name);
+        return t && (t.includes(klNoSpace) || klNoSpace.includes(t));
+      }) || null;
     }
-    if (targetColindex == null) return null;
+    if (!targetCol) return null;
+    const targetSub = targetCol.subTarget || null;
     const rows = [...body.querySelectorAll('.gridLine')];
     if (${row} >= rows.length) return null;
     const line = rows[${row}];
-    const box = [...line.children].find(b => b.offsetWidth > 0 && b.getAttribute('colindex') === targetColindex);
+    const box = cellForColumn(model, line, targetCol);
     if (!box) return null;
     box.scrollIntoView({ block: 'nearest', inline: 'nearest' });
     let cell;
@@ -259,7 +226,7 @@ export function getGridEditCheckScript() {
  */
 export function readActiveGridCellScript() {
   return `(() => {
-    ${HEADERLESS_GRID_FN}
+    ${COLUMN_MODEL_FN}
     const f = document.activeElement;
     if (!f) return { tag: 'none' };
     if (f.tagName === 'INPUT' || f.tagName === 'TEXTAREA') {
@@ -270,8 +237,22 @@ export function readActiveGridCellScript() {
         if (grid) {
           const fr = f.getBoundingClientRect();
           const head = grid.querySelector('.gridHead');
+          // Column name from the shared model — same naming as readTable, including
+          // «Группа / Колонка» under a grouped header. The editing INPUT sits in an overlay,
+          // so the cell is located by x against the first body line, then by its colindex.
+          const model = buildColumnModel(grid);
+          const bLine = grid.querySelector('.gridBody .gridLine');
+          if (bLine) for (const b of bLine.children) {
+            if (b.offsetWidth === 0) continue;
+            const br = b.getBoundingClientRect();
+            if (fr.x >= br.x && fr.x < br.x + br.width) {
+              const ci = b.getAttribute('colindex');
+              if (ci != null && model.byCi[ci]) headerText = model.byCi[ci].name;
+              break;
+            }
+          }
           const hl = head?.querySelector('.gridLine') || head;
-          if (hl) for (const h of hl.children) {
+          if (!headerText && hl) for (const h of hl.children) {
             if (h.offsetWidth === 0) continue;
             const hr = h.getBoundingClientRect();
             if (fr.x >= hr.x && fr.x < hr.x + hr.width) {
@@ -280,7 +261,7 @@ export function readActiveGridCellScript() {
               break;
             }
           }
-          if (!head) {
+          if (!headerText && !head) {
             // Headerless: the editing INPUT is rendered in an overlay (.inputs) OUTSIDE
             // the .gridBox, so walking ancestors for colindex fails. Resolve colindex by
             // matching the input's x against the body cells (same idea as the headed branch).

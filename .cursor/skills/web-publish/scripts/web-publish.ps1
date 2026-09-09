@@ -1,4 +1,4 @@
-﻿# web-publish v1.4 — Publish 1C infobase via Apache
+﻿# web-publish v1.9 — Publish 1C infobase via Apache (+_version_dir/_version_key: общий эталон db-семейства)
 # Source: https://github.com/Nikolay-Shirokov/cc-1c-skills
 <#
 .SYNOPSIS
@@ -49,7 +49,7 @@
     .\web-publish.ps1 -InfoBaseServer "srv01" -InfoBaseRef "MyDB" -Manual
 #>
 
-[CmdletBinding()]
+[CmdletBinding(PositionalBinding=$false)]
 param(
     [Parameter(Mandatory=$false)]
     [string]$V8Path,
@@ -280,8 +280,8 @@ $vrdContent = @"
        base="/$AppName"
        ib="$ibString">
     <standardOdata enable="true"/>
-    <ws pointEnableCommon="true"/>
-    <httpServices publishByDefault="true"/>
+    <ws pointEnableCommon="true" publishExtensionsByDefault="true"/>
+    <httpServices publishByDefault="true" publishExtensionsByDefault="true"/>
 </point>
 "@
 

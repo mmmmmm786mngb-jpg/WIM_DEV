@@ -3,7 +3,7 @@
 Для сложных и комбинированных операций используйте JSON-файл вместо inline-режима.
 
 ```powershell
-powershell.exe -NoProfile -File .claude/skills/meta-edit/scripts/meta-edit.ps1 -DefinitionFile "<json>" -ObjectPath "<path>"
+powershell.exe -NoProfile -File .cursor/skills/meta-edit/scripts/meta-edit.ps1 -DefinitionFile "<json>" -ObjectPath "<path>"
 ```
 
 ## add — добавить элементы
@@ -22,8 +22,7 @@ powershell.exe -NoProfile -File .claude/skills/meta-edit/scripts/meta-edit.ps1 -
         { "name": "Количество", "type": "Число(15,3)" }
       ]
     }],
-    "forms": ["ФормаЭлемента"],
-    "templates": ["ПечатнаяФорма"]
+    "commands": ["Пересчитать"]
   }
 }
 ```
@@ -120,6 +119,9 @@ powershell.exe -NoProfile -File .claude/skills/meta-edit/scripts/meta-edit.ps1 -
 | commands | команды |
 | properties | свойства |
 
+Формы и макеты `meta-edit` не добавляет и не удаляет: кроме записи в `ChildObjects` у них есть собственные файлы.
+Форма — навыки `form-add` / `form-remove`, макет — `template-add` / `template-remove`. Команда файла не имеет — её `meta-edit` добавляет сам.
+
 ## Составные типы
 
 Для полей с несколькими допустимыми типами — массив в `type`:
@@ -141,8 +143,11 @@ powershell.exe -NoProfile -File .claude/skills/meta-edit/scripts/meta-edit.ps1 -
 
 | Тип объекта | Допустимые add-типы |
 |-------------|-------------------|
-| Catalog, Document, ExchangePlan, ChartOf*, BP, Task, Report, DP | attributes, tabularSections, forms, templates, commands |
-| Enum | enumValues, forms, templates, commands |
-| *Register (4 типа) | dimensions, resources, attributes, forms, templates, commands |
-| DocumentJournal | columns, forms, templates, commands |
-| Constant | forms |
+| Catalog, Document, ExchangePlan, ChartOf*, BP, Task, Report, DP | attributes, tabularSections, commands |
+| Enum | enumValues, commands |
+| *Register (4 типа) | dimensions, resources, attributes, commands |
+| DocumentJournal | columns, commands |
+| ExternalDataSource | tables, functions |
+| Table (таблица внешнего источника) | fields, commands |
+
+У `Constant` добавлять нечего: единственный её ребёнок — форма, а форму добавляет навык `form-add`.

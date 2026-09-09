@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# add-template v1.7 — Add template to 1C object
+# template-add v1.23 — Add template to 1C object (+write_xml_file/write_utf8_bom: общий эталон записи)
 # Source: https://github.com/Nikolay-Shirokov/cc-1c-skills
 
 import argparse
@@ -10,6 +10,28 @@ import sys
 import uuid
 
 from lxml import etree
+
+# Регистронезависимый ввод — паритет с PS1: в PowerShell имена параметров и [ValidateSet]
+# регистр не различают, в argparse совпадение точное.
+def ci_parse_args(parser, argv=None):
+    """parse_args по правилам PS: имена параметров и значения choices регистронезависимы."""
+    argv = list(sys.argv[1:] if argv is None else argv)
+    names = {s.lower(): s for a in parser._actions for s in a.option_strings}
+    for i, tok in enumerate(argv):
+        if tok.startswith('-') and tok.lower() in names:
+            argv[i] = names[tok.lower()]
+    # choices — зеркало [ValidateSet]; канонизируем ДО разбора, иначе argparse отвергнет регистр
+    choice_map = {}
+    for a in parser._actions:
+        if a.choices:
+            for s in a.option_strings:
+                choice_map[s] = {str(c).lower(): c for c in a.choices}
+    for i in range(len(argv) - 1):
+        m = choice_map.get(argv[i])
+        if m and argv[i + 1].lower() in m:
+            argv[i + 1] = m[argv[i + 1].lower()]
+    return parser.parse_args(argv)
+
 
 NSMAP = {"md": "http://v8.1c.ru/8.3/MDClasses"}
 
@@ -33,6 +55,18 @@ def _sg_root_uuid(xml_path):
         return None
     return None
 
+
+def _sg_is_external_root(xml_path):
+    if not os.path.isfile(xml_path):
+        return False
+    try:
+        mx = etree.parse(xml_path).getroot()
+        for child in mx:
+            if isinstance(child.tag, str):
+                return child.tag.split("}")[-1] in ("ExternalDataProcessor", "ExternalReport")
+    except Exception:
+        return False
+    return False
 
 def _sg_find_v8project(start_dir):
     d = start_dir
@@ -73,6 +107,9 @@ def _sg_get_edit_mode(cfg_dir):
 def assert_edit_allowed(target_path, require):
     try:
         rp = os.path.abspath(target_path)
+        # Autonomous external object (EPF/ERF): never part of a config on support (issue #39).
+        if _sg_is_external_root(rp):
+            return
         elem_uuid = _sg_root_uuid(rp)
         cfg_dir = None
         bin_path = None
@@ -80,6 +117,8 @@ def assert_edit_allowed(target_path, require):
         for _ in range(12):
             if not d:
                 break
+            if _sg_is_external_root(d + ".xml"):
+                return
             if not elem_uuid:
                 elem_uuid = _sg_root_uuid(d + ".xml")
             if not cfg_dir:
@@ -181,25 +220,86 @@ TYPE_MAP = {
 }
 
 
-def save_xml_with_bom(tree, path):
-    """Save XML tree to file with UTF-8 BOM."""
-    xml_bytes = etree.tostring(tree, xml_declaration=True, encoding="UTF-8")
-    xml_bytes = xml_bytes.replace(b"<?xml version='1.0' encoding='UTF-8'?>", b'<?xml version="1.0" encoding="utf-8"?>')
-    if not xml_bytes.endswith(b"\n"):
+def _detect_xml_style(path):
+    """Стиль существующего файла для round-trip-сохранения: BOM / EOL / регистр encoding /
+    финальный перенос. None → файл новый (сохранить текущее поведение)."""
+    try:
+        raw = open(path, "rb").read()
+    except OSError:
+        return None
+    bom = raw.startswith(b"\xef\xbb\xbf")
+    body = raw[3:] if bom else raw
+    crlf = b"\r\n" in body
+    m = re.search(rb'encoding="([^"]+)"', body[:200])
+    enc = m.group(1).decode("ascii") if m else "utf-8"
+    final_nl = body.endswith(b"\n")
+    return {"bom": bom, "crlf": crlf, "enc": enc, "final_nl": final_nl}
+
+
+def _finalize_xml_bytes(xml_bytes, style):
+    """Привести байты к стилю оригинала; для НОВОГО файла (style is None) — к канону
+    выгрузки Конфигуратора: encoding="UTF-8", CRLF в разделителях, без перевода в конце."""
+    enc_decl = style["enc"] if style else "UTF-8"
+    xml_bytes = xml_bytes.replace(
+        b"<?xml version='1.0' encoding='UTF-8'?>",
+        b'<?xml version="1.0" encoding="' + enc_decl.encode("ascii") + b'"?>')
+    # Канонизировать переносы к LF (убирает &#13; от \r в tail'ах)
+    xml_bytes = (xml_bytes.replace(b"&#13;\n", b"\n").replace(b"&#13;", b"")
+                 .replace(b"\r\n", b"\n").replace(b"\r", b"\n"))
+    # Финальный перенос — как в оригинале (новый файл → нет, канон #57)
+    want_final_nl = style["final_nl"] if style else False
+    xml_bytes = xml_bytes.rstrip(b"\n")
+    if want_final_nl:
         xml_bytes += b"\n"
+    # EOL — как в оригинале (новый файл → CRLF, канон #57)
+    if (style["crlf"] if style else True):
+        xml_bytes = xml_bytes.replace(b"\n", b"\r\n")
+    return xml_bytes
+
+
+def save_xml_with_bom(tree, path):
+    """Save XML tree preserving the existing file's BOM/EOL/encoding-case/final-newline."""
+    style = _detect_xml_style(path)
+    xml_bytes = etree.tostring(tree, xml_declaration=True, encoding="UTF-8")
+    xml_bytes = _finalize_xml_bytes(xml_bytes, style)
     with open(path, "wb") as f:
-        f.write(b"\xef\xbb\xbf")
+        if style is None or style["bom"]:
+            f.write(b"\xef\xbb\xbf")
         f.write(xml_bytes)
 
 
-def write_text_with_bom(path, text):
-    """Write text to file with UTF-8 BOM."""
-    with open(path, "w", encoding="utf-8-sig") as f:
-        f.write(text)
+def write_utf8_bom(path, content):
+    # newline='' — без трансляции: иначе текстовый режим Python дал бы CRLF на Windows
+    # и LF на macOS, то есть вывод навыка зависел бы от ОС.
+    with open(path, 'w', encoding='utf-8-sig', newline='') as f:
+        f.write(content)
+
+
+
+def write_xml_file(path, content):
+    """XML в каноне выгрузки Конфигуратора: CRLF в разделителях, без перевода в конце.
+
+    Копия этой функции есть в каждом навыке-эмиттере (навыки автономны). Держать
+    копии одинаковыми — сознательно: разошедшиеся копии сводят на нет весь смысл.
+
+    HTML-макет сюда НЕ идёт — платформа хранит его с LF.
+    """
+    text = content.replace('\r\n', '\n').replace('\n', '\r\n').rstrip('\r\n')
+    write_utf8_bom(path, text)
 
 
 def detect_format_version(d):
     while d:
+        # Автономная внешняя обработка/отчёт: своего Configuration.xml у неё нет, версию несёт
+        # корень самой обработки. Без этого форма и макет внутри обработки 2.21 писались бы 2.17.
+        ext_path = d + ".xml"
+        if os.path.isfile(ext_path):
+            with open(ext_path, "r", encoding="utf-8-sig") as f:
+                ext_head = f.read(2000)
+            if re.search(r'<(ExternalDataProcessor|ExternalReport)[ >]', ext_head):
+                m = re.search(r'<MetaDataObject[^>]+version="(\d+\.\d+)"', ext_head)
+                if m:
+                    return m.group(1)
         cfg_path = os.path.join(d, "Configuration.xml")
         if os.path.isfile(cfg_path):
             with open(cfg_path, "r", encoding="utf-8-sig") as f:
@@ -213,6 +313,12 @@ def detect_format_version(d):
         d = parent
     return "2.17"
 
+def format_rank(ver):
+    """"2.20" → 220, "2.9" → 209. Строковое сравнение неверно ("2.9" > "2.17")."""
+    m = re.match(r'^(\d+)\.(\d+)$', ver or '')
+    return int(m.group(1)) * 100 + int(m.group(2)) if m else 0
+
+
 
 def main():
     sys.stdout.reconfigure(encoding="utf-8")
@@ -225,7 +331,7 @@ def main():
     parser.add_argument("-Synonym", default=None)
     parser.add_argument("-SrcDir", default="src")
     parser.add_argument("-SetMainSKD", action="store_true")
-    args = parser.parse_args()
+    args = ci_parse_args(parser)
 
     object_name = args.ObjectName
     template_name = args.TemplateName
@@ -236,7 +342,6 @@ def main():
 
     tmpl = TYPE_MAP[template_type]
 
-    format_version = detect_format_version(os.path.abspath(src_dir))
 
     # --- Checks ---
 
@@ -278,18 +383,21 @@ def main():
 
     assert_edit_allowed(root_xml_path, "editable")
 
-    # --- Create directories ---
+    # Версию берём прежде всего из корня самого объекта — он её несёт всегда, а у автономной
+    # внешней обработки/отчёта подниматься к Configuration.xml просто некуда.
+    format_version = None
+    with open(root_xml_path, "r", encoding="utf-8-sig") as f:
+        obj_head = f.read(2000)
+    m_ver = re.search(r'<MetaDataObject[^>]+version="(\d+\.\d+)"', obj_head)
+    if m_ver:
+        format_version = m_ver.group(1)
+    if not format_version:
+        format_version = detect_format_version(os.path.abspath(src_dir))
 
-    template_ext_dir = os.path.join(templates_dir, template_name, "Ext")
-    os.makedirs(template_ext_dir, exist_ok=True)
-
-    # --- 1. Template metadata (Templates/<TemplateName>.xml) ---
-
-    template_uuid = str(uuid.uuid4())
-
-    template_meta_xml = (
-        '<?xml version="1.0" encoding="UTF-8"?>\n'
-        '<MetaDataObject xmlns="http://v8.1c.ru/8.3/MDClasses"'
+    # Объявления пространств имён — одной переменной: место эмиссии её только подставляет.
+    # Правки шапки (как xmlns:pal в формате 2.21) делаются здесь, в одном месте.
+    xmlns_decl = (
+        'xmlns="http://v8.1c.ru/8.3/MDClasses"'
         ' xmlns:app="http://v8.1c.ru/8.2/managed-application/core"'
         ' xmlns:cfg="http://v8.1c.ru/8.1/data/enterprise/current-config"'
         ' xmlns:cmi="http://v8.1c.ru/8.2/managed-application/cmi"'
@@ -306,7 +414,28 @@ def main():
         ' xmlns:xr="http://v8.1c.ru/8.3/xcf/readable"'
         ' xmlns:xs="http://www.w3.org/2001/XMLSchema"'
         ' xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"'
-        f' version="{format_version}">\n'
+    )
+
+    # 2.21 (8.5) добавила в шапку пространство палитры — ради <Color> у значений перечисления.
+    # Вставляем НА МЕСТО (после lf, перед style): платформа держит объявления по алфавиту,
+    # дописать в конец нельзя.
+    if format_rank(format_version) >= 221:
+        xmlns_decl = xmlns_decl.replace(
+            ' xmlns:style=',
+            ' xmlns:pal="http://v8.1c.ru/8.1/data/ui/colors/palette" xmlns:style=')
+
+    # --- Create directories ---
+
+    template_ext_dir = os.path.join(templates_dir, template_name, "Ext")
+    os.makedirs(template_ext_dir, exist_ok=True)
+
+    # --- 1. Template metadata (Templates/<TemplateName>.xml) ---
+
+    template_uuid = str(uuid.uuid4())
+
+    template_meta_xml = (
+        '<?xml version="1.0" encoding="UTF-8"?>\n'
+        f'<MetaDataObject {xmlns_decl} version="{format_version}">\n'
         f'\t<Template uuid="{template_uuid}">\n'
         '\t\t<Properties>\n'
         f'\t\t\t<Name>{template_name}</Name>\n'
@@ -323,7 +452,7 @@ def main():
         '</MetaDataObject>'
     )
 
-    write_text_with_bom(template_meta_path, template_meta_xml)
+    write_xml_file(template_meta_path, template_meta_xml)
 
     # --- 2. Template content (Templates/<TemplateName>/Ext/Template.<ext>) ---
 
@@ -341,21 +470,23 @@ def main():
             '</body>\n'
             '</html>'
         )
-        write_text_with_bom(template_file_path, content)
+        write_utf8_bom(template_file_path, content)
 
     elif template_type == "Text":
-        write_text_with_bom(template_file_path, "")
+        write_utf8_bom(template_file_path, "")
 
     elif template_type == "SpreadsheetDocument":
+        # Пустой макет — самозакрывающимся корнем: пустых пар платформа не пишет
+        # ни в одной форме (0 на 65 040 XML выгрузки acc_8.3.27, включая разнесённые
+        # по строкам). Для XML `<A/>` и `<A></A>` тождественны по спецификации.
         content = (
             '<?xml version="1.0" encoding="UTF-8"?>\n'
             '<SpreadsheetDocument xmlns="http://v8.1c.ru/spreadsheet/document"'
             ' xmlns:ss="http://v8.1c.ru/spreadsheet/document"'
             ' xmlns:v8="http://v8.1c.ru/8.1/data/core"'
-            ' xmlns:xs="http://www.w3.org/2001/XMLSchema">\n'
-            '</SpreadsheetDocument>'
+            ' xmlns:xs="http://www.w3.org/2001/XMLSchema"/>'
         )
-        write_text_with_bom(template_file_path, content)
+        write_xml_file(template_file_path, content)
 
     elif template_type == "BinaryData":
         with open(template_file_path, "wb") as f:
@@ -378,7 +509,7 @@ def main():
             '\t</dataSource>\n'
             '</DataCompositionSchema>'
         )
-        write_text_with_bom(template_file_path, content)
+        write_xml_file(template_file_path, content)
 
     # --- 3. Modify root XML ---
 
@@ -393,31 +524,34 @@ def main():
         print(f"Не найден элемент ChildObjects в {root_xml_path}", file=sys.stderr)
         sys.exit(1)
 
-    # Add <Template> to end of ChildObjects
-    template_elem = etree.SubElement(child_objects, f"{{{ns}}}Template")
-    template_elem.text = template_name
-    # Remove auto-appended element to reinsert with proper whitespace
-    child_objects.remove(template_elem)
+    # Add <Template> to end of ChildObjects — idempotent (do not duplicate already-registered template)
+    already_registered = child_objects.find(f"md:Template[.='{template_name}']", NSMAP) is not None
 
-    children = list(child_objects)
-    if len(children) == 0 and (child_objects.text is None or child_objects.text.strip() == ""):
-        # Empty ChildObjects (self-closing)
-        child_objects.text = "\n\t\t\t"
-        child_objects.append(template_elem)
-        template_elem.tail = "\n\t\t"
-    else:
-        if len(children) > 0:
-            last_child = children[-1]
-            # last_child.tail is the trailing whitespace before </ChildObjects>
-            old_tail = last_child.tail
-            last_child.tail = "\n\t\t\t"
-            child_objects.append(template_elem)
-            template_elem.tail = old_tail if old_tail else "\n\t\t"
-        else:
-            # Has text content but no element children
-            child_objects.text = (child_objects.text or "") + "\n\t\t\t"
+    if not already_registered:
+        template_elem = etree.SubElement(child_objects, f"{{{ns}}}Template")
+        template_elem.text = template_name
+        # Remove auto-appended element to reinsert with proper whitespace
+        child_objects.remove(template_elem)
+
+        children = list(child_objects)
+        if len(children) == 0 and (child_objects.text is None or child_objects.text.strip() == ""):
+            # Empty ChildObjects (self-closing)
+            child_objects.text = "\n\t\t\t"
             child_objects.append(template_elem)
             template_elem.tail = "\n\t\t"
+        else:
+            if len(children) > 0:
+                last_child = children[-1]
+                # last_child.tail is the trailing whitespace before </ChildObjects>
+                old_tail = last_child.tail
+                last_child.tail = "\n\t\t\t"
+                child_objects.append(template_elem)
+                template_elem.tail = old_tail if old_tail else "\n\t\t"
+            else:
+                # Has text content but no element children
+                child_objects.text = (child_objects.text or "") + "\n\t\t\t"
+                child_objects.append(template_elem)
+                template_elem.tail = "\n\t\t"
 
     # --- 4. MainDataCompositionSchema (for ExternalReport / Report) ---
 
@@ -447,6 +581,8 @@ def main():
     save_xml_with_bom(tree, root_xml_full)
 
     print(f"[OK] Создан макет: {template_name} ({template_type})")
+    if already_registered:
+        print(f"     Already registered: <Template>{template_name}</Template> in ChildObjects (skipped duplicate)")
     print(f"     Метаданные: {template_meta_path}")
     print(f"     Содержимое: {template_file_path}")
     if main_dcs_updated:

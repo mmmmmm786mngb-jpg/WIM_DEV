@@ -1,9 +1,11 @@
 #!/usr/bin/env python3
-# stub-db-create v1.3 — Create temp 1C infobase with metadata stubs for EPF/ERF build
+# stub-db-create v1.10 — Create temp 1C infobase with metadata stubs for EPF/ERF build
 # Source: https://github.com/Nikolay-Shirokov/cc-1c-skills
 
 import argparse
+import io
 import os
+import shutil
 import random
 import re
 import subprocess
@@ -20,6 +22,95 @@ IBCMD_NOUSER_HINT = (
 )
 
 
+def decode_platform_bytes(data):
+    """ibcmd writes UTF-8 (checked on 8.3.24, 8.3.27, 8.5), a crashing 1cv8 may still emit
+    OEM text. Decode strictly as UTF-8 and fall back to cp866 on invalid bytes — the locale
+    code page (what text=True uses) mangles both."""
+    if not data:
+        return ""
+    try:
+        return data.decode("utf-8")
+    except UnicodeDecodeError:
+        return data.decode("cp866", errors="replace")
+
+
+def clean_path(value, param=""):
+    """Forgive what is unambiguous in a path the caller passed: surrounding whitespace,
+    surrounding quotes that survived shell parsing, a trailing separator. A quote left
+    inside afterwards cannot be part of a real path — reject it by name instead of letting
+    1C answer with its opaque "Неверные или отсутствующие параметры соединения"."""
+    if not value:
+        return value
+    v = value.strip()
+    if len(v) >= 2 and v[0] == v[-1] and v[0] in "\"'":
+        v = v[1:-1].strip()
+    if len(v) > 3 and v[-1] in "\\/":
+        v = v[:-1]
+    if '"' in v:
+        print(f"Error: {param or 'path'} contains a quote character: {value}", file=sys.stderr)
+        sys.exit(1)
+    return v
+
+
+def quote_if_needed(token):
+    """Extra arguments come from the caller unquoted; the 1cv8 command line is joined
+    verbatim, so a token with a space needs quotes of its own."""
+    if token and (" " in token or "\t" in token) and '"' not in token:
+        return f'"{token}"'
+    return token
+
+
+def run_v8(v8path, arguments):
+    """Run 1cv8 in batch mode and capture its console output.
+
+    The arguments carry their own quotes inside the value (File="C:\\a b") — that is where
+    1C's parser expects them, on Windows and on *nix alike. Windows list2cmdline would
+    escape those quotes, so there the command line is handed over ready-made.
+
+    На POSIX аргументы уходят СПИСКОМ, и кавычки, нужные для склейки на Windows, стали бы
+    частью значения: путь с пробелом платформа не находит («Неопределена информационная
+    база»), многословный -comment теряет молча. Поэтому здесь снимается ОДИН слой
+    обрамляющих кавычек. Склеенные ключи (/N"user", /ConfigurationRepositoryF"путь",
+    File="…") не задеты: у них кавычки внутри токена, а не по краям.
+    """
+    if os.name == "nt":
+        cmd = '"' + v8path + '" ' + " ".join(arguments)
+    else:
+        def strip_framing_quotes(a):
+            # Кавычки, которыми мы обрамляем значения ради склейки на Windows, на POSIX
+            # становятся ЧАСТЬЮ значения. Проверено на darwin: путь с пробелом отдельным
+            # токеном даёт «Неопределена информационная база», а склеенный
+            # /ConfigurationRepositoryF"путь с пробелом" — «завершилось с ошибкой»;
+            # без кавычек обе формы работают.
+            if len(a) > 1 and a[0] == '"' and a[-1] == '"':
+                return a[1:-1]                       # "значение" отдельным токеном
+            if a[0:1] == "/" and a[-1:] == '"' and '"' in a[:-1]:
+                i = a.index('"')
+                return a[:i] + a[i + 1:-1]           # /N"имя" -> /Nимя
+            return a                                 # File="…" не трогаем: там кавычки —
+                                                     # часть синтаксиса строки соединения,
+                                                     # и с ними на POSIX всё работает
+        cmd = [v8path] + [strip_framing_quotes(a) for a in arguments]
+    r = subprocess.run(cmd, input=b"", capture_output=True)
+    r.stdout = decode_platform_bytes(r.stdout)
+    r.stderr = decode_platform_bytes(r.stderr)
+    return r
+
+
+def print_platform_output(result):
+    """Print what the platform wrote to the console as its own labelled block. Silence stays
+    silent: in batch mode 1cv8 reports through /Out and prints nothing here."""
+    text = ((result.stdout or "") + (result.stderr or "")).rstrip()
+    if not text:
+        return
+    limit = 65536
+    if len(text) > limit:
+        text = f"[... обрезано, показаны последние {limit} символов ...]\n" + text[-limit:]
+    print("--- Вывод платформы ---")
+    print(text)
+    print("--- End ---")
+
+
 def run_ibcmd(cmd, has_username=False, warn_no_user=True):
     """Run an ibcmd command non-interactively.
 
@@ -30,7 +121,182 @@ def run_ibcmd(cmd, has_username=False, warn_no_user=True):
     if warn_no_user and os.name == "nt" and not has_username:
         sys.stderr.write(IBCMD_NOUSER_HINT)
         sys.stderr.flush()
-    return subprocess.run(cmd, input="", capture_output=True, encoding="utf-8", errors="replace")
+    r = subprocess.run(cmd, input=b"", capture_output=True)
+    r.stdout = decode_platform_bytes(r.stdout)
+    r.stderr = decode_platform_bytes(r.stderr)
+    return r
+
+
+# --- Additional platform arguments ---
+V8_OWNED_KEYS = [
+    "DESIGNER", "ENTERPRISE", "CREATEINFOBASE", "CONFIG",
+    "/F", "/S", "/N", "/P", "/Out", "/DisableStartupDialogs",
+    "/UseTemplate", "/AddToList", "/Execute", "/C", "/URL", "/UC",
+    "/DumpIB", "/RestoreIB", "/DumpCfg", "/LoadCfg",
+    "/DumpConfigToFiles", "/LoadConfigFromFiles", "/UpdateDBCfg",
+    "/DumpExternalDataProcessorOrReportToFiles", "/LoadExternalDataProcessorOrReportFromFiles",
+]
+# Пакетные команды платформы. В одной командной строке DESIGNER выполняет ТОЛЬКО ПОСЛЕДНЮЮ,
+# остальные молча отбрасывает (проверено на 8.3.24: /LoadConfigFromFiles вместе с
+# /CheckCanApplyConfigurationExtensions завершились кодом 0 с пустым логом, и загрузка НЕ
+# состоялась). Такая команда в дополнительных аргументах подменяет собой операцию навыка, а навык
+# отчитывается успехом. Дополнительные аргументы — это опции, а не режимы.
+V8_BATCH_KEYS = [
+    "/CheckConfig", "/CheckModules", "/CheckCanApplyConfigurationExtensions",
+    "/DumpDBCfgList", "/DeleteCfg", "/UpdateCfg", "/CompareCfg", "/MergeCfg",
+    "/ManageCfgSupport", "/RollbackCfg", "/ConvertFiles",
+]
+
+IBCMD_OWNED_KEYS = [
+    "--db-path", "--data", "--out", "--file", "--load", "--restore",
+    "--import", "--export", "--apply", "--force", "--create-database",
+    "--user", "--password",
+]
+V8_SECRET_KEYS = ["/P", "/UC", "/WSP", "/AWSP"]
+IBCMD_SECRET_KEYS = ["--password", "--token", "--db-pwd"]
+
+
+def arg_key_match(token, key):
+    """Token matches a key when it equals it, or starts with it and the next character
+    is not a letter — catches glued /N"user" and --password=x, while keeping
+    /ClearCache distinct from /C."""
+    if len(token) < len(key):
+        return False
+    if token[: len(key)].lower() != key.lower():
+        return False
+    if len(token) == len(key):
+        return True
+    return not token[len(key)].isalpha()
+
+
+def project_extra_args(name):
+    """v8args / ibcmdargs from .v8-project.json — same upward walk as v8path."""
+    d = os.getcwd()
+    while True:
+        pf = os.path.join(d, ".v8-project.json")
+        if os.path.isfile(pf):
+            try:
+                with open(pf, encoding="utf-8-sig") as f:
+                    data = json.load(f)
+                v = data.get(name)
+                if v:
+                    return [str(x) for x in v]
+            except Exception:
+                pass
+            return []
+        parent = os.path.dirname(d)
+        if parent == d:
+            return []
+        d = parent
+
+
+def assert_extra_args(extra, engine, hints):
+    """The platform accepts only one batch operation, and a duplicate connection or
+    output key fails with an opaque 1C error — reject what the skill owns itself."""
+    param = "-AdditionalIbcmdArguments" if engine == "ibcmd" else "-AdditionalV8Arguments"
+    owned = IBCMD_OWNED_KEYS if engine == "ibcmd" else V8_OWNED_KEYS
+    for tok in extra:
+        if engine == "ibcmd" and not tok.startswith("-"):
+            print(
+                f"Error: '{tok}' is a positional token — pass values as --key=value "
+                f"({param} cannot extend the ibcmd command)",
+            )
+            sys.exit(1)
+        if engine != "ibcmd":
+            for b in V8_BATCH_KEYS:
+                if arg_key_match(tok, b):
+                    print(
+                        f"Error: {b} is a batch command; passed via {param} it would replace "
+                        f"the skill's own operation (a command line runs only its last batch command)",
+                    )
+                    sys.exit(1)
+        for k in owned:
+            if arg_key_match(tok, k):
+                hint = f" (use {hints[k]})" if hints and k in hints else ""
+                print(
+                    f"Error: {k} is controlled by the skill and cannot be passed via {param}{hint}",
+                )
+                sys.exit(1)
+
+
+def format_args_for_display(arglist, engine):
+    """Redact values of secret-prone keys in glued, =-joined and separate forms.
+    Matching here is a plain prefix (no letter rule): over-masking costs nothing,
+    a leaked password does."""
+    keys = IBCMD_SECRET_KEYS if engine == "ibcmd" else V8_SECRET_KEYS
+    res = []
+    mask_next = False
+    for tok in arglist:
+        if mask_next:
+            res.append("***")
+            mask_next = False
+            continue
+        hit = None
+        for k in keys:
+            if tok[: len(k)].lower() == k.lower():
+                hit = k
+                break
+        if hit is None:
+            res.append(tok)
+        elif len(tok) == len(hit):
+            res.append(tok)
+            mask_next = True
+        elif tok[len(hit)] == "=":
+            res.append(hit + "=***")
+        else:
+            res.append(hit + "***")
+    return res
+
+
+def extract_extra_args(argv, known_opts):
+    """argparse refuses values that start with '-' (every ibcmd key does), so pull the two
+    escape-hatch lists out of argv by hand: after the flag, take everything up to the next
+    declared skill option. Returns (remaining_argv, v8_extra, ibcmd_extra)."""
+    rest, v8, ibcmd = [], [], []
+    i = 0
+    while i < len(argv):
+        low = argv[i].lower()
+        if low in ("-additionalv8arguments", "-additionalibcmdarguments"):
+            target = v8 if low == "-additionalv8arguments" else ibcmd
+            i += 1
+            while i < len(argv) and argv[i].lower() not in known_opts:
+                target.append(argv[i])
+                i += 1
+            continue
+        rest.append(argv[i])
+        i += 1
+    return rest, v8, ibcmd
+
+
+def resolve_extra_args(engine, v8_extra, ibcmd_extra, hints):
+    """Pick the argument list for the selected engine and validate it. An explicitly
+    passed parameter for the other engine is an error; the same keys coming from
+    .v8-project.json simply do not apply — a project may describe both engines.
+
+    Comma-separated elements are split apart: PowerShell's -File cannot bind an array,
+    so that form is the documented one and both ports must accept it. A value containing
+    a comma is not supported."""
+    v8_extra = [p for tok in v8_extra for p in str(tok).split(",") if p]
+    ibcmd_extra = [p for tok in ibcmd_extra for p in str(tok).split(",") if p]
+    if engine == "ibcmd" and v8_extra:
+        print(
+            "Error: -AdditionalV8Arguments applies to 1cv8 only; the selected engine is ibcmd "
+            "(use -AdditionalIbcmdArguments)",
+        )
+        sys.exit(1)
+    if engine != "ibcmd" and ibcmd_extra:
+        print(
+            "Error: -AdditionalIbcmdArguments applies to ibcmd only; the selected engine is 1cv8 "
+            "(use -AdditionalV8Arguments)",
+        )
+        sys.exit(1)
+    if engine == "ibcmd":
+        extra = project_extra_args("ibcmdargs") + list(ibcmd_extra)
+    else:
+        extra = project_extra_args("v8args") + list(v8_extra)
+    if extra:
+        assert_extra_args(extra, engine, hints)
+    return extra
 
 
 def new_uuid():
@@ -108,6 +374,66 @@ def scan_ref_types(source_dir):
                 type_map.setdefault('DefinedType', {})[m.group(1)] = True
 
     return type_map
+
+
+def format_rank(ver):
+    """"2.20" → 220, "2.9" → 209. Строковое сравнение неверно ("2.9" > "2.17")."""
+    m = re.match(r'^(\d+)\.(\d+)$', ver or '')
+    return int(m.group(1)) * 100 + int(m.group(2)) if m else 0
+
+
+def detect_stub_format_version(source_dir):
+    """Версия формата заглушечной конфигурации.
+
+    Заглушке нужна САМАЯ НИЗКАЯ работающая версия, а не версия исходников: ограничение платформы
+    одностороннее — она читает формат не новее себя. Отсюда min(версия исходников, 2.17): на 2.17+
+    заглушка остаётся 2.17 (как было), а под исходники 2.13-2.16 опускается до их версии, иначе
+    конфигурация не загрузится платформой, которая эти исходники и выгрузила («Неизвестная версия
+    формата 2.17 загружаемого файла», замерено на 8.3.20).
+
+    Версию исходников берём из корня собираемого объекта (ExternalDataProcessor/ExternalReport);
+    вложенные файлы — запасной вариант, если корень почему-то не попался.
+    """
+    root_version = ""
+    any_version = ""
+    ver_pattern = re.compile(r'<MetaDataObject[^>]+version="(\d+\.\d+)"')
+    root_pattern = re.compile(r'<(ExternalDataProcessor|ExternalReport)[ >]')
+    for dirpath, _, filenames in os.walk(source_dir):
+        for fn in filenames:
+            if not fn.endswith('.xml'):
+                continue
+            try:
+                with open(os.path.join(dirpath, fn), 'r', encoding='utf-8-sig') as f:
+                    content = f.read()
+            except Exception:
+                continue
+            m = ver_pattern.search(content)
+            if not m:
+                continue
+            if not any_version:
+                any_version = m.group(1)
+            if not root_version and root_pattern.search(content):
+                root_version = m.group(1)
+    src_version = root_version or any_version or "2.17"
+    src_rank = format_rank(src_version)
+    return src_version if 0 < src_rank < format_rank("2.17") else "2.17"
+
+
+# Режим совместимости заглушки — по той же логике, что и версия формата. Платформа отказывается
+# работать с конфигурацией, чей режим выше её самой («Для работы с конфигурацией необходима версия
+# платформы не меньше, чем 8.3.24»), и тогда объекты заглушки в базу не попадают: загрузка
+# рапортует успех, а сборка падает на «Неизвестное имя типа». Ступени — лестница версий формата
+# из docs/1c-configuration-spec.md.
+COMPAT_BY_FORMAT = {
+    "2.13": "Version8_3_20",
+    "2.14": "Version8_3_21",
+    "2.15": "Version8_3_22",
+    "2.16": "Version8_3_23",
+}
+
+
+def stub_compatibility_mode(format_version):
+    return COMPAT_BY_FORMAT.get(format_version, "Version8_3_24")
 
 
 def scan_register_columns(source_dir):
@@ -188,7 +514,7 @@ NS = (
     'xmlns:xpr="http://v8.1c.ru/8.3/xcf/predef" '
     'xmlns:xr="http://v8.1c.ru/8.3/xcf/readable" '
     'xmlns:xs="http://www.w3.org/2001/XMLSchema" '
-    'xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" version="2.17"'
+    'xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"'
 )
 
 CLASS_IDS = [
@@ -794,6 +1120,94 @@ def write_bom(path, content):
         f.write(content)
 
 
+# --- Внедрение проверяемого объекта в конфигурацию-заглушку ---
+# Платформа не умеет проверять внешнюю обработку: /LoadExternalDataProcessorOrReportFromFiles
+# только упаковывает XML и модули не компилирует. Зато она проверяет объект КОНФИГУРАЦИИ, а
+# внешняя обработка отличается от него немногим (замер 8.3.24): корневым тегом, именем
+# порождаемого объектного типа и отсутствием типа менеджера. Правим ровно эти точки и переносим
+# остальное как есть — под проверку попадает всё, что написал автор, включая реквизиты, формы и
+# макеты, а формат может расти без правок здесь.
+#
+# Подстановка типа делается ТОЛЬКО в .xml (это DefaultForm и основной реквизит формы); в .bsl
+# такой же текст был бы кодом, и трогать его нельзя.
+GUID_RE = re.compile(r'[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}')
+
+
+def add_source_object_to_config(source_xml, cfg_dir):
+    # Копия объекта живёт в конфигурации базы, а следом в ту же базу грузится исходник как ВНЕШНЯЯ
+    # обработка. С одинаковыми идентификаторами платформа путает их и через раз отвечает «Исключение
+    # XDTO при чтении файла» на исправном исходнике — поэтому у копии все GUID свои, но согласованные
+    # между её файлами (ссылки внутри объекта идут по идентификатору).
+    guid_map = {}
+
+    def reissue(text):
+        def sub(m):
+            k = m.group(0).lower()
+            if k not in guid_map:
+                guid_map[k] = new_uuid()
+            return guid_map[k]
+        return GUID_RE.sub(sub, text)
+
+    with io.open(source_xml, encoding='utf-8-sig') as fh:
+        text = fh.read()
+    if re.search(r'<ExternalDataProcessor[\s>]', text):
+        ext_tag, cfg_tag, folder = 'ExternalDataProcessor', 'DataProcessor', 'DataProcessors'
+    elif re.search(r'<ExternalReport[\s>]', text):
+        ext_tag, cfg_tag, folder = 'ExternalReport', 'Report', 'Reports'
+    else:
+        return None
+
+    m = re.search(r'<Name>([^<]+)</Name>', text)
+    name = m.group(1) if m else os.path.splitext(os.path.basename(source_xml))[0]
+
+    conv = reissue(text)
+    conv = conv.replace('<%s ' % ext_tag, '<%s ' % cfg_tag).replace('<%s>' % ext_tag, '<%s>' % cfg_tag)
+    conv = conv.replace('</%s>' % ext_tag, '</%s>' % cfg_tag)
+    conv = conv.replace('%sObject.' % ext_tag, '%sObject.' % cfg_tag).replace('%s.' % ext_tag, '%s.' % cfg_tag)
+
+    # Тип менеджера у внешней обработки не объявлен, а объекту конфигурации он обязателен:
+    # без него платформа отвечает «отсутствует один или более типов объекта».
+    mgr = ('\t\t\t<xr:GeneratedType name="%sManager.%s" category="Manager">\r\n' % (cfg_tag, name) +
+           '\t\t\t\t<xr:TypeId>%s</xr:TypeId>\r\n' % new_uuid() +
+           '\t\t\t\t<xr:ValueId>%s</xr:ValueId>\r\n' % new_uuid() +
+           '\t\t\t</xr:GeneratedType>\r\n')
+    if '</InternalInfo>' in conv:
+        conv = re.sub(r'\s*</InternalInfo>', lambda _m: '\r\n' + mgr + '\t\t</InternalInfo>', conv, count=1)
+    else:
+        obj_type = ('\t\t\t<xr:GeneratedType name="%sObject.%s" category="Object">\r\n' % (cfg_tag, name) +
+                    '\t\t\t\t<xr:TypeId>%s</xr:TypeId>\r\n' % new_uuid() +
+                    '\t\t\t\t<xr:ValueId>%s</xr:ValueId>\r\n' % new_uuid() +
+                    '\t\t\t</xr:GeneratedType>\r\n')
+        conv = re.sub('(<%s[^>]*>)' % cfg_tag,
+                      lambda m2: m2.group(1) + '\r\n\t\t<InternalInfo>\r\n' + obj_type + mgr + '\t\t</InternalInfo>',
+                      conv, count=1)
+
+    obj_dir = os.path.join(cfg_dir, folder)
+    os.makedirs(obj_dir, exist_ok=True)
+    write_bom(os.path.join(obj_dir, '%s.xml' % name), conv)
+
+    # Содержимое объекта — как есть; в XML та же подстановка типа, .bsl копируются байт в байт.
+    src_content = os.path.join(os.path.dirname(source_xml), name)
+    if os.path.isdir(src_content):
+        dst_content = os.path.join(obj_dir, name)
+        for root, _dirs, files in os.walk(src_content):
+            for fname in files:
+                full = os.path.join(root, fname)
+                rel = os.path.relpath(full, src_content)
+                dst = os.path.join(dst_content, rel)
+                os.makedirs(os.path.dirname(dst), exist_ok=True)
+                if os.path.splitext(fname)[1].lower() == '.xml':
+                    with io.open(full, encoding='utf-8-sig') as fh:
+                        t = fh.read()
+                    t = reissue(t)
+                    t = t.replace('%sObject.' % ext_tag, '%sObject.' % cfg_tag).replace('%s.' % ext_tag, '%s.' % cfg_tag)
+                    write_bom(dst, t)
+                else:
+                    shutil.copyfile(full, dst)
+
+    return {'tag': cfg_tag, 'name': name}
+
+
 def main():
     sys.stdout.reconfigure(encoding='utf-8')
     sys.stderr.reconfigure(encoding='utf-8')
@@ -802,11 +1216,30 @@ def main():
     parser.add_argument('-SourceDir', required=True)
     parser.add_argument('-V8Path', required=True)
     parser.add_argument('-TempBasePath', default='')
-    args = parser.parse_args()
+    # XML проверяемой обработки/отчёта: объект кладётся в конфигурацию-заглушку, чтобы платформа
+    # смогла проверить его штатными проверками. Без параметра стаб работает как раньше.
+    parser.add_argument('-EmbedSourceFile', default='')
+    parser.add_argument('-AdditionalV8Arguments', nargs='*', default=[],
+                        help='Extra 1cv8 arguments, e.g. /UseHwLicenses+')
+    parser.add_argument('-AdditionalIbcmdArguments', nargs='*', default=[],
+                        help='Extra ibcmd arguments in --key=value form')
+    known_opts = {s.lower() for a in parser._actions for s in a.option_strings}
+    argv, v8_extra, ibcmd_extra = extract_extra_args(sys.argv[1:], known_opts)
+    args = parser.parse_args(argv)
+
+    args.SourceDir = clean_path(args.SourceDir, "-SourceDir")
+    args.V8Path = clean_path(args.V8Path, "-V8Path")
+    args.TempBasePath = clean_path(args.TempBasePath, "-TempBasePath")
+    args.EmbedSourceFile = clean_path(args.EmbedSourceFile, "-EmbedSourceFile")
 
     type_map = scan_ref_types(args.SourceDir)
     register_columns = scan_register_columns(args.SourceDir)
     has_ref_types = len(type_map) > 0
+    embed_requested = bool(args.EmbedSourceFile and args.EmbedSourceFile.strip())
+    need_cfg = has_ref_types or embed_requested
+    stub_format_version = detect_stub_format_version(args.SourceDir)
+    stub_compat = stub_compatibility_mode(stub_format_version)
+    ns_decl = f'{NS} version="{stub_format_version}"'
 
     temp_base = args.TempBasePath or os.path.join(tempfile.gettempdir(), f'epf_stub_db_{random.randint(0,999999)}')
 
@@ -816,9 +1249,17 @@ def main():
     if needs_registrator:
         type_map.setdefault('Document', {})['\u0417\u0430\u0433\u043b\u0443\u0448\u043a\u0430\u0420\u0435\u0433\u0438\u0441\u0442\u0440\u0430\u0442\u043e\u0440\u0430'] = True  # ЗаглушкаРегистратора
 
-    if has_ref_types:
+    if need_cfg:
         cfg_dir = os.path.join(temp_base, 'cfg')
         os.makedirs(cfg_dir, exist_ok=True)
+
+        embedded = None
+        if embed_requested:
+            embedded = add_source_object_to_config(args.EmbedSourceFile, cfg_dir)
+            if not embedded:
+                print('Error: %s is neither ExternalDataProcessor nor ExternalReport' % args.EmbedSourceFile,
+                      file=sys.stderr)
+                sys.exit(1)
 
         # Configuration.xml
         uuid_cfg = new_uuid()
@@ -836,9 +1277,11 @@ def main():
             tag = META_INFO[meta_type][0]
             for name in names:
                 child_xml += f'\n\t\t\t<{tag}>{name}</{tag}>'
+        if embedded:
+            child_xml += '\n\t\t\t<%s>%s</%s>' % (embedded['tag'], embedded['name'], embedded['tag'])
 
         cfg_xml = f"""<?xml version="1.0" encoding="UTF-8"?>
-<MetaDataObject {NS}>
+<MetaDataObject {ns_decl}>
 \t<Configuration uuid="{uuid_cfg}">
 \t\t<InternalInfo>{co_xml}
 \t\t</InternalInfo>
@@ -847,7 +1290,7 @@ def main():
 \t\t\t<Synonym/>
 \t\t\t<Comment/>
 \t\t\t<NamePrefix/>
-\t\t\t<ConfigurationExtensionCompatibilityMode>Version8_3_24</ConfigurationExtensionCompatibilityMode>
+\t\t\t<ConfigurationExtensionCompatibilityMode>{stub_compat}</ConfigurationExtensionCompatibilityMode>
 \t\t\t<DefaultRunMode>ManagedApplication</DefaultRunMode>
 \t\t\t<UsePurposes>
 \t\t\t\t<v8:Value xsi:type="app:ApplicationUsePurpose">PlatformApplication</v8:Value>
@@ -898,7 +1341,7 @@ def main():
 \t\t\t<SynchronousPlatformExtensionAndAddInCallUseMode>DontUse</SynchronousPlatformExtensionAndAddInCallUseMode>
 \t\t\t<InterfaceCompatibilityMode>Taxi</InterfaceCompatibilityMode>
 \t\t\t<DatabaseTablespacesUseMode>DontUse</DatabaseTablespacesUseMode>
-\t\t\t<CompatibilityMode>Version8_3_24</CompatibilityMode>
+\t\t\t<CompatibilityMode>{stub_compat}</CompatibilityMode>
 \t\t\t<DefaultConstantsForm/>
 \t\t</Properties>
 \t\t<ChildObjects>{child_xml}
@@ -912,7 +1355,7 @@ def main():
         lang_dir = os.path.join(cfg_dir, 'Languages')
         os.makedirs(lang_dir, exist_ok=True)
         lang_xml = f"""<?xml version="1.0" encoding="UTF-8"?>
-<MetaDataObject {NS}>
+<MetaDataObject {ns_decl}>
 \t<Language uuid="{uuid_lang}">
 \t\t<Properties>
 \t\t\t<Name>\u0420\u0443\u0441\u0441\u043a\u0438\u0439</Name>
@@ -1041,7 +1484,7 @@ def main():
                     child_obj_xml = '\n\t\t<ChildObjects/>'
 
                 obj_xml = f"""<?xml version="1.0" encoding="UTF-8"?>
-<MetaDataObject {NS}>
+<MetaDataObject {ns_decl}>
 \t<{tag} uuid="{obj_uuid}">{internal_xml}
 \t\t<Properties>
 {props_xml}
@@ -1057,14 +1500,19 @@ def main():
 
     # Stub via ibcmd (one call: create [--import --apply])
     stub_engine = "ibcmd" if os.path.basename(args.V8Path).lower().startswith("ibcmd") else "1cv8"
+
+    # --- Resolve additional arguments for the selected engine ---
+    arg_hints = {"/F": "-TempBasePath", "--db-path": "-TempBasePath"}
+    extra_args = resolve_extra_args(stub_engine, v8_extra, ibcmd_extra, arg_hints)
     if stub_engine == "ibcmd":
         import shutil
         print(f'Creating infobase (ibcmd): {temp_base}')
         ib_data = tempfile.mkdtemp(prefix="stub_data_")
         ib_args = [args.V8Path, 'infobase', 'create', f'--db-path={temp_base}', '--create-database']
-        if has_ref_types:
+        if need_cfg:
             ib_args += [f'--import={os.path.join(temp_base, "cfg")}', '--apply', '--force']
         ib_args.append(f'--data={ib_data}')
+        ib_args.extend(extra_args)
         result = run_ibcmd(ib_args, warn_no_user=False)
         shutil.rmtree(ib_data, ignore_errors=True)
         if result.returncode != 0:
@@ -1074,7 +1522,7 @@ def main():
                 print(result.stderr, file=sys.stderr)
             print(f'Failed to create stub infobase (code: {result.returncode})', file=sys.stderr)
             sys.exit(1)
-        if has_ref_types:
+        if need_cfg:
             import shutil
             shutil.rmtree(os.path.join(temp_base, 'cfg'), ignore_errors=True)
         print(f'[OK] Stub database created: {temp_base}')
@@ -1083,33 +1531,40 @@ def main():
 
     # Create infobase
     print(f'Creating infobase: {temp_base}')
-    result = subprocess.run(
-        [args.V8Path, 'CREATEINFOBASE', f'File={temp_base}', '/DisableStartupDialogs'],
-        capture_output=True, text=True,
-    )
+    result = run_v8(args.V8Path, ['CREATEINFOBASE', f'File="{temp_base}"', '/DisableStartupDialogs']
+                    + [quote_if_needed(a) for a in extra_args])
     if result.returncode != 0:
+        print_platform_output(result)
         print(f'Failed to create infobase (code: {result.returncode})', file=sys.stderr)
         sys.exit(1)
 
-    if has_ref_types:
+    if need_cfg:
         cfg_dir = os.path.join(temp_base, 'cfg')
         # LoadConfigFromFiles
         print('Loading configuration from files...')
-        result = subprocess.run(
-            [args.V8Path, 'DESIGNER', f'/F{temp_base}', '/LoadConfigFromFiles', cfg_dir, '/DisableStartupDialogs'],
-            capture_output=True, text=True,
-        )
+        load_log = os.path.join(tempfile.gettempdir(), 'stub_load_log.txt')
+        result = run_v8(args.V8Path, ['DESIGNER', f'/F"{temp_base}"', '/LoadConfigFromFiles', f'"{cfg_dir}"',
+                                      '/Out', f'"{load_log}"',
+                                      '/DisableStartupDialogs'] + [quote_if_needed(a) for a in extra_args])
         if result.returncode != 0:
+            # Причина отказа живёт только в /Out: в консоль пакетный 1cv8 не пишет ничего.
+            if os.path.isfile(load_log):
+                try:
+                    with io.open(load_log, encoding='utf-8-sig', errors='replace') as fh:
+                        text = fh.read().strip()
+                    if text:
+                        print(text)
+                except Exception:
+                    pass
+            print_platform_output(result)
             print(f'Failed to load config (code: {result.returncode})', file=sys.stderr)
             sys.exit(1)
 
         # UpdateDBCfg
         print('Updating database configuration...')
         update_log = os.path.join(tempfile.gettempdir(), 'stub_update_log.txt')
-        result = subprocess.run(
-            [args.V8Path, 'DESIGNER', f'/F{temp_base}', '/UpdateDBCfg', '/Out', update_log, '/DisableStartupDialogs'],
-            capture_output=True, text=True,
-        )
+        result = run_v8(args.V8Path, ['DESIGNER', f'/F"{temp_base}"', '/UpdateDBCfg', '/Out', f'"{update_log}"',
+                                      '/DisableStartupDialogs'] + [quote_if_needed(a) for a in extra_args])
         if result.returncode != 0:
             if os.path.isfile(update_log):
                 try:
@@ -1117,6 +1572,7 @@ def main():
                         print(f.read())
                 except Exception:
                     pass
+            print_platform_output(result)
             print(f'Failed to update DB config (code: {result.returncode})', file=sys.stderr)
             sys.exit(1)
 

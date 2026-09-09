@@ -1,4 +1,4 @@
-﻿# web-info v1.0 — Apache & 1C publication status
+﻿# web-info v1.5 — Apache & 1C publication status
 # Source: https://github.com/Nikolay-Shirokov/cc-1c-skills
 <#
 .SYNOPSIS
@@ -18,9 +18,9 @@
     .\web-info.ps1 -ApachePath "C:\tools\apache24"
 #>
 
-[CmdletBinding()]
+[CmdletBinding(PositionalBinding=$false)]
 param(
-    [Parameter(Mandatory=$false)]
+    [Parameter(Mandatory=$false, Position=0)]
     [string]$ApachePath
 )
 
@@ -82,7 +82,24 @@ $port = "—"
 if ($confContent -match '(?m)^Listen\s+(\d+)') {
     $port = $Matches[1]
 }
-Write-Host "Port:   $port"
+# Проверяем именно TCP-порт: запрос к публикации поднял бы сеанс 1С и занял лицензию
+$portState = ""
+if ($port -ne "—") {
+    $client = New-Object System.Net.Sockets.TcpClient
+    try {
+        $async = $client.BeginConnect("127.0.0.1", [int]$port, $null, $null)
+        if ($async.AsyncWaitHandle.WaitOne(1000) -and $client.Connected) {
+            $portState = " (слушается)"
+        } else {
+            $portState = " (не отвечает)"
+        }
+    } catch {
+        $portState = " (не отвечает)"
+    } finally {
+        $client.Close()
+    }
+}
+Write-Host "Port:   $port$portState"
 
 # Extract wsap24 path
 if ($confContent -match 'LoadModule\s+_1cws_module\s+"([^"]+)"') {
@@ -115,9 +132,20 @@ if ($pubMatches.Count -eq 0) {
         # Detect published services
         $svcTags = @()
         if (Test-Path $vrdPath) {
-            if ($vrdContent -match '<ws\s') { $svcTags += "WS" }
-            if ($vrdContent -match '<httpServices\s') { $svcTags += "HTTP" }
-            if ($vrdContent -match 'enableStandardOdata\s*=\s*"true"') { $svcTags += "OData" }
+            # "+ext" — publishExtensionsByDefault: сервисы расширений тоже опубликованы
+            if ($vrdContent -match '<ws\s[^>]*>') {
+                $wsTag = "WS"
+                if ($Matches[0] -match 'publishExtensionsByDefault\s*=\s*"true"') { $wsTag += "+ext" }
+                $svcTags += $wsTag
+            }
+            if ($vrdContent -match '<httpServices\s[^>]*>') {
+                $hsTag = "HTTP"
+                if ($Matches[0] -match 'publishExtensionsByDefault\s*=\s*"true"') { $hsTag += "+ext" }
+                $svcTags += $hsTag
+            }
+            # Актуальная форма — <standardOdata enable="true"/>; enableStandardOdata — до 8.3.9
+            if ($vrdContent -match '<standardOdata\s[^>]*enable\s*=\s*"true"' -or
+                $vrdContent -match 'enableStandardOdata\s*=\s*"true"') { $svcTags += "OData" }
         }
         $svcLabel = if ($svcTags.Count -gt 0) { "   [" + ($svcTags -join " ") + "]" } else { "" }
 
@@ -133,15 +161,36 @@ if ($pubMatches.Count -eq 0) {
 Write-Host ""
 Write-Host "=== Последние ошибки ===" -ForegroundColor Cyan
 
-$errorLog = Join-Path (Join-Path $ApachePath "logs") "error.log"
-if (Test-Path $errorLog) {
-    $lines = Get-Content $errorLog -Tail 5 -ErrorAction SilentlyContinue
-    if ($lines -and $lines.Count -gt 0) {
+# Имя файла берём из httpd.conf: сборки Apache расходятся (error.log / error_log)
+$errorLog = $null
+if ($confContent -match '(?m)^\s*ErrorLog\s+"?([^"\r\n]+)"?') {
+    $logPath = $Matches[1].Trim()
+    if ([System.IO.Path]::IsPathRooted($logPath)) {
+        $errorLog = $logPath
+    } else {
+        $errorLog = Join-Path $ApachePath ($logPath -replace '/','\')
+    }
+}
+if (-not $errorLog -or -not (Test-Path $errorLog)) {
+    $errorLog = @("error_log", "error.log") |
+        ForEach-Object { Join-Path (Join-Path $ApachePath "logs") $_ } |
+        Where-Object { Test-Path $_ } |
+        Select-Object -First 1
+}
+
+if ($errorLog -and (Test-Path $errorLog)) {
+    Write-Host "Журнал: $errorLog" -ForegroundColor DarkGray
+    # Только error и выше: warn забит штатным шумом winnt_accept, notice — строки старта.
+    # AH02538 — след нашего же рестарта (родитель убит), пишется как crit при каждой публикации
+    $lines = Get-Content $errorLog -ErrorAction SilentlyContinue |
+        Where-Object { $_ -match '\[[a-z_]+:(error|crit|alert|emerg)\]' -and $_ -notmatch 'AH02538' } |
+        Select-Object -Last 5
+    if ($lines) {
         foreach ($line in $lines) {
             Write-Host "  $line" -ForegroundColor DarkGray
         }
     } else {
-        Write-Host "(пусто)" -ForegroundColor Green
+        Write-Host "(ошибок нет)" -ForegroundColor Green
     }
 } else {
     Write-Host "(нет файла)" -ForegroundColor Green

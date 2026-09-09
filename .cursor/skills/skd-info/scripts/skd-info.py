@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# skd-info v1.7 — Analyze 1C DCS structure
+# skd-info v1.12 — Analyze 1C DCS structure
 # Source: https://github.com/Nikolay-Shirokov/cc-1c-skills
 
 import argparse
@@ -8,6 +8,28 @@ import re
 import sys
 from collections import OrderedDict
 from lxml import etree
+
+# Регистронезависимый ввод — паритет с PS1: в PowerShell имена параметров и [ValidateSet]
+# регистр не различают, в argparse совпадение точное.
+def ci_parse_args(parser, argv=None):
+    """parse_args по правилам PS: имена параметров и значения choices регистронезависимы."""
+    argv = list(sys.argv[1:] if argv is None else argv)
+    names = {s.lower(): s for a in parser._actions for s in a.option_strings}
+    for i, tok in enumerate(argv):
+        if tok.startswith('-') and tok.lower() in names:
+            argv[i] = names[tok.lower()]
+    # choices — зеркало [ValidateSet]; канонизируем ДО разбора, иначе argparse отвергнет регистр
+    choice_map = {}
+    for a in parser._actions:
+        if a.choices:
+            for s in a.option_strings:
+                choice_map[s] = {str(c).lower(): c for c in a.choices}
+    for i in range(len(argv) - 1):
+        m = choice_map.get(argv[i])
+        if m and argv[i + 1].lower() in m:
+            argv[i + 1] = m[argv[i + 1].lower()]
+    return parser.parse_args(argv)
+
 
 S_NS = "http://v8.1c.ru/8.1/data-composition-system/schema"
 DCSCOM_NS = "http://v8.1c.ru/8.1/data-composition-system/common"
@@ -278,14 +300,29 @@ def get_support_status_for_path(target_path):
             except Exception:
                 pass
             return None
+        def _sg_is_external_root(xml_path):
+            if not os.path.isfile(xml_path):
+                return False
+            try:
+                mx = etree.parse(xml_path).getroot()
+                for child in mx:
+                    if isinstance(child.tag, str):
+                        return child.tag.split("}")[-1] in ("ExternalDataProcessor", "ExternalReport")
+            except Exception:
+                return False
+            return False
         rp = os.path.abspath(target_path)
         # The target file itself may be the element meta-xml (e.g. Subsystems/X.xml).
         elem_uuid = root_uuid(rp)
+        if _sg_is_external_root(rp):
+            return None
         bin_path = None
         d = os.path.dirname(rp)
         for _ in range(12):
             if not d:
                 break
+            if _sg_is_external_root(d + ".xml"):
+                return None
             if not elem_uuid:
                 elem_uuid = root_uuid(d + ".xml")
             if not bin_path:
@@ -347,7 +384,7 @@ def main():
     parser.add_argument("-Offset", type=int, default=0)
     parser.add_argument("-OutFile", default=None)
     parser.add_argument("-Raw", action="store_true")
-    args = parser.parse_args()
+    args = ci_parse_args(parser)
 
     # --- Resolve path ---
     original_path = args.TemplatePath
@@ -424,7 +461,9 @@ def main():
 
     def show_overview():
         lines.append(f"=== DCS: {template_name} ({total_xml_lines} lines) ===")
-        lines.append(f"Поддержка: {get_support_status_for_path(template_path)}")
+        _support = get_support_status_for_path(template_path)
+        if _support is not None:
+            lines.append(f"Поддержка: {_support}")
         lines.append("")
 
         # Sources
@@ -1785,7 +1824,10 @@ def main():
         if not os.path.isabs(out_path):
             out_path = os.path.join(os.getcwd(), out_path)
         with open(out_path, "w", encoding="utf-8-sig") as fh:
-            fh.write("\n".join(result))
+            # Хвостовой перевод строки — как у PS-порта (WriteAllLines его добавляет).
+            # Это текстовый отчёт, а не XML метаданных: канон Конфигуратора сюда не
+            # относится, важен лишь паритет портов.
+            fh.write("\n".join(result) + "\n")
         print(f"Written {total_lines} lines to {args.OutFile}")
         sys.exit(0)
 

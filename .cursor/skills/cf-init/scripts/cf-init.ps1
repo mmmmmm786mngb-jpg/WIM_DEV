@@ -1,5 +1,6 @@
-﻿# cf-init v1.2 — Create empty 1C configuration scaffold
+﻿# cf-init v1.15 — Create empty 1C configuration scaffold (+write_xml_file/write_utf8_bom: общий эталон записи)
 # Source: https://github.com/Nikolay-Shirokov/cc-1c-skills
+[CmdletBinding(PositionalBinding=$false)]
 param(
 	[Parameter(Mandatory)]
 	[string]$Name,
@@ -7,11 +8,55 @@ param(
 	[string]$OutputDir = "src",
 	[string]$Version,
 	[string]$Vendor,
-	[string]$CompatibilityMode = "Version8_3_24"
+	[string]$CompatibilityMode = "Version8_3_24",
+	# Версия формата выгрузки (MDClasses). Её задаёт ПЛАТФОРМА, которой выгружают, и от режима
+	# совместимости она не зависит. Дефолт 2.17 — нижняя граница проверенного диапазона.
+	[string]$FormatVersion = "2.17"
 )
 
 $ErrorActionPreference = "Stop"
+
+# --- Format version ---
+# Проверенный диапазон: 2.17 (8.3.24) … 2.21 (8.5). Полная лестница — docs/1c-configuration-spec.md,
+# «Лестница версий». Версии ниже 2.17 (платформы 8.3.23 и старше) реальны, поэтому запретом их не
+# закрываем: за пределами диапазона — ПРЕДУПРЕЖДЕНИЕ, скаффолд всё равно выпускается. Ошибка — только
+# на нечисловое значение: это опечатка, а не версия.
+$formatVerifiedMin = "2.17"
+$formatVerifiedMax = "2.21"
+# Версия формата как число: "2.20" → 220. Строковое сравнение неверно ("2.9" > "2.17").
+function Get-FormatRank([string]$ver) {
+	if ($ver -match '^(\d+)\.(\d+)$') { return [int]$Matches[1] * 100 + [int]$Matches[2] }
+	return 0
+}
+$formatRank = Get-FormatRank $FormatVersion
+
+function Esc-XmlText {
+	param([string]$s)
+	# Эскейп ТЕКСТА элемента: только & < > — кавычку и апостроф платформа держит сырыми.
+	return $s.Replace('&','&amp;').Replace('<','&lt;').Replace('>','&gt;')
+}
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+
+# Проверка версии — ПОСЛЕ настройки кодировки консоли: иначе em-dash в сообщении уедет в вопросы.
+# Пишем прямо в stderr, а не Write-Warning: в PS 5.1 предупреждение уходит в stdout, получает
+# локализованный префикс и переносится по 80 символов — подстрока в тесте перестаёт находиться.
+if ($formatRank -eq 0) {
+	[Console]::Error.WriteLine("Malformed -FormatVersion '$FormatVersion' (expected N.N, e.g. 2.17)")
+	exit 1
+}
+if ($formatRank -lt (Get-FormatRank $formatVerifiedMin) -or $formatRank -gt (Get-FormatRank $formatVerifiedMax)) {
+	[Console]::Error.WriteLine("WARNING: Format version '$FormatVersion' is outside the tested range $formatVerifiedMin-$formatVerifiedMax — the scaffold is emitted as requested but was not verified on that platform")
+}
+
+# «Не использовать» в Конфигураторе хранится как версия ТЕКУЩЕЙ платформы, а не как DontUse:
+# свежая база получает Version8_3_<своя>, и ни одна типовая в корпусе DontUse не содержит.
+# Само значение легально — платформа принимает его без ошибок, — но не выживает: замерено на
+# 8.3.25 и 8.3.27, выгрузка обоих возвращает Version8_3_8. Поэтому предупреждение, а не запрет.
+# Сравнение регистронезависимо ЯВНО: в PS -eq таков по умолчанию, в py — нет, и молчаливое
+# расхождение портов началось бы прямо здесь.
+if ($CompatibilityMode -and $CompatibilityMode.ToLowerInvariant() -eq 'dontuse') {
+	[Console]::Error.WriteLine("WARNING: CompatibilityMode 'DontUse' is not `"no restrictions`" — the platform stores it as Version8_3_8. For no compatibility restrictions use the target platform version (e.g. Version8_3_27 for 8.3.27).")
+}
 
 # --- Resolve output dir ---
 if (-not [System.IO.Path]::IsPathRooted($OutputDir)) {
@@ -38,6 +83,11 @@ $co6 = [guid]::NewGuid().ToString()
 $co7 = [guid]::NewGuid().ToString()
 
 # --- Mobile functionalities ---
+# Версия формата как число — по ней ниже включаются вставки 2.21.
+$is221 = ($formatRank -ge 221)
+# TextToSpeech приехал раньше остальных вставок 8.5 — своей ступенью, поэтому гейт отдельный.
+$is218 = ($formatRank -ge 218)
+
 $mobileFuncs = @(
 	@("Biometrics","true"), @("Location","false"), @("BackgroundLocation","false"),
 	@("BluetoothPrinters","false"), @("WiFiPrinters","false"), @("Contacts","false"),
@@ -54,6 +104,12 @@ $mobileFuncs = @(
 	@("DocumentScanning","false"), @("SpeechToText","false"), @("Geofences","false"),
 	@("IncomingShareRequests","false"), @("AllIncomingShareRequestsTypesProcessing","false")
 )
+# TextToSpeech — возможность мобильного приложения, добавленная форматом 2.18 (8.3.25),
+# последней в списке; в 2.21 список не менялся. Замерено выгрузками пустой ИБ шести платформ:
+# 2.13/2.17 — 37 записей без неё, 2.18-2.21 — 38 с ней. Гейт обязателен и в обе стороны:
+# на 2.17 тег ломает загрузку XDTO-ошибкой (проверено на 8.3.24), без тега на 2.18+ платформа
+# подставит дефолт false и допишет его при выгрузке — то есть разойдётся роундтрип.
+if ($is218) { $mobileFuncs += ,@("TextToSpeech","false") }
 
 $mobileXml = ""
 foreach ($mf in $mobileFuncs) {
@@ -63,17 +119,43 @@ foreach ($mf in $mobileFuncs) {
 # --- Synonym XML ---
 $synonymXml = ""
 if ($Synonym) {
-	$synonymXml = "`r`n`t`t`t`t<v8:item>`r`n`t`t`t`t`t<v8:lang>ru</v8:lang>`r`n`t`t`t`t`t<v8:content>$([System.Security.SecurityElement]::Escape($Synonym))</v8:content>`r`n`t`t`t`t</v8:item>`r`n`t`t`t"
+	$synonymXml = "`r`n`t`t`t`t<v8:item>`r`n`t`t`t`t`t<v8:lang>ru</v8:lang>`r`n`t`t`t`t`t<v8:content>$(Esc-XmlText ($Synonym))</v8:content>`r`n`t`t`t`t</v8:item>`r`n`t`t`t"
 }
 
 # --- Optional properties ---
-$vendorXml = if ($Vendor) { [System.Security.SecurityElement]::Escape($Vendor) } else { "" }
-$versionXml = if ($Version) { [System.Security.SecurityElement]::Escape($Version) } else { "" }
+# Элемент целиком, а не значение внутри пары: при пустом значении Конфигуратор
+# пишет <Vendor/>, а не <Vendor></Vendor>.
+$vendorEl = if ($Vendor) { "<Vendor>$(Esc-XmlText ($Vendor))</Vendor>" } else { "<Vendor/>" }
+$versionEl = if ($Version) { "<Version>$(Esc-XmlText ($Version))</Version>" } else { "<Version/>" }
+
+# --- Свойства и пространство имён формата 2.21 (платформа 8.5) ---
+# Значения и ПОЗИЦИИ сняты с выгрузки 8.5.1 (debug/fmt221/dump_v851): те же исходники,
+# выгруженные с 8.3.27 и с 8.5.1, различаются ровно этим. Порядок важен — вставки идут
+# на своё место, а не в конец.
+$nl = "`r`n"
+$f221AuxForms = ""; $f221WindowVariant = ""; $f221OpenVariant = ""; $f221Captions = ""; $f221Migration = ""
+$palNs = ""
+if ($is221) {
+	$palNs = ' xmlns:pal="http://v8.1c.ru/8.1/data/ui/colors/palette"'
+	# Скобки вокруг -join обязательны: без них `$nl + (массив) -join $nl` разбирается как
+	# `($nl + массив) -join $nl`, массив склеивается пробелами и все теги уезжают в одну строку.
+	$f221AuxForms = $nl + ((@(
+		"<AuxiliaryReportForm/>", "<AuxiliaryReportVariantForm/>", "<AuxiliaryReportSettingsForm/>",
+		"<AuxiliaryDynamicListSettingsForm/>", "<AuxiliaryDataHistoryChangeHistoryForm/>",
+		"<AuxiliaryDataHistoryVersionDataForm/>", "<AuxiliaryDataHistoryVersionDifferencesForm/>",
+		"<AuxiliaryCollaborationSystemUsersChoiceForm/>"
+	) | ForEach-Object { "`t`t`t$_" }) -join $nl)
+	$f221WindowVariant = $nl + "`t`t`t<MainClientApplicationWindowInterfaceVariant>NavigationLeft</MainClientApplicationWindowInterfaceVariant>" +
+		$nl + "`t`t`t<ClientApplicationTheme>Auto</ClientApplicationTheme>"
+	$f221OpenVariant = $nl + "`t`t`t<ClientApplicationWindowsOpenVariant>OpenDataInDialogs</ClientApplicationWindowsOpenVariant>"
+	$f221Captions = $nl + "`t`t`t<Caption/>" + $nl + "`t`t`t<ShortCaption/>"
+	$f221Migration = $nl + "`t`t`t<Version85InterfaceMigrationMode>DontUse</Version85InterfaceMigrationMode>"
+}
 
 # --- Configuration.xml ---
 $cfgXml = @"
 <?xml version="1.0" encoding="UTF-8"?>
-<MetaDataObject xmlns="http://v8.1c.ru/8.3/MDClasses" xmlns:app="http://v8.1c.ru/8.2/managed-application/core" xmlns:cfg="http://v8.1c.ru/8.1/data/enterprise/current-config" xmlns:cmi="http://v8.1c.ru/8.2/managed-application/cmi" xmlns:ent="http://v8.1c.ru/8.1/data/enterprise" xmlns:lf="http://v8.1c.ru/8.2/managed-application/logform" xmlns:style="http://v8.1c.ru/8.1/data/ui/style" xmlns:sys="http://v8.1c.ru/8.1/data/ui/fonts/system" xmlns:v8="http://v8.1c.ru/8.1/data/core" xmlns:v8ui="http://v8.1c.ru/8.1/data/ui" xmlns:web="http://v8.1c.ru/8.1/data/ui/colors/web" xmlns:win="http://v8.1c.ru/8.1/data/ui/colors/windows" xmlns:xen="http://v8.1c.ru/8.3/xcf/enums" xmlns:xpr="http://v8.1c.ru/8.3/xcf/predef" xmlns:xr="http://v8.1c.ru/8.3/xcf/readable" xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" version="2.17">
+<MetaDataObject xmlns="http://v8.1c.ru/8.3/MDClasses" xmlns:app="http://v8.1c.ru/8.2/managed-application/core" xmlns:cfg="http://v8.1c.ru/8.1/data/enterprise/current-config" xmlns:cmi="http://v8.1c.ru/8.2/managed-application/cmi" xmlns:ent="http://v8.1c.ru/8.1/data/enterprise" xmlns:lf="http://v8.1c.ru/8.2/managed-application/logform"$palNs xmlns:style="http://v8.1c.ru/8.1/data/ui/style" xmlns:sys="http://v8.1c.ru/8.1/data/ui/fonts/system" xmlns:v8="http://v8.1c.ru/8.1/data/core" xmlns:v8ui="http://v8.1c.ru/8.1/data/ui" xmlns:web="http://v8.1c.ru/8.1/data/ui/colors/web" xmlns:win="http://v8.1c.ru/8.1/data/ui/colors/windows" xmlns:xen="http://v8.1c.ru/8.3/xcf/enums" xmlns:xpr="http://v8.1c.ru/8.3/xcf/predef" xmlns:xr="http://v8.1c.ru/8.3/xcf/readable" xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" version="$FormatVersion">
 	<Configuration uuid="$uuidCfg">
 		<InternalInfo>
 			<xr:ContainedObject>
@@ -106,7 +188,7 @@ $cfgXml = @"
 			</xr:ContainedObject>
 		</InternalInfo>
 		<Properties>
-			<Name>$([System.Security.SecurityElement]::Escape($Name))</Name>
+			<Name>$(Esc-XmlText ($Name))</Name>
 			<Synonym>$synonymXml</Synonym>
 			<Comment/>
 			<NamePrefix/>
@@ -117,8 +199,8 @@ $cfgXml = @"
 			</UsePurposes>
 			<ScriptVariant>Russian</ScriptVariant>
 			<DefaultRoles/>
-			<Vendor>$vendorXml</Vendor>
-			<Version>$versionXml</Version>
+			$vendorEl
+			$versionEl
 			<UpdateCatalogAddress/>
 			<IncludeHelpInContents>false</IncludeHelpInContents>
 			<UseManagedFormInOrdinaryApplication>false</UseManagedFormInOrdinaryApplication>
@@ -140,15 +222,15 @@ $cfgXml = @"
 			<DefaultDataHistoryChangeHistoryForm/>
 			<DefaultDataHistoryVersionDataForm/>
 			<DefaultDataHistoryVersionDifferencesForm/>
-			<DefaultCollaborationSystemUsersChoiceForm/>
+			<DefaultCollaborationSystemUsersChoiceForm/>$f221AuxForms
 			<RequiredMobileApplicationPermissions/>
 			<UsedMobileApplicationFunctionalities>$mobileXml
 			</UsedMobileApplicationFunctionalities>
 			<StandaloneConfigurationRestrictionRoles/>
 			<MobileApplicationURLs/>
-			<AllowedIncomingShareRequestTypes/>
-			<MainClientApplicationWindowMode>Normal</MainClientApplicationWindowMode>
-			<DefaultInterface/>
+			<AllowedIncomingShareRequestTypes/>$f221WindowVariant
+			<MainClientApplicationWindowMode>Normal</MainClientApplicationWindowMode>$f221OpenVariant
+			<DefaultInterface/>$f221Captions
 			<DefaultStyle/>
 			<DefaultLanguage>Language.Русский</DefaultLanguage>
 			<BriefInformation/>
@@ -160,7 +242,7 @@ $cfgXml = @"
 			<ObjectAutonumerationMode>NotAutoFree</ObjectAutonumerationMode>
 			<ModalityUseMode>DontUse</ModalityUseMode>
 			<SynchronousPlatformExtensionAndAddInCallUseMode>DontUse</SynchronousPlatformExtensionAndAddInCallUseMode>
-			<InterfaceCompatibilityMode>TaxiEnableVersion8_2</InterfaceCompatibilityMode>
+			<InterfaceCompatibilityMode>TaxiEnableVersion8_2</InterfaceCompatibilityMode>$f221Migration
 			<DatabaseTablespacesUseMode>DontUse</DatabaseTablespacesUseMode>
 			<CompatibilityMode>$CompatibilityMode</CompatibilityMode>
 			<DefaultConstantsForm/>
@@ -175,7 +257,7 @@ $cfgXml = @"
 # --- Languages/Русский.xml ---
 $langXml = @"
 <?xml version="1.0" encoding="UTF-8"?>
-<MetaDataObject xmlns="http://v8.1c.ru/8.3/MDClasses" xmlns:app="http://v8.1c.ru/8.2/managed-application/core" xmlns:cfg="http://v8.1c.ru/8.1/data/enterprise/current-config" xmlns:cmi="http://v8.1c.ru/8.2/managed-application/cmi" xmlns:ent="http://v8.1c.ru/8.1/data/enterprise" xmlns:lf="http://v8.1c.ru/8.2/managed-application/logform" xmlns:style="http://v8.1c.ru/8.1/data/ui/style" xmlns:sys="http://v8.1c.ru/8.1/data/ui/fonts/system" xmlns:v8="http://v8.1c.ru/8.1/data/core" xmlns:v8ui="http://v8.1c.ru/8.1/data/ui" xmlns:web="http://v8.1c.ru/8.1/data/ui/colors/web" xmlns:win="http://v8.1c.ru/8.1/data/ui/colors/windows" xmlns:xen="http://v8.1c.ru/8.3/xcf/enums" xmlns:xpr="http://v8.1c.ru/8.3/xcf/predef" xmlns:xr="http://v8.1c.ru/8.3/xcf/readable" xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" version="2.17">
+<MetaDataObject xmlns="http://v8.1c.ru/8.3/MDClasses" xmlns:app="http://v8.1c.ru/8.2/managed-application/core" xmlns:cfg="http://v8.1c.ru/8.1/data/enterprise/current-config" xmlns:cmi="http://v8.1c.ru/8.2/managed-application/cmi" xmlns:ent="http://v8.1c.ru/8.1/data/enterprise" xmlns:lf="http://v8.1c.ru/8.2/managed-application/logform"$palNs xmlns:style="http://v8.1c.ru/8.1/data/ui/style" xmlns:sys="http://v8.1c.ru/8.1/data/ui/fonts/system" xmlns:v8="http://v8.1c.ru/8.1/data/core" xmlns:v8ui="http://v8.1c.ru/8.1/data/ui" xmlns:web="http://v8.1c.ru/8.1/data/ui/colors/web" xmlns:win="http://v8.1c.ru/8.1/data/ui/colors/windows" xmlns:xen="http://v8.1c.ru/8.3/xcf/enums" xmlns:xpr="http://v8.1c.ru/8.3/xcf/predef" xmlns:xr="http://v8.1c.ru/8.3/xcf/readable" xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" version="$FormatVersion">
 	<Language uuid="$uuidLang">
 		<Properties>
 			<Name>Русский</Name>
@@ -235,11 +317,20 @@ if (-not (Test-Path $extDir)) {
 # --- Write files with UTF-8 BOM ---
 $enc = New-Object System.Text.UTF8Encoding($true)
 
-[System.IO.File]::WriteAllText($cfgFile, $cfgXml, $enc)
+# XML в каноне выгрузки Конфигуратора: CRLF в разделителях, без перевода в конце.
+#
+# Копия этой функции есть в каждом навыке-эмиттере (навыки автономны). Держать
+# копии одинаковыми — сознательно: разошедшиеся копии сводят на нет весь смысл.
+function Write-XmlFile([string]$path, [string]$text, $encoding) {
+	$t = ($text -replace "`r`n", "`n") -replace "`n", "`r`n"
+	[System.IO.File]::WriteAllText($path, $t.TrimEnd("`r", "`n"), $encoding)
+}
+
+Write-XmlFile $cfgFile $cfgXml $enc
 $langFile = Join-Path $langDir "Русский.xml"
-[System.IO.File]::WriteAllText($langFile, $langXml, $enc)
+Write-XmlFile $langFile $langXml $enc
 $caiFile = Join-Path $extDir "ClientApplicationInterface.xml"
-[System.IO.File]::WriteAllText($caiFile, $caiXml, $enc)
+Write-XmlFile $caiFile $caiXml $enc
 
 # --- Output ---
 Write-Host "[OK] Создана конфигурация: $Name"

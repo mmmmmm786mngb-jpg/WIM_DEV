@@ -1,4 +1,4 @@
-// web-test core/click v1.22 — clickElement dispatcher: routes to spreadsheet / popup / grid-row / form-element / field-focus handlers by target kind.
+// web-test core/click v1.24 — clickElement dispatcher: routes to spreadsheet / popup / form-group / grid-row / form-element / field-focus handlers by target kind.
 // Source: https://github.com/Nikolay-Shirokov/cc-1c-skills
 
 import { page, ensureConnected, highlightMode } from './state.mjs';
@@ -18,6 +18,7 @@ import {
   clickConfirmationButton, tryClickPopupItem,
 } from '../forms/click-popup.mjs';
 import { clickFormTarget, focusFormField } from '../forms/click-form.mjs';
+import { clickFormGroupTarget } from '../forms/click-group.mjs';
 import {
   clickSpreadsheetCell, findSpreadsheetCellByText,
 } from '../spreadsheet/spreadsheet.mjs';
@@ -116,8 +117,14 @@ export async function clickElement(text, { dblclick, table, toggle, expand, modi
       throw new Error(`clickElement: "${text}" not found. Available: ${target.available?.join(', ') || 'none'}`);
     }
 
-    // 4. Dispatch to the right handler by target kind.
+    // 4. Guard: a disabled target (button/frameButton/checkbox/tumbler/field) is a silent
+    //    no-op in 1C — clicking it does nothing. Fail loud instead of masquerading success.
+    //    Availability is checkable up front via getFormState().buttons[].disabled / fields[].disabled.
+    if (target.disabled) throw new Error(`clickElement: "${text}" is disabled`);
+
+    // 5. Dispatch to the right handler by target kind.
     const ctx = { formNum, modifier, dblclick, toggle, expand, timeout, table, gridSelector };
+    if (target.kind === 'formGroup') return await clickFormGroupTarget(target, ctx);
     if (target.kind === 'gridGroup' || target.kind === 'gridParent') return await clickGridGroupTarget(target, ctx);
     if (target.kind === 'gridTreeNode') return await clickGridTreeNodeTarget(target, ctx);
     if (target.kind === 'gridRow') return await clickGridRowTarget(target, ctx);

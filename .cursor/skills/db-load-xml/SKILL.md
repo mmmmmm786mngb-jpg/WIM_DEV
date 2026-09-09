@@ -34,6 +34,7 @@ allowed-tools:
 Если файла нет — предложи `/db-list add`.
 Если использованная база не зарегистрирована — после выполнения предложи добавить через `/db-list add`.
 Если в записи базы указан `configSrc` — используй как каталог загрузки по умолчанию.
+Для `-Extension` каталог берётся из `extensions[].src` записи базы, если он там указан.
 
 ## Команда
 
@@ -57,8 +58,11 @@ powershell.exe -NoProfile -File ".cursor/skills/db-load-xml/scripts/db-load-xml.
 | `-ListFile <путь>` | для Partial | Путь к файлу со списком (альтернатива `-Files`) |
 | `-Extension <имя>` | нет | Загрузить в расширение |
 | `-AllExtensions` | нет | Загрузить все расширения |
+| `-NoApplyCheck` | нет | Не проверять применимость расширения после загрузки |
 | `-Format <формат>` | нет | `Hierarchical` (по умолч.) / `Plain` |
 | `-UpdateDB` | нет | После загрузки сразу обновить конфигурацию БД (`/UpdateDBCfg`) |
+| `-AdditionalV8Arguments <список>` | нет | Доп. аргументы запуска `1cv8.exe` через запятую, напр. `/UseHwLicenses+` |
+| `-AdditionalIbcmdArguments <список>` | нет | Доп. аргументы `ibcmd` через запятую, в форме `--ключ=значение` |
 
 > `*` — нужен либо `-InfoBasePath`, либо пара `-InfoBaseServer` + `-InfoBaseRef`
 

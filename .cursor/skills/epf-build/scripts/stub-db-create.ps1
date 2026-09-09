@@ -1,4 +1,4 @@
-﻿# stub-db-create v1.3 — Create temp 1C infobase with metadata stubs for EPF/ERF build
+﻿# stub-db-create v1.10 — Create temp 1C infobase with metadata stubs for EPF/ERF build
 # Source: https://github.com/Nikolay-Shirokov/cc-1c-skills
 param(
 	[Parameter(Mandatory)]
@@ -7,19 +7,213 @@ param(
 	[Parameter(Mandatory)]
 	[string]$V8Path,
 
-	[string]$TempBasePath
+	[string]$TempBasePath,
+
+	# XML проверяемой обработки/отчёта: объект кладётся в конфигурацию-заглушку, чтобы платформа
+	# смогла проверить его штатными проверками. Без параметра стаб работает как раньше.
+	[string]$EmbedSourceFile,
+
+	[string[]]$AdditionalV8Arguments = @(),
+
+	[string[]]$AdditionalIbcmdArguments = @()
 )
 
 $ErrorActionPreference = "Stop"
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
 
+function ConvertTo-CleanPath {
+    # Forgive what is unambiguous in a path the caller passed: surrounding whitespace,
+    # surrounding quotes that survived shell parsing, a trailing separator. A quote left
+    # inside afterwards cannot be part of a real path — reject it by name instead of letting
+    # 1C answer with its opaque "Неверные или отсутствующие параметры соединения".
+    param([string]$Value, [string]$ParamName)
+    if (-not $Value) { return $Value }
+    $v = $Value.Trim()
+    if ($v.Length -ge 2 -and $v[0] -eq $v[-1] -and ($v[0] -eq '"' -or $v[0] -eq "'")) {
+        $v = $v.Substring(1, $v.Length - 2).Trim()
+    }
+    if ($v.Length -gt 3 -and ($v[-1] -eq '\' -or $v[-1] -eq '/')) { $v = $v.Substring(0, $v.Length - 1) }
+    if ($v.Contains('"')) {
+        Write-Host "Error: $ParamName contains a quote character: $Value" -ForegroundColor Red
+        exit 1
+    }
+    return $v
+}
+
+$SourceDir = ConvertTo-CleanPath $SourceDir '-SourceDir'
+$V8Path = ConvertTo-CleanPath $V8Path '-V8Path'
+$TempBasePath = ConvertTo-CleanPath $TempBasePath '-TempBasePath'
+
+# --- Additional platform arguments ---
+$script:V8OwnedKeys = @(
+    'DESIGNER', 'ENTERPRISE', 'CREATEINFOBASE', 'CONFIG',
+    '/F', '/S', '/N', '/P', '/Out', '/DisableStartupDialogs',
+    '/UseTemplate', '/AddToList', '/Execute', '/C', '/URL', '/UC',
+    '/DumpIB', '/RestoreIB', '/DumpCfg', '/LoadCfg',
+    '/DumpConfigToFiles', '/LoadConfigFromFiles', '/UpdateDBCfg',
+    '/DumpExternalDataProcessorOrReportToFiles', '/LoadExternalDataProcessorOrReportFromFiles'
+)
+# Пакетные команды платформы. В одной командной строке DESIGNER выполняет ТОЛЬКО ПОСЛЕДНЮЮ,
+# остальные молча отбрасывает (проверено на 8.3.24: /LoadConfigFromFiles вместе с
+# /CheckCanApplyConfigurationExtensions завершились кодом 0 с пустым логом, и загрузка НЕ
+# состоялась). Такая команда в дополнительных аргументах подменяет собой операцию навыка, а навык
+# отчитывается успехом. Дополнительные аргументы — это опции, а не режимы.
+$script:V8BatchKeys = @(
+    '/CheckConfig', '/CheckModules', '/CheckCanApplyConfigurationExtensions',
+    '/DumpDBCfgList', '/DeleteCfg', '/UpdateCfg', '/CompareCfg', '/MergeCfg',
+    '/ManageCfgSupport', '/RollbackCfg', '/ConvertFiles'
+)
+
+$script:IbcmdOwnedKeys = @(
+    '--db-path', '--data', '--out', '--file', '--load', '--restore',
+    '--import', '--export', '--apply', '--force', '--create-database',
+    '--user', '--password'
+)
+$script:V8SecretKeys = @('/P', '/UC', '/WSP', '/AWSP')
+$script:IbcmdSecretKeys = @('--password', '--token', '--db-pwd')
+
+function Test-ArgKeyMatch {
+    # A token matches a key when it equals the key, or starts with it and the next
+    # character is not a letter — catches glued /N"user" and --password=x, while
+    # keeping /ClearCache distinct from /C.
+    param([string]$Token, [string]$Key)
+    if ($Token.Length -lt $Key.Length) { return $false }
+    if (-not $Token.Substring(0, $Key.Length).Equals($Key, [System.StringComparison]::OrdinalIgnoreCase)) { return $false }
+    if ($Token.Length -eq $Key.Length) { return $true }
+    return -not [char]::IsLetter($Token[$Key.Length])
+}
+
+function Get-ProjectExtraArgs {
+    # v8args / ibcmdargs from .v8-project.json — same upward walk as v8path.
+    param([string]$Name)
+    $dir = (Get-Location).Path
+    while ($dir) {
+        $pf = Join-Path $dir ".v8-project.json"
+        if (Test-Path $pf) {
+            try {
+                $j = Get-Content $pf -Raw -Encoding UTF8 | ConvertFrom-Json
+                if ($j.$Name) { return @($j.$Name | ForEach-Object { [string]$_ }) }
+            } catch {}
+            return @()
+        }
+        $parent = Split-Path $dir -Parent
+        if (-not $parent -or $parent -eq $dir) { break }
+        $dir = $parent
+    }
+    return @()
+}
+
+function Assert-ExtraArgs {
+    # The platform accepts only one batch operation, and a duplicate connection or
+    # output key fails with an opaque 1C error — reject what the skill owns itself.
+    param([string[]]$ExtraArgs, [string]$Engine, [hashtable]$Hints)
+    $paramName = if ($Engine -eq 'ibcmd') { '-AdditionalIbcmdArguments' } else { '-AdditionalV8Arguments' }
+    $owned = if ($Engine -eq 'ibcmd') { $script:IbcmdOwnedKeys } else { $script:V8OwnedKeys }
+    foreach ($tok in $ExtraArgs) {
+        if ($Engine -eq 'ibcmd' -and $tok -notmatch '^-') {
+            Write-Host "Error: '$tok' is a positional token — pass values as --key=value ($paramName cannot extend the ibcmd command)" -ForegroundColor Red
+            exit 1
+        }
+        if ($Engine -ne 'ibcmd') {
+            foreach ($b in $script:V8BatchKeys) {
+                if (Test-ArgKeyMatch $tok $b) {
+                    Write-Host "Error: $b is a batch command; passed via $paramName it would replace the skill's own operation (a command line runs only its last batch command)" -ForegroundColor Red
+                    exit 1
+                }
+            }
+        }
+        foreach ($k in $owned) {
+            if (Test-ArgKeyMatch $tok $k) {
+                $hint = ''
+                if ($Hints -and $Hints.ContainsKey($k)) { $hint = " (use $($Hints[$k]))" }
+                Write-Host "Error: $k is controlled by the skill and cannot be passed via $paramName$hint" -ForegroundColor Red
+                exit 1
+            }
+        }
+    }
+}
+
+function Resolve-ExtraArgs {
+    # Pick the argument list for the selected engine and validate it. An explicitly passed
+    # parameter for the other engine is an error; the same keys coming from .v8-project.json
+    # simply do not apply — a project may describe both engines.
+    param([string]$Engine, [string[]]$V8Extra, [string[]]$IbcmdExtra, [hashtable]$Hints)
+    # powershell.exe -File — how skills are invoked — cannot bind an array parameter:
+    # space-separated values spill into positional ones, a comma-joined list arrives as a
+    # single token. So accept the repo's list convention (comma-separated) and split here;
+    # a native array call keeps working. A value containing a comma is not supported.
+    $V8Extra = @($V8Extra | ForEach-Object { $_ -split ',' } | Where-Object { $_ -ne '' })
+    $IbcmdExtra = @($IbcmdExtra | ForEach-Object { $_ -split ',' } | Where-Object { $_ -ne '' })
+    if ($Engine -eq 'ibcmd' -and $V8Extra.Count -gt 0) {
+        Write-Host "Error: -AdditionalV8Arguments applies to 1cv8 only; the selected engine is ibcmd (use -AdditionalIbcmdArguments)" -ForegroundColor Red
+        exit 1
+    }
+    if ($Engine -ne 'ibcmd' -and $IbcmdExtra.Count -gt 0) {
+        Write-Host "Error: -AdditionalIbcmdArguments applies to ibcmd only; the selected engine is 1cv8 (use -AdditionalV8Arguments)" -ForegroundColor Red
+        exit 1
+    }
+    if ($Engine -eq 'ibcmd') {
+        $extra = @(Get-ProjectExtraArgs 'ibcmdargs') + @($IbcmdExtra)
+    } else {
+        $extra = @(Get-ProjectExtraArgs 'v8args') + @($V8Extra)
+    }
+    if ($extra.Count -gt 0) { Assert-ExtraArgs $extra $Engine $Hints }
+    # Plain return, no comma trick: the caller re-collects with @(...), and ,@() there
+    # would nest the array — the tokens would then be glued into one argument.
+    return $extra
+}
+
+function Format-ArgsForDisplay {
+    # Redact values of secret-prone keys in glued, =-joined and separate forms.
+    # Matching here is a plain prefix (no letter rule): over-masking costs nothing,
+    # a leaked password does.
+    param([string[]]$ArgList, [string]$Engine)
+    $keys = if ($Engine -eq 'ibcmd') { $script:IbcmdSecretKeys } else { $script:V8SecretKeys }
+    $res = @()
+    $maskNext = $false
+    foreach ($tok in $ArgList) {
+        if ($maskNext) { $res += '***'; $maskNext = $false; continue }
+        $hit = $null
+        foreach ($k in $keys) {
+            if ($tok.Length -ge $k.Length -and $tok.Substring(0, $k.Length).Equals($k, [System.StringComparison]::OrdinalIgnoreCase)) { $hit = $k; break }
+        }
+        if (-not $hit) { $res += $tok; continue }
+        if ($tok.Length -eq $hit.Length) { $res += $tok; $maskNext = $true }
+        elseif ($tok[$hit.Length] -eq '=') { $res += ($hit + '=***') }
+        else { $res += ($hit + '***') }
+    }
+    return ,$res
+}
+
+
+# Версия формата как число: "2.20" → 220. Строковое сравнение неверно ("2.9" > "2.17").
+function Get-FormatRank([string]$ver) {
+	if ($ver -match '^(\d+)\.(\d+)$') { return [int]$Matches[1] * 100 + [int]$Matches[2] }
+	return 0
+}
+
 # --- 1. Scan XML files for reference types ---
 
 $typeMap = @{}  # MetadataType -> @(Name1, Name2, ...)
 
+# Версия формата заглушечной конфигурации. Платформа грузит формат не новее себя, поэтому зашитая
+# версия ломала бы сборку исходников более старого формата на соответствующей ей платформе. Берём
+# версию из корня собираемого объекта (ExternalDataProcessor/ExternalReport); вложенные файлы —
+# запасной вариант, если корень почему-то не попался.
+$srcRootVersion = ""
+$srcAnyVersion = ""
+
 $xmlFiles = Get-ChildItem -Path $SourceDir -Filter "*.xml" -Recurse -File
 foreach ($f in $xmlFiles) {
 	$content = [System.IO.File]::ReadAllText($f.FullName, [System.Text.Encoding]::UTF8)
+
+	if ($content -match '<MetaDataObject[^>]+version="(\d+\.\d+)"') {
+		$ver = $Matches[1]
+		if (-not $srcAnyVersion) { $srcAnyVersion = $ver }
+		if (-not $srcRootVersion -and $content -match '<(ExternalDataProcessor|ExternalReport)[ >]') {
+			$srcRootVersion = $ver
+		}
+	}
 
 	# Ref types: cfg:CatalogRef.XXX or d5p1:CatalogRef.XXX (and similar depth prefixes d4p1, d3p1, etc.)
 	$refPattern = '(?:cfg:|d\dp1:)(CatalogRef|DocumentRef|EnumRef|ChartOfAccountsRef|ChartOfCharacteristicTypesRef|ChartOfCalculationTypesRef|ExchangePlanRef|BusinessProcessRef|TaskRef)\.([A-Za-z\u0400-\u04FF\d_]+)'
@@ -160,6 +354,9 @@ foreach ($f in $xmlFiles) {
 }
 
 $hasRefTypes = $typeMap.Count -gt 0
+# Конфигурация нужна и тогда, когда ссылочных типов нет: в неё кладётся сам объект.
+$embedRequested = -not [string]::IsNullOrWhiteSpace($EmbedSourceFile)
+$needCfg = $hasRefTypes -or $embedRequested
 
 # --- 2. Determine TempBasePath ---
 if (-not $TempBasePath) {
@@ -180,14 +377,128 @@ if ($needsRegistrator) {
 	$typeMap["Document"]["ЗаглушкаРегистратора"] = $true
 }
 
+# --- Внедрение проверяемого объекта в конфигурацию-заглушку ---
+# Платформа не умеет проверять внешнюю обработку: /LoadExternalDataProcessorOrReportFromFiles
+# только упаковывает XML и модули не компилирует. Зато она проверяет объект КОНФИГУРАЦИИ, а
+# внешняя обработка отличается от него немногим (замер 8.3.24): корневым тегом, именем
+# порождаемого объектного типа и отсутствием типа менеджера. Правим ровно эти точки и переносим
+# остальное как есть — под проверку попадает всё, что написал автор, включая реквизиты, формы и
+# макеты, а формат может расти без правок здесь.
+#
+# Подстановка типа делается ТОЛЬКО в .xml (это DefaultForm и основной реквизит формы); в .bsl
+# такой же текст был бы кодом, и трогать его нельзя.
+function Add-SourceObjectToConfig {
+	param([string]$SourceXml, [string]$CfgDir)
+
+	# Копия объекта живёт в конфигурации базы, а следом в ту же базу грузится исходник как ВНЕШНЯЯ
+	# обработка. С одинаковыми идентификаторами платформа путает их и через раз отвечает «Исключение
+	# XDTO при чтении файла» на исправном исходнике — поэтому у копии все GUID свои, но согласованные
+	# между её файлами (ссылки внутри объекта идут по идентификатору).
+	$guidMap = @{}
+	$reGuid = [regex]'[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}'
+	$reissue = {
+		param($m)
+		$k = $m.Value.ToLower()
+		if (-not $guidMap.ContainsKey($k)) { $guidMap[$k] = [guid]::NewGuid().ToString() }
+		$guidMap[$k]
+	}
+
+	$text = [IO.File]::ReadAllText($SourceXml, [Text.Encoding]::UTF8)
+	if ($text -match '<ExternalDataProcessor[\s>]') {
+		$extTag = 'ExternalDataProcessor'; $cfgTag = 'DataProcessor'; $folder = 'DataProcessors'
+	} elseif ($text -match '<ExternalReport[\s>]') {
+		$extTag = 'ExternalReport'; $cfgTag = 'Report'; $folder = 'Reports'
+	} else {
+		return $null
+	}
+
+	$name = if ($text -match '<Name>([^<]+)</Name>') { $Matches[1] } else { [IO.Path]::GetFileNameWithoutExtension($SourceXml) }
+
+	$conv = $reGuid.Replace($text, $reissue)
+	$conv = $conv.Replace("<$extTag ", "<$cfgTag ").Replace("<$extTag>", "<$cfgTag>").Replace("</$extTag>", "</$cfgTag>")
+	$conv = $conv.Replace("${extTag}Object.", "${cfgTag}Object.").Replace("$extTag.", "$cfgTag.")
+
+	# Тип менеджера у внешней обработки не объявлен, а объекту конфигурации он обязателен:
+	# без него платформа отвечает «отсутствует один или более типов объекта».
+	$mgr = "`t`t`t<xr:GeneratedType name=`"${cfgTag}Manager.$name`" category=`"Manager`">`r`n" +
+	       "`t`t`t`t<xr:TypeId>$([guid]::NewGuid().ToString())</xr:TypeId>`r`n" +
+	       "`t`t`t`t<xr:ValueId>$([guid]::NewGuid().ToString())</xr:ValueId>`r`n" +
+	       "`t`t`t</xr:GeneratedType>`r`n"
+	if ($conv -match '</InternalInfo>') {
+		$conv = [regex]::Replace($conv, '(\s*)</InternalInfo>', ("`r`n" + $mgr + "`t`t</InternalInfo>"), 1)
+	} else {
+		$objType = "`t`t`t<xr:GeneratedType name=`"${cfgTag}Object.$name`" category=`"Object`">`r`n" +
+		           "`t`t`t`t<xr:TypeId>$([guid]::NewGuid().ToString())</xr:TypeId>`r`n" +
+		           "`t`t`t`t<xr:ValueId>$([guid]::NewGuid().ToString())</xr:ValueId>`r`n" +
+		           "`t`t`t</xr:GeneratedType>`r`n"
+		$conv = [regex]::Replace($conv, "(<$cfgTag[^>]*>)", ("`$1`r`n`t`t<InternalInfo>`r`n" + $objType + $mgr + "`t`t</InternalInfo>"), 1)
+	}
+
+	$objDir = Join-Path $CfgDir $folder
+	New-Item -ItemType Directory -Path $objDir -Force | Out-Null
+	$encBom = New-Object System.Text.UTF8Encoding($true)
+	[IO.File]::WriteAllText((Join-Path $objDir "$name.xml"), $conv, $encBom)
+
+	# Содержимое объекта — как есть; в XML та же подстановка типа, .bsl копируются байт в байт.
+	$srcContent = Join-Path (Split-Path $SourceXml -Parent) $name
+	if (Test-Path $srcContent) {
+		# Длину префикса берём у РАЗРЕШЁННОГО пути, а не у переданной строки: путь может
+		# прийти с коротким именем (C:\Users\NSHIRO~1\…), а Get-ChildItem отдаёт полное — тогда
+		# отрезание по длине исходной строки оставляет в относительном пути чужие символы.
+		$srcRoot = (Get-Item -LiteralPath $srcContent).FullName.TrimEnd('\', '/')
+		$dstContent = Join-Path $objDir $name
+		foreach ($f in (Get-ChildItem -LiteralPath $srcRoot -Recurse -File)) {
+			$rel = $f.FullName.Substring($srcRoot.Length).TrimStart('\', '/')
+			$dst = Join-Path $dstContent $rel
+			New-Item -ItemType Directory -Path (Split-Path $dst -Parent) -Force | Out-Null
+			if ($f.Extension -ieq '.xml') {
+				$t = [IO.File]::ReadAllText($f.FullName, [Text.Encoding]::UTF8)
+				$t = $reGuid.Replace($t, $reissue)
+				$t = $t.Replace("${extTag}Object.", "${cfgTag}Object.").Replace("$extTag.", "$cfgTag.")
+				[IO.File]::WriteAllText($dst, $t, $encBom)
+			} else {
+				Copy-Item -Path $f.FullName -Destination $dst -Force
+			}
+		}
+	}
+
+	return @{ Tag = $cfgTag; Name = $name }
+}
+
 # --- 4. Generate configuration XML ---
 
-if ($hasRefTypes) {
+if ($needCfg) {
 	$enc = New-Object System.Text.UTF8Encoding($true)
 	$cfgDir = Join-Path $TempBasePath "cfg"
 	New-Item -ItemType Directory -Path $cfgDir -Force | Out-Null
 
-	$ns = 'xmlns="http://v8.1c.ru/8.3/MDClasses" xmlns:app="http://v8.1c.ru/8.2/managed-application/core" xmlns:cfg="http://v8.1c.ru/8.1/data/enterprise/current-config" xmlns:cmi="http://v8.1c.ru/8.2/managed-application/cmi" xmlns:ent="http://v8.1c.ru/8.1/data/enterprise" xmlns:lf="http://v8.1c.ru/8.2/managed-application/logform" xmlns:style="http://v8.1c.ru/8.1/data/ui/style" xmlns:sys="http://v8.1c.ru/8.1/data/ui/fonts/system" xmlns:v8="http://v8.1c.ru/8.1/data/core" xmlns:v8ui="http://v8.1c.ru/8.1/data/ui" xmlns:web="http://v8.1c.ru/8.1/data/ui/colors/web" xmlns:win="http://v8.1c.ru/8.1/data/ui/colors/windows" xmlns:xen="http://v8.1c.ru/8.3/xcf/enums" xmlns:xpr="http://v8.1c.ru/8.3/xcf/predef" xmlns:xr="http://v8.1c.ru/8.3/xcf/readable" xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" version="2.17"'
+	$embedded = $null
+	if ($embedRequested) {
+		$embedded = Add-SourceObjectToConfig $EmbedSourceFile $cfgDir
+		if (-not $embedded) {
+			Write-Host "Error: $EmbedSourceFile is neither ExternalDataProcessor nor ExternalReport" -ForegroundColor Red
+			exit 1
+		}
+	}
+
+	# Заглушке нужна САМАЯ НИЗКАЯ работающая версия, а не версия исходников: ограничение платформы
+	# одностороннее — она читает формат не новее себя. Отсюда min(версия исходников, 2.17): на 2.17+
+	# заглушка остаётся 2.17 (как было), а под исходники 2.13-2.16 опускается до их версии, иначе
+	# конфигурация не загрузится платформой, которая эти исходники и выгрузила («Неизвестная версия
+	# формата 2.17 загружаемого файла», замерено на 8.3.20).
+	#
+	$srcVersion = if ($srcRootVersion) { $srcRootVersion } elseif ($srcAnyVersion) { $srcAnyVersion } else { "2.17" }
+	$srcRank = Get-FormatRank $srcVersion
+	$stubFormatVersion = if ($srcRank -gt 0 -and $srcRank -lt (Get-FormatRank "2.17")) { $srcVersion } else { "2.17" }
+	# Режим совместимости заглушки — по той же логике. Платформа отказывается работать с
+	# конфигурацией, чей режим выше её самой («Для работы с конфигурацией необходима версия
+	# платформы не меньше, чем 8.3.24»), и тогда объекты заглушки в базу не попадают: загрузка
+	# рапортует успех, а сборка падает на «Неизвестное имя типа». Ступени — лестница версий
+	# формата из docs/1c-configuration-spec.md.
+	$compatByFormat = @{ "2.13" = "Version8_3_20"; "2.14" = "Version8_3_21"; "2.15" = "Version8_3_22"; "2.16" = "Version8_3_23" }
+	$stubCompatMode = if ($compatByFormat.ContainsKey($stubFormatVersion)) { $compatByFormat[$stubFormatVersion] } else { "Version8_3_24" }
+
+	$ns = 'xmlns="http://v8.1c.ru/8.3/MDClasses" xmlns:app="http://v8.1c.ru/8.2/managed-application/core" xmlns:cfg="http://v8.1c.ru/8.1/data/enterprise/current-config" xmlns:cmi="http://v8.1c.ru/8.2/managed-application/cmi" xmlns:ent="http://v8.1c.ru/8.1/data/enterprise" xmlns:lf="http://v8.1c.ru/8.2/managed-application/logform" xmlns:style="http://v8.1c.ru/8.1/data/ui/style" xmlns:sys="http://v8.1c.ru/8.1/data/ui/fonts/system" xmlns:v8="http://v8.1c.ru/8.1/data/core" xmlns:v8ui="http://v8.1c.ru/8.1/data/ui" xmlns:web="http://v8.1c.ru/8.1/data/ui/colors/web" xmlns:win="http://v8.1c.ru/8.1/data/ui/colors/windows" xmlns:xen="http://v8.1c.ru/8.3/xcf/enums" xmlns:xpr="http://v8.1c.ru/8.3/xcf/predef" xmlns:xr="http://v8.1c.ru/8.3/xcf/readable" xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" version="' + $stubFormatVersion + '"'
 
 	# GeneratedType definitions per metadata type
 	$gtDefs = @{
@@ -359,6 +670,7 @@ if ($hasRefTypes) {
 			$childXml += "`r`n`t`t`t<$tag>$name</$tag>"
 		}
 	}
+	if ($embedded) { $childXml += "`r`n`t`t`t<$($embedded.Tag)>$($embedded.Name)</$($embedded.Tag)>" }
 
 	$cfgXml = @"
 <?xml version="1.0" encoding="UTF-8"?>
@@ -371,7 +683,7 @@ if ($hasRefTypes) {
 			<Synonym/>
 			<Comment/>
 			<NamePrefix/>
-			<ConfigurationExtensionCompatibilityMode>Version8_3_24</ConfigurationExtensionCompatibilityMode>
+			<ConfigurationExtensionCompatibilityMode>$stubCompatMode</ConfigurationExtensionCompatibilityMode>
 			<DefaultRunMode>ManagedApplication</DefaultRunMode>
 			<UsePurposes>
 				<v8:Value xsi:type="app:ApplicationUsePurpose">PlatformApplication</v8:Value>
@@ -422,7 +734,7 @@ if ($hasRefTypes) {
 			<SynchronousPlatformExtensionAndAddInCallUseMode>DontUse</SynchronousPlatformExtensionAndAddInCallUseMode>
 			<InterfaceCompatibilityMode>Taxi</InterfaceCompatibilityMode>
 			<DatabaseTablespacesUseMode>DontUse</DatabaseTablespacesUseMode>
-			<CompatibilityMode>Version8_3_24</CompatibilityMode>
+			<CompatibilityMode>$stubCompatMode</CompatibilityMode>
 			<DefaultConstantsForm/>
 		</Properties>
 		<ChildObjects>$childXml
@@ -1253,51 +1565,107 @@ $propsXml		</Properties>$childObjLine
 }
 
 # --- 5a. Stub via ibcmd (one call: create [--import --apply]) ---
-function Invoke-IbcmdProcess {
-    # Run ibcmd non-interactively: a closed stdin pipe (EOF) makes ibcmd's auth prompt
-    # fast-fail instead of hanging. Returns @{ Output; ExitCode }. cp866 decodes ibcmd's
-    # native OEM output. The 1cv8/DESIGNER branch keeps using Start-Process.
-    param([string]$Exe, [string[]]$IbArgs)
+function ConvertFrom-PlatformBytes {
+    # ibcmd writes UTF-8 (checked on 8.3.24, 8.3.27, 8.5), a crashing 1cv8 may still emit
+    # OEM text. Decode strictly as UTF-8 and fall back to cp866 on invalid bytes — guessing
+    # one of them outright mangles Cyrillic.
+    param([byte[]]$Bytes)
+    if (-not $Bytes -or $Bytes.Length -eq 0) { return '' }
+    try {
+        $strict = New-Object System.Text.UTF8Encoding($false, $true)
+        return $strict.GetString($Bytes)
+    } catch {
+        return [System.Text.Encoding]::GetEncoding(866).GetString($Bytes)
+    }
+}
+
+function Invoke-PlatformProcess {
+    # Run the platform non-interactively and capture its console output. A closed stdin pipe
+    # (EOF) makes an auth prompt fast-fail instead of hanging; capturing keeps the child's
+    # text out of our stream until we print it labelled (and out of the wrong encoding).
+    # Returns @{ Output; ExitCode }.
+    #
+    # Quoting differs by engine, so the caller says which it built:
+    #   ibcmd    — tokens are bare (--db-path=C:\a b), the whole token gets quoted here;
+    #   1cv8     — -PreQuoted: the caller already put quotes inside the token (File="C:\a b"),
+    #              which is where 1C's own parser expects them; quoting again breaks the value.
+    param([string]$Exe, [string[]]$ProcArgs, [switch]$PreQuoted)
     $psi = New-Object System.Diagnostics.ProcessStartInfo
     $psi.FileName = $Exe
-    $psi.Arguments = ($IbArgs | ForEach-Object { if ($_ -match '[\s"]') { '"' + ($_ -replace '"', '\"') + '"' } else { $_ } }) -join ' '
+    $psi.Arguments = if ($PreQuoted) {
+        $ProcArgs -join ' '
+    } else {
+        ($ProcArgs | ForEach-Object { if ($_ -match '[\s"]') { '"' + ($_ -replace '"', '\"') + '"' } else { $_ } }) -join ' '
+    }
     $psi.UseShellExecute = $false
     $psi.CreateNoWindow = $true
     $psi.RedirectStandardInput = $true
     $psi.RedirectStandardOutput = $true
     $psi.RedirectStandardError = $true
-    try {
-        $psi.StandardOutputEncoding = [System.Text.Encoding]::GetEncoding(866)
-        $psi.StandardErrorEncoding = [System.Text.Encoding]::GetEncoding(866)
-    } catch {}
     $p = [System.Diagnostics.Process]::Start($psi)
     $p.StandardInput.Close()
-    $out = $p.StandardOutput.ReadToEnd()
-    $err = $p.StandardError.ReadToEnd()
+    # stderr is drained in parallel: reading the streams one after another deadlocks
+    # as soon as the other one fills its pipe buffer.
+    $errMs = New-Object System.IO.MemoryStream
+    $errTask = $p.StandardError.BaseStream.CopyToAsync($errMs)
+    $outMs = New-Object System.IO.MemoryStream
+    $p.StandardOutput.BaseStream.CopyTo($outMs)
+    $errTask.Wait()
     $p.WaitForExit()
+    $out = ConvertFrom-PlatformBytes $outMs.ToArray()
+    $err = ConvertFrom-PlatformBytes $errMs.ToArray()
     if ($err) { $out += $err }
     return [pscustomobject]@{ Output = $out; ExitCode = $p.ExitCode }
 }
 
+function Write-PlatformOutput {
+    # Print what the platform wrote to the console as its own labelled block. Silence stays
+    # silent: in batch mode 1cv8 reports through /Out and prints nothing here.
+    param([string]$Text)
+    if (-not $Text) { return }
+    $t = $Text.TrimEnd()
+    if (-not $t) { return }
+    $limit = 65536
+    if ($t.Length -gt $limit) {
+        $t = "[... обрезано, показаны последние $limit символов ...]`r`n" + $t.Substring($t.Length - $limit)
+    }
+    Write-Host "--- Вывод платформы ---"
+    Write-Host $t
+    Write-Host "--- End ---"
+}
+
 
 $stubEngine = if ((Split-Path $V8Path -Leaf) -match '^ibcmd') { "ibcmd" } else { "1cv8" }
+
+# --- Resolve additional arguments for the selected engine ---
+$argHints = @{ '/F' = '-TempBasePath'; '--db-path' = '-TempBasePath' }
+$extraArgs = @(Resolve-ExtraArgs $stubEngine $AdditionalV8Arguments $AdditionalIbcmdArguments $argHints)
+
+function Format-ArgToken {
+	# Start-Process takes these argument lists as one string, so quote each token that needs it.
+	param([string]$Token)
+	if ($Token -match '[\s"]') { return ' "' + ($Token -replace '"', '\"') + '"' }
+	return " $Token"
+}
+$extraArgString = -join ($extraArgs | ForEach-Object { Format-ArgToken $_ })
 if ($stubEngine -eq "ibcmd") {
 	Write-Host "Creating infobase (ibcmd): $TempBasePath"
 	$ibData = Join-Path $env:TEMP "stub_data_$(Get-Random)"
 	New-Item -ItemType Directory -Path $ibData -Force | Out-Null
 	$ibArgs = @("infobase", "create", "--db-path=$TempBasePath", "--create-database")
-	if ($hasRefTypes) { $ibArgs += "--import=$(Join-Path $TempBasePath 'cfg')", "--apply", "--force" }
+	if ($needCfg) { $ibArgs += "--import=$(Join-Path $TempBasePath 'cfg')", "--apply", "--force" }
 	$ibArgs += "--data=$ibData"
-	$__ib = Invoke-IbcmdProcess $V8Path $ibArgs
+	$ibArgs += $extraArgs
+	$__ib = Invoke-PlatformProcess $V8Path $ibArgs
 	$ibOut = $__ib.Output
 	$ibRc = $__ib.ExitCode
 	Remove-Item -Path $ibData -Recurse -Force -ErrorAction SilentlyContinue
 	if ($ibRc -ne 0) {
-		if ($ibOut) { Write-Host ($ibOut | Out-String) }
+		Write-PlatformOutput $ibOut
 		Write-Error "Failed to create stub infobase (code: $ibRc)"
 		exit 1
 	}
-	if ($hasRefTypes) { Remove-Item -Path (Join-Path $TempBasePath "cfg") -Recurse -Force -ErrorAction SilentlyContinue }
+	if ($needCfg) { Remove-Item -Path (Join-Path $TempBasePath "cfg") -Recurse -Force -ErrorAction SilentlyContinue }
 	Write-Host "[OK] Stub database created: $TempBasePath"
 	Write-Host $TempBasePath
 	exit 0
@@ -1305,23 +1673,25 @@ if ($stubEngine -eq "ibcmd") {
 
 # --- 5. Create infobase ---
 Write-Host "Creating infobase: $TempBasePath"
-$createArgs = "CREATEINFOBASE File=`"$TempBasePath`" /DisableStartupDialogs"
-$proc = Start-Process -FilePath $V8Path -ArgumentList $createArgs -NoNewWindow -Wait -PassThru
+$createArgs = "CREATEINFOBASE File=`"$TempBasePath`" /DisableStartupDialogs" + $extraArgString
+$proc = Invoke-PlatformProcess $V8Path @($createArgs) -PreQuoted
 if ($proc.ExitCode -ne 0) {
+	Write-PlatformOutput $proc.Output
 	Write-Error "Failed to create infobase (code: $($proc.ExitCode))"
 	exit 1
 }
 
-# --- 6. Load config and update DB if ref types exist ---
-if ($hasRefTypes) {
+# --- 6. Load config and update DB if there is one ---
+if ($needCfg) {
 	$cfgDir = Join-Path $TempBasePath "cfg"
 	# LoadConfigFromFiles
 	Write-Host "Loading configuration from files..."
 	$loadLog = Join-Path $env:TEMP "stub_load_log.txt"
-	$loadArgs = "DESIGNER /F`"$TempBasePath`" /LoadConfigFromFiles `"$cfgDir`" /Out `"$loadLog`" /DisableStartupDialogs"
-	$proc = Start-Process -FilePath $V8Path -ArgumentList $loadArgs -NoNewWindow -Wait -PassThru
+	$loadArgs = "DESIGNER /F`"$TempBasePath`" /LoadConfigFromFiles `"$cfgDir`" /Out `"$loadLog`" /DisableStartupDialogs" + $extraArgString
+	$proc = Invoke-PlatformProcess $V8Path @($loadArgs) -PreQuoted
 	if ($proc.ExitCode -ne 0) {
 		if (Test-Path $loadLog) { Get-Content $loadLog -Raw -ErrorAction SilentlyContinue | Write-Host }
+		Write-PlatformOutput $proc.Output
 		Write-Error "Failed to load config (code: $($proc.ExitCode))"
 		exit 1
 	}
@@ -1329,10 +1699,11 @@ if ($hasRefTypes) {
 	# UpdateDBCfg
 	Write-Host "Updating database configuration..."
 	$updateLog = Join-Path $env:TEMP "stub_update_log.txt"
-	$updateArgs = "DESIGNER /F`"$TempBasePath`" /UpdateDBCfg /Out `"$updateLog`" /DisableStartupDialogs"
-	$proc = Start-Process -FilePath $V8Path -ArgumentList $updateArgs -NoNewWindow -Wait -PassThru
+	$updateArgs = "DESIGNER /F`"$TempBasePath`" /UpdateDBCfg /Out `"$updateLog`" /DisableStartupDialogs" + $extraArgString
+	$proc = Invoke-PlatformProcess $V8Path @($updateArgs) -PreQuoted
 	if ($proc.ExitCode -ne 0) {
 		if (Test-Path $updateLog) { Get-Content $updateLog -Raw -ErrorAction SilentlyContinue | Write-Host }
+		Write-PlatformOutput $proc.Output
 		Write-Error "Failed to update DB config (code: $($proc.ExitCode))"
 		exit 1
 	}

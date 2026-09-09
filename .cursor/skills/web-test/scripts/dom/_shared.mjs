@@ -1,4 +1,4 @@
-// web-test dom shared v1.2 — embedded JS function constants
+// web-test dom shared v1.10 — embedded JS function constants
 // Source: https://github.com/Nikolay-Shirokov/cc-1c-skills
 /**
  * Shared function strings embedded into page.evaluate() generators.
@@ -41,6 +41,96 @@ export const ROW_CLICK_POINT_FN = `function rowClickPoint(line, body) {
   const pick = cells.find(c => !c.checkbox && c.hasText) || cells.find(c => !c.checkbox) || cells[0];
   if (!pick) return null;
   return { x: Math.round(pick.r.x + Math.min(pick.r.width / 2, 60)), y: Math.round(pick.r.y + pick.r.height / 2) };
+}`;
+
+/**
+ * Click point inside a stretched text container (group title, hyperlink decoration) —
+ * NOT the container's centre.
+ *
+ * `<base>#title_text` is a flex box; the clickable thing is the nested
+ * `<label class="ellipsis" for="<groupId>">` sized by the text and pinned left. The box
+ * stretches to the width of the group's content, so a group holding a wide table gets a
+ * title 1295px wide around a 166px label: the geometric centre lands on empty space and
+ * the click silently does nothing (measured on the stand — collapsed title 173px, expanded
+ * 1295px, which is why the FIRST toggle worked and every later one did not).
+ *
+ * Same clamp as rowClickPoint: aim near the left edge so a wide box still lands on text.
+ *
+ * @param el  container element (`.staticTextHyper` / title text)
+ * @returns `{ x, y }` rounded.
+ */
+export const TEXT_CLICK_POINT_FN = `function textClickPoint(el) {
+  const inner = el.firstElementChild;
+  const r = (inner && inner.offsetWidth > 0 ? inner : el).getBoundingClientRect();
+  return { x: Math.round(r.x + Math.min(r.width / 2, 60)), y: Math.round(r.y + r.height / 2) };
+}`;
+
+/**
+ * Collapsed state of a form group — single source of truth for getFormState().groups[]
+ * and the click-target resolver.
+ *
+ * 1C lays the form out FLAT: a group's content is not nested inside it but follows as
+ * absolutely-positioned siblings of `<base>#title_div`. Anything derived from "the first
+ * sibling" is unreliable — measured on live forms:
+ *   • before a container child comes an empty `.logicGroupContainer` (height 0), spelled
+ *     `<child>#group_div` for a table but `<child>_div` for a nested group;
+ *   • that wrapper's own display FLIPS between runs (block before the first toggle, none
+ *     after) — this is the "readings synced after the first toggle" from the bug report;
+ *   • a group's leading nodes can stay `display:none` by their own logic (a table whose
+ *     command bar is hidden) while the visible content sits further down the chain.
+ * Neither the wrappers' geometry nor the group's own `<base>_div` can serve as the signal:
+ * all of them are always zero-height.
+ *
+ * Signals, in order:
+ *   1. PopUp — the panel `<base>#panel_div` carries the state directly.
+ *   2. Caret (`ControlRepresentation=Picture`) — `<base>#titleBtn img` is the `hideshow`
+ *      sprite, frame `gx`: 0 collapsed, non-zero expanded. Note the polarity is OPPOSITE
+ *      to tree nodes in dom/grid.mjs (gx=0 = expanded there) — different sprite.
+ *   3. Otherwise (`TitleHyperlink`, which has no caret, no aria-expanded and no state class
+ *      on the title): ownership by INDENT. A group's children sit deeper than its title
+ *      (`#title_div` at left:12px → children at 22px), while a free element between groups
+ *      sits at the title's own level. So walk the siblings, skip hidden nodes and wrappers
+ *      (they are not positioned — left comes back `auto`), and the first VISIBLE node
+ *      decides: deeper than the title ⇒ own content ⇒ expanded; same level or shallower
+ *      ⇒ that's already someone else, stop. Nothing own and visible ⇒ collapsed, which is
+ *      sound because a group with every element hidden is not rendered by the platform at all.
+ *      The baseline is the leftmost part of the title BLOCK, not `#title_div` alone: with a
+ *      caret the text is pushed right by its width (measured live: caret box 12px, title
+ *      33px, own children 22px), so anchoring on the title alone would read the group's own
+ *      child as foreign. Only matters if a caret is present but signal 2 did not fire.
+ *      The walk is capped: a group's own nodes sit right after its title, whereas the LAST
+ *      collapsed group on a form has no boundary behind it at all — measured live, the first
+ *      node with height came 107 siblings later, deep inside an unrelated branch, and would
+ *      have been mistaken for the group's content.
+ *
+ * @param base  element id prefix without suffix, e.g. `form1_ГруппаТовары`
+ * @returns `true` collapsed, `false` expanded, `null` when the layout is unrecognised.
+ */
+export const GROUP_STATE_FN = `function groupCollapsed(base) {
+  const panelDiv = document.getElementById(base + '#panel_div');
+  if (panelDiv) return getComputedStyle(panelDiv).display === 'none';
+  const caret = document.querySelector('[id="' + base + '#titleBtn"] img');
+  const src = caret ? (caret.getAttribute('src') || '') : '';
+  if (src.indexOf('hideshow') !== -1) {
+    const gx = src.match(/[?&]gx=(\\d+)/);
+    if (gx) return gx[1] === '0';
+  }
+  const titleDiv = document.getElementById(base + '#title_div');
+  if (!titleDiv) return null;
+  let titleLeft = parseFloat(getComputedStyle(titleDiv).left);
+  const caretDiv = document.getElementById(base + '#titleBtn_div');
+  const caretLeft = caretDiv ? parseFloat(getComputedStyle(caretDiv).left) : NaN;
+  if (!isNaN(caretLeft) && (isNaN(titleLeft) || caretLeft < titleLeft)) titleLeft = caretLeft;
+  if (isNaN(titleLeft)) return null;
+  let candidates = false, scanned = 0;
+  for (let n = titleDiv.nextElementSibling; n && scanned < 20; n = n.nextElementSibling, scanned++) {
+    if (n.offsetWidth === 0 && n.offsetHeight === 0) { candidates = true; continue; }
+    const left = parseFloat(getComputedStyle(n).left);
+    if (isNaN(left)) { candidates = true; continue; }
+    if (left > titleLeft) return false;
+    break;
+  }
+  return candidates ? true : null;
 }`;
 
 /**
@@ -105,34 +195,286 @@ export const HEADERLESS_GRID_FN = `function synthHeaderlessColumns(grid) {
   return cols;
 }`;
 
+/**
+ * Single source of truth for columns of a grid WITH a header — the headed twin of
+ * synthHeaderlessColumns above, and for the same reason: a column name must map to the same
+ * physical cell for readers (readTable) and resolvers (click, row search, filter, fill).
+ *
+ * Column identity is `colindex` — 1С's own column id, present on both header boxes and body
+ * cells. Geometry is the FALLBACK, used only for cells that have no header of their own
+ * (sub-rows of a merged header, e.g. «Субконто Дт» over three stacked cells).
+ *
+ * Why colindex first: a wide header (ERP task list, «Исполнитель» spanning x 1085…1515) covers
+ * the narrow headers below it («Срок» 1085…1251, «Выполнена» 1251…1515). Matching a cell by its
+ * center-x alone puts the «Исполнитель» cell (center 1300) into the «Выполнена» group — which
+ * both fakes a merged header (phantom «Выполнена 1/2») and glues foreign values together.
+ * The write path (grid-edit.mjs) already resolves cells by colindex for exactly this reason.
+ *
+ * Column: { name, text, title, ci, x, right, y, h, fixed, kind?, subIdx? }
+ *  - ci      — anchor; null for expanded sub-columns (their cells carry a different colindex).
+ *  - subIdx  — set on «Имя 1/2/3» columns expanded from ONE header over several sub-rows;
+ *              such a cell is found by its Y order inside the header's x-range.
+ */
+export const COLUMN_MODEL_FN = HEADERLESS_GRID_FN + `
+function picInfoShared(cell) {
+  if (!cell) return null;
+  if (cell.querySelector('.gridListH, .gridListV, [tree="true"], .gridBoxTree')) return null;
+  const dib = cell.querySelector('.gridBoxImg .dIB');
+  if (!dib) return null;
+  const bg = dib.style.backgroundImage || '';
+  if (!bg.includes('pictureCollection/picture/')) return null;
+  const m = bg.match(/[?&]gx=(\\d+)/);
+  return { gx: m ? m[1] : '0' };
+}
+
+function buildColumnModel(grid) {
+  const head = grid.querySelector('.gridHead');
+  const body = grid.querySelector('.gridBody');
+  const empty = { columns: [], byCi: {}, groups: new Map(), subRows: {}, multiRow: {}, headless: !head };
+  if (!body) return empty;
+
+  if (!head) {
+    const cols = synthHeaderlessColumns(grid).map(c => ({
+      name: c.name, text: c.name, title: '', ci: c.colindex, subTarget: c.subTarget,
+      kind: c.kind, x: 0, right: 0, y: 0, h: 0, fixed: false,
+    }));
+    const byCi = {};
+    cols.forEach(c => { if (c.ci != null && byCi[c.ci] === undefined) byCi[c.ci] = c; });
+    return { columns: cols, byCi, groups: new Map(), subRows: {}, multiRow: {}, headless: true };
+  }
+
+  const headLine = head.querySelector('.gridLine') || head;
+  const lines = [...body.querySelectorAll('.gridLine')];
+  const cellByCi = (line, ci) => [...line.children].find(b => b.offsetWidth > 0 && b.getAttribute('colindex') === ci);
+  const columns = [];
+
+  [...headLine.children].forEach(box => {
+    if (box.offsetWidth === 0) return;
+    const ci = box.getAttribute('colindex');
+    const textEl = box.querySelector('.gridBoxText');
+    const text = ((textEl || box).innerText || '').trim().replace(/\\n/g, ' ');
+    const title = (box.getAttribute('title') || '').trim();
+    const r = box.getBoundingClientRect();
+    const base = { ci, x: r.x, right: r.x + r.width, y: r.y, h: r.height,
+                   fixed: box.classList.contains('gridBoxFix') };
+    if (text) { columns.push(Object.assign(base, { name: text, text: text, title: title })); return; }
+
+    // Unnamed header — a column only if its cells hold a checkbox or a picture. 1С doesn't
+    // expose the technical name, so it is named by the header tooltip.
+    // Sample SEVERAL rows: a picture bound to a Boolean draws nothing for false, so an empty
+    // first row is not evidence that the column has no pictures at all.
+    let kind = null;
+    for (const line of lines.slice(0, 10)) {
+      const cell = ci != null ? cellByCi(line, ci) : null;
+      if (!cell) continue;
+      if (cell.querySelector('.checkbox')) { kind = 'checkbox'; break; }
+      if (picInfoShared(cell)) { kind = 'picture'; break; }
+    }
+    if (!kind && picInfoShared(box)) kind = 'picture';
+    if (!kind) return;
+    let name = kind === 'checkbox' ? '(checkbox)' : (title || '(picture)');
+    if (columns.some(c => c.name === name)) {
+      let n = 2;
+      while (columns.some(c => c.name === name + ' ' + n)) n++;
+      name = name + ' ' + n;
+    }
+    columns.push(Object.assign(base, { name: name, text: '', title: title, kind: kind }));
+  });
+
+  // Column GROUPS («Цена» over «План»/«Факт»/«Откл.»). 1С puts the group caption and its leaves
+  // into the SAME head line, differing by y and width. A group caption is not a column: it has no
+  // cells of its own, and leaf names repeat across groups («План» under both «Цена» and
+  // «Количество») — keyed by bare name, values of different groups collided into one key.
+  // The caption is told apart from a genuine wide column (pattern «Исполнитель» over «Срок»/
+  // «Выполнена», see 24-multirow-header) by ONE reliable fact: its colindex never appears among
+  // body cells. Geometry alone cannot tell them apart — both sit above narrower boxes.
+  // Leaves are renamed «Группа / Лист», the same convention the spreadsheet reader uses.
+  const bodyCi = new Set();
+  lines.slice(0, 5).forEach(line => {
+    [...line.children].forEach(b => {
+      if (b.offsetWidth === 0) return;
+      const ci = b.getAttribute('colindex');
+      if (ci != null) bodyCi.add(ci);
+    });
+  });
+  const covers = (g, c) => { const cx = c.x + (c.right - c.x) / 2; return c.y > g.y && cx >= g.x && cx < g.right; };
+  const groupHdrs = columns.filter(g => g.ci != null && !bodyCi.has(g.ci) && columns.some(c => c !== g && covers(g, c)));
+  if (groupHdrs.length) {
+    columns.forEach(c => {
+      if (groupHdrs.indexOf(c) >= 0) return;
+      const parents = groupHdrs.filter(g => covers(g, c)).sort((a, b) => a.y - b.y);
+      if (!parents.length) return;
+      c.name = parents.map(g => g.text).concat(c.name).join(' / ');
+      c.group = parents.map(g => g.text).join(' / ');
+    });
+    groupHdrs.forEach(g => { const at = columns.indexOf(g); if (at >= 0) columns.splice(at, 1); });
+  }
+
+  const keyOf = c => Math.round(c.x) + ':' + Math.round(c.right);
+  const groups = new Map();
+  columns.forEach(c => { const k = keyOf(c); if (!groups.has(k)) groups.set(k, []); groups.get(k).push(c); });
+  for (const hdrs of groups.values()) hdrs.sort((a, b) => a.y - b.y);
+  const byCi = {};
+  columns.forEach(c => { if (c.ci != null && byCi[c.ci] === undefined) byCi[c.ci] = c; });
+
+  // Sub-rows per x-group, measured on the first data line. A cell belongs to the group of its
+  // OWN header whenever colindex says so; only header-less cells are placed geometrically.
+  const subRows = {};
+  if (lines[0]) {
+    [...lines[0].children].forEach(box => {
+      if (box.offsetWidth === 0) return;
+      const ci = box.getAttribute('colindex');
+      const own = ci != null ? byCi[ci] : null;
+      let key = null;
+      const r = box.getBoundingClientRect();
+      if (own) key = keyOf(own);
+      else {
+        const cx = r.x + r.width / 2;
+        for (const [k, hdrs] of groups) {
+          if (cx >= hdrs[0].x && cx < hdrs[0].right) { key = k; break; }
+        }
+      }
+      if (key == null) return;
+      (subRows[key] = subRows[key] || []).push({ y: r.y });
+    });
+    Object.keys(subRows).forEach(k => subRows[k].sort((a, b) => a.y - b.y));
+  }
+
+  // Stacked headers (2+ over several sub-rows) → match by Y order.
+  // ONE header over several sub-rows → merged header: expand into «Имя 1..N».
+  const multiRow = {};
+  for (const [k, hdrs] of groups) {
+    const subs = subRows[k];
+    if (!subs || subs.length <= 1) continue;
+    if (hdrs.length >= 2) { multiRow[k] = hdrs; continue; }
+    const base = hdrs[0];
+    const at = columns.indexOf(base);
+    columns.splice(at, 1);
+    if (base.ci != null && byCi[base.ci] === base) delete byCi[base.ci];
+    const expanded = [];
+    for (let si = 0; si < subs.length; si++) {
+      const col = Object.assign({}, base, {
+        name: base.name + ' ' + (si + 1), ci: null,
+        y: base.y + si, h: base.h / subs.length, subIdx: si,
+      });
+      columns.splice(at + si, 0, col);
+      expanded.push(col);
+    }
+    groups.set(k, expanded);
+    multiRow[k] = expanded;
+  }
+
+  return { columns: columns, byCi: byCi, groups: groups, subRows: subRows, multiRow: multiRow, headless: false };
+}
+
+/** Cell → column. colindex first; geometry only for cells without a header of their own. */
+function columnForCell(model, box) {
+  const ci = box.getAttribute('colindex');
+  if (ci != null && model.byCi[ci]) return model.byCi[ci];
+  const r = box.getBoundingClientRect();
+  const cx = r.x + r.width / 2;
+  const fixed = box.classList.contains('gridBoxFix');
+  for (const k of Object.keys(model.multiRow)) {
+    const hdrs = model.multiRow[k];
+    if (cx < hdrs[0].x || cx >= hdrs[0].right) continue;
+    const subs = model.subRows[k];
+    if (subs) {
+      const si = subs.findIndex(s => Math.abs(s.y - r.y) < 5);
+      if (si >= 0 && si < hdrs.length) return hdrs[si];
+    }
+    let best = hdrs[0], bd = Infinity;
+    for (const h of hdrs) { const d = Math.abs(r.y - h.y); if (d < bd) { bd = d; best = h; } }
+    return best;
+  }
+  return model.columns.find(c => cx >= c.x && cx < c.right && c.fixed === fixed) || null;
+}
+
+/** Column → cell inside a given line. Mirror of columnForCell, same precedence. */
+function cellForColumn(model, line, col) {
+  const boxes = [...line.children].filter(b => b.offsetWidth > 0);
+  if (col.subIdx != null) {
+    const inGroup = boxes
+      .filter(b => {
+        const r = b.getBoundingClientRect();
+        const cx = r.x + r.width / 2;
+        return cx >= col.x && cx < col.right && b.classList.contains('gridBoxFix') === col.fixed;
+      })
+      .sort((a, b) => a.getBoundingClientRect().y - b.getBoundingClientRect().y);
+    return inGroup[col.subIdx] || null;
+  }
+  if (col.ci != null) {
+    const hit = boxes.find(b => b.getAttribute('colindex') === col.ci);
+    if (hit) return hit;
+  }
+  return boxes
+    .filter(b => b.classList.contains('gridBoxFix') === col.fixed)
+    .find(b => {
+      const r = b.getBoundingClientRect();
+      const cx = r.x + r.width / 2;
+      return cx >= col.x && cx < col.right;
+    }) || null;
+}
+
+/** Column by user-supplied name: exact → «Группа / Имя» suffix → substring. */
+function resolveColumnByName(model, name) {
+  const lo = s => (s || '').toLowerCase().replace(/ё/g, 'е').trim();
+  const cand = c => [c.name, c.text, c.title].filter(Boolean);
+  const n = lo(name);
+  const suffix = lo(' / ' + name);
+  return model.columns.find(c => cand(c).some(t => lo(t) === n))
+      || model.columns.find(c => cand(c).some(t => lo(t).endsWith(suffix)))
+      || model.columns.find(c => cand(c).some(t => lo(t).includes(n)))
+      || null;
+}`;
+
+// Селекторы детекции формы. EDIT_SEL — «редактируемые» контролы (поля/кнопки): их наличие
+// исторически = «это форма». Но страницы настроек/справки (напр. «Интернет-поддержка и сервисы»)
+// собраны только из гиперссылок/frameButton/групп и НЕ имеют ни одного из этих трёх → форма не
+// детектировалась (form=null). ANY_SEL добавляет контентные/интерактивные классы декораций, чтобы
+// такие формы регистрировались. form0 (рабочий стол, тоже полон гиперссылок) исключается фильтром n>0.
+const FORM_DETECT_EDIT_SEL = 'input.editInput[id], textarea[id], a.press[id]';
+const FORM_DETECT_ANY_SEL = FORM_DETECT_EDIT_SEL + ', .staticTextHyper[id], .frameButton[id], .checkbox[id], .radio[id], .tumblerItem[id], .grid[id]';
+
 /** Detect active form number. Picks form with most visible elements, skipping form0.
  *  When modalSurface is visible — prefer the highest-numbered form (modal dialog). */
 export const DETECT_FORM_FN = HAS_VISIBLE_MODAL_FN + `
 function detectForm() {
-  const counts = {};
-  document.querySelectorAll('input.editInput[id], textarea[id], a.press[id]').forEach(el => {
+  const editSel = ${JSON.stringify(FORM_DETECT_EDIT_SEL)};
+  const anySel = ${JSON.stringify(FORM_DETECT_ANY_SEL)};
+  const editCounts = {};   // строгие поля/кнопки
+  const anyCounts = {};    // + контентные декорации
+  document.querySelectorAll(anySel).forEach(el => {
     if (el.offsetWidth === 0) return;
     const m = el.id.match(/^form(\\d+)_/);
-    if (m) counts[m[1]] = (counts[m[1]] || 0) + 1;
+    if (!m) return;
+    anyCounts[m[1]] = (anyCounts[m[1]] || 0) + 1;
+    if (el.matches(editSel)) editCounts[m[1]] = (editCounts[m[1]] || 0) + 1;
   });
-  const nums = Object.keys(counts).map(Number);
+  const nums = Object.keys(anyCounts).map(Number);
   if (!nums.length) return null;
   const candidates = nums.filter(n => n > 0);
   if (!candidates.length) return nums[0];
   // When modal surface is visible, prefer the highest-numbered form (modal dialog)
   if (hasVisibleModal()) {
     const maxForm = Math.max(...candidates);
-    if (counts[maxForm] >= 1) return maxForm;
+    if (anyCounts[maxForm] >= 1) return maxForm;
   }
-  return candidates.reduce((best, n) => counts[n] > counts[best] ? n : best);
+  // Двухуровневый выбор: пока есть формы с редактируемыми контролами — выбираем по ним (прежнее
+  // поведение, обычные формы не сдвигаются). Только когда у ВСЕХ кандидатов их нет (info-страница) —
+  // выбираем по расширенному счёту.
+  const editable = candidates.filter(n => editCounts[n] > 0);
+  const pool = editable.length ? editable : candidates;
+  const metric = editable.length ? editCounts : anyCounts;
+  return pool.reduce((best, n) => metric[n] > metric[best] ? n : best);
 }`;
 
 /** Detect all open forms + modal state. Returns { activeForm, allForms, formCount, modal }.
  *  Works even when the open-windows tab bar is hidden. */
 export const DETECT_FORMS_FN = HAS_VISIBLE_MODAL_FN + `
 function detectForms() {
+  const anySel = ${JSON.stringify(FORM_DETECT_ANY_SEL)};
   const counts = {};
-  document.querySelectorAll('input.editInput[id], textarea[id], a.press[id]').forEach(el => {
+  document.querySelectorAll(anySel).forEach(el => {
     if (el.offsetWidth === 0) return;
     const m = el.id.match(/^form(\\d+)_/);
     if (m) counts[m[1]] = (counts[m[1]] || 0) + 1;
@@ -142,7 +484,7 @@ function detectForms() {
 }`;
 
 /** Read form state given prefix p. Returns { fields, buttons, tabs, texts, hyperlinks, table, iframes }. */
-export const READ_FORM_FN = HEADERLESS_GRID_FN + `
+export const READ_FORM_FN = HEADERLESS_GRID_FN + GROUP_STATE_FN + `
 function readForm(p) {
   const result = {};
   const fields = [];
@@ -214,6 +556,7 @@ function readForm(p) {
       type: 'checkbox'
     };
     if (label && label !== name) field.label = label;
+    if (el.classList.contains('checkboxDisabled')) field.disabled = true;
     fields.push(field);
   });
 
@@ -249,6 +592,7 @@ function readForm(p) {
       options: options.map(o => o.label)
     };
     if (label && label !== name) field.label = label;
+    if (document.getElementById(p + name)?.classList.contains('radioDisabled')) field.disabled = true;
     fields.push(field);
   }
 
@@ -277,15 +621,21 @@ function readForm(p) {
     const text = nbsp(el.innerText?.trim() || '');
     const idName = el.id?.replace(p, '') || '';
     if (!text && !idName) return;
-    buttons.push({ name: text || idName, frame: true });
+    // frameButton disabled uses the same class as a.press buttons (pressDisabled).
+    const btn = { name: text || idName, frame: true };
+    if (el.classList.contains('pressDisabled')) btn.disabled = true;
+    buttons.push(btn);
   });
 
-  // Tumbler items
+  // Tumbler items. Disabled state lives on the group element .frameTumbler
+  // (class tumblerDisabled), not on the individual segments.
   document.querySelectorAll('[id^="' + p + '"].tumblerItem').forEach(el => {
     if (el.offsetWidth === 0) return;
     const text = el.innerText?.trim();
     const idName = el.id?.replace(p, '') || '';
-    buttons.push({ name: text || idName, tumbler: true });
+    const btn = { name: text || idName, tumbler: true };
+    if (el.closest('.frameTumbler')?.classList.contains('tumblerDisabled')) btn.disabled = true;
+    buttons.push(btn);
   });
 
   // Tabs — scoped to form by checking ancestor IDs
@@ -338,7 +688,7 @@ function readForm(p) {
           const text = (textEl || box).innerText?.trim().replace(/\\n/g, ' ') || '';
           if (text) {
             const r = box.getBoundingClientRect();
-            columns.push({ text, x: r.x, right: r.x + r.width, y: r.y, h: r.height });
+            columns.push({ text, ci: box.getAttribute('colindex'), x: r.x, right: r.x + r.width, y: r.y, h: r.height });
           } else {
             // Unnamed column — check if data cells contain checkboxes
             const firstLine = body?.querySelector('.gridLine');
@@ -352,6 +702,27 @@ function readForm(p) {
             }
           }
         });
+        // Column groups → «Группа / Лист». Mirrors buildColumnModel: a group caption owns no
+        // cells, so its colindex is absent from the body; leaf names repeat across groups.
+        const dataLines = [...(body?.querySelectorAll('.gridLine') || [])].slice(0, 5);
+        if (dataLines.length && columns.length > 0) {
+          const bodyCi = new Set();
+          dataLines.forEach(line => [...line.children].forEach(b => {
+            if (b.offsetWidth === 0) return;
+            const ci = b.getAttribute('colindex');
+            if (ci != null) bodyCi.add(ci);
+          }));
+          const covers = (g, c) => { const cx = c.x + (c.right - c.x) / 2; return c.y > g.y && cx >= g.x && cx < g.right; };
+          const grpHdrs = columns.filter(g => g.ci != null && !bodyCi.has(g.ci) && columns.some(c => c !== g && covers(g, c)));
+          if (grpHdrs.length) {
+            columns.forEach(c => {
+              if (grpHdrs.indexOf(c) >= 0) return;
+              const parents = grpHdrs.filter(g => covers(g, c)).sort((a, b) => a.y - b.y);
+              if (parents.length) c.text = parents.map(g => g.text).concat(c.text).join(' / ');
+            });
+            grpHdrs.forEach(g => { const at = columns.indexOf(g); if (at >= 0) columns.splice(at, 1); });
+          }
+        }
         // Expand single merged headers with multiple data sub-rows (e.g. "Субконто Дт" → 1/2/3)
         const firstLine = body?.querySelector('.gridLine');
         if (firstLine && columns.length > 0) {
@@ -443,12 +814,35 @@ function readForm(p) {
   });
   if (iframeCount) result.iframes = iframeCount;
 
+  // Collapsible / popup groups — surface that part of the form is hidden + its state.
+  // Идентификация раскрываемой группы (есть заголовок <base>#title_text и один из признаков):
+  //   • заголовок — гиперссылка (.staticTextHyper: ControlRepresentation=TitleHyperlink);
+  //   • рядом кнопка-каретка <base>#titleBtn (ControlRepresentation=Picture);
+  //   • есть панель <base>#panel_div — это ВСПЛЫВАЮЩАЯ (popup) группа.
+  // Обычные (несворачиваемые) группы не имеют ничего из этого — их не показываем.
+  // Состояние — groupCollapsed (GROUP_STATE_FN), общая с резолвером цели клика.
+  const groups = [];
+  document.querySelectorAll('[id^="' + p + '"][id$="#title_text"]').forEach(tt => {
+    if (tt.offsetWidth === 0 && tt.offsetHeight === 0) return;
+    const base = tt.id.slice(0, -('#title_text'.length));
+    const panelDiv = document.getElementById(base + '#panel_div');   // popup-маркер
+    const isHyper = tt.classList.contains('staticTextHyper');
+    const hasBtn = !!document.getElementById(base + '#titleBtn');
+    if (!isHyper && !hasBtn && !panelDiv) return; // обычная (несворачиваемая) группа
+    const g = { name: base.replace(p, ''), title: nbsp(tt.innerText?.trim() || '') };
+    if (panelDiv) g.behavior = 'popup';
+    const collapsed = groupCollapsed(base);
+    if (collapsed !== null) g.collapsed = collapsed;
+    groups.push(g);
+  });
+
   if (fields.length) result.fields = fields;
   if (buttons.length) result.buttons = buttons;
   if (formTabs.length) result.tabs = formTabs;
   if (navigation.length) result.navigation = navigation;
   if (texts.length) result.texts = texts;
   if (hyperlinks.length) result.hyperlinks = hyperlinks;
+  if (groups.length) result.groups = groups;
 
   // Group DCS report settings into readable format
   if (result.fields) {

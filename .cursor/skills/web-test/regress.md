@@ -10,6 +10,8 @@ node $RUN test <dir|file>... [flags]
 
 Positional args are test paths (files and/or dirs, multiple allowed). URL is NOT positional — it comes from `webtest.config.mjs`; override with `--url=<url>`.
 
+`webtest.config.mjs` and `_hooks.mjs` always come from the suite root, whatever path you pass: `test tests/myapp/sales/` and `test tests/myapp/sales/01-order.test.mjs` both run under the config and hooks of `tests/myapp/`, no `--url=` needed. Paths from two different suites in one run are refused — pass one suite and narrow with `--grep=` / `--tags=`.
+
 Tests live next to the project they cover (not inside the skill). Convention: `tests/` at the project root, with `_hooks.mjs` and `webtest.config.mjs` at the suite root. Tests are ES modules with `*.test.mjs` suffix.
 
 ## When to choose `test` over `exec`
@@ -69,7 +71,7 @@ tests/<app-name>/
     01-end-to-end.test.mjs     # multi-user
 ```
 
-Per-folder `_hooks.mjs` / `webtest.config.mjs` inside the application subfolder are NOT supported — only the application-root copies are loaded.
+Per-folder `_hooks.mjs` / `webtest.config.mjs` inside the application subfolder are NOT supported — only the application-root copies are loaded, whichever subfolder you point the runner at.
 
 ## Test file anatomy
 
@@ -184,8 +186,8 @@ assert.match(string, regex, msg?)         // regex.test(string)
 await assert.throws(asyncFn, msg?)        // passes if fn throws (use await)
 
 // 1C-specific — operate on getFormState() / readTable() output
-assert.formHasField(state, 'Контрагент', msg?)        // state.fields[name] exists
-assert.formTitle(state, expected, msg?)               // state.title includes expected
+assert.formHasField(state, 'Контрагент', msg?)        // fields[] contains a field with that name
+assert.formTitle(state, expected, msg?)               // state.title includes expected (null title → fails saying so)
 assert.tableHasRow(table, predicate, msg?)            // predicate: object (partial match) or fn(row) => bool
                                                       //   object form: { 'Наименование': 'Тест' }
                                                       //   fn form:     r => r['Сумма'] > 100
@@ -208,6 +210,11 @@ export default {
   //   manager: { url: 'http://localhost:9191/myapp-manager/ru_RU', displayName: 'Менеджер' },
   // },
   // defaultContext: 'clerk',
+
+  // Context-pool / 1C license management (all optional; omit = no cap, default stays open).
+  // maxContexts: 2,            // cap on simultaneous 1C sessions; omit for unlimited
+  // contextPolicy: 'reuse',    // 'reuse' (keep open within cap) | 'strict' (close after each test)
+  // pinnedContexts: [],        // never evicted; defaults to [defaultContext], [] makes default evictable
 
   timeout: 30000,
   retries: 0,
@@ -311,7 +318,7 @@ export default async function({ clerk, manager, step, assert }) {
   });
   await step('Кладовщик видит новый статус', async () => {
     const s = await clerk.getFormState();
-    assert.equal(s.fields['Статус']?.value, 'Утверждён');
+    assert.equal(s.fields.find(f => f.name === 'Статус')?.value, 'Утверждён');
   });
   await step('Освободить сессию кладовщика', async () => {
     await manager.closeContext('clerk');   // free a 1C license for the next test
@@ -319,7 +326,9 @@ export default async function({ clerk, manager, step, assert }) {
 }
 ```
 
-Close contexts you no longer need (`manager.closeContext('clerk')`) before the next multi-user test starts — frees a 1C web-client license and stops the previous role from holding state.
+Close contexts you no longer need (`manager.closeContext('clerk')`) before the next multi-user test starts — frees a 1C web-client license and stops the previous role from holding state. On tight-license stands prefer configuring the pool (`maxContexts` + `contextPolicy` + `pinnedContexts`) over manual per-test closing — the runner then evicts and reuses sessions automatically.
+
+**Context pool (1C licenses).** With `maxContexts` set, the runner caps simultaneous 1C sessions: before each test it evicts least-recently-used contexts that are neither pinned nor needed, reusing already-open ones. `contextPolicy: 'reuse'` (default) keeps sessions for speed; `'strict'` closes a test's non-pinned contexts right after it. `pinnedContexts` are never evicted (default `[defaultContext]`; set `[]` to make the default context evictable on a tight stand). If the pool can't fit even after eviction, the test fails with a clear `context pool exhausted` error instead of an opaque connection failure.
 
 ### Failing-test repro
 
@@ -332,7 +341,7 @@ export default async function({ openCommand, clickElement, getFormState, assert,
   await clickElement('Создать');
   await clickElement('Провести');
   const s = await getFormState();
-  assert.ok(s.errorModal || s.fields['Контрагент']?.required,
+  assert.ok(s.errorModal || s.fields.find(f => f.name === 'Контрагент')?.required,
     'Должна быть ошибка валидации или поле помечено обязательным');
 }
 ```
@@ -352,7 +361,7 @@ export const params = [
 export default async function({ fillFields, getFormState, assert }, { type, field, value }) {
   await fillFields({ [field]: value });
   const state = await getFormState();
-  assert.equal(state.fields[field]?.value, String(value));
+  assert.equal(state.fields.find(f => f.name === field)?.value, String(value));
 }
 ```
 
@@ -370,8 +379,17 @@ node $RUN test tests/<app-name>/ --grep='накладн'                      # 
 node $RUN test tests/<app-name>/ --bail --retry=1                      # stop on first fail, allow 1 retry
 node $RUN test tests/<app-name>/ --report=allure-results --format=allure --report-dir=allure-results
 node $RUN test tests/<app-name>/ --report=-                            # machine JSON to stdout, progress to stderr
+node $RUN test tests/<app-name>/ --global-timeout=3600000              # ceiling for the whole run (exit 2)
 node $RUN test tests/<app-name>/ -- --rebuild-stand                    # after `--` → hookArgs
 ```
+
+**Timeouts and hangs.** A test's `timeout` is a contract, not a wish: when it expires the runner probes the
+context and destroys whatever is wedged, so the run always moves on. The failure carries a verdict — `hang`
+(browser alive, renderer's JS thread blocked; the context is aborted, its 1C seance released from Node, and
+the next test recreates it) versus `slow`/`slow-network` (nothing is broken — raise `export const timeout`).
+A `hang` is never retried. Exit codes: `1` red tests, `2` `--global-timeout` fired (report written, seances
+released), `3` the shutdown itself wedged. Allure results are written per test as it finishes, so a hang
+cannot destroy the results collected before it — no external watchdog needed.
 
 **Output contract.** `test` behaves like a test runner: by default the human report (with the summary as the last line) goes to **stdout** — read the tail of stdout + exit code. The machine report is opt-in via `--report`: `--report=path` writes it to a file (default JSON; XML for `--format=junit`), `--report=-` writes it to stdout while progress moves to stderr. Allure needs `--format=allure` + a directory (`-` is invalid for allure). For detailed triage use `--report=path` or `--report=-`. **In `--report=-` mode never use `2>&1`** — it merges stderr progress into the stdout JSON. (In the default mode there is no JSON in stdout, so `… | tail` is safe.)
 

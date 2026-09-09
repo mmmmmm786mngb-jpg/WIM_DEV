@@ -1,19 +1,61 @@
 #!/usr/bin/env python3
-# cfe-init v1.2 — Create 1C configuration extension scaffold (CFE)
+# cfe-init v1.11 — Create 1C configuration extension scaffold (CFE) (+write_xml_file/write_utf8_bom: общий эталон записи)
 # Source: https://github.com/Nikolay-Shirokov/cc-1c-skills
 """Generates minimal XML source files for a 1C configuration extension."""
-import sys, os, argparse, uuid
+import sys, os, re, argparse, uuid
 from xml.etree import ElementTree as ET
 
-def esc_xml(s):
-    return s.replace('&','&amp;').replace('<','&lt;').replace('>','&gt;').replace('"','&quot;')
+# Регистронезависимый ввод — паритет с PS1: в PowerShell имена параметров и [ValidateSet]
+# регистр не различают, в argparse совпадение точное.
+def ci_parse_args(parser, argv=None):
+    """parse_args по правилам PS: имена параметров и значения choices регистронезависимы."""
+    argv = list(sys.argv[1:] if argv is None else argv)
+    names = {s.lower(): s for a in parser._actions for s in a.option_strings}
+    for i, tok in enumerate(argv):
+        if tok.startswith('-') and tok.lower() in names:
+            argv[i] = names[tok.lower()]
+    # choices — зеркало [ValidateSet]; канонизируем ДО разбора, иначе argparse отвергнет регистр
+    choice_map = {}
+    for a in parser._actions:
+        if a.choices:
+            for s in a.option_strings:
+                choice_map[s] = {str(c).lower(): c for c in a.choices}
+    for i in range(len(argv) - 1):
+        m = choice_map.get(argv[i])
+        if m and argv[i + 1].lower() in m:
+            argv[i + 1] = m[argv[i + 1].lower()]
+    return parser.parse_args(argv)
+
+
+def esc_xml_text(s):
+    # Эскейп ТЕКСТА элемента: только & < > — кавычку и апостроф платформа держит сырыми.
+    return s.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
 
 def new_uuid():
     return str(uuid.uuid4())
 
 def write_utf8_bom(path, content):
+    # newline='' — без трансляции: иначе текстовый режим Python дал бы CRLF на Windows
+    # и LF на macOS, то есть вывод навыка зависел бы от ОС.
     with open(path, 'w', encoding='utf-8-sig', newline='') as f:
         f.write(content)
+
+
+def write_xml_file(path, content):
+    """XML в каноне выгрузки Конфигуратора: CRLF в разделителях, без перевода в конце.
+
+    Копия этой функции есть в каждом навыке-эмиттере (навыки автономны). Держать
+    копии одинаковыми — сознательно: разошедшиеся копии сводят на нет весь смысл.
+    """
+    text = content.replace('\r\n', '\n').replace('\n', '\r\n').rstrip('\r\n')
+    write_utf8_bom(path, text)
+
+
+def format_rank(ver):
+    """"2.20" → 220, "2.9" → 209. Строковое сравнение неверно ("2.9" > "2.17")."""
+    m = re.match(r'^(\d+)\.(\d+)$', ver or '')
+    return int(m.group(1)) * 100 + int(m.group(2)) if m else 0
+
 
 def main():
     sys.stdout.reconfigure(encoding="utf-8")
@@ -29,7 +71,7 @@ def main():
     parser.add_argument('-CompatibilityMode', dest='CompatibilityMode', default='Version8_3_24')
     parser.add_argument('-ConfigPath', dest='ConfigPath', default=None)
     parser.add_argument('-NoRole', dest='NoRole', action='store_true')
-    args = parser.parse_args()
+    args = ci_parse_args(parser)
 
     name = args.Name
     synonym = args.Synonym if args.Synonym else name
@@ -126,18 +168,23 @@ def main():
     # --- Synonym XML ---
     synonym_xml = ""
     if synonym:
-        synonym_xml = f"\r\n\t\t\t\t<v8:item>\r\n\t\t\t\t\t<v8:lang>ru</v8:lang>\r\n\t\t\t\t\t<v8:content>{esc_xml(synonym)}</v8:content>\r\n\t\t\t\t</v8:item>\r\n\t\t\t"
+        synonym_xml = f"\r\n\t\t\t\t<v8:item>\r\n\t\t\t\t\t<v8:lang>ru</v8:lang>\r\n\t\t\t\t\t<v8:content>{esc_xml_text(synonym)}</v8:content>\r\n\t\t\t\t</v8:item>\r\n\t\t\t"
 
-    vendor_xml = esc_xml(vendor) if vendor else ""
-    version_xml = esc_xml(version) if version else ""
+    # Элемент целиком, а не значение внутри пары: при пустом значении Конфигуратор
+    # пишет <Vendor/>, а не <Vendor></Vendor>.
+    vendor_el = f"<Vendor>{esc_xml_text(vendor)}</Vendor>" if vendor else "<Vendor/>"
+    version_el = f"<Version>{esc_xml_text(version)}</Version>" if version else "<Version/>"
 
     # --- Role name ---
     role_name = f"{name_prefix}ОсновнаяРоль"
 
     # --- DefaultRoles XML ---
-    default_roles_xml = ""
+    # Элемент целиком: без роли Конфигуратор пишет <DefaultRoles/>, а не пустую пару.
+    default_roles_el = "<DefaultRoles/>"
     if not args.NoRole:
-        default_roles_xml = f'\r\n\t\t\t\t<xr:Item xsi:type="xr:MDObjectRef">Role.{role_name}</xr:Item>\r\n\t\t\t'
+        default_roles_el = ('<DefaultRoles>\r\n\t\t\t\t'
+                            f'<xr:Item xsi:type="xr:MDObjectRef">Role.{role_name}</xr:Item>'
+                            '\r\n\t\t\t</DefaultRoles>')
 
     # --- ChildObjects ---
     child_objects_xml = f"\r\n\t\t\t<Language>Русский</Language>"
@@ -156,6 +203,40 @@ def main():
     ]
 
     contained_objects = ""
+
+    # Объявления пространств имён — одной переменной: места эмиссии её только подставляют.
+    # Правки шапки (как xmlns:pal в формате 2.21) делаются здесь, в одном месте.
+    xmlns_decl = (
+        'xmlns="http://v8.1c.ru/8.3/MDClasses"'
+        ' xmlns:app="http://v8.1c.ru/8.2/managed-application/core"'
+        ' xmlns:cfg="http://v8.1c.ru/8.1/data/enterprise/current-config"'
+        ' xmlns:cmi="http://v8.1c.ru/8.2/managed-application/cmi"'
+        ' xmlns:ent="http://v8.1c.ru/8.1/data/enterprise"'
+        ' xmlns:lf="http://v8.1c.ru/8.2/managed-application/logform"'
+        ' xmlns:style="http://v8.1c.ru/8.1/data/ui/style"'
+        ' xmlns:sys="http://v8.1c.ru/8.1/data/ui/fonts/system"'
+        ' xmlns:v8="http://v8.1c.ru/8.1/data/core"'
+        ' xmlns:v8ui="http://v8.1c.ru/8.1/data/ui"'
+        ' xmlns:web="http://v8.1c.ru/8.1/data/ui/colors/web"'
+        ' xmlns:win="http://v8.1c.ru/8.1/data/ui/colors/windows"'
+        ' xmlns:xen="http://v8.1c.ru/8.3/xcf/enums"'
+        ' xmlns:xpr="http://v8.1c.ru/8.3/xcf/predef"'
+        ' xmlns:xr="http://v8.1c.ru/8.3/xcf/readable"'
+        ' xmlns:xs="http://www.w3.org/2001/XMLSchema"'
+        ' xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"'
+    )
+
+    # 2.21 (8.5) добавила в шапку пространство палитры — ради <Color> у значений перечисления.
+    # Вставляем НА МЕСТО (после lf, перед style): платформа держит объявления по алфавиту,
+    # дописать в конец нельзя.
+    # Caption/ShortCaption — свойства корня из того же формата 2.21, между Version и
+    # DefaultLanguage (позиция снята с выгрузки расширения из базы 8.5).
+    f221_captions = ""
+    if format_rank(format_version) >= 221:
+        xmlns_decl = xmlns_decl.replace(
+            ' xmlns:style=',
+            ' xmlns:pal="http://v8.1c.ru/8.1/data/ui/colors/palette" xmlns:style=')
+        f221_captions = "\r\n\t\t\t<Caption/>\r\n\t\t\t<ShortCaption/>"
     for i in range(7):
         contained_objects += f"""\t\t\t<xr:ContainedObject>
 \t\t\t\t<xr:ClassId>{class_ids[i]}</xr:ClassId>
@@ -163,27 +244,27 @@ def main():
 \t\t\t</xr:ContainedObject>\n"""
 
     cfg_xml = f'''<?xml version="1.0" encoding="UTF-8"?>
-<MetaDataObject xmlns="http://v8.1c.ru/8.3/MDClasses" xmlns:app="http://v8.1c.ru/8.2/managed-application/core" xmlns:cfg="http://v8.1c.ru/8.1/data/enterprise/current-config" xmlns:cmi="http://v8.1c.ru/8.2/managed-application/cmi" xmlns:ent="http://v8.1c.ru/8.1/data/enterprise" xmlns:lf="http://v8.1c.ru/8.2/managed-application/logform" xmlns:style="http://v8.1c.ru/8.1/data/ui/style" xmlns:sys="http://v8.1c.ru/8.1/data/ui/fonts/system" xmlns:v8="http://v8.1c.ru/8.1/data/core" xmlns:v8ui="http://v8.1c.ru/8.1/data/ui" xmlns:web="http://v8.1c.ru/8.1/data/ui/colors/web" xmlns:win="http://v8.1c.ru/8.1/data/ui/colors/windows" xmlns:xen="http://v8.1c.ru/8.3/xcf/enums" xmlns:xpr="http://v8.1c.ru/8.3/xcf/predef" xmlns:xr="http://v8.1c.ru/8.3/xcf/readable" xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" version="{format_version}">
+<MetaDataObject {xmlns_decl} version="{format_version}">
 \t<Configuration uuid="{uuid_cfg}">
 \t\t<InternalInfo>
 {contained_objects}\t\t</InternalInfo>
 \t\t<Properties>
 \t\t\t<ObjectBelonging>Adopted</ObjectBelonging>
-\t\t\t<Name>{esc_xml(name)}</Name>
+\t\t\t<Name>{esc_xml_text(name)}</Name>
 \t\t\t<Synonym>{synonym_xml}</Synonym>
 \t\t\t<Comment/>
 \t\t\t<ConfigurationExtensionPurpose>{purpose}</ConfigurationExtensionPurpose>
 \t\t\t<KeepMappingToExtendedConfigurationObjectsByIDs>true</KeepMappingToExtendedConfigurationObjectsByIDs>
-\t\t\t<NamePrefix>{esc_xml(name_prefix)}</NamePrefix>
+\t\t\t<NamePrefix>{esc_xml_text(name_prefix)}</NamePrefix>
 \t\t\t<ConfigurationExtensionCompatibilityMode>{compat}</ConfigurationExtensionCompatibilityMode>
 \t\t\t<DefaultRunMode>ManagedApplication</DefaultRunMode>
 \t\t\t<UsePurposes>
 \t\t\t\t<v8:Value xsi:type="app:ApplicationUsePurpose">PlatformApplication</v8:Value>
 \t\t\t</UsePurposes>
 \t\t\t<ScriptVariant>Russian</ScriptVariant>
-\t\t\t<DefaultRoles>{default_roles_xml}</DefaultRoles>
-\t\t\t<Vendor>{vendor_xml}</Vendor>
-\t\t\t<Version>{version_xml}</Version>
+\t\t\t{default_roles_el}
+\t\t\t{vendor_el}
+\t\t\t{version_el}{f221_captions}
 \t\t\t<DefaultLanguage>Language.Русский</DefaultLanguage>
 \t\t\t<BriefInformation/>
 \t\t\t<DetailedInformation/>
@@ -198,7 +279,7 @@ def main():
 
     # --- Languages/Русский.xml (adopted format) ---
     lang_xml = f'''<?xml version="1.0" encoding="UTF-8"?>
-<MetaDataObject xmlns="http://v8.1c.ru/8.3/MDClasses" xmlns:app="http://v8.1c.ru/8.2/managed-application/core" xmlns:cfg="http://v8.1c.ru/8.1/data/enterprise/current-config" xmlns:cmi="http://v8.1c.ru/8.2/managed-application/cmi" xmlns:ent="http://v8.1c.ru/8.1/data/enterprise" xmlns:lf="http://v8.1c.ru/8.2/managed-application/logform" xmlns:style="http://v8.1c.ru/8.1/data/ui/style" xmlns:sys="http://v8.1c.ru/8.1/data/ui/fonts/system" xmlns:v8="http://v8.1c.ru/8.1/data/core" xmlns:v8ui="http://v8.1c.ru/8.1/data/ui" xmlns:web="http://v8.1c.ru/8.1/data/ui/colors/web" xmlns:win="http://v8.1c.ru/8.1/data/ui/colors/windows" xmlns:xen="http://v8.1c.ru/8.3/xcf/enums" xmlns:xpr="http://v8.1c.ru/8.3/xcf/predef" xmlns:xr="http://v8.1c.ru/8.3/xcf/readable" xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" version="{format_version}">
+<MetaDataObject {xmlns_decl} version="{format_version}">
 \t<Language uuid="{uuid_lang}">
 \t\t<InternalInfo/>
 \t\t<Properties>
@@ -213,10 +294,10 @@ def main():
 
     # --- Role XML ---
     role_xml = f'''<?xml version="1.0" encoding="UTF-8"?>
-<MetaDataObject xmlns="http://v8.1c.ru/8.3/MDClasses" xmlns:app="http://v8.1c.ru/8.2/managed-application/core" xmlns:cfg="http://v8.1c.ru/8.1/data/enterprise/current-config" xmlns:cmi="http://v8.1c.ru/8.2/managed-application/cmi" xmlns:ent="http://v8.1c.ru/8.1/data/enterprise" xmlns:lf="http://v8.1c.ru/8.2/managed-application/logform" xmlns:style="http://v8.1c.ru/8.1/data/ui/style" xmlns:sys="http://v8.1c.ru/8.1/data/ui/fonts/system" xmlns:v8="http://v8.1c.ru/8.1/data/core" xmlns:v8ui="http://v8.1c.ru/8.1/data/ui" xmlns:web="http://v8.1c.ru/8.1/data/ui/colors/web" xmlns:win="http://v8.1c.ru/8.1/data/ui/colors/windows" xmlns:xen="http://v8.1c.ru/8.3/xcf/enums" xmlns:xpr="http://v8.1c.ru/8.3/xcf/predef" xmlns:xr="http://v8.1c.ru/8.3/xcf/readable" xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" version="{format_version}">
+<MetaDataObject {xmlns_decl} version="{format_version}">
 \t<Role uuid="{uuid_role}">
 \t\t<Properties>
-\t\t\t<Name>{esc_xml(role_name)}</Name>
+\t\t\t<Name>{esc_xml_text(role_name)}</Name>
 \t\t\t<Synonym/>
 \t\t\t<Comment/>
 \t\t</Properties>
@@ -229,9 +310,9 @@ def main():
     os.makedirs(lang_dir, exist_ok=True)
 
     # --- Write files ---
-    write_utf8_bom(cfg_file, cfg_xml)
+    write_xml_file(cfg_file, cfg_xml)
     lang_file = os.path.join(lang_dir, "Русский.xml")
-    write_utf8_bom(lang_file, lang_xml)
+    write_xml_file(lang_file, lang_xml)
 
     # --- Role ---
     role_file = None
@@ -239,7 +320,7 @@ def main():
         role_dir = os.path.join(output_dir, "Roles")
         os.makedirs(role_dir, exist_ok=True)
         role_file = os.path.join(role_dir, f"{role_name}.xml")
-        write_utf8_bom(role_file, role_xml)
+        write_xml_file(role_file, role_xml)
 
     # --- Output ---
     print(f"[OK] Создано расширение: {name}")

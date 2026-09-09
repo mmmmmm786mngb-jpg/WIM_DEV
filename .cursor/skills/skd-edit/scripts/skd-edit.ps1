@@ -1,6 +1,7 @@
-﻿# skd-edit v1.28 — Atomic 1C DCS editor
+﻿# skd-edit v1.39 — Atomic 1C DCS editor
 # Source: https://github.com/Nikolay-Shirokov/cc-1c-skills
 # NB: парный .py собирает выражения автодат вне f-string ради совместимости с python 3.9 (PEP 701).
+[CmdletBinding(PositionalBinding=$false)]
 param(
 	[Parameter(Mandatory)]
 	[Alias('Path')]
@@ -64,6 +65,16 @@ function Get-RootUuid([string]$xmlPath) {
 	} catch {}
 	return $null
 }
+function Test-ExternalObjectRoot([string]$xmlPath) {
+	if (-not (Test-Path $xmlPath)) { return $false }
+	try {
+		[xml]$mx = Get-Content -Path $xmlPath -Encoding UTF8
+		$el = $mx.DocumentElement.FirstChild
+		while ($el -and $el.NodeType -ne 'Element') { $el = $el.NextSibling }
+		if ($el) { return @('ExternalDataProcessor','ExternalReport') -contains $el.LocalName }
+	} catch {}
+	return $false
+}
 function Find-V8Project([string]$startDir) {
 	$d = $startDir
 	for ($i = 0; $i -lt 20 -and $d; $i++) {
@@ -100,10 +111,13 @@ function Assert-EditAllowed([string]$targetPath, [string]$require) {
 	try {
 		$rp = $targetPath
 		try { $rp = (Resolve-Path $targetPath -ErrorAction Stop).Path } catch {}
+		# Autonomous external object (EPF/ERF): never part of a config on support (issue #39).
+		if (Test-ExternalObjectRoot $rp) { return }
 		$elemUuid = Get-RootUuid $rp
 		$cfgDir = $null; $binPath = $null
 		$d = if (Test-Path $rp -PathType Container) { $rp } else { [System.IO.Path]::GetDirectoryName($rp) }
 		for ($i = 0; $i -lt 12 -and $d; $i++) {
+			if (Test-ExternalObjectRoot "$d.xml") { return }
 			if (-not $elemUuid) { $elemUuid = Get-RootUuid "$d.xml" }
 			if (-not $cfgDir) {
 				$cand = Join-Path (Join-Path $d "Ext") "ParentConfigurations.bin"
@@ -171,6 +185,12 @@ Assert-EditAllowed $resolvedPath 'editable'
 
 function Esc-Xml {
 	param([string]$s)
+	# Эскейп ЗНАЧЕНИЯ АТРИБУТА: & < > и кавычка — внутри "..." литеральная " невалидна.
+	return $s.Replace('&','&amp;').Replace('<','&lt;').Replace('>','&gt;').Replace('"','&quot;')
+}
+
+function Esc-XmlText {
+	param([string]$s)
 	return $s.Replace('&','&amp;').Replace('<','&lt;').Replace('>','&gt;')
 }
 
@@ -234,6 +254,20 @@ function Resolve-TypeStr {
 	param([string]$typeStr)
 	if (-not $typeStr) { return $typeStr }
 
+	# Прощающий ввод: ведущий префикс приходит копипастой из выгрузки. Без срезания он ломает
+	# поиск в словаре — русское имя типа остаётся непереведённым, и платформа отвечает
+	# «Неизвестное имя типа». cfg: снимаем всегда — он однозначно означает текущую конфигурацию.
+	# Сгенерированный dNpM: (в корпусе на этом URI встречаются d4p1, d5p1, d6p1 — имя префикса
+	# платформа выдаёт по порядку объявления) снимаем ТОЛЬКО у ссылочных типов, с точкой:
+	# сам по себе префикс многозначен — в формах d5p1:Chart, d5p1:TextDocument,
+	# d5p1:GeographicalSchema адресуют чужие пространства имён, и там он часть значения.
+	if ($typeStr.StartsWith('cfg:')) {
+		$typeStr = $typeStr.Substring(4)
+	} elseif ($typeStr.Contains('.') -and $typeStr -match '^d\d+p\d+:') {
+		$typeStr = $typeStr.Substring($typeStr.IndexOf(':') + 1)
+	}
+
+	# Параметризованные типы: Number(15,2), Строка(100)
 	if ($typeStr -match '^([^(]+)\((.+)\)$') {
 		$baseName = $Matches[1].Trim()
 		$params = $Matches[2]
@@ -242,15 +276,17 @@ function Resolve-TypeStr {
 		return $typeStr
 	}
 
+	# Ссылочные типы: СправочникСсылка.Организации → CatalogRef.Организации
 	if ($typeStr.Contains('.')) {
 		$dotIdx = $typeStr.IndexOf('.')
 		$prefix = $typeStr.Substring(0, $dotIdx)
-		$suffix = $typeStr.Substring($dotIdx)
+		$suffix = $typeStr.Substring($dotIdx)  # includes the dot
 		$resolved = $script:typeSynonyms[$prefix.ToLower()]
 		if ($resolved) { return "$resolved$suffix" }
 		return $typeStr
 	}
 
+	# Простое имя
 	$resolved = $script:typeSynonyms[$typeStr.ToLower()]
 	if ($resolved) { return $resolved }
 	return $typeStr
@@ -300,6 +336,36 @@ function Parse-FieldShorthand {
 	return $result
 }
 
+# DOM отдаёт фрагмент через OuterXml как самостоятельный документ и переобъявляет на нём каждый
+# префикс, который был в области видимости. Такие объявления избыточны: родительский контекст в точке
+# вставки их уже даёт. Но объявление, которого в корне НЕТ, значимо — например xmlns:d5p1 на <v8:Type>:
+# только оно связывает префикс, которым квалифицировано значение узла (d5p1:CatalogRef.X). Срезать его
+# нельзя, иначе отказ будет тихим: XML останется well-formed (префикс в тексте парсер не проверяет), а
+# 1С отвергнет тип. Поэтому выбрасываем лишь унаследованное — префикс, объявленный в корне с тем же URI.
+function Strip-InheritedXmlns([string]$raw) {
+	if ([string]::IsNullOrEmpty($raw)) { return $raw }
+	# Корень не распознан — сохраняем прежнее поведение, чтобы не менять статус-кво.
+	if (-not $script:RawRootOpening) {
+		return [regex]::Replace($raw, ' xmlns(?::\w+)?="[^"]*"', '')
+	}
+	# Dictionary, а не @{}: хэш в PS сравнивает ключи регистронезависимо, а префикс XML регистрозависим.
+	$rootNs = New-Object 'System.Collections.Generic.Dictionary[string,string]'
+	# В корне атрибуты бывают разложены по строкам — разделитель \s+, а не пробел.
+	foreach ($m in [regex]::Matches($script:RawRootOpening, '\s+xmlns(?::(\w+))?="([^"]*)"')) {
+		$rootNs[$m.Groups[1].Value] = $m.Groups[2].Value
+	}
+	return [regex]::Replace($raw, ' xmlns(?::(\w+))?="([^"]*)"', {
+		param($m)
+		$prefix = $m.Groups[1].Value
+		$uri = $m.Groups[2].Value
+		# URI регистрозависим: -eq в PS этого не даёт, сравниваем ординально.
+		if ($rootNs.ContainsKey($prefix) -and [string]::Equals($rootNs[$prefix], $uri, [System.StringComparison]::Ordinal)) {
+			return ''
+		}
+		return $m.Value
+	})
+}
+
 function Read-FieldProperties($fieldEl) {
 	$props = @{
 		dataPath = ""; field = ""; title = ""; type = ""
@@ -318,7 +384,7 @@ function Read-FieldProperties($fieldEl) {
 				# siblings when shorthand overrides only the ru content. Strip xmlns
 				# redeclarations that OuterXml adds for sub-elements.
 				$raw = $ch.OuterXml
-				$raw = [regex]::Replace($raw, ' xmlns(?::\w+)?="[^"]*"', '')
+				$raw = Strip-InheritedXmlns $raw
 				$props._rawTitle = $raw
 				# Also extract ru content as plain string (backward compat — used by
 				# external consumers reading $existing.title).
@@ -341,7 +407,7 @@ function Read-FieldProperties($fieldEl) {
 				# .NET OuterXml re-declares xmlns on every element where the prefix is in
 				# scope (because the fragment is treated as standalone). Strip these since
 				# the parent context at insertion point already provides them.
-				$raw = [regex]::Replace($raw, ' xmlns(?::\w+)?="[^"]*"', '')
+				$raw = Strip-InheritedXmlns $raw
 				$props["_rawValueType"] = $raw
 				$typeEl = $null
 				foreach ($gc in $ch.ChildNodes) {
@@ -377,7 +443,7 @@ function Read-FieldProperties($fieldEl) {
 				# Defense in depth: preserve OuterXml of unknown children so rebuild
 				# doesn't silently drop them (custom <editFormat>, <appearance>, etc.).
 				$raw = $ch.OuterXml
-				$raw = [regex]::Replace($raw, ' xmlns(?::\w+)?="[^"]*"', '')
+				$raw = Strip-InheritedXmlns $raw
 				$props._unknownChildren += $raw
 			}
 		}
@@ -979,16 +1045,16 @@ function Build-ValueTypeXml {
 	}
 
 	if ($typeStr -match '^(CatalogRef|DocumentRef|EnumRef|ChartOfAccountsRef|ChartOfCharacteristicTypesRef)\.') {
-		$lines += "$indent<v8:Type xmlns:d5p1=`"http://v8.1c.ru/8.1/data/enterprise/current-config`">d5p1:$(Esc-Xml $typeStr)</v8:Type>"
+		$lines += "$indent<v8:Type xmlns:d5p1=`"http://v8.1c.ru/8.1/data/enterprise/current-config`">d5p1:$(Esc-XmlText $typeStr)</v8:Type>"
 		return $lines -join "`n"
 	}
 
 	if ($typeStr.Contains('.')) {
-		$lines += "$indent<v8:Type xmlns:d5p1=`"http://v8.1c.ru/8.1/data/enterprise/current-config`">d5p1:$(Esc-Xml $typeStr)</v8:Type>"
+		$lines += "$indent<v8:Type xmlns:d5p1=`"http://v8.1c.ru/8.1/data/enterprise/current-config`">d5p1:$(Esc-XmlText $typeStr)</v8:Type>"
 		return $lines -join "`n"
 	}
 
-	$lines += "$indent<v8:Type>$(Esc-Xml $typeStr)</v8:Type>"
+	$lines += "$indent<v8:Type>$(Esc-XmlText $typeStr)</v8:Type>"
 	return $lines -join "`n"
 }
 
@@ -1044,7 +1110,7 @@ function Build-MLTextXml {
 	$lines += "$indent<$tag xsi:type=`"v8:LocalStringType`">"
 	$lines += "$indent`t<v8:item>"
 	$lines += "$indent`t`t<v8:lang>ru</v8:lang>"
-	$lines += "$indent`t`t<v8:content>$(Esc-Xml $text)</v8:content>"
+	$lines += "$indent`t`t<v8:content>$(Esc-XmlText $text)</v8:content>"
 	$lines += "$indent`t</v8:item>"
 	$lines += "$indent</$tag>"
 	return $lines -join "`n"
@@ -1056,7 +1122,7 @@ function Build-MLTextXml {
 # If no ru item exists, one is prepended before the first existing item.
 function Patch-MLTextRu {
 	param([string]$rawOuterXml, [string]$newRuText, [string]$indent)
-	$escaped = Esc-Xml $newRuText
+	$escaped = Esc-XmlText $newRuText
 	$ruItemPat = '(<v8:item>\s*<v8:lang>ru</v8:lang>\s*<v8:content>)[^<]*(</v8:content>\s*</v8:item>)'
 	if ([regex]::IsMatch($rawOuterXml, $ruItemPat)) {
 		return [regex]::Replace($rawOuterXml, $ruItemPat, { param($m) $m.Groups[1].Value + $escaped + $m.Groups[2].Value })
@@ -1119,8 +1185,8 @@ function Build-FieldFragment {
 	$i = $indent
 	$lines = @()
 	$lines += "$i<field xsi:type=`"DataSetFieldField`">"
-	$lines += "$i`t<dataPath>$(Esc-Xml $parsed.dataPath)</dataPath>"
-	$lines += "$i`t<field>$(Esc-Xml $parsed.field)</field>"
+	$lines += "$i`t<dataPath>$(Esc-XmlText $parsed.dataPath)</dataPath>"
+	$lines += "$i`t<field>$(Esc-XmlText $parsed.field)</field>"
 
 	# Title: prefer raw multi-lang title (preserves en/uk/etc.). When shorthand provides
 	# a new ru text, patch ru content inside the raw title; otherwise emit raw as-is.
@@ -1170,8 +1236,8 @@ function Build-TotalFragment {
 	$i = $indent
 	$lines = @()
 	$lines += "$i<totalField>"
-	$lines += "$i`t<dataPath>$(Esc-Xml $parsed.dataPath)</dataPath>"
-	$lines += "$i`t<expression>$(Esc-Xml $parsed.expression)</expression>"
+	$lines += "$i`t<dataPath>$(Esc-XmlText $parsed.dataPath)</dataPath>"
+	$lines += "$i`t<expression>$(Esc-XmlText $parsed.expression)</expression>"
 	$lines += "$i</totalField>"
 	return $lines -join "`n"
 }
@@ -1182,8 +1248,8 @@ function Build-CalcFieldFragment {
 	$i = $indent
 	$lines = @()
 	$lines += "$i<calculatedField>"
-	$lines += "$i`t<dataPath>$(Esc-Xml $parsed.dataPath)</dataPath>"
-	$lines += "$i`t<expression>$(Esc-Xml $parsed.expression)</expression>"
+	$lines += "$i`t<dataPath>$(Esc-XmlText $parsed.dataPath)</dataPath>"
+	$lines += "$i`t<expression>$(Esc-XmlText $parsed.expression)</expression>"
 
 	if ($parsed.title) {
 		$lines += (Build-MLTextXml -tag "title" -text $parsed.title -indent "$i`t")
@@ -1215,7 +1281,7 @@ function Build-ParamValueXml {
 
 	if ($type -eq "StandardPeriod") {
 		$lines += "$i<$open xsi:type=`"v8:StandardPeriod`">"
-		$lines += "$i`t<v8:variant xsi:type=`"v8:StandardPeriodVariant`">$(Esc-Xml $valStr)</v8:variant>"
+		$lines += "$i`t<v8:variant xsi:type=`"v8:StandardPeriodVariant`">$(Esc-XmlText $valStr)</v8:variant>"
 		$lines += "$i`t<v8:startDate>0001-01-01T00:00:00</v8:startDate>"
 		$lines += "$i`t<v8:endDate>0001-01-01T00:00:00</v8:endDate>"
 		$lines += "$i</$open>"
@@ -1241,7 +1307,7 @@ function Build-ParamValueXml {
 		else { $xsi = "xs:string" }
 	}
 
-	$lines += "$i<$open xsi:type=`"$xsi`">$(Esc-Xml $valStr)</$open>"
+	$lines += "$i<$open xsi:type=`"$xsi`">$(Esc-XmlText $valStr)</$open>"
 	return $lines
 }
 
@@ -1262,7 +1328,7 @@ function Build-AvailableValueFragment {
 		$lines += "$indent`t<presentation xsi:type=`"v8:LocalStringType`">"
 		$lines += "$indent`t`t<v8:item>"
 		$lines += "$indent`t`t`t<v8:lang>ru</v8:lang>"
-		$lines += "$indent`t`t`t<v8:content>$(Esc-Xml $item.presentation)</v8:content>"
+		$lines += "$indent`t`t`t<v8:content>$(Esc-XmlText $item.presentation)</v8:content>"
 		$lines += "$indent`t`t</v8:item>"
 		$lines += "$indent`t</presentation>"
 	}
@@ -1278,7 +1344,7 @@ function Build-ParamFragment {
 
 	$lines = @()
 	$lines += "$i<parameter>"
-	$lines += "$i`t<name>$(Esc-Xml $parsed.name)</name>"
+	$lines += "$i`t<name>$(Esc-XmlText $parsed.name)</name>"
 
 	if ($parsed.title) {
 		$lines += (Build-MLTextXml -tag "title" -text $parsed.title -indent "$i`t")
@@ -1344,7 +1410,7 @@ function Build-ParamFragment {
 		$bLines += "$i`t</valueType>"
 		$bLines += "$i`t<value xsi:type=`"xs:dateTime`">0001-01-01T00:00:00</value>"
 		$bLines += "$i`t<useRestriction>true</useRestriction>"
-		$bLines += "$i`t<expression>$(Esc-Xml "&$paramName.ДатаНачала")</expression>"
+		$bLines += "$i`t<expression>$(Esc-XmlText "&$paramName.ДатаНачала")</expression>"
 		$bLines += "$i</parameter>"
 		$fragments += ($bLines -join "`n")
 
@@ -1357,7 +1423,7 @@ function Build-ParamFragment {
 		$eLines += "$i`t</valueType>"
 		$eLines += "$i`t<value xsi:type=`"xs:dateTime`">0001-01-01T00:00:00</value>"
 		$eLines += "$i`t<useRestriction>true</useRestriction>"
-		$eLines += "$i`t<expression>$(Esc-Xml "&$paramName.ДатаОкончания")</expression>"
+		$eLines += "$i`t<expression>$(Esc-XmlText "&$paramName.ДатаОкончания")</expression>"
 		$eLines += "$i</parameter>"
 		$fragments += ($eLines -join "`n")
 	}
@@ -1376,21 +1442,21 @@ function Build-FilterItemFragment {
 		$lines += "$i`t<dcsset:use>false</dcsset:use>"
 	}
 
-	$lines += "$i`t<dcsset:left xsi:type=`"dcscor:Field`">$(Esc-Xml $parsed.field)</dcsset:left>"
-	$lines += "$i`t<dcsset:comparisonType>$(Esc-Xml $parsed.op)</dcsset:comparisonType>"
+	$lines += "$i`t<dcsset:left xsi:type=`"dcscor:Field`">$(Esc-XmlText $parsed.field)</dcsset:left>"
+	$lines += "$i`t<dcsset:comparisonType>$(Esc-XmlText $parsed.op)</dcsset:comparisonType>"
 
 	if ($null -ne $parsed.value) {
 		$vt = if ($parsed["valueType"]) { $parsed["valueType"] } else { "xs:string" }
-		$lines += "$i`t<dcsset:right xsi:type=`"$vt`">$(Esc-Xml "$($parsed.value)")</dcsset:right>"
+		$lines += "$i`t<dcsset:right xsi:type=`"$vt`">$(Esc-XmlText "$($parsed.value)")</dcsset:right>"
 	}
 
 	if ($parsed.viewMode) {
-		$lines += "$i`t<dcsset:viewMode>$(Esc-Xml $parsed.viewMode)</dcsset:viewMode>"
+		$lines += "$i`t<dcsset:viewMode>$(Esc-XmlText $parsed.viewMode)</dcsset:viewMode>"
 	}
 
 	if ($parsed.userSettingID) {
 		$uid = if ($parsed.userSettingID -eq "auto") { [System.Guid]::NewGuid().ToString() } else { $parsed.userSettingID }
-		$lines += "$i`t<dcsset:userSettingID>$(Esc-Xml $uid)</dcsset:userSettingID>"
+		$lines += "$i`t<dcsset:userSettingID>$(Esc-XmlText $uid)</dcsset:userSettingID>"
 	}
 
 	$lines += "$i</dcsset:item>"
@@ -1419,20 +1485,20 @@ function Build-SelectionItemFragment {
 			$lines += "$i`t<dcsset:lwsTitle>"
 			$lines += "$i`t`t<v8:item>"
 			$lines += "$i`t`t`t<v8:lang>ru</v8:lang>"
-			$lines += "$i`t`t`t<v8:content>$(Esc-Xml $title)</v8:content>"
+			$lines += "$i`t`t`t<v8:content>$(Esc-XmlText $title)</v8:content>"
 			$lines += "$i`t`t</v8:item>"
 			$lines += "$i`t</dcsset:lwsTitle>"
 		}
 		foreach ($item in $items) {
 			$lines += "$i`t<dcsset:item xsi:type=`"dcsset:SelectedItemField`">"
-			$lines += "$i`t`t<dcsset:field>$(Esc-Xml $item)</dcsset:field>"
+			$lines += "$i`t`t<dcsset:field>$(Esc-XmlText $item)</dcsset:field>"
 			$lines += "$i`t</dcsset:item>"
 		}
 		$lines += "$i`t<dcsset:placement>Auto</dcsset:placement>"
 		$lines += "$i</dcsset:item>"
 	} else {
 		$lines += "$i<dcsset:item xsi:type=`"dcsset:SelectedItemField`">"
-		$lines += "$i`t<dcsset:field>$(Esc-Xml $fieldName)</dcsset:field>"
+		$lines += "$i`t<dcsset:field>$(Esc-XmlText $fieldName)</dcsset:field>"
 		$lines += "$i</dcsset:item>"
 	}
 	return $lines -join "`n"
@@ -1449,33 +1515,33 @@ function Build-DataParamFragment {
 		$lines += "$i`t<dcscor:use>false</dcscor:use>"
 	}
 
-	$lines += "$i`t<dcscor:parameter>$(Esc-Xml $parsed.parameter)</dcscor:parameter>"
+	$lines += "$i`t<dcscor:parameter>$(Esc-XmlText $parsed.parameter)</dcscor:parameter>"
 
 	if ($null -ne $parsed.value) {
 		if ($parsed.value -is [hashtable] -and $parsed.value.variant) {
 			$lines += "$i`t<dcscor:value xsi:type=`"v8:StandardPeriod`">"
-			$lines += "$i`t`t<v8:variant xsi:type=`"v8:StandardPeriodVariant`">$(Esc-Xml $parsed.value.variant)</v8:variant>"
+			$lines += "$i`t`t<v8:variant xsi:type=`"v8:StandardPeriodVariant`">$(Esc-XmlText $parsed.value.variant)</v8:variant>"
 			$lines += "$i`t`t<v8:startDate>0001-01-01T00:00:00</v8:startDate>"
 			$lines += "$i`t`t<v8:endDate>0001-01-01T00:00:00</v8:endDate>"
 			$lines += "$i`t</dcscor:value>"
 		} elseif (Test-EmptyValue $parsed.value) {
 			$lines += "$i`t<dcscor:value xsi:nil=`"true`"/>"
 		} elseif ("$($parsed.value)" -match '^\d{4}-\d{2}-\d{2}T') {
-			$lines += "$i`t<dcscor:value xsi:type=`"xs:dateTime`">$(Esc-Xml "$($parsed.value)")</dcscor:value>"
+			$lines += "$i`t<dcscor:value xsi:type=`"xs:dateTime`">$(Esc-XmlText "$($parsed.value)")</dcscor:value>"
 		} elseif ("$($parsed.value)" -eq "true" -or "$($parsed.value)" -eq "false") {
-			$lines += "$i`t<dcscor:value xsi:type=`"xs:boolean`">$(Esc-Xml "$($parsed.value)")</dcscor:value>"
+			$lines += "$i`t<dcscor:value xsi:type=`"xs:boolean`">$(Esc-XmlText "$($parsed.value)")</dcscor:value>"
 		} else {
-			$lines += "$i`t<dcscor:value xsi:type=`"xs:string`">$(Esc-Xml "$($parsed.value)")</dcscor:value>"
+			$lines += "$i`t<dcscor:value xsi:type=`"xs:string`">$(Esc-XmlText "$($parsed.value)")</dcscor:value>"
 		}
 	}
 
 	if ($parsed.viewMode) {
-		$lines += "$i`t<dcsset:viewMode>$(Esc-Xml $parsed.viewMode)</dcsset:viewMode>"
+		$lines += "$i`t<dcsset:viewMode>$(Esc-XmlText $parsed.viewMode)</dcsset:viewMode>"
 	}
 
 	if ($parsed.userSettingID) {
 		$uid = if ($parsed.userSettingID -eq "auto") { [System.Guid]::NewGuid().ToString() } else { $parsed.userSettingID }
-		$lines += "$i`t<dcsset:userSettingID>$(Esc-Xml $uid)</dcsset:userSettingID>"
+		$lines += "$i`t<dcsset:userSettingID>$(Esc-XmlText $uid)</dcsset:userSettingID>"
 	}
 
 	$lines += "$i</dcscor:item>"
@@ -1491,7 +1557,7 @@ function Build-OrderItemFragment {
 		$lines += "$i<dcsset:item xsi:type=`"dcsset:OrderItemAuto`"/>"
 	} else {
 		$lines += "$i<dcsset:item xsi:type=`"dcsset:OrderItemField`">"
-		$lines += "$i`t<dcsset:field>$(Esc-Xml $parsed.field)</dcsset:field>"
+		$lines += "$i`t<dcsset:field>$(Esc-XmlText $parsed.field)</dcsset:field>"
 		$lines += "$i`t<dcsset:orderType>$($parsed.direction)</dcsset:orderType>"
 		$lines += "$i</dcsset:item>"
 	}
@@ -1504,12 +1570,12 @@ function Build-DataSetLinkFragment {
 	$i = $indent
 	$lines = @()
 	$lines += "$i<dataSetLink>"
-	$lines += "$i`t<sourceDataSet>$(Esc-Xml $parsed.source)</sourceDataSet>"
-	$lines += "$i`t<destinationDataSet>$(Esc-Xml $parsed.dest)</destinationDataSet>"
-	$lines += "$i`t<sourceExpression>$(Esc-Xml $parsed.sourceExpr)</sourceExpression>"
-	$lines += "$i`t<destinationExpression>$(Esc-Xml $parsed.destExpr)</destinationExpression>"
+	$lines += "$i`t<sourceDataSet>$(Esc-XmlText $parsed.source)</sourceDataSet>"
+	$lines += "$i`t<destinationDataSet>$(Esc-XmlText $parsed.dest)</destinationDataSet>"
+	$lines += "$i`t<sourceExpression>$(Esc-XmlText $parsed.sourceExpr)</sourceExpression>"
+	$lines += "$i`t<destinationExpression>$(Esc-XmlText $parsed.destExpr)</destinationExpression>"
 	if ($parsed.parameter) {
-		$lines += "$i`t<parameter>$(Esc-Xml $parsed.parameter)</parameter>"
+		$lines += "$i`t<parameter>$(Esc-XmlText $parsed.parameter)</parameter>"
 	}
 	$lines += "$i</dataSetLink>"
 	return $lines -join "`n"
@@ -1521,9 +1587,9 @@ function Build-DataSetQueryFragment {
 	$i = $indent
 	$lines = @()
 	$lines += "$i<dataSet xsi:type=`"DataSetQuery`">"
-	$lines += "$i`t<name>$(Esc-Xml $parsed.name)</name>"
-	$lines += "$i`t<dataSource>$(Esc-Xml $parsed.dataSource)</dataSource>"
-	$lines += "$i`t<query>$(Esc-Xml $parsed.query)</query>"
+	$lines += "$i`t<name>$(Esc-XmlText $parsed.name)</name>"
+	$lines += "$i`t<dataSource>$(Esc-XmlText $parsed.dataSource)</dataSource>"
+	$lines += "$i`t<query>$(Esc-XmlText $parsed.query)</query>"
 	$lines += "$i</dataSet>"
 	return $lines -join "`n"
 }
@@ -1534,7 +1600,7 @@ function Build-VariantFragment {
 	$i = $indent
 	$lines = @()
 	$lines += "$i<settingsVariant>"
-	$lines += "$i`t<dcsset:name>$(Esc-Xml $parsed.name)</dcsset:name>"
+	$lines += "$i`t<dcsset:name>$(Esc-XmlText $parsed.name)</dcsset:name>"
 	$lines += (Build-MLTextXml -tag "dcsset:presentation" -text $parsed.presentation -indent "$i`t")
 	$lines += "$i`t<dcsset:settings xmlns:style=`"http://v8.1c.ru/8.1/data/ui/style`" xmlns:sys=`"http://v8.1c.ru/8.1/data/ui/fonts/system`" xmlns:web=`"http://v8.1c.ru/8.1/data/ui/colors/web`" xmlns:win=`"http://v8.1c.ru/8.1/data/ui/colors/windows`">"
 	$lines += "$i`t`t<dcsset:selection>"
@@ -1558,11 +1624,11 @@ function Emit-FilterComparison {
 	param($f, [string]$indent)
 	$lines = @()
 	$lines += "$indent<dcsset:item xsi:type=`"dcsset:FilterItemComparison`">"
-	$lines += "$indent`t<dcsset:left xsi:type=`"dcscor:Field`">$(Esc-Xml $f.field)</dcsset:left>"
-	$lines += "$indent`t<dcsset:comparisonType>$(Esc-Xml $f.op)</dcsset:comparisonType>"
+	$lines += "$indent`t<dcsset:left xsi:type=`"dcscor:Field`">$(Esc-XmlText $f.field)</dcsset:left>"
+	$lines += "$indent`t<dcsset:comparisonType>$(Esc-XmlText $f.op)</dcsset:comparisonType>"
 	if ($null -ne $f.value) {
 		$vt = if ($f["valueType"]) { $f["valueType"] } else { "xs:string" }
-		$lines += "$indent`t<dcsset:right xsi:type=`"$vt`">$(Esc-Xml "$($f.value)")</dcsset:right>"
+		$lines += "$indent`t<dcsset:right xsi:type=`"$vt`">$(Esc-XmlText "$($f.value)")</dcsset:right>"
 	}
 	$lines += "$indent</dcsset:item>"
 	return $lines
@@ -1580,7 +1646,7 @@ function Build-ConditionalAppearanceItemFragment {
 		$lines += "$i`t<dcsset:selection>"
 		foreach ($fld in $parsed.fields) {
 			$lines += "$i`t`t<dcsset:item>"
-			$lines += "$i`t`t`t<dcsset:field>$(Esc-Xml $fld)</dcsset:field>"
+			$lines += "$i`t`t`t<dcsset:field>$(Esc-XmlText $fld)</dcsset:field>"
 			$lines += "$i`t`t</dcsset:item>"
 		}
 		$lines += "$i`t</dcsset:selection>"
@@ -1612,21 +1678,21 @@ function Build-ConditionalAppearanceItemFragment {
 
 	$val = $parsed.value
 	$lines += "$i`t`t<dcscor:item xsi:type=`"dcsset:SettingsParameterValue`">"
-	$lines += "$i`t`t`t<dcscor:parameter>$(Esc-Xml $parsed.param)</dcscor:parameter>"
+	$lines += "$i`t`t`t<dcscor:parameter>$(Esc-XmlText $parsed.param)</dcscor:parameter>"
 
 	if ($val -match '^(web|style|win):') {
-		$lines += "$i`t`t`t<dcscor:value xsi:type=`"v8ui:Color`">$(Esc-Xml $val)</dcscor:value>"
+		$lines += "$i`t`t`t<dcscor:value xsi:type=`"v8ui:Color`">$(Esc-XmlText $val)</dcscor:value>"
 	} elseif ($val -eq "true" -or $val -eq "false") {
-		$lines += "$i`t`t`t<dcscor:value xsi:type=`"xs:boolean`">$(Esc-Xml $val)</dcscor:value>"
+		$lines += "$i`t`t`t<dcscor:value xsi:type=`"xs:boolean`">$(Esc-XmlText $val)</dcscor:value>"
 	} elseif ($parsed.param -eq "Формат" -or $parsed.param -eq "Текст" -or $parsed.param -eq "Заголовок") {
 		$lines += "$i`t`t`t<dcscor:value xsi:type=`"v8:LocalStringType`">"
 		$lines += "$i`t`t`t`t<v8:item>"
 		$lines += "$i`t`t`t`t`t<v8:lang>ru</v8:lang>"
-		$lines += "$i`t`t`t`t`t<v8:content>$(Esc-Xml $val)</v8:content>"
+		$lines += "$i`t`t`t`t`t<v8:content>$(Esc-XmlText $val)</v8:content>"
 		$lines += "$i`t`t`t`t</v8:item>"
 		$lines += "$i`t`t`t</dcscor:value>"
 	} else {
-		$lines += "$i`t`t`t<dcscor:value xsi:type=`"xs:string`">$(Esc-Xml $val)</dcscor:value>"
+		$lines += "$i`t`t`t<dcscor:value xsi:type=`"xs:string`">$(Esc-XmlText $val)</dcscor:value>"
 	}
 
 	$lines += "$i`t`t</dcscor:item>"
@@ -1645,7 +1711,7 @@ function Build-StructureItemFragment {
 
 	# name
 	if ($item["name"]) {
-		$lines += "$i`t<dcsset:name>$(Esc-Xml $item["name"])</dcsset:name>"
+		$lines += "$i`t<dcsset:name>$(Esc-XmlText $item["name"])</dcsset:name>"
 	}
 
 	# groupItems
@@ -1656,7 +1722,7 @@ function Build-StructureItemFragment {
 		$lines += "$i`t<dcsset:groupItems>"
 		foreach ($field in $groupBy) {
 			$lines += "$i`t`t<dcsset:item xsi:type=`"dcsset:GroupItemField`">"
-			$lines += "$i`t`t`t<dcsset:field>$(Esc-Xml $field)</dcsset:field>"
+			$lines += "$i`t`t`t<dcsset:field>$(Esc-XmlText $field)</dcsset:field>"
 			$lines += "$i`t`t`t<dcsset:groupType>Items</dcsset:groupType>"
 			$lines += "$i`t`t`t<dcsset:periodAdditionType>None</dcsset:periodAdditionType>"
 			$lines += "$i`t`t`t<dcsset:periodAdditionBegin xsi:type=`"xs:dateTime`">0001-01-01T00:00:00</dcsset:periodAdditionBegin>"
@@ -1699,17 +1765,17 @@ function Build-OutputParamFragment {
 
 	$lines = @()
 	$lines += "$i<dcscor:item xsi:type=`"dcsset:SettingsParameterValue`">"
-	$lines += "$i`t<dcscor:parameter>$(Esc-Xml $key)</dcscor:parameter>"
+	$lines += "$i`t<dcscor:parameter>$(Esc-XmlText $key)</dcscor:parameter>"
 
 	if ($ptype -eq "mltext") {
 		$lines += "$i`t<dcscor:value xsi:type=`"v8:LocalStringType`">"
 		$lines += "$i`t`t<v8:item>"
 		$lines += "$i`t`t`t<v8:lang>ru</v8:lang>"
-		$lines += "$i`t`t`t<v8:content>$(Esc-Xml $val)</v8:content>"
+		$lines += "$i`t`t`t<v8:content>$(Esc-XmlText $val)</v8:content>"
 		$lines += "$i`t`t</v8:item>"
 		$lines += "$i`t</dcscor:value>"
 	} else {
-		$lines += "$i`t<dcscor:value xsi:type=`"$ptype`">$(Esc-Xml $val)</dcscor:value>"
+		$lines += "$i`t<dcscor:value xsi:type=`"$ptype`">$(Esc-XmlText $val)</dcscor:value>"
 	}
 
 	$lines += "$i</dcscor:item>"
@@ -1859,7 +1925,7 @@ function Set-OrCreateChildElement($parent, [string]$localName, [string]$nsUri, [
 	} else {
 		$prefix = $parent.GetPrefixOfNamespace($nsUri)
 		$qualName = if ($prefix) { "${prefix}:$localName" } else { $localName }
-		$fragXml = "$indent<$qualName>$(Esc-Xml $value)</$qualName>"
+		$fragXml = "$indent<$qualName>$(Esc-XmlText $value)</$qualName>"
 		$nodes = Import-Fragment $xmlDoc $fragXml
 		foreach ($node in $nodes) {
 			Insert-BeforeElement $parent $node $null $indent
@@ -1884,7 +1950,7 @@ function Set-OrCreateChildElementWithAttr($parent, [string]$localName, [string]$
 		$prefix = $parent.GetPrefixOfNamespace($nsUri)
 		$qualName = if ($prefix) { "${prefix}:$localName" } else { $localName }
 		$typeAttr = if ($xsiType) { " xsi:type=`"$xsiType`"" } else { "" }
-		$fragXml = "$indent<$qualName$typeAttr>$(Esc-Xml $value)</$qualName>"
+		$fragXml = "$indent<$qualName$typeAttr>$(Esc-XmlText $value)</$qualName>"
 		$nodes = Import-Fragment $xmlDoc $fragXml
 		foreach ($node in $nodes) {
 			Insert-BeforeElement $parent $node $null $indent
@@ -2179,7 +2245,6 @@ if ($rootOpenMatch.Success) { $script:RawRootOpening = $rootOpenMatch.Value } el
 
 # Detect line ending convention so save can normalize back to whatever the source used.
 # 1С Designer writes CRLF on Windows; LF-edited files should stay LF.
-$script:LineEnding = if ($script:RawOriginal.Contains("`r`n")) { "`r`n" } else { "`n" }
 
 $xmlDoc = New-Object System.Xml.XmlDocument
 $xmlDoc.PreserveWhitespace = $true
@@ -2421,7 +2486,7 @@ switch ($Operation) {
 				$titleFrag = $null
 				if ($existingTitle) {
 					$rawTitle = $existingTitle.OuterXml
-					$rawTitle = [regex]::Replace($rawTitle, ' xmlns(?::\w+)?="[^"]*"', '')
+					$rawTitle = Strip-InheritedXmlns $rawTitle
 					# Count <v8:item> occurrences — if >1, treat as multi-lang.
 					$itemCount = ([regex]::Matches($rawTitle, '<v8:item>')).Count
 					if ($itemCount -gt 1) {
@@ -2558,7 +2623,7 @@ switch ($Operation) {
 								}
 							}
 						}
-						$fragXml = "$childIndent<$key>$(Esc-Xml $value)</$key>"
+						$fragXml = "$childIndent<$key>$(Esc-XmlText $value)</$key>"
 						$nodes = Import-Fragment $xmlDoc $fragXml
 						foreach ($node in $nodes) {
 							Insert-BeforeElement $paramEl $node $refNode $childIndent
@@ -3219,7 +3284,7 @@ switch ($Operation) {
 			foreach ($field in $t.groupBy) {
 				$lines = @()
 				$lines += "$itemIndent<dcsset:item xsi:type=`"dcsset:GroupItemField`">"
-				$lines += "$itemIndent`t<dcsset:field>$(Esc-Xml $field)</dcsset:field>"
+				$lines += "$itemIndent`t<dcsset:field>$(Esc-XmlText $field)</dcsset:field>"
 				$lines += "$itemIndent`t<dcsset:groupType>Items</dcsset:groupType>"
 				$lines += "$itemIndent`t<dcsset:periodAdditionType>None</dcsset:periodAdditionType>"
 				$lines += "$itemIndent`t<dcsset:periodAdditionBegin xsi:type=`"xs:dateTime`">0001-01-01T00:00:00</dcsset:periodAdditionBegin>"
@@ -3535,18 +3600,18 @@ switch ($Operation) {
 				$valLines = @()
 				if ($parsed.value -is [hashtable] -and $parsed.value.variant) {
 					$valLines += "$itemIndent<dcscor:value xsi:type=`"v8:StandardPeriod`">"
-					$valLines += "$itemIndent`t<v8:variant xsi:type=`"v8:StandardPeriodVariant`">$(Esc-Xml $parsed.value.variant)</v8:variant>"
+					$valLines += "$itemIndent`t<v8:variant xsi:type=`"v8:StandardPeriodVariant`">$(Esc-XmlText $parsed.value.variant)</v8:variant>"
 					$valLines += "$itemIndent`t<v8:startDate>0001-01-01T00:00:00</v8:startDate>"
 					$valLines += "$itemIndent`t<v8:endDate>0001-01-01T00:00:00</v8:endDate>"
 					$valLines += "$itemIndent</dcscor:value>"
 				} elseif (Test-EmptyValue $parsed.value) {
 					$valLines += "$itemIndent<dcscor:value xsi:nil=`"true`"/>"
 				} elseif ("$($parsed.value)" -match '^\d{4}-\d{2}-\d{2}T') {
-					$valLines += "$itemIndent<dcscor:value xsi:type=`"xs:dateTime`">$(Esc-Xml "$($parsed.value)")</dcscor:value>"
+					$valLines += "$itemIndent<dcscor:value xsi:type=`"xs:dateTime`">$(Esc-XmlText "$($parsed.value)")</dcscor:value>"
 				} elseif ("$($parsed.value)" -eq "true" -or "$($parsed.value)" -eq "false") {
-					$valLines += "$itemIndent<dcscor:value xsi:type=`"xs:boolean`">$(Esc-Xml "$($parsed.value)")</dcscor:value>"
+					$valLines += "$itemIndent<dcscor:value xsi:type=`"xs:boolean`">$(Esc-XmlText "$($parsed.value)")</dcscor:value>"
 				} else {
-					$valLines += "$itemIndent<dcscor:value xsi:type=`"xs:string`">$(Esc-Xml "$($parsed.value)")</dcscor:value>"
+					$valLines += "$itemIndent<dcscor:value xsi:type=`"xs:string`">$(Esc-XmlText "$($parsed.value)")</dcscor:value>"
 				}
 				$valXml = $valLines -join "`n"
 				$valNodes = Import-Fragment $xmlDoc $valXml
@@ -3696,7 +3761,7 @@ switch ($Operation) {
 					# what the user explicitly set.
 					if ($kv.Contains($gc.LocalName)) { continue }
 					$raw = $gc.OuterXml
-					$raw = [regex]::Replace($raw, ' xmlns(?::\w+)?="[^"]*"', '')
+					$raw = Strip-InheritedXmlns $raw
 					$preservedRoleChildren += $raw
 				}
 				Remove-NodeWithWhitespace $oldRole
@@ -3720,7 +3785,7 @@ switch ($Operation) {
 				}
 			}
 			foreach ($k in $kv.Keys) {
-				$lines += "$fieldIndent`t<dcscom:$k>$(Esc-Xml $kv[$k])</dcscom:$k>"
+				$lines += "$fieldIndent`t<dcscom:$k>$(Esc-XmlText $kv[$k])</dcscom:$k>"
 			}
 			foreach ($raw in $preservedRoleChildren) {
 				$lines += "$fieldIndent`t" + $raw
@@ -4032,17 +4097,16 @@ if ($script:RawRootOpening) {
 	$content = [regex]::Replace($content, '<DataCompositionSchema\b[^>]*>', { param($m) $script:RawRootOpening })
 }
 
-#   (2) normalize self-closing tags: `.NET XmlDocument` adds a space before `/>`
-#       (`<foo bar="x" />`) but 1C-Designer writes `<foo bar="x"/>`. Strip the space.
-$content = [regex]::Replace($content, '(?<=\S) />', '/>')
+#   (2) Пустой элемент: XmlWriter отдаёт `<a />`, Конфигуратор пишет `<a/>`. Внутри
+#       CDATA/комментария ` />` может быть содержимым (там `>` не экранируется),
+#       поэтому они идут первыми ветками альтернации и возвращаются как есть.
+$content = [regex]::Replace($content, '(?s)<!\[CDATA\[.*?\]\]>|<!--.*?-->|(?<=\S) />', { param($m) if ($m.Value -eq ' />') { '/>' } else { $m.Value } })
 
-#   (3) normalize line endings to match source — operations may mix LF (from new
-#       fragments) with whatever the source used (CRLF on Windows, LF on Linux/git).
-if ($script:LineEnding -eq "`r`n") {
-	$content = $content -replace '(?<!\r)\n', "`r`n"
-} else {
-	$content = $content -replace "`r`n", "`n"
-}
+#   (3) Целевой перевод строки: стиль файла-назначения — правка наследует его (#44/#46/#47),
+#       новый файл получает канон выгрузки CRLF. Зеркало _detect_xml_style в py-порту.
+#       Нужно потому, что операции подмешивают LF (новые фрагменты) к стилю источника.
+$targetEol = if ((Test-Path -LiteralPath $resolvedPath) -and ([System.IO.File]::ReadAllText($resolvedPath) -notmatch "`r`n")) { "`n" } else { "`r`n" }
+$content = ($content -replace "`r`n", "`n") -replace "`n", $targetEol
 
 $enc = New-Object System.Text.UTF8Encoding($true)
 [System.IO.File]::WriteAllText($resolvedPath, $content, $enc)
