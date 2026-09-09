@@ -17,7 +17,7 @@
 | **Wim_Pif**    | `C:\1c\Cursor_1c\WORK\Wim_PIF\SRC` | example |
 | **WIM_FIn**    | `C:\1c\Cursor_1c\WORK\WIM_FIn`    | example |
 | **Wim_Mo**     | `C:\1c\Cursor_1c\WORK\Wim_Mo`     | example |
-| **Wim_Fo**     | `C:\1c\Cursor_1c\WORK\WIM_Fo`     | example |
+| **Wim_Fo**     | `C:\1c\Cursor_1c\WORK\WIM_Fo`     | example; IMAPPS-37889; ПереносЗапросовКДанным |
 
 Исходники баз в репозиторий не копируются; путь всегда берётся из **source-path.txt** в папке базы.
 
