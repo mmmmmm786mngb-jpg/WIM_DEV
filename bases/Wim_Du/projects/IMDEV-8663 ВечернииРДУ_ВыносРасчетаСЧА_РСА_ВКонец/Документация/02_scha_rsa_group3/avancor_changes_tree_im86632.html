@@ -1,0 +1,720 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <title>IMDEV-8663.2 — дерево изменений для Аванкор (перенос IM86632 в базовую CF)</title>
+  <style>
+    :root {
+      --add: #276749;
+      --chg: #2b6cb0;
+      --del: #9b2c2c;
+      --info: #744210;
+      --mute: #4a5568;
+    }
+    body {
+      font-family: "Segoe UI", Tahoma, sans-serif;
+      margin: 1rem 2rem 2.5rem;
+      background: #fafafa;
+      color: #1a202c;
+      line-height: 1.45;
+    }
+    h1 { font-size: 1.35rem; margin: 0 0 0.35rem 0; }
+    h2.sec { font-size: 1.05rem; margin: 1rem 0 0.4rem; }
+    .subtitle { color: #718096; font-size: 0.92rem; margin: 0 0 1rem 0; }
+    .ref-block {
+      margin-bottom: 1rem;
+      padding: 0.75rem 1rem;
+      background: #ebf8ff;
+      border: 1px solid #90cdf4;
+      border-radius: 6px;
+      font-size: 0.9rem;
+    }
+    .ref-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 0.8rem;
+      margin-bottom: 1rem;
+    }
+    .ref-card {
+      background: #fff;
+      border: 1px solid #e2e8f0;
+      border-radius: 6px;
+      padding: 0.75rem 0.9rem;
+      font-size: 0.9rem;
+    }
+    .ref-card h2 { margin: 0 0 0.45rem 0; font-size: 0.98rem; }
+    .ref-card ul { margin: 0.35rem 0 0; padding-left: 1.15rem; }
+    .ref-card li { margin: 0.2rem 0; }
+    .vendor-note { border-color: #f6ad55; background: #fffaf0; }
+    .good { border-color: #9ae6b4; background: #f0fff4; }
+    code {
+      background: #edf2f7;
+      padding: 0.05rem 0.35rem;
+      border-radius: 3px;
+      font-family: Consolas, monospace;
+      font-size: 0.88em;
+    }
+    ul.tree {
+      list-style: none;
+      padding-left: 1.1rem;
+      margin: 0.3rem 0 1rem;
+    }
+    ul.tree ul {
+      list-style: none;
+      padding-left: 1.15rem;
+      border-left: 1px solid #e2e8f0;
+      margin: 0.15rem 0 0.15rem 0.35rem;
+    }
+    .branch { margin: 0.22rem 0; }
+    .branch > .cap {
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      padding: 0.12rem 0.2rem;
+      flex-wrap: wrap;
+    }
+    .branch > .cap:hover { background: #edf2f7; border-radius: 4px; }
+    .toggle { font-size: 0.72rem; color: #718096; user-select: none; }
+    .name { font-weight: 600; }
+    .leaf {
+      padding-left: 1.4rem;
+      margin: 0.18rem 0;
+      display: flex;
+      align-items: flex-start;
+      gap: 0.4rem;
+      flex-wrap: wrap;
+    }
+    .leaf .name {
+      font-weight: 400;
+      font-family: Consolas, monospace;
+      font-size: 0.88rem;
+    }
+    .hint {
+      flex-basis: 100%;
+      margin: 0.1rem 0 0.25rem 1.55rem;
+      font-size: 0.84rem;
+      color: #4a5568;
+    }
+    .tag {
+      font-size: 0.74rem;
+      padding: 0.1rem 0.42rem;
+      border-radius: 4px;
+      white-space: nowrap;
+      font-weight: 600;
+    }
+    .tag.add { background: #c6f6d5; color: var(--add); }
+    .tag.chg { background: #bee3f8; color: var(--chg); }
+    .tag.del { background: #fed7d7; color: var(--del); }
+    .tag.cf { background: #feebc8; color: var(--info); }
+    .tag.ext { background: #e9d8fd; color: #553c9a; }
+    .tag.a { background: #e2e8f0; color: var(--mute); }
+    .legend {
+      margin-top: 0.5rem;
+      padding: 0.75rem 1rem;
+      background: #fff;
+      border: 1px solid #e2e8f0;
+      border-radius: 6px;
+      font-size: 0.85rem;
+    }
+    .legend h3 { margin: 0 0 0.4rem 0; font-size: 0.95rem; }
+    .legend span { display: inline-block; margin: 0 0.55rem 0.25rem 0; }
+    table.steps {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.9rem;
+      margin: 0.75rem 0 1.2rem;
+      background: #fff;
+    }
+    table.steps th, table.steps td {
+      border: 1px solid #e2e8f0;
+      padding: 0.55rem 0.7rem;
+      vertical-align: top;
+      text-align: left;
+    }
+    table.steps th { background: #edf2f7; }
+    .foot {
+      margin-top: 1.2rem;
+      font-size: 0.82rem;
+      color: #718096;
+    }
+    ol.compact { margin: 0.35rem 0 0; padding-left: 1.2rem; }
+  </style>
+</head>
+<body>
+
+  <div class="ref-block">
+    <strong>Вендор: Аванкор (AvancoreDU).</strong>
+    Источник — расширение <code>IM86632</code> (CFE). Перенести в базовую конфигурацию ДУ
+    только код и метаданные из этого дерева.
+    Директивы расширения (<code>&amp;ИзменениеИКонтроль</code>, <code>&amp;После</code>,
+    <code>#Вставка</code>, <code>#Удаление</code>) в CF <b>не копировать</b> — влить тело
+    в типовые процедуры. Не подменять модуль целиком файлом из CFE.
+    Префикс <code>IM86632_</code> только у перехватов: в CF править исходные методы.
+    Новые процедуры в CFE уже без префикса — имена оставить.
+    После переноса расширение IM86632 снять с ИБ.
+  </div>
+
+  <h1>Дерево изменений для переноса IM86632 → базовая CF</h1>
+  <p class="subtitle">
+    IMDEV-8663.2: раздельный запуск группы расчета СЧА/РСА и пакетный расчет операции 1000.
+    Целевая CF 1.5.29.11 (диспетчер порций 8663.1 уже в типовой). Артефакт: <code>IM86632.cfe</code>.
+  </p>
+
+  <div class="ref-grid">
+    <div class="ref-card good">
+      <h2>Что внести в CF</h2>
+      <ul>
+        <li>Константа <code>ИспользоватьПредварительныеЗапросыДляРегламентовСЧА_РСА</code>
+          (Булево, по умолчанию Ложь): права в штатные роли и вывести на форму настроек системы
+          рядом с аналогичными константами предварительных запросов (утро / вечер).</li>
+        <li>Форма <code>РегламентныеПериоды.РегламентныйПериод</code>:
+          6 реквизитов формы (на форму — только флажок
+          <code>ЗапускатьРасчетСЧАПослеВечерних</code>) и правки модуля формы.
+          Реквизиты справочника не менять.</li>
+        <li>Модуль менеджера <code>РегламентныеПериоды</code>: 4 правки типовых + 5 новых методов.</li>
+        <li>Модуль объекта <code>РасчетСЧА_РСА</code>: 1 правка типового.</li>
+        <li>Модуль менеджера <code>РасчетСЧА_РСА</code>: 1 правка типового + 16 новых методов.</li>
+        <li>Общий модуль <code>ИсполняемыеПроцедурыЗакрытияПериода</code>: 1 правка типового.</li>
+        <li>РС <code>ЗначенияПараметровДоговораДУ</code>: одна новая функция менеджера.</li>
+      </ul>
+    </div>
+    <div class="ref-card vendor-note">
+      <h2>Как читать</h2>
+      <ul>
+        <li><span class="tag add">ДОБАВИТЬ</span> — новый объект / метод / реквизит формы.</li>
+        <li><span class="tag chg">ИЗМЕНИТЬ</span> — вставка в существующий типовой метод.</li>
+        <li><span class="tag del">УБРАТЬ</span> — заменить типовой фрагмент.</li>
+        <li><span class="tag cf">в CF</span> — куда вносить.</li>
+        <li><span class="tag ext">из CFE</span> — откуда взять код.</li>
+        <li>Группу справочника <code>ВидыОперацийЗакрытияПериода</code> с кодом
+          <code>3. "Расчет СЧА/РСА"</code> в конфигураторе <b>не создавать</b> —
+          это данные ИБ, не метаданные. Операции 1010–1030 в коде не менять.</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="ref-card" style="margin-bottom:1rem; border-color:#90cdf4; background:#ebf8ff;">
+    <h2>Инвентаризация CFE → действие в CF</h2>
+    <table class="steps" style="margin:0;">
+      <tr>
+        <th>Объект в CFE</th>
+        <th style="width:22%;">Действие</th>
+        <th>Комментарий</th>
+      </tr>
+      <tr>
+        <td>Константа <code>ИспользоватьПредварительныеЗапросыДляРегламентовСЧА_РСА</code></td>
+        <td><span class="tag add">→ в CF</span></td>
+        <td>Булево. Синоним и подсказка из XML константы. Пустые <code>Ext/*.bsl</code> не копировать.
+          Вывести на форму настроек системы рядом с константами утреннего/вечернего пакета.</td>
+      </tr>
+      <tr>
+        <td>Роль <code>ПраваНаРегламентыСЧА_РСА</code></td>
+        <td><span class="tag chg">права, не роль</span></td>
+        <td>Отдельную роль в CF не создавать. Read/Update/View/Edit константы — в штатные роли ДУ
+          (как у соседних констант предварительных запросов).</td>
+      </tr>
+      <tr>
+        <td>Справочник <code>РегламентныеПериоды</code> (заимствование)</td>
+        <td><span class="tag a">не объект CF</span></td>
+        <td>Справочник уже есть. Перенести модуль менеджера и правки формы.</td>
+      </tr>
+      <tr>
+        <td>Форма <code>РегламентныйПериод</code> + модуль</td>
+        <td><span class="tag chg">→ правки в CF</span></td>
+        <td>Форму целиком не подменять. Добавить <b>реквизиты формы</b>
+          (не справочника): <code>ЗапускатьРасчетСЧАПослеВечерних</code>,
+          <code>ГруппаЗапуска</code>, <code>УчитыватьВыполненныеЗапуска</code>,
+          <code>ПропуститьПредупреждениеСЧА</code>, <code>КодВечернейГруппы</code>,
+          <code>КодГруппыСЧА</code>. На форму вывести только флажок. Затем обработчики модуля.
+          Картинки формы не копировать.</td>
+      </tr>
+      <tr>
+        <td>Модуль менеджера <code>РегламентныеПериоды</code></td>
+        <td><span class="tag chg">→ правки в CF</span></td>
+        <td>Фрагменты <code>#Вставка</code> в 4 типовых процедурах + 5 новых методов.</td>
+      </tr>
+      <tr>
+        <td>Документ <code>РасчетСЧА_РСА</code> (заимствование реквизитов)</td>
+        <td><span class="tag a">не объект CF</span></td>
+        <td>Реквизиты уже в CF. Новых реквизитов документа нет. Перенести модули объекта и менеджера.</td>
+      </tr>
+      <tr>
+        <td>Модуль объекта / менеджера <code>РасчетСЧА_РСА</code></td>
+        <td><span class="tag chg">→ правки в CF</span></td>
+        <td>Объект: 1 правка типового. Менеджер: 1 правка типового + 16 новых методов.</td>
+      </tr>
+      <tr>
+        <td>Общий модуль <code>ИсполняемыеПроцедурыЗакрытияПериода</code></td>
+        <td><span class="tag chg">→ правки в CF</span></td>
+        <td>1 правка типового: <code>Операция_1000_РасчетРСА_СЧА</code>. 1010–1030 не трогать.</td>
+      </tr>
+      <tr>
+        <td>Модуль менеджера РС <code>ЗначенияПараметровДоговораДУ</code></td>
+        <td><span class="tag chg">→ правки в CF</span></td>
+        <td>Регистр уже есть, не создавать. Добавить одну новую функцию
+          <code>ЗначенияПараметровДоговоровДУПакетно</code>.</td>
+      </tr>
+      <tr>
+        <td>Язык, <code>Configuration.xml</code>, общие картинки</td>
+        <td><span class="tag a">не переносить</span></td>
+        <td>Служебное расширение.</td>
+      </tr>
+    </table>
+  </div>
+
+  <h2 class="sec">Порядок работ</h2>
+  <p style="font-size:0.9rem; margin:0 0 0.6rem; color:#4a5568;">
+    Сначала константа и форма, затем менеджер периодов, затем документ и операция 1000, затем функция регистра.
+  </p>
+
+  <table class="steps">
+    <tr>
+      <th style="width:42px;">Шаг</th>
+      <th style="width:88px;">Действие</th>
+      <th style="width:28%;">Куда</th>
+      <th>Что сделать</th>
+    </tr>
+    <tr>
+      <td>1</td>
+      <td><span class="tag add">СОЗДАТЬ</span></td>
+      <td>Константа <code>ИспользоватьПредварительныеЗапросыДляРегламентовСЧА_РСА</code></td>
+      <td>
+        Тип Булево, по умолчанию <b>Ложь</b>.
+        Синоним: «Использовать предварительные запросы для регламентов СЧА/РСА».
+        На форму «Настройка системы» рядом с аналогичными константами
+        предварительных запросов (утро / вечер). Права — в штатные роли.
+      </td>
+    </tr>
+    <tr>
+      <td>2</td>
+      <td><span class="tag add">ВСТАВИТЬ</span></td>
+      <td>
+        <code>Справочник.РегламентныеПериоды</code><br>
+        → модуль менеджера (новые методы)
+      </td>
+      <td>
+        Скопировать как есть:
+        <ol class="compact">
+          <li><code>КодВечернейГруппыОпераций</code> — Экспорт</li>
+          <li><code>КодГруппыРасчетаСЧА_РСА</code> — Экспорт, строка <code>3. "Расчет СЧА/РСА"</code></li>
+          <li><code>ЕстьПланыГруппыСЧА</code> — Экспорт</li>
+          <li><code>ЗаполнитьПараметрыСохраненияПакетнымиДаннымиГруппыСЧА</code> — Экспорт</li>
+          <li><code>ДатаРасчетаСЧА_РСА</code> — не экспорт; формула как у
+            <code>ПолучитьДатуСВременемОкончанияРабочегоДня</code></li>
+        </ol>
+      </td>
+    </tr>
+    <tr>
+      <td>3</td>
+      <td><span class="tag chg">ИЗМЕНИТЬ</span></td>
+      <td>→ <code>СформироватьРегламентныеОперации</code></td>
+      <td>
+        После блока вечерней предподготовки вставить ветку: если константа шага 1 = Истина
+        и код группы = <code>КодГруппыРасчетаСЧА_РСА()</code> —
+        вызвать <code>ЗаполнитьПараметрыСохраненияПакетнымиДаннымиГруппыСЧА(..., ДатаПериода)</code>
+        (не <code>ДатаПроведения</code>).
+      </td>
+    </tr>
+    <tr>
+      <td>4</td>
+      <td><span class="tag chg">ИЗМЕНИТЬ</span></td>
+      <td>→ <code>ОчиститьПакетныеДанныеПараметрыСохранения</code></td>
+      <td>
+        В массив ключей добавить
+        <code>СоответствиеДоговорТаблицаБУ_СЧА_РСА</code> и
+        <code>СоответствиеДоговорТаблицаУУ_СЧА_РСА</code>.
+      </td>
+    </tr>
+    <tr>
+      <td>5</td>
+      <td><span class="tag chg">ИЗМЕНИТЬ</span></td>
+      <td>→ <code>ОбработатьПачкуДиспетчером</code></td>
+      <td>
+        Три вставки (процедуру целиком из CFE не копировать — диспетчер уже в CF):
+        <ol class="compact">
+          <li>перед циклом запуска: <code>ТекущаяГруппаЧанков = Неопределено</code>;</li>
+          <li>барьер групп: не стартовать чанк следующей группы, пока живы ФЗ текущей;</li>
+          <li>в <code>КлючиСоответствий</code> — те же два ключа СЧА/РСА (срез по договорам чанка).</li>
+        </ol>
+      </td>
+    </tr>
+    <tr>
+      <td>6</td>
+      <td><span class="tag chg">ИЗМЕНИТЬ</span></td>
+      <td>→ <code>СформироватьДокументыЗакрытияПериода</code></td>
+      <td>
+        Достать из <code>ПараметрыСохранения</code> таблицы БУ/УУ текущего договора.
+        Если обе не Неопределено — положить структуру в <code>СоответствиеОперацияТаблица</code>
+        с ключом <code>ИсполняемыеПроцедурыЗакрытияПериода.Операция_1000_РасчетРСА_СЧА</code>
+        (поля <code>ТаблицаБУ</code>, <code>ТаблицаУУ</code>; пустая ТЗ допустима).
+      </td>
+    </tr>
+    <tr>
+      <td>7</td>
+      <td><span class="tag add">ВСТАВИТЬ</span></td>
+      <td>
+        РС <code>ЗначенияПараметровДоговораДУ</code><br>
+        → модуль менеджера
+      </td>
+      <td>
+        Новая <code>ЗначенияПараметровДоговоровДУПакетно</code> (Экспорт) — пакетный аналог
+        <code>ЗначенияПараметровДоговораДУ</code>: срез последних по массиву договоров.
+      </td>
+    </tr>
+    <tr>
+      <td>8</td>
+      <td><span class="tag add">ВСТАВИТЬ</span></td>
+      <td>
+        Документ <code>РасчетСЧА_РСА</code><br>
+        → модуль менеджера (новые методы)
+      </td>
+      <td>
+        <code>ПолучитьСуммыРСА_СЧА_Пакетно</code> (Экспорт),
+        <code>ТекстЗапросаОднодоговорныйБУ</code> / <code>УУ</code> / <code>СС</code>,
+        <code>ТекстЗапросаБУ</code> / <code>УУ</code> / <code>СС</code>,
+        <code>ВставитьПолеДоговорДУПеред</code>,
+        <code>НаборыСчетовПоПризнакам</code>,
+        <code>ПризнакиИзЗначенийПараметров</code>,
+        <code>ПодготовитьГруппыДоговоровПоСигнатуре</code>,
+        <code>СигнатураПризнаков</code>,
+        <code>СоздатьТаблицуПоказателей</code>,
+        <code>ДобавитьДанныеБУПоГруппе</code>,
+        <code>ДобавитьДанныеУУПоГруппе</code>,
+        <code>ДобавитьДанныеССПоГруппе</code>.<br>
+        Курсы / валюту / площадку из стр. 26–30 типового <code>ПолучитьСуммыРСА_СЧА</code>
+        в пакет не воспроизводить.
+      </td>
+    </tr>
+    <tr>
+      <td>9</td>
+      <td><span class="tag chg">ИЗМЕНИТЬ</span></td>
+      <td>→ <code>ПолучитьСуммыРСА_СЧА</code></td>
+      <td>
+        Три длинных текста запросов (БУ, УУ, СС) внутри процедуры заменить на
+        <code>Запрос.Текст = ТекстЗапросаБУ(Ложь)</code> /
+        <code>ТекстЗапросаУУ(Ложь)</code> /
+        <code>ТекстЗапросаСС(Ложь)</code>.
+        Сами запросы не менять — только вынести. Метод пакетным не оборачивать.
+      </td>
+    </tr>
+    <tr>
+      <td>10</td>
+      <td><span class="tag chg">ИЗМЕНИТЬ</span></td>
+      <td>
+        Документ <code>РасчетСЧА_РСА</code><br>
+        → модуль объекта → <code>ПолучитьСуммыРСАСЧА</code>
+      </td>
+      <td>
+        Добавить последним необязательным параметр <code>ГотовыеДанные = Неопределено</code>.
+        Если передана структура с таблицами БУ и УУ — заполнять ТЧ из них, иначе штатный
+        <code>Документы.РасчетСЧА_РСА.ПолучитьСуммыРСА_СЧА(...)</code>.
+        Пустая таблица — валидный пакетный результат, не откат.
+      </td>
+    </tr>
+    <tr>
+      <td>11</td>
+      <td><span class="tag chg">ИЗМЕНИТЬ</span></td>
+      <td>
+        <code>ИсполняемыеПроцедурыЗакрытияПериода</code><br>
+        → <code>Операция_1000_РасчетРСА_СЧА</code>
+      </td>
+      <td>
+        Две правки в одной процедуре:
+        <ol class="compact">
+          <li>в сигнатуру — 7-й необязательный <code>ДополнительныеДанные = Неопределено</code>
+            (канал IMAPPS-35037);</li>
+          <li>внутри — вызов
+            <code>ПолучитьСуммыРСАСЧА(Отказ, ТекстОтказа)</code>
+            заменить на
+            <code>ПолучитьСуммыРСАСЧА(Отказ, ТекстОтказа, ДополнительныеДанные)</code>.
+          </li>
+        </ol>
+      </td>
+    </tr>
+    <tr>
+      <td>12</td>
+      <td><span class="tag add">ФОРМА</span></td>
+      <td>Форма <code>РегламентныйПериод</code></td>
+      <td>
+        Реквизиты (на форму выводить только флажок):
+        <code>ЗапускатьРасчетСЧАПослеВечерних</code>,
+        <code>ГруппаЗапуска</code>,
+        <code>УчитыватьВыполненныеЗапуска</code>,
+        <code>ПропуститьПредупреждениеСЧА</code>,
+        <code>КодВечернейГруппы</code>,
+        <code>КодГруппыСЧА</code>.<br>
+        Флажок «После вечерних операций запускать расчет СЧА/РСА» — виден на группе 2,
+        если в справочнике есть группа с кодом <code>3. "Расчет СЧА/РСА"</code>.
+        Если записи настройки нет — флажок <b>Истина</b>.<br>
+        Ключ хранилища оставить как в CFE: объект
+        <code>IM86632_РегламентныйПериод</code>, ключ
+        <code>ЗапускатьРасчетСЧАПослеВечерних</code>.
+      </td>
+    </tr>
+    <tr>
+      <td>13</td>
+      <td><span class="tag chg">ИЗМЕНИТЬ</span></td>
+      <td>модуль той же формы</td>
+      <td>
+        В <code>СформироватьРегламентныеОперации</code> (клиент): перед стартом вечерних —
+        вопрос, если флажок выключен и уже есть планы группы 3.
+        Планы группы 3 при перезапуске вечерних <b>не</b> помечать на удаление.<br>
+        В <code>ОбработатьРезультатЗадания</code> после успеха —
+        <code>ПослеУспешногоЗавершенияГруппы</code>
+        (при флажке: сменить группу, «Заполнить», второй запуск).<br>
+        В <code>ПриСозданииНаСервере</code> и <code>ГруппаРегламентныхОперацийПриИзменении</code>
+        вызвать <code>НастроитьФормуСЧАНаСервере</code>.
+        Новые процедуры формы — как в CFE, без префикса.
+      </td>
+    </tr>
+  </table>
+
+  <h2 class="sec">Дерево: объекты → модули → процедуры</h2>
+  <p style="font-size:0.88rem; color:#4a5568; margin:0 0 0.5rem;">Клик по узлу сворачивает ветку.</p>
+
+  <ul class="tree">
+    <li class="branch">
+      <span class="cap"><span class="toggle">[-]</span>
+        <span class="name">Базовая конфигурация ДУ</span>
+        <span class="tag cf">в CF</span></span>
+      <ul>
+
+        <li class="branch">
+          <span class="cap"><span class="toggle">[-]</span>
+            <span class="name">Константа.ИспользоватьПредварительныеЗапросыДляРегламентовСЧА_РСА</span>
+            <span class="tag add">ДОБАВИТЬ</span></span>
+          <ul>
+            <li class="leaf"><span class="name">свойства метаданных</span>
+              <span class="tag add">ДОБАВИТЬ</span></li>
+            <div class="hint">Булево, Ложь. Вывести на форму настроек системы рядом с константами
+              утреннего/вечернего пакета. Отдельные константы размера пачки для группы 3 не создавать.</div>
+            <li class="leaf"><span class="name">форма настроек системы</span>
+              <span class="tag chg">ИЗМЕНИТЬ</span></li>
+            <div class="hint">Добавить флажок константы рядом с аналогичными.</div>
+          </ul>
+        </li>
+
+        <li class="branch">
+          <span class="cap"><span class="toggle">[-]</span>
+            <span class="name">Справочник.РегламентныеПериоды</span>
+            <span class="tag chg">ИЗМЕНИТЬ</span></span>
+          <ul>
+
+            <li class="branch">
+              <span class="cap"><span class="toggle">[-]</span>
+                <span class="name">модуль менеджера</span>
+                <span class="tag ext">из CFE …/РегламентныеПериоды/Ext/ManagerModule.bsl</span></span>
+              <ul>
+                <li class="leaf"><span class="name">КодВечернейГруппыОпераций</span>
+                  <span class="tag add">ДОБАВИТЬ</span></li>
+                <div class="hint">Экспорт. Код <code>2. "Вечерние" операции</code>.</div>
+                <li class="leaf"><span class="name">КодГруппыРасчетаСЧА_РСА</span>
+                  <span class="tag add">ДОБАВИТЬ</span></li>
+                <div class="hint">Экспорт. Код <code>3. "Расчет СЧА/РСА"</code>. Сравнение групп на форме — по коду.</div>
+                <li class="leaf"><span class="name">ЕстьПланыГруппыСЧА</span>
+                  <span class="tag add">ДОБАВИТЬ</span></li>
+                <li class="leaf"><span class="name">ЗаполнитьПараметрыСохраненияПакетнымиДаннымиГруппыСЧА</span>
+                  <span class="tag add">ДОБАВИТЬ</span></li>
+                <div class="hint">Экспорт. Один вызов <code>ПолучитьСуммыРСА_СЧА_Пакетно</code> на пачку.
+                  При ошибке ключи не заполнять (откат на однодоговорной путь).</div>
+                <li class="leaf"><span class="name">ДатаРасчетаСЧА_РСА</span>
+                  <span class="tag add">ДОБАВИТЬ</span></li>
+                <div class="hint">Не экспорт. Дата периода + время <code>ОкончаниеРабочегоДня</code>.</div>
+                <li class="leaf"><span class="name">СформироватьРегламентныеОперации</span>
+                  <span class="tag chg">ИЗМЕНИТЬ</span></li>
+                <div class="hint">Вставка предподготовки группы 3. В CFE: <code>IM86632_СформироватьРегламентныеОперации</code>.</div>
+                <li class="leaf"><span class="name">ОчиститьПакетныеДанныеПараметрыСохранения</span>
+                  <span class="tag chg">ИЗМЕНИТЬ</span></li>
+                <div class="hint">+2 ключа СЧА/РСА.</div>
+                <li class="leaf"><span class="name">ОбработатьПачкуДиспетчером</span>
+                  <span class="tag chg">ИЗМЕНИТЬ</span></li>
+                <div class="hint">Барьер групп + 2 ключа в срез чанка. Процедуру целиком из CFE не копировать.</div>
+                <li class="leaf"><span class="name">СформироватьДокументыЗакрытияПериода</span>
+                  <span class="tag chg">ИЗМЕНИТЬ</span></li>
+                <div class="hint">Таблицы договора в <code>СоответствиеОперацияТаблица</code> для операции 1000.</div>
+              </ul>
+            </li>
+
+            <li class="branch">
+              <span class="cap"><span class="toggle">[-]</span>
+                <span class="name">форма РегламентныйПериод</span>
+                <span class="tag chg">ИЗМЕНИТЬ</span></span>
+              <ul>
+                <li class="leaf"><span class="name">реквизит ЗапускатьРасчетСЧАПослеВечерних + флажок</span>
+                  <span class="tag add">ДОБАВИТЬ</span></li>
+                <div class="hint">Видимость на группе 2, если группа 3 найдена по коду. По умолчанию Истина.</div>
+                <li class="leaf"><span class="name">реквизиты кэша запуска (не на форму)</span>
+                  <span class="tag add">ДОБАВИТЬ</span></li>
+                <div class="hint"><code>ГруппаЗапуска</code>, <code>УчитыватьВыполненныеЗапуска</code>,
+                  <code>ПропуститьПредупреждениеСЧА</code>, <code>КодВечернейГруппы</code>, <code>КодГруппыСЧА</code>.</div>
+                <li class="leaf"><span class="name">СформироватьРегламентныеОперации (клиент)</span>
+                  <span class="tag chg">ИЗМЕНИТЬ</span></li>
+                <div class="hint">Вопрос перед стартом вечерних. В CFE: <code>IM86632_СформироватьРегламентныеОперации</code>.</div>
+                <li class="leaf"><span class="name">ОбработатьРезультатЗадания</span>
+                  <span class="tag chg">ИЗМЕНИТЬ</span></li>
+                <div class="hint">После успеха — <code>ПослеУспешногоЗавершенияГруппы</code>.</div>
+                <li class="leaf"><span class="name">ПриСозданииНаСервере</span>
+                  <span class="tag chg">ИЗМЕНИТЬ</span></li>
+                <div class="hint">Дописать <code>НастроитьФормуСЧАНаСервере(Истина)</code>.</div>
+                <li class="leaf"><span class="name">ГруппаРегламентныхОперацийПриИзменении</span>
+                  <span class="tag chg">ИЗМЕНИТЬ</span></li>
+                <div class="hint">Обновить видимость флажка.</div>
+                <li class="leaf"><span class="name">ПослеПредупрежденияОПересчетеСЧА</span>
+                  <span class="tag add">ДОБАВИТЬ</span></li>
+                <li class="leaf"><span class="name">ПослеУспешногоЗавершенияГруппы</span>
+                  <span class="tag add">ДОБАВИТЬ</span></li>
+                <div class="hint">Подставить группу 3, обновить дерево, Заполнить, второй запуск.
+                  Без Заполнить вторая длительная операция ничего не создаст.</div>
+                <li class="leaf"><span class="name">ЗапускатьРасчетСЧАПослеВечернихПриИзменении</span>
+                  <span class="tag add">ДОБАВИТЬ</span></li>
+                <li class="leaf"><span class="name">ПодготовитьЗапускРегламентаНаСервере</span>
+                  <span class="tag add">ДОБАВИТЬ</span></li>
+                <li class="leaf"><span class="name">СохранитьФлагАвтозапускаНаСервере</span>
+                  <span class="tag add">ДОБАВИТЬ</span></li>
+                <div class="hint">Хранилище: объект <code>IM86632_РегламентныйПериод</code>,
+                  ключ <code>ЗапускатьРасчетСЧАПослеВечерних</code> — не переименовывать.</div>
+                <li class="leaf"><span class="name">НастроитьФормуСЧАНаСервере</span>
+                  <span class="tag add">ДОБАВИТЬ</span></li>
+                <div class="hint">Чтение того же ключа. Если записи нет — флажок Истина.</div>
+              </ul>
+            </li>
+          </ul>
+        </li>
+
+        <li class="branch">
+          <span class="cap"><span class="toggle">[-]</span>
+            <span class="name">Документ.РасчетСЧА_РСА</span>
+            <span class="tag chg">ИЗМЕНИТЬ</span></span>
+          <ul>
+            <li class="branch">
+              <span class="cap"><span class="toggle">[-]</span>
+                <span class="name">модуль объекта</span></span>
+              <ul>
+                <li class="leaf"><span class="name">ПолучитьСуммыРСАСЧА</span>
+                  <span class="tag chg">ИЗМЕНИТЬ</span></li>
+                <div class="hint">3-й параметр <code>ГотовыеДанные</code>. Вызовы с двумя аргументами совместимы.
+                  В CFE: <code>IM86632_ПолучитьСуммыРСАСЧА</code>.</div>
+              </ul>
+            </li>
+            <li class="branch">
+              <span class="cap"><span class="toggle">[-]</span>
+                <span class="name">модуль менеджера</span>
+                <span class="tag ext">из CFE …/РасчетСЧА_РСА/Ext/ManagerModule.bsl</span></span>
+              <ul>
+                <li class="leaf"><span class="name">ПолучитьСуммыРСА_СЧА</span>
+                  <span class="tag chg">ИЗМЕНИТЬ</span></li>
+                <div class="hint">Вместо трёх текстов запросов в кавычках —
+                  <code>ТекстЗапросаБУ/УУ/СС(Ложь)</code>. Тексты переезжают в новые функции.</div>
+                <li class="leaf"><span class="name">ПолучитьСуммыРСА_СЧА_Пакетно</span>
+                  <span class="tag add">ДОБАВИТЬ</span></li>
+                <div class="hint">Экспорт. Группировка по сигнатуре. Всегда и РСА, и СЧА.</div>
+                <li class="leaf"><span class="name">ТекстЗапросаОднодоговорныйБУ / УУ / СС</span>
+                  <span class="tag add">ДОБАВИТЬ</span></li>
+                <div class="hint">Те же тексты запросов, что сейчас внутри типового <code>ПолучитьСуммыРСА_СЧА</code>.</div>
+                <li class="leaf"><span class="name">ТекстЗапросаБУ / УУ / СС</span>
+                  <span class="tag add">ДОБАВИТЬ</span></li>
+                <div class="hint">Пакетно: <code>В (&amp;ДоговорыГруппы)</code>, поле ДоговорДУ, группировка по договору.</div>
+                <li class="leaf"><span class="name">остальные служебные пакета</span>
+                  <span class="tag add">ДОБАВИТЬ</span></li>
+                <div class="hint"><code>ВставитьПолеДоговорДУПеред</code>, <code>НаборыСчетовПоПризнакам</code>,
+                  <code>ПризнакиИзЗначенийПараметров</code>, <code>ПодготовитьГруппыДоговоровПоСигнатуре</code>,
+                  <code>СигнатураПризнаков</code>, <code>СоздатьТаблицуПоказателей</code>,
+                  <code>ДобавитьДанныеБУПоГруппе</code>, <code>ДобавитьДанныеУУПоГруппе</code>,
+                  <code>ДобавитьДанныеССПоГруппе</code>.</div>
+              </ul>
+            </li>
+          </ul>
+        </li>
+
+        <li class="branch">
+          <span class="cap"><span class="toggle">[-]</span>
+            <span class="name">ОбщийМодуль.ИсполняемыеПроцедурыЗакрытияПериода</span>
+            <span class="tag chg">ИЗМЕНИТЬ</span></span>
+          <ul>
+            <li class="leaf"><span class="name">Операция_1000_РасчетРСА_СЧА</span>
+              <span class="tag chg">ИЗМЕНИТЬ</span></li>
+            <div class="hint">1) 7-й параметр <code>ДополнительныеДанные = Неопределено</code>.
+              2) Внутри заменить
+              <code>ПолучитьСуммыРСАСЧА(Отказ, ТекстОтказа)</code>
+              на вызов с третьим аргументом <code>ДополнительныеДанные</code>.
+              В CFE: <code>IM86632_Операция_1000_РасчетРСА_СЧА</code>.</div>
+            <li class="leaf"><span class="name">Операция_1010 / 1020 / 1030</span>
+              <span class="tag a">не трогать</span></li>
+          </ul>
+        </li>
+
+        <li class="branch">
+          <span class="cap"><span class="toggle">[-]</span>
+            <span class="name">РегистрСведений.ЗначенияПараметровДоговораДУ</span>
+            <span class="tag chg">ИЗМЕНИТЬ</span></span>
+          <ul>
+            <li class="leaf"><span class="name">ЗначенияПараметровДоговоровДУПакетно</span>
+              <span class="tag add">ДОБАВИТЬ</span></li>
+            <div class="hint">Экспорт, модуль менеджера. Вызов из
+              <code>ПодготовитьГруппыДоговоровПоСигнатуре</code>.</div>
+          </ul>
+        </li>
+
+        <li class="branch">
+          <span class="cap"><span class="toggle">[-]</span>
+            <span class="name">Не менять / не переносить</span>
+            <span class="tag a">вне объёма</span></span>
+          <ul>
+            <li class="leaf"><span class="name">методика РСА/СЧА (счета, ВЫБОР, коэффициенты)</span></li>
+            <li class="leaf"><span class="name">диспетчер порций 8663.1</span></li>
+            <div class="hint">Уже в CF. Здесь только вставки ключей и барьер групп.</div>
+            <li class="leaf"><span class="name">ключи IM8663_НачалоРасчетаМС / IM8663_Прогресс*</span></li>
+            <div class="hint">Не переименовывать.</div>
+            <li class="leaf"><span class="name">ключ хранилища IM86632_РегламентныйПериод</span></li>
+            <div class="hint">Оставить как в CFE.</div>
+            <li class="leaf"><span class="name">картинки / язык / Configuration.xml расширения</span></li>
+            <li class="leaf"><span class="name">роль ПраваНаРегламентыСЧА_РСА как объект CF</span></li>
+            <div class="hint">Права константы влить в существующие роли.</div>
+            <li class="leaf"><span class="name">имена перехватов IM86632_*</span></li>
+            <div class="hint">В CF править исходные процедуры.</div>
+          </ul>
+        </li>
+      </ul>
+    </li>
+  </ul>
+
+  <div class="legend">
+    <h3>Легенда</h3>
+    <span class="tag add">ДОБАВИТЬ</span>
+    <span class="tag chg">ИЗМЕНИТЬ</span>
+    <span class="tag del">УБРАТЬ</span>
+    <span class="tag cf">в CF</span>
+    <span class="tag ext">из CFE</span>
+  </div>
+
+  <p class="foot">
+    IMDEV-8663.2 · дерево для Аванкор · клик по узлу сворачивает ветку.
+  </p>
+
+  <script>
+    document.querySelectorAll(".branch > .cap").forEach(function (cap) {
+      cap.addEventListener("click", function () {
+        var ul = this.nextElementSibling;
+        if (!ul) return;
+        var toggle = this.querySelector(".toggle");
+        if (ul.style.display === "none") {
+          ul.style.display = "block";
+          if (toggle) toggle.textContent = "[-]";
+        } else {
+          ul.style.display = "none";
+          if (toggle) toggle.textContent = "[+]";
+        }
+      });
+    });
+    document.querySelectorAll(".branch > ul").forEach(function (ul) {
+      ul.style.display = "block";
+      var prev = ul.previousElementSibling;
+      if (prev) {
+        var t = prev.querySelector(".toggle");
+        if (t) t.textContent = "[-]";
+      }
+    });
+  </script>
+</body>
+</html>
