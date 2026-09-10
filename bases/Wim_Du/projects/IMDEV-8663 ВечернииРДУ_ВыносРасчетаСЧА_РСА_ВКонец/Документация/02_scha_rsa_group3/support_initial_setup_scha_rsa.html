@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<title>Первоначальная настройка СЧА/РСА — инструкция для поддержки</title>
+<style>
+    * { box-sizing: border-box; }
+    body {
+        font-family: Calibri, "Segoe UI", Arial, sans-serif;
+        font-size: 15px;
+        line-height: 1.55;
+        color: #222;
+        background: #f4f6f8;
+        margin: 0;
+        padding: 0;
+    }
+    .page {
+        max-width: 860px;
+        margin: 0 auto;
+        background: #fff;
+        padding: 0 0 40px 0;
+        box-shadow: 0 0 18px rgba(0,0,0,0.08);
+    }
+    header.doc-head {
+        background: linear-gradient(135deg, #0d5c63 0%, #1a7a82 100%);
+        color: #fff;
+        padding: 28px 40px 22px 40px;
+    }
+    header.doc-head .kicker {
+        font-size: 13px;
+        letter-spacing: 1.2px;
+        text-transform: uppercase;
+        opacity: 0.85;
+        margin-bottom: 10px;
+    }
+    header.doc-head h1 {
+        margin: 0 0 8px 0;
+        font-size: 24px;
+        line-height: 1.28;
+        font-weight: 600;
+    }
+    header.doc-head .sub {
+        font-size: 15px;
+        opacity: 0.94;
+        margin: 0;
+    }
+    .content { padding: 8px 40px 0 40px; }
+    .box {
+        padding: 14px 18px;
+        border-radius: 6px;
+        margin: 16px 0;
+    }
+    .ok { background: #eaf7ee; border-left: 6px solid #28a745; }
+    .warn { background: #fff8e1; border-left: 6px solid #ffc107; }
+    .info { background: #e8f4fd; border-left: 6px solid #17a2b8; }
+    ol.steps {
+        margin: 18px 0 8px 0;
+        padding-left: 0;
+        list-style: none;
+        counter-reset: step;
+    }
+    ol.steps > li {
+        margin-bottom: 18px;
+        padding: 14px 16px 14px 56px;
+        border: 1px solid #e3e8ef;
+        border-radius: 6px;
+        position: relative;
+    }
+    ol.steps > li::before {
+        counter-increment: step;
+        content: counter(step);
+        position: absolute;
+        left: 14px;
+        top: 14px;
+        width: 28px;
+        height: 28px;
+        line-height: 28px;
+        text-align: center;
+        border-radius: 50%;
+        background: #0d5c63;
+        color: #fff;
+        font-weight: 700;
+        font-size: 14px;
+    }
+    ol.steps b { color: #0d5c63; }
+    code {
+        font-family: Consolas, "Courier New", monospace;
+        background: #eef2f5;
+        padding: 1px 5px;
+        border-radius: 3px;
+        font-size: 13.5px;
+        color: #b8003a;
+    }
+    table {
+        border-collapse: collapse;
+        width: 100%;
+        margin: 12px 0 8px 0;
+        font-size: 14px;
+    }
+    th {
+        background: #0d5c63;
+        color: #fff;
+        text-align: left;
+        padding: 8px 10px;
+        font-weight: 600;
+    }
+    td {
+        border: 1px solid #d8dee4;
+        padding: 8px 10px;
+        vertical-align: top;
+    }
+    footer {
+        margin: 28px 40px 0 40px;
+        padding-top: 12px;
+        border-top: 1px solid #e3e8ef;
+        font-size: 13px;
+        color: #6c757d;
+    }
+</style>
+</head>
+<body>
+<div class="page">
+<header class="doc-head">
+    <div class="kicker">IMDEV-8663.2 &nbsp;|&nbsp; отдел поддержки</div>
+    <h1>Первоначальная настройка расчета СЧА/РСА</h1>
+    <p class="sub">Два действия на каждой базе: константа пакетного расчета и перенос операций в группу 3</p>
+</header>
+
+<div class="content">
+
+<div class="box info">
+Код доработки уже должен быть в базе (расширение <code>IM86632</code> или типовая конфигурация после переноса вендором).
+Без кода константы в списке не будет.
+</div>
+
+<ol class="steps">
+    <li>
+        <b>Включить константу.</b>
+        Откройте форму «Настройка системы».
+        Найдите флажок «Использовать предварительные запросы для регламентов СЧА/РСА»
+        (рядом с такими же флажками для утренних и вечерних регламентов).
+        Установите <b>Истина</b> и запишите настройки.
+        <br><br>
+        По умолчанию константа выключена: группа 3 тогда считается по каждому договору, без пакета.
+    </li>
+    <li>
+        <b>Открыть обработку</b>
+        <code>ПереносОперацийСЧА_РСАВГруппу3.epf</code>
+        (Файл → Открыть).
+        При открытии сама заполнится таблица плана.
+    </li>
+    <li>
+        <b>Нажать «Выполнить перенос»</b> и в вопросе подтверждения ответить <b>«Да»</b>.
+        Появится группа «3. Расчет СЧА/РСА», в неё переедут пять операций
+        (расчет РСА, расчет СЧА и три контрольные).
+        <br><br>
+        Если кнопка серая — сначала «Проверить». Повторный перенос безопасен: дубль группы не создаётся.
+    </li>
+</ol>
+
+<div class="box ok">
+Готово, если в справочнике видов операций закрытия периода есть группа «3. Расчет СЧА/РСА»
+с пятью видами, а константа включена.
+На форме регламентного периода в списке групп должна быть «3. Расчет СЧА/РСА».
+</div>
+
+<div class="box warn">
+Настройки <b>не переносятся</b> с одной базы на другую. Тест, копия и рабочая база настраиваются отдельно.
+Кнопка «Вернуть в вечерние» в той же обработке откатывает только состав группы, константу не трогает.
+</div>
+
+<table>
+    <tr><th>Что</th><th>Значение</th></tr>
+    <tr>
+        <td>Константа</td>
+        <td>«Использовать предварительные запросы для регламентов СЧА/РСА» = Истина</td>
+    </tr>
+    <tr>
+        <td>Обработка</td>
+        <td><code>ПереносОперацийСЧА_РСАВГруппу3.epf</code></td>
+    </tr>
+    <tr>
+        <td>Кнопка</td>
+        <td>«Выполнить перенос» → «Да»</td>
+    </tr>
+</table>
+
+<p style="font-size:14px; color:#555;">
+Подробно про кнопки обработки, план и возврат в вечерние — инструкция
+<code>support_move_scha_rsa_group3.html</code>.
+</p>
+
+</div>
+
+<footer>
+    IMDEV-8663.2. Краткая инструкция первоначальной настройки для отдела поддержки.
+</footer>
+</div>
+</body>
+</html>
