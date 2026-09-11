@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""Снимает безопасный режим расширения IM1109261 через COM."""
+"""Снимает безопасный режим расширения IM9434 через COM."""
 
 import sys
 import traceback
@@ -36,7 +36,7 @@ def main():
             ext = extensions.Получить(i)
             name = str(ext.Имя)
             safe_print("ext=" + name)
-            if name != "IM1109261":
+            if name != "IM9434":
                 continue
             found = True
             safe_print("before SafeMode=" + str(ext.БезопасныйРежим))
@@ -58,7 +58,7 @@ def main():
             safe_print("after SafeMode=" + str(ext.БезопасныйРежим))
             safe_print("OK written")
         if not found:
-            safe_print("ERROR: IM1109261 not found")
+            safe_print("ERROR: IM9434 not found")
             return 1
         return 0
     except Exception as exc:
