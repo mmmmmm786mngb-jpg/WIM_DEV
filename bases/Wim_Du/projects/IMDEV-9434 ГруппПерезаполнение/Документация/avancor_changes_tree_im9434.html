@@ -1,0 +1,637 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <title>IMDEV-9434 - дерево изменений для Аванкор (перенос IM9434 в базовую CF)</title>
+  <style>
+    :root {
+      --add: #276749;
+      --chg: #2b6cb0;
+      --del: #9b2c2c;
+      --info: #744210;
+      --mute: #4a5568;
+    }
+    body {
+      font-family: "Segoe UI", Tahoma, sans-serif;
+      margin: 1rem 2rem 2.5rem;
+      background: #fafafa;
+      color: #1a202c;
+      line-height: 1.45;
+    }
+    h1 { font-size: 1.35rem; margin: 0 0 0.35rem 0; }
+    h2.sec { font-size: 1.05rem; margin: 1rem 0 0.4rem; }
+    .subtitle { color: #718096; font-size: 0.92rem; margin: 0 0 1rem 0; }
+    .ref-block {
+      margin-bottom: 1rem;
+      padding: 0.75rem 1rem;
+      background: #ebf8ff;
+      border: 1px solid #90cdf4;
+      border-radius: 6px;
+      font-size: 0.9rem;
+    }
+    .ref-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 0.8rem;
+      margin-bottom: 1rem;
+    }
+    .ref-card {
+      background: #fff;
+      border: 1px solid #e2e8f0;
+      border-radius: 6px;
+      padding: 0.75rem 0.9rem;
+      font-size: 0.9rem;
+    }
+    .ref-card h2 { margin: 0 0 0.45rem 0; font-size: 0.98rem; }
+    .ref-card ul { margin: 0.35rem 0 0; padding-left: 1.15rem; }
+    .ref-card li { margin: 0.2rem 0; }
+    .vendor-note { border-color: #f6ad55; background: #fffaf0; }
+    .good { border-color: #9ae6b4; background: #f0fff4; }
+    .warn { border-color: #f6ad55; background: #fffaf0; }
+    code {
+      background: #edf2f7;
+      padding: 0.05rem 0.35rem;
+      border-radius: 3px;
+      font-family: Consolas, monospace;
+      font-size: 0.88em;
+    }
+    pre {
+      background: #edf2f7;
+      border: 1px solid #e2e8f0;
+      border-radius: 4px;
+      padding: 0.55rem 0.7rem;
+      overflow-x: auto;
+      font-family: Consolas, monospace;
+      font-size: 0.82rem;
+      line-height: 1.4;
+      margin: 0.35rem 0 0.2rem;
+    }
+    ul.tree {
+      list-style: none;
+      padding-left: 1.1rem;
+      margin: 0.3rem 0 1rem;
+    }
+    ul.tree ul {
+      list-style: none;
+      padding-left: 1.15rem;
+      border-left: 1px solid #e2e8f0;
+      margin: 0.15rem 0 0.15rem 0.35rem;
+    }
+    .branch { margin: 0.22rem 0; }
+    .branch > .cap {
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      padding: 0.12rem 0.2rem;
+      flex-wrap: wrap;
+    }
+    .branch > .cap:hover { background: #edf2f7; border-radius: 4px; }
+    .toggle { font-size: 0.72rem; color: #718096; user-select: none; }
+    .name { font-weight: 600; }
+    .leaf {
+      padding-left: 1.4rem;
+      margin: 0.18rem 0;
+      display: flex;
+      align-items: flex-start;
+      gap: 0.4rem;
+      flex-wrap: wrap;
+    }
+    .leaf .name {
+      font-weight: 400;
+      font-family: Consolas, monospace;
+      font-size: 0.88rem;
+    }
+    .hint {
+      flex-basis: 100%;
+      margin: 0.1rem 0 0.25rem 1.55rem;
+      font-size: 0.84rem;
+      color: #4a5568;
+    }
+    .tag {
+      font-size: 0.74rem;
+      padding: 0.1rem 0.42rem;
+      border-radius: 4px;
+      white-space: nowrap;
+      font-weight: 600;
+    }
+    .tag.add { background: #c6f6d5; color: var(--add); }
+    .tag.chg { background: #bee3f8; color: var(--chg); }
+    .tag.del { background: #fed7d7; color: var(--del); }
+    .tag.cf { background: #feebc8; color: var(--info); }
+    .tag.ext { background: #e9d8fd; color: #553c9a; }
+    .tag.a { background: #e2e8f0; color: var(--mute); }
+    .legend {
+      margin-top: 0.5rem;
+      padding: 0.75rem 1rem;
+      background: #fff;
+      border: 1px solid #e2e8f0;
+      border-radius: 6px;
+      font-size: 0.85rem;
+    }
+    .legend h3 { margin: 0 0 0.4rem 0; font-size: 0.95rem; }
+    .legend span { display: inline-block; margin: 0 0.55rem 0.25rem 0; }
+    table.steps {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.9rem;
+      margin: 0.75rem 0 1.2rem;
+      background: #fff;
+    }
+    table.steps th, table.steps td {
+      border: 1px solid #e2e8f0;
+      padding: 0.55rem 0.7rem;
+      vertical-align: top;
+      text-align: left;
+    }
+    table.steps th { background: #edf2f7; }
+    .foot {
+      margin-top: 1.2rem;
+      font-size: 0.82rem;
+      color: #718096;
+    }
+    ol.compact { margin: 0.35rem 0 0; padding-left: 1.2rem; }
+    ol.compact li { margin: 0.2rem 0; }
+  </style>
+</head>
+<body>
+
+  <div class="ref-block">
+    <strong>Вендор: Аванкор (Avancore DU).</strong>
+    Источник - расширение <code>IM9434</code> (CFE). Перенести в базовую конфигурацию ДУ
+    только код из этого дерева.
+    Директивы расширения (<code>&amp;ИзменениеИКонтроль</code>, <code>#Вставка</code>,
+    <code>#КонецВставки</code>) в CF <b>не копировать</b> - влить тело в типовые процедуры.
+    Модуль формы и модуль менеджера целиком файлом из CFE не подменять.
+    Префикс <code>IM9434_</code> только у перехвата: в CF править исходный метод
+    <code>Перезаполнить</code>. Новые процедуры в CFE уже без префикса - имена оставить.
+    После переноса расширение IM9434 снять с информационной базы.
+  </div>
+
+  <h1>Дерево изменений для переноса IM9434 -&gt; базовая CF</h1>
+  <p class="subtitle">
+    IMDEV-9434: ускорение обработки «Групповое перезаполнение документов» -
+    параллельные пачки по договорам ДУ, окно процента БСП, подтверждение периода,
+    замер длительной операции. Артефакт: <code>IM9434.cfe</code>.
+  </p>
+
+  <div class="ref-grid">
+    <div class="ref-card good">
+      <h2>Что внести в CF</h2>
+      <ul>
+        <li>Обработка <code>ГрупповоеПерезаполнениеДокументов</code>:
+          <b>создать модуль менеджера</b> (в типовой его нет) - 4 метода из CFE.</li>
+        <li>Форма <code>ГрупповоеПерезаполнениеДокументов.Форма</code>:
+          4 вставки в типовую <code>Перезаполнить</code> + 6 новых методов +
+          клиентская переменная модуля.</li>
+        <li>Ключ замера <code>ДУ.ГрупповоеПерезаполнениеДокументов</code>
+          (при первом прогоне создастся сам; при необходимости завести в ключевых операциях).</li>
+      </ul>
+    </div>
+    <div class="ref-card vendor-note">
+      <h2>Как читать</h2>
+      <ul>
+        <li><span class="tag add">ДОБАВИТЬ</span> - новый модуль / метод / переменная.</li>
+        <li><span class="tag chg">ИЗМЕНИТЬ</span> - вставка в существующий типовой метод.</li>
+        <li><span class="tag cf">в CF</span> - куда вносить.</li>
+        <li><span class="tag ext">из CFE</span> - откуда взять код.</li>
+        <li>Форму, реквизиты, макеты СКД, команду открытия, справку
+          <b>не менять</b>.</li>
+        <li>Новых констант и общих модулей нет.</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="ref-card" style="margin-bottom:1rem; border-color:#90cdf4; background:#ebf8ff;">
+    <h2>Инвентаризация CFE -&gt; действие в CF</h2>
+    <table class="steps" style="margin:0;">
+      <tr>
+        <th>Объект в CFE</th>
+        <th style="width:22%;">Действие</th>
+        <th>Комментарий</th>
+      </tr>
+      <tr>
+        <td>Обработка <code>ГрупповоеПерезаполнениеДокументов</code> (заимствование)</td>
+        <td><span class="tag a">не объект CF</span></td>
+        <td>Обработка уже есть. Реквизиты <code>ВидДокумента</code> и
+          <code>ПерезаполнятьКонтрольДопустимогоУровняРиска</code> уже в CF.
+          Новых реквизитов нет.</td>
+      </tr>
+      <tr>
+        <td>Модуль менеджера обработки</td>
+        <td><span class="tag add">-&gt; создать в CF</span></td>
+        <td>В типовой модуль менеджера отсутствует. Создать и перенести 4 метода
+          (см. шаг 1). Обёртки <code>#Если Сервер...</code> сохранить.</td>
+      </tr>
+      <tr>
+        <td>Форма <code>Форма</code> (заимствование, XML формы)</td>
+        <td><span class="tag a">не переносить</span></td>
+        <td>Элементы, реквизиты формы, настройки динамических списков не менялись.
+          XML формы из CFE не копировать.</td>
+      </tr>
+      <tr>
+        <td>Модуль формы: перехват <code>IM9434_Перезаполнить</code></td>
+        <td><span class="tag chg">-&gt; правки в CF</span></td>
+        <td>Не создавать процедуру с префиксом. Четыре блока <code>#Вставка</code>
+          влить в типовую <code>Перезаполнить</code> (см. шаг 3).</td>
+      </tr>
+      <tr>
+        <td>Модуль формы: 6 новых методов + переменная</td>
+        <td><span class="tag add">-&gt; в CF</span></td>
+        <td>Скопировать как есть, без префикса (см. шаг 2).</td>
+      </tr>
+      <tr>
+        <td>Роль <code>IM9434_ОсновнаяРоль</code></td>
+        <td><span class="tag a">не переносить</span></td>
+        <td>Служебная роль расширения (пустая). В CF не создавать.
+          Права на обработку уже есть у штатных ролей.</td>
+      </tr>
+      <tr>
+        <td>Язык, <code>Configuration.xml</code> расширения</td>
+        <td><span class="tag a">не переносить</span></td>
+        <td>Служебное расширение.</td>
+      </tr>
+      <tr>
+        <td>Макеты СКД обработки, <code>ПереполнитьДокументы</code>,
+          <code>ПолучитьМассивДокументовДляПерепроведения</code></td>
+        <td><span class="tag a">не менять</span></td>
+        <td>Выборка ссылок и заполнение одного документа остаются типовыми.
+          Воркер вызывает тот же <code>Выполнить("ДокументОбъект." + ПроцедураЗаполнения)</code>.</td>
+      </tr>
+    </table>
+  </div>
+
+  <h2 class="sec">Поведение (чтобы понимать, что переносится)</h2>
+  <table class="steps">
+    <tr>
+      <th>Вид документа</th>
+      <th>После переноса</th>
+    </tr>
+    <tr>
+      <td>Установка котировок ц/б (по пулам)</td>
+      <td>Как сейчас: клиентский цикл <code>ПереполнитьДокументы</code> +
+        замер <code>ДУ.ГрупповоеПерезаполнениеДокументов</code>.
+        Договора ДУ в шапке нет, в параллель не переводим.</td>
+    </tr>
+    <tr>
+      <td>Остальные 10 видов обработки</td>
+      <td>Подтверждение периода -&gt; одно родительское ФЗ
+        <code>ВыполнитьГрупповоеПерезаполнение</code> -&gt;
+        пачки целых <code>ДоговорДУ</code> (размер из
+        <code>МаксимальныйРазмерПорцииДоговоровВПотокеРегл</code>, по умолчанию 50) -&gt;
+        скользящее окно воркеров
+        <code>ОбработатьПачкуДокументов</code>
+        (число из <code>МаксимальноеКоличествоПараллельныхПотоков</code>) -&gt;
+        окно БСП с процентом. Если потоков 0 или ФЗ запрещены -
+        пачки идут последовательно внутри диспетчера, окно процента остаётся.</td>
+    </tr>
+    <tr>
+      <td>Расчет СЧА/РСА + флаг риска</td>
+      <td>Риск подбирается по договору и календарному дню отобранных СЧА
+        (не тем же отбором списка). В воркере по договору: сначала СЧА, затем риск.
+        Ошибка СЧА - риск этого договора не запускать.</td>
+    </tr>
+  </table>
+
+  <h2 class="sec">Порядок работ</h2>
+  <p style="font-size:0.9rem; margin:0 0 0.6rem; color:#4a5568;">
+    Сначала модуль менеджера (иначе форма не скомпилируется), затем методы формы, затем вставки в
+    <code>Перезаполнить</code>. Форму визуально не трогать.
+  </p>
+
+  <table class="steps">
+    <tr>
+      <th style="width:42px;">Шаг</th>
+      <th style="width:88px;">Действие</th>
+      <th style="width:28%;">Куда</th>
+      <th>Что сделать</th>
+    </tr>
+    <tr>
+      <td>1</td>
+      <td><span class="tag add">СОЗДАТЬ</span></td>
+      <td>
+        <code>Обработка.ГрупповоеПерезаполнениеДокументов</code><br>
+        -&gt; модуль менеджера
+      </td>
+      <td>
+        Создать модуль менеджера обработки. Перенести из CFE целиком область
+        с четырьмя методами (имена без префикса, не переименовывать):
+        <ol class="compact">
+          <li><code>ВыполнитьГрупповоеПерезаполнение</code> - Экспорт, диспетчер
+            (нарезка пачек, скользящее окно, прогресс, сводка, замер)</li>
+          <li><code>ТекстПрогрессаПерезаполнения</code> - текст деталей для
+            <code>ДлительныеОперации.СообщитьПрогресс</code> (без ведущего %)</li>
+          <li><code>ОбработатьПачкуДокументов</code> - Экспорт, воркер пачки</li>
+          <li><code>ПерезаполнитьДокументПачки</code> - служебная, один документ
+            как типовая <code>ПереполнитьДокументы</code></li>
+        </ol>
+        При переносе ключ фонового задания воркера
+        <code>"IM9434_" + номер + UID</code> заменить на нейтральный, например
+        <code>"ГрупповоеПерезаполнение_" + номер + UID</code>.
+        Служебное сообщение воркера уже без номера задачи: <code>ИТОГ:Успешно=...</code>
+        - не менять формат (диспетчер его разбирает).
+        Область <code>IMDEV_9434</code> можно убрать или заменить на свою.
+      </td>
+    </tr>
+    <tr>
+      <td>2</td>
+      <td><span class="tag add">ВСТАВИТЬ</span></td>
+      <td>
+        Форма обработки -&gt; модуль формы<br>
+        (новые методы и переменная)
+      </td>
+      <td>
+        В начало модуля (как в CFE, до процедур):
+        <pre>&amp;НаКлиенте
+Перем ПродолжитьПерезаполнениеПослеПодтверждения;</pre>
+        В конец модуля скопировать как есть:
+        <ol class="compact">
+          <li><code>ПослеПодтвержденияПерезаполнения</code> - клиент, Экспорт, ответ на вопрос</li>
+          <li><code>ОбработатьЗавершениеПерезаполнения</code> - клиент, Экспорт, колбэк БСП</li>
+          <li><code>ЗапуститьПерезаполнениеНаСервере</code> - отбор ссылок, таблицы Ссылка/ДоговорДУ,
+            риск по договору и дню, запуск
+            <code>ДлительныеОперации.ВыполнитьВФоне("Обработки.ГрупповоеПерезаполнениеДокументов.ВыполнитьГрупповоеПерезаполнение", ...)</code></li>
+          <li><code>НачатьЗамерПерезаполненияНаСервере</code></li>
+          <li><code>ЗакончитьЗамерПерезаполненияНаСервере</code></li>
+          <li><code>ОписаниеОтбораДляПодтвержденияПерезаполнения</code> - оба края периода по полю Дата;
+            текст вопроса (вид, период со временем, флаг риска, прочие отборы)</li>
+        </ol>
+        В <code>ЗапуститьПерезаполнениеНаСервере</code> ключ родительского ФЗ
+        <code>IM9434_ГрупповоеПерезаполнение</code> заменить, например, на
+        <code>ГрупповоеПерезаполнение</code>.
+      </td>
+    </tr>
+    <tr>
+      <td>3</td>
+      <td><span class="tag chg">ИЗМЕНИТЬ</span></td>
+      <td>
+        Форма -&gt; типовая <code>Перезаполнить</code>
+      </td>
+      <td>
+        Процедуру целиком из CFE <b>не копировать</b>. В типовое тело вставить
+        четыре фрагмента из блоков <code>#Вставка</code> (см. ниже).
+        Директиву <code>&amp;ИзменениеИКонтроль</code> и имя
+        <code>IM9434_Перезаполнить</code> не переносить.
+      </td>
+    </tr>
+    <tr>
+      <td>4</td>
+      <td><span class="tag a">проверка</span></td>
+      <td>Сборка CF, снять CFE</td>
+      <td>
+        Скомпилировать. Прогнать: (а) вид «по пулам» - клиентский цикл и замер;
+        (б) любой другой вид с периодом в настройке списка - окно БСП и сводка;
+        (в) без периода - предупреждение, без старта;
+        (г) СЧА + флаг риска. После приёмки расширение IM9434 отключить и удалить из ИБ.
+      </td>
+    </tr>
+  </table>
+
+  <h2 class="sec">Куда вставлять в типовую Перезаполнить</h2>
+  <p style="font-size:0.9rem; color:#4a5568; margin:0 0 0.5rem;">
+    Типовая процедура начинается с <code>ОчиститьСообщения();</code>, затем выбор макета
+    по <code>Объект.ВидДокумента</code>, затем
+    <code>ПолучитьМассивДокументовДляПерепроведения</code> и клиентский цикл.
+    Четыре вставки:
+  </p>
+  <table class="steps">
+    <tr>
+      <th style="width:70px;">Вставка</th>
+      <th style="width:32%;">Место в типовой</th>
+      <th>Суть кода (взять тело из CFE между #Вставка и #КонецВставки)</th>
+    </tr>
+    <tr>
+      <td>1</td>
+      <td>Сразу после <code>ОчиститьСообщения();</code></td>
+      <td>
+        Если клиентская переменная ещё не «да после вопроса»:
+        проверить оба края периода; если нет - <code>ПоказатьПредупреждение</code> и
+        <code>Возврат</code>. Иначе <code>ПоказатьВопрос</code>
+        (Да/Нет, по умолчанию Нет) и <code>Возврат</code>.
+        Если уже подтверждено - сбросить флаг и идти дальше.
+      </td>
+    </tr>
+    <tr>
+      <td>2</td>
+      <td>После <code>КонецЕсли;</code> выбора вида
+        (после ветки «по пулам»), <b>до</b>
+        <code>ПолучитьМассивДокументовДляПерепроведения</code></td>
+      <td>
+        Если вид <b>не</b> «Установка котировок ц/б (по пулам)»:
+        <code>ЗапуститьПерезаполнениеНаСервере</code>,
+        <code>ДлительныеОперацииКлиент.ОжидатьЗавершение</code>
+        (окно ожидания, прогресс, сообщения) и <code>Возврат</code>.
+        Типовой клиентский цикл для этих видов больше не выполняется.
+      </td>
+    </tr>
+    <tr>
+      <td>3</td>
+      <td>После проверки, что массив документов - Массив;
+        <b>до</b> <code>КартинкаИндикатора = ...</code></td>
+      <td>
+        Только путь «по пулам»:
+        <code>ОписаниеЗамера = НачатьЗамерПерезаполненияНаСервере();</code>
+      </td>
+    </tr>
+    <tr>
+      <td>4</td>
+      <td>После сообщения «Перезаполнение документов завершено...»,
+        перед <code>КонецПроцедуры</code></td>
+      <td>
+        Только путь «по пулам»: закончить замер с весом = число обработанных
+        документов, комментарий Вид / Договоров=0 / Документов / Риск=Нет / Потоков=1.
+      </td>
+    </tr>
+  </table>
+
+  <div class="ref-card warn" style="margin-bottom:1rem;">
+    <h2>Не делать</h2>
+    <ul>
+      <li>Не создавать константы, общий модуль, элементы формы, поля периода в шапке.</li>
+      <li>Не подменять <code>ПереполнитьДокументы</code> и макеты СКД.</li>
+      <li>Не копировать маркеры <code>#Вставка</code> / <code>#КонецВставки</code> в CF.</li>
+      <li>Не оставлять имя <code>IM9434_Перезаполнить</code> в CF - править
+        <code>Перезаполнить</code>.</li>
+      <li>Не рвать один <code>ДоговорДУ</code> на два потока.</li>
+      <li>Не писать процент во втором параметре <code>СообщитьПрогресс</code>
+        (его рисует окно БСП из первого параметра).</li>
+    </ul>
+  </div>
+
+  <h2 class="sec">Дерево объектов</h2>
+  <p style="font-size:0.85rem; color:#718096; margin:0 0 0.4rem;">Клик по узлу сворачивает ветку.</p>
+
+  <ul class="tree">
+    <li class="branch">
+      <span class="cap"><span class="toggle">[-]</span>
+        <span class="name">Обработка.ГрупповоеПерезаполнениеДокументов</span>
+        <span class="tag chg">ИЗМЕНИТЬ</span>
+        <span class="tag cf">в CF</span></span>
+      <ul>
+        <li class="branch">
+          <span class="cap"><span class="toggle">[-]</span>
+            <span class="name">Модуль менеджера (создать)</span>
+            <span class="tag add">ДОБАВИТЬ</span>
+            <span class="tag ext">из CFE</span></span>
+          <ul>
+            <li class="leaf"><span class="name">ВыполнитьГрупповоеПерезаполнение</span>
+              <span class="tag add">ДОБАВИТЬ</span> <span class="tag a">Экспорт</span></li>
+            <div class="hint">
+              Диспетчер. Вход: таблицы документов/риска (колонки Ссылка, ДоговорДУ),
+              строки процедур заполнения, лимиты потоков и порции.
+              Группировка по ДоговорДУ, пачка = целые портфели до размера порции.
+              Прогресс пишет только диспетчер. Воркеры через
+              <code>ДлительныеОперации.ВыполнитьСКонтекстомКлиента</code>.
+              Замер: один старт, один финиш, вес = все документы прогона.
+            </div>
+            <li class="leaf"><span class="name">ТекстПрогрессаПерезаполнения</span>
+              <span class="tag add">ДОБАВИТЬ</span></li>
+            <div class="hint">
+              Формат:
+              <code>860/2100 док. | потоков 4 | ФЗ в базе 11 | порция 7/42 | осталось примерно 8 мин</code>.
+              Хвост «осталось ...» только с 10%. Меньше минуты -
+              «осталось меньше минуты».
+            </div>
+            <li class="leaf"><span class="name">ОбработатьПачкуДокументов</span>
+              <span class="tag add">ДОБАВИТЬ</span> <span class="tag a">Экспорт</span></li>
+            <div class="hint">
+              По каждому договору пачки: документы вида, затем риск того же договора.
+              Итог воркера служебным сообщением <code>ИТОГ:Успешно=...;Ошибок=...;Обработано=...</code>
+              (пользователю это сообщение не показывать - диспетчер его глотает).
+            </div>
+            <li class="leaf"><span class="name">ПерезаполнитьДокументПачки</span>
+              <span class="tag add">ДОБАВИТЬ</span></li>
+            <div class="hint">
+              ПолучитьОбъект + Выполнить процедуру заполнения + Запись/Проведение.
+              Текст ошибки как в типовой <code>ПереполнитьДокументы</code>.
+            </div>
+          </ul>
+        </li>
+
+        <li class="branch">
+          <span class="cap"><span class="toggle">[-]</span>
+            <span class="name">Форма.Форма - модуль</span>
+            <span class="tag chg">ИЗМЕНИТЬ</span></span>
+          <ul>
+            <li class="leaf"><span class="name">ПродолжитьПерезаполнениеПослеПодтверждения</span>
+              <span class="tag add">ДОБАВИТЬ</span> <span class="tag a">клиентская Перем</span></li>
+            <div class="hint">Флаг «пользователь уже ответил Да». После старта сбрасывается.</div>
+
+            <li class="leaf"><span class="name">Перезаполнить</span>
+              <span class="tag chg">ИЗМЕНИТЬ</span>
+              <span class="tag ext">4 вставки</span></li>
+            <div class="hint">
+              Типовое имя сохранить. Из CFE брать только тела <code>#Вставка</code>,
+              не перехватчик <code>IM9434_Перезаполнить</code>.
+            </div>
+
+            <li class="leaf"><span class="name">ПослеПодтвержденияПерезаполнения</span>
+              <span class="tag add">ДОБАВИТЬ</span></li>
+            <div class="hint">Да - выставить флаг и снова вызвать <code>Перезаполнить</code>. Нет - выход.</div>
+
+            <li class="leaf"><span class="name">ОбработатьЗавершениеПерезаполнения</span>
+              <span class="tag add">ДОБАВИТЬ</span></li>
+            <div class="hint">Отмена / ошибка родительского ФЗ - сообщение пользователю. Успех: сводку уже вывел диспетчер.</div>
+
+            <li class="leaf"><span class="name">ЗапуститьПерезаполнениеНаСервере</span>
+              <span class="tag add">ДОБАВИТЬ</span></li>
+            <div class="hint">
+              Тот же маппинг вид -&gt; макет / процедура заполнения, что в типовой
+              <code>Перезаполнить</code>. Выборка:
+              <code>ПолучитьМассивДокументовДляПерепроведения</code>, затем запрос
+              Ссылка + ДоговорДУ. Риск: соединение по ДоговорДУ и НАЧАЛОПЕРИОДА(Дата, ДЕНЬ)
+              с отобранными СЧА, плюс дополнение массивом макета риска без дублей.
+            </div>
+
+            <li class="leaf"><span class="name">ОписаниеОтбораДляПодтвержденияПерезаполнения</span>
+              <span class="tag add">ДОБАВИТЬ</span></li>
+            <div class="hint">
+              Период брать из <code>КомпоновщикНастроек.ПолучитьНастройки().Отбор</code>
+              (не из ПользовательскиеНастройки.Элементы - у обёрток нет ЛевоеЗначение).
+              Оба края обязательны. Даты в тексте всегда с временем
+              <code>ДФ='dd.MM.yyyy ЧЧ:мм:сс'</code> и попадают в строку «Период», не в «прочие отборы».
+              Поле Проведен в «прочие отборы» не выводить.
+            </div>
+
+            <li class="leaf"><span class="name">НачатьЗамерПерезаполненияНаСервере</span>
+              <span class="tag add">ДОБАВИТЬ</span></li>
+            <li class="leaf"><span class="name">ЗакончитьЗамерПерезаполненияНаСервере</span>
+              <span class="tag add">ДОБАВИТЬ</span></li>
+            <div class="hint">Ключ <code>ДУ.ГрупповоеПерезаполнениеДокументов</code>. Для «по пулам» замер на форме; для остальных видов - внутри диспетчера.</div>
+          </ul>
+        </li>
+
+        <li class="branch">
+          <span class="cap"><span class="toggle">[-]</span>
+            <span class="name">Уже в CF - не трогать</span>
+            <span class="tag a">вне объёма</span></span>
+          <ul>
+            <li class="leaf"><span class="name">реквизиты ВидДокумента, ПерезаполнятьКонтрольДопустимогоУровняРиска</span></li>
+            <li class="leaf"><span class="name">команда Перезаполнить / элементы формы / динамические списки</span></li>
+            <li class="leaf"><span class="name">макеты СКД видов документов</span></li>
+            <li class="leaf"><span class="name">ПолучитьМассивДокументовДляПерепроведения</span></li>
+            <li class="leaf"><span class="name">ПереполнитьДокументы</span></li>
+            <div class="hint">Остаётся для пути «по пулам». Параллельный путь использует копию логики в менеджере.</div>
+            <li class="leaf"><span class="name">Константа.МаксимальноеКоличествоПараллельныхПотоков</span></li>
+            <li class="leaf"><span class="name">Константа.МаксимальныйРазмерПорцииДоговоровВПотокеРегл</span></li>
+            <div class="hint">Читать как есть. Новых констант не заводить. Предподготовку регл (3000) не использовать.</div>
+          </ul>
+        </li>
+      </ul>
+    </li>
+
+    <li class="branch">
+      <span class="cap"><span class="toggle">[-]</span>
+        <span class="name">Не переносить из CFE</span>
+        <span class="tag a">служебное расширение</span></span>
+      <ul>
+        <li class="leaf"><span class="name">Role.IM9434_ОсновнаяРоль</span></li>
+        <li class="leaf"><span class="name">Language.Русский</span></li>
+        <li class="leaf"><span class="name">Configuration.xml, NamePrefix IM9434_</span></li>
+        <li class="leaf"><span class="name">директивы &amp;ИзменениеИКонтроль / #Вставка</span></li>
+        <li class="leaf"><span class="name">имя процедуры IM9434_Перезаполнить</span></li>
+        <div class="hint">В CF это обычная Перезаполнить.</div>
+      </ul>
+    </li>
+  </ul>
+
+  <div class="legend">
+    <h3>Легенда</h3>
+    <span class="tag add">ДОБАВИТЬ</span>
+    <span class="tag chg">ИЗМЕНИТЬ</span>
+    <span class="tag cf">в CF</span>
+    <span class="tag ext">из CFE</span>
+    <span class="tag a">не переносить / не менять</span>
+  </div>
+
+  <p class="foot">
+    IMDEV-9434. Дерево для Аванкор. Клик по узлу сворачивает ветку.
+    Постановка для бизнеса - отдельный файл tz_IMDEV-9434.html.
+  </p>
+
+  <script>
+    document.querySelectorAll(".branch > .cap").forEach(function (cap) {
+      cap.addEventListener("click", function () {
+        var ul = this.nextElementSibling;
+        if (!ul) return;
+        var toggle = this.querySelector(".toggle");
+        if (ul.style.display === "none") {
+          ul.style.display = "block";
+          if (toggle) toggle.textContent = "[-]";
+        } else {
+          ul.style.display = "none";
+          if (toggle) toggle.textContent = "[+]";
+        }
+      });
+    });
+    document.querySelectorAll(".branch > ul").forEach(function (ul) {
+      ul.style.display = "block";
+      var prev = ul.previousElementSibling;
+      if (prev) {
+        var t = prev.querySelector(".toggle");
+        if (t) t.textContent = "[-]";
+      }
+    });
+  </script>
+</body>
+</html>
