@@ -1,0 +1,698 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Weekly Status Report — Smart Editor</title>
+<style>
+/* ═══════════════════════════════════════════
+   EDIT PANEL STYLES
+═══════════════════════════════════════════ */
+.edit-zone { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+.edit-toggle {
+    width: 100%; background: #1e3a8a; color: #fbbf24;
+    font-size: 15px; font-weight: 700; padding: 14px 28px;
+    border: none; cursor: pointer; text-align: left; letter-spacing: .4px;
+    border-bottom: 3px solid #3b82f6;
+}
+.edit-toggle:hover { background: #1e40af; }
+.edit-body {
+    display: none; background: #f0f4f8;
+    border-bottom: 4px solid #3b82f6; padding: 28px 36px;
+}
+.edit-body.open { display: block; }
+.es { margin-bottom: 26px; }
+.es-title {
+    font-size: 12px; font-weight: 700; color: #1e3a8a;
+    text-transform: uppercase; letter-spacing: 1px;
+    border-bottom: 2px solid #3b82f6; padding-bottom: 6px; margin-bottom: 12px;
+}
+.fg { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; }
+.fg label { font-size: 11px; font-weight: 600; color: #374151; display: block; margin-bottom: 3px; }
+.fg input, .fg select, .fg textarea {
+    width: 100%; padding: 7px 9px; border: 1px solid #cbd5e1;
+    border-radius: 4px; font-size: 12px; font-family: inherit; background: white;
+}
+.fg textarea { resize: vertical; min-height: 54px; }
+
+/* project / risk / action / resource edit rows */
+.erow { display: grid; gap: 6px; margin-bottom: 6px; align-items: start; }
+.erow input, .erow select { padding: 6px 8px; border: 1px solid #cbd5e1; border-radius: 4px; font-size: 12px; width: 100%; font-family: inherit; }
+.erow-proj { grid-template-columns: 160px 120px 65px 55px 90px 1fr 1fr 1fr 110px 95px; }
+.erow-risk { grid-template-columns: 55px 1fr 100px 90px 1fr 110px 110px; }
+.erow-act  { grid-template-columns: 1fr 120px 105px 110px; }
+.erow-act2 { grid-template-columns: 1fr; margin-top: 2px; }
+.erow-res  { grid-template-columns: 130px 150px 1fr 80px 80px 130px; }
+.col-lbl { font-size: 10px; font-weight: 700; color: #6b7280; text-transform: uppercase; letter-spacing: .5px; }
+.erow-hdr { display: grid; gap: 6px; margin-bottom: 2px; }
+
+.apply-btn {
+    background: #1e3a8a; color: white; border: none;
+    padding: 11px 32px; font-size: 14px; font-weight: 700;
+    border-radius: 5px; cursor: pointer; margin-top: 10px;
+    letter-spacing: .3px;
+}
+.apply-btn:hover { background: #1e40af; }
+
+/* ═══════════════════════════════════════════
+   ORIGINAL REPORT STYLES (preserved exactly)
+═══════════════════════════════════════════ */
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f5f7fa; color: #333; line-height: 1.6; padding: 20px; }
+
+.container { max-width: 1400px; margin: 0 auto; background-color: white; box-shadow: 0 2px 10px rgba(0,0,0,.1); border-radius: 8px; overflow: hidden; }
+
+.header { background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%); color: white; padding: 30px 40px; display: flex; justify-content: space-between; align-items: center; border-bottom: 4px solid #1e40af; }
+.header-left { display: flex; align-items: center; gap: 20px; }
+.logo-placeholder { width: 60px; height: 60px; background-color: rgba(255,255,255,.3); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 28px; font-weight: bold; }
+.header-info h1 { font-size: 24px; margin-bottom: 5px; }
+.header-info p { font-size: 14px; opacity: .9; }
+.header-right { text-align: right; font-size: 14px; }
+.header-right p { margin: 5px 0; }
+
+section { padding: 30px 40px; border-bottom: 1px solid #e5e7eb; }
+section:last-of-type { border-bottom: none; }
+
+h2 { font-size: 18px; color: #1e3a8a; margin-bottom: 20px; padding-bottom: 10px; border-bottom: 3px solid #3b82f6; display: inline-block; }
+h3 { font-size: 14px; color: #374151; margin-top: 15px; margin-bottom: 10px; font-weight: 600; }
+
+/* summary cards */
+.summary-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px; margin-top: 15px; }
+.summary-item { background: linear-gradient(135deg, #f0f4f8 0%, #d9e2ec 100%); padding: 15px; border-radius: 6px; border-left: 4px solid #3b82f6; font-size: 14px; }
+.summary-item.green  { border-left-color: #10b981; background: linear-gradient(135deg, #f0fdf4 0%, #d1fae5 100%); }
+.summary-item.amber  { border-left-color: #f59e0b; background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%); }
+.summary-item.red    { border-left-color: #ef4444; background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%); }
+.summary-item.blue   { border-left-color: #3b82f6; background: linear-gradient(135deg, #f0f4f8 0%, #d9e2ec 100%); }
+
+/* tables */
+table { width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 13px; }
+thead { background-color: #1e3a8a; color: white; }
+th { padding: 12px; text-align: left; font-weight: 600; border: 1px solid #1e40af; }
+td { padding: 12px; border: 1px solid #e5e7eb; vertical-align: middle; }
+tbody tr:nth-child(even) { background-color: #f9fafb; }
+tbody tr:hover { background-color: #f3f4f6; }
+
+.rag-status { font-size: 20px; text-align: center; }
+.status-green { color: #10b981; }
+.status-amber { color: #f59e0b; }
+.status-red   { color: #ef4444; }
+
+/* progress bar — full height with text inside */
+.progress-bar { width: 100%; height: 20px; background-color: #e5e7eb; border-radius: 10px; overflow: hidden; position: relative; margin-top: 4px; }
+.progress-fill { height: 100%; display: flex; align-items: center; justify-content: center; color: white; font-size: 11px; font-weight: bold; }
+.pf-green { background: linear-gradient(90deg, #10b981 0%, #059669 100%); }
+.pf-amber { background: linear-gradient(90deg, #f59e0b 0%, #d97706 100%); }
+.pf-red   { background: linear-gradient(90deg, #ef4444 0%, #dc2626 100%); }
+
+/* risk rows */
+.high-impact   { background-color: #fee2e2 !important; color: #991b1b; }
+.medium-impact { background-color: #fef3c7 !important; color: #92400e; }
+.low-impact    { background-color: #d1fae5 !important; color: #065f46; }
+.risk-table-container { margin-top: 15px; overflow-x: auto; }
+
+/* action cards */
+.action-items-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 15px; margin-top: 15px; }
+.action-card { background-color: #f9fafb; border: 2px solid #e5e7eb; border-radius: 6px; padding: 15px; border-left: 4px solid #3b82f6; }
+.action-card.overdue { border-left-color: #ef4444; background-color: #fef2f2; }
+.action-card.closed  { border-left-color: #10b981; background-color: #f0fdf4; }
+.action-status { display: inline-block; padding: 3px 8px; border-radius: 12px; font-size: 11px; font-weight: 600; margin-top: 10px; }
+.status-open        { background-color: #fed7aa; color: #92400e; }
+.status-in-progress { background-color: #bfdbfe; color: #1e40af; }
+.status-overdue     { background-color: #fecaca; color: #991b1b; }
+.status-closed      { background-color: #bbf7d0; color: #065f46; }
+.resource-detail    { font-size: 12px; color: #666; margin: 5px 0; }
+
+/* resource TABLE (replaces cards) */
+.res-table thead { background-color: #1e3a8a; }
+.res-table th { border: 1px solid #1e40af; }
+.res-table td { border: 1px solid #e5e7eb; vertical-align: middle; }
+.allocation-bar { width: 100%; height: 10px; background-color: #e5e7eb; border-radius: 5px; overflow: hidden; }
+.allocation-fill { height: 100%; background: linear-gradient(90deg, #3b82f6 0%, #1e40af 100%); border-radius: 5px; }
+.res-name { font-weight: 600; color: #1e3a8a; }
+
+/* footer */
+.footer { background-color: #1e3a8a; color: white; padding: 20px 40px; display: flex; justify-content: space-between; align-items: center; font-size: 12px; }
+.footer-left { flex: 1; }
+.footer-right { text-align: right; }
+.practice-name { font-weight: 600; margin-bottom: 5px; }
+
+/* print */
+@media print {
+    body { padding: 0; background-color: white; }
+    .edit-zone { display: none; }
+    .container { box-shadow: none; border-radius: 0; }
+    section { page-break-inside: avoid; }
+}
+@media (max-width: 768px) {
+    .header { flex-direction: column; text-align: center; }
+    .header-left { flex-direction: column; }
+    .header-right { text-align: center; margin-top: 15px; }
+    table { font-size: 12px; }
+    th, td { padding: 8px; }
+    section { padding: 20px; }
+    .footer { flex-direction: column; text-align: center; gap: 15px; }
+    .footer-right { text-align: center; }
+}
+</style>
+</head>
+<body>
+
+<!-- ════════════════════════════════════════════════════════
+     SMART EDIT PANEL  — click the bar to expand, fill data,
+     press "Apply Changes" and the report below updates live
+════════════════════════════════════════════════════════ -->
+<div class="edit-zone">
+  <button class="edit-toggle" onclick="toggleEdit(this)">
+    ✏️ &nbsp; EDIT REPORT DATA &nbsp;▼ &nbsp;&nbsp;
+    <span style="font-size:12px;font-weight:400;opacity:.85">
+      Click to expand → fill in your data → click "Apply Changes"
+    </span>
+  </button>
+
+  <div class="edit-body" id="editBody">
+
+    <!-- 1. Header -->
+    <div class="es">
+      <div class="es-title">1 · Report Header</div>
+      <div class="fg">
+        <div><label>Account / Client Name</label><input id="f_account" value="Acme University"></div>
+        <div><label>Vertical / Industry</label><input id="f_vertical" value="Higher Education Account"></div>
+        <div><label>Account Manager</label><input id="f_am" value="Sarah Johnson"></div>
+        <div><label>Week Ending</label><input type="date" id="f_weekend" value="2026-02-21"></div>
+        <div><label>Reporting Period</label><input id="f_period" value="Feb 16 – Feb 21, 2026"></div>
+        <div><label>Logo Emoji</label><input id="f_logo" value="🏛️"></div>
+      </div>
+    </div>
+
+    <!-- 2. Executive Summary Cards -->
+    <div class="es">
+      <div class="es-title">2 · Executive Summary (4 cards — choose colour: green / amber / red / blue)</div>
+      <div class="fg">
+        <div><label>Card 1 — Colour</label>
+          <select id="f_c1t"><option>green</option><option>amber</option><option>red</option><option>blue</option></select></div>
+        <div><label>Card 1 — Title</label><input id="f_c1h" value="✓ 14 of 18 Projects On-Track"></div>
+        <div style="grid-column:span 2"><label>Card 1 — Body</label><textarea id="f_c1b">Strong delivery momentum with 78% of projects at or ahead of schedule</textarea></div>
+
+        <div><label>Card 2 — Colour</label>
+          <select id="f_c2t"><option>green</option><option selected>amber</option><option>red</option><option>blue</option></select></div>
+        <div><label>Card 2 — Title</label><input id="f_c2h" value="⚠ 3 Projects At Risk"></div>
+        <div style="grid-column:span 2"><label>Card 2 — Body</label><textarea id="f_c2b">Portal Enhancement and Analytics Platform require resource rebalancing</textarea></div>
+
+        <div><label>Card 3 — Colour</label>
+          <select id="f_c3t"><option selected>green</option><option>amber</option><option>red</option><option>blue</option></select></div>
+        <div><label>Card 3 — Title</label><input id="f_c3h" value="✓ 78% Overall Health Score"></div>
+        <div style="grid-column:span 2"><label>Card 3 — Body</label><textarea id="f_c3b">Defect detection up 12% YoY; CSAT remains strong at 4.7/5.0</textarea></div>
+
+        <div><label>Card 4 — Colour</label>
+          <select id="f_c4t"><option>green</option><option>amber</option><option selected>red</option><option>blue</option></select></div>
+        <div><label>Card 4 — Title</label><input id="f_c4h" value="🔴 2 Critical Issues"></div>
+        <div style="grid-column:span 2"><label>Card 4 — Body</label><textarea id="f_c4b">Performance bottleneck in Integration Testing env; requires escalation</textarea></div>
+      </div>
+    </div>
+
+    <!-- 3. Projects -->
+    <div class="es">
+      <div class="es-title">3 · Project Portfolio Status (up to 8 rows)</div>
+      <div style="font-size:11px;color:#6b7280;margin-bottom:8px;">RAG: G = Green &nbsp;|&nbsp; A = Amber &nbsp;|&nbsp; R = Red</div>
+      <div class="erow-hdr erow-proj" style="margin-bottom:3px;">
+        <span class="col-lbl">Project Name</span><span class="col-lbl">Phase</span>
+        <span class="col-lbl">RAG</span><span class="col-lbl">%</span><span class="col-lbl">Resources</span>
+        <span class="col-lbl">Milestone (This Week)</span><span class="col-lbl">Next Milestone</span>
+        <span class="col-lbl">Critical Issue</span><span class="col-lbl">Action Owner</span><span class="col-lbl">Due Date</span>
+      </div>
+      <div id="projRows"></div>
+    </div>
+
+    <!-- 4. Highlights -->
+    <div class="es">
+      <div class="es-title">4 · Highlights &amp; Wins (4 cards)</div>
+      <div class="fg">
+        <div><label>Win 1 — Title</label><input id="f_h1t" value="🎯 Test Automation Success"></div>
+        <div><label>Win 1 — Detail</label><input id="f_h1b" value="Achieved 42% automation coverage on Mobile App v2.0, reducing regression time by 35%"></div>
+        <div><label>Win 2 — Title</label><input id="f_h2t" value="⭐ Zero Production Defects"></div>
+        <div><label>Win 2 — Detail</label><input id="f_h2b" value="LMS Modernization shipped with zero P0 defects; 3 P2s captured pre-release"></div>
+        <div><label>Win 3 — Title</label><input id="f_h3t" value="📈 Team Development"></div>
+        <div><label>Win 3 — Detail</label><input id="f_h3b" value="Rachel Kumar completed ISTQB Advanced certification; James Wilson mentoring 2 junior engineers"></div>
+        <div><label>Win 4 — Title</label><input id="f_h4t" value="🚀 Process Improvement"></div>
+        <div><label>Win 4 — Detail</label><input id="f_h4b" value="Implemented new test data management approach; reduced setup time by 40%"></div>
+      </div>
+    </div>
+
+    <!-- 5. Risks -->
+    <div class="es">
+      <div class="es-title">5 · Risks &amp; Escalations (up to 5 rows — row colour auto-set by impact)</div>
+      <div class="erow-hdr erow-risk" style="margin-bottom:3px;">
+        <span class="col-lbl">Risk ID</span><span class="col-lbl">Description</span>
+        <span class="col-lbl">Probability</span><span class="col-lbl">Impact</span>
+        <span class="col-lbl">Mitigation</span><span class="col-lbl">Owner</span><span class="col-lbl">Status</span>
+      </div>
+      <div id="riskRows"></div>
+    </div>
+
+    <!-- 6. Actions -->
+    <div class="es">
+      <div class="es-title">6 · Action Items (up to 6 — include brief description)</div>
+      <div class="erow-hdr erow-act" style="margin-bottom:3px;">
+        <span class="col-lbl">Action Title</span><span class="col-lbl">Owner &amp; Due</span>
+        <span class="col-lbl">Due Date</span><span class="col-lbl">Status</span>
+      </div>
+      <div id="actionRows"></div>
+    </div>
+
+    <!-- 7. Resources -->
+    <div class="es">
+      <div class="es-title">7 · Resource &amp; Allocation Table (up to 8 rows)</div>
+      <div class="erow-hdr erow-res" style="margin-bottom:3px;">
+        <span class="col-lbl">Name</span><span class="col-lbl">Role</span>
+        <span class="col-lbl">Project</span><span class="col-lbl">Alloc %</span>
+        <span class="col-lbl">Hrs/Wk</span><span class="col-lbl">Billing Type</span>
+      </div>
+      <div id="resRows"></div>
+    </div>
+
+    <button class="apply-btn" onclick="applyChanges()">✅ &nbsp; Apply Changes — Update Report Below</button>
+    &nbsp;&nbsp;
+    <button class="apply-btn" style="background:#374151;" onclick="location.reload()">↺ Reset to Sample Data</button>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════════
+     RENDERED REPORT  (read-only view for CEO / MD)
+════════════════════════════════════════════════════ -->
+<div class="container">
+
+  <!-- Header -->
+  <div class="header">
+    <div class="header-left">
+      <div class="logo-placeholder" id="r_logo">🏛️</div>
+      <div class="header-info">
+        <h1 id="r_account">Acme University</h1>
+        <p id="r_vertical">Higher Education Account | <span id="r_weekdisplay">Week Ending Feb 21, 2026</span></p>
+      </div>
+    </div>
+    <div class="header-right">
+      <p><strong>Account Manager:</strong> <span id="r_am">Sarah Johnson</span></p>
+      <p><strong>Reporting Period:</strong> <span id="r_period">Feb 16 – Feb 21, 2026</span></p>
+      <p><strong>Report Generated:</strong> <span id="r_gendate"></span></p>
+    </div>
+  </div>
+
+  <!-- Executive Summary -->
+  <section>
+    <h2>Executive Summary</h2>
+    <div class="summary-grid" id="r_summary">
+      <div class="summary-item green"><strong>✓ 14 of 18 Projects On-Track</strong><br>Strong delivery momentum with 78% of projects at or ahead of schedule</div>
+      <div class="summary-item amber"><strong>⚠ 3 Projects At Risk</strong><br>Portal Enhancement and Analytics Platform require resource rebalancing</div>
+      <div class="summary-item green"><strong>✓ 78% Overall Health Score</strong><br>Defect detection up 12% YoY; CSAT remains strong at 4.7/5.0</div>
+      <div class="summary-item red"><strong>🔴 2 Critical Issues</strong><br>Performance bottleneck in Integration Testing env; requires escalation</div>
+    </div>
+  </section>
+
+  <!-- Project Portfolio Status -->
+  <section>
+    <h2>Project Portfolio Status</h2>
+    <div style="overflow-x:auto;">
+      <table>
+        <thead>
+          <tr>
+            <th>Project Name</th><th>Phase</th><th>Status</th><th>% Complete</th>
+            <th>Resources</th><th>Key Milestone (This Week)</th><th>Next Milestone</th>
+            <th>Critical Issues</th><th>Action Owner</th><th>Due Date</th>
+          </tr>
+        </thead>
+        <tbody id="r_projTable"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- Highlights & Wins -->
+  <section>
+    <h2>Highlights &amp; Wins</h2>
+    <div class="summary-grid" id="r_highlights">
+      <div class="summary-item green"><strong>🎯 Test Automation Success</strong><br>Achieved 42% automation coverage on Mobile App v2.0, reducing regression time by 35%</div>
+      <div class="summary-item green"><strong>⭐ Zero Production Defects</strong><br>LMS Modernization shipped with zero P0 defects; 3 P2s captured pre-release</div>
+      <div class="summary-item green"><strong>📈 Team Development</strong><br>Rachel Kumar completed ISTQB Advanced certification; James Wilson mentoring 2 junior engineers</div>
+      <div class="summary-item green"><strong>🚀 Process Improvement</strong><br>Implemented new test data management approach; reduced setup time by 40%</div>
+    </div>
+  </section>
+
+  <!-- Risks & Escalations -->
+  <section>
+    <h2>Risks &amp; Escalations</h2>
+    <div class="risk-table-container">
+      <table>
+        <thead>
+          <tr>
+            <th>Risk ID</th><th>Risk Description</th><th>Probability</th>
+            <th>Impact</th><th>Mitigation Strategy</th><th>Owner</th><th>Status</th>
+          </tr>
+        </thead>
+        <tbody id="r_riskTable"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- Action Items -->
+  <section>
+    <h2>Action Items Tracker</h2>
+    <div class="action-items-grid" id="r_actionGrid"></div>
+  </section>
+
+  <!-- Resource & Allocation Summary — TABLE -->
+  <section>
+    <h2>Resource &amp; Allocation Summary</h2>
+    <div style="overflow-x:auto;">
+      <table class="res-table">
+        <thead>
+          <tr>
+            <th>#</th><th>Name</th><th>Role</th><th>Primary Project</th>
+            <th>Allocation</th><th>Hrs / Week</th><th>Billing Type</th><th>Utilisation</th>
+          </tr>
+        </thead>
+        <tbody id="r_resTable"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <div class="footer">
+    <div class="footer-left">
+      <div class="practice-name">QE Practice — Governance &amp; Delivery</div>
+      <div>Quality Engineering Services &nbsp;|&nbsp; www.qe-practice.com &nbsp;|&nbsp; contact@qe-practice.com</div>
+    </div>
+    <div class="footer-right">
+      <strong>CONFIDENTIAL</strong><br>
+      This report contains proprietary information and is intended for authorised recipients only.
+    </div>
+  </div>
+
+</div><!-- /container -->
+
+<script>
+/* ════════════════════════════════════════════
+   DEFAULT SAMPLE DATA
+════════════════════════════════════════════ */
+const D = {
+  projects: [
+    { name:"LMS Modernization",    phase:"Integration",       rag:"G", pct:72, res:"5 QA Engineers", mile:"Complete Integration Testing",   next:"UAT Phase Kickoff",            issue:"None",                      owner:"Mike Chen",    due:"Feb 18" },
+    { name:"Portal Enhancement",   phase:"Functional Testing",rag:"A", pct:55, res:"3 QA Engineers", mile:"Review test cases with PO",     next:"Regression Test Suite Prep",   issue:"Resource constraint",       owner:"Lisa Park",    due:"Feb 21" },
+    { name:"Analytics Platform",   phase:"UAT",               rag:"A", pct:68, res:"4 QA Engineers", mile:"UAT defect triage",             next:"Production Readiness Review",  issue:"Performance degradation",   owner:"James Wilson", due:"Feb 20" },
+    { name:"Mobile App v2.0",      phase:"Regression Testing", rag:"G", pct:85, res:"6 QA Engineers", mile:"Complete Regression Suite",     next:"Performance Testing",          issue:"None",                      owner:"Rachel Kumar", due:"Feb 19" },
+    { name:"API Integration Hub",  phase:"System Integration", rag:"G", pct:62, res:"4 QA Engineers", mile:"End-to-end test execution",     next:"Load Testing phase",           issue:"None",                      owner:"Arun Patel",   due:"Feb 25" },
+    { name:"Data Migration Testing",phase:"Data Validation",   rag:"G", pct:78, res:"3 QA Engineers", mile:"Validation report completion",  next:"Cutover readiness plan",       issue:"None",                      owner:"Emma Roberts", due:"Feb 28" }
+  ],
+  risks: [
+    { id:"R-001", desc:"Integration Testing Environment Performance Degradation",          prob:"High (80%)",   impact:"High",   mit:"Escalated to Infrastructure team; requesting urgent performance audit and possible resource expansion", owner:"Mike Chen",    status:"ACTIVE" },
+    { id:"R-002", desc:"Resource constraint on Portal Enhancement project",                prob:"Medium (60%)", impact:"Medium", mit:"Rebalancing team members from completed projects; considering contractor support if needed",            owner:"Lisa Park",    status:"MITIGATING" },
+    { id:"R-003", desc:"Analytics Platform UAT schedule compression (2-week reduction)",   prob:"High (75%)",   impact:"High",   mit:"Prioritising test cases by business criticality; increasing team to 6 engineers",                      owner:"James Wilson", status:"ACTIVE" },
+    { id:"R-004", desc:"Potential skill gap in API testing for Hub project",               prob:"Medium (50%)", impact:"Low",    mit:"Conducted training session this week; pairing junior engineers with experienced API tester",             owner:"Arun Patel",   status:"MITIGATED" }
+  ],
+  actions: [
+    { title:"Infrastructure Performance Audit",  owner:"Mike Chen",       due:"Feb 15", status:"In Progress", desc:"Identify root cause of Integration Testing env slowdown and recommend solution" },
+    { title:"Resource Rebalancing Plan",          owner:"Account Manager", due:"Feb 17", status:"In Progress", desc:"Finalise resource allocation across Portal Enhancement and Analytics projects" },
+    { title:"UAT Test Case Sign-Off",            owner:"Lisa Park",       due:"Feb 14", status:"Overdue",     desc:"Obtain client approval on test case scope for Portal Enhancement UAT phase" },
+    { title:"Test Data Refresh for Analytics",   owner:"James Wilson",    due:"Feb 16", status:"Open",        desc:"Prepare production-like test data set for Analytics Platform UAT" },
+    { title:"API Testing Training",              owner:"Arun Patel",      due:"Feb 13", status:"Closed",      desc:"Conduct API testing framework training session for team" },
+    { title:"Performance Test Plan Review",      owner:"Rachel Kumar",    due:"Feb 18", status:"Open",        desc:"Finalise and review performance testing approach for Mobile App v2.0" }
+  ],
+  resources: [
+    { name:"Mike Chen",    role:"Senior QA Engineer",        project:"LMS Modernization",    pct:100, hrs:40, billing:"T&M — On-Site" },
+    { name:"Rachel Kumar", role:"Test Automation Engineer",   project:"Mobile App v2.0",      pct:100, hrs:40, billing:"T&M — On-Site" },
+    { name:"Lisa Park",    role:"QA Lead",                   project:"Portal Enhancement",   pct:80,  hrs:32, billing:"FTE — On-Site" },
+    { name:"James Wilson", role:"Senior QA Engineer",        project:"Analytics Platform",   pct:90,  hrs:36, billing:"T&M — On-Site" },
+    { name:"Arun Patel",   role:"QA Engineer (API)",         project:"API Integration Hub",  pct:100, hrs:40, billing:"T&M — On-Site" },
+    { name:"Emma Roberts", role:"Data QA Engineer",          project:"Data Migration",       pct:60,  hrs:24, billing:"T&M — Remote"  }
+  ]
+};
+
+/* ════════════════════════════════════════════
+   BUILD EDIT FORM ROWS FROM SAMPLE DATA
+════════════════════════════════════════════ */
+function buildForms() {
+  // Projects
+  const pb = document.getElementById('projRows');
+  D.projects.forEach((p, i) => {
+    const r = document.createElement('div'); r.className = 'erow erow-proj';
+    r.innerHTML = `
+      <input id="p_name${i}" value="${x(p.name)}">
+      <input id="p_phase${i}" value="${x(p.phase)}">
+      <select id="p_rag${i}">
+        <option${p.rag==='G'?' selected':''}>G</option>
+        <option${p.rag==='A'?' selected':''}>A</option>
+        <option${p.rag==='R'?' selected':''}>R</option>
+      </select>
+      <input type="number" id="p_pct${i}" value="${p.pct}" min="0" max="100">
+      <input id="p_res${i}" value="${x(p.res)}">
+      <input id="p_mile${i}" value="${x(p.mile)}">
+      <input id="p_next${i}" value="${x(p.next)}">
+      <input id="p_iss${i}" value="${x(p.issue)}">
+      <input id="p_own${i}" value="${x(p.owner)}">
+      <input id="p_due${i}" value="${x(p.due)}">`;
+    pb.appendChild(r);
+  });
+  // Add 2 blank rows
+  for (let i = D.projects.length; i < 8; i++) {
+    const r = document.createElement('div'); r.className = 'erow erow-proj';
+    r.innerHTML = `<input id="p_name${i}" placeholder="Project name">
+      <input id="p_phase${i}" placeholder="Phase">
+      <select id="p_rag${i}"><option>G</option><option>A</option><option>R</option></select>
+      <input type="number" id="p_pct${i}" value="0" min="0" max="100">
+      <input id="p_res${i}" placeholder="e.g. 3 QA Engineers">
+      <input id="p_mile${i}" placeholder="This week milestone">
+      <input id="p_next${i}" placeholder="Next milestone">
+      <input id="p_iss${i}" placeholder="Issue (or None)">
+      <input id="p_own${i}" placeholder="Owner">
+      <input id="p_due${i}" placeholder="Due date">`;
+    pb.appendChild(r);
+  }
+
+  // Risks
+  const rb = document.getElementById('riskRows');
+  D.risks.forEach((r, i) => {
+    const row = document.createElement('div'); row.className = 'erow erow-risk';
+    row.innerHTML = `
+      <input id="r_id${i}" value="${x(r.id)}">
+      <input id="r_desc${i}" value="${x(r.desc)}">
+      <input id="r_prob${i}" value="${x(r.prob)}">
+      <select id="r_imp${i}">
+        <option${r.impact==='High'?' selected':''}>High</option>
+        <option${r.impact==='Medium'?' selected':''}>Medium</option>
+        <option${r.impact==='Low'?' selected':''}>Low</option>
+      </select>
+      <input id="r_mit${i}" value="${x(r.mit)}">
+      <input id="r_own${i}" value="${x(r.owner)}">
+      <input id="r_sta${i}" value="${x(r.status)}">`;
+    rb.appendChild(row);
+  });
+  for (let i = D.risks.length; i < 5; i++) {
+    const row = document.createElement('div'); row.className = 'erow erow-risk';
+    row.innerHTML = `<input id="r_id${i}" placeholder="R-00${i+1}">
+      <input id="r_desc${i}" placeholder="Risk description">
+      <input id="r_prob${i}" placeholder="e.g. High (70%)">
+      <select id="r_imp${i}"><option>High</option><option>Medium</option><option>Low</option></select>
+      <input id="r_mit${i}" placeholder="Mitigation strategy">
+      <input id="r_own${i}" placeholder="Owner">
+      <input id="r_sta${i}" placeholder="ACTIVE / MITIGATING / MITIGATED">`;
+    rb.appendChild(row);
+  }
+
+  // Actions
+  const ab = document.getElementById('actionRows');
+  D.actions.forEach((a, i) => {
+    const row = document.createElement('div'); row.style.marginBottom = '10px';
+    row.innerHTML = `
+      <div class="erow erow-act">
+        <input id="a_title${i}" value="${x(a.title)}">
+        <input id="a_own${i}" value="${x(a.owner)}">
+        <input id="a_due${i}" value="${x(a.due)}">
+        <select id="a_sta${i}">
+          <option${a.status==='Open'?' selected':''}>Open</option>
+          <option${a.status==='In Progress'?' selected':''}>In Progress</option>
+          <option${a.status==='Overdue'?' selected':''}>Overdue</option>
+          <option${a.status==='Closed'?' selected':''}>Closed</option>
+        </select>
+      </div>
+      <div class="erow erow-act2">
+        <input id="a_desc${i}" value="${x(a.desc)}" placeholder="Brief description of this action">
+      </div>`;
+    ab.appendChild(row);
+  });
+
+  // Resources
+  const resb = document.getElementById('resRows');
+  D.resources.forEach((r, i) => {
+    const row = document.createElement('div'); row.className = 'erow erow-res';
+    row.innerHTML = `
+      <input id="res_name${i}" value="${x(r.name)}">
+      <input id="res_role${i}" value="${x(r.role)}">
+      <input id="res_proj${i}" value="${x(r.project)}">
+      <input type="number" id="res_pct${i}" value="${r.pct}" min="0" max="100">
+      <input type="number" id="res_hrs${i}" value="${r.hrs}" min="0">
+      <input id="res_bill${i}" value="${x(r.billing)}">`;
+    resb.appendChild(row);
+  });
+  for (let i = D.resources.length; i < 8; i++) {
+    const row = document.createElement('div'); row.className = 'erow erow-res';
+    row.innerHTML = `<input id="res_name${i}" placeholder="Full name">
+      <input id="res_role${i}" placeholder="Role / Title">
+      <input id="res_proj${i}" placeholder="Project name">
+      <input type="number" id="res_pct${i}" value="" min="0" max="100" placeholder="%">
+      <input type="number" id="res_hrs${i}" value="" min="0" placeholder="hrs">
+      <input id="res_bill${i}" placeholder="e.g. T&M — On-Site">`;
+    resb.appendChild(row);
+  }
+}
+
+/* ════════════════════════════════════════════
+   APPLY CHANGES → UPDATE REPORT
+════════════════════════════════════════════ */
+function applyChanges() {
+  // Header
+  document.getElementById('r_logo').textContent    = v('f_logo') || '🏛️';
+  document.getElementById('r_account').textContent = v('f_account');
+  document.getElementById('r_vertical').innerHTML  = x(v('f_vertical')) + ' | <span id="r_weekdisplay">Week Ending ' + x(v('f_weekend')) + '</span>';
+  document.getElementById('r_am').textContent      = v('f_am');
+  document.getElementById('r_period').textContent  = v('f_period');
+  document.getElementById('r_gendate').textContent = new Date().toLocaleDateString('en-GB', { day:'2-digit', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit' });
+
+  // Executive Summary
+  const sc = document.getElementById('r_summary');
+  sc.innerHTML = '';
+  [[1],[2],[3],[4]].forEach(([n]) => {
+    const colour = v(`f_c${n}t`), head = v(`f_c${n}h`), body = v(`f_c${n}b`);
+    if (!head) return;
+    const d = document.createElement('div');
+    d.className = 'summary-item ' + colour;
+    d.innerHTML = `<strong>${x(head)}</strong><br>${x(body)}`;
+    sc.appendChild(d);
+  });
+
+  // Projects table
+  const pt = document.getElementById('r_projTable'); pt.innerHTML = '';
+  for (let i = 0; i < 8; i++) {
+    const name = v(`p_name${i}`); if (!name) continue;
+    const rag  = v(`p_rag${i}`);
+    const pct  = parseInt(v(`p_pct${i}`)) || 0;
+    const pfClass = rag === 'G' ? 'pf-green' : rag === 'A' ? 'pf-amber' : 'pf-red';
+    const ragEmoji = rag === 'G' ? '🟢' : rag === 'A' ? '🟡' : '🔴';
+    const ragClass = rag === 'G' ? 'status-green' : rag === 'A' ? 'status-amber' : 'status-red';
+    const issue = v(`p_iss${i}`);
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td><strong>${x(name)}</strong></td>
+      <td>${x(v(`p_phase${i}`))}</td>
+      <td class="rag-status"><span class="${ragClass}">${ragEmoji}</span></td>
+      <td>
+        ${pct}%
+        <div class="progress-bar">
+          <div class="progress-fill ${pfClass}" style="width:${Math.min(pct,100)}%">${pct}%</div>
+        </div>
+      </td>
+      <td>${x(v(`p_res${i}`))}</td>
+      <td>${x(v(`p_mile${i}`))}</td>
+      <td>${x(v(`p_next${i}`))}</td>
+      <td style="color:${(!issue||issue.toLowerCase()==='none')?'inherit':'#991b1b'};font-weight:${(!issue||issue.toLowerCase()==='none')?'normal':'600'}">${x(issue||'None')}</td>
+      <td>${x(v(`p_own${i}`))}</td>
+      <td>${x(v(`p_due${i}`))}</td>`;
+    pt.appendChild(tr);
+  }
+
+  // Highlights
+  const hl = document.getElementById('r_highlights'); hl.innerHTML = '';
+  [[1],[2],[3],[4]].forEach(([n]) => {
+    const t = v(`f_h${n}t`), b = v(`f_h${n}b`);
+    if (!t) return;
+    const d = document.createElement('div');
+    d.className = 'summary-item green';
+    d.innerHTML = `<strong>${x(t)}</strong><br>${x(b)}`;
+    hl.appendChild(d);
+  });
+
+  // Risks
+  const rt = document.getElementById('r_riskTable'); rt.innerHTML = '';
+  for (let i = 0; i < 5; i++) {
+    const desc = v(`r_desc${i}`); if (!desc) continue;
+    const imp = v(`r_imp${i}`);
+    const rowClass = imp === 'High' ? 'high-impact' : imp === 'Medium' ? 'medium-impact' : 'low-impact';
+    const tr = document.createElement('tr'); tr.className = rowClass;
+    tr.innerHTML = `
+      <td><strong>${x(v(`r_id${i}`))}</strong></td>
+      <td>${x(desc)}</td>
+      <td>${x(v(`r_prob${i}`))}</td>
+      <td>${x(imp)}</td>
+      <td>${x(v(`r_mit${i}`))}</td>
+      <td>${x(v(`r_own${i}`))}</td>
+      <td>${x(v(`r_sta${i}`))}</td>`;
+    rt.appendChild(tr);
+  }
+
+  // Actions (cards)
+  const ag = document.getElementById('r_actionGrid'); ag.innerHTML = '';
+  for (let i = 0; i < 6; i++) {
+    const title = v(`a_title${i}`); if (!title) continue;
+    const sta = v(`a_sta${i}`);
+    const staKey = sta.toLowerCase().replace(' ','-');
+    const cardClass = sta === 'Overdue' ? 'action-card overdue' : sta === 'Closed' ? 'action-card closed' : 'action-card';
+    const badgeClass = sta === 'Open' ? 'status-open' : sta === 'In Progress' ? 'status-in-progress' : sta === 'Overdue' ? 'status-overdue' : 'status-closed';
+    const div = document.createElement('div'); div.className = cardClass;
+    div.innerHTML = `
+      <strong>${i+1}. ${x(title)}</strong><br>
+      <span class="resource-detail">Owner: ${x(v(`a_own${i}`))} &nbsp;|&nbsp; Due: ${x(v(`a_due${i}`))}</span>
+      <span class="action-status ${badgeClass}">${x(sta).toUpperCase()}</span>
+      <div class="resource-detail" style="margin-top:8px;">${x(v(`a_desc${i}`))}</div>`;
+    ag.appendChild(div);
+  }
+
+  // Resources — TABLE
+  const resT = document.getElementById('r_resTable'); resT.innerHTML = '';
+  let idx = 1;
+  for (let i = 0; i < 8; i++) {
+    const name = v(`res_name${i}`); if (!name) continue;
+    const pct  = parseInt(v(`res_pct${i}`)) || 0;
+    const tr   = document.createElement('tr');
+    tr.innerHTML = `
+      <td>${idx++}</td>
+      <td class="res-name">${x(name)}</td>
+      <td>${x(v(`res_role${i}`))}</td>
+      <td>${x(v(`res_proj${i}`))}</td>
+      <td><strong>${pct}%</strong></td>
+      <td>${x(v(`res_hrs${i}`))} hrs</td>
+      <td>${x(v(`res_bill${i}`))}</td>
+      <td>
+        <div class="allocation-bar">
+          <div class="allocation-fill" style="width:${Math.min(pct,100)}%"></div>
+        </div>
+      </td>`;
+    resT.appendChild(tr);
+  }
+
+  // Collapse edit panel
+  document.getElementById('editBody').classList.remove('open');
+  const btn = document.querySelector('.edit-toggle');
+  btn.innerHTML = '✏️ &nbsp; EDIT REPORT DATA &nbsp;▼ &nbsp;&nbsp;<span style="font-size:12px;font-weight:400;opacity:.85">Click to expand → fill in your data → click "Apply Changes"</span>';
+  // Scroll to report
+  document.querySelector('.container').scrollIntoView({ behavior:'smooth' });
+}
+
+/* ════════════════════════════════════════════
+   HELPERS
+════════════════════════════════════════════ */
+function v(id) { const el = document.getElementById(id); return el ? el.value.trim() : ''; }
+function x(t)  { const d = document.createElement('div'); d.textContent = t || ''; return d.innerHTML; }
+
+function toggleEdit(btn) {
+  const body = document.getElementById('editBody');
+  const open = body.classList.toggle('open');
+  btn.innerHTML = open
+    ? '✏️ &nbsp; EDIT REPORT DATA &nbsp;▲ &nbsp;&nbsp;<span style="font-size:12px;font-weight:400;opacity:.85">Fill in your data below → click "Apply Changes"</span>'
+    : '✏️ &nbsp; EDIT REPORT DATA &nbsp;▼ &nbsp;&nbsp;<span style="font-size:12px;font-weight:400;opacity:.85">Click to expand → fill in your data → click "Apply Changes"</span>';
+}
+
+/* ════════════════════════════════════════════
+   INIT — build forms, then render report
+════════════════════════════════════════════ */
+buildForms();
+applyChanges();
+</script>
+</body>
+</html>

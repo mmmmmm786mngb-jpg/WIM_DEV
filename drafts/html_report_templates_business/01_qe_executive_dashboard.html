@@ -1,0 +1,1441 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Executive Account Dashboard - Smart</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+            color: #e2e8f0;
+            line-height: 1.6;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+
+        /* Edit Zone Styles */
+        .edit-zone {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin-bottom: 20px;
+        }
+
+        .edit-toggle {
+            width: 100%;
+            background: #1e3a8a;
+            color: #fbbf24;
+            font-size: 15px;
+            font-weight: 700;
+            padding: 14px 28px;
+            border: none;
+            cursor: pointer;
+            text-align: left;
+            letter-spacing: 0.4px;
+            border-bottom: 3px solid #3b82f6;
+            transition: background 0.3s ease;
+        }
+
+        .edit-toggle:hover {
+            background: #1e40af;
+        }
+
+        .edit-body {
+            display: none;
+            background: #f0f4f8;
+            border-bottom: 4px solid #3b82f6;
+            padding: 28px 36px;
+        }
+
+        .edit-body.open {
+            display: block;
+        }
+
+        .es {
+            margin-bottom: 26px;
+        }
+
+        .es-title {
+            font-size: 12px;
+            font-weight: 700;
+            color: #1e3a8a;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            border-bottom: 2px solid #3b82f6;
+            padding-bottom: 6px;
+            margin-bottom: 12px;
+        }
+
+        .fg {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 10px;
+        }
+
+        .fg label {
+            font-size: 11px;
+            font-weight: 600;
+            color: #374151;
+            display: block;
+            margin-bottom: 3px;
+        }
+
+        .fg input,
+        .fg select,
+        .fg textarea {
+            width: 100%;
+            padding: 7px 9px;
+            border: 1px solid #cbd5e1;
+            border-radius: 4px;
+            font-size: 12px;
+            font-family: inherit;
+            background: white;
+        }
+
+        .erow {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 6px;
+            margin-bottom: 6px;
+            align-items: start;
+        }
+
+        .erow input,
+        .erow select {
+            padding: 6px 8px;
+            border: 1px solid #cbd5e1;
+            border-radius: 4px;
+            font-size: 12px;
+            width: 100%;
+            font-family: inherit;
+            background: white;
+        }
+
+        .erow label {
+            font-size: 10px;
+            font-weight: 600;
+            color: #374151;
+            margin-bottom: 2px;
+        }
+
+        .apply-btn {
+            background: #1e3a8a;
+            color: white;
+            border: none;
+            padding: 11px 32px;
+            font-size: 14px;
+            font-weight: 700;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-top: 10px;
+            transition: background 0.3s ease;
+        }
+
+        .apply-btn:hover {
+            background: #1e40af;
+        }
+
+        .add-row-btn {
+            background: #059669;
+            color: white;
+            border: none;
+            padding: 6px 14px;
+            font-size: 12px;
+            font-weight: 600;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-top: 8px;
+            transition: background 0.3s ease;
+        }
+
+        .add-row-btn:hover {
+            background: #047857;
+        }
+
+        .reset-btn {
+            background: #6b7280;
+            color: white;
+            border: none;
+            padding: 10px 24px;
+            font-size: 14px;
+            font-weight: 700;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-top: 10px;
+            margin-left: 10px;
+            letter-spacing: 0.3px;
+        }
+
+        .reset-btn:hover {
+            background: #4b5563;
+        }
+
+        /* Header */
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+            padding: 20px;
+            background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%);
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+        }
+
+        .header h1 {
+            font-size: 28px;
+            color: white;
+        }
+
+        .header p {
+            color: rgba(255, 255, 255, 0.8);
+            font-size: 14px;
+            margin-top: 5px;
+        }
+
+        .header-filters {
+            display: flex;
+            gap: 10px;
+        }
+
+        .filter-btn {
+            padding: 8px 16px;
+            background-color: rgba(255, 255, 255, 0.2);
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 13px;
+            transition: all 0.3s ease;
+        }
+
+        .filter-btn:hover {
+            background-color: rgba(255, 255, 255, 0.3);
+        }
+
+        .filter-btn.active {
+            background-color: white;
+            color: #1e3a8a;
+        }
+
+        /* KPI Cards */
+        .kpi-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+
+        .kpi-card {
+            background: rgba(30, 41, 59, 0.8);
+            border: 1px solid rgba(148, 163, 184, 0.2);
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+            transition: transform 0.3s ease;
+        }
+
+        .kpi-card:hover {
+            transform: translateY(-5px);
+            border-color: rgba(59, 130, 246, 0.5);
+        }
+
+        .kpi-label {
+            color: #94a3b8;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 10px;
+        }
+
+        .kpi-value {
+            font-size: 32px;
+            font-weight: 700;
+            color: #60a5fa;
+            margin-bottom: 8px;
+        }
+
+        .kpi-detail {
+            font-size: 13px;
+            color: #cbd5e1;
+        }
+
+        .kpi-trend {
+            display: inline-block;
+            padding: 3px 8px;
+            background-color: rgba(16, 185, 129, 0.2);
+            color: #10b981;
+            border-radius: 4px;
+            font-size: 12px;
+            margin-top: 8px;
+        }
+
+        .kpi-trend.down {
+            background-color: rgba(239, 68, 68, 0.2);
+            color: #ef4444;
+        }
+
+        /* Section Title */
+        h2 {
+            color: #e2e8f0;
+            font-size: 18px;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #3b82f6;
+            display: inline-block;
+        }
+
+        /* Sections */
+        .section {
+            background: rgba(30, 41, 59, 0.8);
+            border: 1px solid rgba(148, 163, 184, 0.2);
+            border-radius: 10px;
+            padding: 25px;
+            margin-bottom: 25px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        /* Charts Grid */
+        .charts-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 25px;
+            margin-bottom: 25px;
+        }
+
+        .chart-container {
+            background: rgba(30, 41, 59, 0.8);
+            border: 1px solid rgba(148, 163, 184, 0.2);
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+            position: relative;
+            height: 350px;
+        }
+
+        .chart-container h3 {
+            color: #e2e8f0;
+            font-size: 15px;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid rgba(148, 163, 184, 0.2);
+        }
+
+        .chart-wrapper {
+            position: relative;
+            height: 280px;
+        }
+
+        /* Portfolio Health Matrix */
+        .portfolio-matrix {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+            gap: 12px;
+            margin-top: 15px;
+        }
+
+        .project-tile {
+            background: rgba(15, 23, 42, 0.8);
+            border: 1px solid rgba(148, 163, 184, 0.2);
+            border-radius: 8px;
+            padding: 15px;
+            text-align: center;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .project-tile:hover {
+            transform: scale(1.05);
+            border-color: rgba(59, 130, 246, 0.5);
+        }
+
+        .project-name {
+            font-size: 12px;
+            color: #cbd5e1;
+            margin-bottom: 10px;
+            line-height: 1.4;
+        }
+
+        .project-status {
+            font-size: 28px;
+            margin-bottom: 5px;
+        }
+
+        .project-percent {
+            font-size: 11px;
+            color: #94a3b8;
+        }
+
+        /* Issues & Risks Table */
+        .issues-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+        }
+
+        .issues-table thead {
+            background-color: rgba(59, 130, 246, 0.1);
+        }
+
+        .issues-table th {
+            padding: 12px;
+            text-align: left;
+            color: #60a5fa;
+            font-weight: 600;
+            border-bottom: 1px solid rgba(148, 163, 184, 0.2);
+            font-size: 13px;
+        }
+
+        .issues-table td {
+            padding: 12px;
+            border-bottom: 1px solid rgba(148, 163, 184, 0.1);
+            color: #cbd5e1;
+            font-size: 13px;
+        }
+
+        .issues-table tbody tr:hover {
+            background-color: rgba(59, 130, 246, 0.1);
+        }
+
+        .severity-high {
+            color: #ef4444;
+            font-weight: 600;
+        }
+
+        .severity-medium {
+            color: #f59e0b;
+            font-weight: 600;
+        }
+
+        .severity-low {
+            color: #10b981;
+            font-weight: 600;
+        }
+
+        /* Milestones */
+        .milestones-list {
+            list-style: none;
+            margin-top: 15px;
+        }
+
+        .milestone-item {
+            background: rgba(15, 23, 42, 0.8);
+            border-left: 3px solid #3b82f6;
+            padding: 12px;
+            margin-bottom: 10px;
+            border-radius: 4px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .milestone-item.at-risk {
+            border-left-color: #ef4444;
+        }
+
+        .milestone-title {
+            color: #e2e8f0;
+            font-size: 13px;
+            font-weight: 600;
+        }
+
+        .milestone-date {
+            color: #94a3b8;
+            font-size: 12px;
+        }
+
+        .milestone-tag {
+            display: inline-block;
+            padding: 4px 8px;
+            background-color: rgba(239, 68, 68, 0.2);
+            color: #ef4444;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 600;
+        }
+
+        /* Footer */
+        .footer {
+            background: rgba(30, 41, 59, 0.8);
+            border-top: 1px solid rgba(148, 163, 184, 0.2);
+            padding: 20px;
+            text-align: center;
+            color: #94a3b8;
+            font-size: 12px;
+            margin-top: 30px;
+            border-radius: 10px;
+        }
+
+        /* Print Hide Edit Zone */
+        @media print {
+            .edit-zone {
+                display: none;
+            }
+        }
+
+        /* Responsive */
+        @media (max-width: 1024px) {
+            .charts-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .kpi-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .header {
+                flex-direction: column;
+                text-align: center;
+                gap: 15px;
+            }
+
+            .header-filters {
+                justify-content: center;
+                flex-wrap: wrap;
+            }
+        }
+
+        @media (max-width: 768px) {
+            body {
+                padding: 10px;
+            }
+
+            .kpi-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .portfolio-matrix {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .chart-container {
+                height: 300px;
+            }
+
+            .chart-wrapper {
+                height: 230px;
+            }
+
+            .header h1 {
+                font-size: 20px;
+            }
+
+            .section {
+                padding: 15px;
+            }
+
+            .fg {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Edit Zone -->
+        <div class="edit-zone">
+            <button class="edit-toggle" onclick="toggleEdit(this)">⏷ Edit Dashboard Data</button>
+            <div class="edit-body">
+                <!-- Header Section -->
+                <div class="es">
+                    <div class="es-title">Dashboard Header</div>
+                    <div class="fg">
+                        <div>
+                            <label>Account Name</label>
+                            <input type="text" id="edit_account" />
+                        </div>
+                        <div>
+                            <label>Report Date</label>
+                            <input type="text" id="edit_date" />
+                        </div>
+                        <div>
+                            <label>Organization Name</label>
+                            <input type="text" id="edit_org" />
+                        </div>
+                    </div>
+                </div>
+
+                <!-- KPI Cards Section -->
+                <div class="es">
+                    <div class="es-title">KPI Cards (6 Cards)</div>
+                    <div id="kpiEditSection"></div>
+                </div>
+
+                <!-- Portfolio Matrix Section -->
+                <div class="es">
+                    <div class="es-title">Portfolio Matrix</div>
+                    <div id="tileEditSection"></div>
+                    <button class="add-row-btn" onclick="addTile()">+ Add Tile</button>
+                </div>
+
+                <!-- Issues Section -->
+                <div class="es">
+                    <div class="es-title">Issues & Risks Table</div>
+                    <div id="issueEditSection"></div>
+                    <button class="add-row-btn" onclick="addIssue()">+ Add Row</button>
+                </div>
+
+                <!-- Milestones Section -->
+                <div class="es">
+                    <div class="es-title">Critical Milestones</div>
+                    <div id="msEditSection"></div>
+                    <button class="add-row-btn" onclick="addMilestone()">+ Add Milestone</button>
+                </div>
+
+                <!-- Chart Data Section -->
+                <div class="es">
+                    <div class="es-title">Chart Data - Defect Detection</div>
+                    <div class="fg">
+                        <div>
+                            <label>Project Labels (comma-separated)</label>
+                            <input type="text" id="edit_def_labels" />
+                        </div>
+                        <div>
+                            <label>Defect Values (comma-separated)</label>
+                            <input type="text" id="edit_def_data" />
+                        </div>
+                    </div>
+                </div>
+
+                <div class="es">
+                    <div class="es-title">Chart Data - CSAT Trend</div>
+                    <div class="fg">
+                        <div>
+                            <label>CSAT Scores (6 weeks, comma-separated)</label>
+                            <input type="text" id="edit_csat_data" />
+                        </div>
+                    </div>
+                </div>
+
+                <div class="es">
+                    <div class="es-title">Chart Data - Resource Allocation</div>
+                    <div class="fg">
+                        <div>
+                            <label>Project Labels (comma-separated)</label>
+                            <input type="text" id="edit_res_labels" />
+                        </div>
+                        <div>
+                            <label>Resource Values (comma-separated)</label>
+                            <input type="text" id="edit_res_data" />
+                        </div>
+                    </div>
+                </div>
+
+                <div class="es">
+                    <div class="es-title">Chart Data - Automation Coverage</div>
+                    <div class="fg">
+                        <div>
+                            <label>Target % (comma-separated)</label>
+                            <input type="text" id="edit_auto_target" />
+                        </div>
+                        <div>
+                            <label>Actual % (comma-separated)</label>
+                            <input type="text" id="edit_auto_actual" />
+                        </div>
+                    </div>
+                </div>
+
+                <button class="apply-btn" onclick="applyChanges()">✅ Apply Changes</button>
+                <button class="reset-btn" onclick="resetForm()">↺ Reset to Sample Data</button>
+            </div>
+        </div>
+
+        <!-- Header -->
+        <div class="header">
+            <div>
+                <h1 id="headerTitle">📊 Executive Account Dashboard</h1>
+                <p id="headerSubtitle">Acme University Account | As of February 14, 2025</p>
+            </div>
+            <div class="header-filters">
+                <button class="filter-btn active">All Projects</button>
+                <button class="filter-btn">At Risk</button>
+                <button class="filter-btn">On Track</button>
+                <button class="filter-btn">By Phase</button>
+            </div>
+        </div>
+
+        <!-- KPI Cards -->
+        <div class="kpi-grid" id="kpiGrid">
+        </div>
+
+        <!-- Portfolio Health Matrix -->
+        <div class="section">
+            <h2>Portfolio Health Matrix</h2>
+            <div class="portfolio-matrix" id="portfolioMatrix">
+            </div>
+        </div>
+
+        <!-- Charts Section -->
+        <div class="charts-grid">
+            <div class="chart-container">
+                <h3>Defect Detection Rate by Project</h3>
+                <div class="chart-wrapper">
+                    <canvas id="defectChart"></canvas>
+                </div>
+            </div>
+            <div class="chart-container">
+                <h3>CSAT Trend (Last 6 Weeks)</h3>
+                <div class="chart-wrapper">
+                    <canvas id="csatChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <div class="charts-grid">
+            <div class="chart-container">
+                <h3>Resource Allocation by Project</h3>
+                <div class="chart-wrapper">
+                    <canvas id="resourceChart"></canvas>
+                </div>
+            </div>
+            <div class="chart-container">
+                <h3>Automation Coverage (Target vs Actual)</h3>
+                <div class="chart-wrapper">
+                    <canvas id="automationChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Issues & Risks -->
+        <div class="section">
+            <h2>Top 5 Critical Issues & Risks</h2>
+            <table class="issues-table">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Issue/Risk</th>
+                        <th>Project</th>
+                        <th>Severity</th>
+                        <th>Status</th>
+                        <th>Owner</th>
+                    </tr>
+                </thead>
+                <tbody id="issuesTableBody">
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Milestones at Risk -->
+        <div class="section">
+            <h2>Critical Milestones (Next 2 Weeks)</h2>
+            <ul class="milestones-list" id="milestonesList">
+            </ul>
+        </div>
+
+        <!-- Footer -->
+        <div class="footer">
+            <strong>QE Practice - Executive Dashboard</strong> | Last Updated: <span id="footerDate">Feb 14, 2025</span> at 4:30 PM |
+            <strong>CONFIDENTIAL</strong> - Intended for authorized recipients only
+        </div>
+    </div>
+
+    <script>
+        // Data object - All sample data
+        const D = {
+            header: {
+                account: 'Acme University',
+                date: 'February 14, 2025',
+                org: 'Executive Account Dashboard'
+            },
+            kpis: [
+                { label: 'Total Projects', value: '18', detail: '6 Active | 12 In Planning', trend: '↑ 2 projects since last month', dir: 'up' },
+                { label: 'Active Resources', value: '25', detail: '20 On-Site | 5 Remote', trend: '↑ 3 resources onboarded', dir: 'up' },
+                { label: 'Overall Health Score', value: '78%', detail: '14 projects Green', trend: '↑ +5 points from last week', dir: 'up' },
+                { label: 'Critical Issues', value: '2', detail: 'Environment + Performance', trend: '↑ 1 new critical issue', dir: 'down' },
+                { label: 'Billing Utilization', value: '94%', detail: '$847K of $900K budget', trend: '↓ On budget forecast', dir: 'up' },
+                { label: 'CSAT Score', value: '4.7/5.0', detail: '12 surveys this month', trend: '↑ Stable & strong', dir: 'up' }
+            ],
+            tiles: [
+                { name: 'LMS Modernization', status: '🟢', pct: '72% Complete' },
+                { name: 'Portal Enhancement', status: '🟡', pct: '55% Complete' },
+                { name: 'Analytics Platform', status: '🟡', pct: '68% Complete' },
+                { name: 'Mobile App v2.0', status: '🟢', pct: '85% Complete' },
+                { name: 'API Integration Hub', status: '🟢', pct: '62% Complete' },
+                { name: 'Data Migration', status: '🟢', pct: '78% Complete' },
+                { name: 'Security Hardening', status: '🟢', pct: '45% Complete' },
+                { name: 'Compliance Testing', status: '🟢', pct: '90% Complete' }
+            ],
+            issues: [
+                { id: 'I-001', desc: 'Integration Testing Environment Performance Degradation', proj: 'LMS Modernization', sev: 'CRITICAL', status: 'Active - Escalated', owner: 'Mike Chen' },
+                { id: 'R-003', desc: 'Analytics Platform UAT Schedule Compression (2-week reduction)', proj: 'Analytics Platform', sev: 'CRITICAL', status: 'Mitigating', owner: 'James Wilson' },
+                { id: 'R-002', desc: 'Resource Constraint on Portal Enhancement Project', proj: 'Portal Enhancement', sev: 'HIGH', status: 'In Progress', owner: 'Lisa Park' },
+                { id: 'I-002', desc: 'Mobile App Performance Testing Gap - Load Testing Tools', proj: 'Mobile App v2.0', sev: 'HIGH', status: 'Planning', owner: 'Rachel Kumar' },
+                { id: 'R-004', desc: 'Test Data Availability for Data Migration Validation', proj: 'Data Migration', sev: 'MEDIUM', status: 'Resolved', owner: 'Emma Roberts' }
+            ],
+            milestones: [
+                { title: 'LMS Modernization - Integration Testing Complete', date: 'Due: Feb 18, 2025', tag: 'ON TRACK', color: 'green' },
+                { title: 'Portal Enhancement - UAT Test Case Sign-Off', date: 'Due: Feb 17, 2025', tag: 'AT RISK', color: 'red' },
+                { title: 'Analytics Platform - UAT Phase Kickoff', date: 'Due: Feb 20, 2025', tag: 'WATCH', color: 'amber' },
+                { title: 'Mobile App v2.0 - Performance Testing Complete', date: 'Due: Feb 25, 2025', tag: 'ON TRACK', color: 'green' }
+            ],
+            charts: {
+                defLabels: 'LMS,Portal,Analytics,Mobile,API Hub,Data Mig',
+                defData: '2.3,3.1,4.2,1.8,1.2,2.5',
+                csatData: '4.5,4.6,4.5,4.7,4.8,4.7',
+                resLabels: 'LMS Mod.,Portal,Analytics,Mobile App,API Hub,Data Mig.,Other',
+                resData: '18,12,16,20,10,8,6',
+                autoTarget: '80,75,70,85,60,50',
+                autoActual: '72,55,48,82,38,25'
+            }
+        };
+
+        // Helper: XSS-safe escape
+        function x(t) {
+            const div = document.createElement('div');
+            div.textContent = t;
+            return div.innerHTML;
+        }
+
+        // Helper: Get trimmed value from input
+        function v(id) {
+            const el = document.getElementById(id);
+            return el ? el.value.trim() : '';
+        }
+
+        // Toggle edit panel
+        function toggleEdit(btn) {
+            const body = btn.nextElementSibling;
+            body.classList.toggle('open');
+            const isOpen = body.classList.contains('open');
+            btn.textContent = isOpen ? '⏶ Edit Dashboard Data' : '⏷ Edit Dashboard Data';
+        }
+
+        // Build edit forms from data
+        function buildForms() {
+            // Header fields
+            document.getElementById('edit_account').value = D.header.account;
+            document.getElementById('edit_date').value = D.header.date;
+            document.getElementById('edit_org').value = D.header.org;
+
+            // KPI Fields
+            let kpiHtml = '';
+            for (let i = 0; i < D.kpis.length; i++) {
+                const kpi = D.kpis[i];
+                const idx = i + 1;
+                kpiHtml += `
+                <div class="erow">
+                    <div>
+                        <label>KPI ${idx} Label</label>
+                        <input type="text" id="kpi${idx}_label" value="${x(kpi.label)}" />
+                    </div>
+                    <div>
+                        <label>Value</label>
+                        <input type="text" id="kpi${idx}_value" value="${x(kpi.value)}" />
+                    </div>
+                    <div>
+                        <label>Detail</label>
+                        <input type="text" id="kpi${idx}_detail" value="${x(kpi.detail)}" />
+                    </div>
+                    <div>
+                        <label>Trend Text</label>
+                        <input type="text" id="kpi${idx}_trend" value="${x(kpi.trend)}" />
+                    </div>
+                    <div>
+                        <label>Direction</label>
+                        <select id="kpi${idx}_dir">
+                            <option value="up" ${kpi.dir === 'up' ? 'selected' : ''}>Up (Green)</option>
+                            <option value="down" ${kpi.dir === 'down' ? 'selected' : ''}>Down (Red)</option>
+                        </select>
+                    </div>
+                </div>
+                `;
+            }
+            document.getElementById('kpiEditSection').innerHTML = kpiHtml;
+
+            // Tile Fields
+            let tileHtml = '';
+            for (let i = 0; i < D.tiles.length; i++) {
+                const tile = D.tiles[i];
+                const idx = i + 1;
+                tileHtml += `
+                <div class="erow">
+                    <div>
+                        <label>Tile ${idx} Name</label>
+                        <input type="text" id="tile${idx}_name" value="${x(tile.name)}" />
+                    </div>
+                    <div>
+                        <label>Status</label>
+                        <select id="tile${idx}_status">
+                            <option value="🟢" ${tile.status === '🟢' ? 'selected' : ''}>🟢 Green</option>
+                            <option value="🟡" ${tile.status === '🟡' ? 'selected' : ''}>🟡 Yellow</option>
+                            <option value="🔴" ${tile.status === '🔴' ? 'selected' : ''}>🔴 Red</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label>% Complete</label>
+                        <input type="text" id="tile${idx}_pct" value="${x(tile.pct)}" />
+                    </div>
+                </div>
+                `;
+            }
+            document.getElementById('tileEditSection').innerHTML = tileHtml;
+
+            // Issue Fields
+            let issueHtml = '';
+            for (let i = 0; i < D.issues.length; i++) {
+                const iss = D.issues[i];
+                const idx = i + 1;
+                issueHtml += `
+                <div class="erow">
+                    <div>
+                        <label>Issue ${idx} ID</label>
+                        <input type="text" id="iss${idx}_id" value="${x(iss.id)}" />
+                    </div>
+                    <div>
+                        <label>Description</label>
+                        <input type="text" id="iss${idx}_desc" value="${x(iss.desc)}" />
+                    </div>
+                    <div>
+                        <label>Project</label>
+                        <input type="text" id="iss${idx}_proj" value="${x(iss.proj)}" />
+                    </div>
+                    <div>
+                        <label>Severity</label>
+                        <select id="iss${idx}_sev">
+                            <option value="CRITICAL" ${iss.sev === 'CRITICAL' ? 'selected' : ''}>CRITICAL</option>
+                            <option value="HIGH" ${iss.sev === 'HIGH' ? 'selected' : ''}>HIGH</option>
+                            <option value="MEDIUM" ${iss.sev === 'MEDIUM' ? 'selected' : ''}>MEDIUM</option>
+                            <option value="LOW" ${iss.sev === 'LOW' ? 'selected' : ''}>LOW</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label>Status</label>
+                        <input type="text" id="iss${idx}_status" value="${x(iss.status)}" />
+                    </div>
+                    <div>
+                        <label>Owner</label>
+                        <input type="text" id="iss${idx}_owner" value="${x(iss.owner)}" />
+                    </div>
+                </div>
+                `;
+            }
+            document.getElementById('issueEditSection').innerHTML = issueHtml;
+
+            // Milestone Fields
+            let msHtml = '';
+            for (let i = 0; i < D.milestones.length; i++) {
+                const ms = D.milestones[i];
+                const idx = i + 1;
+                msHtml += `
+                <div class="erow">
+                    <div>
+                        <label>Milestone ${idx} Title</label>
+                        <input type="text" id="ms${idx}_title" value="${x(ms.title)}" />
+                    </div>
+                    <div>
+                        <label>Date</label>
+                        <input type="text" id="ms${idx}_date" value="${x(ms.date)}" />
+                    </div>
+                    <div>
+                        <label>Tag Text</label>
+                        <input type="text" id="ms${idx}_tag" value="${x(ms.tag)}" />
+                    </div>
+                    <div>
+                        <label>Tag Color</label>
+                        <select id="ms${idx}_color">
+                            <option value="green" ${ms.color === 'green' ? 'selected' : ''}>Green</option>
+                            <option value="red" ${ms.color === 'red' ? 'selected' : ''}>Red</option>
+                            <option value="amber" ${ms.color === 'amber' ? 'selected' : ''}>Amber</option>
+                        </select>
+                    </div>
+                </div>
+                `;
+            }
+            document.getElementById('msEditSection').innerHTML = msHtml;
+
+            // Chart data
+            document.getElementById('edit_def_labels').value = D.charts.defLabels;
+            document.getElementById('edit_def_data').value = D.charts.defData;
+            document.getElementById('edit_csat_data').value = D.charts.csatData;
+            document.getElementById('edit_res_labels').value = D.charts.resLabels;
+            document.getElementById('edit_res_data').value = D.charts.resData;
+            document.getElementById('edit_auto_target').value = D.charts.autoTarget;
+            document.getElementById('edit_auto_actual').value = D.charts.autoActual;
+        }
+
+        // Add new tile
+        function addTile() {
+            D.tiles.push({ name: 'New Project', status: '🟢', pct: '0% Complete' });
+            const idx = D.tiles.length;
+            const tileSection = document.getElementById('tileEditSection');
+            const div = document.createElement('div');
+            div.className = 'erow';
+            div.innerHTML = `
+                <div>
+                    <label>Tile ${idx} Name</label>
+                    <input type="text" id="tile${idx}_name" value="New Project" />
+                </div>
+                <div>
+                    <label>Status</label>
+                    <select id="tile${idx}_status">
+                        <option value="🟢" selected>🟢 Green</option>
+                        <option value="🟡">🟡 Yellow</option>
+                        <option value="🔴">🔴 Red</option>
+                    </select>
+                </div>
+                <div>
+                    <label>% Complete</label>
+                    <input type="text" id="tile${idx}_pct" value="0% Complete" />
+                </div>
+            `;
+            tileSection.appendChild(div);
+        }
+
+        // Add new issue
+        function addIssue() {
+            D.issues.push({ id: 'I-NEW', desc: 'New issue', proj: 'Project', sev: 'MEDIUM', status: 'New', owner: 'Unassigned' });
+            const idx = D.issues.length;
+            const issueSection = document.getElementById('issueEditSection');
+            const div = document.createElement('div');
+            div.className = 'erow';
+            div.innerHTML = `
+                <div>
+                    <label>Issue ${idx} ID</label>
+                    <input type="text" id="iss${idx}_id" value="I-NEW" />
+                </div>
+                <div>
+                    <label>Description</label>
+                    <input type="text" id="iss${idx}_desc" value="New issue" />
+                </div>
+                <div>
+                    <label>Project</label>
+                    <input type="text" id="iss${idx}_proj" value="Project" />
+                </div>
+                <div>
+                    <label>Severity</label>
+                    <select id="iss${idx}_sev">
+                        <option value="CRITICAL">CRITICAL</option>
+                        <option value="HIGH">HIGH</option>
+                        <option value="MEDIUM" selected>MEDIUM</option>
+                        <option value="LOW">LOW</option>
+                    </select>
+                </div>
+                <div>
+                    <label>Status</label>
+                    <input type="text" id="iss${idx}_status" value="New" />
+                </div>
+                <div>
+                    <label>Owner</label>
+                    <input type="text" id="iss${idx}_owner" value="Unassigned" />
+                </div>
+            `;
+            issueSection.appendChild(div);
+        }
+
+        // Add new milestone
+        function addMilestone() {
+            D.milestones.push({ title: 'New Milestone', date: 'Due: TBD', tag: 'NEW', color: 'amber' });
+            const idx = D.milestones.length;
+            const msSection = document.getElementById('msEditSection');
+            const div = document.createElement('div');
+            div.className = 'erow';
+            div.innerHTML = `
+                <div>
+                    <label>Milestone ${idx} Title</label>
+                    <input type="text" id="ms${idx}_title" value="New Milestone" />
+                </div>
+                <div>
+                    <label>Date</label>
+                    <input type="text" id="ms${idx}_date" value="Due: TBD" />
+                </div>
+                <div>
+                    <label>Tag Text</label>
+                    <input type="text" id="ms${idx}_tag" value="NEW" />
+                </div>
+                <div>
+                    <label>Tag Color</label>
+                    <select id="ms${idx}_color">
+                        <option value="green">Green</option>
+                        <option value="red">Red</option>
+                        <option value="amber" selected>Amber</option>
+                    </select>
+                </div>
+            `;
+            msSection.appendChild(div);
+        }
+
+        // Chart instances (global)
+        let defectChartInst, csatChartInst, resourceChartInst, automationChartInst;
+
+        // Destroy existing charts
+        function destroyCharts() {
+            if (defectChartInst) {
+                defectChartInst.destroy();
+                defectChartInst = null;
+            }
+            if (csatChartInst) {
+                csatChartInst.destroy();
+                csatChartInst = null;
+            }
+            if (resourceChartInst) {
+                resourceChartInst.destroy();
+                resourceChartInst = null;
+            }
+            if (automationChartInst) {
+                automationChartInst.destroy();
+                automationChartInst = null;
+            }
+        }
+
+        // Apply changes from edit forms
+        function applyChanges() {
+            // Header
+            D.header.account = v('edit_account');
+            D.header.date = v('edit_date');
+            D.header.org = v('edit_org');
+
+            // KPIs
+            for (let i = 1; i <= 6; i++) {
+                if (D.kpis[i - 1]) {
+                    D.kpis[i - 1].label = v(`kpi${i}_label`);
+                    D.kpis[i - 1].value = v(`kpi${i}_value`);
+                    D.kpis[i - 1].detail = v(`kpi${i}_detail`);
+                    D.kpis[i - 1].trend = v(`kpi${i}_trend`);
+                    D.kpis[i - 1].dir = v(`kpi${i}_dir`);
+                }
+            }
+
+            // Tiles
+            D.tiles = [];
+            let tileCount = 1;
+            while (document.getElementById(`tile${tileCount}_name`)) {
+                D.tiles.push({
+                    name: v(`tile${tileCount}_name`),
+                    status: v(`tile${tileCount}_status`),
+                    pct: v(`tile${tileCount}_pct`)
+                });
+                tileCount++;
+            }
+
+            // Issues
+            D.issues = [];
+            let issCount = 1;
+            while (document.getElementById(`iss${issCount}_id`)) {
+                D.issues.push({
+                    id: v(`iss${issCount}_id`),
+                    desc: v(`iss${issCount}_desc`),
+                    proj: v(`iss${issCount}_proj`),
+                    sev: v(`iss${issCount}_sev`),
+                    status: v(`iss${issCount}_status`),
+                    owner: v(`iss${issCount}_owner`)
+                });
+                issCount++;
+            }
+
+            // Milestones
+            D.milestones = [];
+            let msCount = 1;
+            while (document.getElementById(`ms${msCount}_title`)) {
+                D.milestones.push({
+                    title: v(`ms${msCount}_title`),
+                    date: v(`ms${msCount}_date`),
+                    tag: v(`ms${msCount}_tag`),
+                    color: v(`ms${msCount}_color`)
+                });
+                msCount++;
+            }
+
+            // Chart data
+            D.charts.defLabels = v('edit_def_labels');
+            D.charts.defData = v('edit_def_data');
+            D.charts.csatData = v('edit_csat_data');
+            D.charts.resLabels = v('edit_res_labels');
+            D.charts.resData = v('edit_res_data');
+            D.charts.autoTarget = v('edit_auto_target');
+            D.charts.autoActual = v('edit_auto_actual');
+
+            // Re-render all sections
+            renderHeader();
+            renderKPIs();
+            renderPortfolio();
+            renderIssues();
+            renderMilestones();
+            destroyCharts();
+            renderCharts();
+
+            // Close edit panel and scroll to top
+            const editBody = document.querySelector('.edit-body');
+            if (editBody.classList.contains('open')) {
+                editBody.classList.remove('open');
+                const btn = document.querySelector('.edit-toggle');
+                btn.textContent = '⏷ Edit Dashboard Data';
+            }
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        // Render functions
+        function renderHeader() {
+            document.getElementById('headerTitle').textContent = `📊 ${x(D.header.org)}`;
+            document.getElementById('headerSubtitle').textContent = `${x(D.header.account)} Account | As of ${x(D.header.date)}`;
+        }
+
+        function renderKPIs() {
+            const grid = document.getElementById('kpiGrid');
+            grid.innerHTML = '';
+            for (let kpi of D.kpis) {
+                const trendClass = kpi.dir === 'down' ? 'down' : '';
+                grid.innerHTML += `
+                <div class="kpi-card">
+                    <div class="kpi-label">${x(kpi.label)}</div>
+                    <div class="kpi-value">${x(kpi.value)}</div>
+                    <div class="kpi-detail">${x(kpi.detail)}</div>
+                    <span class="kpi-trend ${trendClass}">${x(kpi.trend)}</span>
+                </div>
+                `;
+            }
+        }
+
+        function renderPortfolio() {
+            const matrix = document.getElementById('portfolioMatrix');
+            matrix.innerHTML = '';
+            for (let tile of D.tiles) {
+                matrix.innerHTML += `
+                <div class="project-tile">
+                    <div class="project-name">${x(tile.name)}</div>
+                    <div class="project-status">${tile.status}</div>
+                    <div class="project-percent">${x(tile.pct)}</div>
+                </div>
+                `;
+            }
+        }
+
+        function renderIssues() {
+            const tbody = document.getElementById('issuesTableBody');
+            tbody.innerHTML = '';
+            for (let iss of D.issues) {
+                let sevClass = 'severity-low';
+                if (iss.sev === 'CRITICAL' || iss.sev === 'HIGH') {
+                    sevClass = iss.sev === 'CRITICAL' ? 'severity-high' : 'severity-medium';
+                } else if (iss.sev === 'MEDIUM') {
+                    sevClass = 'severity-medium';
+                }
+                tbody.innerHTML += `
+                <tr>
+                    <td>${x(iss.id)}</td>
+                    <td>${x(iss.desc)}</td>
+                    <td>${x(iss.proj)}</td>
+                    <td class="${sevClass}">${x(iss.sev)}</td>
+                    <td>${x(iss.status)}</td>
+                    <td>${x(iss.owner)}</td>
+                </tr>
+                `;
+            }
+        }
+
+        function renderMilestones() {
+            const list = document.getElementById('milestonesList');
+            list.innerHTML = '';
+            for (let ms of D.milestones) {
+                let bgColor = 'rgba(16, 185, 129, 0.2)';
+                let txtColor = '#10b981';
+                if (ms.color === 'red') {
+                    bgColor = 'rgba(239, 68, 68, 0.2)';
+                    txtColor = '#ef4444';
+                } else if (ms.color === 'amber') {
+                    bgColor = 'rgba(245, 158, 11, 0.2)';
+                    txtColor = '#f59e0b';
+                }
+                list.innerHTML += `
+                <li class="milestone-item">
+                    <div>
+                        <div class="milestone-title">${x(ms.title)}</div>
+                        <div class="milestone-date">${x(ms.date)}</div>
+                    </div>
+                    <span class="milestone-tag" style="background-color: ${bgColor}; color: ${txtColor};">${x(ms.tag)}</span>
+                </li>
+                `;
+            }
+        }
+
+        function renderCharts() {
+            const chartDefaults = {
+                plugins: {
+                    legend: {
+                        labels: {
+                            color: '#cbd5e1',
+                            font: { size: 12 }
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        ticks: { color: '#94a3b8', font: { size: 11 } },
+                        grid: { color: 'rgba(148, 163, 184, 0.1)' }
+                    },
+                    y: {
+                        ticks: { color: '#94a3b8', font: { size: 11 } },
+                        grid: { color: 'rgba(148, 163, 184, 0.1)' }
+                    }
+                }
+            };
+
+            // Parse chart data
+            const defLabels = D.charts.defLabels.split(',').map(l => l.trim());
+            const defData = D.charts.defData.split(',').map(d => parseFloat(d));
+            const csatLabels = ['Week 1', 'Week 2', 'Week 3', 'Week 4', 'Week 5', 'Week 6'];
+            const csatData = D.charts.csatData.split(',').map(d => parseFloat(d));
+            const resLabels = D.charts.resLabels.split(',').map(l => l.trim());
+            const resData = D.charts.resData.split(',').map(d => parseInt(d));
+            const autoLabels = defLabels;
+            const autoTarget = D.charts.autoTarget.split(',').map(d => parseInt(d));
+            const autoActual = D.charts.autoActual.split(',').map(d => parseInt(d));
+
+            // Defect chart
+            const defectCtx = document.getElementById('defectChart').getContext('2d');
+            const defBgColors = defLabels.map((l, i) => {
+                const colors = ['rgba(16, 185, 129, 0.7)', 'rgba(245, 158, 11, 0.7)', 'rgba(239, 68, 68, 0.7)', 'rgba(16, 185, 129, 0.7)', 'rgba(16, 185, 129, 0.7)', 'rgba(59, 130, 246, 0.7)'];
+                return colors[i % colors.length];
+            });
+            const defBdColors = defLabels.map((l, i) => {
+                const colors = ['rgba(16, 185, 129, 1)', 'rgba(245, 158, 11, 1)', 'rgba(239, 68, 68, 1)', 'rgba(16, 185, 129, 1)', 'rgba(16, 185, 129, 1)', 'rgba(59, 130, 246, 1)'];
+                return colors[i % colors.length];
+            });
+
+            defectChartInst = new Chart(defectCtx, {
+                type: 'bar',
+                data: {
+                    labels: defLabels,
+                    datasets: [{
+                        label: 'Defects/Day',
+                        data: defData,
+                        backgroundColor: defBgColors,
+                        borderColor: defBdColors,
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    ...chartDefaults,
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    indexAxis: 'x'
+                }
+            });
+
+            // CSAT chart
+            const csatCtx = document.getElementById('csatChart').getContext('2d');
+            csatChartInst = new Chart(csatCtx, {
+                type: 'line',
+                data: {
+                    labels: csatLabels,
+                    datasets: [{
+                        label: 'CSAT Score (out of 5)',
+                        data: csatData,
+                        borderColor: 'rgba(96, 165, 250, 1)',
+                        backgroundColor: 'rgba(96, 165, 250, 0.1)',
+                        borderWidth: 3,
+                        fill: true,
+                        tension: 0.4,
+                        pointBackgroundColor: 'rgba(96, 165, 250, 1)',
+                        pointBorderColor: '#fff',
+                        pointBorderWidth: 2,
+                        pointRadius: 5
+                    }]
+                },
+                options: {
+                    ...chartDefaults,
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        ...chartDefaults.scales,
+                        y: {
+                            ...chartDefaults.scales.y,
+                            beginAtZero: false,
+                            min: 4,
+                            max: 5
+                        }
+                    }
+                }
+            });
+
+            // Resource chart
+            const resourceCtx = document.getElementById('resourceChart').getContext('2d');
+            const resBgColors = ['rgba(59, 130, 246, 0.8)', 'rgba(96, 165, 250, 0.8)', 'rgba(147, 197, 253, 0.8)', 'rgba(34, 197, 94, 0.8)', 'rgba(251, 191, 36, 0.8)', 'rgba(244, 63, 94, 0.8)', 'rgba(107, 114, 128, 0.8)'];
+
+            resourceChartInst = new Chart(resourceCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: resLabels,
+                    datasets: [{
+                        data: resData,
+                        backgroundColor: resBgColors.slice(0, resLabels.length),
+                        borderColor: '#1e293b',
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    ...chartDefaults,
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        ...chartDefaults.plugins,
+                        legend: {
+                            ...chartDefaults.plugins.legend,
+                            position: 'right'
+                        }
+                    }
+                }
+            });
+
+            // Automation chart
+            const automationCtx = document.getElementById('automationChart').getContext('2d');
+            automationChartInst = new Chart(automationCtx, {
+                type: 'bar',
+                data: {
+                    labels: autoLabels,
+                    datasets: [
+                        {
+                            label: 'Target %',
+                            data: autoTarget,
+                            backgroundColor: 'rgba(148, 163, 184, 0.5)',
+                            borderColor: 'rgba(148, 163, 184, 1)',
+                            borderWidth: 1
+                        },
+                        {
+                            label: 'Actual %',
+                            data: autoActual,
+                            backgroundColor: 'rgba(59, 130, 246, 0.7)',
+                            borderColor: 'rgba(59, 130, 246, 1)',
+                            borderWidth: 1
+                        }
+                    ]
+                },
+                options: {
+                    ...chartDefaults,
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        ...chartDefaults.scales,
+                        y: {
+                            ...chartDefaults.scales.y,
+                            beginAtZero: true,
+                            max: 100
+                        }
+                    }
+                }
+            });
+        }
+
+        // Reset to sample data
+        function resetForm() {
+            if (confirm('Reset all fields to sample data?')) {
+                location.reload();
+            }
+        }
+
+        // Initialize
+        buildForms();
+        applyChanges();
+    </script>
+</body>
+</html>

@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>IMDEV-9434. Итог тестирования (вариант для руководства)</title>
+<style>
+:root {
+  --ink: #1a2332;
+  --muted: #5b6573;
+  --line: #e2e8f0;
+  --paper: #f7f8fa;
+  --card: #ffffff;
+  --brand: #1e3a5f;
+  --brand-2: #2f6fed;
+  --ok: #0f766e;
+  --ok-bg: #ecfdf5;
+  --warn: #b45309;
+  --warn-bg: #fffbeb;
+  --bad: #b91c1c;
+  --bad-bg: #fef2f2;
+  --go: #047857;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+  background: var(--paper);
+  color: var(--ink);
+  line-height: 1.5;
+  padding: 28px 16px 48px;
+}
+.wrap {
+  max-width: 1080px;
+  margin: 0 auto;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: 0 8px 28px rgba(26, 35, 50, 0.06);
+}
+.banner {
+  background: #fff7ed;
+  border-bottom: 1px solid #fed7aa;
+  color: #9a3412;
+  font-size: 12px;
+  padding: 10px 28px;
+}
+.banner strong { color: #7c2d12; }
+.header {
+  background: linear-gradient(135deg, #1e3a5f 0%, #2f6fed 100%);
+  color: #fff;
+  padding: 28px 32px;
+  display: flex;
+  justify-content: space-between;
+  gap: 24px;
+  flex-wrap: wrap;
+}
+.header h1 {
+  font-size: 22px;
+  font-weight: 700;
+  margin-bottom: 6px;
+}
+.header .sub { font-size: 13px; opacity: 0.92; }
+.header-meta {
+  text-align: right;
+  font-size: 13px;
+  opacity: 0.95;
+}
+.header-meta p { margin: 3px 0; }
+.verdict {
+  margin: 24px 32px 0;
+  padding: 18px 20px;
+  border-radius: 8px;
+  background: var(--ok-bg);
+  border: 1px solid #a7f3d0;
+  display: grid;
+  grid-template-columns: 140px 1fr;
+  gap: 16px;
+  align-items: start;
+}
+.verdict-badge {
+  background: var(--go);
+  color: #fff;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  font-size: 18px;
+  text-align: center;
+  border-radius: 6px;
+  padding: 14px 8px;
+  line-height: 1.2;
+}
+.verdict-badge small {
+  display: block;
+  font-size: 11px;
+  font-weight: 600;
+  opacity: 0.9;
+  margin-top: 4px;
+  letter-spacing: 0;
+}
+.verdict h2 {
+  font-size: 15px;
+  color: var(--ok);
+  margin-bottom: 6px;
+  border: none;
+  padding: 0;
+}
+.verdict p { font-size: 14px; color: var(--ink); }
+section {
+  padding: 26px 32px;
+  border-bottom: 1px solid var(--line);
+}
+section:last-of-type { border-bottom: none; }
+h2 {
+  font-size: 16px;
+  color: var(--brand);
+  margin-bottom: 14px;
+  padding-bottom: 8px;
+  border-bottom: 2px solid #dbeafe;
+  display: inline-block;
+}
+.kpis {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px;
+}
+.kpi {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 14px 16px;
+  background: #fafbfc;
+  border-left: 4px solid var(--brand-2);
+}
+.kpi.ok { border-left-color: var(--ok); background: var(--ok-bg); }
+.kpi.warn { border-left-color: var(--warn); background: var(--warn-bg); }
+.kpi .label {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  color: var(--muted);
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+.kpi .value {
+  font-size: 22px;
+  font-weight: 750;
+  color: var(--ink);
+  line-height: 1.2;
+}
+.kpi .hint { font-size: 12px; color: var(--muted); margin-top: 4px; }
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+  margin-top: 8px;
+}
+thead { background: var(--brand); color: #fff; }
+th, td {
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  text-align: left;
+  vertical-align: top;
+}
+th { border-color: #27466f; font-weight: 600; }
+tbody tr:nth-child(even) { background: #f8fafc; }
+.status {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+}
+.status-ok { background: #d1fae5; color: #065f46; }
+.status-na { background: #e2e8f0; color: #334155; }
+.note {
+  font-size: 13px;
+  color: var(--muted);
+  margin-top: 10px;
+}
+.two-col {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+@media (max-width: 800px) {
+  .two-col { grid-template-columns: 1fr; }
+  .verdict { grid-template-columns: 1fr; }
+  .header-meta { text-align: left; }
+}
+.box {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 14px 16px;
+  background: #fafbfc;
+}
+.box h3 {
+  font-size: 13px;
+  color: var(--brand);
+  margin-bottom: 8px;
+}
+.box ul { margin-left: 18px; font-size: 13px; }
+.box li { margin: 4px 0; }
+.risk-row td:first-child { font-weight: 600; }
+.signoff td { height: 48px; }
+.footer {
+  background: var(--brand);
+  color: #fff;
+  padding: 16px 32px;
+  font-size: 12px;
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.footer a { color: #bfdbfe; }
+@media print {
+  body { padding: 0; background: #fff; }
+  .banner { display: none; }
+  .wrap { box-shadow: none; border: none; }
+  section { page-break-inside: avoid; }
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="banner">
+    <strong>Вариант оформления.</strong>
+    Рабочим документом по прогону остаётся отчёт
+    <em>test_plan_IMDEV-9434.html</em> (постановка + сценарии + скриншоты).
+    Этот файл — пробный формат итога для руководства / бизнеса.
+  </div>
+
+  <div class="header">
+    <div>
+      <h1>IMDEV-9434. Итог тестирования</h1>
+      <p class="sub">Групповое перезаполнение документов — параллельный прогон по договорам ДУ</p>
+      <p class="sub">Расширение IM9434 · конфигурация Аванкор ДУ</p>
+    </div>
+    <div class="header-meta">
+      <p><strong>Стенд:</strong> AVC_UAT_RDU_PERFTEST</p>
+      <p><strong>Сервер:</strong> SMSK02MG138:8541</p>
+      <p><strong>Дата отчёта:</strong> 12.09.2026</p>
+      <p><strong>Аудитория:</strong> руководство / бизнес</p>
+    </div>
+  </div>
+
+  <div class="verdict">
+    <div class="verdict-badge">
+      GO
+      <small>к приёмке</small>
+    </div>
+    <div>
+      <h2>Рекомендация</h2>
+      <p>
+        Прогон на perf-стенде закрыт без ошибок по ключевым сценариям:
+        параллельный режим с окном процента БСП, массовый СЧА/РСА (день),
+        СЧА + контроль риска, отказ старта без периода, ветка «по пулам» без изменения сценария.
+        Критерии приёмки по постановке выполнены. Готово к передаче / приёмке
+        при условии стандартного регресса на целевой среде после переноса.
+      </p>
+    </div>
+  </div>
+
+  <section>
+    <h2>Ключевые цифры</h2>
+    <div class="kpis">
+      <div class="kpi ok">
+        <div class="label">Сценарии</div>
+        <div class="value">5 / 5</div>
+        <div class="hint">пройдено без блокеров</div>
+      </div>
+      <div class="kpi ok">
+        <div class="label">Ошибки прогона</div>
+        <div class="value">0</div>
+        <div class="hint">по успешным массовым запускам</div>
+      </div>
+      <div class="kpi">
+        <div class="label">Макс. объём</div>
+        <div class="value">21 993</div>
+        <div class="hint">док. СЧА, розничное ДУ, день</div>
+      </div>
+      <div class="kpi">
+        <div class="label">Время (макс.)</div>
+        <div class="value">9 мин 11 сек</div>
+        <div class="hint">6 161 док., СЧА + риск, 12 потоков</div>
+      </div>
+      <div class="kpi">
+        <div class="label">Потоки</div>
+        <div class="value">12</div>
+        <div class="hint">из константы параллельности</div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Результаты по сценариям</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Сценарий</th>
+          <th>Объём</th>
+          <th>Потоки</th>
+          <th>Время</th>
+          <th>Итог</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Установка котировок ц/б (по пулам)</td>
+          <td>типовой клиентский цикл</td>
+          <td>1 (клиент)</td>
+          <td>—</td>
+          <td><span class="status status-ok">OK</span> поведение как было (+ замер)</td>
+        </tr>
+        <tr>
+          <td>Переоценка денежных средств (фильтр)</td>
+          <td>9 док. / 9 договоров</td>
+          <td>12</td>
+          <td>5 сек</td>
+          <td><span class="status status-ok">OK</span> ошибок 0; окно БСП и сводка</td>
+        </tr>
+        <tr>
+          <td>Запуск без периода в отборе</td>
+          <td>—</td>
+          <td>—</td>
+          <td>—</td>
+          <td><span class="status status-ok">OK</span> предупреждение, старта нет</td>
+        </tr>
+        <tr>
+          <td>Расчет СЧА/РСА, день, пул = Розничное ДУ</td>
+          <td>21 993 док.</td>
+          <td>12</td>
+          <td>8 мин 46 сек</td>
+          <td><span class="status status-ok">OK</span> ошибок 0; документов риска нет (ожидаемо)</td>
+        </tr>
+        <tr>
+          <td>Расчет СЧА/РСА, день, пул &lt;&gt; Розничное ДУ + риск</td>
+          <td>6 161 док. (3 086 СЧА + 3 075 риск; без риска у 11)</td>
+          <td>12</td>
+          <td>9 мин 11 сек</td>
+          <td><span class="status status-ok">OK</span> ошибок 0; риск после СЧА договора</td>
+        </tr>
+      </tbody>
+    </table>
+    <p class="note">
+      Детали, ожидания и скриншоты — в основном отчёте
+      <em>test_plan_IMDEV-9434.html</em>.
+    </p>
+  </section>
+
+  <section>
+    <h2>Что подтверждено для бизнеса</h2>
+    <div class="two-col">
+      <div class="box">
+        <h3>Пользовательский эффект</h3>
+        <ul>
+          <li>После «Перезаполнить» — штатное окно БСП с процентом (не «молчаливое» зависание клиента).</li>
+          <li>В деталях прогресса: док., потоки, ФЗ в базе, порция, оценка остатка времени.</li>
+          <li>В конце — сводка в сообщениях (успешно / с ошибкой / время / потоки).</li>
+          <li>Перед стартом — вопрос с расшифровкой отбора; без периода запуск блокируется.</li>
+        </ul>
+      </div>
+      <div class="box">
+        <h3>Правила параллельности</h3>
+        <ul>
+          <li>Пачки по целым договорам ДУ; один договор не режется на два потока.</li>
+          <li>Лимит потоков — существующая константа (на стенде — 12).</li>
+          <li>СЧА + риск: риск только после СЧА того же договора и того же календарного дня.</li>
+          <li>Ветка «по пулам» — прежний последовательный сценарий.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Остаточные риски и условия</h2>
+    <table>
+      <thead>
+        <tr>
+          <th style="width:22%">Тема</th>
+          <th>Суть</th>
+          <th style="width:28%">Митигация / следующий шаг</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr class="risk-row">
+          <td>Нагрузка на ИБ</td>
+          <td>12 параллельных воркеров на массовом дне дают нагрузку на СУБД и очередь ФЗ. На стенде прогон стабилен; на проде лимит потоков нужно держать осознанно.</td>
+          <td>Контроль константы потоков и порции на целевой среде</td>
+        </tr>
+        <tr class="risk-row">
+          <td>Оценка «осталось»</td>
+          <td>Ориентир с 10%, не гарантия SLA. На старте хвост времени не показывается.</td>
+          <td>Принять как UX-ориентир (по постановке)</td>
+        </tr>
+        <tr class="risk-row">
+          <td>Перенос в типовую</td>
+          <td>Сейчас решение в расширении IM9434. После приёмки — перенос в CF / отключение расширения.</td>
+          <td>Дерево переноса для Аванкор: <em>avancor_changes_tree_im9434.html</em></td>
+        </tr>
+        <tr class="risk-row">
+          <td>Регресс на целевой</td>
+          <td>Цифры получены на AVC_UAT_RDU_PERFTEST. На другой базе объёмы и время будут другими.</td>
+          <td>Короткий регресс ключевых сценариев после установки</td>
+        </tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section>
+    <h2>Критерии приёмки (сводка)</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Критерий</th>
+          <th style="width:120px">Статус</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td>1</td><td>«По пулам» — как сейчас (+ замер)</td><td><span class="status status-ok">подтверждено</span></td></tr>
+        <tr><td>2</td><td>Остальные виды — окно процента БСП, без клиентского цикла по документам</td><td><span class="status status-ok">подтверждено</span></td></tr>
+        <tr><td>3</td><td>Лимит потоков из константы; один ДоговорДУ не в двух заданиях</td><td><span class="status status-ok">подтверждено</span></td></tr>
+        <tr><td>4</td><td>СЧА + риск: риск после СЧА того же договора / календарного дня</td><td><span class="status status-ok">подтверждено</span></td></tr>
+        <tr><td>5</td><td>Сводка и ошибки в сообщениях; запись в замеры времени</td><td><span class="status status-ok">подтверждено</span></td></tr>
+        <tr><td>6</td><td>Без периода — старта нет; с периодом — вопрос подтверждения</td><td><span class="status status-ok">подтверждено</span></td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section>
+    <h2>Подписи / согласование</h2>
+    <table class="signoff">
+      <thead>
+        <tr>
+          <th>Роль</th>
+          <th>ФИО</th>
+          <th>Решение</th>
+          <th>Дата</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Ответственный за разработку</td>
+          <td></td>
+          <td>GO / GO с условиями / NO-GO</td>
+          <td></td>
+        </tr>
+        <tr>
+          <td>Ответственный за тестирование</td>
+          <td></td>
+          <td>GO / GO с условиями / NO-GO</td>
+          <td></td>
+        </tr>
+        <tr>
+          <td>Бизнес / владелец процесса</td>
+          <td></td>
+          <td>GO / GO с условиями / NO-GO</td>
+          <td></td>
+        </tr>
+      </tbody>
+    </table>
+    <p class="note">Поля подписи оставлены пустыми — заполняются при формальной приёмке.</p>
+  </section>
+
+  <div class="footer">
+    <div>IMDEV-9434 · вариант итогового отчёта для руководства</div>
+    <div>Основной отчёт с доказательствами: test_plan_IMDEV-9434.html</div>
+  </div>
+
+</div>
+</body>
+</html>
