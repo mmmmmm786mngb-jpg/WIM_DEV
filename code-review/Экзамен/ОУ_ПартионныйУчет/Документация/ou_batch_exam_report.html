@@ -1,0 +1,619 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Отчет: ОУ партионный учет — постановка, план, тесты, выводы</title>
+  <style>
+    :root {
+      --ink: #1a2332;
+      --muted: #5c6b7a;
+      --accent: #0d6e6e;
+      --accent-soft: #e6f4f4;
+      --line: #d7e0e6;
+      --ok: #28a745;
+      --info: #17a2b8;
+      --warn: #e0a800;
+      --surface: #ffffff;
+      --bg: #f3f6f8;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Segoe UI", "PT Sans", Arial, sans-serif;
+      color: var(--ink);
+      background:
+        radial-gradient(ellipse at 10% 0%, #dff0ef 0%, transparent 42%),
+        linear-gradient(180deg, #f7fafb 0%, var(--bg) 100%);
+      line-height: 1.55;
+    }
+    .wrap { max-width: 980px; margin: 0 auto; padding: 2rem 1.25rem 4rem; }
+    header.hero {
+      border-bottom: 3px solid var(--accent);
+      padding-bottom: 1.25rem;
+      margin-bottom: 1.5rem;
+    }
+    .brand {
+      margin: 0 0 0.4rem;
+      color: var(--accent);
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      font-size: 0.85rem;
+    }
+    h1 { margin: 0 0 0.5rem; font-size: 1.85rem; line-height: 1.25; }
+    .lead { margin: 0; color: var(--muted); max-width: 46rem; }
+    nav.toc {
+      background: var(--surface);
+      border: 1px solid var(--line);
+      padding: 1rem 1.25rem;
+      margin: 1.25rem 0 2rem;
+    }
+    nav.toc h2 { margin: 0 0 0.5rem; font-size: 1rem; color: var(--accent); }
+    nav.toc ol { margin: 0; padding-left: 1.25rem; }
+    nav.toc a { color: var(--accent); text-decoration: none; }
+    nav.toc a:hover { text-decoration: underline; }
+    section { margin: 0 0 2.4rem; }
+    h2 {
+      margin: 0 0 0.75rem;
+      font-size: 1.35rem;
+      color: var(--accent);
+      border-bottom: 1px solid var(--line);
+      padding-bottom: 0.35rem;
+    }
+    h3 { margin: 1.2rem 0 0.45rem; font-size: 1.05rem; }
+    p, li { font-size: 0.98rem; }
+    ul, ol { padding-left: 1.3rem; }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      background: var(--surface);
+      margin: 0.75rem 0 1rem;
+      font-size: 0.92rem;
+    }
+    th, td {
+      border: 1px solid var(--line);
+      padding: 0.5rem 0.65rem;
+      text-align: left;
+      vertical-align: top;
+    }
+    th { background: var(--accent-soft); font-weight: 650; }
+    .box {
+      padding: 0.85rem 1rem;
+      border-radius: 6px;
+      margin: 0.85rem 0;
+      background: var(--surface);
+      border-left: 4px solid var(--info);
+    }
+    .box.source { border-left-color: #6f42c1; background: #f7f2fb; }
+    .box.ok { border-left-color: var(--ok); background: #eaf7ee; }
+    .box.warn { border-left-color: var(--warn); background: #fff8e1; }
+    .box.info { border-left-color: var(--info); background: #e8f7fb; }
+    code {
+      font-family: Consolas, "Cascadia Mono", monospace;
+      font-size: 0.88em;
+      background: #eef3f5;
+      padding: 0.1em 0.35em;
+      border-radius: 3px;
+    }
+    pre {
+      background: #1e2a26;
+      color: #e8f0ec;
+      padding: 0.9rem 1rem;
+      overflow-x: auto;
+      font-size: 0.82rem;
+      border-radius: 4px;
+      line-height: 1.45;
+    }
+    .status-pass { color: var(--ok); font-weight: 700; }
+    .meta { color: var(--muted); font-size: 0.9rem; }
+    footer {
+      margin-top: 2rem;
+      padding-top: 1rem;
+      border-top: 1px solid var(--line);
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+    .plan-steps { counter-reset: step; list-style: none; padding-left: 0; }
+    .plan-steps li {
+      position: relative;
+      padding: 0.75rem 0.9rem 0.75rem 3.1rem;
+      margin: 0.55rem 0;
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: 6px;
+    }
+    .plan-steps li::before {
+      counter-increment: step;
+      content: counter(step);
+      position: absolute;
+      left: 0.75rem;
+      top: 0.75rem;
+      width: 1.6rem;
+      height: 1.6rem;
+      border-radius: 50%;
+      background: var(--accent);
+      color: #fff;
+      font-size: 0.85rem;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header class="hero">
+      <p class="brand">Экзамен · Оперативный учет · партионный учет</p>
+      <h1>Отчет по учебной конфигурации «ОперативныйУчетУчебная»</h1>
+      <p class="lead">
+        Постановка задачи (с указанием источника), план разработки,
+        описание всех конечных автотестов и выводы по результатам прогона.
+      </p>
+      <p class="meta">Дата отчета: 13.09.2026 · Результат автотестов: 23 / 23 PASS</p>
+    </header>
+
+    <nav class="toc" aria-label="Содержание">
+      <h2>Содержание</h2>
+      <ol>
+        <li><a href="#intro">Введение</a></li>
+        <li><a href="#source">Постановка задачи и источник</a></li>
+        <li><a href="#plan">План разработки</a></li>
+        <li><a href="#tests">Описание конечных тестов</a></li>
+        <li><a href="#results">Результаты прогона</a></li>
+        <li><a href="#conclusions">Выводы</a></li>
+      </ol>
+    </nav>
+
+    <section id="intro">
+      <h2>1. Введение</h2>
+      <p>
+        Учебная конфигурация реализует оперативный учет оптовой торговли:
+        приход и расход товаров по складам, партионное списание себестоимости
+        по методу учетной политики (FIFO / LIFO / по средней), отдельный учет услуг,
+        контроль недостачи, ручную корректировку регистров и два отчета на СКД.
+      </p>
+      <p>
+        Платформа: <strong>1С:Предприятие 8.3.27</strong> (формат выгрузки 2.20).
+        Комплект включает XML-исходники, бинарный файл конфигурации
+        <code>ОперативныйУчетУчебная.cf</code>, алгоритм для разработчика
+        (<code>developer-algorithm.html</code>) и COM-автотесты.
+      </p>
+    </section>
+
+    <section id="source">
+      <h2>2. Постановка задачи и источник</h2>
+
+      <div class="box source">
+        <strong>Откуда взята постановка.</strong>
+        Задача относится к типовому блоку
+        <strong>«Оперативный учет»</strong> экзамена
+        <strong>«1С:Специалист по платформе»</strong>.
+        В открытых источниках публикуются близкие варианты условий
+        (нумерация у разных авторов: 1.1, 1.7 и др.):
+        <ul>
+          <li>
+            Обзоры и разборы на Infostart —
+            например,
+            <em>«Сквозной пример задачи оперативного учета (ОУ)…»</em>
+            и статьи по подготовке к «1С:Специалист».
+          </li>
+          <li>
+            Сборники условий задач ОУ (например, navigator1c8.ru, раздел
+            «Специалист 8 / Оперативный учет») — сюжет про оптовую торговлю,
+            приходную/расходную накладные, услуги в одной ТЧ, FIFO/LIFO,
+            учетную политику и отчеты.
+          </li>
+          <li>
+            Учебные разборы (itsale.ru и аналоги) с той же канвой:
+            метод списания из учетной политики, партии, контроль остатков, отчеты.
+          </li>
+        </ul>
+        Официальный билет на экзамене может отличаться деталями, но
+        <strong>предметная канва устойчива</strong>: оптовая торговля + партии +
+        FIFO/LIFO + услуги + отчеты.
+      </div>
+
+      <h3>2.1. Классическая постановка (обобщение открытых формулировок)</h3>
+      <p>Компания занимается оптовой торговлей.</p>
+      <ul>
+        <li>Поступление — документ <strong>«Приходная накладная»</strong>.</li>
+        <li>Продажа — документ <strong>«Расходная накладная»</strong>.</li>
+        <li>Помимо товаров компания оказывает услуги (например, доставка);
+            товары и услуги указываются в одной табличной части.</li>
+        <li>Учет товаров ведется в разрезе складов (склад в шапке документа).</li>
+        <li>При недостатке товара расходный документ <strong>не проводится</strong>.</li>
+        <li>Списание себестоимости — по партиям, по методу из учетной политики
+            (в классике обычно FIFO / LIFO; политика действует период — часто год).</li>
+        <li>Нужны отчеты: продажи за период (количество, себестоимость, сумма продажи, прибыль)
+            и остатки товаров на дату.</li>
+      </ul>
+
+      <h3>2.2. Адаптация в комплекте «ОУ_ПартионныйУчет»</h3>
+      <p>
+        В учебной конфигурации постановка сохранена по смыслу и расширена
+        для удобства приёмки и обучения:
+      </p>
+      <table>
+        <thead>
+          <tr><th>Требование классики</th><th>Реализация в комплекте</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Приход / расход, склад, товары и услуги в одной ТЧ</td>
+            <td>Документы <code>ПриходнаяНакладная</code>, <code>РасходнаяНакладная</code>;
+                тип номенклатуры Товар / Услуга</td>
+          </tr>
+          <tr>
+            <td>Партионное списание FIFO / LIFO</td>
+            <td>Плюс метод <strong>«По средней»</strong>; метод читается
+                из РС <code>УчетнаяПолитикаУУ</code> <strong>на дату документа</strong></td>
+          </tr>
+          <tr>
+            <td>Блокировка проведения при недостаче</td>
+            <td>Атомарный отказ: очистка всех движений документа при любой недостаче</td>
+          </tr>
+          <tr>
+            <td>Отложенный расчет себестоимости регламентом (в части билетов)</td>
+            <td>Себестоимость считается <strong>при проведении</strong> расхода
+                (упрощение для учебной конфигурации)</td>
+          </tr>
+          <tr>
+            <td>Отчеты продажи и остатки</td>
+            <td>СКД: <code>ПродажиЗаПериод</code>, <code>ОстаткиТоваровПоПартиям</code></td>
+          </tr>
+          <tr>
+            <td>—</td>
+            <td>Дополнительно: документ <code>КорректировкаРегистров</code>
+                для ручных движений</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h3>2.3. Числовой эталон из алгоритма комплекта</h3>
+      <table>
+        <thead>
+          <tr><th>Событие</th><th>Количество / цена</th><th>Ожидаемый эффект</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Приход 05.01</td><td>10 × 100 = 1000</td><td>Партия 1</td></tr>
+          <tr><td>Приход 10.01</td><td>10 × 200 = 2000</td><td>Партия 2</td></tr>
+          <tr><td>Расход 12.01, FIFO, 5 шт</td><td>продажа 300</td><td>Себестоимость <strong>500</strong></td></tr>
+          <tr><td>Остаток после</td><td>5×100 + 10×200</td><td>15 шт / 2500</td></tr>
+          <tr><td>Расход 16.01, по средней, 6 шт</td><td>продажа 350</td><td>Себестоимость ≈ <strong>1000</strong></td></tr>
+          <tr><td>Расход 999 при остатке 9</td><td>—</td><td>Проведение заблокировано</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section id="plan">
+      <h2>3. План разработки</h2>
+      <ol class="plan-steps">
+        <li>
+          <strong>Проектирование регистров и метаданных.</strong>
+          Спроектировать РС учетной политики, РН остатков
+          <code>ТоварыНаСкладах</code> (склад + номенклатура + партия),
+          РН оборотов <code>Продажи</code>, справочники (номенклатура, склады,
+          контрагенты, партии), перечисления методов и типов номенклатуры.
+        </li>
+        <li>
+          <strong>Каркас конфигурации.</strong>
+          Создать пустую конфигурацию, подсистемы (Главное / Оперативный учет / Сервис),
+          роль <code>ПолныеПрава</code>, командный интерфейс.
+        </li>
+        <li>
+          <strong>Документы прихода и расхода.</strong>
+          Реквизиты шапки и ТЧ; проведение через общий модуль
+          <code>УчетТоваров</code> (создание партий на приходе, подбор партий на расходе).
+        </li>
+        <li>
+          <strong>Учетная политика.</strong>
+          Модуль <code>УчетнаяПолитикаСервер</code>: метод на дату документа,
+          значение по умолчанию FIFO при отсутствии записей.
+        </li>
+        <li>
+          <strong>Алгоритмы FIFO / LIFO / средняя.</strong>
+          Сортировка остатков партий, пропорциональное списание стоимости,
+          для средней — единая цена с сохранением партионного разреза движений.
+        </li>
+        <li>
+          <strong>Товары vs услуги и контроль остатков.</strong>
+          Услуги не двигают склад; при недостаче — отказ проведения и сообщение пользователю.
+        </li>
+        <li>
+          <strong>Корректировка регистров и отчеты.</strong>
+          Ручные движения; СКД-отчеты продаж и остатков по партиям.
+        </li>
+        <li>
+          <strong>Сборка и приёмка.</strong>
+          Выгрузка XML / CF, создание ИБ, пользователь Admin,
+          COM-автотесты с эталонными цифрами, HTML-отчет о прогоне.
+        </li>
+      </ol>
+
+      <div class="box info">
+        Ключевые точки входа в код:
+        <code>УчетТоваров.ВыполнитьПроведениеПрихода</code>,
+        <code>УчетТоваров.ВыполнитьПроведениеРасхода</code>,
+        <code>УчетТоваров.ПодобратьПартииКСписанию</code>,
+        <code>УчетнаяПолитикаСервер.МетодОценкиНаДату</code>.
+        Подробности алгоритмов — в файле <code>developer-algorithm.html</code>.
+      </div>
+    </section>
+
+    <section id="tests">
+      <h2>4. Описание конечных тестов</h2>
+      <p>
+        Автотесты выполняются скриптом <code>test_ou_batch_scenarios.py</code>
+        через COM (<code>V83.COMConnector</code>, pywin32).
+        Пользователь: <code>Admin</code> / <code>1</code>, роль <code>ПолныеПрава</code>.
+        Каждый прогон использует уникальный суффикс номенклатуры/склада,
+        чтобы повторные запуски не искажали остатки.
+      </p>
+
+      <h3>4.1. Подготовка среды</h3>
+      <table>
+        <thead>
+          <tr><th>#</th><th>Тест</th><th>Что проверяется</th><th>Критерий успеха</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>1</td>
+            <td>Create Admin user</td>
+            <td>Создание/обновление пользователя Admin с паролем 1 и ролью ПолныеПрава;
+                повторный вход под Admin</td>
+            <td>Пользователь записан, COM-подключение под Admin успешно</td>
+          </tr>
+          <tr>
+            <td>2</td>
+            <td>Master data</td>
+            <td>Создание склада, контрагентов, номенклатуры Товар и Услуга</td>
+            <td>Элементы справочников созданы</td>
+          </tr>
+          <tr>
+            <td>3</td>
+            <td>Policy FIFO 01.01</td>
+            <td>Запись учетной политики методом FIFO с 01.01</td>
+            <td>Запись РС записана без ошибки</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h3>4.2. Приход, партии, услуги на приходе</h3>
+      <table>
+        <thead>
+          <tr><th>#</th><th>Тест</th><th>Что проверяется</th><th>Критерий успеха</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>4</td>
+            <td>Receipts posted</td>
+            <td>Два прихода: 10×100 (05.01) и 10×200 (10.01)</td>
+            <td>Оба документа проведены</td>
+          </tr>
+          <tr>
+            <td>5</td>
+            <td>Parties created</td>
+            <td>Автосоздание элементов <code>ПартииТоваров</code></td>
+            <td>Не менее 2 партий по товару</td>
+          </tr>
+          <tr>
+            <td>6</td>
+            <td>Stock after receipts</td>
+            <td>Остаток после приходов</td>
+            <td>Количество = 20, стоимость = 3000</td>
+          </tr>
+          <tr>
+            <td>7</td>
+            <td>Service not on stock</td>
+            <td>Приход услуги не двигает <code>ТоварыНаСкладах</code></td>
+            <td>Остаток по услуге = 0</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h3>4.3. FIFO и «по средней»</h3>
+      <table>
+        <thead>
+          <tr><th>#</th><th>Тест</th><th>Что проверяется</th><th>Критерий успеха</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>8</td>
+            <td>FIFO expense posted</td>
+            <td>Расход 12.01 на 5 шт (FIFO)</td>
+            <td>Документ проведен</td>
+          </tr>
+          <tr>
+            <td>9</td>
+            <td>FIFO cost = 500</td>
+            <td>Себестоимость списания с партии 1 (5×100)</td>
+            <td>Себестоимость в <code>Продажи</code> = 500</td>
+          </tr>
+          <tr>
+            <td>10</td>
+            <td>Stock after FIFO</td>
+            <td>Остаток после FIFO-расхода</td>
+            <td>15 шт / 2500</td>
+          </tr>
+          <tr>
+            <td>11</td>
+            <td>Policy average 15.01</td>
+            <td>Смена метода на «По средней» с 15.01</td>
+            <td>Запись РС записана</td>
+          </tr>
+          <tr>
+            <td>12</td>
+            <td>Average expense posted</td>
+            <td>Расход 16.01 на 6 шт</td>
+            <td>Документ проведен</td>
+          </tr>
+          <tr>
+            <td>13</td>
+            <td>Average cost ~ 1000</td>
+            <td>6 × (2500 / 15)</td>
+            <td>Себестоимость ≈ 1000 (±0.02)</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h3>4.4. Услуги на расходе, недостача, корректировка</h3>
+      <table>
+        <thead>
+          <tr><th>#</th><th>Тест</th><th>Что проверяется</th><th>Критерий успеха</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>14</td>
+            <td>Service expense posted</td>
+            <td>Расход услуги</td>
+            <td>Документ проведен</td>
+          </tr>
+          <tr>
+            <td>15</td>
+            <td>Service cost = 0</td>
+            <td>По услуге только продажи, без себестоимости склада</td>
+            <td>Себестоимость = 0, сумма продажи = 700</td>
+          </tr>
+          <tr>
+            <td>16</td>
+            <td>Stock before shortage = 9</td>
+            <td>Остаток перед проверкой недостачи (15 − 6)</td>
+            <td>Количество = 9</td>
+          </tr>
+          <tr>
+            <td>17</td>
+            <td>Shortage blocks posting</td>
+            <td>Расход 999 шт при остатке 9</td>
+            <td>Проведение отклонено платформой/логикой</td>
+          </tr>
+          <tr>
+            <td>18</td>
+            <td>Stock unchanged after shortage</td>
+            <td>Остаток не изменился после отказа</td>
+            <td>Количество = 9</td>
+          </tr>
+          <tr>
+            <td>19</td>
+            <td>Register adjustment movements</td>
+            <td>Документ <code>КорректировкаРегистров</code>:
+                приход 1 шт / 50 и оборот продаж 80 / 50</td>
+            <td>Движения по обоим РН соответствуют строкам документа</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h3>4.5. Источники отчетов и LIFO</h3>
+      <table>
+        <thead>
+          <tr><th>#</th><th>Тест</th><th>Что проверяется</th><th>Критерий успеха</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>20</td>
+            <td>Report source Prodazhi has data</td>
+            <td>Обороты РН <code>Продажи</code> за январь (источник отчета продаж)</td>
+            <td>Суммарное количество оборотов &gt; 0</td>
+          </tr>
+          <tr>
+            <td>21</td>
+            <td>Report source Ostatki has data</td>
+            <td>Остатки РН <code>ТоварыНаСкладах</code> (источник отчета остатков)</td>
+            <td>Суммарный остаток &gt; 0</td>
+          </tr>
+          <tr>
+            <td>22</td>
+            <td>LIFO expense posted</td>
+            <td>Отдельный товар: два прихода 10×100 и 10×200, расход 5 шт при LIFO</td>
+            <td>Документ проведен</td>
+          </tr>
+          <tr>
+            <td>23</td>
+            <td>LIFO cost = 1000</td>
+            <td>Списание с последней партии (5×200)</td>
+            <td>Себестоимость = 1000</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="box warn">
+        <strong>Замечание.</strong>
+        Тесты проверяют бизнес-логику и регистры запросами.
+        Открытие форм отчетов в тонком клиенте в автопрогон не входит —
+        проверяется наличие данных в тех же источниках, что используют СКД-отчеты.
+      </div>
+    </section>
+
+    <section id="results">
+      <h2>5. Результаты прогона</h2>
+      <div class="box ok">
+        <strong>Итог:</strong> Passed 23 / 23, Failed 0<br>
+        Прогон: 13.09.2026, отчет <code>ou_batch_test_report_20260913_165731.html</code>
+      </div>
+      <table>
+        <thead>
+          <tr><th>Группа</th><th>Тестов</th><th>Статус</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Пользователь и НСИ</td><td>3</td><td class="status-pass">PASS</td></tr>
+          <tr><td>Приход / партии / услуги</td><td>4</td><td class="status-pass">PASS</td></tr>
+          <tr><td>FIFO и средняя</td><td>6</td><td class="status-pass">PASS</td></tr>
+          <tr><td>Услуги расхода / недостача / корректировка</td><td>6</td><td class="status-pass">PASS</td></tr>
+          <tr><td>Отчеты и LIFO</td><td>4</td><td class="status-pass">PASS</td></tr>
+        </tbody>
+      </table>
+      <p>
+        Фактические значения совпали с эталоном:
+        FIFO = 500, остаток после FIFO = 15/2500,
+        средняя = 1000, LIFO = 1000, недостача блокирует проведение.
+      </p>
+    </section>
+
+    <section id="conclusions">
+      <h2>6. Выводы</h2>
+      <ol>
+        <li>
+          <strong>Постановка подтверждена открытыми источниками</strong>
+          подготовки к экзамену «1С:Специалист по платформе» (раздел ОУ:
+          оптовая торговля, партии, FIFO/LIFO, услуги, отчеты).
+          Комплект — учебная адаптация с методом «по средней» и расчетом
+          себестоимости при проведении.
+        </li>
+        <li>
+          <strong>План разработки закрыт полностью:</strong>
+          метаданные, алгоритмы прихода/расхода, учетная политика на дату,
+          контроль остатков, корректировка, отчеты, CF и автотесты.
+        </li>
+        <li>
+          <strong>Все 23 конечных теста прошли успешно.</strong>
+          Числовые эталоны FIFO / средней / LIFO и сценарий недостачи
+          подтверждены данными регистров.
+        </li>
+        <li>
+          <strong>Конфигурация пригодна для экзаменационной/учебной приёмки:</strong>
+          загружается в ИБ 8.3.27, работает под Admin, сценарии воспроизводимы
+          через COM без ручного ввода.
+        </li>
+        <li>
+          <strong>Ограничения учебной версии</strong> относительно части
+          «полных» билетов: нет отложенного регламентного расчета себестоимости;
+          нет ПВХ/характеристик производителя в отчете остатков —
+          при необходимости это отдельные доработки под конкретный билет.
+        </li>
+      </ol>
+
+      <div class="box ok">
+        Рекомендация: использовать комплект как рабочий эталон ОУ-партий
+        и как базу для донастройки под формулировку конкретного экзаменационного билета.
+      </div>
+    </section>
+
+    <footer>
+      Комплект: ОУ_ПартионныйУчет · конфигурация ОперативныйУчетУчебная ·
+      связанные материалы: developer-algorithm.html, test_ou_batch_scenarios.py,
+      ou_batch_test_report_20260913_165731.html
+    </footer>
+  </div>
+</body>
+</html>

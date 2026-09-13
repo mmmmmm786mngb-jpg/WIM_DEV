@@ -1,0 +1,596 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Алгоритм для разработчика — Оперативный учёт (партии)</title>
+  <style>
+    :root {
+      --bg: #f7f4ef;
+      --surface: #ffffff;
+      --ink: #1c2420;
+      --muted: #5a635e;
+      --accent: #0f6b5c;
+      --accent-soft: #d8efe9;
+      --line: #d5ddd8;
+      --warn-bg: #fff6e5;
+      --warn-border: #e0b45a;
+      --code-bg: #eef2f0;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Segoe UI", "PT Sans", "DejaVu Sans", sans-serif;
+      color: var(--ink);
+      background:
+        radial-gradient(ellipse at top left, #e4f2ed 0%, transparent 45%),
+        linear-gradient(180deg, #f7f4ef 0%, #ebe6dc 100%);
+      line-height: 1.55;
+    }
+    .wrap {
+      max-width: 960px;
+      margin: 0 auto;
+      padding: 2rem 1.25rem 4rem;
+    }
+    header.hero {
+      padding: 1.5rem 0 1rem;
+      border-bottom: 2px solid var(--accent);
+      margin-bottom: 1.75rem;
+    }
+    header.hero .brand {
+      font-size: 0.85rem;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      color: var(--accent);
+      font-weight: 700;
+      margin: 0 0 0.35rem;
+    }
+    h1 {
+      margin: 0 0 0.5rem;
+      font-size: 1.85rem;
+      font-weight: 700;
+      line-height: 1.25;
+    }
+    .lead {
+      margin: 0;
+      color: var(--muted);
+      max-width: 42rem;
+    }
+    nav.toc {
+      background: var(--surface);
+      border: 1px solid var(--line);
+      padding: 1rem 1.25rem;
+      margin: 1.5rem 0 2rem;
+    }
+    nav.toc h2 {
+      margin: 0 0 0.6rem;
+      font-size: 1rem;
+    }
+    nav.toc ol {
+      margin: 0;
+      padding-left: 1.25rem;
+    }
+    nav.toc a {
+      color: var(--accent);
+      text-decoration: none;
+    }
+    nav.toc a:hover { text-decoration: underline; }
+    section {
+      margin: 0 0 2.25rem;
+    }
+    h2 {
+      margin: 0 0 0.75rem;
+      font-size: 1.35rem;
+      color: var(--accent);
+      border-bottom: 1px solid var(--line);
+      padding-bottom: 0.35rem;
+    }
+    h3 {
+      margin: 1.25rem 0 0.5rem;
+      font-size: 1.08rem;
+    }
+    p, li { font-size: 0.98rem; }
+    ul, ol { padding-left: 1.3rem; }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      background: var(--surface);
+      margin: 0.75rem 0 1rem;
+      font-size: 0.92rem;
+    }
+    th, td {
+      border: 1px solid var(--line);
+      padding: 0.5rem 0.65rem;
+      text-align: left;
+      vertical-align: top;
+    }
+    th {
+      background: var(--accent-soft);
+      font-weight: 650;
+    }
+    code, .path {
+      font-family: "Consolas", "Cascadia Mono", "DejaVu Sans Mono", monospace;
+      font-size: 0.88em;
+      background: var(--code-bg);
+      padding: 0.1em 0.35em;
+      border-radius: 3px;
+    }
+    pre {
+      background: #1e2a26;
+      color: #e8f0ec;
+      padding: 0.9rem 1rem;
+      overflow-x: auto;
+      font-size: 0.82rem;
+      line-height: 1.45;
+      border-radius: 4px;
+    }
+    pre code {
+      background: transparent;
+      color: inherit;
+      padding: 0;
+    }
+    .note {
+      background: var(--warn-bg);
+      border-left: 4px solid var(--warn-border);
+      padding: 0.75rem 1rem;
+      margin: 1rem 0;
+    }
+    .flow {
+      background: var(--surface);
+      border: 1px solid var(--line);
+      padding: 0.9rem 1.1rem;
+      margin: 0.75rem 0;
+    }
+    .flow ol { margin: 0.4rem 0 0; }
+    footer {
+      margin-top: 2.5rem;
+      padding-top: 1rem;
+      border-top: 1px solid var(--line);
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header class="hero">
+      <p class="brand">ОперативныйУчетУчебная · экзамен ОУ</p>
+      <h1>Алгоритм для разработчика</h1>
+      <p class="lead">
+        Подробное описание партионного учёта: приход и расход, FIFO / LIFO / средняя,
+        контроль остатков, учётная политика на дату, товары и услуги, корректировка
+        регистров и отчёты. Точки входа в код — модули общих модулей и документов.
+      </p>
+    </header>
+
+    <nav class="toc" aria-label="Содержание">
+      <h2>Содержание</h2>
+      <ol>
+        <li><a href="#overview">Обзор конфигурации</a></li>
+        <li><a href="#metadata">Метаданные и регистры</a></li>
+        <li><a href="#policy">Учётная политика на дату</a></li>
+        <li><a href="#receipt">Алгоритм прихода и партий</a></li>
+        <li><a href="#issue">Алгоритм расхода</a></li>
+        <li><a href="#methods">FIFO / LIFO / по средней</a></li>
+        <li><a href="#stock-control">Контроль остатков</a></li>
+        <li><a href="#goods-services">Товары и услуги</a></li>
+        <li><a href="#adjust">Корректировка регистров</a></li>
+        <li><a href="#reports">Отчёты</a></li>
+        <li><a href="#entry-points">Точки входа в код</a></li>
+        <li><a href="#checklist">Чеклист разработчика</a></li>
+      </ol>
+    </nav>
+
+    <section id="overview">
+      <h2>1. Обзор конфигурации</h2>
+      <p>
+        Конфигурация учебная, без БСП: оперативный учёт оптовой торговли со складом,
+        партиями и тремя методами оценки запасов. Платформа <strong>8.3.27</strong>,
+        формат выгрузки 2.20.
+      </p>
+      <table>
+        <thead>
+          <tr><th>Компонент</th><th>Роль</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Документы прихода / расхода</td>
+            <td>Создают движения по регистрам; вызывают <code>УчетТоваров</code></td>
+          </tr>
+          <tr>
+            <td><code>УчетТоваров</code></td>
+            <td>Вся логика проведения и подбора партий</td>
+          </tr>
+          <tr>
+            <td><code>УчетнаяПолитикаСервер</code></td>
+            <td>Метод оценки на дату документа</td>
+          </tr>
+          <tr>
+            <td>РС <code>УчетнаяПолитикаУУ</code></td>
+            <td>Периодические записи метода (день)</td>
+          </tr>
+          <tr>
+            <td>РН <code>ТоварыНаСкладах</code> / <code>Продажи</code></td>
+            <td>Остатки по партиям и обороты продаж</td>
+          </tr>
+        </tbody>
+      </table>
+      <div class="note">
+        XML-комплект для загрузки: каталог <span class="path">config/</span> рядом с этим файлом
+        (корень — <span class="path">Configuration.xml</span>). Бинарный <code>.cf</code> не обязателен.
+      </div>
+    </section>
+
+    <section id="metadata">
+      <h2>2. Метаданные и регистры</h2>
+      <h3>Справочники</h3>
+      <table>
+        <thead>
+          <tr><th>Объект</th><th>Ключевые реквизиты</th><th>Замечание</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>Номенклатура</code></td>
+            <td><code>ТипНоменклатуры</code>, <code>ЕдиницаИзмерения</code></td>
+            <td>Тип: Товар или Услуга</td>
+          </tr>
+          <tr>
+            <td><code>Склады</code>, <code>Контрагенты</code></td>
+            <td>—</td>
+            <td>Шапка документов</td>
+          </tr>
+          <tr>
+            <td><code>ПартииТоваров</code></td>
+            <td>ДокументПрихода, ДатаПоступления, Номенклатура, Склад, Цена</td>
+            <td>Один элемент партии ≈ одна приходная строка-товар</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h3>Регистры накопления</h3>
+      <table>
+        <thead>
+          <tr><th>Регистр</th><th>Вид</th><th>Измерения</th><th>Ресурсы</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>ТоварыНаСкладах</code></td>
+            <td>Остатки</td>
+            <td>Склад, Номенклатура, Партия</td>
+            <td>Количество, Стоимость</td>
+          </tr>
+          <tr>
+            <td><code>Продажи</code></td>
+            <td>Обороты</td>
+            <td>Склад, Номенклатура, Контрагент</td>
+            <td>Количество, СуммаПродажи, Себестоимость</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h3>Перечисления</h3>
+      <ul>
+        <li><code>МетодыОценкиЗапасов</code>: FIFO, LIFO, ПоСредней</li>
+        <li><code>ТипыНоменклатуры</code>: Товар, Услуга</li>
+        <li><code>ВидыДвижений</code>: Приход, Расход (для корректировки)</li>
+      </ul>
+    </section>
+
+    <section id="policy">
+      <h2>3. Учётная политика на дату</h2>
+      <p>
+        Регистр сведений <code>УчетнаяПолитикаУУ</code>: периодичность <strong>Day</strong>,
+        измерений нет, ресурс <code>МетодОценкиЗапасов</code>.
+      </p>
+      <div class="flow">
+        <strong>Чтение метода</strong>
+        <ol>
+          <li>При проведении расхода вызывается
+            <code>УчетнаяПолитикаСервер.МетодОценкиНаДату(ДокументОбъект.Дата)</code>.</li>
+          <li>Запрос: срез последних РС на дату документа.</li>
+          <li>Если записей нет — возвращается <strong>FIFO</strong> по умолчанию.</li>
+        </ol>
+      </div>
+      <p>
+        Смена метода «с даты» делается новой записью РС (пример: до 15.01 — FIFO,
+        с 15.01 — По средней). Документ расхода 16.01 берёт уже среднюю.
+      </p>
+      <pre><code>Функция МетодОценкиНаДату(ДатаДокумента) Экспорт
+  // СрезПоследних(&amp;ДатаДокумента) по УчетнаяПолитикаУУ
+  // Пустой результат → МетодыОценкиЗапасов.FIFO
+КонецФункции</code></pre>
+      <p class="note">
+        Важно: метод берётся по <strong>дате документа расхода</strong>, а не по дате прихода партии.
+        Остатки партий при этом всегда читаются на момент времени документа.
+      </p>
+    </section>
+
+    <section id="receipt">
+      <h2>4. Алгоритм прихода и партий</h2>
+      <p>
+        Точка входа: <code>ОбработкаПроведения</code> документа
+        <code>ПриходнаяНакладная</code> → <code>УчетТоваров.ВыполнитьПроведениеПрихода</code>.
+      </p>
+      <div class="flow">
+        <strong>По каждой строке ТЧ Товары</strong>
+        <ol>
+          <li>Пропуск пустой номенклатуры и количества ≤ 0.</li>
+          <li>Если тип = <strong>Услуга</strong> — строка пропускается (склад не трогаем).</li>
+          <li>Если в строке уже есть <code>Партия</code> — обновляем реквизиты элемента;
+            иначе создаём новый элемент <code>ПартииТоваров</code> и пишем ссылку в строку ТЧ.</li>
+          <li>Добавляем движение <strong>Приход</strong> в <code>ТоварыНаСкладах</code>:
+            склад из шапки, номенклатура и партия из строки, количество и стоимость (= сумма строки).</li>
+        </ol>
+      </div>
+      <h3>Наименование партии</h3>
+      <p>Шаблон: <code>«Номенклатура / dd.MM.yyyy / НомерДокумента»</code>.</p>
+      <h3>Перед записью документа</h3>
+      <p>
+        Если сумма = 0, а количество и цена заполнены — сумма пересчитывается как
+        <code>Количество * Цена</code> (и на приходе, и на расходе).
+      </p>
+    </section>
+
+    <section id="issue">
+      <h2>5. Алгоритм расхода</h2>
+      <p>
+        Точка входа: <code>РасходнаяНакладная.ОбработкаПроведения</code> →
+        <code>УчетТоваров.ВыполнитьПроведениеРасхода</code>.
+      </p>
+      <div class="flow">
+        <ol>
+          <li>Очистить наборы движений <code>ТоварыНаСкладах</code> и <code>Продажи</code>.</li>
+          <li>Получить метод оценки на дату документа.</li>
+          <li>Для каждой строки ТЧ:
+            <ul>
+              <li><strong>Услуга</strong> — только оборот <code>Продажи</code>, себестоимость 0; складской регистр не трогать.</li>
+              <li><strong>Товар</strong> — вызвать <code>ПодобратьПартииКСписанию</code>.</li>
+            </ul>
+          </li>
+          <li>При недостаче — накопить текст сообщения и продолжить обход строк (все сообщения потом).</li>
+          <li>При успехе — движения расхода по партиям + одна строка <code>Продажи</code>
+            с суммой продажи и суммарной себестоимостью списания.</li>
+          <li>Если были недостачи — <code>Отказ = Истина</code>, очистить оба набора движений,
+            вывести сообщения пользователю.</li>
+        </ol>
+      </div>
+      <p>
+        Опционально в строке расхода можно указать явную <code>Партию</code> —
+        тогда остатки читаются только по этой партии (удобно для ручного указания).
+      </p>
+    </section>
+
+    <section id="methods">
+      <h2>6. FIFO / LIFO / по средней</h2>
+      <p>
+        Общая функция: <code>УчетТоваров.ПодобратьПартииКСписанию</code>.
+        Сначала запрос остатков партий, затем сортировка и разбор количества.
+      </p>
+
+      <h3>Получение остатков</h3>
+      <p>
+        Запрос к <code>РегистрНакопления.ТоварыНаСкладах.Остатки</code> на
+        <code>МоментВремени</code> документа, отбор по складу и номенклатуре
+        (и опционально по партии). Соединение со справочником партий даёт
+        <code>ДатаПоступления</code>. Берутся только строки с количеством &gt; 0.
+      </p>
+
+      <h3>Сравнение методов</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>Метод</th>
+            <th>Порядок партий</th>
+            <th>Стоимость списания</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>FIFO</strong></td>
+            <td>По возрастанию <code>ДатаПоступления</code>, затем партия</td>
+            <td>Доля стоимости остатка партии:
+              <code>Стоимость * КолСписать / КолОстаток</code>
+              (если списывается весь остаток партии — вся стоимость)</td>
+          </tr>
+          <tr>
+            <td><strong>LIFO</strong></td>
+            <td>По убыванию <code>ДатаПоступления</code>, затем партия</td>
+            <td>Та же пропорция стоимости партии</td>
+          </tr>
+          <tr>
+            <td><strong>По средней</strong></td>
+            <td>Хронологический разбор количества (как FIFO по порядку),
+              но цена единая</td>
+            <td><code>КолСписать * (СуммаСтоимостей / СуммаКоличеств)</code>
+              по всем остаткам номенклатуры на складе; округление до 2 знаков</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h3>Числовой пример (из экзаменационных сценариев)</h3>
+      <table>
+        <thead>
+          <tr><th>Событие</th><th>Количество / цена</th><th>Эффект</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Приход 05.01</td>
+            <td>10 × 100 = 1000</td>
+            <td>Партия 1</td>
+          </tr>
+          <tr>
+            <td>Приход 10.01</td>
+            <td>10 × 200 = 2000</td>
+            <td>Партия 2</td>
+          </tr>
+          <tr>
+            <td>Расход 12.01, FIFO, 5 шт</td>
+            <td>продажа 300</td>
+            <td>Себестоимость <strong>500</strong> (с партии 1)</td>
+          </tr>
+          <tr>
+            <td>Остаток после</td>
+            <td>5×100 + 10×200 = 15 / 2500</td>
+            <td>Средняя ≈ 166.67</td>
+          </tr>
+          <tr>
+            <td>Расход 16.01, По средней, 6 шт</td>
+            <td>продажа 350</td>
+            <td>Себестоимость ≈ <strong>1000</strong> (6 × 2500/15)</td>
+          </tr>
+        </tbody>
+      </table>
+      <div class="note">
+        При методе «по средней» движения расхода всё равно пишутся <strong>по партиям</strong>
+        (количество разбирается по остаткам партий), а стоимость каждой порции считается
+        по единой средней цене. Это сохраняет партионный разрез остатков.
+      </div>
+    </section>
+
+    <section id="stock-control">
+      <h2>7. Контроль остатков</h2>
+      <ul>
+        <li>После обхода партий, если ещё осталось списать (<code>ОсталосьСписать &gt; 0</code>),
+          в результат пишется <code>Недостача</code>, массив строк списания <strong>очищается</strong>.</li>
+        <li>Проведение не делает частичных движений по проблемной строке.</li>
+        <li>На уровне документа: при любой недостаче отменяются <em>все</em> движения документа
+          (и по успешным строкам тоже) — атомарный отказ.</li>
+        <li>Текст: <code>Недостаточно товара "…" на складе "…". Недостача: N</code>.</li>
+      </ul>
+      <p>
+        Сценарий проверки: расход 999 шт при остатке 9 — документ не проводится.
+      </p>
+    </section>
+
+    <section id="goods-services">
+      <h2>8. Товары и услуги</h2>
+      <table>
+        <thead>
+          <tr><th>Операция</th><th>Товар</th><th>Услуга</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Приход</td>
+            <td>Партия + приход в <code>ТоварыНаСкладах</code></td>
+            <td>Нет движений склада / партий</td>
+          </tr>
+          <tr>
+            <td>Расход</td>
+            <td>Списание партий + <code>Продажи</code> с себестоимостью</td>
+            <td>Только <code>Продажи</code>, себестоимость = 0</td>
+          </tr>
+          <tr>
+            <td>Контроль остатков</td>
+            <td>Да</td>
+            <td>Нет (остатков нет)</td>
+          </tr>
+        </tbody>
+      </table>
+      <p>
+        Тип читается запросом к справочнику (<code>ОбщегоНазначенияТипНоменклатуры</code>).
+        При пустой ссылке считается Товар.
+      </p>
+    </section>
+
+    <section id="adjust">
+      <h2>9. Корректировка регистров</h2>
+      <p>
+        Документ <code>КорректировкаРегистров</code> →
+        <code>УчетТоваров.ВыполнитьПроведениеКорректировки</code>.
+      </p>
+      <ul>
+        <li>ТЧ <code>ТоварыНаСкладах</code>: вид движения из перечисления Приход/Расход
+          → <code>ВидДвиженияНакопления</code>; измерения и ресурсы копируются из строки.</li>
+        <li>ТЧ <code>Продажи</code>: прямая запись оборотов (количество, сумма продажи, себестоимость).</li>
+        <li>Автоподбора партий и контроля остатков <strong>нет</strong> — ответственность пользователя/экзаменатора.</li>
+      </ul>
+    </section>
+
+    <section id="reports">
+      <h2>10. Отчёты</h2>
+      <table>
+        <thead>
+          <tr><th>Отчёт</th><th>Источник</th><th>Что показывает</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>ПродажиЗаПериод</code></td>
+            <td>РН <code>Продажи</code> (СКД)</td>
+            <td>Обороты за период: количество, сумма продажи, себестоимость, валовая прибыль</td>
+          </tr>
+          <tr>
+            <td><code>ОстаткиТоваровПоПартиям</code></td>
+            <td>РН <code>ТоварыНаСкладах</code> (СКД)</td>
+            <td>Остатки в разрезе склад / номенклатура / партия (кол-во и стоимость)</td>
+          </tr>
+        </tbody>
+      </table>
+      <p>
+        Макеты СКД лежат в <span class="path">Reports/.../Templates/...</span>.
+        JSON-заготовки сборки — в <span class="path">config/_meta/</span> (платформе не нужны).
+      </p>
+    </section>
+
+    <section id="entry-points">
+      <h2>11. Точки входа в код</h2>
+      <table>
+        <thead>
+          <tr><th>Файл в config/</th><th>Что смотреть</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><span class="path">CommonModules/УчетТоваров/Ext/Module.bsl</span></td>
+            <td>Приход, расход, корректировка, подбор партий, остатки</td>
+          </tr>
+          <tr>
+            <td><span class="path">CommonModules/УчетнаяПолитикаСервер/Ext/Module.bsl</span></td>
+            <td><code>МетодОценкиНаДату</code></td>
+          </tr>
+          <tr>
+            <td><span class="path">Documents/ПриходнаяНакладная/Ext/ObjectModule.bsl</span></td>
+            <td>Делегирование + пересчёт суммы</td>
+          </tr>
+          <tr>
+            <td><span class="path">Documents/РасходнаяНакладная/Ext/ObjectModule.bsl</span></td>
+            <td>Делегирование + пересчёт суммы</td>
+          </tr>
+          <tr>
+            <td><span class="path">Documents/КорректировкаРегистров/Ext/ObjectModule.bsl</span></td>
+            <td>Делегирование в корректировку</td>
+          </tr>
+        </tbody>
+      </table>
+      <h3>Схема вызовов расхода</h3>
+      <pre><code>РасходнаяНакладная.ОбработкаПроведения
+  └─ УчетТоваров.ВыполнитьПроведениеРасхода
+       ├─ УчетнаяПолитикаСервер.МетодОценкиНаДату(Дата)
+       └─ для каждой строки-товара:
+            ПодобратьПартииКСписанию
+              ├─ ПолучитьОстаткиПартий (запрос Остатки)
+              ├─ сортировка FIFO / LIFO
+              ├─ средняя цена (если ПоСредней)
+              └─ разбор количества → СтрокиСписания | Недостача</code></pre>
+    </section>
+
+    <section id="checklist">
+      <h2>12. Чеклист разработчика</h2>
+      <ul>
+        <li>Не дублировать логику списания в модулях документов — только вызов <code>УчетТоваров</code>.</li>
+        <li>Любое изменение метода оценки — через РС на дату, не хардкод в документе.</li>
+        <li>При доработке средней помнить: количество по партиям, стоимость по средней.</li>
+        <li>Контроль остатков должен обнулять движения всего документа при отказе.</li>
+        <li>Услуги никогда не создавать партии и не писать в <code>ТоварыНаСкладах</code>.</li>
+        <li>После правок алгоритма прогнать сценарии из README экзамена / task-дока.</li>
+      </ul>
+    </section>
+
+    <footer>
+      <p>
+        Комплект: <span class="path">Экзамены/ОУ_ПартионныйУчет/</span> ·
+        конфигурация <strong>ОперативныйУчетУчебная</strong> · платформа 8.3.27 ·
+        файл также известен как «Алгоритм для разработчика» (<code>developer-algorithm.html</code>).
+      </p>
+    </footer>
+  </div>
+</body>
+</html>

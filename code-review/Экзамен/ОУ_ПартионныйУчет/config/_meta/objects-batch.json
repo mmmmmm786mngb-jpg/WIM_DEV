@@ -1,0 +1,206 @@
+[
+  {
+    "type": "Enum",
+    "name": "МетодыОценкиЗапасов",
+    "synonym": "Методы оценки запасов",
+    "values": [
+      { "name": "FIFO", "synonym": "FIFO" },
+      { "name": "LIFO", "synonym": "LIFO" },
+      { "name": "ПоСредней", "synonym": "По средней" }
+    ]
+  },
+  {
+    "type": "Enum",
+    "name": "ТипыНоменклатуры",
+    "synonym": "Типы номенклатуры",
+    "values": [
+      { "name": "Товар", "synonym": "Товар" },
+      { "name": "Услуга", "synonym": "Услуга" }
+    ]
+  },
+  {
+    "type": "Enum",
+    "name": "ВидыДвижений",
+    "synonym": "Виды движений",
+    "values": [
+      { "name": "Приход", "synonym": "Приход" },
+      { "name": "Расход", "synonym": "Расход" }
+    ]
+  },
+  {
+    "type": "Catalog",
+    "name": "Номенклатура",
+    "synonym": "Номенклатура",
+    "descriptionLength": 150,
+    "attributes": [
+      "ТипНоменклатуры: EnumRef.ТипыНоменклатуры | req",
+      "ЕдиницаИзмерения: String(25)"
+    ]
+  },
+  {
+    "type": "Catalog",
+    "name": "Склады",
+    "synonym": "Склады",
+    "descriptionLength": 100
+  },
+  {
+    "type": "Catalog",
+    "name": "Контрагенты",
+    "synonym": "Контрагенты",
+    "descriptionLength": 150
+  },
+  {
+    "type": "Catalog",
+    "name": "ПартииТоваров",
+    "synonym": "Партии товаров",
+    "descriptionLength": 150,
+    "attributes": [
+      "ДокументПрихода: DocumentRef.ПриходнаяНакладная",
+      "ДатаПоступления: Date | req",
+      "Номенклатура: CatalogRef.Номенклатура | req",
+      "Склад: CatalogRef.Склады | req",
+      "Цена: Number(15,2)"
+    ]
+  },
+  {
+    "type": "InformationRegister",
+    "name": "УчетнаяПолитикаУУ",
+    "synonym": "Учетная политика (управленческий учет)",
+    "periodicity": "Day",
+    "mainFilterOnPeriod": true,
+    "resources": [
+      "МетодОценкиЗапасов: EnumRef.МетодыОценкиЗапасов | req"
+    ]
+  },
+  {
+    "type": "AccumulationRegister",
+    "name": "ТоварыНаСкладах",
+    "synonym": "Товары на складах",
+    "registerType": "Balance",
+    "dimensions": [
+      "Склад: CatalogRef.Склады | master, mainFilter, denyIncomplete, useInTotals",
+      "Номенклатура: CatalogRef.Номенклатура | master, mainFilter, denyIncomplete, useInTotals",
+      "Партия: CatalogRef.ПартииТоваров | mainFilter, useInTotals"
+    ],
+    "resources": [
+      "Количество: Number(15,3)",
+      "Стоимость: Number(15,2)"
+    ]
+  },
+  {
+    "type": "AccumulationRegister",
+    "name": "Продажи",
+    "synonym": "Продажи",
+    "registerType": "Turnovers",
+    "dimensions": [
+      "Склад: CatalogRef.Склады | mainFilter",
+      "Номенклатура: CatalogRef.Номенклатура | mainFilter",
+      "Контрагент: CatalogRef.Контрагенты | mainFilter"
+    ],
+    "resources": [
+      "Количество: Number(15,3)",
+      "СуммаПродажи: Number(15,2)",
+      "Себестоимость: Number(15,2)"
+    ]
+  },
+  {
+    "type": "Document",
+    "name": "ПриходнаяНакладная",
+    "synonym": "Приходная накладная",
+    "numberPeriodicity": "Year",
+    "registerRecords": ["AccumulationRegister.ТоварыНаСкладах"],
+    "attributes": [
+      "Склад: CatalogRef.Склады | req",
+      "Контрагент: CatalogRef.Контрагенты | req",
+      "Комментарий: String(200) | multiline"
+    ],
+    "tabularSections": {
+      "Товары": [
+        "Номенклатура: CatalogRef.Номенклатура | req",
+        "Количество: Number(15,3) | req, nonneg",
+        "Цена: Number(15,2) | nonneg",
+        "Сумма: Number(15,2) | nonneg"
+      ]
+    }
+  },
+  {
+    "type": "Document",
+    "name": "РасходнаяНакладная",
+    "synonym": "Расходная накладная",
+    "numberPeriodicity": "Year",
+    "registerRecords": [
+      "AccumulationRegister.ТоварыНаСкладах",
+      "AccumulationRegister.Продажи"
+    ],
+    "attributes": [
+      "Склад: CatalogRef.Склады | req",
+      "Контрагент: CatalogRef.Контрагенты | req",
+      "Комментарий: String(200) | multiline"
+    ],
+    "tabularSections": {
+      "Товары": [
+        "Номенклатура: CatalogRef.Номенклатура | req",
+        "Количество: Number(15,3) | req, nonneg",
+        "Цена: Number(15,2) | nonneg",
+        "Сумма: Number(15,2) | nonneg",
+        "Партия: CatalogRef.ПартииТоваров"
+      ]
+    }
+  },
+  {
+    "type": "Document",
+    "name": "КорректировкаРегистров",
+    "synonym": "Корректировка регистров",
+    "numberPeriodicity": "Year",
+    "registerRecords": [
+      "AccumulationRegister.ТоварыНаСкладах",
+      "AccumulationRegister.Продажи"
+    ],
+    "attributes": [
+      "Комментарий: String(200) | multiline"
+    ],
+    "tabularSections": {
+      "ТоварыНаСкладах": [
+        "ВидДвижения: EnumRef.ВидыДвижений | req",
+        "Склад: CatalogRef.Склады | req",
+        "Номенклатура: CatalogRef.Номенклатура | req",
+        "Партия: CatalogRef.ПартииТоваров",
+        "Количество: Number(15,3)",
+        "Стоимость: Number(15,2)"
+      ],
+      "Продажи": [
+        "Склад: CatalogRef.Склады | req",
+        "Номенклатура: CatalogRef.Номенклатура | req",
+        "Контрагент: CatalogRef.Контрагенты | req",
+        "Количество: Number(15,3)",
+        "СуммаПродажи: Number(15,2)",
+        "Себестоимость: Number(15,2)"
+      ]
+    }
+  },
+  {
+    "type": "CommonModule",
+    "name": "УчетТоваров",
+    "synonym": "Учет товаров",
+    "context": "server"
+  },
+  {
+    "type": "CommonModule",
+    "name": "УчетнаяПолитикаСервер",
+    "synonym": "Учетная политика (сервер)",
+    "context": "server",
+    "returnValuesReuse": "DuringRequest"
+  },
+  {
+    "type": "Report",
+    "name": "ПродажиЗаПериод",
+    "synonym": "Продажи за период",
+    "useStandardCommands": true
+  },
+  {
+    "type": "Report",
+    "name": "ОстаткиТоваровПоПартиям",
+    "synonym": "Остатки товаров по партиям",
+    "useStandardCommands": true
+  }
+]

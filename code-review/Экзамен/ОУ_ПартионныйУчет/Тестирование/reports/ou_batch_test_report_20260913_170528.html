@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8"/>
+<title>OU Batch Accounting COM Tests</title>
+<style>
+body { font-family: Segoe UI, Arial, sans-serif; margin: 24px; color: #222; }
+h1 { color: #17a2b8; }
+.box { padding: 12px 16px; border-radius: 6px; margin: 12px 0; }
+.info { background: #e8f7fb; border-left: 4px solid #17a2b8; }
+.ok { background: #eaf7ee; border-left: 4px solid #28a745; }
+.fail { background: #fdeeee; border-left: 4px solid #dc3545; }
+.warn { background: #fff8e1; border-left: 4px solid #ffc107; }
+table { border-collapse: collapse; width: 100%; margin-top: 16px; }
+th, td { border: 1px solid #ddd; padding: 8px; vertical-align: top; text-align: left; }
+th { background: #f5f5f5; }
+pre { margin: 0; white-space: pre-wrap; font-family: Consolas, monospace; font-size: 12px; }
+</style>
+</head>
+<body>
+<h1>Тестирование: ОУ партионный учет</h1>
+<div class="box info">
+<strong>Введение.</strong> Автоматический прогон экзаменационных сценариев через COM
+(pywin32 / V83.COMConnector) в файловой ИБ OU_Training.
+</div>
+
+<h2>Технология</h2>
+<div class="box info">
+<p><strong>COM подключение</strong> — Component Object Model, библиотека pywin32,
+объект <code>V83.COMConnector</code>.</p>
+<p>Параметры: File, Usr, Pwd, App='PyCOM', Locale=ru_RU.</p>
+<pre>File='C:\1c\Cursor_1c\WORK\OU_Training';Usr='Admin';Pwd='1';App='PyCOM';Locale=ru_RU;</pre>
+<p>Примеры:</p>
+<ul>
+<li>Файловая база без пользователя (до создания Admin)</li>
+<li>Файловая база Admin / 1</li>
+<li>Запросы через NewObject("Запрос") и проведение документов РежимЗаписиДокумента.Проведение</li>
+</ul>
+</div>
+
+<h2>Статистика</h2>
+<div class="box fail">
+Passed: 3 / 4; Failed: 1<br/>
+Admin: User Admin updated, password set, role PolnyePrava<br/>
+Time: 2026-09-13T17:05:28
+</div>
+
+<h2>Детали тестов</h2>
+<table>
+<thead><tr><th>Сценарий</th><th>Статус</th><th>Детали</th></tr></thead>
+<tbody>
+<tr><td>Create Admin user</td><td style='color:#28a745;font-weight:bold'>PASS</td><td><pre>User Admin updated, password set, role PolnyePrava</pre></td></tr><tr><td>Master data</td><td style='color:#28a745;font-weight:bold'>PASS</td><td><pre>tag=170528; warehouse/partners/goods/service</pre></td></tr><tr><td>Policy FIFO 01.01</td><td style='color:#28a745;font-weight:bold'>PASS</td><td><pre>Method FIFO set</pre></td></tr><tr><td>Fatal error</td><td style='color:#dc3545;font-weight:bold'>FAIL</td><td><pre>Traceback (most recent call last):
+  File &quot;C:\1c\Cursor_1c\WIM_DEV\code-review\Экзамен\ОУ_ПартионныйУчет\Тестирование\test_ou_batch_scenarios.py&quot;, line 671, in main
+    run_scenarios(conn, tr)
+  File &quot;C:\1c\Cursor_1c\WIM_DEV\code-review\Экзамен\ОУ_ПартионныйУчет\Тестирование\test_ou_batch_scenarios.py&quot;, line 231, in run_scenarios
+    r1 = create_receipt(
+         ^^^^^^^^^^^^^^^
+  File &quot;C:\1c\Cursor_1c\WIM_DEV\code-review\Экзамен\ОУ_ПартионныйУчет\Тестирование\test_ou_batch_scenarios.py&quot;, line 145, in create_receipt
+    doc.Записать(conn.РежимЗаписиДокумента.Проведение)
+  File &quot;&lt;COMObject &lt;unknown&gt;&gt;&quot;, line 2, in Записать
+pywintypes.com_error: (-2147352567, &#x27;Ошибка.&#x27;, (1001, &#x27;1C:Enterprise 8.3.27.1859&#x27;, &#x27;Ошибка при выполнении обработчика - \&#x27;ОбработкаПроведения\&#x27;\n{ОбщийМодуль.УчетТоваров.Модуль(451)}: Ошибка при вызове метода контекста (Выполнить)\n{(15, 6)}: Неоднозначное поле &quot;Номенклатура.Ссылка&quot;\nПО &lt;&lt;?&gt;&gt;Номенклатура.Ссылка = ВТНоменклатура.Номенклатура&#x27;, None, 0, 0), None)
+</pre></td></tr>
+</tbody>
+</table>
+
+<h2>Возможности</h2>
+<div class="box info">
+Проверены: создание пользователя Admin, приходы с партиями, FIFO/LIFO/средняя,
+услуги без склада, блокировка недостачи, корректировка регистров, источники отчетов.
+</div>
+
+<h2>Выводы</h2>
+<div class="box warn">
+Есть ошибки — см. таблицу деталей.
+</div>
+</body>
+</html>

@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Производительность проведения расходной накладной</title>
+  <style>
+    body { font-family: Segoe UI, Arial, sans-serif; margin: 24px; color: #1a2332; background: #f5f7f9; }
+    .wrap { max-width: 960px; margin: 0 auto; background: #fff; padding: 28px 32px; border: 1px solid #d7e0e6; }
+    h1 { color: #0d6e6e; margin-top: 0; }
+    h2 { color: #0d6e6e; border-bottom: 1px solid #d7e0e6; padding-bottom: 6px; }
+    .box { padding: 12px 14px; margin: 12px 0; border-left: 4px solid #17a2b8; background: #e8f7fb; }
+    .ok { border-left-color: #28a745; background: #eaf7ee; }
+    .warn { border-left-color: #e0a800; background: #fff8e1; }
+    table { border-collapse: collapse; width: 100%; margin: 12px 0; font-size: 0.95rem; }
+    th, td { border: 1px solid #d7e0e6; padding: 8px; text-align: left; vertical-align: top; }
+    th { background: #e6f4f4; }
+    code { background: #eef3f5; padding: 1px 5px; }
+    .speedup { color: #28a745; font-weight: 700; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>Замеры скорости: расходная накладная с большой ТЧ</h1>
+    <p>Дата: 13.09.2026 · ИБ OU_Training · Admin · таймер только на <code>Записать(Проведение)</code> расходной</p>
+
+    <h2>1. План и гипотеза</h2>
+    <div class="box">
+      <p><strong>Гипотеза:</strong> в исходном коде на каждую строку ТЧ выполнялись отдельные запросы
+      типа номенклатуры и остатков партий (~2N запросов). При росте N время проведения растет линейно.</p>
+      <p><strong>План:</strong> baseline (before) → пакетный алгоритм (after) → повторный замер → регресс FIFO/LIFO/средняя/недостача.</p>
+      <p>Детали: файл <code>perf_test_plan.md</code>, скрипт <code>test_ou_perf_expense.py</code>.</p>
+    </div>
+
+    <h2>2. Что изменено в коде</h2>
+    <ul>
+      <li>Один пакетный запрос типов номенклатуры на документ.</li>
+      <li>Один пакетный запрос остатков по всем товарам накладной.</li>
+      <li>Списание FIFO/LIFO/средняя в памяти с уменьшением локальных остатков между строками.</li>
+      <li>Предпроверка доступного количества до изменения остатков (корректная недостача).</li>
+    </ul>
+
+    <h2>3. Результаты замеров</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>N строк ТЧ</th>
+          <th>Before, avg ms</th>
+          <th>After, avg ms</th>
+          <th>Before ms/строка</th>
+          <th>After ms/строка</th>
+          <th>Ускорение</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>50</td>
+          <td>65.45</td>
+          <td>22.88</td>
+          <td>1.309</td>
+          <td>0.458</td>
+          <td class="speedup">×2.9</td>
+        </tr>
+        <tr>
+          <td>100</td>
+          <td>132.50</td>
+          <td>45.51</td>
+          <td>1.325</td>
+          <td>0.455</td>
+          <td class="speedup">×2.9</td>
+        </tr>
+        <tr>
+          <td>200</td>
+          <td>277.44</td>
+          <td>75.52</td>
+          <td>1.387</td>
+          <td>0.378</td>
+          <td class="speedup">×3.7</td>
+        </tr>
+        <tr>
+          <td>500</td>
+          <td>779.90</td>
+          <td>177.90</td>
+          <td>1.560</td>
+          <td>0.356</td>
+          <td class="speedup">×4.4</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="box ok">
+      На N=500 проведение ускорено примерно в <strong>4.4 раза</strong>
+      (780 ms → 178 ms). Линейный рост ms/строка снизился с ~1.5 до ~0.36.
+    </div>
+
+    <h2>4. Корректность</h2>
+    <div class="box ok">
+      Регресс <code>test_ou_batch_scenarios.py</code>: <strong>23 / 23 PASS</strong>
+      (FIFO=500, средняя≈1000, LIFO=1000, недостача блокирует, услуги без склада).
+    </div>
+
+    <h2>5. Выводы</h2>
+    <ol>
+      <li>Гипотеза подтверждена: время before почти пропорционально N.</li>
+      <li>Пакетное чтение остатков и типов убирает доминирующую стоимость запросов в цикле.</li>
+      <li>Ускорение растет с N (от ×2.9 на 50 строках до ×4.4 на 500).</li>
+      <li>Функциональное поведение сохранено по эталонным сценариям.</li>
+      <li>Дальнейший резерв: пакетное создание партий на приходе (сейчас каждая партия пишется отдельно) — вне текущего замера расхода.</li>
+    </ol>
+
+    <div class="box warn">
+      Сырые отчеты: <code>perf_expense_before_*.html/json</code>, <code>perf_expense_after_*.html/json</code>
+      в каталоге отчетов тестирования.
+    </div>
+  </div>
+</body>
+</html>
