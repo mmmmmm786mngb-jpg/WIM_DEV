@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>1С и Cursor: что есть в открытом доступе — 13.09.2026</title>
+<style>
+:root {
+  --bg: #f4f7fb;
+  --card: #ffffff;
+  --text: #1f2d3d;
+  --muted: #6b7b8c;
+  --ok: #28a745;
+  --warn: #d39e00;
+  --error: #dc3545;
+  --info: #17a2b8;
+  --violet: #6f42c1;
+  --border: #dbe4ef;
+  --shadow: 0 4px 14px rgba(15, 42, 71, 0.08);
+}
+* { box-sizing: border-box; }
+body { margin: 0; font-family: Arial, sans-serif; background: var(--bg); color: var(--text); line-height: 1.45; }
+.container { max-width: 1280px; margin: 0 auto; padding: 24px; }
+.header { background: linear-gradient(120deg, #123a6b, #1d7a6a); color: #fff; border-radius: 14px; padding: 28px; box-shadow: var(--shadow); }
+.header h1 { margin: 0 0 8px 0; font-size: 28px; }
+.header p { margin: 6px 0; color: #e7f4ff; }
+.stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; margin-top: 18px; }
+.stat { background: rgba(255,255,255,0.14); border-radius: 10px; padding: 14px 16px; }
+.stat .n { font-size: 26px; font-weight: bold; }
+.stat .l { font-size: 13px; color: #d7ecf8; }
+.section { margin-top: 22px; background: var(--card); border-radius: 14px; padding: 20px; border: 1px solid var(--border); box-shadow: var(--shadow); }
+.section h2 { margin: 0 0 12px 0; font-size: 22px; }
+.section h3 { margin: 18px 0 8px 0; font-size: 17px; color: #123a6b; }
+.note { background: #eef9ff; border-left: 5px solid var(--info); border-radius: 10px; padding: 12px 14px; margin: 10px 0; }
+.note.ok { background: #eefaf1; border-left-color: var(--ok); }
+.note.warn { background: #fff8e6; border-left-color: var(--warn); }
+.note.violet { background: #f6f0ff; border-left-color: var(--violet); }
+table { width: 100%; border-collapse: collapse; font-size: 14px; }
+th, td { border-bottom: 1px solid var(--border); padding: 8px 10px; text-align: left; vertical-align: top; }
+th { background: #f0f5fa; color: #35506a; }
+tr:hover td { background: #f8fbff; }
+.badge { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 12px; font-weight: bold; }
+.badge-ok { background: #d4edda; color: #155724; }
+.badge-paid { background: #f8d7da; color: #721c24; }
+.badge-info { background: #d1ecf1; color: #0c5460; }
+.badge-warn { background: #fff3cd; color: #856404; }
+.badge-free { background: #d4edda; color: #155724; }
+.grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 12px; }
+.card { border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px; background: #fbfdff; }
+.card h4 { margin: 0 0 6px 0; }
+.muted { color: var(--muted); }
+a { color: #1d4e89; }
+code { background: #eef3f8; padding: 1px 5px; border-radius: 4px; font-size: 13px; }
+.toc a { color: #123a6b; text-decoration: none; }
+.toc a:hover { text-decoration: underline; }
+.toc li { margin: 4px 0; }
+footer { margin: 24px 0 8px; color: var(--muted); font-size: 13px; text-align: center; }
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="header">
+    <h1>1С + Cursor: обзор открытого рынка</h1>
+    <p>Что лежит в публичном GitHub и на сайтах вендоров для работы с Cursor IDE. Состояние на 13 сентября 2026.</p>
+    <p>Это не наш внутренний контур, а карта того, что можно взять свободно или купить.</p>
+    <div class="stats">
+      <div class="stat"><div class="n">4</div><div class="l">сильных набора скиллов/правил</div></div>
+      <div class="stat"><div class="n">20+</div><div class="l">открытых MCP под 1С</div></div>
+      <div class="stat"><div class="n">MIT / AGPL</div><div class="l">основные лицензии git</div></div>
+      <div class="stat"><div class="n">5</div><div class="l">заметных платных продуктов</div></div>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>Содержание</h2>
+    <ol class="toc">
+      <li><a href="#intro">1. Как устроен рынок</a></li>
+      <li><a href="#skills">2. Наборы скиллов и правил (GitHub, свободный доступ)</a></li>
+      <li><a href="#mcp-help">3. MCP: синтакс-помощник и линтер</a></li>
+      <li><a href="#mcp-dev">4. MCP: разработка, метаданные, живая база</a></li>
+      <li><a href="#mcp-other">5. MCP: Напарник, данные учёта, прочее</a></li>
+      <li><a href="#paid">6. Платные продукты</a></li>
+      <li><a href="#pick">7. Что имеет смысл брать в Cursor</a></li>
+      <li><a href="#out">8. Выводы</a></li>
+    </ol>
+  </div>
+
+  <div class="section" id="intro">
+    <h2>1. Как устроен рынок</h2>
+    <div class="grid">
+      <div class="card">
+        <h4>Скиллы</h4>
+        <p>Папки с инструкциями для агента Cursor. Кладётся в <code>.cursor/skills/</code>. Агент сам выбирает нужный навык (собрать форму, выгрузить XML, опубликовать базу).</p>
+      </div>
+      <div class="card">
+        <h4>Правила</h4>
+        <p>Постоянный стиль: как писать BSL, куда класть объекты, какие MCP вызывать. Файлы <code>.cursor/rules/</code>. Часто идут в одном репозитории со скиллами.</p>
+      </div>
+      <div class="card">
+        <h4>MCP</h4>
+        <p>Отдельный процесс рядом с Cursor: синтакс-помощник, линтер, доступ к живой базе, EDT, Напарник. Подключается в настройках MCP. Скиллы MCP не заменяют.</p>
+      </div>
+    </div>
+    <div class="note">
+      Сводный каталог MCP: <a href="https://github.com/Untru/1c-mcp">Untru/1c-mcp</a> (Awesome 1C MCP). Звёзды ниже — ориентир GitHub на сентябрь 2026, не рейтинг качества.
+    </div>
+    <div class="note warn">
+      Многие репозитории <code>cursor_rules_1c</code> — копии одного и того же XML-контура Широкова. Смотреть оригинал, а не десятый форк.
+    </div>
+  </div>
+
+  <div class="section" id="skills">
+    <h2>2. Наборы скиллов и правил (свободный GitHub)</h2>
+    <table>
+      <thead>
+        <tr><th>Репозиторий</th><th>GitHub</th><th>Лицензия</th><th>Что внутри</th><th>Для Cursor</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><b>cc-1c-skills</b><br>Николай Широков</td>
+          <td>~576</td>
+          <td><span class="badge badge-free">MIT</span></td>
+          <td>Полный цикл XML и CLI конфигуратора: конфигурации, расширения, формы, СКД, EPF/ERF, роли, веб-клиент, тесты. Ветки PowerShell и Python.</td>
+          <td>Да. Ветки <code>port-cursor</code> / <code>port-cursor-py</code>, каталог <code>.cursor/skills/</code>.<br>
+            <a href="https://github.com/Nikolay-Shirokov/cc-1c-skills">github.com/Nikolay-Shirokov/cc-1c-skills</a></td>
+        </tr>
+        <tr>
+          <td><b>ai_rules_1c</b><br>comol</td>
+          <td>~388</td>
+          <td><span class="badge badge-free">открытый git</span></td>
+          <td>Другая школа: правила, субагенты, слэш-команды, установщик, каталог MCP. Не копия XML-скиллов Широкова.</td>
+          <td>Да. Сообщение агенту: установить из git по AGENT-INSTALL.md.<br>
+            <a href="https://github.com/comol/ai_rules_1c">github.com/comol/ai_rules_1c</a></td>
+        </tr>
+        <tr>
+          <td><b>1c-ai-development-kit</b><br>Арман Кудайбергенов</td>
+          <td>~151</td>
+          <td><span class="badge badge-warn">AGPL-3.0</span></td>
+          <td>Комбайн: агенты, скиллы, правила, шаблоны MCP. Явно опирается на Широкова и comol.</td>
+          <td>Да, копирование <code>.cursor/</code> в проект. AGPL строже MIT: производные надо открывать.<br>
+            <a href="https://github.com/Arman-Kudaibergenov/1c-ai-development-kit">github.com/Arman-Kudaibergenov/1c-ai-development-kit</a></td>
+        </tr>
+        <tr>
+          <td><b>cursor-1c-skills</b><br>Desko77</td>
+          <td>~40</td>
+          <td><span class="badge badge-info">открытый git</span></td>
+          <td>~94 скилла: Широков плюс ЗУП, Конвертация данных, 1С 7.7, Клеверенс, Напарник, MCP-toolkit. 29 правил.</td>
+          <td>Да, адаптация claude-code-skills-1c под Cursor.<br>
+            <a href="https://github.com/Desko77/cursor-1c-skills">github.com/Desko77/cursor-1c-skills</a></td>
+        </tr>
+      </tbody>
+    </table>
+    <h3>Что не считать отдельным набором</h3>
+    <p class="muted">Форки <code>anoda-tech/cursor_rules_1c</code>, <code>olegtrast/cursor_rules_1c</code> и старый <code>Nikolay-Shirokov/cursor_rules_1c</code> — это копии/ответвления XML-контура или раннего comol. Отдельной ценности обычно нет.</p>
+    <div class="note warn">
+      <b>Не смешивать Широкова и comol в одном проекте.</b> Это два полных стека. Агент начнёт дергать оба сразу, контекст распухнет. Белый список отдельных скиллов (запросы, ЗУП) — нормально; полный второй набор — нет.
+    </div>
+    <p>Обсуждения: Telegram <code>t.me/comol_it_does_matter</code>, канал yellow_ai_vibe. Платный конструктор рядом с comol: <a href="http://vibecoding1c.ru">vibecoding1c.ru</a> — сам git правил при этом открыт.</p>
+  </div>
+
+  <div class="section" id="mcp-help">
+    <h2>3. MCP: синтакс-помощник и линтер</h2>
+    <p>Это то, чего скиллы не дают: живой поиск по API платформы и статическая проверка BSL.</p>
+    <table>
+      <thead><tr><th>Проект</th><th>Цена</th><th>Для Cursor</th><th>Суть</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><a href="https://github.com/alkoleft/mcp-bsl-platform-context">alkoleft/mcp-bsl-platform-context</a><br>~191 звезда, MIT</td>
+          <td><span class="badge badge-free">бесплатно</span></td>
+          <td>stdio / SSE, JAR, Java 17, путь к платформе 1С</td>
+          <td>Синтакс-помощник: search, info, getMembers, getConstructors. Читает справку установленной 8.3.20+.</td>
+        </tr>
+        <tr>
+          <td><a href="https://github.com/Antonio1C/1c-syntax-helper-mcp">Antonio1C/1c-syntax-helper-mcp</a><br>~68</td>
+          <td><span class="badge badge-free">бесплатно</span></td>
+          <td>HTTP-сервис на команду</td>
+          <td>Индекс файла справки <code>.hbk</code> через Elasticsearch. Тяжелее, удобно если несколько человек.</td>
+        </tr>
+        <tr>
+          <td><a href="https://github.com/rzateev/onec-help-mcp">rzateev/onec-help-mcp</a></td>
+          <td><span class="badge badge-free">бесплатно</span></td>
+          <td>MCP + REST, Docker + Qdrant</td>
+          <td>RAG по всей справке, не только API. Несколько версий платформы.</td>
+        </tr>
+        <tr>
+          <td><a href="https://github.com/phsin/mcp-bsl-ls">phsin/mcp-bsl-ls</a></td>
+          <td><span class="badge badge-free">бесплатно</span></td>
+          <td>Python + JAR BSL Language Server</td>
+          <td>Линтер ~180 проверок по файлам <code>.bsl</code>: запрос в цикле, транзакции, устаревшие методы. Не проверяет существование методов платформы.</td>
+        </tr>
+        <tr>
+          <td><a href="https://github.com/SteelMorgan/mcp-bsl-lsp-bridge">SteelMorgan/mcp-bsl-lsp-bridge</a></td>
+          <td><span class="badge badge-free">бесплатно</span></td>
+          <td>мост LSP → MCP</td>
+          <td>Диагностика, переход к определению, hover — через BSL Language Server.</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="section" id="mcp-dev">
+    <h2>4. MCP: разработка, метаданные, живая база</h2>
+    <table>
+      <thead><tr><th>Проект</th><th>Цена</th><th>Нужно</th><th>Суть</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><a href="https://github.com/DitriXNew/EDT-MCP">DitriXNew/EDT-MCP</a><br>~235, AGPL</td>
+          <td><span class="badge badge-free">бесплатно</span></td>
+          <td>1C:EDT 2026.x</td>
+          <td>Самый «толстый» бесплатный MCP, если работаете в EDT: модули, формы, валидация запросов, отладка, скриншоты форм.</td>
+        </tr>
+        <tr>
+          <td><a href="https://github.com/feenlace/mcp-1c">feenlace/mcp-1c</a><br>~164, MIT + подписка</td>
+          <td><span class="badge badge-free">10 инструментов бесплатно</span>
+              <span class="badge badge-paid">Pro от 1990 руб/мес</span></td>
+          <td>HTTP-сервис 1С, один Go-бинарник</td>
+          <td>Метаданные живой базы, поиск по BSL, запросы. Расширенные редакции платные.</td>
+        </tr>
+        <tr>
+          <td><a href="https://github.com/vladimir-kharin/1c_mcp">vladimir-kharin/1c_mcp</a></td>
+          <td><span class="badge badge-free">бесплатно</span></td>
+          <td>расширение CFE + Python-прокси</td>
+          <td>Фреймворк: свои инструменты MCP внутри 1С (метаданные, синтаксис как ресурс).</td>
+        </tr>
+        <tr>
+          <td><a href="https://github.com/ROCTUP/1c-mcp-toolkit">ROCTUP/1c-mcp-toolkit</a></td>
+          <td><span class="badge badge-free">бесплатно</span></td>
+          <td>внешняя обработка EPF</td>
+          <td>HTTP внутри обработки, без публикации на веб-сервере: запросы, метаданные, выполнение кода.</td>
+        </tr>
+        <tr>
+          <td><a href="https://github.com/artesk/1C_MCP_metadata">artesk/1C_MCP_metadata</a></td>
+          <td><span class="badge badge-free">бесплатно</span></td>
+          <td>расширение + PowerShell</td>
+          <td>Метаданные и проверка синтаксиса запросов.</td>
+        </tr>
+        <tr>
+          <td><a href="https://github.com/prepod2003/mcp-rsv-data">prepod2003/mcp-rsv-data</a><br>~42, MIT</td>
+          <td><span class="badge badge-free">чтение бесплатно</span>
+              <span class="badge badge-paid">EDT-разработка платная</span></td>
+          <td>расширение в базе</td>
+          <td>Чтение данных и метаданных. Линейка RSV Server для EDT — отдельный платный продукт.</td>
+        </tr>
+        <tr>
+          <td><a href="https://github.com/alkoleft/mcp-onec-test-runner">alkoleft/mcp-onec-test-runner</a></td>
+          <td><span class="badge badge-free">бесплатно</span></td>
+          <td>YaXUnit, JDK 17</td>
+          <td>Запуск тестов и сборка из Cursor.</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="section" id="mcp-other">
+    <h2>5. MCP: Напарник, данные учёта, прочее</h2>
+    <h3>1С:Напарник (code.1c.ai)</h3>
+    <p>Исходники MCP бесплатные. Нужны токен и обычно ИТС. Это не синтакс-помощник, а чужая нейросеть 1С.</p>
+    <ul>
+      <li><a href="https://github.com/artesk/1copilot_MCP">artesk/1copilot_MCP</a> — Python, вопросы / синтаксис / проверка кода</li>
+      <li><a href="https://github.com/Desko77/1c-ai-mcp">Desko77/1c-ai-mcp</a> — FastMCP, Docker</li>
+      <li><a href="https://github.com/EugeneVl/1c-copilot-mcp">EugeneVl/1c-copilot-mcp</a> — Go, поиск по ИТС</li>
+      <li><a href="https://github.com/ROCTUP/1c-buddy">ROCTUP/1c-buddy</a>, <a href="https://github.com/SteelMorgan/spring-mcp-1c-copilot">spring-mcp-1c-copilot</a></li>
+    </ul>
+    <h3>OData — данные учёта, не код</h3>
+    <table>
+      <thead><tr><th>Проект</th><th>Лицензия</th><th>Заметка</th></tr></thead>
+      <tbody>
+        <tr><td><a href="https://github.com/evilbruce666/1c-odata-mcp">evilbruce666/1c-odata-mcp</a></td><td>MIT</td><td>Чтение по умолчанию, <code>npx -y 1c-odata-mcp</code></td></tr>
+        <tr><td><a href="https://github.com/itsuppartem/python_1c_mcp">itsuppartem/python_1c_mcp</a></td><td>MIT</td><td>Строго read-only OData 8.3.5+</td></tr>
+        <tr><td><a href="https://github.com/theYahia/aprovodka">theYahia/aprovodka</a></td><td>MIT</td><td>OData 3.0, без расширения в конфигурации</td></tr>
+      </tbody>
+    </table>
+    <p class="muted">Полезно бухгалтеру («покажи долги»). На ошибки BSL почти не влияет.</p>
+    <h3>Ещё из каталога Untru</h3>
+    <ul>
+      <li>Граф кода: <a href="https://github.com/ROCTUP/1c-mcp-metacode">1c-mcp-metacode</a> (Neo4j), <a href="https://github.com/alkoleft/bsl-graph">bsl-graph</a></li>
+      <li>RAG по конфигурации: <a href="https://github.com/FSerg/mcp-1c-v1">FSerg/mcp-1c-v1</a></li>
+      <li>Журнал регистрации: <a href="https://github.com/SteelMorgan/1c-log-checker">1c-log-checker</a></li>
+      <li>Набор Docker: <a href="https://github.com/pravets/compose4mcp">compose4mcp</a></li>
+    </ul>
+  </div>
+
+  <div class="section" id="paid">
+    <h2>6. Платные продукты</h2>
+    <table>
+      <thead><tr><th>Продукт</th><th>Что продают</th><th>Цена (ориентир)</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><a href="https://feenlace.ru">feenlace mcp-1c Pro</a></td>
+          <td>Расширенный анализ кода, граф, семантика, генерация тестов поверх бесплатных 10 инструментов</td>
+          <td>1990 / 4990 руб. в месяц, 14 дней Pro</td>
+        </tr>
+        <tr>
+          <td><a href="http://vibecoding1c.ru">VibeCoding1C</a></td>
+          <td>Конструктор MCP без программирования, курсы. Правила comol на GitHub при этом открыты</td>
+          <td>конструктор ~9000 руб., курсы отдельно</td>
+        </tr>
+        <tr>
+          <td><a href="https://prepod2003.github.io/edt-ai-1c/">MCP:RSV Server</a></td>
+          <td>Разработка в EDT (правка BSL, метаданных, СКД). Read-only Data — бесплатный git</td>
+          <td>платная линейка RSV</td>
+        </tr>
+        <tr>
+          <td><a href="https://infostart.ru">Infostart MCP</a></td>
+          <td>Метаданные, синтакс-помощник, Docker-контейнеры проверки</td>
+          <td>коммерческий</td>
+        </tr>
+        <tr>
+          <td><a href="https://onemcp.ru">OneMCP</a></td>
+          <td>SaaS: семантический поиск по метаданным и коду</td>
+          <td>бета, тарифы заявлялись как бесплатные</td>
+        </tr>
+        <tr>
+          <td><a href="https://arqa.cc/ru/mcp-server">ARQA MCP</a>, <a href="https://docs.onerpa.ru/mcp-servery-1c">OneRPA Suite</a></td>
+          <td>Операции учёта / набор Docker MCP (справка, метаданные, БСП, синтаксис)</td>
+          <td>платно</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="section" id="pick">
+    <h2>7. Что имеет смысл брать в Cursor</h2>
+    <p>Минимальный полезный набор для конфигуратора (без EDT), если собирать «с нуля из интернета»:</p>
+    <ol>
+      <li><b>Скиллы Широкова</b> — XML, расширения, загрузка в базу, веб-тесты. Самый зрелый открытый набор под Cursor.</li>
+      <li><b>MCP синтакс-помощник alkoleft</b> — чтобы модель не выдумывала методы платформы.</li>
+      <li>По желанию <b>MCP BSL Language Server</b> — линтер файлов до синтаксического контроля конфигуратора.</li>
+      <li>Живая база (feenlace / toolkit / 1c_mcp) — только если нужен запрос к конкретной ИБ, не «чтобы писать правильнее».</li>
+    </ol>
+    <div class="grid">
+      <div class="card">
+        <h4>Если команда на EDT</h4>
+        <p>Первым MCP брать <a href="https://github.com/DitriXNew/EDT-MCP">EDT-MCP</a>. Скиллы Широкова тогда вторичны: EDT и так видит исходники.</p>
+      </div>
+      <div class="card">
+        <h4>Если нужен процесс «агент + субагенты»</h4>
+        <p>Смотреть <a href="https://github.com/comol/ai_rules_1c">comol/ai_rules_1c</a> вместо второго полного набора скиллов, не вместе с Широковым.</p>
+      </div>
+      <div class="card">
+        <h4>Если есть ИТС</h4>
+        <p>Напарник как ревьюер — опция. Без ИТС ставить обёртки бессмысленно.</p>
+      </div>
+    </div>
+    <div class="note ok">
+      Cursor нормально переваривает ограниченное число MCP-инструментов. Один синтакс-помощник плюс скиллы лучше, чем пять MCP сразу.
+    </div>
+  </div>
+
+  <div class="section" id="out">
+    <h2>8. Выводы</h2>
+    <ol>
+      <li>Свободный доступ к гитам есть. Два полноценных открытых стека: Широков (скиллы XML/CLI) и comol (правила/агенты). Остальное — комбайны, форки и прикладные надстройки.</li>
+      <li>Бесплатных MCP для 1С десятки. Для качества кода в Cursor важны два класса: синтакс-помощник и линтер BSL. Остальное — живая база, EDT, учёт, Напарник.</li>
+      <li>Платный слой (feenlace Pro, RSV, Infostart, VibeCoding) расширяет поиск по коду и конструкторы MCP, но не обязателен, чтобы начать.</li>
+      <li>Каталог для навигации: <a href="https://github.com/Untru/1c-mcp">github.com/Untru/1c-mcp</a>.</li>
+    </ol>
+    <div class="note violet">
+      Рядом лежит отдельный свод по <b>нашему</b> подключенному контуру: <code>ai_1c_skills_rules_mcp_report_2026-09-13.html</code>.
+    </div>
+  </div>
+
+  <footer>Обзор публичных источников на 13.09.2026. Не документация для заказчика. Ссылки ведут на GitHub и сайты авторов.</footer>
+</div>
+</body>
+</html>
