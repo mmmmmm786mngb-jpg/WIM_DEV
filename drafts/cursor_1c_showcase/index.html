@@ -1,0 +1,1142 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cursor для специалиста по платформе 1С — реальный кейс</title>
+<style>
+  :root{
+    --ink:#0d1117;
+    --ink-soft:#3d4a5c;
+    --muted:#6b7a8d;
+    --line:#dde5ec;
+    --surface:#ffffff;
+    --bg:#f4f7fa;
+    --gold:#ffc83d;
+    --gold-deep:#d99b00;
+    --teal:#0f9e8b;
+    --teal-soft:#e3f6f2;
+    --red:#e8433a;
+    --violet:#6f42c1;
+    --ok:#28a745;
+    --code-bg:#11161f;
+    --shadow:0 1px 2px rgba(16,32,54,.06),0 8px 28px rgba(16,32,54,.08);
+    --shadow-lg:0 2px 6px rgba(16,32,54,.08),0 24px 60px rgba(16,32,54,.14);
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    margin:0;
+    font-family:"Segoe UI","PT Sans",Arial,sans-serif;
+    color:var(--ink);
+    background:var(--bg);
+    line-height:1.6;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:1080px;margin:0 auto;padding:0 1.5rem}
+
+  /* ---------- Навигация ---------- */
+  .topbar{
+    position:sticky;top:0;z-index:50;
+    background:rgba(11,18,32,.92);
+    backdrop-filter:blur(10px);
+    border-bottom:1px solid rgba(255,255,255,.08);
+  }
+  .topbar .wrap{display:flex;align-items:center;gap:1.5rem;height:56px}
+  .logo{display:flex;align-items:center;gap:.6rem;color:#fff;font-weight:700;letter-spacing:.02em;white-space:nowrap}
+  .logo .mark{
+    width:26px;height:26px;border-radius:7px;
+    background:linear-gradient(135deg,var(--gold),var(--red));
+    display:inline-block;flex:none;
+  }
+  .topbar nav{display:flex;gap:1.25rem;overflow-x:auto;scrollbar-width:none}
+  .topbar nav::-webkit-scrollbar{display:none}
+  .topbar nav a{
+    color:#9fb0c6;text-decoration:none;font-size:.88rem;white-space:nowrap;
+    padding:.35rem 0;border-bottom:2px solid transparent;transition:.2s;
+  }
+  .topbar nav a:hover{color:#fff;border-bottom-color:var(--gold)}
+
+  /* ---------- Заглавный экран ---------- */
+  .hero{
+    position:relative;overflow:hidden;color:#eaf1f8;
+    background:
+      radial-gradient(900px 420px at 82% -8%,rgba(255,200,61,.20),transparent 62%),
+      radial-gradient(760px 420px at 6% 12%,rgba(15,158,139,.26),transparent 60%),
+      linear-gradient(160deg,#0b1220 0%,#101d31 48%,#0b1220 100%);
+  }
+  .hero::after{
+    content:"";position:absolute;inset:0;pointer-events:none;
+    background-image:linear-gradient(rgba(255,255,255,.035) 1px,transparent 1px),
+                     linear-gradient(90deg,rgba(255,255,255,.035) 1px,transparent 1px);
+    background-size:46px 46px;
+    mask-image:radial-gradient(700px 380px at 50% 20%,#000,transparent 78%);
+  }
+  .hero .wrap{position:relative;z-index:1;padding-top:4.5rem;padding-bottom:3.5rem}
+  .kicker{
+    display:inline-flex;align-items:center;gap:.55rem;
+    border:1px solid rgba(255,200,61,.4);
+    background:rgba(255,200,61,.10);
+    color:var(--gold);
+    padding:.35rem .85rem;border-radius:999px;
+    font-size:.78rem;font-weight:700;letter-spacing:.09em;text-transform:uppercase;
+  }
+  .kicker .dot{width:7px;height:7px;border-radius:50%;background:var(--gold)}
+  .hero h1{
+    margin:1.1rem 0 .9rem;
+    font-size:clamp(2rem,4.6vw,3.3rem);
+    line-height:1.12;letter-spacing:-.02em;font-weight:800;max-width:20ch;
+  }
+  .hero h1 .hl{
+    color:#ffd267;
+    border-bottom:3px solid rgba(255,200,61,.45);
+    padding-bottom:.06em;
+  }
+  .hero .lead{font-size:1.12rem;color:#a9bdd4;max-width:56ch;margin:0 0 2rem}
+  .hero .lead strong{color:#e6eefa;font-weight:600}
+
+  .metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:1rem;margin-top:.5rem}
+  .metric{
+    background:rgba(255,255,255,.055);
+    border:1px solid rgba(255,255,255,.11);
+    border-radius:14px;padding:1.05rem 1.15rem;
+  }
+  .metric .val{font-size:2.1rem;font-weight:800;line-height:1;letter-spacing:-.02em;color:#fff}
+  .metric .val span{font-size:1rem;font-weight:600;color:var(--gold);margin-left:.15rem}
+  .metric .cap{margin-top:.45rem;font-size:.84rem;color:#93a7c0}
+  .hero-note{
+    margin-top:2rem;font-size:.86rem;color:#7f93ab;
+    border-left:2px solid rgba(255,200,61,.5);padding-left:.9rem;
+  }
+
+  /* ---------- Общие секции ---------- */
+  section.block{padding:4rem 0;border-bottom:1px solid var(--line)}
+  section.block:last-of-type{border-bottom:none}
+  .block-head{max-width:62ch;margin-bottom:2rem}
+  .eyebrow{
+    font-size:.76rem;font-weight:800;letter-spacing:.12em;text-transform:uppercase;
+    color:var(--teal);margin:0 0 .5rem;
+  }
+  h2{font-size:clamp(1.5rem,2.6vw,2.05rem);line-height:1.2;margin:0 0 .7rem;letter-spacing:-.015em}
+  h3{font-size:1.12rem;margin:1.6rem 0 .6rem}
+  .sub{color:var(--muted);margin:0;font-size:1.02rem}
+  p{margin:0 0 1rem}
+  .alt{background:linear-gradient(180deg,#fff 0%,#f7fafc 100%)}
+
+  /* ---------- Карточки ---------- */
+  .grid{display:grid;gap:1.15rem}
+  .g2{grid-template-columns:repeat(2,1fr)}
+  .g3{grid-template-columns:repeat(3,1fr)}
+  .card{
+    background:var(--surface);border:1px solid var(--line);border-radius:14px;
+    padding:1.35rem 1.4rem;box-shadow:var(--shadow);
+  }
+  .card h4{margin:.15rem 0 .5rem;font-size:1.04rem}
+  .card p{margin:0;color:var(--ink-soft);font-size:.95rem}
+  .card .tag{
+    display:inline-block;font-size:.72rem;font-weight:700;letter-spacing:.06em;
+    text-transform:uppercase;color:var(--teal);background:var(--teal-soft);
+    padding:.2rem .55rem;border-radius:5px;margin-bottom:.6rem;
+  }
+  .card .tag.gold{color:var(--gold-deep);background:#fff4d6}
+  .card .tag.violet{color:var(--violet);background:#f1ebfa}
+  .card .tag.red{color:var(--red);background:#fdeceb}
+  .num-card{position:relative;padding-left:3.6rem}
+  .num-card .n{
+    position:absolute;left:1.25rem;top:1.3rem;
+    width:2rem;height:2rem;border-radius:9px;
+    background:linear-gradient(135deg,#132033,#27405f);color:#fff;
+    display:flex;align-items:center;justify-content:center;
+    font-weight:800;font-size:.9rem;
+  }
+
+  /* ---------- Хронология ---------- */
+  .timeline{position:relative;margin-top:1.5rem;padding-left:2.4rem}
+  .timeline::before{
+    content:"";position:absolute;left:.62rem;top:.4rem;bottom:.4rem;width:2px;
+    background:linear-gradient(180deg,var(--gold),var(--teal));
+  }
+  .tl-item{position:relative;margin-bottom:1.4rem}
+  .tl-item::before{
+    content:"";position:absolute;left:-2.13rem;top:.55rem;
+    width:12px;height:12px;border-radius:50%;
+    background:#fff;border:3px solid var(--teal);
+  }
+  .tl-item.gold::before{border-color:var(--gold)}
+  .tl-time{
+    display:inline-block;font-family:Consolas,"Cascadia Mono",monospace;
+    font-size:.82rem;font-weight:700;color:var(--teal);
+    background:var(--teal-soft);padding:.1rem .45rem;border-radius:4px;
+  }
+  .tl-item.gold .tl-time{color:var(--gold-deep);background:#fff4d6}
+  .tl-title{font-weight:700;margin:.35rem 0 .3rem;font-size:1.02rem}
+  .tl-body{color:var(--ink-soft);font-size:.95rem}
+  .prompt{
+    margin:.55rem 0 .2rem;background:var(--surface);border:1px solid var(--line);
+    border-left:3px solid var(--gold);border-radius:0 10px 10px 0;
+    padding:.7rem .95rem;font-size:.93rem;color:var(--ink-soft);box-shadow:var(--shadow);
+  }
+  .prompt .who{
+    display:block;font-size:.7rem;font-weight:800;letter-spacing:.1em;
+    text-transform:uppercase;color:var(--muted);margin-bottom:.25rem;
+  }
+  .prompt q{font-style:italic;color:var(--ink)}
+
+  /* ---------- Код ---------- */
+  pre{
+    background:var(--code-bg);color:#dfe8f3;border-radius:11px;
+    padding:1.05rem 1.2rem;overflow-x:auto;margin:.9rem 0;
+    font-size:.82rem;line-height:1.6;
+    font-family:Consolas,"Cascadia Mono","DejaVu Sans Mono",monospace;
+    box-shadow:var(--shadow);
+  }
+  pre .kw{color:#ff9d6b}
+  pre .st{color:#9fe6a0}
+  pre .cm{color:#6f8299;font-style:italic}
+  pre .fn{color:#7cc7ff}
+  pre .nm{color:#ffd479}
+  code{
+    font-family:Consolas,"Cascadia Mono",monospace;font-size:.88em;
+    background:#eef3f7;padding:.1em .38em;border-radius:4px;color:#204060;
+  }
+  .code-head{
+    display:flex;align-items:center;gap:.6rem;
+    font-size:.78rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;
+    color:var(--muted);margin-top:1.2rem;
+  }
+  .code-head .badge{
+    background:#132033;color:#fff;padding:.15rem .5rem;border-radius:5px;
+    letter-spacing:.04em;font-size:.7rem;
+  }
+
+  /* ---------- Таблицы ---------- */
+  table{
+    width:100%;border-collapse:collapse;background:var(--surface);
+    margin:1rem 0;font-size:.93rem;border-radius:11px;overflow:hidden;
+    box-shadow:var(--shadow);
+  }
+  th,td{border-bottom:1px solid var(--line);padding:.65rem .85rem;text-align:left;vertical-align:top}
+  th{background:#eef4f8;font-weight:700;font-size:.85rem;letter-spacing:.02em;color:#2b3b4f}
+  tbody tr:last-child td{border-bottom:none}
+  tbody tr:hover{background:#fafcfe}
+  td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
+  .pass{color:var(--ok);font-weight:700}
+  .up{color:var(--ok);font-weight:800}
+
+  /* ---------- Диаграмма производительности ---------- */
+  .chart{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:1.5rem;box-shadow:var(--shadow)}
+  .chart-legend{display:flex;gap:1.4rem;font-size:.85rem;color:var(--ink-soft);margin-bottom:1.2rem}
+  .chart-legend i{display:inline-block;width:12px;height:12px;border-radius:3px;margin-right:.4rem;vertical-align:-1px}
+  .sw-before{background:#c2ccd8}
+  .sw-after{background:linear-gradient(90deg,var(--teal),#3ecfb3)}
+  .row{margin-bottom:1.15rem}
+  .row:last-child{margin-bottom:0}
+  .row .lbl{font-size:.85rem;font-weight:700;color:var(--ink-soft);margin-bottom:.35rem;display:flex;justify-content:space-between}
+  .row .lbl em{font-style:normal;color:var(--ok);font-weight:800}
+  .track{display:flex;align-items:center;gap:.6rem;margin-bottom:6px}
+  .track .lane{flex:1 1 auto;min-width:0}
+  .track b{
+    flex:0 0 4.2rem;text-align:right;
+    font-size:.76rem;font-weight:700;color:var(--ink-soft);
+    font-variant-numeric:tabular-nums;white-space:nowrap;
+  }
+  .bar{display:block;height:20px;border-radius:6px;min-width:3px;transition:width 1.1s cubic-bezier(.2,.7,.3,1)}
+  .bar.before{background:#c2ccd8}
+  .bar.after{background:linear-gradient(90deg,var(--teal),#3ecfb3)}
+
+  /* ---------- До/после ---------- */
+  .ba{display:grid;grid-template-columns:1fr 1fr;gap:1.15rem}
+  .ba .side{background:var(--surface);border:1px solid var(--line);border-radius:14px;overflow:hidden;box-shadow:var(--shadow)}
+  .ba .side header{padding:.7rem 1.1rem;font-weight:700;font-size:.9rem;color:#fff}
+  .ba .before header{background:linear-gradient(90deg,#8d97a5,#6f7c8d)}
+  .ba .after  header{background:linear-gradient(90deg,#0f9e8b,#12b39c)}
+  .ba .side pre{margin:0;border-radius:0;box-shadow:none}
+  .ba .side .foot{padding:.7rem 1.1rem;font-size:.86rem;color:var(--ink-soft);border-top:1px solid var(--line)}
+
+  /* ---------- Выноски ---------- */
+  .callout{
+    border-radius:12px;padding:1.05rem 1.25rem;margin:1.2rem 0;
+    border-left:4px solid var(--teal);background:var(--teal-soft);
+    font-size:.96rem;color:#20403c;
+  }
+  .callout.gold{border-left-color:var(--gold);background:#fff8e6;color:#4b3c08}
+  .callout.violet{border-left-color:var(--violet);background:#f5f1fc;color:#3a2a5c}
+  .callout strong{font-weight:700}
+
+  /* ---------- Скриншоты ---------- */
+  .shots{display:grid;grid-template-columns:1fr 1fr;gap:1.25rem;margin-top:1.3rem}
+  figure{margin:0;background:var(--surface);border:1px solid var(--line);border-radius:14px;overflow:hidden;box-shadow:var(--shadow-lg)}
+  figure .bar-os{
+    height:28px;background:#eef2f6;border-bottom:1px solid var(--line);
+    display:flex;align-items:center;gap:6px;padding:0 .7rem;
+  }
+  figure .bar-os i{width:9px;height:9px;border-radius:50%;background:#cdd6e0;display:inline-block}
+  figure img{display:block;width:100%;height:auto;cursor:zoom-in}
+  figcaption{padding:.8rem 1.05rem;font-size:.88rem;color:var(--ink-soft);border-top:1px solid var(--line)}
+
+  /* ---------- Стек ---------- */
+  .chips{display:flex;flex-wrap:wrap;gap:.5rem;margin-top:.8rem}
+  .chip{
+    background:var(--surface);border:1px solid var(--line);border-radius:999px;
+    padding:.35rem .8rem;font-size:.82rem;color:var(--ink-soft);
+    font-family:Consolas,"Cascadia Mono",monospace;box-shadow:var(--shadow);
+  }
+  .chip b{color:var(--teal);font-weight:700}
+
+  /* ---------- Финал ---------- */
+  .final{
+    color:#eaf1f8;border-radius:18px;padding:2.6rem 2.4rem;margin:1rem 0 0;
+    background:
+      radial-gradient(600px 300px at 88% 0%,rgba(255,200,61,.22),transparent 60%),
+      linear-gradient(150deg,#0b1220,#132033 60%,#0b1220);
+  }
+  .final h2{color:#fff;margin-bottom:1rem}
+  .final ul{margin:0;padding-left:1.15rem;color:#b6c7dc}
+  .final li{margin-bottom:.55rem}
+  .final li b{color:#fff}
+
+  footer.page{padding:2.5rem 0 3.5rem;color:var(--muted);font-size:.87rem}
+  footer.page .wrap{display:flex;justify-content:space-between;gap:1rem;flex-wrap:wrap}
+
+  /* ---------- Появление при прокрутке ---------- */
+  .reveal{opacity:0;transform:translateY(14px);transition:opacity .6s ease,transform .6s ease}
+  .reveal.on{opacity:1;transform:none}
+
+  @media (max-width:860px){
+    .metrics{grid-template-columns:repeat(2,1fr)}
+    .g3,.g2,.ba,.shots{grid-template-columns:1fr}
+    .topbar nav{gap:.9rem}
+  }
+  @media print{
+    .topbar{display:none}
+    .reveal{opacity:1;transform:none}
+    section.block{page-break-inside:avoid}
+  }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="wrap">
+    <div class="logo"><span class="mark"></span>Cursor &times; 1С</div>
+    <nav>
+      <a href="#case">Кейс</a>
+      <a href="#timeline">Хронология</a>
+      <a href="#skills">Что умеет</a>
+      <a href="#meta">Метаданные</a>
+      <a href="#tests">Тесты</a>
+      <a href="#perf">Производительность</a>
+      <a href="#web">Веб-клиент</a>
+      <a href="#compare">Сравнение</a>
+    </nav>
+  </div>
+</div>
+
+<header class="hero">
+  <div class="wrap">
+    <span class="kicker"><span class="dot"></span>Реальный кейс, а не демонстрация</span>
+    <h1>Задача экзамена <span class="hl">«1С:Специалист по платформе»</span> закрыта за 43 минуты</h1>
+    <p class="lead">
+      Блок «Оперативный учет»: оптовая торговля, партионный учет, FIFO / LIFO / по средней,
+      контроль остатков, отчеты на СКД. <strong>Конфигурация собрана, база создана, код написан,
+      23 сценария прогнаны, узкое место найдено и ускорено в 4,4 раза, клиентские отчеты проверены
+      в веб-клиенте</strong> — без единого клика в Конфигураторе.
+    </p>
+
+    <div class="metrics">
+      <div class="metric">
+        <div class="val">43<span>мин</span></div>
+        <div class="cap">от первого запроса до финального отчета</div>
+      </div>
+      <div class="metric">
+        <div class="val">23<span>/23</span></div>
+        <div class="cap">функциональных сценария PASS</div>
+      </div>
+      <div class="metric">
+        <div class="val">4,4<span>x</span></div>
+        <div class="cap">ускорение проведения расходной</div>
+      </div>
+      <div class="metric">
+        <div class="val">0</div>
+        <div class="cap">ручных действий в Конфигураторе</div>
+      </div>
+    </div>
+
+    <p class="hero-note">
+      13 сентября 2026, 16:35&ndash;17:18. Платформа 1С:Предприятие 8.3.27, формат выгрузки 2.20.
+      Все цифры ниже взяты из фактических отчетов прогонов, а не из маркетинговых оценок.
+    </p>
+  </div>
+</header>
+
+<!-- ==================== КЕЙС ==================== -->
+<section class="block" id="case">
+  <div class="wrap">
+    <div class="block-head reveal">
+      <p class="eyebrow">Постановка</p>
+      <h2>Классическая задача, на которой проверяют квалификацию</h2>
+      <p class="sub">
+        Сюжет устойчив во всех вариантах билета: оптовая торговля, приходная и расходная накладные,
+        товары и услуги в одной табличной части, учет по складам, партионное списание себестоимости
+        по методу из учетной политики и два отчета. Ошибка в любом узле — незачет.
+      </p>
+    </div>
+
+    <div class="grid g3">
+      <div class="card reveal">
+        <span class="tag">Учет</span>
+        <h4>Партии и склады</h4>
+        <p>Приход создает партию, расход списывает ее по остаткам. Регистр накопления в разрезе
+        склад / номенклатура / партия, обороты продаж отдельно.</p>
+      </div>
+      <div class="card reveal">
+        <span class="tag gold">Себестоимость</span>
+        <h4>FIFO / LIFO / по средней</h4>
+        <p>Метод читается из регистра сведений <b>на дату документа</b>, а не хардкодом.
+        Смена политики с середины периода должна менять результат расхода.</p>
+      </div>
+      <div class="card reveal">
+        <span class="tag red">Контроль</span>
+        <h4>Недостача блокирует проведение</h4>
+        <p>Частичных движений быть не должно: при нехватке хотя бы по одной строке отменяются
+        <b>все</b> движения документа, пользователь получает внятное сообщение.</p>
+      </div>
+      <div class="card reveal">
+        <span class="tag violet">Номенклатура</span>
+        <h4>Товары против услуг</h4>
+        <p>Услуга в той же табличной части не создает партию и не двигает склад — только оборот
+        продаж с нулевой себестоимостью.</p>
+      </div>
+      <div class="card reveal">
+        <span class="tag">Отчетность</span>
+        <h4>Два отчета на СКД</h4>
+        <p>Продажи за период с валовой прибылью и остатки товаров в партионном разрезе на дату.</p>
+      </div>
+      <div class="card reveal">
+        <span class="tag gold">Приемка</span>
+        <h4>Числовой эталон</h4>
+        <p>Приход 10&times;100 и 10&times;200; расход 5 шт по FIFO дает себестоимость ровно 500,
+        остаток 15 / 2500; 6 шт по средней — около 1000; по LIFO — 1000.</p>
+      </div>
+    </div>
+
+    <div class="callout gold reveal">
+      <strong>Сколько это обычно стоит.</strong> Специалист вручную проектирует метаданные в Конфигураторе,
+      пишет модули, руками вбивает тестовые документы, глазами сверяет движения регистров и почти никогда
+      не доходит до замеров производительности — на подготовку к билету уходят дни. Ниже — то же самое,
+      но за 43 минуты и с замерами.
+    </div>
+  </div>
+</section>
+
+<!-- ==================== ХРОНОЛОГИЯ ==================== -->
+<section class="block alt" id="timeline">
+  <div class="wrap">
+    <div class="block-head reveal">
+      <p class="eyebrow">Как это было</p>
+      <h2>Пять запросов на обычном русском языке</h2>
+      <p class="sub">
+        Ни одной команды, ни одного скрипта руками. Формулировки ниже — дословные реплики разработчика
+        из рабочей сессии; между ними Cursor работал самостоятельно.
+      </p>
+    </div>
+
+    <div class="timeline">
+      <div class="tl-item gold reveal">
+        <span class="tl-time">16:35</span>
+        <div class="tl-title">Сборка бинарной конфигурации из XML-исходников</div>
+        <div class="prompt">
+          <span class="who">Разработчик</span>
+          <q>Можешь сделать cf по этой конфигурации 1С?</q>
+        </div>
+        <div class="tl-body">
+          Cursor нашел нужный навык работы с платформой, проверил XML-выгрузку на целостность,
+          создал временную информационную базу, загрузил в нее конфигурацию из файлов и выгрузил
+          <code>ОперативныйУчетУчебная.cf</code>. Все — через пакетный запуск конфигуратора.
+        </div>
+      </div>
+
+      <div class="tl-item reveal">
+        <span class="tl-time">16:39</span>
+        <div class="tl-title">Рабочая база создана и обновлена</div>
+        <div class="tl-body">
+          Информационная база <code>OU_Training</code>, загрузка конфигурации, обновление структуры БД,
+          командный интерфейс с разделами «Главное», «Оперативный учет», «Сервис».
+        </div>
+      </div>
+
+      <div class="tl-item gold reveal">
+        <span class="tl-time">16:44</span>
+        <div class="tl-title">Пользователь, тестовые данные и прогон сценариев</div>
+        <div class="prompt">
+          <span class="who">Разработчик</span>
+          <q>Прогони тестовые сценарии — создай пользователя admin с паролем 1 с административными
+          правами. Потом создай через COM тестовые данные и прогони сценарии.</q>
+        </div>
+        <div class="tl-body">
+          Написан COM-скрипт на Python: создание пользователя с ролью «ПолныеПрава», наполнение НСИ,
+          учетная политика, приходы и расходы с эталонными цифрами, проверка движений регистров запросами.
+          К 16:57 — <b class="pass">23 из 23 PASS</b> и HTML-отчет прогона.
+        </div>
+      </div>
+
+      <div class="tl-item gold reveal">
+        <span class="tl-time">16:58</span>
+        <div class="tl-title">Отчет с исследованием первоисточника задачи</div>
+        <div class="prompt">
+          <span class="who">Разработчик</span>
+          <q>Теперь нужен отчет HTML — постановка задачи (откуда взята? поищи в интернете),
+          описание плана разработки, описание всех конечных тестов. Выводы.</q>
+        </div>
+        <div class="tl-body">
+          Cursor поднял открытые источники подготовки к экзамену, сопоставил классическую формулировку
+          с реализацией, оформил таблицу соответствий «требование билета — как сделано», план разработки
+          из восьми шагов и описание каждого из 23 тестов.
+        </div>
+      </div>
+
+      <div class="tl-item gold reveal">
+        <span class="tl-time">17:00</span>
+        <div class="tl-title">Гипотеза о производительности, замер, переписывание, повторный замер</div>
+        <div class="prompt">
+          <span class="who">Разработчик</span>
+          <q>Мне кажется, если много строк в табличной части РН, то, так как циклом запрос делается
+          по каждой строке (вместо того чтобы один сразу на накладную), будет долго. Надо сделать
+          тестирование и замерить время, потом добиться значительного ускорения — переписать код
+          и перезамерить время.</q>
+        </div>
+        <div class="tl-body">
+          План нагрузочного теста, базовый замер на 50 / 100 / 200 / 500 строках (17:04), переписывание
+          алгоритма на пакетные запросы, повторный замер (17:06) и сразу регресс функциональности.
+          Итог: <b class="up">4,4x</b> на 500 строках при <b class="pass">23/23 PASS</b>.
+        </div>
+      </div>
+
+      <div class="tl-item gold reveal">
+        <span class="tl-time">17:07</span>
+        <div class="tl-title">Проверка отчетов глазами пользователя в веб-клиенте</div>
+        <div class="prompt">
+          <span class="who">Разработчик</span>
+          <q>Еще надо проверить работу клиентских отчетов.</q>
+        </div>
+        <div class="tl-body">
+          База опубликована на веб-сервере, Cursor открыл веб-клиент, зашел в раздел «Оперативный учет»,
+          открыл каждый отчет, нажал «Сформировать», прочитал табличный документ, сверил числа с эталоном
+          и сохранил скриншоты. К 17:18 — <b class="pass">3/3 PASS</b> и отчет с картинками.
+        </div>
+      </div>
+    </div>
+
+    <div class="callout reveal">
+      <strong>Обратите внимание на характер запросов.</strong> Это не «сгенерируй функцию» — это постановки
+      уровня руководителя группы: проверь гипотезу, добейся ускорения, подтверди регрессом, оформи отчет.
+      Именно на таком уровне Cursor и работает.
+    </div>
+  </div>
+</section>
+
+<!-- ==================== ЧТО УМЕЕТ ==================== -->
+<section class="block" id="skills">
+  <div class="wrap">
+    <div class="block-head reveal">
+      <p class="eyebrow">Возможности</p>
+      <h2>Восемь вещей, которые Cursor делает вместо разработчика 1С</h2>
+      <p class="sub">
+        Каждый пункт — не обещание, а то, что фактически произошло в этом кейсе.
+      </p>
+    </div>
+
+    <div class="grid g2">
+      <div class="card num-card reveal"><span class="n">1</span>
+        <h4>Проектирует и создает метаданные</h4>
+        <p>Справочники, документы, регистры накопления и сведений, перечисления, подсистемы, роли,
+        схемы компоновки данных — сразу в виде корректной XML-выгрузки платформы, с валидацией структуры.</p>
+      </div>
+      <div class="card num-card reveal"><span class="n">2</span>
+        <h4>Пишет модули на встроенном языке</h4>
+        <p>Проведение документов, подбор партий, три метода оценки, контроль остатков.
+        С документирующими комментариями, параметрами запросов вместо конкатенации, без дублирования
+        логики в модулях объектов.</p>
+      </div>
+      <div class="card num-card reveal"><span class="n">3</span>
+        <h4>Управляет информационными базами</h4>
+        <p>Создать базу, загрузить конфигурацию из XML или CF, обновить структуру БД, выгрузить CF или DT,
+        подключить расширение, опубликовать на веб-сервере — пакетным запуском платформы.</p>
+      </div>
+      <div class="card num-card reveal"><span class="n">4</span>
+        <h4>Наполняет базу данными и тестирует через COM</h4>
+        <p>Создает пользователей, элементы справочников, проводит документы, выполняет запросы к регистрам
+        и сверяет результат с эталоном. Каждый прогон изолирован уникальными префиксами данных.</p>
+      </div>
+      <div class="card num-card reveal"><span class="n">5</span>
+        <h4>Замеряет и оптимизирует производительность</h4>
+        <p>Строит план нагрузочного теста, снимает базовую линию, находит запросы в цикле,
+        переписывает на пакетное чтение и подтверждает эффект повторным замером.</p>
+      </div>
+      <div class="card num-card reveal"><span class="n">6</span>
+        <h4>Тестирует интерфейс в веб-клиенте</h4>
+        <p>Открывает формы, заполняет поля, нажимает кнопки, читает табличный документ отчета
+        и делает скриншоты — то, что обычно проверяют вручную.</p>
+      </div>
+      <div class="card num-card reveal"><span class="n">7</span>
+        <h4>Ищет первоисточник и обосновывает решение</h4>
+        <p>Поднимает внешние источники, сопоставляет их с реализацией и честно фиксирует,
+        где учебная версия упрощена относительно полного билета.</p>
+      </div>
+      <div class="card num-card reveal"><span class="n">8</span>
+        <h4>Оформляет документацию и отчеты</h4>
+        <p>Алгоритм для разработчика, отчет о тестировании, сравнительные замеры, чеклист приемки,
+        инструкция по загрузке — в готовом для отправки виде.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ==================== МЕТАДАННЫЕ И КОД ==================== -->
+<section class="block alt" id="meta">
+  <div class="wrap">
+    <div class="block-head reveal">
+      <p class="eyebrow">Конфигурация</p>
+      <h2>Полноценная конфигурация, а не набор фрагментов</h2>
+      <p class="sub">
+        30 XML-файлов метаданных и 19 модулей на встроенном языке. Загружается в пустую базу 8.3.27
+        и сразу работает.
+      </p>
+    </div>
+
+    <div class="grid g3 reveal">
+      <table>
+        <thead><tr><th>Объект</th><th class="num">Кол-во</th></tr></thead>
+        <tbody>
+          <tr><td>Справочники</td><td class="num">4</td></tr>
+          <tr><td>Документы</td><td class="num">3</td></tr>
+          <tr><td>Регистры накопления</td><td class="num">2</td></tr>
+          <tr><td>Регистры сведений</td><td class="num">1</td></tr>
+        </tbody>
+      </table>
+      <table>
+        <thead><tr><th>Объект</th><th class="num">Кол-во</th></tr></thead>
+        <tbody>
+          <tr><td>Перечисления</td><td class="num">3</td></tr>
+          <tr><td>Общие модули</td><td class="num">2</td></tr>
+          <tr><td>Отчеты на СКД</td><td class="num">2</td></tr>
+          <tr><td>Подсистемы и роль</td><td class="num">3 + 1</td></tr>
+        </tbody>
+      </table>
+      <table>
+        <thead><tr><th>Исходники</th><th class="num">Строк</th></tr></thead>
+        <tbody>
+          <tr><td>Модуль «УчетТоваров»</td><td class="num">522</td></tr>
+          <tr><td>Все модули конфигурации</td><td class="num">573</td></tr>
+          <tr><td>Скрипты тестирования</td><td class="num">885</td></tr>
+          <tr><td>XML-файлов метаданных</td><td class="num">30</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3 class="reveal">Код, который не стыдно показать на ревью</h3>
+    <p class="reveal">
+      Учетная политика читается срезом последних на дату документа, с безопасным значением по умолчанию.
+      Параметр запроса — именно параметр, а не склейка строк. Документирующий комментарий оформлен
+      по стандарту, включая пример вызова.
+    </p>
+
+    <div class="code-head reveal"><span class="badge">BSL</span> CommonModules / УчетнаяПолитикаСервер / Module.bsl</div>
+    <pre class="reveal"><code><span class="cm">// Описание: Возвращает метод оценки запасов по учетной политике на указанную дату.
+// Если запись на дату не найдена, используется FIFO.
+//
+// Параметры:
+//  ДатаДокумента - Дата - дата, на которую нужно получить метод оценки
+//
+// Возвращаемое значение:
+//  ПеречислениеСсылка.МетодыОценкиЗапасов - метод оценки запасов
+//
+// Пример:
+//  Метод = УчетнаяПолитикаСервер.МетодОценкиНаДату(Дата(2026, 1, 15));
+//</span>
+<span class="kw">Функция</span> <span class="fn">МетодОценкиНаДату</span>(ДатаДокумента) <span class="kw">Экспорт</span>
+
+    Запрос = <span class="kw">Новый</span> Запрос;
+    Запрос.Текст =
+    <span class="st">"ВЫБРАТЬ ПЕРВЫЕ 1
+    |   УчетнаяПолитикаУУ.МетодОценкиЗапасов КАК МетодОценкиЗапасов
+    |ИЗ
+    |   РегистрСведений.УчетнаяПолитикаУУ.СрезПоследних(&amp;ДатаДокумента, ) КАК УчетнаяПолитикаУУ"</span>;
+    Запрос.<span class="fn">УстановитьПараметр</span>(<span class="st">"ДатаДокумента"</span>, ДатаДокумента);
+
+    Результат = Запрос.<span class="fn">Выполнить</span>();
+    <span class="kw">Если</span> Результат.Пустой() <span class="kw">Тогда</span>
+        <span class="kw">Возврат</span> Перечисления.МетодыОценкиЗапасов.FIFO;
+    <span class="kw">КонецЕсли</span>;
+
+    Выборка = Результат.<span class="fn">Выбрать</span>();
+    Выборка.Следующий();
+    <span class="kw">Возврат</span> Выборка.МетодОценкиЗапасов;
+
+<span class="kw">КонецФункции</span></code></pre>
+
+    <div class="callout violet reveal">
+      <strong>Важная деталь для экзаменатора.</strong> Метод оценки берется по дате <em>документа расхода</em>,
+      а не по дате прихода партии. Это одна из типовых ловушек билета — и она закрыта архитектурно,
+      отдельной функцией, а не условием внутри проведения.
+    </div>
+  </div>
+</section>
+
+<!-- ==================== ТЕСТЫ ==================== -->
+<section class="block" id="tests">
+  <div class="wrap">
+    <div class="block-head reveal">
+      <p class="eyebrow">Проверка</p>
+      <h2>23 сценария, которые выполняются сами</h2>
+      <p class="sub">
+        Тесты подключаются к базе через внешнее соединение, создают данные, проводят документы
+        и сверяют движения регистров с эталонными числами. Повторный запуск не портит остатки:
+        каждая итерация работает на своем наборе номенклатуры.
+      </p>
+    </div>
+
+    <div class="code-head reveal"><span class="badge">Python</span> подключение и проверка результата запросом</div>
+    <pre class="reveal"><code><span class="kw">import</span> pythoncom, win32com.client
+
+com  = win32com.client.<span class="fn">Dispatch</span>(<span class="st">"V83.COMConnector"</span>)
+conn = com.<span class="fn">Connect</span>(<span class="st">"File='C:\\1c\\...\\OU_Training';"</span>
+                   <span class="st">"App='PyCOM';Locale=ru_RU;Usr='Admin';Pwd='1';"</span>)
+
+<span class="cm"># Себестоимость списания по FIFO должна быть ровно 500</span>
+query = conn.<span class="fn">NewObject</span>(<span class="st">"Запрос"</span>)
+query.Текст = <span class="st">"""
+ВЫБРАТЬ
+    СУММА(Продажи.Себестоимость) КАК Себестоимость
+ИЗ
+    РегистрНакопления.Продажи КАК Продажи
+ГДЕ
+    Продажи.Номенклатура = &amp;Номенклатура
+"""</span>
+query.<span class="fn">УстановитьПараметр</span>(<span class="st">"Номенклатура"</span>, товар)
+факт = query.<span class="fn">Выполнить</span>().<span class="fn">Выгрузить</span>()[<span class="nm">0</span>].Себестоимость
+
+<span class="kw">assert</span> <span class="fn">abs</span>(факт - <span class="nm">500</span>) &lt; <span class="nm">0.01</span>, <span class="st">f"FIFO cost = {факт}, ожидалось 500"</span></code></pre>
+
+    <table class="reveal">
+      <thead>
+        <tr><th>Группа сценариев</th><th class="num">Тестов</th><th>Что подтверждено фактическими данными</th><th>Статус</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Пользователь и НСИ</td><td class="num">3</td>
+          <td>Admin с ролью «ПолныеПрава», склад, контрагенты, товар и услуга, учетная политика FIFO с 01.01</td>
+          <td class="pass">PASS</td>
+        </tr>
+        <tr>
+          <td>Приход, партии, услуги</td><td class="num">4</td>
+          <td>Две партии созданы автоматически; остаток 20 шт / 3000; приход услуги склад не двигает</td>
+          <td class="pass">PASS</td>
+        </tr>
+        <tr>
+          <td>FIFO и «по средней»</td><td class="num">6</td>
+          <td>FIFO дал себестоимость 500 и остаток 15 / 2500; после смены политики 6 шт по средней дали 1000</td>
+          <td class="pass">PASS</td>
+        </tr>
+        <tr>
+          <td>Услуги, недостача, корректировка</td><td class="num">6</td>
+          <td>Услуга без себестоимости; расход 999 при остатке 9 отклонен, остаток не изменился; ручные движения записаны</td>
+          <td class="pass">PASS</td>
+        </tr>
+        <tr>
+          <td>Источники отчетов и LIFO</td><td class="num">4</td>
+          <td>Обороты и остатки заполнены; LIFO списал с последней партии на 1000</td>
+          <td class="pass">PASS</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="callout reveal">
+      <strong>Итог прогона: 23 из 23, ни одного отказа.</strong> Причем это не «тесты, написанные под код» —
+      эталонные числа заданы постановкой задачи (500, 15/2500, 1000, 1000) и посчитаны вручную до реализации.
+    </div>
+  </div>
+</section>
+
+<!-- ==================== ПРОИЗВОДИТЕЛЬНОСТЬ ==================== -->
+<section class="block alt" id="perf">
+  <div class="wrap">
+    <div class="block-head reveal">
+      <p class="eyebrow">Оптимизация</p>
+      <h2>Гипотеза разработчика подтверждена и закрыта за 6 минут</h2>
+      <p class="sub">
+        Классическая беда проведения: запросы внутри цикла по строкам табличной части.
+        При N строках выполнялось порядка 2N запросов — отдельно тип номенклатуры, отдельно остатки партий.
+      </p>
+    </div>
+
+    <div class="chart reveal">
+      <div class="chart-legend">
+        <span><i class="sw-before"></i>До оптимизации</span>
+        <span><i class="sw-after"></i>После оптимизации</span>
+        <span style="margin-left:auto;color:var(--muted)">Время проведения расходной накладной, мс</span>
+      </div>
+
+      <div class="row">
+        <div class="lbl"><span>50 строк</span><em>2,9x быстрее</em></div>
+        <div class="track"><span class="lane"><i class="bar before" style="width:8.4%"></i></span><b>65,45</b></div>
+        <div class="track"><span class="lane"><i class="bar after" style="width:2.9%"></i></span><b>22,88</b></div>
+      </div>
+
+      <div class="row">
+        <div class="lbl"><span>100 строк</span><em>2,9x быстрее</em></div>
+        <div class="track"><span class="lane"><i class="bar before" style="width:17.0%"></i></span><b>132,50</b></div>
+        <div class="track"><span class="lane"><i class="bar after" style="width:5.8%"></i></span><b>45,51</b></div>
+      </div>
+
+      <div class="row">
+        <div class="lbl"><span>200 строк</span><em>3,7x быстрее</em></div>
+        <div class="track"><span class="lane"><i class="bar before" style="width:35.6%"></i></span><b>277,44</b></div>
+        <div class="track"><span class="lane"><i class="bar after" style="width:9.7%"></i></span><b>75,52</b></div>
+      </div>
+
+      <div class="row">
+        <div class="lbl"><span>500 строк</span><em>4,4x быстрее</em></div>
+        <div class="track"><span class="lane"><i class="bar before" style="width:100%"></i></span><b>779,90</b></div>
+        <div class="track"><span class="lane"><i class="bar after" style="width:22.8%"></i></span><b>177,90</b></div>
+      </div>
+    </div>
+
+    <table class="reveal">
+      <thead>
+        <tr>
+          <th>Строк в табличной части</th>
+          <th class="num">Было, мс</th>
+          <th class="num">Стало, мс</th>
+          <th class="num">Было, мс/строка</th>
+          <th class="num">Стало, мс/строка</th>
+          <th class="num">Ускорение</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td>50</td><td class="num">65,45</td><td class="num">22,88</td><td class="num">1,309</td><td class="num">0,458</td><td class="num up">2,9x</td></tr>
+        <tr><td>100</td><td class="num">132,50</td><td class="num">45,51</td><td class="num">1,325</td><td class="num">0,455</td><td class="num up">2,9x</td></tr>
+        <tr><td>200</td><td class="num">277,44</td><td class="num">75,52</td><td class="num">1,387</td><td class="num">0,378</td><td class="num up">3,7x</td></tr>
+        <tr><td>500</td><td class="num">779,90</td><td class="num">177,90</td><td class="num">1,560</td><td class="num">0,356</td><td class="num up">4,4x</td></tr>
+      </tbody>
+    </table>
+
+    <h3 class="reveal">Что именно изменилось в алгоритме</h3>
+    <div class="ba reveal">
+      <div class="side before">
+        <header>Было: запросы в цикле</header>
+<pre><code><span class="kw">Для Каждого</span> СтрокаТовара <span class="kw">Из</span> Товары <span class="kw">Цикл</span>
+
+    <span class="cm">// запрос N 1: тип номенклатуры</span>
+    Тип = <span class="fn">ОбщегоНазначенияТипНоменклатуры</span>(
+              СтрокаТовара.Номенклатура);
+
+    <span class="cm">// запрос N 2: остатки партий
+    // по одной номенклатуре</span>
+    Результат = <span class="fn">ПодобратьПартииКСписанию</span>(
+        Склад,
+        СтрокаТовара.Номенклатура,
+        СтрокаТовара.Количество,
+        МоментВремени,
+        МетодОценки,
+        СтрокаТовара.Партия);
+
+<span class="kw">КонецЦикла</span>;</code></pre>
+        <div class="foot">Порядка <b>2N</b> обращений к базе. На 500 строках — около 1000 запросов и 780 мс.</div>
+      </div>
+
+      <div class="side after">
+        <header>Стало: два пакетных запроса</header>
+<pre><code><span class="cm">// один запрос типов на весь документ</span>
+ТипыНоменклатуры =
+    <span class="fn">ПолучитьТипыНоменклатурыПакетом</span>(Товары);
+
+<span class="cm">// один запрос остатков по всем товарам</span>
+ОстаткиПартий = <span class="fn">ПолучитьОстаткиПартийПакетом</span>(
+    ДокументОбъект.Склад,
+    НоменклатураТоваров,
+    ДокументОбъект.<span class="fn">МоментВремени</span>());
+
+ОстаткиПартий.<span class="fn">Сортировать</span>(
+    <span class="st">"Номенклатура Возр, ДатаПоступления Возр"</span>);
+
+ИндексОстатков =
+    <span class="fn">ПостроитьИндексОстатковПоНоменклатуре</span>(ОстаткиПартий);
+
+<span class="kw">Для Каждого</span> СтрокаТовара <span class="kw">Из</span> Товары <span class="kw">Цикл</span>
+    <span class="cm">// списание в памяти, без обращений к базе</span>
+    РезультатСписания = <span class="fn">СписатьИзЛокальныхОстатков</span>(...);
+<span class="kw">КонецЦикла</span>;</code></pre>
+        <div class="foot">Ровно <b>2</b> обращения к базе независимо от N. Остатки уменьшаются в памяти между строками.</div>
+      </div>
+    </div>
+
+    <div class="code-head reveal"><span class="badge">BSL</span> пакетное чтение остатков через табличный параметр</div>
+    <pre class="reveal"><code><span class="st">"ВЫБРАТЬ
+|   СписокНоменклатуры.Номенклатура КАК Номенклатура
+|ПОМЕСТИТЬ ВТНоменклатура
+|ИЗ
+|   &amp;СписокНоменклатуры КАК СписокНоменклатуры
+|;
+|
+|ВЫБРАТЬ
+|   Остатки.Номенклатура КАК Номенклатура,
+|   Остатки.Партия КАК Партия,
+|   ЕСТЬNULL(ПартииТоваров.ДатаПоступления, ДАТАВРЕМЯ(1, 1, 1)) КАК ДатаПоступления,
+|   Остатки.КоличествоОстаток КАК Количество,
+|   Остатки.СтоимостьОстаток КАК Стоимость
+|ИЗ
+|   РегистрНакопления.ТоварыНаСкладах.Остатки(
+|           &amp;МоментВремени,
+|           Склад = &amp;Склад
+|               И Номенклатура В
+|                   (ВЫБРАТЬ ВТНоменклатура.Номенклатура ИЗ ВТНоменклатура КАК ВТНоменклатура)) КАК Остатки
+|       ЛЕВОЕ СОЕДИНЕНИЕ Справочник.ПартииТоваров КАК ПартииТоваров
+|       ПО Остатки.Партия = ПартииТоваров.Ссылка
+|ГДЕ
+|   Остатки.КоличествоОстаток &gt; 0"</span></code></pre>
+
+    <div class="callout reveal">
+      <strong>И главное — корректность не пострадала.</strong> Сразу после переписывания прогнан полный
+      регресс: FIFO = 500, по средней около 1000, LIFO = 1000, недостача по-прежнему блокирует проведение,
+      услуги по-прежнему не трогают склад. <b class="pass">23/23 PASS</b> на новом коде.
+    </div>
+  </div>
+</section>
+
+<!-- ==================== ВЕБ-КЛИЕНТ ==================== -->
+<section class="block" id="web">
+  <div class="wrap">
+    <div class="block-head reveal">
+      <p class="eyebrow">Приемка глазами пользователя</p>
+      <h2>Отчеты проверены в живом интерфейсе, а не только запросами</h2>
+      <p class="sub">
+        База опубликована на веб-сервере, дальше Cursor работал как тестировщик: раздел «Оперативный учет»,
+        открытие отчета, кнопка «Сформировать», чтение табличного документа, сверка чисел, скриншот.
+      </p>
+    </div>
+
+    <div class="shots">
+      <figure class="reveal">
+        <div class="bar-os"><i></i><i></i><i></i></div>
+        <img src="images/web_report_sales.png" alt="Отчет «Продажи за период» в веб-клиенте 1С" title="Открыть в полном размере">
+        <figcaption>
+          <b>Продажи за период.</b> Количество 5, сумма продажи 1 500, себестоимость 500,
+          валовая прибыль 1 000 — ровно как в эталоне FIFO.
+        </figcaption>
+      </figure>
+      <figure class="reveal">
+        <div class="bar-os"><i></i><i></i><i></i></div>
+        <img src="images/web_report_stock.png" alt="Отчет «Остатки товаров по партиям» в веб-клиенте 1С" title="Открыть в полном размере">
+        <figcaption>
+          <b>Остатки товаров по партиям.</b> 136 строк в разрезе склад / номенклатура / партия
+          с количеством и стоимостью.
+        </figcaption>
+      </figure>
+    </div>
+
+    <div class="callout gold reveal">
+      <strong>3 из 3 PASS.</strong> Проверено, что команды отчетов действительно доступны в командном
+      интерфейсе, стандартная форма компоновки данных отрабатывает, параметры принимаются,
+      а числа на экране совпадают с движениями регистров.
+    </div>
+  </div>
+</section>
+
+<!-- ==================== ПОЧЕМУ РАБОТАЕТ ==================== -->
+<section class="block alt" id="how">
+  <div class="wrap">
+    <div class="block-head reveal">
+      <p class="eyebrow">Под капотом</p>
+      <h2>Почему это работает именно на 1С</h2>
+      <p class="sub">
+        Дело не в том, что модель «знает 1С». Дело в том, что у нее есть настоящие руки:
+        доступ к платформе, к базе и к браузеру.
+      </p>
+    </div>
+
+    <div class="grid g2">
+      <div class="card reveal">
+        <span class="tag">Инструменты платформы</span>
+        <h4>Пакетный запуск конфигуратора</h4>
+        <p>Создание баз, загрузка и выгрузка конфигураций и расширений, обновление структуры БД,
+        публикация на веб-сервере. Все то, что обычно делают мышкой, доступно как команда.</p>
+      </div>
+      <div class="card reveal">
+        <span class="tag gold">Внешнее соединение</span>
+        <h4>Прямой доступ к данным базы</h4>
+        <p>Создание пользователей и объектов, проведение документов, произвольные запросы к регистрам.
+        Агент не «предполагает» результат — он его читает.</p>
+      </div>
+      <div class="card reveal">
+        <span class="tag violet">Автоматизация браузера</span>
+        <h4>Веб-клиент как полигон приемки</h4>
+        <p>Формы, кнопки, табличные документы и скриншоты. Проверяется не только логика,
+        но и то, что пользователь реально увидит.</p>
+      </div>
+      <div class="card reveal">
+        <span class="tag red">Правила проекта</span>
+        <h4>Стандарты кодирования заданы один раз</h4>
+        <p>Регистр ключевых слов, параметры запросов вместо конкатенации, документирующие комментарии,
+        разделение клиент/сервер, запрет на лишние «Попытка» — и агент следует им во всех задачах.</p>
+      </div>
+    </div>
+
+    <h3 class="reveal">Стек, задействованный в этом кейсе</h3>
+    <div class="chips reveal">
+      <span class="chip"><b>Платформа</b> 1С:Предприятие 8.3.27</span>
+      <span class="chip"><b>Формат</b> выгрузка 2.20</span>
+      <span class="chip"><b>Язык</b> BSL, язык запросов 1С</span>
+      <span class="chip"><b>Отчеты</b> СКД</span>
+      <span class="chip"><b>Тесты</b> COM + Python</span>
+      <span class="chip"><b>UI-тесты</b> веб-клиент</span>
+      <span class="chip"><b>Публикация</b> Apache</span>
+      <span class="chip"><b>Документация</b> HTML, Markdown</span>
+    </div>
+  </div>
+</section>
+
+<!-- ==================== СРАВНЕНИЕ ==================== -->
+<section class="block" id="compare">
+  <div class="wrap">
+    <div class="block-head reveal">
+      <p class="eyebrow">Сухой остаток</p>
+      <h2>Как обычно и как с Cursor</h2>
+      <p class="sub">
+        Оценка «как обычно» — по опыту подготовки к экзаменационному блоку такого объема
+        одним разработчиком.
+      </p>
+    </div>
+
+    <table class="reveal">
+      <thead>
+        <tr><th>Этап работы</th><th>Традиционно</th><th>С Cursor</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Метаданные конфигурации</td>
+          <td>Несколько часов кликов в Конфигураторе</td>
+          <td>XML-исходники генерируются и проверяются автоматически</td>
+        </tr>
+        <tr>
+          <td>Модули проведения и партий</td>
+          <td>Пишутся вручную, комментарии «когда-нибудь потом»</td>
+          <td>522 строки с документирующими комментариями сразу</td>
+        </tr>
+        <tr>
+          <td>Тестовые данные</td>
+          <td>Вбиваются руками, при каждом изменении заново</td>
+          <td>Скрипт создает и пересоздает данные за секунды</td>
+        </tr>
+        <tr>
+          <td>Проверка результата</td>
+          <td>Глазами по движениям регистров</td>
+          <td>23 автоматических сверки с эталонными числами</td>
+        </tr>
+        <tr>
+          <td>Производительность</td>
+          <td>Чаще всего не проверяется вовсе</td>
+          <td>Замер, оптимизация 4,4x, повторный замер, регресс</td>
+        </tr>
+        <tr>
+          <td>Проверка интерфейса</td>
+          <td>Ручное открытие форм</td>
+          <td>Автотест веб-клиента со скриншотами</td>
+        </tr>
+        <tr>
+          <td>Документация и отчеты</td>
+          <td>Пишется в последнюю очередь или не пишется</td>
+          <td>Четыре готовых документа к моменту завершения работ</td>
+        </tr>
+        <tr>
+          <td><b>Суммарно</b></td>
+          <td><b>Дни</b></td>
+          <td><b>43 минуты</b></td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="callout violet reveal">
+      <strong>Честная оговорка.</strong> Разработчик здесь не исчез — он задавал направление, сформулировал
+      гипотезу о запросах в цикле и принимал результат. Cursor снял с него всю механическую работу:
+      клики, набор кода, ввод тестовых данных, сверку чисел и оформление отчетов.
+    </div>
+  </div>
+</section>
+
+<!-- ==================== ФИНАЛ ==================== -->
+<section class="block alt" id="final">
+  <div class="wrap">
+    <div class="final reveal">
+      <h2>Что это означает для отдела разработки 1С</h2>
+      <ul>
+        <li><b>Порог входа в сложные задачи падает.</b> Партионный учет, три метода оценки и контроль
+        остатков перестают быть «работой на неделю».</li>
+        <li><b>Тестирование становится нормой, а не роскошью.</b> Если прогон занимает секунды,
+        его запускают после каждого изменения.</li>
+        <li><b>Производительность проверяется до продуктива.</b> Запросы в цикле находятся замером,
+        а не жалобой пользователя через полгода.</li>
+        <li><b>Документация перестает отставать от кода.</b> Отчет о тестировании и алгоритм для
+        разработчика готовы в тот же час, что и сама доработка.</li>
+        <li><b>Знания остаются в проекте.</b> Стандарты кодирования, приемы работы с платформой и
+        сценарии приемки живут в правилах проекта, а не в голове одного человека.</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<footer class="page">
+  <div class="wrap">
+    <span>Источник данных: комплект «ОУ_ПартионныйУчет», конфигурация «ОперативныйУчетУчебная», прогоны 13.09.2026.</span>
+    <span>Все метрики подтверждены отчетами автотестов и замеров.</span>
+  </div>
+</footer>
+
+<script>
+  (function () {
+    var items = document.querySelectorAll('.reveal');
+    if (!('IntersectionObserver' in window)) {
+      items.forEach(function (el) { el.classList.add('on'); });
+      return;
+    }
+    var io = new IntersectionObserver(function (entries) {
+      entries.forEach(function (e) {
+        if (e.isIntersecting) { e.target.classList.add('on'); io.unobserve(e.target); }
+      });
+    }, { rootMargin: '0px 0px -8% 0px', threshold: 0.05 });
+    items.forEach(function (el) { io.observe(el); });
+  })();
+
+  // Столбцы диаграммы вырастают при первом появлении блока
+  (function () {
+    var chart = document.querySelector('.chart');
+    if (!chart) { return; }
+    var bars = chart.querySelectorAll('.bar');
+    var widths = [];
+    bars.forEach(function (b) { widths.push(b.style.width); b.style.width = '0'; });
+    var grow = function () {
+      bars.forEach(function (b, i) {
+        setTimeout(function () { b.style.width = widths[i]; }, 90 * i);
+      });
+    };
+    if (!('IntersectionObserver' in window)) { grow(); return; }
+    var io = new IntersectionObserver(function (entries) {
+      entries.forEach(function (e) { if (e.isIntersecting) { grow(); io.disconnect(); } });
+    }, { threshold: 0.25 });
+    io.observe(chart);
+  })();
+
+  // Скриншот открывается в отдельной вкладке в полном размере
+  document.querySelectorAll('figure img').forEach(function (img) {
+    img.addEventListener('click', function () {
+      var tab = window.open('', '_blank');
+      if (!tab) { return; }
+      tab.document.write('<title>' + img.alt + '</title>' +
+        '<body style="margin:0;background:#11161f">' +
+        '<img src="' + img.src + '" style="max-width:100%">');
+      tab.document.close();
+    });
+  });
+</script>
+</body>
+</html>
