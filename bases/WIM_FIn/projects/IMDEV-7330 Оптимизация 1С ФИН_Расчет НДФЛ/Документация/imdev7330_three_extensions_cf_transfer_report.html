@@ -1,0 +1,865 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>IMDEV-7330. Проверка переноса IMDEV7330_Locks, NkdCoupon, NkdParam в базовую конфигурацию</title>
+<style>
+  :root {
+    --ok: #2f855a;
+    --ok-bg: #f0fff4;
+    --ok-br: #9ae6b4;
+    --warn: #c05621;
+    --warn-bg: #fffaf0;
+    --warn-br: #f6ad55;
+    --err: #9b2c2c;
+    --err-bg: #fff5f5;
+    --err-br: #fc8181;
+    --info: #2b6cb0;
+    --info-bg: #ebf8ff;
+    --info-br: #90cdf4;
+    --muted: #718096;
+    --line: #e2e8f0;
+    --ink: #1a202c;
+    --header: #1f2d3d;
+  }
+  * { box-sizing: border-box; }
+  body {
+    font-family: "Segoe UI", Tahoma, Arial, sans-serif;
+    margin: 0;
+    background: #f5f6f8;
+    color: var(--ink);
+    line-height: 1.55;
+  }
+  header {
+    background: var(--header);
+    color: #fff;
+    padding: 28px 0 22px 0;
+  }
+  .wrap { max-width: 1100px; margin: 0 auto; padding: 0 24px; }
+  header h1 { margin: 0 0 8px 0; font-size: 24px; font-weight: 650; }
+  header .sub { color: #b8c4d0; font-size: 14px; }
+  h2 {
+    font-size: 1.15rem;
+    margin: 2.2rem 0 0.7rem 0;
+    padding-bottom: 0.35rem;
+    border-bottom: 2px solid #17a2b8;
+  }
+  h3 { font-size: 1.02rem; margin: 1.3rem 0 0.45rem 0; }
+  p { margin: 0.55rem 0; }
+  code {
+    font-family: Consolas, "Courier New", monospace;
+    font-size: 0.88em;
+    background: #edf2f7;
+    padding: 0.05rem 0.28rem;
+    border-radius: 3px;
+  }
+  pre {
+    font-family: Consolas, "Courier New", monospace;
+    font-size: 0.8rem;
+    background: #1a202c;
+    color: #e2e8f0;
+    padding: 0.75rem 0.95rem;
+    border-radius: 6px;
+    overflow-x: auto;
+    line-height: 1.42;
+    white-space: pre;
+  }
+  .box {
+    border-radius: 8px;
+    padding: 0.85rem 1.05rem;
+    margin: 0.8rem 0;
+    border: 1px solid var(--line);
+    background: #fff;
+  }
+  .box.ok   { background: var(--ok-bg);   border-color: var(--ok-br); }
+  .box.warn { background: var(--warn-bg); border-color: var(--warn-br); }
+  .box.err  { background: var(--err-bg);  border-color: var(--err-br); }
+  .box.info { background: var(--info-bg); border-color: var(--info-br); }
+  .box p:first-child { margin-top: 0; }
+  .box p:last-child { margin-bottom: 0; }
+  .verdict {
+    display: flex;
+    gap: 1.2rem;
+    align-items: center;
+    padding: 1.1rem 1.3rem;
+    margin: 1.4rem 0 0.4rem 0;
+    border-radius: 10px;
+    background: linear-gradient(180deg, #f0fff4 0%, #e6ffed 100%);
+    border: 2px solid #68d391;
+  }
+  .verdict .mark {
+    flex: 0 0 auto;
+    width: 72px; height: 72px;
+    border-radius: 50%;
+    background: #38a169;
+    color: #fff;
+    font-size: 1.7rem;
+    font-weight: 800;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    letter-spacing: 0.02em;
+  }
+  .verdict h2 { margin: 0 0 0.25rem 0; border: none; padding: 0; color: #22543d; font-size: 1.35rem; }
+  .verdict p { margin: 0; color: #2f855a; }
+  .tag {
+    font-size: 0.74rem;
+    padding: 0.14rem 0.5rem;
+    border-radius: 4px;
+    white-space: nowrap;
+    display: inline-block;
+    font-weight: 650;
+  }
+  .tag.ok   { background: #c6f6d5; color: var(--ok); }
+  .tag.warn { background: #fbd38d; color: var(--warn); }
+  .tag.err  { background: #fed7d7; color: var(--err); }
+  .tag.info { background: #bee3f8; color: var(--info); }
+  .tag.grey { background: #e2e8f0; color: #4a5568; }
+  table { border-collapse: collapse; width: 100%; font-size: 0.88rem; margin: 0.6rem 0 1rem 0; background: #fff; }
+  th, td { border: 1px solid var(--line); padding: 0.45rem 0.6rem; text-align: left; vertical-align: top; }
+  th { background: #1f2d3d; color: #fff; font-weight: 600; }
+  tbody tr:nth-child(even) { background: #fafbfc; }
+  tr.row-ok td:first-child { border-left: 3px solid var(--ok); }
+  tr.row-warn td:first-child { border-left: 3px solid var(--warn); }
+  .stat-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 0.8rem;
+    margin: 1rem 0 1.2rem 0;
+  }
+  .stat {
+    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 0.85rem 0.9rem;
+    text-align: center;
+  }
+  .stat .val { font-size: 1.85rem; font-weight: 750; line-height: 1.1; }
+  .stat .lbl { font-size: 0.8rem; color: var(--muted); margin-top: 0.3rem; }
+  .stat.good .val { color: var(--ok); }
+  .stat.mid .val { color: var(--warn); }
+  .stat.neutral .val { color: var(--info); }
+  .path { font-family: Consolas, monospace; font-size: 0.82rem; color: #2d3748; word-break: break-all; }
+  ul, ol { padding-left: 1.3rem; margin: 0.4rem 0 0.8rem 0; }
+  li { margin-bottom: 0.28rem; }
+  .small { font-size: 0.85rem; color: var(--muted); }
+  .toc {
+    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 12px 20px;
+    margin: 16px 0 8px 0;
+  }
+  .toc a { text-decoration: none; color: #0a58ca; }
+  .toc a:hover { text-decoration: underline; }
+  .toc ol { margin: 4px 0 0 18px; }
+  .two {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 0.8rem;
+  }
+  .card {
+    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 0.85rem 1rem;
+  }
+  .card h3 { margin-top: 0; }
+  footer {
+    margin: 2.4rem 0 0 0;
+    padding: 16px 0 28px 0;
+    border-top: 1px solid var(--line);
+    font-size: 13px;
+    color: var(--muted);
+  }
+  @media (max-width: 900px) {
+    .stat-grid, .two { grid-template-columns: 1fr; }
+    .verdict { flex-direction: column; text-align: center; }
+  }
+  @media print {
+    body { background: #fff; }
+    header { background: #fff; color: #000; border-bottom: 2px solid #000; }
+    header .sub { color: #444; }
+    .verdict { break-inside: avoid; }
+    pre { white-space: pre-wrap; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap">
+    <h1>IMDEV-7330. Перенос трёх расширений в базовую конфигурацию ФИН</h1>
+    <div class="sub">
+      Проверка: попали ли доработки из патчей
+      <code style="background:#2d3e50;color:#e2e8f0;">IMDEV7330_Locks</code>,
+      <code style="background:#2d3e50;color:#e2e8f0;">IMDEV7330_NkdCoupon</code>,
+      <code style="background:#2d3e50;color:#e2e8f0;">IMDEV7330_NkdParam</code>
+      в типовую конфигурацию WIM ФИН.
+      Дата проверки: 14.09.2026. Версия CF: 2.8.8.1, вендор ООО «Аванкор».
+    </div>
+  </div>
+</header>
+
+<div class="wrap">
+
+<div class="verdict">
+  <div class="mark">OK</div>
+  <div>
+    <h2>Все доработки трёх расширений перенесены</h2>
+    <p>
+      Тринадцать перехватов, новые процедуры и обязательное удаление сеансового кэша НКД
+      найдены в базовой конфигурации 2.8.8.1. Потерянных блоков нет.
+      После обновления базы на эту CF расширения
+      <code>IMDEV7330_Locks</code>, <code>IMDEV7330_NkdCoupon</code> и
+      <code>IMDEV7330_NkdParam</code> больше не требуются.
+    </p>
+  </div>
+</div>
+
+<div class="toc">
+  <b>Содержание</b>
+  <ol>
+    <li><a href="#s1">Что проверяли</a></li>
+    <li><a href="#s2">Как проверяли</a></li>
+    <li><a href="#s3">Итог в цифрах</a></li>
+    <li><a href="#s4">IMDEV7330_Locks — устойчивость к блокировкам</a></li>
+    <li><a href="#s5">IMDEV7330_NkdCoupon — купон только своего клиента</a></li>
+    <li><a href="#s6">IMDEV7330_NkdParam — кэш НКД параметром</a></li>
+    <li><a href="#s7">Отличия от текста расширений — не ошибки</a></li>
+    <li><a href="#s8">Вывод и что делать дальше</a></li>
+  </ol>
+</div>
+
+<h2 id="s1">1. Что проверяли</h2>
+
+<div class="box info">
+  <p>
+    Вендору передавали три Patch-расширения к релизу 2.8.7.5
+    (сводный файл для Аванкор <code>imdev7330_three_extensions.html</code>).
+    В 2.8.7.5 уже были оркестратор пачек и массовый предрасчёт НКД.
+    Три расширения закрывали оставшиеся дыры этого релиза.
+  </p>
+  <p>
+    Сейчас в типовой лежит конфигурация <strong>2.8.8.1</strong>
+    (следующий релиз после 2.8.7.5). Нужно убедиться, что вендор вшил все три патча
+    в базовую CF, а не оставил их только в расширениях.
+  </p>
+</div>
+
+<div class="two">
+  <div class="card">
+    <h3>Locks</h3>
+    <p>
+      Пауза 30 секунд между большими пачками, повтор запроса оборотов при SQL 1222,
+      вариант заполнения 4 «клиенты на конец периода без НДФЛ».
+    </p>
+    <p class="small">Суммы налога расширение не меняет.</p>
+  </div>
+  <div class="card">
+    <h3>NkdCoupon</h3>
+    <p>
+      В массовом запросе НКД оплаченный купон хранится вместе с клиентом.
+      Перевод НКД соединяется по паре «этот клиент + этот купон», а не по общей куче купонов пачки.
+    </p>
+    <p class="small">Одиночный расчёт одного клиента не меняется.</p>
+  </div>
+  <div class="card">
+    <h3>NkdParam</h3>
+    <p>
+      Кэш расходов НКД передаётся параметром <code>ВнешнийКэшНКД</code>
+      из обработки в документ и дальше по стеку менеджера УК.
+      Сеансовое хранилище больше не используется.
+    </p>
+    <p class="small">Обязательно удалить две сеансовые процедуры.</p>
+  </div>
+</div>
+
+<table>
+  <thead>
+    <tr>
+      <th>Источник</th>
+      <th>Состав</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Расширения-патчи</td>
+      <td>
+        <code>IMDEV7330_Locks</code> 1.0.0.1,
+        <code>IMDEV7330_NkdCoupon</code> 1.0.0.1,
+        <code>IMDEV7330_NkdParam</code> 1.0.0.1
+      </td>
+    </tr>
+    <tr>
+      <td>Целевой релиз для влива</td>
+      <td>ДУ 2.8.7.5</td>
+    </tr>
+    <tr>
+      <td>Фактически проверенная CF</td>
+      <td>ДУ 2.8.8.1, вендор ООО «Аванкор», совместимость платформы 8.3.27</td>
+    </tr>
+    <tr>
+      <td>Объекты</td>
+      <td>
+        Документ <code>НачислениеНДФЛПоУправляющейКомпании</code>
+        (модули объекта и менеджера),
+        документ <code>НачислениеНДФЛПоПортфелю</code> (модуль объекта),
+        обработка <code>ФормированиеНачисленийНДФЛ</code>
+        (модули объекта, менеджера и формы).
+        Собственных объектов в расширениях нет — только заимствование и перехваты.
+      </td>
+    </tr>
+  </tbody>
+</table>
+
+<h2 id="s2">2. Как проверяли</h2>
+
+<div class="box">
+  <p>Проверка сделана по исходникам XML/BSL типовой конфигурации, без запуска 1С.</p>
+  <ol>
+    <li>
+      Состав патчей: какие объекты заимствованы и какие методы перехвачены
+      (<code>&amp;ИзменениеИКонтроль</code>), какие процедуры добавлены целиком.
+    </li>
+    <li>
+      Из каждого блока <code>#Вставка</code> расширения берётся смысловой код
+      и ищется в соответствующем модуле типовой CF.
+    </li>
+    <li>
+      Новые процедуры без перехвата сверяются целиком
+      (префикс <code>IMDEV7330_*</code> в типовой должен быть снят).
+    </li>
+    <li>
+      Контроль обязательного удаления:
+      процедур <code>УстановитьВнешнийКэшНКДРасходов</code> /
+      <code>ПолучитьВнешнийКэшНКДРасходов</code> в CF быть не должно.
+    </li>
+  </ol>
+</div>
+
+<h2 id="s3">3. Итог в цифрах</h2>
+
+<div class="stat-grid">
+  <div class="stat good"><div class="val">3 / 3</div><div class="lbl">расширения полностью<br>в типовой CF</div></div>
+  <div class="stat good"><div class="val">13 / 13</div><div class="lbl">перехватчиков<br>найдены в CF</div></div>
+  <div class="stat good"><div class="val">0</div><div class="lbl">не перенесено<br>потерянных блоков нет</div></div>
+  <div class="stat neutral"><div class="val">2.8.8.1</div><div class="lbl">версия базовой CF<br>(влив шёл в 2.8.7.5)</div></div>
+</div>
+
+<table>
+  <thead>
+    <tr>
+      <th>Расширение</th>
+      <th>Перехваты</th>
+      <th>Новые процедуры</th>
+      <th>Удаление из типовой</th>
+      <th>Результат</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr class="row-ok">
+      <td><code>IMDEV7330_Locks</code></td>
+      <td>5</td>
+      <td>4</td>
+      <td>—</td>
+      <td><span class="tag ok">ПЕРЕНЕСЕНО</span></td>
+    </tr>
+    <tr class="row-ok">
+      <td><code>IMDEV7330_NkdCoupon</code></td>
+      <td>1</td>
+      <td>—</td>
+      <td>—</td>
+      <td><span class="tag ok">ПЕРЕНЕСЕНО</span></td>
+    </tr>
+    <tr class="row-ok">
+      <td><code>IMDEV7330_NkdParam</code></td>
+      <td>7</td>
+      <td>—</td>
+      <td>2 сеансовые процедуры</td>
+      <td><span class="tag ok">ПЕРЕНЕСЕНО</span></td>
+    </tr>
+  </tbody>
+</table>
+
+<p class="small">
+  Итог сверки: 13 перехватчиков перенесены, 4 новые процедуры на месте,
+  2 сеансовые процедуры удалены, 0 не перенесено.
+</p>
+
+<h2 id="s4">4. IMDEV7330_Locks — устойчивость к блокировкам</h2>
+
+<p>
+  Патч не меняет суммы налога. Он снижает риск ошибки ожидания блокировки СУБД
+  (SQL 1222 / HYT00) при параллельном формировании и даёт вариант добрать клиентов,
+  у которых документ НДФЛ на дату конца периода не создался.
+</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>#</th>
+      <th>Объект / метод</th>
+      <th>Что должно появиться в CF</th>
+      <th>Где в CF</th>
+      <th>Результат</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr class="row-ok">
+      <td>L1</td>
+      <td>
+        Обработка.ФормированиеНачисленийНДФЛ<br>
+        <code>ОркестраторФормированияНДФЛ</code>
+      </td>
+      <td>
+        После запуска пачки больше 1000 строк — пауза 30 секунд
+        перед следующей (<code>АванкорСервер.Пауза(30000)</code>)
+      </td>
+      <td>модуль менеджера, строки 662–667</td>
+      <td><span class="tag ok">ПЕРЕНЕСЕНО</span></td>
+    </tr>
+    <tr class="row-ok">
+      <td>L2</td>
+      <td>
+        Документ.НачислениеНДФЛПоПортфелю<br>
+        <code>ОбщиеОбороты</code>
+      </td>
+      <td>
+        <code>Запрос.Выполнить()</code> заменён на
+        <code>ВыполнитьЗапросСПовторомПриБлокировке</code>
+      </td>
+      <td>модуль объекта, строка 7708</td>
+      <td><span class="tag ok">ПЕРЕНЕСЕНО</span></td>
+    </tr>
+    <tr class="row-ok">
+      <td>L3</td>
+      <td>тот же модуль, новые функции</td>
+      <td>
+        <code>ВыполнитьЗапросСПовторомПриБлокировке</code>
+        (3 попытки, паузы 60 и 180 секунд) и
+        <code>ЭтоОшибкаОжиданияБлокировки</code>
+        (маркеры: конфликт блокировок, lock request time out, native=1222)
+      </td>
+      <td>строки 8851 и 8919</td>
+      <td><span class="tag ok">ПЕРЕНЕСЕНО</span></td>
+    </tr>
+    <tr class="row-ok">
+      <td>L4</td>
+      <td>
+        Документ.НачислениеНДФЛПоПортфелю<br>
+        <code>ОбщиеОборотыТекстЗапроса</code>
+      </td>
+      <td>
+        Индексы ВТ санкций:
+        <code>ВТ_ТаблицаПродажДляРасчетаЛьготПоКлиентамПодСанкциями</code>
+        (Регистратор, Портфель, Актив, Партия) и
+        <code>ВТ_ТаблицаВыручкиПоКлиентамПодСанкциями</code>
+        (Регистратор, Актив, Портфель)
+      </td>
+      <td>строки 7775–7779 и 7797–7800</td>
+      <td><span class="tag ok">ПЕРЕНЕСЕНО</span></td>
+    </tr>
+    <tr class="row-ok">
+      <td>L5</td>
+      <td>
+        Обработка.ФормированиеНачисленийНДФЛ<br>
+        <code>ЗаполнитьДатыДокументов</code>
+      </td>
+      <td>
+        Ветка <code>ВариантЗаполнения = 4</code> вызывает
+        <code>ЗаполнитьПоОтсутствующимНачислениямНДФЛ</code>
+      </td>
+      <td>модуль объекта, строки 170–171</td>
+      <td><span class="tag ok">ПЕРЕНЕСЕНО</span></td>
+    </tr>
+    <tr class="row-ok">
+      <td>L6</td>
+      <td>тот же модуль, новая процедура</td>
+      <td>
+        <code>ЗаполнитьПоОтсутствующимНачислениямНДФЛ</code>:
+        кандидаты как на дату, пара (Клиент, УК) исключается,
+        если на конец периода уже есть проведённый документ НДФЛ
+      </td>
+      <td>строки 181–398</td>
+      <td><span class="tag ok">ПЕРЕНЕСЕНО</span></td>
+    </tr>
+    <tr class="row-ok">
+      <td>L7</td>
+      <td>
+        Форма обработки<br>
+        <code>УправлениеФормой</code>
+      </td>
+      <td>
+        Пункт списка выбора «По всем клиентам на конец периода без НДФЛ»,
+        видимость отборов для варианта 4, горизонтальная группировка тумблера
+      </td>
+      <td>модуль формы, строки 138–143 и 523–531</td>
+      <td><span class="tag ok">ПЕРЕНЕСЕНО</span></td>
+    </tr>
+  </tbody>
+</table>
+
+<p><strong>Фрагмент CF — пауза между пачками (оркестратор):</strong></p>
+<pre>ПорогПаузыМеждуПачками = 1000;
+ПаузаМеждуЗапускамиПачекМс = 30000;
+Если НомерПачки &lt; ВсегоПачек
+    И ПачкаИндексов.Количество() &gt; ПорогПаузыМеждуПачками Тогда
+    АванкорСервер.Пауза(ПаузаМеждуЗапускамиПачекМс);
+КонецЕсли;</pre>
+
+<p><strong>Фрагмент CF — повтор запроса оборотов:</strong></p>
+<pre>ОбщиеОбороты = ВыполнитьЗапросСПовторомПриБлокировке(
+    Запрос, "НачислениеНДФЛПоПортфелю.ОбщиеОбороты").Выгрузить();</pre>
+
+<div class="box ok">
+  <p>
+    Справочники <code>БанковскиеСчета</code>, <code>Контрагенты</code>, <code>Периоды</code>
+    в расширении только заимствованы (нужны форме). Менять их в типовой не требовалось —
+    в CF они на месте как типовые объекты.
+  </p>
+</div>
+
+<h2 id="s5">5. IMDEV7330_NkdCoupon — купон только своего клиента</h2>
+
+<p>
+  <strong>Файл CF:</strong>
+  <span class="path">Documents\НачислениеНДФЛПоУправляющейКомпании\Ext\ManagerModule.bsl</span>,
+  функция <code>РасходыПоНКДПоКлиентамИДате</code> (с строки 3292).
+</p>
+
+<p>
+  Старый массовый запрос складывал оплаченные купоны пачки в одну кучу без клиента.
+  Перевод НКД смотрел «есть ли этот купон в куче» — купон одного клиента мог попасть
+  в расчёт другого. Патч хранит пару (Клиент, Купон) и соединяет Перевод НКД по этой паре.
+</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>#</th>
+      <th>Что должно появиться в CF</th>
+      <th>Где в CF</th>
+      <th>Результат</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr class="row-ok">
+      <td>C1</td>
+      <td>
+        ВТ <code>ОплаченныеКупоныЗаПериод</code>: колонки Клиент и Купон,
+        <code>СГРУППИРОВАТЬ ПО</code> паре, <code>ИНДЕКСИРОВАТЬ ПО</code> Клиент, Купон.
+        Колонки Облигация и СуммаОборот убраны
+      </td>
+      <td>строки 3296–3309</td>
+      <td><span class="tag ok">ПЕРЕНЕСЕНО</span></td>
+    </tr>
+    <tr class="row-ok">
+      <td>C2</td>
+      <td>
+        Новые ВТ <code>ВТ_ПереводыНКД_Кор2</code> и <code>ВТ_ПереводыНКД_Кор3</code>
+        с полями Клиент и КупонДляСвязи, индекс по этой паре
+      </td>
+      <td>строки 3313–3396</td>
+      <td><span class="tag ok">ПЕРЕНЕСЕНО</span></td>
+    </tr>
+    <tr class="row-ok">
+      <td>C3</td>
+      <td>
+        В <code>ВТ_РасходыПоНКД</code> второе и третье объединения идут из этих ВТ
+        с внутренним соединением по <code>Клиент</code> и <code>КупонДляСвязи</code>,
+        а не напрямую из виртуальной таблицы «купон в списке пачки»
+      </td>
+      <td>строки 3423–3467</td>
+      <td><span class="tag ok">ПЕРЕНЕСЕНО</span></td>
+    </tr>
+    <tr class="row-ok">
+      <td>C4</td>
+      <td>
+        Результирующая таблица и два итоговых SELECT без изменения состава полей
+        (как в патче)
+      </td>
+      <td>строки 3470–3559</td>
+      <td><span class="tag ok">ПЕРЕНЕСЕНО</span></td>
+    </tr>
+  </tbody>
+</table>
+
+<p><strong>Фрагмент CF — соединение Перевод НКД по паре клиент + купон:</strong></p>
+<pre>ВТ_ПереводыНКД_Кор2 КАК ВТ_ПереводыНКД_Кор2
+    ВНУТРЕННЕЕ СОЕДИНЕНИЕ ОплаченныеКупоныЗаПериод КАК ОплаченныеКупоныЗаПериод
+    ПО ВТ_ПереводыНКД_Кор2.Клиент = ОплаченныеКупоныЗаПериод.Клиент
+        И ВТ_ПереводыНКД_Кор2.КупонДляСвязи = ОплаченныеКупоныЗаПериод.Купон</pre>
+
+<div class="box info">
+  <p>
+    Одиночный запрос <code>РасходыПоНКДПоВидуОбращаемости</code> (один клиент) патч
+    <code>NkdCoupon</code> не трогал — там клиент и так один. В CF он остался одиночным,
+    это правильно.
+  </p>
+</div>
+
+<h2 id="s6">6. IMDEV7330_NkdParam — кэш НКД параметром</h2>
+
+<p>
+  В 2.8.7.5 параметр <code>ВнешнийКэшНКД</code> в сигнатурах уже был объявлен,
+  но кэш по-прежнему клали в <code>ПараметрыСеанса.ОбщиеЗначения</code>
+  (хранилище значения) и каждый раз распаковывали. Патч использует уже объявленный
+  параметр и убирает сеансовый путь.
+</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>#</th>
+      <th>Объект / метод</th>
+      <th>Что должно появиться в CF</th>
+      <th>Где в CF</th>
+      <th>Результат</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr class="row-ok">
+      <td>P1</td>
+      <td>
+        Документ УК, модуль объекта<br>
+        <code>Перем ВнешнийКэшНКД</code>
+      </td>
+      <td>Переменная модуля объекта для проброса кэша внутри документа</td>
+      <td>строка 4</td>
+      <td><span class="tag ok">ПЕРЕНЕСЕНО</span></td>
+    </tr>
+    <tr class="row-ok">
+      <td>P2</td>
+      <td><code>РассчитатьНДФЛ(ВнешнийКэшНКДПараметр)</code></td>
+      <td>
+        Кэш с параметра кладётся в <code>Перем</code>.
+        Вызовов <code>УстановитьВнешнийКэшНКДРасходов</code> нет
+        (ни на ранних <code>Возврат</code>, ни в конце)
+      </td>
+      <td>строки 30–32</td>
+      <td><span class="tag ok">ПЕРЕНЕСЕНО</span></td>
+    </tr>
+    <tr class="row-ok">
+      <td>P3</td>
+      <td><code>РасчетНДФЛ_ИнвестиционныйВычет</code></td>
+      <td>
+        Вызов менеджера с шестым аргументом <code>ВнешнийКэшНКД</code>
+      </td>
+      <td>строка 1814</td>
+      <td><span class="tag ok">ПЕРЕНЕСЕНО</span></td>
+    </tr>
+    <tr class="row-ok">
+      <td>P4</td>
+      <td>
+        Модуль менеджера УК<br>
+        <code>РезультатРасчетаИнвестиционногоВычета</code>
+      </td>
+      <td>Проброс <code>ВнешнийКэшНКД</code> в <code>ОтразитьУКДиНКДВИнвестВычете</code></td>
+      <td>строки 391–396</td>
+      <td><span class="tag ok">ПЕРЕНЕСЕНО</span></td>
+    </tr>
+    <tr class="row-ok">
+      <td>P5</td>
+      <td><code>ОтразитьУКДиНКДВИнвестВычете</code></td>
+      <td>Проброс в <code>ИнвестиционныйВычетУКД(Клиент, Дата, ВнешнийКэшНКД)</code></td>
+      <td>строки 2613–2625</td>
+      <td><span class="tag ok">ПЕРЕНЕСЕНО</span></td>
+    </tr>
+    <tr class="row-ok">
+      <td>P6</td>
+      <td><code>ИнвестиционныйВычетУКД</code></td>
+      <td>
+        Lookup расходов:
+        <code>РасходыПоНКДПоВидуОбращаемости(..., ВнешнийКэшНКД)</code>
+      </td>
+      <td>строки 2795–2797</td>
+      <td><span class="tag ok">ПЕРЕНЕСЕНО</span></td>
+    </tr>
+    <tr class="row-ok">
+      <td>P7</td>
+      <td><code>РасходыПоНКДПоВидуОбращаемости</code></td>
+      <td>
+        Lookup из параметра <code>ВнешнийКэшНКД.Получить(КлючКД)</code>,
+        без <code>ПолучитьВнешнийКэшНКДРасходов()</code>
+      </td>
+      <td>строки 2931–2938</td>
+      <td><span class="tag ok">ПЕРЕНЕСЕНО</span></td>
+    </tr>
+    <tr class="row-ok">
+      <td>P8</td>
+      <td>
+        Обработка.ФормированиеНачисленийНДФЛ<br>
+        <code>СоздатьНачислениеНДФЛПоУК</code>
+      </td>
+      <td>
+        <code>НачислениеНДФЛПоУК.РассчитатьНДФЛ(СтруктураКэшНКД)</code>
+        вместо записи кэша в сеанс
+      </td>
+      <td>строка 558</td>
+      <td><span class="tag ok">ПЕРЕНЕСЕНО</span></td>
+    </tr>
+    <tr class="row-ok">
+      <td>P9</td>
+      <td>Весь модуль менеджера УК</td>
+      <td>
+        Удалены <code>УстановитьВнешнийКэшНКДРасходов</code> и
+        <code>ПолучитьВнешнийКэшНКДРасходов</code>.
+        Поиск по CF: объявлений и вызовов нет
+      </td>
+      <td>поиск по всей CF — 0 совпадений</td>
+      <td><span class="tag ok">УДАЛЕНО</span></td>
+    </tr>
+  </tbody>
+</table>
+
+<p><strong>Фрагмент CF — обработка передаёт кэш параметром:</strong></p>
+<pre>НачислениеНДФЛПоУК = НайтиСоздатьДокументПоУК(СтрокаДокументов);
+НачислениеНДФЛПоУК.РассчитатьНДФЛ(СтруктураКэшНКД);</pre>
+
+<p><strong>Фрагмент CF — lookup без сеанса:</strong></p>
+<pre>Если ВнешнийКэшНКД &lt;&gt; Неопределено Тогда
+    КлючКД = КлючКэшаНКД(Клиент, Дата);
+    ПоКД = ВнешнийКэшНКД.Получить(КлючКД);
+    Если ПоКД &lt;&gt; Неопределено Тогда
+        Возврат ПоКД;
+    КонецЕсли;
+КонецЕсли;</pre>
+
+<div class="box ok">
+  <p>
+    Функция <code>КлючКэшаНКД</code> в менеджере УК сохранена (строка 3200) —
+    она нужна lookup-у по параметру. Это не сеансовый кэш, удалять её не требовалось.
+    Переменная обработки <code>СтруктураКэшНКД</code> тоже на месте: это сам кэш пачки,
+    который теперь передаётся аргументом, а не ключ в параметрах сеанса.
+  </p>
+</div>
+
+<div class="box info">
+  <p>
+    Вызовы <code>РассчитатьНДФЛ()</code> без аргумента (форма документа, тесты, прочие обработки)
+    остаются допустимы: параметр имеет значение по умолчанию <code>Неопределено</code>,
+    тогда расходы НКД считаются одиночным запросом. Так и задумано в патче.
+  </p>
+</div>
+
+<h2 id="s7">7. Отличия от текста расширений — не ошибки</h2>
+
+<table>
+  <thead>
+    <tr>
+      <th>Отличие</th>
+      <th>Почему это не дефект переноса</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Версия CF 2.8.8.1, а не 2.8.7.5</td>
+      <td>
+        Влив шёл в следующий релиз вендора. Состав правок трёх патчей в 2.8.8.1 полный.
+      </td>
+    </tr>
+    <tr>
+      <td>Префиксы <code>IMDEV7330_Locks_</code> / <code>NkdCoupon_</code> / <code>NkdParam_</code> сняты</td>
+      <td>
+        Так и требовалось в инструкции вендору: в типовую копировать тела методов
+        без префикса расширения и без маркеров <code>#Вставка</code>.
+      </td>
+    </tr>
+    <tr>
+      <td>
+        Комментарии IMDEV-7330 внутри текста запроса NkdCoupon в CF нет
+      </td>
+      <td>
+        Логика запроса совпадает с блоком <code>#Вставка</code>: ВТ, индексы, JOIN по клиенту.
+        Комментарии в SQL на выполнение не влияют.
+      </td>
+    </tr>
+    <tr>
+      <td>
+        В <code>РассчитатьНДФЛ</code> появился вызов <code>РасчетНДФЛ_ПоПрочимДоходам</code>
+      </td>
+      <td>
+        Это не из трёх расширений. На проброс кэша НКД не влияет.
+      </td>
+    </tr>
+    <tr>
+      <td>
+        Имя процедуры формы <code>ДобавитьВариантПоОтсутствующимНачислениям</code>
+        без префикса Locks
+      </td>
+      <td>Снятие префикса — штатное требование переноса.</td>
+    </tr>
+  </tbody>
+</table>
+
+<div class="box warn">
+  <p>
+    <strong>Эта проверка — статическая.</strong>
+    Исходники CF сверены с расширениями. Прогон массового формирования НДФЛ
+    на 2.8.8.1 в этом отчёте не выполнялся. Для приёмки на данных достаточно
+    убедиться, что после обновления базы три CFE сняты и нет двух перехватов
+    на одном методе.
+  </p>
+</div>
+
+<h2 id="s8">8. Вывод и что делать дальше</h2>
+
+<div class="box ok">
+  <p><strong>Заключение.</strong> Изменения трёх расширений полностью присутствуют
+  в базовой конфигурации 2.8.8.1:</p>
+  <ul>
+    <li>
+      <code>IMDEV7330_Locks</code> — пауза между пачками, повтор запроса оборотов,
+      индексы ВТ санкций, вариант заполнения 4 и пункт на форме;
+    </li>
+    <li>
+      <code>IMDEV7330_NkdCoupon</code> — массовый запрос НКД соединяет Перевод НКД
+      по паре клиент + купон;
+    </li>
+    <li>
+      <code>IMDEV7330_NkdParam</code> — кэш идёт параметром по стеку УК,
+      сеансовые процедуры кэша удалены.
+    </li>
+  </ul>
+  <p>Потерянных вставок нет. Патчи можно считать внедрёнными в типовую.</p>
+</div>
+
+<ol>
+  <li>
+    После обновления рабочей / тестовой базы на CF 2.8.8.1 (или новее с этими правками)
+    снять расширения <code>IMDEV7330_Locks</code>, <code>IMDEV7330_NkdCoupon</code>,
+    <code>IMDEV7330_NkdParam</code>: они дублируют уже вшитый код.
+    Не оставлять два перехвата на одном методе.
+  </li>
+  <li>
+    Необязательная проверка в предприятии:
+    <ul>
+      <li>
+        Locks: в обработке «Формирование начислений НДФЛ» есть пятый вариант заполнения;
+        при параллельном запуске больших пачек в журнале регистрации могут появиться
+        предупреждения «Повтор запроса после блокировки», а не сразу падение SQL 1222.
+      </li>
+      <li>
+        NkdCoupon: массовый расчёт пачки не должен переносить чужой оплаченный купон
+        в расходы другого клиента (обработка диагностики <code>IMDEV7330_DiagNkdCouponLeak</code>).
+      </li>
+      <li>
+        NkdParam: расчёт из обработки идёт с кэшем пачки; расчёт кнопкой на форме документа
+        без параметра по-прежнему считает одиночным запросом.
+      </li>
+    </ul>
+  </li>
+</ol>
+
+<footer>
+  Задача IMDEV-7330. Проверка исходников 14.09.2026.
+  Расширения: IMDEV7330_Locks, IMDEV7330_NkdCoupon, IMDEV7330_NkdParam — все 1.0.0.1 (Patch).
+  Конфигурация: ДУ 2.8.8.1, вендор ООО «Аванкор».
+  Метод: сверка блоков #Вставка / #Удаление и новых процедур расширений с модулями типовой CF.
+</footer>
+
+</div>
+</body>
+</html>
