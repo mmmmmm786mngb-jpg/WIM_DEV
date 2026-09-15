@@ -1,0 +1,310 @@
+{
+  "started_at": "2026-09-15 12:40:15",
+  "connection": "Srvr='localhost';Ref='WIM_DU';App='PyCOM';Locale=ru_RU;",
+  "environment": {
+    "config_name": "ДУ",
+    "config_version": "1.5.29.11",
+    "config_synonym": "Доверительное управление, версия 1.5",
+    "im86632_version": "1.0.0.4",
+    "im86632_active": true,
+    "extensions": [
+      {
+        "name": "VTB_Devops",
+        "synonym": "VTB devops",
+        "version": "1.0.0.2",
+        "active": true
+      },
+      {
+        "name": "IMTOOLS",
+        "synonym": "IM-TOOLS",
+        "version": "1.0.1.2",
+        "active": true
+      },
+      {
+        "name": "IM9434",
+        "synonym": "IM9434",
+        "version": "1.0.0.1",
+        "active": true
+      },
+      {
+        "name": "IM86632",
+        "synonym": "IMDEV-8663.2 вынос расчета СЧА/РСА в группу 3",
+        "version": "1.0.0.4",
+        "active": true
+      }
+    ],
+    "code_group2": "2. \"Вечерние\" операции",
+    "code_group3": "3. \"Расчет СЧА/РСА\"",
+    "group2_found": true,
+    "group3_found": true,
+    "group2_name": "2. \"Вечерние\" операции",
+    "group3_name": "3. \"Расчет СЧА/РСА\"",
+    "contracts_total": 1645,
+    "groups_created": [],
+    "test_date": "15.03.2027",
+    "test_date_ymd": "20270315"
+  },
+  "stats": {
+    "contracts_prepared": 500,
+    "group2_created": 400,
+    "group2_failed": 0,
+    "group3_auto": 200,
+    "group3_prefill": 200,
+    "group3_blocked": 30,
+    "group3_leaked": 0,
+    "group3_block_sample": "Нет проведенного плана вечерних операций за эту дату по договору ДУ.\nДокумент расчета СЧА/РСА не записан.; (-2147352567, 'Ошибка.', (1001, '1C:Enterprise 8.3.27.1859', 'Не удалось провести: \"Регламентная операция (ДУ)\"!', None, 0, 0), None)",
+    "group3_linked": 400,
+    "group3_unlinked": 0,
+    "filter_returned": 400,
+    "filter_expected": 400,
+    "scha_created": 15,
+    "scha_failed": 0,
+    "cancel_dummy_jobs": 3,
+    "cancel_waiter_finished": true,
+    "cancel_wait_s": 10.2
+  },
+  "tests": [
+    {
+      "name": "Podkljuchenie i rasshirenie IM86632",
+      "ok": true,
+      "detail": "Konfiguracija ДУ 1.5.29.11, IM86632 1.0.0.4, dogovorov=1645",
+      "error": "",
+      "sql": "",
+      "params": {},
+      "duration_s": 0.0
+    },
+    {
+      "name": "Podgotovka grupp 2 i 3 v vide operacij",
+      "ok": true,
+      "detail": "Gruppa 2=2. \"Вечерние\" операции, gruppa 3=3. \"Расчет СЧА/РСА\", sozdano seichas: uzhe byli",
+      "error": "",
+      "sql": "",
+      "params": {},
+      "duration_s": 0.0
+    },
+    {
+      "name": "Reglamentnyj period na datu testa",
+      "ok": true,
+      "detail": "Sozdan otkrytyj period 15 марта 2027 г.",
+      "error": "",
+      "sql": "",
+      "params": {},
+      "duration_s": 0.0
+    },
+    {
+      "name": "Ochistka predydushhego COMTEST",
+      "ok": true,
+      "detail": "Udaleno dokumentov: 815, oshibok: 0",
+      "error": "",
+      "sql": "",
+      "params": {},
+      "duration_s": 0.0
+    },
+    {
+      "name": "Podgotovka pulja dogovorov DU",
+      "ok": true,
+      "detail": "Otobrano dogovorov: 500 (cel 500)",
+      "error": "",
+      "sql": "ВЫБРАТЬ ПЕРВЫЕ 500\n    ДоговорДУ.Ссылка КАК Ссылка,\n    ДоговорДУ.Код КАК Код,\n    ДоговорДУ.Наименование КАК Наименование\nИЗ\n    Справочник.ДоговорДУ КАК ДоговорДУ\nГДЕ\n    ДоговорДУ.ПометкаУдаления = ЛОЖЬ\nУПОРЯДОЧИТЬ ПО\n    ДоговорДУ.Код",
+      "params": {
+        "Pervye": 500,
+        "PometkaUdalenija": false
+      },
+      "duration_s": 0.0
+    },
+    {
+      "name": "Sozdanie provedennyh planov gruppy 2",
+      "ok": true,
+      "detail": "Provedeno planov gruppy 2: 400, oshibok: 0",
+      "error": "",
+      "sql": "",
+      "params": {
+        "kolichestvo": 400,
+        "gruppa": "2. vechernie"
+      },
+      "duration_s": 13.42
+    },
+    {
+      "name": "Gruppa 3: zapis bez predzanapolnenija (PeredZapisju)",
+      "ok": true,
+      "detail": "Zapisano avtozapolneniem PplanVechernih: 200 iz 200",
+      "error": "",
+      "sql": "",
+      "params": {
+        "rezhim": "PeredZapisju ishhet provedennyj plan gruppy 2"
+      },
+      "duration_s": 6.699
+    },
+    {
+      "name": "Gruppa 3: zapis s keshom PplanVechernih (massovyj kontur)",
+      "ok": true,
+      "detail": "Zapisano s predzanapolneniem: 200 iz 200",
+      "error": "",
+      "sql": "",
+      "params": {
+        "rezhim": "atribut uzhe zapolnen, zapros ne vypolnjaetsja"
+      },
+      "duration_s": 6.31
+    },
+    {
+      "name": "Gruppa 3: otkaz bez provedennogo vechernego plana",
+      "ok": true,
+      "detail": "Otkazano zapis: 30, utechek: 0, vyborka bez gruppy 2: 30",
+      "error": "",
+      "sql": "",
+      "params": {
+        "ozhidaemyj_otkaz": true,
+        "tekst_1c": "Нет проведенного плана вечерних операций за эту дату по договору ДУ.\nДокумент расчета СЧА/РСА не записан.; (-2147352567, 'Ошибка.', (1001, '1C:Enterprise 8.3.27.1859', 'Не удалось провести: \"Регламентная операция (ДУ)\"!', None, 0, 0), None)"
+      },
+      "duration_s": 0.323
+    },
+    {
+      "name": "Zapros: PplanVechernih zapolnen u planov gruppy 3",
+      "ok": true,
+      "detail": "Planov gruppy 3: 400, so svjazkoj: 400, bez svjazki: 0",
+      "error": "",
+      "sql": "ВЫБРАТЬ\n    ПланРегламентныхОперацийДУ.Ссылка КАК Ссылка,\n    ПланРегламентныхОперацийДУ.ДоговорДУ КАК ДоговорДУ,\n    ПланРегламентныхОперацийДУ.ПланВечернихОпераций КАК ПланВечернихОпераций,\n    ПланРегламентныхОперацийДУ.Проведен КАК Проведен\nИЗ\n    Документ.ПланРегламентныхОперацийДУ КАК ПланРегламентныхОперацийДУ\nГДЕ\n    ПланРегламентныхОперацийДУ.Дата МЕЖДУ &ДатаНачала И &ДатаОкончания\n    И ПланРегламентныхОперацийДУ.ГруппаОперацийПользователя = &ГруппаСЧА\n    И ПланРегламентныхОперацийДУ.Комментарий = &Маркер\n    И НЕ ПланРегламентныхОперацийДУ.ПометкаУдаления",
+      "params": {
+        "Маркер": "IM86632_COMTEST",
+        "Группа": "3. raschet SCHA/RSA"
+      },
+      "duration_s": 0.0
+    },
+    {
+      "name": "DogovorySProvedennymVechernimPlanom",
+      "ok": true,
+      "detail": "Otbor vernul 400 dogovorov, ozhidalos 400 (iz pulja 500)",
+      "error": "",
+      "sql": "",
+      "params": {
+        "ДатаПериода": "15.03.2027",
+        "SpisokDogovorov": 500
+      },
+      "duration_s": 0.034
+    },
+    {
+      "name": "Filtr gruppy 3 na dogovorah bez vechernego plana",
+      "ok": true,
+      "detail": "Otbor iz 50 dogovorov bez gruppy 2 vernul 0",
+      "error": "",
+      "sql": "",
+      "params": {
+        "ozhidaemyj_otkaz_zapuska": true
+      },
+      "duration_s": 0.0
+    },
+    {
+      "name": "NajtiProvedennyjVechernijPlan po odnomu dogovoru",
+      "ok": true,
+      "detail": "Najden plan Регламентная операция (ДУ) -00000000001 от 15.03.2027 0:00:00 po dogovoru 000000000000000000000000000001",
+      "error": "",
+      "sql": "",
+      "params": {},
+      "duration_s": 0.0
+    },
+    {
+      "name": "NajtiProvedennyjVechernijPlan esli plana net",
+      "ok": true,
+      "detail": "Dlya dogovora bez gruppy 2 vozvrashheno pusto/neopredeleno",
+      "error": "",
+      "sql": "",
+      "params": {},
+      "duration_s": 0.0
+    },
+    {
+      "name": "EstPlanyGruppySCHA posle podgotovki",
+      "ok": true,
+      "detail": "EstPlanyGruppySCHA=True (preduprezhdenie pri povtornom vechernem zapuske)",
+      "error": "",
+      "sql": "",
+      "params": {},
+      "duration_s": 0.0
+    },
+    {
+      "name": "Sozdanie dokumentov RaschetSCHA_RSA s osnovaniem gruppy 3",
+      "ok": true,
+      "detail": "Zapisano dokumentov SCHA/RSA: 15 iz 15 (bez provedenija rascheta)",
+      "error": "",
+      "sql": "",
+      "params": {
+        "DokumentOsnovanie": "Plan gruppy 3"
+      },
+      "duration_s": 0.314
+    },
+    {
+      "name": "EstAktivnyePorcii do zapuska (dolzhno byt LoZh)",
+      "ok": true,
+      "detail": "EstAktivnyePorciiReglamentaZaDatu=False",
+      "error": "",
+      "sql": "",
+      "params": {},
+      "duration_s": 0.001
+    },
+    {
+      "name": "Ozhidanie porcij s pustoj datoj (srazu Uspechno)",
+      "ok": true,
+      "detail": "Выполнено, Uspechno=True",
+      "error": "",
+      "sql": "",
+      "params": {},
+      "duration_s": 0.0
+    },
+    {
+      "name": "Zapusk dummy-porcij s kljuchom IM8663_yyyyMMdd",
+      "ok": true,
+      "detail": "Zapushheno FZ pauzy: 3 iz 3, kljuch IM8663_20270315_dummy_N, metod VTB_ObshhijModul.Pauza(12)",
+      "error": "",
+      "sql": "",
+      "params": {
+        "kljuch": "IM8663_20270315_dummy_N",
+        "metod": "VTB_ObshhijModul.Pauza",
+        "sekund": 12
+      },
+      "duration_s": 0.0
+    },
+    {
+      "name": "EstAktivnyePorcii posle zapuska dummy IM8663_",
+      "ok": true,
+      "detail": "EstAktivnyePorciiReglamentaZaDatu=True (ozhidaetsja Istina)",
+      "error": "",
+      "sql": "",
+      "params": {},
+      "duration_s": 0.0
+    },
+    {
+      "name": "Otmena roditelja ne gasit porcii IM8663_",
+      "ok": true,
+      "detail": "Roditel otmenen, porcii IM8663_ zhivy=True",
+      "error": "",
+      "sql": "",
+      "params": {
+        "kljuch_roditelja": "IM86632_Parent_...",
+        "porcii": "IM8663_yyyyMMdd_dummy_N"
+      },
+      "duration_s": 0.0
+    },
+    {
+      "name": "Ozhidanie porcij ne vyzyvaet Otmenit() u detej",
+      "ok": true,
+      "detail": "Do ozhidanija porcii zhivy=True, ozhidanie shlo 10.2 s (pauza 12 s). Esli by Otmenit() - vernulos by za ~5 s.",
+      "error": "",
+      "sql": "",
+      "params": {
+        "kljuch_ozhidanija": "vyzov menedzhera vo vneshnem soedinenii"
+      },
+      "duration_s": 10.221
+    },
+    {
+      "name": "Waiter zavershaetsja kogda porcii IM8663_ konchilis",
+      "ok": true,
+      "detail": "EstAktivnyePorcii=False, Uspechno=True, wait_s=10.2",
+      "error": "",
+      "sql": "",
+      "params": {},
+      "duration_s": 10.221
+    }
+  ],
+  "fatal": "",
+  "finished_at": "2026-09-15 12:42:47",
+  "duration_s": 152.5
+}
