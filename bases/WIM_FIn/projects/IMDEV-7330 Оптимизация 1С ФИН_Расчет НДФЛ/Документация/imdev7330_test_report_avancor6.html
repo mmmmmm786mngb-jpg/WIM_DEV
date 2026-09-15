@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>IMDEV-7330. Отчёт о тестировании: влив в типовую, прогон Аванкор 6</title>
+<style>
+    :root {
+        --old: #fd7e14;
+        --ok: #28a745;
+        --info: #17a2b8;
+        --warn: #f0ad4e;
+        --bad: #dc3545;
+        --ink: #212529;
+        --muted: #6c757d;
+        --head: #1f2d3d;
+    }
+    body { font-family: "Segoe UI", Arial, sans-serif; line-height: 1.55; color: var(--ink); background: #f5f6f8; margin: 0; padding: 0 0 64px 0; }
+    .wrap { max-width: 1120px; margin: 0 auto; padding: 0 24px; }
+    header { background: var(--head); color: #fff; padding: 32px 0 26px; margin-bottom: 28px; }
+    header h1 { margin: 0 0 8px 0; font-size: 26px; font-weight: 650; }
+    header .sub { color: #b8c4d0; font-size: 14.5px; max-width: 920px; }
+    .stamp { display: inline-block; margin-top: 14px; background: var(--ok); color: #fff; font-size: 13px; font-weight: 650; letter-spacing: 0.04em; padding: 5px 12px; border-radius: 3px; }
+    h2 { font-size: 20px; margin: 36px 0 12px 0; padding-bottom: 8px; border-bottom: 2px solid var(--info); }
+    h3 { font-size: 16px; margin: 18px 0 8px 0; color: var(--head); }
+    p { margin: 10px 0; }
+    table { width: 100%; border-collapse: collapse; background: #fff; margin: 12px 0; font-size: 13.5px; }
+    th { background: var(--head); color: #fff; text-align: left; padding: 8px 10px; }
+    td { padding: 7px 10px; border-bottom: 1px solid #e3e6ea; vertical-align: top; }
+    tbody tr:nth-child(even) { background: #fafbfc; }
+    tr.ok td { background: #eefaf1; }
+    tr.bad td { background: #fdf0f1; }
+    tr.warn td { background: #fff9e6; }
+    .num { text-align: right; font-family: Consolas, monospace; white-space: nowrap; }
+    .sig { font-family: Consolas, "Courier New", monospace; font-size: 12px; }
+    code { background: #eef1f4; padding: 1px 5px; border-radius: 3px; font-family: Consolas, monospace; font-size: 13px; }
+    .box { padding: 14px 18px; border-radius: 5px; margin: 14px 0; border-left: 5px solid; }
+    .box b { display: block; margin-bottom: 6px; }
+    .in { background: #eefaf1; border-color: var(--ok); }
+    .out { background: #fdf0f1; border-color: var(--bad); }
+    .warn { background: #fff9e6; border-color: var(--warn); }
+    .info { background: #eaf7fa; border-color: var(--info); }
+    .small { font-size: 13px; color: var(--muted); }
+    ul { margin: 8px 0 8px 22px; }
+    li { margin: 5px 0; }
+    footer { margin-top: 40px; padding-top: 12px; border-top: 1px solid #dee2e6; font-size: 13px; color: var(--muted); }
+    .kpis { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin: 18px 0 8px; }
+    .kpi { background: #fff; border: 1px solid #e3e6ea; border-radius: 6px; padding: 14px 16px; }
+    .kpi .v { font-size: 26px; font-weight: 700; font-family: Consolas, monospace; line-height: 1.15; }
+    .kpi .l { font-size: 12.5px; color: var(--muted); margin-top: 6px; }
+    .kpi.ok .v { color: var(--ok); }
+    .kpi.old .v { color: var(--old); }
+    .kpi.warn .v { color: #c47a00; }
+    .chart { background: #fff; border: 1px solid #e3e6ea; border-radius: 6px; padding: 18px 20px 14px; margin: 16px 0 8px; }
+    .chart h2 { margin: 0 0 14px; border: 0; padding: 0; font-size: 18px; }
+    .bar-row { display: grid; grid-template-columns: 170px 1fr 110px; gap: 10px; align-items: center; margin: 10px 0; }
+    .bar-lab { font-size: 13.5px; }
+    .bar-track { background: #eceff2; height: 28px; border-radius: 4px; overflow: hidden; }
+    .bar { height: 28px; line-height: 28px; color: #fff; font-size: 12px; padding-left: 10px; white-space: nowrap; font-weight: 600; }
+    .bar-old { width: 100%; background: var(--old); }
+    .bar-new { width: 8.6%; background: var(--ok); min-width: 148px; }
+    .bar-val { font-family: Consolas, monospace; font-size: 13px; text-align: right; }
+    .cols { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    svg.hours { width: 100%; height: 220px; display: block; }
+    .legend { display: flex; gap: 18px; font-size: 13px; color: var(--muted); margin-top: 8px; }
+    .sw { display: inline-block; width: 12px; height: 12px; border-radius: 2px; margin-right: 6px; vertical-align: -1px; }
+    a { color: #0a58ca; }
+    @media (max-width: 800px) {
+        .kpis, .cols { grid-template-columns: 1fr; }
+        .bar-row { grid-template-columns: 1fr; }
+        .bar-val { text-align: left; }
+    }
+</style>
+</head>
+<body>
+<header>
+<div class="wrap">
+    <h1>IMDEV-7330. Отчёт о тестировании после влива в типовую</h1>
+    <div class="sub">
+        Аванкор перенёс в базовую конфигурацию доработки трёх расширений
+        (Locks, NkdCoupon, NkdParam). Прогон на DR: ДУ редакция 2, версия <b>2.8.8.1</b>,
+        обработка «Формирование начислений НДФЛ», 27 292 клиента, период 01.01.2026 - 31.12.2026.
+        Сверка с эталоном «по-старому» (2.8.5.5). Дата прогона: 14.09.2026. Дата отчёта: 15.09.2026.
+    </div>
+    <span class="stamp">ЗАДАЧА ВЫПОЛНЕНА</span>
+</div>
+</header>
+<div class="wrap">
+
+<div class="box in">
+<b>Итог</b>
+Влив принят на полном объёме. Время расчёта: 55 ч 05 мин по-старому против
+<b>4 ч 43 мин</b> после влива (лог, x11.7). Портфели совпали с эталоном построчно.
+По УК денежно совпали все документы, кроме одного известного клиента (Платонов Д.В.:
+инвествычет 618 +8 481, 6 строк Начисления вместо 4). Ошибок и блокировок SQL 1222 в логе нет.
+Проведено 28 431 портфель и 27 292 клиента УК.
+</div>
+
+<div class="kpis">
+    <div class="kpi old">
+        <div class="v">55 ч 05</div>
+        <div class="l">По-старому, последовательно, 500 объектов/час</div>
+    </div>
+    <div class="kpi ok">
+        <div class="v">4 ч 43</div>
+        <div class="l">После влива, лог 14.09 15:09-19:52, ~5 790 объектов/час</div>
+    </div>
+    <div class="kpi ok">
+        <div class="v">x11.7</div>
+        <div class="l">Ускорение к эталону 2.8.5.5 без доработок</div>
+    </div>
+    <div class="kpi ok">
+        <div class="v">0 / 1</div>
+        <div class="l">Портфели: 0 расхождений. УК: 1 документ (Платонов)</div>
+    </div>
+</div>
+
+<h2 id="p1">1. Сравнение времени со старой версией</h2>
+<div class="chart">
+    <h2>Длительность полного расчёта, 27 292 клиента</h2>
+    <div class="bar-row">
+        <div class="bar-lab">По-старому (2.8.5.5)</div>
+        <div class="bar-track"><div class="bar bar-old">55 ч 05 мин</div></div>
+        <div class="bar-val">55.08 ч</div>
+    </div>
+    <div class="bar-row">
+        <div class="bar-lab">После влива (Аванкор 6)</div>
+        <div class="bar-track"><div class="bar bar-new">4 ч 43 мин</div></div>
+        <div class="bar-val">4.72 ч</div>
+    </div>
+    <svg class="hours" viewBox="0 0 640 220" role="img" aria-label="Столбцы времени старый и новый прогон">
+        <text x="40" y="18" fill="#6c757d" font-size="12">часы</text>
+        <line x1="40" y1="28" x2="40" y2="188" stroke="#ced4da"/>
+        <line x1="40" y1="188" x2="620" y2="188" stroke="#ced4da"/>
+        <text x="8" y="192" fill="#6c757d" font-size="11">0</text>
+        <text x="4" y="110" fill="#6c757d" font-size="11">28</text>
+        <text x="4" y="36" fill="#6c757d" font-size="11">55</text>
+        <rect x="150" y="36" width="120" height="152" fill="#fd7e14"/>
+        <text x="210" y="30" text-anchor="middle" fill="#212529" font-size="13" font-weight="700">55.08</text>
+        <text x="210" y="208" text-anchor="middle" fill="#212529" font-size="12">По-старому</text>
+        <rect x="370" y="175" width="120" height="13" fill="#28a745"/>
+        <text x="430" y="171" text-anchor="middle" fill="#212529" font-size="13" font-weight="700">4.72</text>
+        <text x="430" y="208" text-anchor="middle" fill="#212529" font-size="12">После влива</text>
+    </svg>
+    <div class="legend">
+        <span><span class="sw" style="background:#fd7e14"></span>Эталон скорости, последовательно</span>
+        <span><span class="sw" style="background:#28a745"></span>ДУ 2.8.8.1 после влива, DR</span>
+    </div>
+    <p class="small">
+        Старый прогон: протокол DR, релиз 2.8.5.5 без IMDEV-7330, 26.08-29.08.2026, две части
+        (останов по ошибке ставки, затем продолжение), 500 объектов в час.
+        Новый: конфигурация 2.8.8.1, лог формирования 14.09.2026 15:09:44 - 19:52:46, ошибок в шапке 0.
+        Доля времени нового прогона от старого - около 8.6%.
+    </p>
+</div>
+<table>
+<thead><tr><th>Показатель</th><th>По-старому</th><th>После влива (Аванкор 6)</th></tr></thead>
+<tbody>
+<tr><td>Конфигурация</td><td>Доверительное управление, редакция 2, 2.8.5.5, без доработок IMDEV-7330</td><td>Доверительное управление, редакция 2, <b>2.8.8.1</b> (ООО «Аванкор»), после влива Locks + NkdCoupon + NkdParam</td></tr>
+<tr><td>Контур</td><td>DR</td><td>DR</td></tr>
+<tr><td>Клиентов</td><td class="num">27 292</td><td class="num">27 292</td></tr>
+<tr><td>Длительность</td><td>55 ч 05 мин</td><td>4 ч 43 мин 02 с</td></tr>
+<tr><td>Объектов в час</td><td class="num">500</td><td class="num">~5 790</td></tr>
+<tr class="ok"><td>Ошибки лога / SQL 1222</td><td>-</td><td>0 / 0</td></tr>
+<tr class="ok"><td>Проведено портфелей</td><td class="num">28 431</td><td class="num">28 431</td></tr>
+<tr class="ok"><td>Проведено клиентов УК</td><td class="num">-</td><td class="num">27 292 (уник. 27 038)</td></tr>
+</tbody>
+</table>
+
+<h2 id="p2">2. Регресс: старый алгоритм vs Аванкор 6</h2>
+<p>
+Эталон сумм - выгрузки «по-старому». Новый дамп - прогон после влива в типовую.
+Допуск 0.01. Сообщения нового прогона совпали с прогоном ПоНовому5 по расширениям.
+</p>
+
+<h3>2.1 Портфели - полное совпадение</h3>
+<table>
+<thead><tr><th>Поле</th><th>По-старому</th><th>Аванкор 6</th><th>Дельта</th></tr></thead>
+<tbody>
+<tr class="ok"><td>Строк / документов</td><td class="num">413 547 / 28 431</td><td class="num">413 547 / 28 431</td><td class="num">0</td></tr>
+<tr class="ok"><td>НалогооблагаемаяCумма</td><td class="num">9 461 241 048.22</td><td class="num">9 461 241 048.22</td><td class="num">0</td></tr>
+<tr class="ok"><td>СуммаВычета</td><td class="num">28 117 530 732.98</td><td class="num">28 117 530 732.98</td><td class="num">0</td></tr>
+<tr class="ok"><td>СуммаДохода</td><td class="num">74 373 506 176.78</td><td class="num">74 373 506 176.78</td><td class="num">0</td></tr>
+<tr class="ok"><td>СуммаКУдержанию</td><td class="num">1 089 408 644</td><td class="num">1 089 408 644</td><td class="num">0</td></tr>
+<tr class="ok"><td>СуммаИсчисленногоНалога</td><td class="num">1 231 714 768</td><td class="num">1 231 714 768</td><td class="num">0</td></tr>
+<tr class="ok"><td>Сумма</td><td class="num">822 753 611.48</td><td class="num">822 753 611.48</td><td class="num">0</td></tr>
+<tr class="ok"><td>Документов с денежным расхождением</td><td colspan="3" class="num">0</td></tr>
+<tr class="ok"><td>Строк только в эталоне / только в новом</td><td class="num">0</td><td class="num">0</td><td></td></tr>
+<tr class="ok"><td>Платонов, строки портфелей</td><td class="num">31</td><td class="num">31</td><td class="num">совпали</td></tr>
+</tbody>
+</table>
+
+<h3>2.2 УК - все клиенты кроме одного</h3>
+<table>
+<thead><tr><th>Показатель</th><th>По-старому</th><th>Аванкор 6</th></tr></thead>
+<tbody>
+<tr><td>Строк выгрузки</td><td class="num">84 056</td><td class="num">85 541</td></tr>
+<tr><td>Документов в xlsx</td><td class="num">26 668</td><td class="num">27 292</td></tr>
+<tr><td>Пустых документов</td><td class="num">13 145</td><td class="num">13 769</td></tr>
+<tr class="ok"><td>Документов с денежным расхождением</td><td colspan="2" class="num">1 (только Платонов)</td></tr>
+<tr class="ok"><td>Прочие УК, деньги</td><td colspan="2">совпали, 0 расхождений</td></tr>
+<tr class="warn"><td>Только структура (суммы те же)</td><td colspan="2" class="num">90 документов, лишние Выводы/ОбщиеРасходы</td></tr>
+<tr><td>Только в новой выгрузке</td><td colspan="2" class="num">624 пустых УК (в эталоне не выгружались)</td></tr>
+</tbody>
+</table>
+<table>
+<thead><tr><th>ТЧ УК</th><th>По-старому</th><th>Аванкор 6</th><th>Дельта</th></tr></thead>
+<tbody>
+<tr class="warn"><td>Начисления</td><td class="num">17 943</td><td class="num">17 945</td><td class="num">+2 (Платонов 4-&gt;6)</td></tr>
+<tr class="warn"><td>Удержания</td><td class="num">4 897</td><td class="num">4 898</td><td class="num">+1 (Платонов)</td></tr>
+<tr class="ok"><td>ИнвестиционныйВычетПоПортфелям</td><td class="num">491</td><td class="num">491</td><td class="num">0</td></tr>
+<tr class="warn"><td>Выводы</td><td class="num">29 770</td><td class="num">30 511</td><td class="num">+741</td></tr>
+<tr class="warn"><td>ОбщиеРасходы</td><td class="num">30 955</td><td class="num">31 696</td><td class="num">+741</td></tr>
+</tbody>
+</table>
+<p class="small">Итог УК по всем полям отличается от эталона ровно на дельту документа Платонова. Остальные клиенты, включая тех, кто расходился в промежуточном ПоНовому4 (Бабарыкин, Гладилов, Кубасов, Бараникас), совпали.</p>
+
+<h3>2.3 Платонов Д.В., УК 000000000038432</h3>
+<div class="box warn">
+<b>Известное расхождение 4 vs 6 строк Начисления</b>
+Портфели этого клиента совпали с эталоном. На УК массовый прогон даёт 6 строк Начисления
+вместо 4 и инвествычет 618 = 277 733.07 вместо 269 252.07 (+8 481). К удержанию -1 719.
+Это тот же профиль, что в ПоНовому3, и тот же эффект порядка партий облигации,
+который описан отдельно (кнопка «Рассчитать» по ДУ). Не массовый сдвиг дохода по десяткам клиентов.
+</div>
+<table>
+<thead><tr><th>Поле</th><th>По-старому</th><th>Аванкор 6</th><th>Дельта</th></tr></thead>
+<tbody>
+<tr class="warn"><td>Строк ТЧ / Начисления / Удержания</td><td class="num">12 / 4 / 3</td><td class="num">15 / 6 / 4</td><td></td></tr>
+<tr class="warn"><td>СуммаДохода</td><td class="num">91 628 393.60</td><td class="num">92 338 856.38</td><td class="num">+710 462.78</td></tr>
+<tr class="warn"><td>СуммаВычета</td><td class="num">42 128 269.62</td><td class="num">42 136 750.62</td><td class="num">+8 481.00</td></tr>
+<tr class="warn"><td>НалогооблагаемаяCумма</td><td class="num">7 655 788.30</td><td class="num">8 343 088.21</td><td class="num">+687 299.91</td></tr>
+<tr class="warn"><td>СуммаКУдержанию</td><td class="num">105 052</td><td class="num">103 333</td><td class="num">-1 719</td></tr>
+<tr class="warn"><td>Сумма (вычет 618)</td><td class="num">269 252.07</td><td class="num">277 733.07</td><td class="num">+8 481.00</td></tr>
+</tbody>
+</table>
+
+<h3>2.4 Сообщения</h3>
+<table>
+<thead><tr><th>Тип</th><th>По-старому</th><th>Аванкор 6</th><th>Дельта</th></tr></thead>
+<tbody>
+<tr class="warn"><td>Невозможно распределить НДФЛ</td><td class="num">361</td><td class="num">438</td><td class="num">+77</td></tr>
+<tr class="warn"><td>Граница актуальности сдвинута</td><td class="num">107</td><td class="num">0</td><td class="num">-107</td></tr>
+<tr class="warn"><td>Документ не проведен</td><td class="num">7</td><td class="num">8</td><td class="num">+1</td></tr>
+</tbody>
+</table>
+<p class="small">Набор сообщений Аванкор 6 совпал с ПоНовому5. На суммы документов это не влияет.</p>
+
+<div class="cols">
+<div class="box in">
+<b>Что закрыто вливом</b>
+<ul>
+<li>Параллельный полный объём без 1222.</li>
+<li>Портфели 1:1 с эталоном, включая Платонова.</li>
+<li>УК: нет регресса ПоНовому4 (сдвиг дохода у 8 клиентов, 61 документ).</li>
+<li>Время x11.7 к 55 часам.</li>
+</ul>
+</div>
+<div class="box warn">
+<b>Что не деньги / один клиент</b>
+<ul>
+<li>624 пустых УК только в новой выгрузке.</li>
+<li>90 УК: лишние нулевые Выводы/ОбщиеРасходы.</li>
+<li>Платонов на УК: +8 481 к 618, 6 строк Начисления.</li>
+</ul>
+</div>
+</div>
+
+<h2 id="p3">3. Выводы</h2>
+<div class="box in">
+<b>1. Задача IMDEV-7330 после влива в типовую выполнена</b>
+Доработки трёх расширений работают в базовой конфигурации <b>2.8.8.1</b> на DR.
+Полный отбор 27 292 клиентов считается за 4 ч 43 мин вместо 55 ч 05 мин,
+без ошибок лога и без блокировок СУБД.
+</div>
+<div class="box in">
+<b>2. Регресс массовых сумм пройден</b>
+Все 28 431 документ по портфелю совпали со старым алгоритмом.
+По УК совпали все клиенты, кроме Платонова. Тяжёлые расхождения промежуточного
+ПоНовому4 на влитой типовой не воспроизвелись.
+</div>
+<div class="box warn">
+<b>3. Остаток по одному клиенту - известный, не блокер влива</b>
+У Платонова Д.В. на УК снова 6 строк Начисления и вычет 618 на 8 481 больше эталона
+при полном совпадении его портфелей. Это тот же кейс, что в ПоНовому3 и в разборе
+кнопки «Рассчитать». На приёмку скорости и массового регресса не влияет.
+</div>
+<div class="box info">
+<b>4. Приёмка</b>
+Рекомендация: считать влив трёх расширений в типовую принятым по результатам прогона Аванкор 6.
+Детальная построчная сверка - файл <a href="imdev7330_ndfl_old_vs_avancor6_diff.html">imdev7330_ndfl_old_vs_avancor6_diff.html</a>.
+</div>
+
+<footer>
+Отчёт: <code>imdev7330_test_report_avancor6.html</code>.
+Источники: лог и дампы «ПоНовому_Аванкор_6», эталон НДФЛ_*_27292, протокол скорости DR 55 ч 05 мин.
+</footer>
+</div>
+</body>
+</html>
