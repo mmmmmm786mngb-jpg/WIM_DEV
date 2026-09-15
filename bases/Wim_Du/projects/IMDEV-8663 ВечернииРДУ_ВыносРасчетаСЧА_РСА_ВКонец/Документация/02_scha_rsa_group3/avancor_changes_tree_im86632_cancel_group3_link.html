@@ -1,0 +1,715 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <title>IM86632 1.0.0.4 — дерево для Аванкор: отмена порций и связь групп 2/3</title>
+  <style>
+    :root {
+      --add: #276749;
+      --chg: #2b6cb0;
+      --del: #9b2c2c;
+      --info: #744210;
+      --mute: #4a5568;
+    }
+    body {
+      font-family: "Segoe UI", Tahoma, sans-serif;
+      margin: 1rem 2rem 2.5rem;
+      background: #fafafa;
+      color: #1a202c;
+      line-height: 1.45;
+    }
+    h1 { font-size: 1.35rem; margin: 0 0 0.35rem 0; }
+    h2.sec { font-size: 1.05rem; margin: 1.2rem 0 0.4rem; }
+    .subtitle { color: #718096; font-size: 0.92rem; margin: 0 0 1rem 0; }
+    .ref-block {
+      margin-bottom: 1rem;
+      padding: 0.75rem 1rem;
+      background: #ebf8ff;
+      border: 1px solid #90cdf4;
+      border-radius: 6px;
+      font-size: 0.9rem;
+    }
+    .ref-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 0.8rem;
+      margin-bottom: 1rem;
+    }
+    .ref-card {
+      background: #fff;
+      border: 1px solid #e2e8f0;
+      border-radius: 6px;
+      padding: 0.75rem 0.9rem;
+      font-size: 0.9rem;
+    }
+    .ref-card h2 { margin: 0 0 0.45rem 0; font-size: 0.98rem; }
+    .ref-card ul { margin: 0.35rem 0 0; padding-left: 1.15rem; }
+    .ref-card li { margin: 0.2rem 0; }
+    .vendor-note { border-color: #f6ad55; background: #fffaf0; }
+    .good { border-color: #9ae6b4; background: #f0fff4; }
+    .stop { border-color: #fc8181; background: #fff5f5; }
+    code {
+      background: #edf2f7;
+      padding: 0.05rem 0.35rem;
+      border-radius: 3px;
+      font-family: Consolas, monospace;
+      font-size: 0.88em;
+    }
+    ul.tree {
+      list-style: none;
+      padding-left: 1.1rem;
+      margin: 0.3rem 0 1rem;
+    }
+    ul.tree ul {
+      list-style: none;
+      padding-left: 1.15rem;
+      border-left: 1px solid #e2e8f0;
+      margin: 0.15rem 0 0.15rem 0.35rem;
+    }
+    .branch { margin: 0.22rem 0; }
+    .branch > .cap {
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      padding: 0.12rem 0.2rem;
+      flex-wrap: wrap;
+    }
+    .branch > .cap:hover { background: #edf2f7; border-radius: 4px; }
+    .toggle { font-size: 0.72rem; color: #718096; user-select: none; }
+    .name { font-weight: 600; }
+    .leaf {
+      padding-left: 1.4rem;
+      margin: 0.18rem 0;
+      display: flex;
+      align-items: flex-start;
+      gap: 0.4rem;
+      flex-wrap: wrap;
+    }
+    .leaf .name {
+      font-weight: 400;
+      font-family: Consolas, monospace;
+      font-size: 0.88rem;
+    }
+    .hint {
+      flex-basis: 100%;
+      margin: 0.1rem 0 0.25rem 1.55rem;
+      font-size: 0.84rem;
+      color: #4a5568;
+    }
+    .tag {
+      font-size: 0.74rem;
+      padding: 0.1rem 0.42rem;
+      border-radius: 4px;
+      white-space: nowrap;
+      font-weight: 600;
+    }
+    .tag.add { background: #c6f6d5; color: var(--add); }
+    .tag.chg { background: #bee3f8; color: var(--chg); }
+    .tag.del { background: #fed7d7; color: var(--del); }
+    .tag.cf { background: #feebc8; color: var(--info); }
+    .tag.ext { background: #e9d8fd; color: #553c9a; }
+    .tag.a { background: #e2e8f0; color: var(--mute); }
+    .legend {
+      margin-top: 0.5rem;
+      padding: 0.75rem 1rem;
+      background: #fff;
+      border: 1px solid #e2e8f0;
+      border-radius: 6px;
+      font-size: 0.85rem;
+    }
+    .legend h3 { margin: 0 0 0.4rem 0; font-size: 0.95rem; }
+    .legend span { display: inline-block; margin: 0 0 0.25rem 0; margin-right: 0.55rem; }
+    table.steps {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.9rem;
+      margin: 0.75rem 0 1.2rem;
+      background: #fff;
+    }
+    table.steps th, table.steps td {
+      border: 1px solid #e2e8f0;
+      padding: 0.55rem 0.7rem;
+      vertical-align: top;
+      text-align: left;
+    }
+    table.steps th { background: #edf2f7; }
+    .foot {
+      margin-top: 1.2rem;
+      font-size: 0.82rem;
+      color: #718096;
+    }
+    ol.compact { margin: 0.35rem 0 0; padding-left: 1.2rem; }
+    .map td:first-child { font-family: Consolas, monospace; font-size: 0.84rem; }
+  </style>
+</head>
+<body>
+
+  <div class="ref-block">
+    <strong>Вендор: Аванкор (AvancoreDU).</strong>
+    Вложение к задаче: расширение <code>IM86632.cfe</code>, версия <b>1.0.0.4</b>.
+    Этот файл — инструкция, <u>что взять из CFE в базовую конфигурацию ДУ</u>
+    по двум доработкам ниже. Остальной код в том же CFE к <b>этой</b> задаче не относится.
+    Директивы расширения (<code>&amp;ИзменениеИКонтроль</code>, <code>&amp;После</code>,
+    <code>#Вставка</code>, <code>#Удаление</code>) в CF <b>не копировать</b> —
+    влить тело в типовые процедуры. Модуль целиком файлом из CFE не подменять.
+    Префикс <code>IM86632_</code> только у перехватов: в CF править исходные имена методов.
+    Новые процедуры и реквизиты в CFE уже <b>без префикса</b> — имена оставить.
+  </div>
+
+  <h1>Дерево изменений IM86632 1.0.0.4 → базовая CF</h1>
+  <p class="subtitle">
+    Только две доработки: (1) отмена расчёта — ждать живые порции;
+    (2) группа 3 считает только договоры с проведенным планом группы 2 и пишет ссылку
+    <code>ПланВечернихОпераций</code>. Целевая CF уже содержит диспетчер порций 8663.1
+    и предыдущий перенос IM86632 (разделение групп + пакет 1000).
+  </p>
+
+  <div class="ref-grid">
+    <div class="ref-card good">
+      <h2>Что внести сейчас</h2>
+      <ul>
+        <li>Реквизит документа <code>ПланРегламентныхОперацийДУ.ПланВечернихОпераций</code>
+          (ссылка на этот же документ, синоним «План вечерних операций»).</li>
+        <li>Поле только просмотр на форме плана — после
+          <code>ГруппаОперацийПользователя</code>.</li>
+        <li>Реквизит <b>формы</b> (не документа) <code>РасчетСЧА_РСА</code>
+          + поле только просмотр после <code>ДокументОснование</code>.</li>
+        <li>Модуль менеджера <code>РегламентныеПериоды</code>: 3 новых метода связи
+          + 2 метода отмены + 1 служебный.</li>
+        <li>Форма <code>РегламентныйПериод</code>: 5 новых процедур отмены,
+          1 функция отбора группы 3, две точечные вставки в уже перенесённые методы.</li>
+        <li>Модуль объекта плана: код после <code>ПередЗаписью</code>.</li>
+        <li>Общий модуль <code>ФоновыеЗаданияСервер</code>: вставка до
+          <code>Записать</code> в <code>СоздатьПланРегламентныхОперацийДУ</code>.</li>
+        <li>Две точечные вставки в уже существующие
+          <code>ОбработатьПачкуДиспетчером</code> и
+          <code>СформироватьДокументыЗакрытияПериода</code>.</li>
+      </ul>
+    </div>
+    <div class="ref-card stop">
+      <h2>Чего не делать</h2>
+      <ul>
+        <li>Не переносить заново пакет 1000, константу, флажок автозапуска,
+          роль <code>ПраваНаРегламентыСЧА_РСА</code> — это предыдущее дерево
+          <code>avancor_changes_tree_im86632.html</code>.</li>
+        <li>Не создавать в CF объекты, которые в CFE только заимствованы
+          (список в таблице ниже, серые строки).</li>
+        <li>Не писать вечерний план в <code>РасчетСЧА_РСА.ДокументОснование</code>.</li>
+        <li>Не удалять поле «Комментарий» с типовой формы плана —
+          в CFE его нет только из-за ограничения расширения.</li>
+        <li>Не добавлять ключ <code>СоответствиеДоговорВечернийПлан</code>
+          в <code>ОчиститьПакетныеДанныеПараметрыСохранения</code>.</li>
+        <li>Не вызывать <code>Отменить()</code> у порций с ключом <code>IM8663_</code>.</li>
+        <li>Не менять кнопку «Создать», пулы, пакет 1000, «с учетом выполненных»,
+          <code>ПослеУспешногоЗавершенияГруппы</code>.</li>
+        <li>Не подменять модули целиком. Не копировать <code>Configuration.xml</code>,
+          язык, картинки, префикс расширения.</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="ref-card vendor-note" style="margin-bottom:1rem;">
+    <h2>Как переносить перехват</h2>
+    <ul>
+      <li>Открыть метод в CFE (имя с <code>IM86632_</code>) и тот же метод без префикса в CF.</li>
+      <li>Взять только содержимое <code>#Вставка</code> … <code>#КонецВставки</code>
+        (или тело <code>&amp;После</code>) и вставить в типовой метод в то же место.</li>
+      <li>Маркеры <code>#Вставка</code> / <code>#Удаление</code> / директивы
+        <code>&amp;После</code> в CF не оставлять.</li>
+      <li>Новые процедуры копировать как есть, без префикса (в CFE они уже без него).</li>
+    </ul>
+  </div>
+
+  <h2 class="sec">Инвентаризация CFE: брать / не брать</h2>
+  <table class="steps">
+    <tr>
+      <th>Объект в CFE</th>
+      <th style="width:22%;">Действие</th>
+      <th>Комментарий</th>
+    </tr>
+    <tr>
+      <td>Документ <code>ПланРегламентныхОперацийДУ</code> — реквизит
+        <code>ПланВечернихОпераций</code></td>
+      <td><span class="tag add">→ в CF</span></td>
+      <td>Новый реквизит. Тип: ссылка на <code>ПланРегламентныхОперацийДУ</code>.
+        Синоним: «План вечерних операций». Без префикса.</td>
+    </tr>
+    <tr>
+      <td>Форма документа плана</td>
+      <td><span class="tag chg">→ поле в CF</span></td>
+      <td>Форму целиком не подменять. Добавить поле только просмотр после
+        <code>ГруппаОперацийПользователя</code>, путь <code>Объект.ПланВечернихОпераций</code>.
+        Поле «Комментарий» в CF не трогать.</td>
+    </tr>
+    <tr>
+      <td>Модуль объекта плана</td>
+      <td><span class="tag chg">→ после ПередЗаписью</span></td>
+      <td>Тело <code>IM86632_ПередЗаписью</code> дописать в конец типового
+        <code>ПередЗаписью</code> (после штатных проверок).</td>
+    </tr>
+    <tr>
+      <td>Форма <code>РасчетСЧА_РСА.ФормаДокумента</code></td>
+      <td><span class="tag chg">→ реквизит формы + поле</span></td>
+      <td>Реквизит документа не создавать. Реквизит формы
+        <code>ПланВечернихОпераций</code> + поле только просмотр после основания.
+        В <code>ПриЧтенииНаСервере</code> — вызов заполнения.</td>
+    </tr>
+    <tr>
+      <td>Общий модуль <code>ФоновыеЗаданияСервер</code></td>
+      <td><span class="tag chg">→ вставка в CF</span></td>
+      <td>Модуль уже есть. Не создавать заново. Одна вставка до
+        <code>ТекДокумент.Записать(РежимЗаписиДокумента.Проведение)</code>
+        в <code>СоздатьПланРегламентныхОперацийДУ</code>.</td>
+    </tr>
+    <tr>
+      <td>Модуль менеджера <code>РегламентныеПериоды</code></td>
+      <td><span class="tag chg">→ правки в CF</span></td>
+      <td>Новые методы областей «Отмена порций» и «Связь групп» + две вставки
+        в уже существующие <code>ОбработатьПачкуДиспетчером</code> и
+        <code>СформироватьДокументыЗакрытияПериода</code>.
+        Остальные перехваты этого модуля (пакет 1000) — не этот объём.</td>
+    </tr>
+    <tr>
+      <td>Форма <code>РегламентныйПериод</code></td>
+      <td><span class="tag chg">→ правки модуля</span></td>
+      <td>Новых реквизитов формы в этом объёме нет.
+        Вставить вызовы в <code>СформироватьРегламентныеОперации</code>
+        и <code>ОбработатьРезультатЗадания</code> + скопировать новые процедуры.</td>
+    </tr>
+    <tr>
+      <td>Константа, роль, РС <code>ЗначенияПараметровДоговораДУ</code>,
+        <code>ИсполняемыеПроцедурыЗакрытияПериода</code>, модули
+        <code>РасчетСЧА_РСА</code> (объект/менеджер)</td>
+      <td><span class="tag a">не этот объём</span></td>
+      <td>Уже описано в <code>avancor_changes_tree_im86632.html</code>.
+        Повторно не копировать.</td>
+    </tr>
+    <tr>
+      <td>Заимствования без своего кода:
+        <code>ВидыОперацийЗакрытияПериода</code>, <code>ДоговорДУ</code>,
+        <code>Облигации</code>, <code>АналитическиеСчета</code>,
+        <code>Контрагенты</code>, <code>СрочныеКонтракты</code>,
+        <code>Активы</code>, <code>Сделка</code>,
+        <code>СделкаРЕПОПерваяНога</code>,
+        <code>ДокументРасчетовСКонтрагентом</code>,
+        <code>СтавкиНалога</code>, <code>НДФЛСтавки</code>,
+        <code>Хозрасчетный</code>, БП <code>СделкиРЕПО</code></td>
+      <td><span class="tag a">не переносить</span></td>
+      <td>Служебное заимствование типов для формы СЧА. В CF эти объекты уже есть.
+        Не создавать, не менять.</td>
+    </tr>
+    <tr>
+      <td>Язык, картинки, <code>Configuration.xml</code>, префикс
+        <code>IM86632_</code></td>
+      <td><span class="tag a">не переносить</span></td>
+      <td>Служебное расширение.</td>
+    </tr>
+  </table>
+
+  <h2 class="sec">Порядок работ (этот объём)</h2>
+  <table class="steps">
+    <tr>
+      <th style="width:42px;">Шаг</th>
+      <th style="width:88px;">Действие</th>
+      <th style="width:28%;">Куда</th>
+      <th>Что сделать</th>
+    </tr>
+    <tr>
+      <td>1</td>
+      <td><span class="tag add">СОЗДАТЬ</span></td>
+      <td>Документ <code>ПланРегламентныхОперацийДУ</code>
+        → реквизит <code>ПланВечернихОпераций</code></td>
+      <td>
+        Тип: <code>ДокументСсылка.ПланРегламентныхОперацийДУ</code>.
+        Синоним: «План вечерних операций». Проверка заполнения не нужна.
+        Отдельную роль не создавать — права наследуют роли с правами на документ.
+      </td>
+    </tr>
+    <tr>
+      <td>2</td>
+      <td><span class="tag add">ПОЛЕ</span></td>
+      <td>Форма документа плана</td>
+      <td>
+        Поле ввода после <code>ГруппаОперацийПользователя</code>,
+        только просмотр, путь <code>Объект.ПланВечернихОпераций</code>.
+      </td>
+    </tr>
+    <tr>
+      <td>3</td>
+      <td><span class="tag add">ВСТАВИТЬ</span></td>
+      <td>Модуль менеджера <code>РегламентныеПериоды</code>
+        (новые методы)</td>
+      <td>
+        Скопировать как есть (без префикса, как в CFE):
+        <ol class="compact">
+          <li><code>СоответствиеВечернихПланов</code> — Экспорт</li>
+          <li><code>ДоговорыСПроведеннымВечернимПланом</code> — Экспорт</li>
+          <li><code>НайтиПроведенныйВечернийПлан</code> — Экспорт, только ручная запись</li>
+          <li><code>ЕстьАктивныеПорцииРегламентаЗаДату</code> — Экспорт</li>
+          <li><code>ОжидатьЗавершенияПорцийРегламентаЗаДату</code> — Экспорт</li>
+          <li><code>АктивныеПорцииРегламентаЗаДату</code> — не экспорт</li>
+        </ol>
+        Ждать порции только через <code>ОжидатьЗавершенияВыполнения</code>,
+        не <code>ОжидатьЗавершения</code>. Ключ порции не переименовывать
+        (<code>IM8663_</code> + дата). Ключ ФЗ ожидания в форме:
+        <code>IM86632_Wait_…</code> — не начинать с <code>IM8663_</code>.
+      </td>
+    </tr>
+    <tr>
+      <td>4</td>
+      <td><span class="tag chg">ИЗМЕНИТЬ</span></td>
+      <td>→ <code>ОбработатьПачкуДиспетчером</code></td>
+      <td>
+        Рядом с ключами БУ/УУ СЧА добавить в массив
+        <code>КлючиСоответствий</code> одну строку:
+        <code>СоответствиеДоговорВечернийПлан</code>.
+        Процедуру целиком не копировать. В очистку пачки этот ключ <b>не</b> добавлять.
+      </td>
+    </tr>
+    <tr>
+      <td>5</td>
+      <td><span class="tag chg">ИЗМЕНИТЬ</span></td>
+      <td>→ <code>СформироватьДокументыЗакрытияПериода</code></td>
+      <td>
+        После сборки <code>СоответствиеОперацияТаблица</code>, до вызова
+        <code>СоздатьПланРегламентныхОперацийДУ</code>: из
+        <code>ПараметрыСохранения</code> взять карту
+        <code>СоответствиеДоговорВечернийПлан</code>, по <code>ДоговорДУ</code>
+        получить ссылку и при заполненности вставить в соответствие
+        ключом <code>"ПланВечернихОпераций"</code> (это имя реквизита, не имя процедуры).
+      </td>
+    </tr>
+    <tr>
+      <td>6</td>
+      <td><span class="tag chg">ИЗМЕНИТЬ</span></td>
+      <td>
+        <code>ФоновыеЗаданияСервер</code><br>
+        → <code>СоздатьПланРегламентныхОперацийДУ</code>
+      </td>
+      <td>
+        Сразу перед <code>ТекДокумент.Записать(РежимЗаписиДокумента.Проведение)</code>:
+        если в 7-м параметре <code>СоответствиеОперацияТаблица</code> есть
+        <code>"ПланВечернихОпераций"</code> — записать в
+        <code>ТекДокумент.ПланВечернихОпераций</code>.
+        В CFE: <code>IM86632_СоздатьПланРегламентныхОперацийДУ</code>.
+      </td>
+    </tr>
+    <tr>
+      <td>7</td>
+      <td><span class="tag chg">ИЗМЕНИТЬ</span></td>
+      <td>
+        Модуль объекта плана<br>
+        → <code>ПередЗаписью</code>
+      </td>
+      <td>
+        После типового кода: если реквизит уже заполнен — выход (массовый контур,
+        запроса нет). Если группа документа =
+        <code>КодГруппыРасчетаСЧА_РСА()</code> — найти вечерний план.
+        Нет плана — отказать в записи.
+        В CFE: <code>IM86632_ПередЗаписью</code> (<code>&amp;После</code>).
+      </td>
+    </tr>
+    <tr>
+      <td>8</td>
+      <td><span class="tag add">ФОРМА</span></td>
+      <td>Форма <code>РасчетСЧА_РСА</code></td>
+      <td>
+        Реквизит формы <code>ПланВечернихОпераций</code>
+        (тип ссылка на план). Поле только просмотр после
+        <code>ДокументОснование</code>.
+        В конец типового <code>ПриЧтенииНаСервере</code> —
+        <code>ЗаполнитьПланВечернихОперацийНаФорме</code>
+        (читать реквизит основания только если тип =
+        <code>ДокументСсылка.ПланРегламентныхОперацийДУ</code>).
+        <code>ДокументОснование</code> не менять.
+      </td>
+    </tr>
+    <tr>
+      <td>9</td>
+      <td><span class="tag add">ВСТАВИТЬ</span></td>
+      <td>Модуль формы <code>РегламентныйПериод</code>
+        (новые процедуры)</td>
+      <td>
+        Скопировать как есть:
+        <ol class="compact">
+          <li><code>ОтобратьДоговорыДляГруппыСЧАНаСервере</code></li>
+          <li><code>ЗапуститьОжиданиеПорцийПослеОтмены</code></li>
+          <li><code>ЗапуститьОжиданиеПорцийНаСервере</code>
+            (обязательно <code>ЗапуститьВФоне = Истина</code>)</li>
+          <li><code>НачатьОтслеживаниеОжиданияПорций</code>
+            (<code>LockOwnerWindow</code>)</li>
+          <li><code>ОбработатьРезультатОжиданияПорций</code>
+            — отдельный колбэк, не <code>ОбработатьРезультатЗадания</code></li>
+        </ol>
+      </td>
+    </tr>
+    <tr>
+      <td>10</td>
+      <td><span class="tag chg">ИЗМЕНИТЬ</span></td>
+      <td>→ <code>СформироватьРегламентныеОперации</code> (клиент формы)</td>
+      <td>
+        Сразу после <code>ПолучитьДоговораДУпоДинамическомуСписку</code>
+        (рядом с уже существующим вопросом ОВ-3): вызвать
+        <code>ОтобратьДоговорыДляГруппыСЧАНаСервере</code>.
+        Если <code>Отказано</code> — сообщить и <code>Возврат</code>.
+        Для группы 2 функция возвращает список как есть. Вопрос ОВ-3 не менять.
+      </td>
+    </tr>
+    <tr>
+      <td>11</td>
+      <td><span class="tag chg">ИЗМЕНИТЬ</span></td>
+      <td>→ <code>ОбработатьРезультатЗадания</code></td>
+      <td>
+        В ветках <code>Результат = Неопределено</code> и статус
+        <code>"Отменено"</code> вызвать
+        <code>ЗапуститьОжиданиеПорцийПослеОтмены()</code>.
+        Если активных порций нет — второе окно не показывать.
+        После окна ожидания <code>ПослеУспешногоЗавершенияГруппы</code> не вызывать.
+      </td>
+    </tr>
+  </table>
+
+  <h2 class="sec">Имена в CFE → имена в CF</h2>
+  <table class="steps map">
+    <tr>
+      <th>В CFE (перехват)</th>
+      <th>В CF (куда вливать)</th>
+    </tr>
+    <tr>
+      <td>IM86632_СоздатьПланРегламентныхОперацийДУ</td>
+      <td>ФоновыеЗаданияСервер.СоздатьПланРегламентныхОперацийДУ</td>
+    </tr>
+    <tr>
+      <td>IM86632_ПередЗаписью (модуль объекта плана)</td>
+      <td>ПланРегламентныхОперацийДУ.ПередЗаписью</td>
+    </tr>
+    <tr>
+      <td>IM86632_ПриЧтенииНаСервере (форма СЧА)</td>
+      <td>РасчетСЧА_РСА.ФормаДокумента.ПриЧтенииНаСервере</td>
+    </tr>
+    <tr>
+      <td>IM86632_СформироватьРегламентныеОперации (форма периода)</td>
+      <td>РегламентныйПериод.СформироватьРегламентныеОперации — только новые строки отбора группы 3</td>
+    </tr>
+    <tr>
+      <td>IM86632_ОбработатьРезультатЗадания</td>
+      <td>РегламентныйПериод.ОбработатьРезультатЗадания — только вызов ожидания порций</td>
+    </tr>
+    <tr>
+      <td>IM86632_ОбработатьПачкуДиспетчером</td>
+      <td>РегламентныеПериоды.ОбработатьПачкуДиспетчером — одна строка ключа карты</td>
+    </tr>
+    <tr>
+      <td>IM86632_СформироватьДокументыЗакрытияПериода</td>
+      <td>РегламентныеПериоды.СформироватьДокументыЗакрытияПериода — блок ключа ПланВечернихОпераций</td>
+    </tr>
+  </table>
+
+  <h2 class="sec">Дерево: объекты → модули → процедуры</h2>
+  <p style="font-size:0.88rem; color:#4a5568; margin:0 0 0.5rem;">Клик по узлу сворачивает ветку.</p>
+
+  <ul class="tree">
+    <li class="branch">
+      <span class="cap"><span class="toggle">[-]</span>
+        <span class="name">Базовая конфигурация ДУ — этот объём</span>
+        <span class="tag cf">в CF</span></span>
+      <ul>
+
+        <li class="branch">
+          <span class="cap"><span class="toggle">[-]</span>
+            <span class="name">Документ.ПланРегламентныхОперацийДУ</span>
+            <span class="tag chg">ИЗМЕНИТЬ</span></span>
+          <ul>
+            <li class="leaf"><span class="name">реквизит ПланВечернихОпераций</span>
+              <span class="tag add">ДОБАВИТЬ</span></li>
+            <div class="hint">Ссылка на этот же документ. Синоним «План вечерних операций». Без префикса.</div>
+            <li class="leaf"><span class="name">форма документа — поле ПланВечернихОпераций</span>
+              <span class="tag add">ДОБАВИТЬ</span></li>
+            <div class="hint">После ГруппаОперацийПользователя, только просмотр.
+              Типовое поле «Комментарий» не удалять.</div>
+            <li class="leaf"><span class="name">ПередЗаписью</span>
+              <span class="tag chg">ИЗМЕНИТЬ</span></li>
+            <div class="hint">Дописать тело IM86632_ПередЗаписью. Если реквизит заполнен — выход.
+              Иначе только ручная запись группы 3: НайтиПроведенныйВечернийПлан.</div>
+          </ul>
+        </li>
+
+        <li class="branch">
+          <span class="cap"><span class="toggle">[-]</span>
+            <span class="name">Документ.РасчетСЧА_РСА</span>
+            <span class="tag chg">ИЗМЕНИТЬ</span></span>
+          <ul>
+            <li class="leaf"><span class="name">реквизиты документа</span>
+              <span class="tag a">не трогать</span></li>
+            <div class="hint">ДокументОснование по-прежнему план группы 3. Вечерний план туда не писать.</div>
+            <li class="leaf"><span class="name">реквизит формы ПланВечернихОпераций</span>
+              <span class="tag add">ДОБАВИТЬ</span></li>
+            <li class="leaf"><span class="name">поле формы после ДокументОснование</span>
+              <span class="tag add">ДОБАВИТЬ</span></li>
+            <div class="hint">Только просмотр. Путь — реквизит формы, не Объект.</div>
+            <li class="leaf"><span class="name">ПриЧтенииНаСервере</span>
+              <span class="tag chg">ИЗМЕНИТЬ</span></li>
+            <div class="hint">Вызов ЗаполнитьПланВечернихОперацийНаФорме.
+              Без проверки типа основания не читать.</div>
+            <li class="leaf"><span class="name">ЗаполнитьПланВечернихОперацийНаФорме</span>
+              <span class="tag add">ДОБАВИТЬ</span></li>
+          </ul>
+        </li>
+
+        <li class="branch">
+          <span class="cap"><span class="toggle">[-]</span>
+            <span class="name">Справочник.РегламентныеПериоды</span>
+            <span class="tag chg">ИЗМЕНИТЬ</span></span>
+          <ul>
+            <li class="branch">
+              <span class="cap"><span class="toggle">[-]</span>
+                <span class="name">модуль менеджера — связь групп</span>
+                <span class="tag ext">из CFE область IMDEV_8663_2_СвязьГрупп</span></span>
+              <ul>
+                <li class="leaf"><span class="name">СоответствиеВечернихПланов</span>
+                  <span class="tag add">ДОБАВИТЬ</span></li>
+                <div class="hint">Один запрос: проведенные планы группы 2 за дату по списку.
+                  Дубль — первый, не перезаписывать. Код группы только через
+                  КодВечернейГруппыОпераций().</div>
+                <li class="leaf"><span class="name">ДоговорыСПроведеннымВечернимПланом</span>
+                  <span class="tag add">ДОБАВИТЬ</span></li>
+                <li class="leaf"><span class="name">НайтиПроведенныйВечернийПлан</span>
+                  <span class="tag add">ДОБАВИТЬ</span></li>
+                <div class="hint">Только ручная запись. В массовом контуре не вызывать.</div>
+              </ul>
+            </li>
+            <li class="branch">
+              <span class="cap"><span class="toggle">[-]</span>
+                <span class="name">модуль менеджера — отмена порций</span>
+                <span class="tag ext">из CFE область IMDEV_8663_2_ОтменаПорций</span></span>
+              <ul>
+                <li class="leaf"><span class="name">ЕстьАктивныеПорцииРегламентаЗаДату</span>
+                  <span class="tag add">ДОБАВИТЬ</span></li>
+                <li class="leaf"><span class="name">ОжидатьЗавершенияПорцийРегламентаЗаДату</span>
+                  <span class="tag add">ДОБАВИТЬ</span></li>
+                <div class="hint">Сами порции не отменяет. Прогресс: «Новые порции не запускаются…».</div>
+                <li class="leaf"><span class="name">АктивныеПорцииРегламентаЗаДату</span>
+                  <span class="tag add">ДОБАВИТЬ</span></li>
+                <div class="hint">Отбор активных ФЗ с ключом IM8663_ + yyyyMMdd.
+                  Служебное ФЗ ожидания этот префикс не использует.</div>
+              </ul>
+            </li>
+            <li class="branch">
+              <span class="cap"><span class="toggle">[-]</span>
+                <span class="name">модуль менеджера — точечные вставки</span></span>
+              <ul>
+                <li class="leaf"><span class="name">ОбработатьПачкуДиспетчером</span>
+                  <span class="tag chg">ИЗМЕНИТЬ</span></li>
+                <div class="hint">+КлючиСоответствий.Добавить("СоответствиеДоговорВечернийПлан").</div>
+                <li class="leaf"><span class="name">СформироватьДокументыЗакрытияПериода</span>
+                  <span class="tag chg">ИЗМЕНИТЬ</span></li>
+                <div class="hint">Ключ "ПланВечернихОпераций" в СоответствиеОперацияТаблица.</div>
+                <li class="leaf"><span class="name">ОчиститьПакетныеДанныеПараметрыСохранения</span>
+                  <span class="tag a">не трогать в этом объёме</span></li>
+                <div class="hint">Ключ карты вечерних туда не добавлять — иначе вторая пачка потеряет карту.</div>
+              </ul>
+            </li>
+            <li class="branch">
+              <span class="cap"><span class="toggle">[-]</span>
+                <span class="name">форма РегламентныйПериод</span>
+                <span class="tag chg">ИЗМЕНИТЬ</span></span>
+              <ul>
+                <li class="leaf"><span class="name">ОтобратьДоговорыДляГруппыСЧАНаСервере</span>
+                  <span class="tag add">ДОБАВИТЬ</span></li>
+                <div class="hint">Только группа 3. Один запрос, сузить список, карту положить
+                  в ПараметрыСохранения во временном хранилище. На клиент карту не отдавать.
+                  Пусто — Отказано + сообщение, группу не стартовать.</div>
+                <li class="leaf"><span class="name">СформироватьРегламентныеОперации</span>
+                  <span class="tag chg">ИЗМЕНИТЬ</span></li>
+                <div class="hint">После ПолучитьДоговораДУпоДинамическомуСписку — вызов отбора.</div>
+                <li class="leaf"><span class="name">ЗапуститьОжиданиеПорцийПослеОтмены
+                  и связанные 4 процедуры</span>
+                  <span class="tag add">ДОБАВИТЬ</span></li>
+                <li class="leaf"><span class="name">ОбработатьРезультатЗадания</span>
+                  <span class="tag chg">ИЗМЕНИТЬ</span></li>
+                <div class="hint">Неопределено / "Отменено" → ожидание порций.
+                  Колбэк второго окна — ОбработатьРезультатОжиданияПорций.</div>
+                <li class="leaf"><span class="name">ПослеУспешногоЗавершенияГруппы</span>
+                  <span class="tag a">не менять</span></li>
+                <div class="hint">Автозапуск группы 3 сам попадёт в фильтр отбора.</div>
+              </ul>
+            </li>
+          </ul>
+        </li>
+
+        <li class="branch">
+          <span class="cap"><span class="toggle">[-]</span>
+            <span class="name">ОбщийМодуль.ФоновыеЗаданияСервер</span>
+            <span class="tag chg">ИЗМЕНИТЬ</span></span>
+          <ul>
+            <li class="leaf"><span class="name">СоздатьПланРегламентныхОперацийДУ</span>
+              <span class="tag chg">ИЗМЕНИТЬ</span></li>
+            <div class="hint">Перед Записать(Проведение): подставить
+              ТекДокумент.ПланВечернихОпераций из СоответствиеОперацияТаблица.
+              Чужие операции читают ключ со своим именем процедуры — лишний ключ им не мешает.</div>
+          </ul>
+        </li>
+
+        <li class="branch">
+          <span class="cap"><span class="toggle">[-]</span>
+            <span class="name">Не менять / не переносить</span>
+            <span class="tag a">вне объёма</span></span>
+          <ul>
+            <li class="leaf"><span class="name">пакет 1000, константа предварительных запросов, флажок автозапуска</span></li>
+            <div class="hint">Предыдущее дерево avancor_changes_tree_im86632.html.</div>
+            <li class="leaf"><span class="name">диспетчер порций, ключ IM8663_дата_пачка_чанк_группа</span></li>
+            <div class="hint">Уже в CF. Не переименовывать.</div>
+            <li class="leaf"><span class="name">ОчиститьПакетныеДанныеПараметрыСохранения — ключ вечерней карты</span></li>
+            <li class="leaf"><span class="name">ПолучитьДоговораДУпоДинамическомуСписку целиком</span></li>
+            <li class="leaf"><span class="name">кнопка «Создать», форма ДлительнаяОперация, ОтменитьАктивныеЗадания</span></li>
+            <li class="leaf"><span class="name">заимствованные типы формы СЧА (Облигации, Сделка, Хозрасчетный…)</span></li>
+            <li class="leaf"><span class="name">поле Комментарий на типовой форме плана</span></li>
+            <li class="leaf"><span class="name">имена перехватов IM86632_*</span></li>
+            <div class="hint">В CF править исходные процедуры.</div>
+          </ul>
+        </li>
+      </ul>
+    </li>
+  </ul>
+
+  <div class="legend">
+    <h3>Легенда</h3>
+    <span class="tag add">ДОБАВИТЬ</span>
+    <span class="tag chg">ИЗМЕНИТЬ</span>
+    <span class="tag a">не трогать</span>
+    <span class="tag cf">в CF</span>
+    <span class="tag ext">из CFE</span>
+  </div>
+
+  <p class="foot">
+    IMDEV-8663.2 · IM86632 1.0.0.4 · только отмена порций и связь групп 2/3 ·
+    клик по узлу сворачивает ветку.
+  </p>
+
+  <script>
+    document.querySelectorAll(".branch > .cap").forEach(function (cap) {
+      cap.addEventListener("click", function () {
+        var ul = this.nextElementSibling;
+        if (!ul) return;
+        var toggle = this.querySelector(".toggle");
+        if (ul.style.display === "none") {
+          ul.style.display = "block";
+          if (toggle) toggle.textContent = "[-]";
+        } else {
+          ul.style.display = "none";
+          if (toggle) toggle.textContent = "[+]";
+        }
+      });
+    });
+    document.querySelectorAll(".branch > ul").forEach(function (ul) {
+      ul.style.display = "block";
+      var prev = ul.previousElementSibling;
+      if (prev) {
+        var t = prev.querySelector(".toggle");
+        if (t) t.textContent = "[-]";
+      }
+    });
+  </script>
+</body>
+</html>
