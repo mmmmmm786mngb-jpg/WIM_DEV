@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<title>RE: Согласование на будущее — Отмена и повторное Создать</title>
+</head>
+<body style="margin:0;padding:16px;background:#ffffff;">
+<!--
+  Как вставить в Outlook:
+    1. Откройте файл в Chrome или Edge.
+    2. Выделите текст письма (не всю страницу, если копируете из браузера: Ctrl+A внутри блока).
+    3. Ctrl+C, в Outlook вставьте в тело ответа (Ctrl+V).
+  Тема: RE: Согласование на будущее
+-->
+<div style="font-family:Calibri,Arial,sans-serif;font-size:11pt;color:#1f1f1f;line-height:1.45;">
+
+<p style="margin:0 0 12px 0;">Вадим, здравствуйте.</p>
+
+<p style="margin:0 0 12px 0;">По пункту 1 отвечаем прямо на ваш вопрос и уточняем формулировку про &laquo;Отмена&raquo;.</p>
+
+<p style="margin:0 0 8px 0;"><b>Перед повторным &laquo;Создать&raquo; созданные ранее операции будут помечены на удаление?</b></p>
+
+<p style="margin:0 0 12px 0;"><b>Да</b> &mdash; это делает само &laquo;Создать&raquo;, а не кнопка &laquo;Отмена&raquo;.</p>
+
+<p style="margin:0 0 12px 0;">Повторный запуск проходит список с начала. Если по договору за этот день план уже есть, система берет его, не создает второй. Подчиненные документы этого договора (котировки, НКД, переоценка и остальные операции плана) помечаются на удаление и формируются заново. Так Аванкор работает и сейчас, когда находит существующий план. Именно это вы имели в виду: &laquo;обычно удаляет созданные операции и формирует их заново&raquo;.</p>
+
+<table cellpadding="0" cellspacing="0" border="0" width="100%" style="width:100%;margin:0 0 16px 0;border-collapse:collapse;">
+<tr>
+<td style="background:#fff8e1;border:1px solid #e0c36a;padding:10px 12px;font-family:Calibri,Arial,sans-serif;font-size:10.5pt;color:#333333;">
+&laquo;Отмена&raquo; <b>не</b> откатывает уже записанные документы и <b>не</b> помечает их на удаление.<br>
+Она только останавливает запуск <u>новых</u> порций расчета.<br>
+Если нужна отдельная кнопка &laquo;снять все, что успел создать этот запуск&raquo; &mdash; это другая задача, в текущий объем не входит.
+</td>
+</tr>
+</table>
+
+<p style="margin:0 0 8px 0;"><b>Почему на тесте 14.09 это выглядело как &laquo;продолжилось с середины&raquo;</b></p>
+
+<p style="margin:0 0 12px 0;">На ПРОД вечерний прогон идет до конца. Прерывать его &laquo;Отменой&raquo; &mdash; не штатный сценарий. На Т-1 вы как раз проверяли аварийный случай: остановили расчет на середине.</p>
+
+<p style="margin:0 0 12px 0;">Что произошло технически. Закрылось только окно расчета. На сервере остались дорабатывать уже запущенные фоновые потоки &mdash; обычно около 12, в каждом порция примерно по 50 договоров. На экране этого не было видно: окно исчезло, и казалось, что всё остановилось. Повторное &laquo;Создать&raquo; стартовало, пока эти потоки еще писали документы. Отсюда пачка ошибок &laquo;нельзя создавать два документа в один день&raquo;: новый запуск не успел подхватить план, который в этот момент дописывал прошлый поток.</p>
+
+<p style="margin:0 0 8px 0;"><b>Что предлагаем</b></p>
+
+<p style="margin:0 0 12px 0;">Оставить уже созданные документы на месте (их не трогает &laquo;Отмена&raquo;). Сделать видимым то, что раньше было скрыто: доработку потоков.</p>
+
+<table cellpadding="0" cellspacing="0" border="0" width="100%" style="width:100%;margin:0 0 16px 0;border-collapse:collapse;">
+<tr>
+<td style="border:1px solid #c9c9c9;background:#f3f3f3;padding:8px 10px;font-family:Calibri,Arial,sans-serif;font-size:10.5pt;"><b>Шаг</b></td>
+<td style="border:1px solid #c9c9c9;background:#f3f3f3;padding:8px 10px;font-family:Calibri,Arial,sans-serif;font-size:10.5pt;"><b>Что увидите</b></td>
+</tr>
+<tr>
+<td style="border:1px solid #c9c9c9;padding:8px 10px;font-family:Calibri,Arial,sans-serif;font-size:10.5pt;vertical-align:top;">Нажали &laquo;Отмена&raquo;</td>
+<td style="border:1px solid #c9c9c9;padding:8px 10px;font-family:Calibri,Arial,sans-serif;font-size:10.5pt;">Первое окно закрывается. Новые порции больше не стартуют. Уже запущенные потоки (те самые ~12 по ~50 договоров) дописывают свою порцию целиком &mdash; договор не обрывается посередине операций.</td>
+</tr>
+<tr>
+<td style="border:1px solid #c9c9c9;padding:8px 10px;font-family:Calibri,Arial,sans-serif;font-size:10.5pt;vertical-align:top;">Сразу второе окно</td>
+<td style="border:1px solid #c9c9c9;padding:8px 10px;font-family:Calibri,Arial,sans-serif;font-size:10.5pt;">Текст: новые порции не запускаются, ждем окончания уже запущенных потоков. На экране счетчик, сколько потоков еще работает. Пока это окно висит, повторное &laquo;Создать&raquo; недоступно.</td>
+</tr>
+<tr>
+<td style="border:1px solid #c9c9c9;padding:8px 10px;font-family:Calibri,Arial,sans-serif;font-size:10.5pt;vertical-align:top;">Окно закрылось само</td>
+<td style="border:1px solid #c9c9c9;padding:8px 10px;font-family:Calibri,Arial,sans-serif;font-size:10.5pt;">Потоки доработали. Можно жать &laquo;Создать&raquo;. Запуск идет с начала списка. По договорам, где план уже есть, подчиненные операции помечаются на удаление и создаются заново. Второго плана за день нет, ошибки уникальности из теста 14.09 быть не должно.</td>
+</tr>
+</table>
+
+<p style="margin:0 0 12px 0;">Итого: проблема теста была не в том, что &laquo;Создать&raquo; не умеет пересобирать операции, а в том, что после &laquo;Отмена&raquo; не было видно живых потоков. Это и закрываем.</p>
+
+<p style="margin:0 0 12px 0;">Пункты 2 и 3 (связь вечерних со СЧА/РСА и отбор группы 3 только по проведенному вечернему плану) &mdash; без изменений, как в предыдущем письме.</p>
+
+<p style="margin:0 0 12px 0;">Готовы делать в этом виде.</p>
+
+<p style="margin:16px 0 0 0;">С уважением,<br>
+Алексей Чмыхалов</p>
+
+</div>
+</body>
+</html>
