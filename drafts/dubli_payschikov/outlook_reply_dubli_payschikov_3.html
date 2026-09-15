@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<title>RE: Дубли пайщиков - Критичный вопрос</title>
+</head>
+<body style="margin:0;padding:16px;background:#ffffff;">
+<!--
+  Как вставить в Outlook:
+    1. Откройте файл в Chrome или Edge.
+    2. Выделите только текст письма внутри блока.
+    3. Ctrl+C, в Outlook вставьте в тело ответа (Ctrl+V).
+-->
+<div style="font-family:Calibri,Arial,sans-serif;font-size:11pt;color:#1f1f1f;line-height:1.45;">
+
+<p style="margin:0 0 12px 0;">Елена, Анастасия, коллеги, добрый день.</p>
+
+<p style="margin:0 0 12px 0;">Спасибо за скрины двух карточек по ВИМ Недвижимость. Это <b>предварительный разбор одной пары</b>, не акт по всей выплате и не готовое ТЗ. Персональные данные в письме не повторяем: ниже только то, как две карточки соотносятся между собой и почему обработка, судя по коду, могла завести вторую.</p>
+
+<p style="margin:16px 0 8px 0;"><b>1. Что видно по двум карточкам</b></p>
+
+<p style="margin:0 0 12px 0;">Это с высокой вероятностью <b>один человек, две карточки</b> в справочнике Контрагенты:</p>
+
+<ul style="margin:0 0 12px 20px;padding:0;">
+<li style="margin:0 0 6px 0;">совпадают имя, отчество, дата рождения, адрес и номер счета в спецрегистраторе;</li>
+<li style="margin:0 0 6px 0;">не совпадают фамилия и паспорт: на новой карточке паспорт выдан незадолго до даты списка (31.08);</li>
+<li style="margin:0 0 6px 0;">старая карточка относится к январю, новая - к дате начитки 31.08 (и счет на новой открыт той же датой);</li>
+<li style="margin:0 0 6px 0;">на <b>обеих</b> уже заполнено свойство "НРД id клиента", но это <b>два разных кода</b>, не один и тот же.</li>
+</ul>
+
+<p style="margin:0 0 12px 0;">То есть это не "склеили - и снова создалось", а скорее первый заход после смены фамилии и паспорта. Цифры в наименовании карточек - серия и номер паспорта, не ID пайщика (он на обеих пустой).</p>
+
+<p style="margin:16px 0 8px 0;"><b>2. Как система сейчас решает: это новый клиент или нет</b></p>
+
+<p style="margin:0 0 12px 0;">На каждую строку файла НРД обработка задает один вопрос: <b>этого человека мы уже знаем?</b> Дерево ниже - <b>как сейчас</b>, шаги не переписываем. Голубым - одна доп. ветка, которой сейчас нет. Желтым - путь этой пары.</p>
+
+<table cellpadding="0" cellspacing="0" border="0" width="100%" style="width:100%;margin:0 0 12px 0;border-collapse:collapse;">
+<tr>
+<td style="background:#e7f4fb;border:1px solid #17a2b8;padding:10px 12px;font-family:Calibri,Arial,sans-serif;font-size:10.5pt;">
+<b>Старт.</b> Из файла пришла одна строка: фамилия, имя, отчество, дата рождения, паспорт, код НРД, номер спецдепозитария.
+</td>
+</tr>
+</table>
+
+<table cellpadding="0" cellspacing="0" border="0" width="100%" style="width:100%;margin:0 0 4px 0;border-collapse:collapse;">
+<tr>
+<td style="width:28px;border:none;font-family:Calibri,Arial,sans-serif;font-size:10.5pt;color:#888888;vertical-align:top;padding:0 8px 0 12px;">|</td>
+<td style="border:none;padding:0;"></td>
+</tr>
+</table>
+
+<table cellpadding="0" cellspacing="0" border="0" width="100%" style="width:100%;margin:0 0 8px 0;border-collapse:collapse;">
+<tr>
+<td style="width:28px;border:none;font-family:Calibri,Arial,sans-serif;font-size:10.5pt;color:#888888;vertical-align:top;padding:4px 8px 0 12px;">+--</td>
+<td style="background:#f3f3f3;border:1px solid #c9c9c9;padding:10px 12px;font-family:Calibri,Arial,sans-serif;font-size:10.5pt;">
+<b>Вопрос 1.</b> Есть ли уже карточка с <b>таким же кодом НРД</b>, как в файле?
+</td>
+</tr>
+</table>
+
+<table cellpadding="0" cellspacing="0" border="0" width="100%" style="width:100%;margin:0 0 8px 0;border-collapse:collapse;">
+<tr>
+<td style="width:28px;border:none;"></td>
+<td style="width:28px;border:none;font-family:Calibri,Arial,sans-serif;font-size:10.5pt;color:#888888;vertical-align:top;padding:4px 8px 0 0;">|--</td>
+<td style="background:#e8f5e9;border:1px solid #a5d6a7;padding:8px 12px;font-family:Calibri,Arial,sans-serif;font-size:10.5pt;">
+<b>Да</b> -&gt; это <b>старый клиент</b>. Подставляем карточку. Конец.<br>
+<small>Так августовский релиз и должен спасать смену фамилии - если код НРД тот же.</small>
+</td>
+</tr>
+</table>
+
+<table cellpadding="0" cellspacing="0" border="0" width="100%" style="width:100%;margin:0 0 8px 0;border-collapse:collapse;">
+<tr>
+<td style="width:28px;border:none;"></td>
+<td style="width:28px;border:none;font-family:Calibri,Arial,sans-serif;font-size:10.5pt;color:#888888;vertical-align:top;padding:4px 8px 0 0;">+--</td>
+<td style="background:#fff8e1;border:1px solid #e0c36a;padding:8px 12px;font-family:Calibri,Arial,sans-serif;font-size:10.5pt;">
+<b>Нет</b> -&gt; идем дальше.<br>
+<small>В этой паре: на старой карточке код НРД <u>есть</u>, но <u>другой</u>, не тот, что пришел из файла. Для системы это "не нашли".</small>
+</td>
+</tr>
+</table>
+
+<table cellpadding="0" cellspacing="0" border="0" width="100%" style="width:100%;margin:0 0 8px 0;border-collapse:collapse;">
+<tr>
+<td style="width:56px;border:none;"></td>
+<td style="width:28px;border:none;font-family:Calibri,Arial,sans-serif;font-size:10.5pt;color:#888888;vertical-align:top;padding:4px 8px 0 0;">+--</td>
+<td style="background:#f3f3f3;border:1px solid #c9c9c9;padding:10px 12px;font-family:Calibri,Arial,sans-serif;font-size:10.5pt;">
+<b>Вопрос 2.</b> Есть ли карточка с <b>точно таким же ФИО</b> и <b>той же датой рождения</b>?<br>
+<small>Фамилия должна совпасть буква в букву. Паспорт здесь почти не смотрят.</small>
+</td>
+</tr>
+</table>
+
+<table cellpadding="0" cellspacing="0" border="0" width="100%" style="width:100%;margin:0 0 8px 0;border-collapse:collapse;">
+<tr>
+<td style="width:84px;border:none;"></td>
+<td style="width:28px;border:none;font-family:Calibri,Arial,sans-serif;font-size:10.5pt;color:#888888;vertical-align:top;padding:4px 8px 0 0;">|--</td>
+<td style="background:#e8f5e9;border:1px solid #a5d6a7;padding:8px 12px;font-family:Calibri,Arial,sans-serif;font-size:10.5pt;">
+<b>Да</b> -&gt; это <b>старый клиент</b>. Подставляем карточку. Конец.
+</td>
+</tr>
+</table>
+
+<table cellpadding="0" cellspacing="0" border="0" width="100%" style="width:100%;margin:0 0 8px 0;border-collapse:collapse;">
+<tr>
+<td style="width:84px;border:none;"></td>
+<td style="width:28px;border:none;font-family:Calibri,Arial,sans-serif;font-size:10.5pt;color:#888888;vertical-align:top;padding:4px 8px 0 0;">+--</td>
+<td style="background:#fff8e1;border:1px solid #e0c36a;padding:8px 12px;font-family:Calibri,Arial,sans-serif;font-size:10.5pt;">
+<b>Нет</b> -&gt; идем дальше.<br>
+<small>В этой паре: имя, отчество и дата рождения те же, фамилия уже другая. Для системы полное ФИО не совпало.</small>
+</td>
+</tr>
+</table>
+
+<table cellpadding="0" cellspacing="0" border="0" width="100%" style="width:100%;margin:0 0 8px 0;border-collapse:collapse;">
+<tr>
+<td style="width:112px;border:none;"></td>
+<td style="width:28px;border:none;font-family:Calibri,Arial,sans-serif;font-size:10.5pt;color:#888888;vertical-align:top;padding:4px 8px 0 0;">+--</td>
+<td style="background:#e3f2fd;border:1px solid #90caf9;padding:10px 12px;font-family:Calibri,Arial,sans-serif;font-size:10.5pt;">
+<b>Вопрос 2а. Доп. ветка (сейчас ее нет).</b> Совпали сразу все четыре:<br>
+<b>имя + отчество + дата рождения + номер спецдепозитария</b>?<br>
+<small>Фамилию здесь не требуем. В этой паре все четыре как раз совпали.</small>
+</td>
+</tr>
+</table>
+
+<table cellpadding="0" cellspacing="0" border="0" width="100%" style="width:100%;margin:0 0 8px 0;border-collapse:collapse;">
+<tr>
+<td style="width:140px;border:none;"></td>
+<td style="width:28px;border:none;font-family:Calibri,Arial,sans-serif;font-size:10.5pt;color:#888888;vertical-align:top;padding:4px 8px 0 0;">|--</td>
+<td style="background:#e8f5e9;border:1px solid #a5d6a7;padding:8px 12px;font-family:Calibri,Arial,sans-serif;font-size:10.5pt;">
+<b>Да</b> -&gt; это <b>старый клиент</b>. Новую карточку не создаем.<br>
+<small>Сюда эта пара и попала бы. Новый код НРД из файла дописываем на ту же карточку, старый не затираем.</small>
+</td>
+</tr>
+</table>
+
+<table cellpadding="0" cellspacing="0" border="0" width="100%" style="width:100%;margin:0 0 8px 0;border-collapse:collapse;">
+<tr>
+<td style="width:140px;border:none;"></td>
+<td style="width:28px;border:none;font-family:Calibri,Arial,sans-serif;font-size:10.5pt;color:#888888;vertical-align:top;padding:4px 8px 0 0;">+--</td>
+<td style="background:#eeeeee;border:1px solid #c9c9c9;padding:8px 12px;font-family:Calibri,Arial,sans-serif;font-size:10.5pt;">
+<b>Нет</b> -&gt; как сейчас, идем в вопрос 3.
+</td>
+</tr>
+</table>
+
+<table cellpadding="0" cellspacing="0" border="0" width="100%" style="width:100%;margin:0 0 8px 0;border-collapse:collapse;">
+<tr>
+<td style="width:168px;border:none;"></td>
+<td style="width:28px;border:none;font-family:Calibri,Arial,sans-serif;font-size:10.5pt;color:#888888;vertical-align:top;padding:4px 8px 0 0;">+--</td>
+<td style="background:#f3f3f3;border:1px solid #c9c9c9;padding:10px 12px;font-family:Calibri,Arial,sans-serif;font-size:10.5pt;">
+<b>Вопрос 3.</b> Включено "Создавать контрагентов при начитке"?
+</td>
+</tr>
+</table>
+
+<table cellpadding="0" cellspacing="0" border="0" width="100%" style="width:100%;margin:0 0 8px 0;border-collapse:collapse;">
+<tr>
+<td style="width:196px;border:none;"></td>
+<td style="width:28px;border:none;font-family:Calibri,Arial,sans-serif;font-size:10.5pt;color:#888888;vertical-align:top;padding:4px 8px 0 0;">|--</td>
+<td style="background:#fdecea;border:1px solid #f5c6cb;padding:8px 12px;font-family:Calibri,Arial,sans-serif;font-size:10.5pt;">
+<b>Да</b> -&gt; это <b>новый клиент</b>. Создаем карточку.<br>
+<small>Сейчас эта пара дошла сюда, потому что ветки 2а еще нет.</small>
+</td>
+</tr>
+</table>
+
+<table cellpadding="0" cellspacing="0" border="0" width="100%" style="width:100%;margin:0 0 16px 0;border-collapse:collapse;">
+<tr>
+<td style="width:196px;border:none;"></td>
+<td style="width:28px;border:none;font-family:Calibri,Arial,sans-serif;font-size:10.5pt;color:#888888;vertical-align:top;padding:4px 8px 0 0;">+--</td>
+<td style="background:#eeeeee;border:1px solid #c9c9c9;padding:8px 12px;font-family:Calibri,Arial,sans-serif;font-size:10.5pt;">
+<b>Нет</b> -&gt; карточку не создаем, строка остается без контрагента (или ручной выбор).
+</td>
+</tr>
+</table>
+
+<table cellpadding="0" cellspacing="0" border="0" width="100%" style="width:100%;margin:0 0 16px 0;border-collapse:collapse;">
+<tr>
+<td style="background:#fff8e1;border:1px solid #e0c36a;padding:10px 12px;font-family:Calibri,Arial,sans-serif;font-size:10.5pt;color:#333333;">
+Коротко: старое дерево не ломаем. Вопрос 1 (код НРД) и вопрос 2 (полное ФИО + дата рождения) остаются как есть. Между "ФИО не совпало" и "создать нового" добавляем только ветку 2а.<br><br>
+В этой паре вопросы 1 и 2 честно ответили "нет": из файла пришли новая фамилия и другой код НРД. Паспорт тоже новый, им эту пару не спасти. Четыре поля ветки 2а совпали - с ней вторая карточка бы не создалась.
+</td>
+</tr>
+</table>
+
+<p style="margin:16px 0 8px 0;"><b>3. Что еще полезно, но уже не блокирует картину по этой паре</b></p>
+
+
+
+<ul style="margin:0 0 12px 20px;padding:0;">
+<li style="margin:0 0 6px 0;">файл НРД, который грузили на 31.08 (хотя бы строка этого человека): чтобы увидеть, какой код НРД и какое ФИО реально пришли из файла;</li>
+<li style="margin:0 0 6px 0;">подтверждение, что начитку делали с пунктом "Формат Гарант";</li>
+<li style="margin:0 0 6px 0;">по желанию - когда на старую карточку записали ее код НРД (Елена писала, что список с НРД id грузили первый раз в сентябре; на январской карточке код уже есть);</li>
+<li style="margin:0 0 6px 0;">по РД 3 по-прежнему ждем 1-2 примера, если там та же история.</li>
+</ul>
+
+<p style="margin:0 0 12px 0;">Задачу на доработку пока не открываем как закрытый диагноз по всем дублям. Но по этой паре уже понятно, какой дыры августовский релиз не закрывал: смена анкеты вместе со сменой кода НРД.</p>
+
+<p style="margin:16px 0 0 0;">С уважением,<br>
+Алексей Чмыхалов</p>
+
+<hr style="border:none;border-top:1px solid #cccccc;margin:28px 0 16px 0;">
+
+<p style="margin:0 0 12px 0;font-size:10.5pt;color:#666666;"><b>Ниже - коротко для аналитика. Для бизнес-части письма не обязательно. Персональных данных нет.</b></p>
+
+<table cellpadding="0" cellspacing="0" border="0" width="100%" style="width:100%;margin:0 0 16px 0;border-collapse:collapse;">
+<tr>
+<td style="background:#e7f4fb;border:1px solid #17a2b8;padding:12px 14px;font-family:Calibri,Arial,sans-serif;font-size:10.5pt;color:#1f1f1f;">
+
+<p style="margin:0 0 10px 0;"><b>Для Натальи</b></p>
+
+<p style="margin:0 0 8px 0;">Пара карточек Контрагенты, один фонд, начитка на 31.08. Совпали: имя, отчество, ДР, адрес, номер счета спецрегистратора. Разъехались: фамилия, ДУЛ, свойство "НРД id клиента" (два разных значения, оба заполнены), внешний ID для ПК. IDПайщика пуст. Новая карточка по дате исторических реквизитов и дате открытия счета садится на 31.08; старая - на 30.01. Паспорт на новой выдан за несколько дней до списка.</p>
+
+<p style="margin:0 0 8px 0;"><code>ПолучитьКонтрагент</code>: шаг 1 по новому НРД id старую не находит; шаг 2 - точное ФИО+ДР, фамилия другая. Поиск по ДУЛ закомментирован и в этом кейсе все равно был бы мимо. Автосоздание включено. Отсюда новая карточка с новым НРД id.</p>
+
+<p style="margin:0 0 8px 0;">Для ТЗ дерево ПолучитьКонтрагент не переписывать. После пустого ФИО+ДР добавить ветку: имя + отчество + ДР + номер счета спецдепозитария. Если нашли - старый клиент, новый НРД id дописать, старый не затирать. Паспорт в ключ не ставить.</p>
+
+<p style="margin:0;">Файл начитки все еще полезен как подтверждение, что в строке НРД был именно новый id. На диагноз по этой паре это уже не похоже на блокер.</p>
+
+</td>
+</tr>
+</table>
+
+</div>
+</body>
+</html>
