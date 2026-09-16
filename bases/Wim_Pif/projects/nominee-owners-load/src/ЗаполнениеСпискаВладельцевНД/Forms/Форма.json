@@ -1,0 +1,166 @@
+{
+  "title": "Заполнение списка владельцев номинального держателя",
+  "width": 1400,
+  "height": 800,
+  "windowOpeningMode": "LockOwner",
+  "autoCommandBar": { "name": "ФормаКоманднаяПанель" },
+  "events": { "OnCreateAtServer": "ПриСозданииНаСервере", "OnOpen": "ПриОткрытии" },
+  "commands": [
+    { "name": "ВыбратьФайл", "title": "Выбрать файл", "action": "ВыбратьФайл", "picture": "OpenFile" },
+    { "name": "ПрочитатьФайл", "title": "Прочитать файл", "action": "ПрочитатьФайл", "picture": "ReadChanges" },
+    { "name": "Сопоставить", "title": "Сопоставить", "action": "Сопоставить", "picture": "Find" },
+    { "name": "СоздатьНедостающих", "title": "Создать недостающих", "action": "СоздатьНедостающих", "picture": "CreateListItem" },
+    { "name": "СоздатьДокумент", "title": "Создать документ", "action": "СоздатьДокумент", "picture": "Document" },
+    { "name": "СохранитьПротокол", "title": "Сохранить протокол", "action": "СохранитьПротокол", "picture": "SaveFile" },
+    { "name": "НайтиНезаполненные", "title": "Незаполненные", "action": "НайтиНезаполненные" },
+    { "name": "НайтиНеНайденные", "title": "Не найденные", "action": "НайтиНеНайденные" },
+    { "name": "НайтиПодмены", "title": "Подмены клиента", "action": "НайтиПодмены" },
+    { "name": "НайтиВыборИзНескольких", "title": "Выбор из нескольких", "action": "НайтиВыборИзНескольких" },
+    { "name": "ОчиститьОтбор", "title": "Показать все", "action": "ОчиститьОтбор" }
+  ],
+  "elements": [
+    { "autoCmdBar": "ФормаКоманднаяПанель", "autofill": false, "children": [
+      { "button": "КнопкаВыбратьФайл", "command": "ВыбратьФайл", "picture": "OpenFile", "representation": "PictureAndText" },
+      { "button": "КнопкаПрочитатьФайл", "command": "ПрочитатьФайл", "defaultButton": true, "picture": "ReadChanges", "representation": "PictureAndText" },
+      { "button": "КнопкаСопоставить", "command": "Сопоставить", "picture": "Find", "representation": "PictureAndText" },
+      { "button": "КнопкаСоздатьНедостающих", "command": "СоздатьНедостающих", "picture": "CreateListItem", "representation": "PictureAndText" },
+      { "button": "КнопкаСоздатьДокумент", "command": "СоздатьДокумент", "picture": "Document", "representation": "PictureAndText" },
+      { "button": "КнопкаСохранитьПротокол", "command": "СохранитьПротокол", "picture": "SaveFile", "representation": "PictureAndText" }
+    ]},
+    { "group": "vertical", "name": "ГруппаШапка", "representation": "None", "showTitle": false, "united": false, "children": [
+      { "group": "alwaysHorizontal", "name": "ГруппаФайл", "title": "Файл", "united": false, "children": [
+        { "input": "ИмяФайлаКлиент", "path": "ИмяФайлаКлиент", "title": "Файл", "autoMaxWidth": false },
+        { "radio": "ФорматФайла", "path": "ФорматФайла", "title": "Формат", "radioButtonType": "RadioButtons", "columnsCount": 4,
+          "choiceList": [
+            { "value": 0, "presentation": "Гарант Excel" },
+            { "value": 1, "presentation": "XML ВТБ СД" },
+            { "value": 2, "presentation": "ЦДФ" },
+            { "value": 3, "presentation": "Гарант Excel NEW" }
+          ]}
+      ]},
+      { "group": "alwaysHorizontal", "name": "ГруппаРеквизиты", "title": "Параметры начитки", "united": false, "children": [
+        { "input": "Фонд", "path": "Фонд", "events": { "OnChange": "ФондПриИзменении" } },
+        { "input": "НоминальныйДержатель", "path": "НоминальныйДержатель", "events": { "OnChange": "НоминальныйДержательПриИзменении" } },
+        { "input": "ЛицевойСчет", "path": "ЛицевойСчет" },
+        { "input": "ГруппаКонтрагентов", "path": "ГруппаКонтрагентов" }
+      ]},
+      { "group": "alwaysHorizontal", "name": "ГруппаДатыФлаги", "representation": "None", "showTitle": false, "united": false, "children": [
+        { "input": "ДатаДок", "path": "ДатаДок" },
+        { "input": "ДатаИсторическихЗначений", "path": "ДатаИсторическихЗначений" },
+        { "input": "ДатаОткрытияСчета", "path": "ДатаОткрытияСчета" },
+        { "check": "ФлСоздаватьКонтрагентов", "path": "ФлСоздаватьКонтрагентов" },
+        { "check": "ФлСоздаватьЛицевыеСчета", "path": "ФлСоздаватьЛицевыеСчета" },
+        { "check": "МножитьЛицСчета", "path": "МножитьЛицСчета" }
+      ]}
+    ]},
+    { "pages": "Страницы", "pagesRepresentation": "TabsOnTop", "children": [
+      { "page": "СтраницаСтроки", "title": "Строки файла", "children": [
+        { "cmdBar": "КоманднаяПанельОтбор", "children": [
+          { "button": "КнопкаНезаполненные", "command": "НайтиНезаполненные" },
+          { "button": "КнопкаНеНайденные", "command": "НайтиНеНайденные" },
+          { "button": "КнопкаПодмены", "command": "НайтиПодмены" },
+          { "button": "КнопкаВыборИзНескольких", "command": "НайтиВыборИзНескольких" },
+          { "button": "КнопкаПоказатьВсе", "command": "ОчиститьОтбор" }
+        ]},
+        { "table": "СтрокиФайла", "path": "СтрокиФайла", "changeRowSet": false, "changeRowOrder": false, "footer": true,
+          "columns": [
+            { "input": "НомерСтрокиФайла", "path": "СтрокиФайла.НомерСтрокиФайла", "title": "N", "width": 6 },
+            { "input": "ФИО", "path": "СтрокиФайла.ФИО", "title": "ФИО файла" },
+            { "input": "ДатаРождения", "path": "СтрокиФайла.ДатаРождения", "title": "ДР" },
+            { "input": "ДокументСерия", "path": "СтрокиФайла.ДокументСерия", "title": "Серия" },
+            { "input": "ДокументНомер", "path": "СтрокиФайла.ДокументНомер", "title": "Номер" },
+            { "input": "НРДid", "path": "СтрокиФайла.НРДid", "title": "НРД id файла" },
+            { "input": "Контрагент", "path": "СтрокиФайла.Контрагент", "title": "Карточка", "choiceButton": true },
+            { "input": "ФИОКарточки", "path": "СтрокиФайла.ФИОКарточки", "title": "ФИО карточки", "readOnly": true },
+            { "input": "СпособСопоставления", "path": "СтрокиФайла.СпособСопоставления", "title": "Способ" },
+            { "input": "ПодменаКлиента", "path": "СтрокиФайла.ПодменаКлиента", "title": "Подмена" },
+            { "input": "ВыборИзНескольких", "path": "СтрокиФайла.ВыборИзНескольких", "title": "Несколько" },
+            { "input": "ЛицевойСчетСтроки", "path": "СтрокиФайла.ЛицевойСчет", "title": "ЛС" },
+            { "input": "КоличествоПаев", "path": "СтрокиФайла.КоличествоПаев", "title": "Паи" },
+            { "input": "КомментарийСопоставления", "path": "СтрокиФайла.КомментарийСопоставления", "title": "Комментарий" }
+          ]}
+      ]},
+      { "page": "СтраницаПротокол", "title": "Протокол", "children": [
+        { "input": "ТекстИтогов", "path": "ТекстИтогов", "titleLocation": "None", "multiLine": true, "height": 4, "readOnly": true },
+        { "table": "ПротоколСопоставления", "path": "ПротоколСопоставления", "changeRowSet": false, "changeRowOrder": false,
+          "columns": [
+            { "input": "ПротоколНомерСтрокиФайла", "path": "ПротоколСопоставления.НомерСтрокиФайла", "title": "N" },
+            { "input": "ПротоколКатегория", "path": "ПротоколСопоставления.Категория", "title": "Категория" },
+            { "input": "ПротоколФИОФайла", "path": "ПротоколСопоставления.ФИОФайла", "title": "ФИО файла" },
+            { "input": "ПротоколФИОКарточки", "path": "ПротоколСопоставления.ФИОКарточки", "title": "ФИО карточки" },
+            { "input": "ПротоколСпособ", "path": "ПротоколСопоставления.СпособСопоставления", "title": "Способ" },
+            { "input": "ПротоколНРДidФайла", "path": "ПротоколСопоставления.НРДidФайла", "title": "НРД файла" },
+            { "input": "ПротоколНРДidКарточкиДо", "path": "ПротоколСопоставления.НРДidКарточкиДо", "title": "НРД до" },
+            { "input": "ПротоколКомментарий", "path": "ПротоколСопоставления.Комментарий", "title": "Комментарий" },
+            { "input": "ПротоколКонтрагент", "path": "ПротоколСопоставления.Контрагент", "title": "Карточка" }
+          ]}
+      ]}
+    ]}
+  ],
+  "attributes": [
+    { "name": "Объект", "type": "ExternalDataProcessorObject.ЗаполнениеСпискаВладельцевНД", "main": true },
+    { "name": "ИмяФайлаКлиент", "type": "string(1024)", "title": "Файл" },
+    { "name": "АдресФайлаВоВременномХранилище", "type": "string(0)", "title": "Адрес файла" },
+    { "name": "Фонд", "type": "CatalogRef.ПИФ", "title": "Фонд" },
+    { "name": "НоминальныйДержатель", "type": "CatalogRef.Контрагенты", "title": "Номинальный держатель" },
+    { "name": "ЛицевойСчет", "type": "CatalogRef.ЛицевыеСчетаПайщиков", "title": "Лицевой счет НД" },
+    { "name": "ГруппаКонтрагентов", "type": "CatalogRef.Контрагенты", "title": "Группа пайщиков" },
+    { "name": "ДатаДок", "type": "date", "title": "Дата документа" },
+    { "name": "ДатаИсторическихЗначений", "type": "date", "title": "Дата исторических значений" },
+    { "name": "ДатаОткрытияСчета", "type": "date", "title": "Дата открытия счета" },
+    { "name": "ФлСоздаватьКонтрагентов", "type": "boolean", "title": "Создавать контрагентов" },
+    { "name": "ФлСоздаватьЛицевыеСчета", "type": "boolean", "title": "Создавать лицевые счета" },
+    { "name": "МножитьЛицСчета", "type": "boolean", "title": "Размножать лиц. счета" },
+    { "name": "ФорматФайла", "type": "decimal(1,0)", "title": "Формат файла" },
+    { "name": "ТекстИтогов", "type": "string(0)", "title": "Итоги" },
+    { "name": "СтрокиФайла", "type": "ValueTable", "title": "Строки файла", "columns": [
+      { "name": "НомерСтрокиФайла", "type": "decimal(10,0)", "title": "N" },
+      { "name": "ФИО", "type": "string(250)", "title": "ФИО" },
+      { "name": "Фамилия", "type": "string(100)", "title": "Фамилия" },
+      { "name": "Имя", "type": "string(100)", "title": "Имя" },
+      { "name": "Отчество", "type": "string(100)", "title": "Отчество" },
+      { "name": "ДатаРождения", "type": "date", "title": "Дата рождения" },
+      { "name": "ДокументСерия", "type": "string(20)", "title": "Серия" },
+      { "name": "ДокументНомер", "type": "string(20)", "title": "Номер" },
+      { "name": "ДокументДатаВыдачи", "type": "date", "title": "Дата выдачи" },
+      { "name": "ДокументКемВыдан", "type": "string(250)", "title": "Кем выдан" },
+      { "name": "ДокументКодПодразделения", "type": "string(20)", "title": "Код подразделения" },
+      { "name": "ИНН", "type": "string(12)", "title": "ИНН" },
+      { "name": "ОГРН", "type": "string(15)", "title": "ОГРН" },
+      { "name": "ЭтоЮрЛицо", "type": "boolean", "title": "Юрлицо" },
+      { "name": "НРДid", "type": "string(50)", "title": "НРД id" },
+      { "name": "ЮрАдрес", "type": "string(500)", "title": "Юр. адрес" },
+      { "name": "ПочтовыйАдрес", "type": "string(500)", "title": "Почтовый адрес" },
+      { "name": "Телефон", "type": "string(50)", "title": "Телефон" },
+      { "name": "КоличествоПаев", "type": "decimal(15,5)", "title": "Количество паев" },
+      { "name": "БИК", "type": "string(9)", "title": "БИК" },
+      { "name": "РасчетныйСчет", "type": "string(20)", "title": "Расчетный счет" },
+      { "name": "ЛицевойСчетБанк", "type": "string(20)", "title": "Лиц. счет в банке" },
+      { "name": "Получатель", "type": "string(250)", "title": "Получатель" },
+      { "name": "НазначениеПлатежа", "type": "string(500)", "title": "Назначение платежа" },
+      { "name": "Контрагент", "type": "CatalogRef.Контрагенты", "title": "Контрагент" },
+      { "name": "ЛицевойСчет", "type": "CatalogRef.ЛицевыеСчетаПайщиков", "title": "Лицевой счет" },
+      { "name": "БанковскийСчет", "type": "CatalogRef.БанковскиеСчета", "title": "Банковский счет" },
+      { "name": "СпособСопоставления", "type": "string(50)", "title": "Способ" },
+      { "name": "ФИОКарточки", "type": "string(250)", "title": "ФИО карточки" },
+      { "name": "НРДidКарточкиДо", "type": "string(50)", "title": "НРД id до" },
+      { "name": "ПодменаКлиента", "type": "boolean", "title": "Подмена" },
+      { "name": "ВыборИзНескольких", "type": "boolean", "title": "Выбор из нескольких" },
+      { "name": "КоличествоКандидатов", "type": "decimal(10,0)", "title": "Кандидатов" },
+      { "name": "ОписаниеКандидатов", "type": "string(0)", "title": "Кандидаты" },
+      { "name": "КомментарийСопоставления", "type": "string(0)", "title": "Комментарий" },
+      { "name": "НовыйКонтрагент", "type": "boolean", "title": "Новый" }
+    ]},
+    { "name": "ПротоколСопоставления", "type": "ValueTable", "title": "Протокол", "columns": [
+      { "name": "НомерСтрокиФайла", "type": "decimal(10,0)", "title": "N" },
+      { "name": "Категория", "type": "string(80)", "title": "Категория" },
+      { "name": "ФИОФайла", "type": "string(250)", "title": "ФИО файла" },
+      { "name": "ФИОКарточки", "type": "string(250)", "title": "ФИО карточки" },
+      { "name": "СпособСопоставления", "type": "string(50)", "title": "Способ" },
+      { "name": "НРДidФайла", "type": "string(50)", "title": "НРД файла" },
+      { "name": "НРДidКарточкиДо", "type": "string(50)", "title": "НРД до" },
+      { "name": "Комментарий", "type": "string(0)", "title": "Комментарий" },
+      { "name": "Контрагент", "type": "CatalogRef.Контрагенты", "title": "Карточка" }
+    ]}
+  ]
+}

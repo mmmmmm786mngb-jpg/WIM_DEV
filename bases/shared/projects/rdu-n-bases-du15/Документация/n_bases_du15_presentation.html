@@ -1,0 +1,666 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>N баз ДУ 1.5 — 1 млн договоров РДУ</title>
+<style>
+:root {
+  --navy: #0b1c33;
+  --navy-2: #122844;
+  --navy-3: #1a3a5c;
+  --gold: #d4a017;
+  --gold-2: #f0c14b;
+  --teal: #2a9d8f;
+  --red: #c0392b;
+  --ok: #1e8a4c;
+  --warn: #c47b12;
+  --paper: #f6f3eb;
+  --ink: #122033;
+  --muted: #6b7c90;
+  --line: rgba(255,255,255,.12);
+  --shadow: 0 18px 50px rgba(0,0,0,.28);
+}
+* { box-sizing: border-box; }
+html, body {
+  margin: 0; height: 100%;
+  background: #071018;
+  color: var(--paper);
+  font-family: "Segoe UI", "PT Sans", Arial, sans-serif;
+  overflow: hidden;
+}
+.deck { position: relative; width: 100%; height: 100%; }
+.slide {
+  position: absolute; inset: 0;
+  display: none;
+  padding: 56px 72px 88px;
+  background:
+    radial-gradient(1200px 500px at 110% -10%, rgba(212,160,23,.16), transparent 55%),
+    radial-gradient(900px 420px at -10% 110%, rgba(42,157,143,.12), transparent 50%),
+    linear-gradient(165deg, var(--navy) 0%, var(--navy-2) 48%, #0a1626 100%);
+}
+.slide.on { display: flex; flex-direction: column; }
+.slide.paper {
+  background: linear-gradient(180deg, #fbf8f1 0%, #efe8d8 100%);
+  color: var(--ink);
+}
+.kicker {
+  font-size: 13px; letter-spacing: .16em; text-transform: uppercase;
+  color: var(--gold); font-weight: 700; margin: 0 0 14px;
+}
+.paper .kicker { color: #8a6a10; }
+h1 { font-size: clamp(32px, 4.4vw, 54px); line-height: 1.12; margin: 0 0 18px; font-weight: 800; letter-spacing: -.02em; max-width: 18ch; }
+h2 { font-size: clamp(26px, 3.2vw, 40px); line-height: 1.15; margin: 0 0 18px; font-weight: 800; letter-spacing: -.015em; }
+.lead { font-size: 22px; line-height: 1.45; color: #c9d6e6; max-width: 46ch; margin: 0 0 28px; }
+.paper .lead { color: #3d5168; }
+.hl { color: var(--gold-2); }
+.paper .hl { color: #9a6f00; }
+.row { display: flex; gap: 18px; flex-wrap: wrap; }
+.grow { flex: 1 1 0; min-width: 220px; }
+.card {
+  background: rgba(255,255,255,.06);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  padding: 20px 22px;
+}
+.paper .card { background: #fff; border: 1px solid #e4dcc8; box-shadow: 0 8px 24px rgba(18,32,51,.06); }
+.card .n { font-size: 42px; font-weight: 800; letter-spacing: -.03em; line-height: 1; }
+.card .c { margin-top: 8px; font-size: 14px; color: #9fb0c4; line-height: 1.4; }
+.paper .card .c { color: #5b6d80; }
+.card.bad { border-left: 5px solid var(--red); }
+.card.ok { border-left: 5px solid var(--ok); }
+.card.gold { border-left: 5px solid var(--gold); }
+.card.teal { border-left: 5px solid var(--teal); }
+.tag {
+  display: inline-block; font-size: 11px; font-weight: 700; letter-spacing: .08em;
+  text-transform: uppercase; padding: 3px 8px; border-radius: 999px;
+}
+.tag.bad { background: rgba(192,57,43,.18); color: #ffb4ab; }
+.tag.ok { background: rgba(30,138,76,.18); color: #8ee0ad; }
+.tag.warn { background: rgba(196,123,18,.2); color: #ffd089; }
+.paper .tag.bad { background: #fde8e6; color: #9b2418; }
+.paper .tag.ok { background: #e3f6ea; color: #146635; }
+.paper .tag.warn { background: #fff1d6; color: #8a5500; }
+table { width: 100%; border-collapse: collapse; font-size: 15px; }
+th { text-align: left; font-size: 12px; letter-spacing: .06em; text-transform: uppercase; color: #9fb0c4; padding: 8px 10px; border-bottom: 1px solid var(--line); }
+td { padding: 9px 10px; border-bottom: 1px solid rgba(255,255,255,.07); vertical-align: top; }
+.paper th { color: #6a5a38; border-bottom-color: #e4dcc8; }
+.paper td { border-bottom-color: #eee6d4; }
+td.num { text-align: right; font-variant-numeric: tabular-nums; font-weight: 700; white-space: nowrap; }
+.proof {
+  margin-top: auto; font-size: 13px; color: #8aa0b8; border-top: 1px solid var(--line);
+  padding-top: 12px; display: flex; gap: 18px; flex-wrap: wrap;
+}
+.paper .proof { color: #6b7c90; border-top-color: #e4dcc8; }
+.proof b { color: var(--gold-2); font-weight: 700; }
+.paper .proof b { color: #8a6a10; }
+ul.clean { margin: 0; padding: 0; list-style: none; }
+ul.clean li { position: relative; padding: 8px 0 8px 22px; font-size: 18px; line-height: 1.4; }
+ul.clean li::before {
+  content: ""; position: absolute; left: 0; top: 16px; width: 10px; height: 10px;
+  border-radius: 2px; background: var(--gold);
+}
+.bar-row { display: grid; grid-template-columns: 280px 1fr 90px; gap: 12px; align-items: center; margin: 8px 0; font-size: 14px; }
+.bar { height: 18px; background: rgba(255,255,255,.08); border-radius: 99px; overflow: hidden; }
+.bar > span { display: block; height: 100%; border-radius: 99px; }
+.bar .bad { background: linear-gradient(90deg, #c0392b, #e67e22); }
+.bar .mid { background: linear-gradient(90deg, #c47b12, #d4a017); }
+.bar .ok { background: linear-gradient(90deg, #1e8a4c, #2a9d8f); }
+.bar .tgt { background: repeating-linear-gradient(90deg, #f0c14b, #f0c14b 2px, transparent 2px, transparent 6px); opacity: .9; }
+.flow { display: flex; flex-direction: column; gap: 8px; flex: 1; justify-content: center; }
+.flow-row { display: grid; gap: 12px; }
+.flow-row.cols2 { grid-template-columns: 1fr 1fr; }
+.flow-row.cols4 { grid-template-columns: repeat(4, 1fr); }
+.box {
+  border: 1px solid var(--line); border-radius: 14px; padding: 12px 14px;
+  background: rgba(255,255,255,.05); text-align: center;
+}
+.box h3 { margin: 0 0 4px; font-size: 15px; }
+.box p { margin: 0; font-size: 12px; color: #9fb0c4; line-height: 1.35; }
+.box.gold { background: rgba(212,160,23,.14); border-color: rgba(212,160,23,.45); }
+.box.teal { border-color: rgba(42,157,143,.5); }
+.chevr { text-align: center; color: var(--gold); font-size: 12px; letter-spacing: .18em; text-transform: uppercase; font-weight: 700; opacity: .85; }
+.shards { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; }
+.shard {
+  background: rgba(212,160,23,.12); border: 1px solid rgba(212,160,23,.35);
+  border-radius: 12px; padding: 14px 8px; text-align: center;
+}
+.shard b { display: block; font-size: 16px; }
+.shard span { font-size: 12px; color: #c9d6e6; }
+.calc {
+  background: rgba(255,255,255,.06); border: 1px solid var(--line);
+  border-radius: 18px; padding: 22px 26px; margin-top: 8px;
+}
+.calc input[type=range] { width: 100%; accent-color: var(--gold); }
+.calc-out { display: flex; gap: 16px; margin-top: 16px; }
+.calc-out .big { font-size: 64px; font-weight: 800; line-height: 1; color: var(--gold-2); }
+.paper tr.win td { background: #e8f6ee; }
+.nav {
+  position: fixed; left: 0; right: 0; bottom: 0; height: 56px; z-index: 20;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 24px;
+  background: linear-gradient(180deg, transparent, rgba(0,0,0,.55));
+  font-size: 13px; color: #9fb0c4;
+}
+.dots { display: flex; gap: 6px; align-items: center; }
+.dots button {
+  width: 8px; height: 8px; border-radius: 50%; border: 0; padding: 0;
+  background: rgba(255,255,255,.28); cursor: pointer;
+}
+.dots button.on { width: 22px; border-radius: 8px; background: var(--gold); }
+.nav-btn {
+  background: transparent; border: 1px solid rgba(255,255,255,.2);
+  color: #eaf1f8; border-radius: 8px; padding: 6px 12px; cursor: pointer;
+}
+.progress { position: fixed; top: 0; left: 0; height: 3px; background: var(--gold); z-index: 30; }
+.cover-meta { margin-top: auto; display: flex; gap: 28px; color: #8aa0b8; font-size: 14px; }
+.quote {
+  font-size: 26px; line-height: 1.35; max-width: 22ch; font-weight: 700;
+  border-left: 4px solid var(--gold); padding-left: 18px; margin: 8px 0 24px;
+}
+.two { display: grid; grid-template-columns: 1.15fr .85fr; gap: 24px; flex: 1; }
+.three { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
+.small { font-size: 13px; color: #8aa0b8; line-height: 1.45; }
+.paper .small { color: #6b7c90; }
+.mark { color: var(--gold-2); font-weight: 800; }
+.paper .mark { color: #9a6f00; }
+@media print {
+  html, body { overflow: visible; height: auto; background: #fff; }
+  .nav, .progress { display: none !important; }
+  .slide { display: flex !important; position: relative; page-break-after: always; height: 100vh; }
+}
+@media (max-width: 980px) {
+  .slide { padding: 28px 22px 72px; }
+  .two, .three, .flow-row.cols2, .flow-row.cols4, .shards { grid-template-columns: 1fr; }
+  .bar-row { grid-template-columns: 1fr; }
+  h1 { max-width: none; }
+}
+</style>
+</head>
+<body>
+<div class="progress" id="progress"></div>
+<div class="deck" id="deck">
+
+<!-- 1 -->
+<section class="slide on">
+  <p class="kicker">Архитектура масштабирования Розничного ДУ</p>
+  <h1>N баз ДУ 1.5.<br>Один миллион договоров РДУ.</h1>
+  <p class="lead">Одна информационная база не выдерживает целевой объём. Несколько баз одной конфигурации — штатный приём платформы. Он уже используется в мидл-офисе и фронт-офисе.</p>
+  <div class="row">
+    <div class="card gold grow"><div class="n">1 млн</div><div class="c">целевой объём договоров РДУ</div></div>
+    <div class="card bad grow"><div class="n">6 из 23</div><div class="c">ключевых операций не выдерживают уже 250 тыс. в одной базе</div></div>
+    <div class="card ok grow"><div class="n">N x ДУ 1.5</div><div class="c">предлагаемая модель: заполняем базу до порога и открываем следующую</div></div>
+  </div>
+  <div class="cover-meta">
+    <span>Конфигурация ДУ, редакция 1.5</span>
+    <span>Дата: 16.09.2026</span>
+    <span>Статус: предложение к решению</span>
+  </div>
+</section>
+
+<!-- 2 -->
+<section class="slide">
+  <p class="kicker">Тезис</p>
+  <p class="quote">Не «переписать ДУ под миллион», а <span class="hl">нарезать миллион на обслуживаемые базы</span>.</p>
+  <div class="two">
+    <div>
+      <ul class="clean">
+        <li>Договоры РДУ независимы друг от друга в ежедневном контуре: регламенты, СЧА/РСА, сделки, выписки идут по договору.</li>
+        <li>Значит, граница шарда — клиент / договор, а не «кусок кода».</li>
+        <li>Новые договоры после порога открываются в новой информационной базе той же конфигурации.</li>
+        <li>Старые договоры не переезжают: учёт непрерывный, база «липкая».</li>
+      </ul>
+    </div>
+    <div class="card teal">
+      <h3 style="margin:0 0 10px">Правило нарезки</h3>
+      <p style="margin:0 0 12px;font-size:18px;line-height:1.45">Если в текущей базе РДУ клиентов (договоров) больше порога — <b>следующих запускаем в новую базу ДУ 1.5</b>.</p>
+      <p class="small">Порог 200 тыс. — планировочная единица. Архитектура не ломается, если по замерам шарды сделают 120–150 тыс.</p>
+    </div>
+  </div>
+  <p class="proof"><span><b>Доказательство 1.</b> Предметная область уже нарезана: РДУ отдельно от обычного ДУ.</span></p>
+</section>
+
+<!-- 3 -->
+<section class="slide">
+  <p class="kicker">Масштаб задачи</p>
+  <h2>Три числа, которые нельзя смешивать</h2>
+  <div class="three" style="flex:1">
+    <div class="card">
+      <div class="n">~25 тыс.</div>
+      <div class="c">Текущий рабочий объём РДУ, от которого считался прогноз x10. На полном отборе РДУ в смежных прогонах — 21 993 договора.</div>
+    </div>
+    <div class="card gold">
+      <div class="n">200 тыс.</div>
+      <div class="c">Планировочный «нормальный» размер одной базы. Круглая операционная единица, не путать с доказанным пределом каждой операции.</div>
+    </div>
+    <div class="card bad">
+      <div class="n">1 000 тыс.</div>
+      <div class="c">Целевой объём. Это x40 к текущему контуру и x4 к сценарию «250 тыс. в одной базе», который уже не сходится.</div>
+    </div>
+  </div>
+  <p class="proof">
+    <span><b>Источник.</b> Сводка ключевых операций Розничного ДУ, сценарий 25 тыс. → 250 тыс. (x10).</span>
+    <span><b>Следствие.</b> 1 млн в одной базе = ещё x4 сверх сценария, который уже красный.</span>
+  </p>
+</section>
+
+<!-- 4 -->
+<section class="slide paper">
+  <p class="kicker">Доказательство 2 — замеры, не мнение</p>
+  <h2>Одна база не выдерживает даже 250 тыс.</h2>
+  <p class="lead">По 23 ключевым операциям Розничного ДУ: 6 не укладываются в окно уже на 250 тыс. договоров. Прогноз строился по медиане полных прогонов ПРОД, без увеличения числа потоков.</p>
+  <div class="row" style="margin-bottom:18px">
+    <div class="card bad grow"><div class="n" style="color:#c0392b">6</div><div class="c">операций с пределом ниже 250 тыс.</div></div>
+    <div class="card grow"><div class="n">10</div><div class="c">однопоточных операций, которые принимают рост базы целиком</div></div>
+    <div class="card grow"><div class="n">26 273</div><div class="c">замера регистра «Замеры времени», 28.07–02.09.2026</div></div>
+  </div>
+  <p class="small">Методика: только служебный контур, вес от 15 000 договоров, аварийные замеры исключены. Две оценки рядом — линейная x10 и модель «постоянная часть + стоимость единицы».</p>
+  <p class="proof"><span><b>Источник.</b> Отчёт «Текущая и прогнозная длительность ключевых операций Розничного ДУ» (IMDEV-9393).</span></p>
+</section>
+
+<!-- 5 -->
+<section class="slide paper">
+  <p class="kicker">Узкие места одной базы</p>
+  <h2>Предел операций vs порог 200 тыс.</h2>
+  <table>
+    <thead>
+      <tr><th>Операция</th><th>Сейчас, мин</th><th>Окно, мин</th><th>Предел, тыс. договоров</th><th>К 200 тыс.</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>Исполнение сделок Т+1 / Т+2</td><td class="num">39,6</td><td class="num">120</td><td class="num">50</td><td><span class="tag bad">не проходит</span></td></tr>
+      <tr><td>Загрузка сделок РДУ</td><td class="num">12,9</td><td class="num">120</td><td class="num">74</td><td><span class="tag bad">не проходит</span></td></tr>
+      <tr><td>Загрузка выписок банка</td><td class="num">15,9</td><td class="num">60</td><td class="num">94</td><td><span class="tag bad">не проходит</span></td></tr>
+      <tr><td>Утренние регламенты</td><td class="num">30,1</td><td class="num">180</td><td class="num">135</td><td><span class="tag warn">запас отрицательный</span></td></tr>
+      <tr><td>Вечерние регламенты, СЧА/РСА</td><td class="num">42,4</td><td class="num">180</td><td class="num">145</td><td><span class="tag warn">запас отрицательный</span></td></tr>
+      <tr><td>Начисление вознаграждения (квартал)</td><td class="num">64,6</td><td class="num">480</td><td class="num">152</td><td><span class="tag warn">запас отрицательный</span></td></tr>
+    </tbody>
+  </table>
+  <p class="small" style="margin-top:14px">Вечерние — уже после ускорения примерно в 2 раза. Начисление вознаграждения — параллельная версия, 1 ч 04 мин на 20 467 договоров. Сделки пересчитаны через интенсивность на договор (K = 0,865 и 0,251).</p>
+  <p class="proof"><span><b>Вывод.</b> 200 тыс. — цель размера шарда после дожима узких мест, а не факт «одна база уже тянет 200 тыс.». Горизонтальная нарезка нужна в любом случае.</span></p>
+</section>
+
+<!-- 6 -->
+<section class="slide">
+  <p class="kicker">Почему не «просто оптимизировать»</p>
+  <h2>До 1 млн в одной базе не хватает порядка величины</h2>
+  <div class="bar-row"><span>Текущий объём</span><div class="bar"><span class="ok" style="width:2.5%"></span></div><span>25 тыс.</span></div>
+  <div class="bar-row"><span>Предел исполнения сделок</span><div class="bar"><span class="bad" style="width:5%"></span></div><span>50 тыс.</span></div>
+  <div class="bar-row"><span>Предел вечерних регламентов</span><div class="bar"><span class="mid" style="width:14.5%"></span></div><span>145 тыс.</span></div>
+  <div class="bar-row"><span>Планировочный шард</span><div class="bar"><span class="mid" style="width:20%"></span></div><span>200 тыс.</span></div>
+  <div class="bar-row"><span>Сценарий, уже красный</span><div class="bar"><span class="bad" style="width:25%"></span></div><span>250 тыс.</span></div>
+  <div class="bar-row"><span>Цель бизнеса</span><div class="bar"><span class="tgt" style="width:100%"></span></div><span>1 млн</span></div>
+  <div class="row" style="margin-top:22px">
+    <div class="card bad grow"><b>Нужно x40 к текущему объёму</b><p class="small" style="margin:8px 0 0">Вечерние после оптимизации ускорились примерно в 2 раза. До x40 это не масштабируется заменой железа: 10 операций однопоточные.</p></div>
+    <div class="card gold grow"><b>Оптимизация и нарезка — не альтернативы</b><p class="small" style="margin:8px 0 0">Оптимизация поднимает потолок шарда (50→150→200 тыс.). Нарезка даёт N таких шардов. Вместе — 1 млн.</p></div>
+  </div>
+</section>
+
+<!-- 7 -->
+<section class="slide">
+  <p class="kicker">Доказательство 3 — уже сделано у нас</p>
+  <h2>Мидл-офис уже две базы: обычные и РДУ</h2>
+  <div class="two">
+    <div>
+      <p class="lead">Разделение контуров по продукту — не гипотеза, а текущая эксплуатация. Никто не запрещает повторить тот же приём внутри РДУ столько раз, сколько требует объём.</p>
+      <ul class="clean">
+        <li>Обычный контур (HNWI / корп.) и контур Розничного ДУ живут раздельно.</li>
+        <li>Регламенты, выгрузки и сверки уже фильтруются флагом «Розничное ДУ».</li>
+        <li>Поддержка умеет держать две информационные базы одной линейки.</li>
+        <li>Добавить третью, четвёртую, пятую базу РДУ — тот же операционный жест, не новый класс системы.</li>
+      </ul>
+    </div>
+    <div>
+      <div class="card gold" style="margin-bottom:12px"><b>Было</b><p class="small" style="margin:8px 0 0">1 контур МО на все договоры → не масштабируется по рознице.</p></div>
+      <div class="card ok" style="margin-bottom:12px"><b>Стало (факт)</b><p class="small" style="margin:8px 0 0">МО обычные + МО РДУ. Две базы, одна конфигурация мидл-офиса.</p></div>
+      <div class="card teal"><b>Предлагается для ДУ</b><p class="small" style="margin:8px 0 0">ДУ обычные (как есть) + ДУ РДУ-1 + ДУ РДУ-2 + … + ДУ РДУ-N.</p></div>
+    </div>
+  </div>
+  <p class="proof"><span><b>Ключ.</b> Запрета «РДУ может быть только в одной базе» нет ни в конфигурации, ни в платформе, ни в уже принятой схеме контуров.</span></p>
+</section>
+
+<!-- 8 -->
+<section class="slide">
+  <p class="kicker">Доказательство 4 — обмены уже узловые</p>
+  <h2>Фронт-офис уже два получателя. Третий — ещё один узел</h2>
+  <div class="two">
+    <div>
+      <p class="lead">Регламент обходит план обмена «Источники обмена» и для <b>каждого узла</b> вызывает свою команду. Число баз-получателей = число узлов, не правка ядра конфигурации.</p>
+      <table>
+        <thead><tr><th>Контур</th><th>Типичный узел</th></tr></thead>
+        <tbody>
+          <tr><td>Корпоративный ФО</td><td>ВыгрузкаОстатков_ФО</td></tr>
+          <tr><td>Розничный ФО (РДУ)</td><td>ВыгрузкаОстатков_ФОРозн</td></tr>
+          <tr><td>ДУ РДУ база 2, 3, … N</td><td>новый узел того же плана обмена</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="card">
+      <p style="margin:0 0 10px;font-size:16px"><b>Как это устроено сейчас</b></p>
+      <p class="small">Обработчик регламента принимает узел плана обмена «Источники обмена» и запускает назначенный метод. Расписание и адрес веб-сервиса живут на узле, не в коде.</p>
+      <p class="small" style="margin-top:12px">Розничный контур уже смотрит в отдельный WSDL фронт-офиса, корпоративный — в свой. Это и есть доказательство, что «ещё одна база» для платформы обмена — штатное расширение списка, а не проект с нуля.</p>
+    </div>
+  </div>
+  <p class="proof"><span><b>Источник.</b> План обмена «Источники обмена», регламент транспорта обменов, действующие узлы корпоративного и розничного ФО.</span></p>
+</section>
+
+<!-- 9 -->
+<section class="slide">
+  <p class="kicker">Доказательство 5 — платформа 1С</p>
+  <h2>Несколько информационных баз — штатная модель кластера</h2>
+  <div class="three">
+    <div class="card teal"><h3 style="margin:0 0 8px">Кластер держит много ИБ</h3><p class="small">У каждой базы своё имя в кластере и свой идентификатор. Список баз — первая операция администрирования кластера, не обход ограничения.</p></div>
+    <div class="card gold"><h3 style="margin:0 0 8px">Изоляция нагрузки</h3><p class="small">Несколько рабочих процессов как раз для того, чтобы изолировать группы клиентов, работающих с разными информационными базами, и переживать перезапуск процесса.</p></div>
+    <div class="card ok"><h3 style="margin:0 0 8px">Назначение серверов по базе</h3><p class="small">Можно закрепить рабочий сервер за конкретной ИБ, вынести фоновые задания, держать «один процесс — одна база». Это пункты руководства администратора, не кастом.</p></div>
+  </div>
+  <div class="card" style="margin-top:18px">
+    <p style="margin:0;font-size:18px">Конфигурация ДУ 1.5 не содержит запрета «эта ИБ должна быть единственной». Это обычная прикладная конфигурация: её можно загрузить в N информационных баз. Именно так тиражируют 1С по филиалам, юрлицам и контурам.</p>
+  </div>
+  <p class="proof">
+    <span><b>Платформа.</b> Раздел «Масштабируемость кластера»; руководство администратора, клиент-серверный вариант: несколько ИБ, ТНФ по информационным базам.</span>
+  </p>
+</section>
+
+<!-- 10 -->
+<section class="slide">
+  <p class="kicker">Целевая схема</p>
+  <h2>Один контур учёта — N одинаковых баз ДУ 1.5</h2>
+  <div class="flow">
+    <div class="flow-row cols2">
+      <div class="box"><h3>Кабинет / 1С:ДО / CRM</h3><p>создание договора и карточки клиента</p></div>
+      <div class="box"><h3>Котировки, НДЦ, справочник ЦБ</h3><p>не зависят от числа договоров; копия в каждую базу (~3 мин)</p></div>
+    </div>
+    <div class="chevr">новые договоры получают номер базы</div>
+    <div class="box gold">
+      <h3>Маршрутизатор</h3>
+      <p>пока база ниже порога — пишем в неё; выше порога — открываем следующую. Живой договор не переезжает</p>
+    </div>
+    <div class="chevr">N одинаковых информационных баз одной конфигурации ДУ 1.5</div>
+    <div class="shards">
+      <div class="shard"><b>ДУ 1.5</b><span>РДУ-1<br>до порога</span></div>
+      <div class="shard"><b>ДУ 1.5</b><span>РДУ-2<br>до порога</span></div>
+      <div class="shard"><b>ДУ 1.5</b><span>РДУ-3<br>до порога</span></div>
+      <div class="shard"><b>ДУ 1.5</b><span>РДУ-4<br>до порога</span></div>
+      <div class="shard"><b>ДУ 1.5</b><span>РДУ-N</span></div>
+    </div>
+    <div class="chevr">обмен — отдельный узел на каждую базу, как уже сделано для ФО</div>
+    <div class="flow-row cols4">
+      <div class="box"><h3>МО обычные</h3><p>контур как сейчас</p></div>
+      <div class="box teal"><h3>МО РДУ</h3><p>узлы на каждую базу ДУ</p></div>
+      <div class="box"><h3>ФО корп.</h3><p>ВыгрузкаОстатков_ФО</p></div>
+      <div class="box teal"><h3>ФО РДУ</h3><p>ВыгрузкаОстатков_ФОРозн + узлы шардов</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- 11 -->
+<section class="slide">
+  <p class="kicker">Правило заполнения</p>
+  <h2>Не режем живых клиентов. Открываем следующую базу</h2>
+  <div class="two">
+    <div>
+      <ul class="clean">
+        <li>База РДУ-1 принимает новые договоры, пока живых не станет больше порога.</li>
+        <li>Следующий новый клиент открывается в РДУ-2. РДУ-1 продолжает жить и обслуживать своих.</li>
+        <li>Перенос договора между базами не делаем: это ломает историю, остатки и налоговый контур.</li>
+        <li>Идентификатор шарда хранится рядом с договором (в карточке / в ДО / в маршрутизаторе) — один раз при создании.</li>
+      </ul>
+    </div>
+    <div class="card gold">
+      <p style="margin:0 0 8px;font-size:15px;letter-spacing:.08em;text-transform:uppercase;color:var(--gold)">Почему так безопаснее миграции</p>
+      <p style="margin:0;font-size:17px;line-height:1.45">Миграция 200 тыс. договоров — отдельный многомесячный проект с риском остатков. «Новых — в новую базу» включается за дни: копия конфигурации, узел обмена, правило маршрута.</p>
+    </div>
+  </div>
+  <p class="proof"><span><b>Следствие.</b> Число баз растёт ступеньками вместе с бизнесом. Не нужно сразу поднимать все пять под 1 млн.</span></p>
+</section>
+
+<!-- 12 -->
+<section class="slide">
+  <p class="kicker">Граница шарда</p>
+  <h2>Что режется по клиенту, что остаётся общим</h2>
+  <div class="two">
+    <div class="card ok">
+      <h3 style="margin:0 0 10px">Внутри шарда (растёт с клиентами)</h3>
+      <ul class="clean">
+        <li>Договоры ДУ, карточки, аналитика ВУ</li>
+        <li>Сделки, выписки, поручения</li>
+        <li>Утренние и вечерние регламенты, СЧА/РСА</li>
+        <li>Вознаграждение, отчёты 482-П по договору</li>
+        <li>Расторжения, сетап счетов</li>
+      </ul>
+    </div>
+    <div class="card gold">
+      <h3 style="margin:0 0 10px">Общее / дешёвая копия в каждую базу</h3>
+      <ul class="clean">
+        <li>Котировки и контроль котировок — не зависят от числа договоров</li>
+        <li>Справочник инструментов, НДЦ</li>
+        <li>Сверка ЕРС (десяток счетов, не клиенты)</li>
+        <li>Релизы конфигурации и внешних обработок</li>
+        <li>Свод для регулятора и кабинета — сборка снаружи (МО / витрина)</li>
+      </ul>
+    </div>
+  </div>
+  <p class="proof"><span><b>Замер котировок.</b> 3,2 мин утренний сеанс, объём ~3 600 инструментов. Повторить в пяти базах — минуты, не часы. Это не аргумент против N баз.</span></p>
+</section>
+
+<!-- 13 -->
+<section class="slide">
+  <p class="kicker">Арифметика</p>
+  <h2>Сколько баз нужно на 1 млн</h2>
+  <div class="calc">
+    <p style="margin:0 0 8px">Порог одной базы, тыс. договоров</p>
+    <input id="cap" type="range" min="50" max="250" step="10" value="200">
+    <div class="calc-out">
+      <div>
+        <div class="big" id="nBases">5</div>
+        <div class="small">информационных баз ДУ 1.5</div>
+      </div>
+      <div class="grow">
+        <p style="margin:8px 0 0;font-size:20px" id="nText">1 000 000 / 200 000 = 5 баз. Пятая открывается, когда четвёртая заполнена.</p>
+        <p class="small" id="nHint" style="margin-top:10px"></p>
+      </div>
+    </div>
+  </div>
+  <div class="row" style="margin-top:16px">
+    <div class="card grow"><b>100–150 тыс.</b><div class="c">консервативно по вечерним регламентам и вознаграждению: 7–10 баз</div></div>
+    <div class="card gold grow"><b>200 тыс.</b><div class="c">планировочный модуль: 5 баз. Нужен дожим сделок и выписок внутри шарда</div></div>
+    <div class="card bad grow"><b>одна база на 1 млн</b><div class="c">не сходится ни при каком пороге из таблицы замеров</div></div>
+  </div>
+</section>
+
+<!-- 14 -->
+<section class="slide paper">
+  <p class="kicker">Юридически-технический запрет</p>
+  <h2>Кто мог бы запретить N баз РДУ — и почему не запрещает</h2>
+  <table>
+    <thead><tr><th>Слой</th><th>Есть ли запрет</th><th>Факт</th></tr></thead>
+    <tbody>
+      <tr><td>Платформа 1С:Предприятие</td><td><span class="tag ok">нет</span></td><td>Кластер создан обслуживать много информационных баз; изоляция процессов по ИБ — штатная рекомендация.</td></tr>
+      <tr><td>Конфигурация ДУ 1.5</td><td><span class="tag ok">нет</span></td><td>Обычная прикладная ИБ. Нет свойства «единственный экземпляр». Та же CF ставится сколько угодно раз.</td></tr>
+      <tr><td>План обмена МО / ФО</td><td><span class="tag ok">нет</span></td><td>Получатель — узел. Два узла ФО уже в проде; N-й узел добавляется настройкой.</td></tr>
+      <tr><td>Продуктовая модель</td><td><span class="tag ok">нет</span></td><td>РДУ уже отделён от обычного ДУ. Внутри РДУ тот же принцип: отдельный контур = отдельная база.</td></tr>
+      <tr><td>Эксплуатация</td><td><span class="tag ok">нет</span></td><td>Две базы МО (обычные и РДУ) — прецедент. Релизный поезд один, экземпляров несколько.</td></tr>
+      <tr><td>Лицензии и железо</td><td><span class="tag warn">это стоимость</span></td><td>Не запрет архитектуры. Лицензии клиент-сервер и SQL считаются на экземпляр — статья бюджета, не «нельзя».</td></tr>
+    </tbody>
+  </table>
+  <p class="proof"><span><b>Формула.</b> «Никто не запрещает много баз РДУ» = нет технического инварианта «РДУ обязан жить в одной ИБ». Инвариант противоположный: одна ИБ обслуживает ограниченный объём.</span></p>
+</section>
+
+<!-- 15 -->
+<section class="slide">
+  <p class="kicker">Честный контур рисков</p>
+  <h2>Что нужно спроектировать — и что уже не риск</h2>
+  <div class="two">
+    <div>
+      <div class="card" style="margin-bottom:12px"><b>Маршрут нового клиента</b><p class="small" style="margin:8px 0 0">Одно правило в ДО / кабинете / шине: «текущая база РДУ-k, если заполнена — РДУ-(k+1)». Делается один раз при создании договора.</p></div>
+      <div class="card" style="margin-bottom:12px"><b>Сводная отчётность</b><p class="small" style="margin:8px 0 0">Отчёт по одному договору остаётся в своей базе. Свод по всем шардам — витрина МО или отдельный контур сборки, не «все клиенты в одной ДУ».</p></div>
+      <div class="card"><b>Дожим шарда до 200 тыс.</b><p class="small" style="margin:8px 0 0">Сделки (предел 50–74) и выписки (94) всё равно требуют оптимизации внутри каждой базы. Нарезка не отменяет эту работу — она делает её конечной.</p></div>
+    </div>
+    <div>
+      <div class="card ok" style="margin-bottom:12px"><b>Не риск: котировки N раз</b><p class="small" style="margin:8px 0 0">Операции, не зависящие от клиентов, дёшевы. Дублирование справочника ЦБ — штатная плата за изоляцию.</p></div>
+      <div class="card ok" style="margin-bottom:12px"><b>Не риск: «другая конфигурация»</b><p class="small" style="margin:8px 0 0">Все шарды — ДУ 1.5. Один комплект доработок, один комплект внешних обработок, одно регрессионное ядро.</p></div>
+      <div class="card ok"><b>Не риск: «платформа не умеет»</b><p class="small" style="margin:8px 0 0">Умеет. Документация кластера прямо описывает много ИБ и привязку рабочих серверов к выбранным базам.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- 16 -->
+<section class="slide paper">
+  <p class="kicker">Сравнение вариантов</p>
+  <h2>Почему N баз ДУ 1.5 выигрывает у альтернатив</h2>
+  <table class="compare">
+    <thead>
+      <tr><th>Вариант</th><th>1 млн договоров</th><th>Срок до первого эффекта</th><th>Риск</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Одна база ДУ 1.5 «дожать оптимизацией»</td>
+        <td><span class="tag bad">не сходится</span></td>
+        <td>годы, без гарантии</td>
+        <td>6 операций красные уже на 250 тыс.; 10 однопоточных</td>
+      </tr>
+      <tr>
+        <td>Вертикаль: больше CPU / RAM / потоков</td>
+        <td><span class="tag warn">частично</span></td>
+        <td>месяцы</td>
+        <td>Не лечит однопоточные сверки и окна расписания; потоки ДУ не подтверждены нагрузочно</td>
+      </tr>
+      <tr>
+        <td>Миграция всего РДУ на ДУ ред. 2</td>
+        <td><span class="tag warn">другой проект</span></td>
+        <td>крупная миграция</td>
+        <td>Не доказано, что ред. 2 тянет 1 млн в одной базе; смена контура учёта</td>
+      </tr>
+      <tr class="win">
+        <td><b>N баз ДУ 1.5 по порогу</b></td>
+        <td><span class="tag ok">сходится</span></td>
+        <td>первая новая база — недели после решения</td>
+        <td>Управляемый: маршрут, узлы обмена, свод. Прецедент — две базы МО</td>
+      </tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- 17 -->
+<section class="slide">
+  <p class="kicker">Решение</p>
+  <h2>Что предлагается принять</h2>
+  <div class="three">
+    <div class="card gold"><div class="n">1</div><div class="c"><b>Архитектурный принцип.</b> Розничное ДУ масштабируется числом информационных баз ДУ 1.5, а не попыткой уместить всех клиентов в одну.</div></div>
+    <div class="card teal"><div class="n">2</div><div class="c"><b>Правило порога.</b> Новые договоры идут в текущую базу РДУ, пока она ниже порога. Выше порога — открывается следующая база. Живых не мигрируем.</div></div>
+    <div class="card ok"><div class="n">3</div><div class="c"><b>Порог калибруется.</b> Стартовый ориентир 200 тыс. Фактический размер шарда фиксируется по узким местам после дожима сделок и выписок.</div></div>
+  </div>
+  <div class="card" style="margin-top:18px">
+    <p style="margin:0 0 8px;font-size:18px"><b>Ближайшие шаги после «да»</b></p>
+    <p class="small" style="margin:0">1) Зафиксировать ключ маршрута договора (какая база). 2) Шаблон развёртывания «ещё одна ИБ ДУ 1.5 + узел обмена МО/ФО». 3) Продолжить оптимизацию внутри шарда по сделкам и выпискам — это поднимает порог и уменьшает N. 4) Описать свод отчётности с нескольких баз, не требуя обратной склейки учёта.</p>
+  </div>
+</section>
+
+<!-- 18 -->
+<section class="slide paper">
+  <p class="kicker">Приложение — откуда цифры</p>
+  <h2>Доказательная база, которую можно проверить</h2>
+  <table>
+    <thead><tr><th>Утверждение</th><th>Чем подтверждено</th></tr></thead>
+    <tbody>
+      <tr><td>6 операций не выдерживают 250 тыс. в одной базе</td><td>Сводка ключевых операций Розничного ДУ (IMDEV-9393): ПРОД, 26 273 замера, 28.07–02.09.2026; предел = окно / стоимость единицы объёма</td></tr>
+      <tr><td>Текущий объём порядка 22–25 тыс. договоров РДУ</td><td>Сценарий x10 в той же сводке; полный отбор РДУ на прогоне СЧА/РСА — 21 993 договора</td></tr>
+      <tr><td>Вечерние уже ускоряли, и всё равно предел ~145 тыс.</td><td>Замер после оптимизации фоновых регламентов; окно 180 мин</td></tr>
+      <tr><td>Котировки не зависят от числа клиентов</td><td>Та же сводка: объём ~3 600 инструментов, длительность 3,2 / 2,7 мин, прогноз x10 = как сейчас</td></tr>
+      <tr><td>МО и ФО уже разделены на обычные и РДУ</td><td>Две базы мидл-офиса; два узла выгрузки остатков в ФО (корпоративный и розничный WSDL)</td></tr>
+      <tr><td>Добавить базу = добавить узел, не переписывать ядро</td><td>Регламент транспорта обменов вызывается с узлом плана обмена «Источники обмена»</td></tr>
+      <tr><td>Платформа разрешает N информационных баз</td><td>Документация 1С: кластер, масштабируемость, требования назначения функциональности по информационным базам</td></tr>
+    </tbody>
+  </table>
+  <p class="proof"><span>Документ для архитектурного решения. Цифры пределов — снимок на дату сводки ключевых операций; при изменении окон расписания пересчитывается порог шарда, не сам принцип N баз.</span></p>
+</section>
+
+</div>
+
+<div class="nav">
+  <button class="nav-btn" id="prev" type="button">Назад</button>
+  <div class="dots" id="dots"></div>
+  <div><span id="idx">1</span> / <span id="total">0</span> &nbsp; стрелки · пробел · PageUp/PageDown</div>
+  <button class="nav-btn" id="next" type="button">Вперёд</button>
+</div>
+
+<script>
+(function () {
+  var slides = Array.prototype.slice.call(document.querySelectorAll(".slide"));
+  var dots = document.getElementById("dots");
+  var idxEl = document.getElementById("idx");
+  var totalEl = document.getElementById("total");
+  var progress = document.getElementById("progress");
+  var i = 0;
+  totalEl.textContent = String(slides.length);
+
+  slides.forEach(function (_, n) {
+    var b = document.createElement("button");
+    b.type = "button";
+    b.addEventListener("click", function () { go(n); });
+    dots.appendChild(b);
+  });
+
+  function go(n) {
+    if (n < 0 || n >= slides.length) return;
+    slides[i].classList.remove("on");
+    i = n;
+    slides[i].classList.add("on");
+    idxEl.textContent = String(i + 1);
+    progress.style.width = ((i / (slides.length - 1)) * 100) + "%";
+    Array.prototype.forEach.call(dots.children, function (d, k) {
+      d.className = k === i ? "on" : "";
+    });
+  }
+
+  document.getElementById("prev").onclick = function () { go(i - 1); };
+  document.getElementById("next").onclick = function () { go(i + 1); };
+
+  document.addEventListener("keydown", function (e) {
+    if (e.key === "ArrowRight" || e.key === "PageDown" || e.key === " " || e.key === "Enter") {
+      e.preventDefault(); go(i + 1);
+    } else if (e.key === "ArrowLeft" || e.key === "PageUp" || e.key === "Backspace") {
+      e.preventDefault(); go(i - 1);
+    } else if (e.key === "Home") { go(0); }
+    else if (e.key === "End") { go(slides.length - 1); }
+  });
+
+  document.getElementById("deck").addEventListener("click", function (e) {
+    if (e.target.closest("button, input, a, .dots")) return;
+    var x = e.clientX / window.innerWidth;
+    if (x > 0.72) go(i + 1);
+    else if (x < 0.28) go(i - 1);
+  });
+
+  var wheelLock = false;
+  document.addEventListener("wheel", function (e) {
+    if (wheelLock) return;
+    if (Math.abs(e.deltaY) < 40) return;
+    wheelLock = true;
+    go(e.deltaY > 0 ? i + 1 : i - 1);
+    setTimeout(function () { wheelLock = false; }, 420);
+  }, { passive: true });
+
+  var cap = document.getElementById("cap");
+  var nBases = document.getElementById("nBases");
+  var nText = document.getElementById("nText");
+  var nHint = document.getElementById("nHint");
+  function upd() {
+    var c = parseInt(cap.value, 10);
+    var n = Math.ceil(1000 / c);
+    nBases.textContent = String(n);
+    nText.textContent = "1 000 000 / " + c.toLocaleString("ru-RU") + " 000 = " + n +
+      (n === 1 ? " база." : " баз.") + " Следующая открывается, когда текущая заполнена.";
+    var hint = "";
+    if (c <= 90) hint = "В этой зоне уже лежат пределы сделок и выписок по текущим замерам. Оптимизация внутри шарда всё равно нужна, иначе даже мелкая нарезка не спасёт дневное окно.";
+    else if (c <= 150) hint = "Близко к пределу вечерних регламентов и начисления вознаграждения. Консервативный шард: больше баз, меньше сюрпризов по окну 3 часа.";
+    else if (c <= 200) hint = "Планировочный модуль. Чтобы шард реально держал 200 тыс., внутри каждой базы нужно подтянуть сделки и выписки (сейчас 50–94 тыс.).";
+    else hint = "Выше 200 тыс. сводка ключевых операций уже красная по шести операциям. Ставить такой порог можно только после новых замеров, не по желанию.";
+    nHint.textContent = hint;
+  }
+  cap.addEventListener("input", upd);
+  upd();
+  go(0);
+})();
+</script>
+</body>
+</html>
