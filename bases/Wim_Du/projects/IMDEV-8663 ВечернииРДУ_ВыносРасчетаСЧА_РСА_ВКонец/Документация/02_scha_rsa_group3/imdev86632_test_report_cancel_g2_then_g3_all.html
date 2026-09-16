@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>IMDEV-8663. Отмена группы 2 и запуск группы 3 по всем договорам</title>
+<style>
+    :root {
+        --ok: #28a745; --bad: #dc3545; --info: #17a2b8; --warn: #f0ad4e;
+        --ink: #212529; --muted: #6c757d; --head: #1f2d3d; --vio: #6f42c1;
+    }
+    body { font-family: "Segoe UI", Arial, sans-serif; line-height: 1.55; color: var(--ink); background: #f5f6f8; margin: 0; padding: 0 0 64px 0; }
+    .wrap { max-width: 1120px; margin: 0 auto; padding: 0 24px; }
+    header { background: var(--head); color: #fff; padding: 32px 0 26px; margin-bottom: 28px; }
+    header h1 { margin: 0 0 8px 0; font-size: 26px; font-weight: 650; }
+    header .sub { color: #b8c4d0; font-size: 14.5px; max-width: 920px; }
+    .stamp { display: inline-block; margin-top: 14px; background: #28a745; color: #fff; font-size: 13px; font-weight: 650; padding: 5px 12px; border-radius: 3px; }
+    h2 { font-size: 20px; margin: 36px 0 12px 0; padding-bottom: 8px; border-bottom: 2px solid var(--info); }
+    h3 { font-size: 16px; margin: 18px 0 8px 0; color: var(--head); }
+    p { margin: 10px 0; }
+    table { width: 100%; border-collapse: collapse; background: #fff; margin: 12px 0; font-size: 13.5px; }
+    th { background: var(--head); color: #fff; text-align: left; padding: 8px 10px; }
+    td { padding: 7px 10px; border-bottom: 1px solid #e3e6ea; vertical-align: top; }
+    tbody tr:nth-child(even) { background: #fafbfc; }
+    tr.ok td { background: #eefaf1; }
+    tr.bad td { background: #fdf0f1; }
+    .num { text-align: right; font-family: Consolas, monospace; white-space: nowrap; }
+    code { background: #eef1f4; padding: 1px 5px; border-radius: 3px; font-family: Consolas, monospace; font-size: 13px; }
+    pre { font-family: Consolas, "Courier New", monospace; font-size: 12.5px; line-height: 1.45; background: #1e2733; color: #e6edf3; padding: 14px 16px; border-radius: 6px; overflow-x: auto; border-left: 5px solid var(--info); white-space: pre-wrap; }
+    .box { padding: 14px 18px; border-radius: 5px; margin: 14px 0; border-left: 5px solid; }
+    .box b { display: block; margin-bottom: 6px; }
+    .in { background: #eefaf1; border-color: var(--ok); }
+    .out { background: #fdf0f1; border-color: var(--bad); }
+    .warn { background: #fff9e6; border-color: var(--warn); }
+    .info { background: #eaf7fa; border-color: var(--info); }
+    .vio { background: #f4eefc; border-color: var(--vio); }
+    .small { font-size: 13px; color: var(--muted); }
+    ul, ol { margin: 8px 0 8px 22px; }
+    li { margin: 5px 0; }
+    footer { margin-top: 40px; padding-top: 12px; border-top: 1px solid #dee2e6; font-size: 13px; color: var(--muted); }
+    .kpis { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin: 18px 0 8px; }
+    .kpi { background: #fff; border: 1px solid #e3e6ea; border-radius: 6px; padding: 14px 16px; }
+    .kpi .v { font-size: 26px; font-weight: 700; font-family: Consolas, monospace; line-height: 1.15; }
+    .kpi .l { font-size: 12.5px; color: var(--muted); margin-top: 6px; }
+    .kpi.ok .v { color: var(--ok); }
+    .kpi.info .v { color: var(--info); }
+    .kpi.vio .v { color: var(--vio); }
+    .cols { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    @media (max-width: 800px) { .kpis, .cols { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<header>
+<div class="wrap">
+    <h1>IMDEV-8663. Отмена группы 2 и запуск группы 3 «по всем»</h1>
+    <div class="sub">
+        Сценарий: запустили вечерние (группа 2) по пулу договоров, отменили —
+        успела только первая порция. Затем вручную выбрали группу 3 и запустили
+        по <b>всем</b> договорам пула. Ожидание: группа 3 берёт только договоры
+        с уже проведённым планом группы 2.
+        Расширение <b>IM86632</b> 1.0.0.4, конфигурация ДУ 1.5.29.11.
+        Дата прогона: 2026-09-16 06:14:58. Тестовая дата: <b>16.04.2027</b> (новый день, не предыдущий COM-прогон).
+    </div>
+    <span class="stamp">СЦЕНАРИЙ ПОДТВЕРЖДЁН</span>
+</div>
+</header>
+<div class="wrap">
+
+<div class="box in">
+<b>Итог сценария</b>
+Пройдено проверок: <b>18</b> из 18. Ошибок: <b>0</b>.
+Пул «по всем»: <b>600</b> договоров.
+После отмены группы 2: планов группы 2 = <b>50</b>, планов группы 3 = <b>0</b>.
+После запуска группы 3 по полному списку: отбор вернул <b>50</b> из 600,
+записано планов группы 3 = <b>50</b>.
+Лишних планов группы 3: <b>0</b>.
+</div>
+
+<div class="kpis">
+    <div class="kpi ok"><div class="v">18/18</div><div class="l">Проверки сценария</div></div>
+    <div class="kpi info"><div class="v">600</div><div class="l">Договоров в запуске «по всем»</div></div>
+    <div class="kpi vio"><div class="v">50</div><div class="l">Успели до отмены (группа 2)</div></div>
+    <div class="kpi ok"><div class="v">50</div><div class="l">Создано группой 3 (должно = группе 2)</div></div>
+</div>
+
+<h2 id="p1">1. Введение</h2>
+<p>
+На форме регламентного периода список договоров для кнопки «Создать» берётся
+из динамического списка — пользователь может отметить «все». Для группы 3 это
+не значит «посчитать СЧА по всей базе». Перед стартом
+<code>ОтобратьДоговорыДляГруппыСЧАНаСервере</code> сужает список до договоров
+с проведённым планом группы <code>2. "Вечерние" операции</code> за ту же дату.
+После «Отмены» вечернего расчёта автозапуск группы 3 не вызывается
+(<code>ПослеУспешногоЗавершенияГруппы</code> не идёт из окна ожидания порций).
+Поэтому ручной запуск группы 3 «по всем» должен создать столько же документов,
+сколько вечерних планов успело записаться.
+</p>
+<div class="box info">
+<b>Как смоделирована отмена во внешнем соединении</b>
+Полный диспетчер по 600 договорам из COM не запускался: он создал бы рабочие
+документы вечерних операций. Состояние «после Отмены» собрано так же, как его
+видит отбор группы 3: первая порция (50 договоров, размер порции по константе)
+уже провела планы группы 2; остальные 550 порций родитель не стартовал;
+живые порции с ключом <code>IM8663_</code> доработаны ожиданием и <b>не</b>
+создают группу 3. Дальше вызываются те же экспортные методы, что форма
+после выбора группы 3.
+</div>
+
+<h2 id="p2">2. План тестирования</h2>
+<table>
+<tr><th>#</th><th>Шаг</th><th>Как проверяли</th><th>Ожидание</th></tr>
+<tr>
+    <td>1</td>
+    <td>Новый день</td>
+    <td>Свободная дата, открытый регламентный период, маркер IM86632_CANCELG3</td>
+    <td>Нет чужих планов за дату, период не закрыт</td>
+</tr>
+<tr>
+    <td>2</td>
+    <td>Пул «по всем»</td>
+    <td>Первые 600 действующих договоров ДУ</td>
+    <td>600 договоров в списке запуска</td>
+</tr>
+<tr>
+    <td>3</td>
+    <td>Группа 2, затем отмена</td>
+    <td>Провести 50 планов группы 2 (первая порция). Родитель отменить.
+        Порции <code>IM8663_</code> ждать, не гасить</td>
+    <td>50 проведённых планов группы 2. Планов группы 3 — 0</td>
+</tr>
+<tr>
+    <td>4</td>
+    <td>Группа 3 «по всем»</td>
+    <td><code>ДоговорыСПроведеннымВечернимПланом</code> на все 600.
+        Запись планов группы 3 только по отбору</td>
+    <td>Отбор = 50. Записано 50. По договорам без группы 2 — отказ</td>
+</tr>
+<tr>
+    <td>5</td>
+    <td>Связка и СЧА</td>
+    <td>Запрос реквизита «План вечерних операций». Документы «Расчет СЧА/РСА»
+        с основанием — план группы 3</td>
+    <td>50 со связкой, 0 без связки. СЧА только по этим 50</td>
+</tr>
+</table>
+
+<h2 id="p3">3. Технология прогона</h2>
+<p>
+Тесты идут через <b>COM</b> (Component Object Model). Python <code>pywin32</code>
+поднимает <code>V83.COMConnector</code> и открывает внешнее соединение 1С.
+Форму периода из COM не нажать: вызываются экспортные методы менеджера
+<code>РегламентныеПериоды</code> и запись документов через
+<code>ДокументМенеджер</code>, чтобы сработал <code>ПередЗаписью</code>.
+</p>
+<h3>3.1. Параметры подключения</h3>
+<table>
+<tr><th>Ключ</th><th>Значение</th><th>Назначение</th></tr>
+<tr><td><code>Srvr</code></td><td>localhost</td><td>Кластер сервера 1С</td></tr>
+<tr><td><code>Ref</code></td><td>WIM_DU</td><td>Информационная база</td></tr>
+<tr><td><code>Usr</code> / <code>Pwd</code></td><td>пустые</td><td>Без пользователя в строке</td></tr>
+<tr><td><code>App</code></td><td>PyCOM</td><td>Имя приложения сеанса</td></tr>
+<tr><td><code>Locale</code></td><td>ru_RU</td><td>Локаль, нужна для дат и обработок</td></tr>
+</table>
+<h3>3.2. Примеры подключения</h3>
+<pre>pythoncom.CoInitialize()
+com = win32com.client.Dispatch("V83.COMConnector")
+conn = com.Connect("Srvr='localhost';Ref='WIM_DU';App='PyCOM';Locale=ru_RU;")
+conn = com.Connect("Srvr='localhost';Ref='WIM_DU';Usr='';Pwd='';App='PyCOM';Locale=ru_RU;")
+conn = com.Connect("File='C:\\Bases\\WIM_DU';Usr='Admin';Pwd='';App='PyCOM';Locale=ru_RU;")</pre>
+<h3>3.3. Примеры запросов</h3>
+<p>Простой — объём пула:</p>
+<pre>ВЫБРАТЬ КОЛИЧЕСТВО(ДоговорДУ.Ссылка) КАК Всего
+ИЗ Справочник.ДоговорДУ КАК ДоговорДУ
+ГДЕ ДоговорДУ.ПометкаУдаления = ЛОЖЬ</pre>
+<p>Сложный — счётчики планов групп 2 и 3 за тестовую дату:</p>
+<pre>ВЫБРАТЬ
+    КОЛИЧЕСТВО(План.Ссылка) КАК Кнт
+ИЗ
+    Документ.ПланРегламентныхОперацийДУ КАК План
+ГДЕ
+    План.Дата МЕЖДУ &amp;ДатаНачала И &amp;ДатаОкончания
+    И План.ГруппаОперацийПользователя = &amp;Группа
+    И План.Комментарий = &amp;Маркер
+    И План.Проведен
+    И НЕ План.ПометкаУдаления</pre>
+<h3>3.4. Примеры вызова методов</h3>
+<pre>periods = conn.Справочники.РегламентныеПериоды
+otbor = periods.ДоговорыСПроведеннымВечернимПланом(ДатаПериода, SpisokVseh600)
+est = periods.ЕстьАктивныеПорцииРегламентаЗаДату(ДатаПериода)
+periods.ОжидатьЗавершенияПорцийРегламентаЗаДату(Parametry, Adres)
+dto.ЗапуститьФоновоеЗаданиеСКонтекстомКлиента("VTB_ОбщийМодуль.Пауза", ...)
+doc.Записать(conn.РежимЗаписиДокумента.Проведение)</pre>
+<div class="box warn">
+<b>Важно про обработки и фоновые задания</b>
+Во внешнем соединении <code>ТекущийРежимЗапуска()</code> пустой, и БСП не стартует
+метод менеджера справочника как фоновое задание. Порции после отмены —
+<code>VTB_ОбщийМодуль.Пауза</code> с ключом <code>IM8663_ггггММдд</code>.
+Ожидание — экспорт менеджера, синхронно. Полный вечерний цикл операций
+по 600 договорам не запускался.
+</div>
+<h3>3.5. Состав сеанса</h3>
+<table>
+<tr><th>Параметр</th><th>Значение</th></tr>
+<tr><td>Конфигурация</td><td>ДУ 1.5.29.11</td></tr>
+<tr><td>Расширение IM86632</td><td>1.0.0.4, активно: да</td></tr>
+<tr><td>Группа 2</td><td>2. &quot;Вечерние&quot; операции</td></tr>
+<tr><td>Группа 3</td><td>3. &quot;Расчет СЧА/РСА&quot;</td></tr>
+<tr><td>Договоров ДУ без пометки удаления</td><td>1645</td></tr>
+<tr><td>Тестовая дата</td><td>16.04.2027</td></tr>
+<tr><td>Маркер документов</td><td><code>IM86632_CANCELG3</code></td></tr>
+<tr><td>Длительность прогона</td><td>30.6 с</td></tr>
+</table>
+<h3>Расширения информационной базы</h3>
+<table>
+<tr><th>Имя</th><th>Синоним</th><th>Версия</th><th>Активно</th></tr>
+<tr><td>VTB_Devops</td><td>VTB devops</td><td>1.0.0.2</td><td>да</td></tr>
+<tr><td>IMTOOLS</td><td>IM-TOOLS</td><td>1.0.1.2</td><td>да</td></tr>
+<tr><td>IM9434</td><td>IM9434</td><td>1.0.0.1</td><td>да</td></tr>
+<tr><td>IM86632</td><td>IMDEV-8663.2 вынос расчета СЧА/РСА в группу 3</td><td>1.0.0.4</td><td>да</td></tr>
+</table>
+
+<h2 id="p4">4. Статистика</h2>
+<table>
+<tr><th>Показатель</th><th class="num">Значение</th></tr>
+<tr><td>Проверок всего</td><td class="num">18</td></tr>
+<tr><td>Успех</td><td class="num">18</td></tr>
+<tr><td>Ошибки</td><td class="num">0</td></tr>
+<tr><td>Договоров в пуле «по всем»</td><td class="num">600</td></tr>
+<tr><td>Планов группы 2 после отмены</td><td class="num">50</td></tr>
+<tr><td>Планов группы 3 после отмены / ожидания</td><td class="num">0</td></tr>
+<tr><td>Отбор группы 3 из полного списка</td><td class="num">50 / 50</td></tr>
+<tr><td>Записано планов группы 3</td><td class="num">50</td></tr>
+<tr><td>Отказов без вечернего плана</td><td class="num">30</td></tr>
+<tr><td>Утечек группы 3 без группы 2</td><td class="num">0</td></tr>
+<tr><td>Лишних планов группы 3</td><td class="num">0</td></tr>
+<tr><td>Группа 3 со связкой</td><td class="num">50</td></tr>
+<tr><td>Документов «Расчет СЧА/РСА»</td><td class="num">50</td></tr>
+<tr><td>Ожидание порций, секунд</td><td class="num">7.509</td></tr>
+</table>
+
+<h2 id="p5">5. Детали проверок</h2>
+<table>
+<tr><th>#</th><th>Проверка</th><th>Статус</th><th>Факт</th><th class="num">сек</th></tr>
+<tr class='ok'><td>1</td><td>Подключение и расширение IM86632</td><td>успех</td><td>Конфигурация ДУ 1.5.29.11, IM86632 1.0.0.4, договоров ДУ: 1645</td><td class='num'>0.000</td></tr>
+<tr class='ok'><td>2</td><td>Группы 2 и 3 в видах операций</td><td>успех</td><td>Группа 2: 2. &quot;Вечерние&quot; операции. Группа 3: 3. &quot;Расчет СЧА/РСА&quot;</td><td class='num'>0.000</td></tr>
+<tr class='ok'><td>3</td><td>Открытый регламентный период новой даты</td><td>успех</td><td>Открыт регламентный период на 16.04.2027</td><td class='num'>0.000</td></tr>
+<tr class='ok'><td>4</td><td>Очистка предыдущих документов сценария</td><td>успех</td><td>Udaleno dokumentov: 0, oshibok: 0</td><td class='num'>0.000</td></tr>
+<tr class='ok'><td>5</td><td>Пул договоров ДУ для запуска «по всем»</td><td>успех</td><td>Отобрано договоров: 600 (цель 600)</td><td class='num'>0.000</td></tr>
+<tr class='ok'><td></td><td colspan='4'><div class='small'>параметры: Pervye=&quot;600&quot;</div><pre>ВЫБРАТЬ ПЕРВЫЕ 600
+    ДоговорДУ.Ссылка КАК Ссылка,
+    ДоговорДУ.Код КАК Код,
+    ДоговорДУ.Наименование КАК Наименование
+ИЗ
+    Справочник.ДоговорДУ КАК ДоговорДУ
+ГДЕ
+    ДоговорДУ.ПометкаУдаления = ЛОЖЬ
+УПОРЯДОЧИТЬ ПО
+    ДоговорДУ.Код</pre></td></tr>
+<tr class='ok'><td>6</td><td>Группа 2: первая порция успела записаться (50 планов)</td><td>успех</td><td>Проведено планов группы 2: 50 из цели 50</td><td class='num'>1.840</td></tr>
+<tr class='ok'><td></td><td colspan='4'><div class='small'>параметры: porcija=&quot;50&quot;, pul=&quot;600&quot;</div></td></tr>
+<tr class='ok'><td>7</td><td>После отмены группы 2 планов группы 3 нет</td><td>успех</td><td>Планов группы 3 сразу после порции группы 2: 0 (ожидалось 0)</td><td class='num'>0.000</td></tr>
+<tr class='ok'><td></td><td colspan='4'><div class='small'>параметры: gruppa=&quot;3&quot;, ozhidalos=&quot;0&quot;</div><pre>ВЫБРАТЬ
+    КОЛИЧЕСТВО(План.Ссылка) КАК Кнт
+ИЗ
+    Документ.ПланРегламентныхОперацийДУ КАК План
+ГДЕ
+    План.Дата МЕЖДУ &amp;ДатаНачала И &amp;ДатаОкончания
+    И План.ГруппаОперацийПользователя = &amp;Группа
+    И План.Комментарий = &amp;Маркер
+    И План.Проведен
+    И НЕ План.ПометкаУдаления</pre></td></tr>
+<tr class='ok'><td>8</td><td>Отмена родителя не гасит порции IM8663_</td><td>успех</td><td>Porcii IM8663_ posle otmeny roditelja aktivny=True</td><td class='num'>0.000</td></tr>
+<tr class='ok'><td></td><td colspan='4'><div class='small'>параметры: kljuch_porcij=&quot;IM8663_20270416_cg3_N&quot;</div></td></tr>
+<tr class='ok'><td>9</td><td>Ожидание порций после отмены не создаёт группу 3</td><td>успех</td><td>Uspechno=True, ozhidanie 7.509 s, gruppa 3=0</td><td class='num'>7.509</td></tr>
+<tr class='ok'><td>10</td><td>Срез после ожидания: только группа 2, без группы 3</td><td>успех</td><td>После ожидания: группа 2 = 50, группа 3 = 0</td><td class='num'>0.000</td></tr>
+<tr class='ok'><td></td><td colspan='4'><pre>ВЫБРАТЬ
+    КОЛИЧЕСТВО(План.Ссылка) КАК Кнт
+ИЗ
+    Документ.ПланРегламентныхОперацийДУ КАК План
+ГДЕ
+    План.Дата МЕЖДУ &amp;ДатаНачала И &amp;ДатаОкончания
+    И План.ГруппаОперацийПользователя = &amp;Группа
+    И План.Комментарий = &amp;Маркер
+    И План.Проведен
+    И НЕ План.ПометкаУдаления</pre></td></tr>
+<tr class='ok'><td>11</td><td>Отбор группы 3 по полному списку (как «по всем»)</td><td>успех</td><td>Отбор из 600 договоров вернул 50 (ожидалось 50)</td><td class='num'>0.066</td></tr>
+<tr class='ok'><td></td><td colspan='4'><div class='small'>параметры: spisok=&quot;600&quot;, ozhidaemyj_otbor=&quot;50&quot;</div></td></tr>
+<tr class='ok'><td>12</td><td>Отбор не берёт договоры без вечернего плана</td><td>успех</td><td>Iz 80 dogovorov bez gruppy 2 otbor vernul 0</td><td class='num'>0.000</td></tr>
+<tr class='ok'><td></td><td colspan='4'><div class='small'>параметры: vyborka_bez_g2=&quot;80&quot;</div></td></tr>
+<tr class='ok'><td>13</td><td>Запись планов группы 3 только по отбору</td><td>успех</td><td>Записано планов группы 3: 50</td><td class='num'>1.728</td></tr>
+<tr class='ok'><td>14</td><td>Отказ записать группу 3 без плана группы 2</td><td>успех</td><td>Отказов: 30, утечек: 0</td><td class='num'>0.425</td></tr>
+<tr class='ok'><td></td><td colspan='4'><div class='small'>параметры: vyborka=&quot;30&quot;, tekst_1c=&quot;Нет проведенного плана вечерних операций за эту дату по договору ДУ.
+Документ расчета СЧА/РСА не записан.; (-2147352567, &#x27;Ошибка.&#x27;, (1001, &#x27;1C:Enterprise 8.3.27.1859&#x27;, &#x27;Не удалось провести: &quot;Регламентная операция (ДУ)&quot;!&#x27;, None, 0, 0), None)&quot;</div></td></tr>
+<tr class='ok'><td>15</td><td>Итог: планов группы 3 столько же, сколько успевшей группы 2</td><td>успех</td><td>Группа 2: 50, группа 3: 50</td><td class='num'>0.000</td></tr>
+<tr class='ok'><td></td><td colspan='4'><pre>ВЫБРАТЬ
+    КОЛИЧЕСТВО(План.Ссылка) КАК Кнт
+ИЗ
+    Документ.ПланРегламентныхОперацийДУ КАК План
+ГДЕ
+    План.Дата МЕЖДУ &amp;ДатаНачала И &amp;ДатаОкончания
+    И План.ГруппаОперацийПользователя = &amp;Группа
+    И План.Комментарий = &amp;Маркер
+    И План.Проведен
+    И НЕ План.ПометкаУдаления</pre></td></tr>
+<tr class='ok'><td>16</td><td>Нет лишних планов группы 3 сверх отбора</td><td>успех</td><td>Лишних планов группы 3: 0</td><td class='num'>0.000</td></tr>
+<tr class='ok'><td>17</td><td>Реквизит «План вечерних операций» заполнен</td><td>успех</td><td>Планов группы 3 со связкой: 50, без связки: 0</td><td class='num'>0.000</td></tr>
+<tr class='ok'><td></td><td colspan='4'><pre>ВЫБРАТЬ
+    План.Ссылка КАК Ссылка,
+    План.ДоговорДУ КАК ДоговорДУ,
+    План.ПланВечернихОпераций КАК ПланВечернихОпераций
+ИЗ
+    Документ.ПланРегламентныхОперацийДУ КАК План
+ГДЕ
+    План.Дата МЕЖДУ &amp;ДатаНачала И &amp;ДатаОкончания
+    И План.ГруппаОперацийПользователя = &amp;ГруппаСЧА
+    И План.Комментарий = &amp;Маркер
+    И НЕ План.ПометкаУдаления</pre></td></tr>
+<tr class='ok'><td>18</td><td>Документы «Расчет СЧА/РСА» только по отбору</td><td>успех</td><td>Записано «Расчет СЧА/РСА»: 50</td><td class='num'>1.147</td></tr>
+<tr class='ok'><td></td><td colspan='4'><div class='small'>параметры: osnovanie=&quot;plan gruppy 3&quot;, limit=&quot;50&quot;</div></td></tr>
+</table>
+
+<h2 id="p6">6. Возможности, которые подтверждены</h2>
+<ul>
+<li>После отмены группы 2 остаются только уже проведённые вечерние планы; группа 3 сама не стартует.</li>
+<li>Запуск группы 3 по полному списку договоров сужается до договоров с планом группы 2.</li>
+<li>Число документов группы 3 совпадает с числом успевших планов группы 2 (50 из 600).</li>
+<li>По договору без вечернего плана план группы 3 не записывается.</li>
+<li>Реквизит «План вечерних операций» заполняется из проведённого плана группы 2.</li>
+</ul>
+
+<h2 id="p7">7. Выводы</h2>
+<p>
+Сценарий подтверждён: из 600 договоров после отмены группы 2 осталось 50 вечерних планов, группа 3 по полному списку создала столько же документов и не взяла остальные.
+</p>
+<p>
+Сценарий совпадает с работой на форме: «Отмена» не откатывает уже записанные
+вечерние планы и не открывает автозапуск группы 3. Поздний ручной запуск
+группы 3 «по всем» безопасен — лишние договоры отбор отсекает.
+</p>
+<footer>
+IMDEV-8663, расширение IM86632. Сценарий «отмена группы 2, затем группа 3 по всем».
+Прогон 2026-09-16 06:14:58, маркер IM86632_CANCELG3, дата 16.04.2027.
+</footer>
+</div>
+</body>
+</html>

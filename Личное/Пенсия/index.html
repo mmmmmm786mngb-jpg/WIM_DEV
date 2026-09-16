@@ -1,0 +1,1259 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Пенсия: выгоднее выйти в 55 или в 75</title>
+    <style>
+        :root {
+            --success: #28a745;
+            --danger: #dc3545;
+            --info: #17a2b8;
+            --primary: #1b4f72;
+            --primary-dark: #0e2f44;
+            --accent: #c0392b;
+            --bg: #f3f6f9;
+            --card: #ffffff;
+            --text: #1f2d3a;
+            --muted: #6c757d;
+            --border: #d9e2ec;
+            --yellow: #fff3cd;
+            --yellow-border: #e0a800;
+            --blue-light: #e8f4fc;
+            --green-light: #e8f6ec;
+            --red-light: #fdecea;
+            --purple-light: #f3e8fc;
+            --orange: #d35400;
+            --law: #1a6aa3;
+            --wait: #6c3483;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.55;
+        }
+
+        .header {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            color: white;
+            padding: 28px 24px 24px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 26px;
+            font-weight: 650;
+            margin-bottom: 8px;
+        }
+
+        .header .subtitle {
+            font-size: 15px;
+            opacity: 0.92;
+            max-width: 860px;
+            margin: 0 auto;
+        }
+
+        .container {
+            max-width: 1180px;
+            margin: 0 auto;
+            padding: 20px 16px 48px;
+        }
+
+        .section {
+            background: var(--card);
+            border-radius: 10px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.07);
+            margin-bottom: 18px;
+            overflow: hidden;
+        }
+
+        .section-title {
+            background: var(--primary);
+            color: white;
+            padding: 11px 20px;
+            font-size: 16px;
+            font-weight: 600;
+        }
+
+        .section-title.alt { background: #2e6b4f; }
+        .section-title.warn { background: #8a6d1d; }
+        .section-body { padding: 16px 20px; }
+
+        .muted { color: var(--muted); }
+        .small { font-size: 13px; }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+            gap: 12px;
+        }
+
+        label.field {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            font-size: 13px;
+            color: var(--muted);
+        }
+
+        label.field input, label.field select {
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 8px 10px;
+            font-size: 15px;
+            color: var(--text);
+            background: #fff;
+        }
+
+        label.field input:focus, label.field select:focus {
+            outline: 2px solid #9ec5e0;
+            border-color: var(--law);
+        }
+
+        .check {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 14px;
+            margin-top: 8px;
+        }
+
+        .verdict {
+            border-radius: 10px;
+            padding: 18px 20px;
+            margin-bottom: 18px;
+            border: 1px solid var(--border);
+        }
+
+        .verdict h2 {
+            font-size: 22px;
+            margin-bottom: 8px;
+        }
+
+        .verdict.win-early { background: var(--green-light); border-color: #8fd19e; }
+        .verdict.win-wait { background: var(--purple-light); border-color: #c39bd3; }
+        .verdict.win-mixed { background: var(--yellow); border-color: var(--yellow-border); }
+
+        .cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 14px;
+        }
+
+        .card {
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 14px 16px;
+            background: #fff;
+            position: relative;
+        }
+
+        .card.early { border-top: 5px solid var(--orange); }
+        .card.law { border-top: 5px solid var(--law); }
+        .card.wait { border-top: 5px solid var(--wait); }
+        .card.winner { box-shadow: 0 0 0 2px var(--success) inset; }
+
+        .badge {
+            display: inline-block;
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 0.03em;
+            text-transform: uppercase;
+            padding: 3px 8px;
+            border-radius: 4px;
+            color: #fff;
+            margin-bottom: 8px;
+        }
+
+        .badge.early { background: var(--orange); }
+        .badge.law { background: var(--law); }
+        .badge.wait { background: var(--wait); }
+        .badge.ok { background: var(--success); }
+
+        .card h3 { font-size: 18px; margin-bottom: 6px; }
+        .metric { margin: 8px 0; }
+        .metric .val {
+            font-size: 22px;
+            font-weight: 700;
+            color: var(--primary-dark);
+        }
+        .metric .lbl { font-size: 12px; color: var(--muted); }
+
+        .note {
+            padding: 12px 14px;
+            border-radius: 8px;
+            margin: 12px 0;
+            font-size: 14px;
+        }
+
+        .note.yellow { background: var(--yellow); border-left: 4px solid var(--yellow-border); }
+        .note.blue { background: var(--blue-light); border-left: 4px solid var(--info); }
+        .note.red { background: var(--red-light); border-left: 4px solid var(--danger); }
+        .note.green { background: var(--green-light); border-left: 4px solid var(--success); }
+
+        .tabs {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            margin-bottom: 12px;
+        }
+
+        .tabs button {
+            border: 1px solid var(--border);
+            background: #fff;
+            padding: 7px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 13px;
+        }
+
+        .tabs button.active {
+            background: var(--primary);
+            color: #fff;
+            border-color: var(--primary);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+
+        th, td {
+            border-bottom: 1px solid var(--border);
+            padding: 6px 8px;
+            text-align: right;
+            white-space: nowrap;
+        }
+
+        th:first-child, td:first-child { text-align: left; }
+
+        thead th {
+            background: #eef3f7;
+            position: sticky;
+            top: 0;
+            z-index: 1;
+        }
+
+        tr.claim td { background: #fff4e5; font-weight: 600; }
+        tr.age80 td { background: #f5eef8; }
+
+        .table-wrap {
+            max-height: 440px;
+            overflow: auto;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+        }
+
+        .chart-box {
+            width: 100%;
+            overflow-x: auto;
+        }
+
+        svg.chart { width: 100%; height: 340px; display: block; }
+
+        .legend {
+            display: flex;
+            gap: 16px;
+            flex-wrap: wrap;
+            font-size: 13px;
+            margin: 8px 0 0;
+        }
+
+        .swatch {
+            display: inline-block;
+            width: 14px;
+            height: 14px;
+            border-radius: 3px;
+            margin-right: 6px;
+            vertical-align: -2px;
+        }
+
+        ul.plain { margin: 8px 0 0 18px; }
+        ul.plain li { margin: 4px 0; }
+
+        .pair-title {
+            font-size: 18px;
+            margin: 4px 0 12px;
+        }
+
+        .kpi-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 10px;
+            margin: 12px 0;
+        }
+
+        .kpi {
+            background: #f8fafc;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 10px 12px;
+        }
+
+        .kpi .k { font-size: 12px; color: var(--muted); }
+        .kpi .v { font-size: 18px; font-weight: 700; }
+
+        .sources { font-size: 13px; color: var(--muted); }
+        .sources a { color: var(--law); }
+
+        @media (max-width: 700px) {
+            .header h1 { font-size: 20px; }
+            .verdict h2 { font-size: 18px; }
+            .metric .val { font-size: 18px; }
+        }
+
+        @media print {
+            .header { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+            .section { box-shadow: none; }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Пенсия: 55 лет или 75 лет</h1>
+        <div class="subtitle">
+            Досрочная пенсия отца ребенка-инвалида с детства: право в 55 лет.
+            Сейчас 52 года, 103 балла, 26 лет стажа, Москва, зарплата около 500 тыс. руб. в месяц.
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="section">
+            <div class="section-title">Исходные данные. Можно менять</div>
+            <div class="section-body">
+                <div class="grid">
+                    <label class="field">Текущий возраст
+                        <input id="age0" type="number" min="40" max="80" step="1" value="52">
+                    </label>
+                    <label class="field">Текущий год
+                        <input id="year0" type="number" min="2026" max="2040" step="1" value="2026">
+                    </label>
+                    <label class="field">Накопленные баллы (ИПК)
+                        <input id="points0" type="number" min="0" max="1000" step="0.001" value="103">
+                    </label>
+                    <label class="field">Стаж, лет
+                        <input id="stag" type="number" min="0" max="60" step="1" value="26">
+                    </label>
+                    <label class="field">Баллов в год без пенсии
+                        <input id="ptsWork" type="number" min="0" max="10" step="0.1" value="10">
+                    </label>
+                    <label class="field">Баллов в год на пенсии (работа)
+                        <input id="ptsRet" type="number" min="0" max="10" step="0.1" value="3">
+                    </label>
+                    <label class="field">Основание права
+                        <select id="basis">
+                            <option value="father" selected>Отец ребенка-инвалида (55 лет)</option>
+                            <option value="mother">Мать ребенка-инвалида (50 лет)</option>
+                            <option value="man">Общий порядок, мужчина (65 лет)</option>
+                        </select>
+                    </label>
+                    <label class="field">Возраст права
+                        <input id="lawAge" type="number" min="50" max="70" step="1" value="55">
+                    </label>
+                    <label class="field">Сравнить выход в возрасте
+                        <input id="ageA" type="number" min="45" max="80" step="1" value="55">
+                    </label>
+                    <label class="field">И выход в возрасте
+                        <input id="ageB" type="number" min="50" max="90" step="1" value="75">
+                    </label>
+                    <label class="field">Работать до возраста
+                        <input id="workUntil" type="number" min="52" max="90" step="1" value="75">
+                    </label>
+                    <label class="field">Итог смотрим на возрасте
+                        <input id="targetAge" type="number" min="60" max="100" step="1" value="85">
+                    </label>
+                    <label class="field">Индексация с 2029, % в год
+                        <input id="longPct" type="number" min="0" max="15" step="0.1" value="6">
+                    </label>
+                    <label class="field">Реальная ставка дисконта, %
+                        <input id="discPct" type="number" min="0" max="10" step="0.1" value="0">
+                    </label>
+                    <label class="field">Горизонт таблицы, лет
+                        <input id="horizon" type="number" min="70" max="100" step="1" value="90">
+                    </label>
+                </div>
+                <label class="check">
+                    <input id="age80bonus" type="checkbox" checked>
+                    Учитывать удвоение фиксированной выплаты с 80 лет
+                </label>
+                <p class="small muted" style="margin-top:10px">
+                    Зарплата 500 тыс. руб. в формуле не нужна: потолок и так 10 баллов в год без пенсии
+                    и 3 балла в год после назначения. Индексация 2027 = 7,5%, 2028 = 8% (бюджет СФР),
+                    дальше берется ставка из поля выше. Стоимость балла в 2026 году: 156,76 руб.
+                    Фиксированная выплата: 9 584,69 руб.
+                </p>
+            </div>
+        </div>
+
+        <div id="verdict" class="verdict win-mixed"></div>
+
+        <div class="section">
+            <div class="section-title">Короткий ответ на вопрос 55 или 75</div>
+            <div class="section-body" id="shortAnswer"></div>
+        </div>
+
+        <div class="section">
+            <div class="section-title">Сводка: сколько уже получено к возрасту, цены 2026</div>
+            <div class="section-body">
+                <div class="table-wrap" style="max-height: none">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>К возрасту</th>
+                                <th id="thA">Выход в 55</th>
+                                <th id="thLaw">Выход в 65, макс. отсрочка</th>
+                                <th id="thBE">Ждать до 75</th>
+                            </tr>
+                        </thead>
+                        <tbody id="sumBody"></tbody>
+                    </table>
+                </div>
+                <p class="small muted" style="margin-top:8px">
+                    Строка «смерть годом раньше позднего выхода» показывает риск отсрочки:
+                    пенсия так и не назначена, накопленная сумма ноль.
+                </p>
+            </div>
+        </div>
+
+        <div class="section">
+            <div class="section-title">Три варианта: сразу, максимум отсрочки и ждать до <span id="lblB">75</span></div>
+            <div class="section-body">
+                <div class="note green" id="rightNote"></div>
+                <div class="cards" id="cardsEarly"></div>
+                <div class="kpi-row" id="kpiEarly"></div>
+            </div>
+        </div>
+
+        <div class="section">
+            <div class="section-title">Максимум отсрочки <span id="lblLaw">65</span> против ожидания до <span id="lblB2">75</span></div>
+            <div class="section-body">
+                <div class="note blue">
+                    После 10 лет отсрочки коэффициенты больше не растут. Дальше вы только не получаете пенсию.
+                    Поэтому ждать до 75 при праве в 55 обычно хуже, чем выйти в 65.
+                </div>
+                <div class="cards" id="cardsLaw"></div>
+                <div class="kpi-row" id="kpiLaw"></div>
+            </div>
+        </div>
+
+        <div class="section">
+            <div class="section-title">Почему 10 баллов против 3 - слабый аргумент ждать</div>
+            <div class="section-body">
+                <div class="note yellow" id="pointsTrap"></div>
+                <div class="note blue">
+                    Ждать имеет смысл только из-за премиальных коэффициентов за отсрочку
+                    <b>после возникновения права</b>. Максимум - 10 лет. Дальше коэффициенты не растут.
+                    Для обычной пенсии за 10 лет отсрочки баллы умножаются на 2,32, фиксированная выплата - на 2,11.
+                    Для досрочной пенсии родителя ребенка-инвалида коэффициенты меньше: максимум 1,68 и 1,53.
+                </div>
+                <div class="note green">
+                    Отдельное заявление «хочу отсрочку» не нужно. Если в 55 право уже есть, а заявление
+                    не подано, это и есть отсрочка: СФР считает полные месяцы с даты права до даты
+                    обращения. Первый коэффициент - после 12 месяцев, максимум - 120 месяцев.
+                    Письменный отказ нужен только если пенсию уже назначили и вы от нее отказываетесь.
+                    Когда будете подавать позже, указывайте основание «родитель ребенка-инвалида»,
+                    иначе могут назначить обычную пенсию в 65 без этих коэффициентов.
+                </div>
+            </div>
+        </div>
+
+        <div class="section">
+            <div class="section-title">График. Накопленная пенсия в ценах 2026 года</div>
+            <div class="section-body">
+                <div class="tabs">
+                    <button type="button" class="active" data-pair="early" id="tabEarly">55 против 75</button>
+                    <button type="button" data-pair="law" id="tabLaw">65 против 75</button>
+                </div>
+                <div class="chart-box">
+                    <svg class="chart" id="chart" viewBox="0 0 1100 340" preserveAspectRatio="xMidYMid meet"></svg>
+                </div>
+                <div class="legend" id="legend"></div>
+                <p class="small muted" style="margin-top:8px">
+                    Чем выше линия, тем больше живых денег уже получено к этому возрасту.
+                    Скачок у позднего выхода - это не «догнали», а только начали получать.
+                </p>
+            </div>
+        </div>
+
+        <div class="section">
+            <div class="section-title">Какой возраст назначения максимизирует сумму к целевому возрасту</div>
+            <div class="section-body">
+                <p class="small muted" id="optIntro"></p>
+                <div class="table-wrap" style="max-height: 280px; margin-top: 10px">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Выход в</th>
+                                <th>Отсрочка, лет</th>
+                                <th>Коэф. баллов</th>
+                                <th>Пенсия в месяц в ценах 2026</th>
+                                <th>Сумма к целевому возрасту</th>
+                            </tr>
+                        </thead>
+                        <tbody id="optBody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div class="section">
+            <div class="section-title">Год за годом</div>
+            <div class="section-body">
+                <div class="tabs">
+                    <button type="button" class="active" data-table="early" id="tabTEarly">55 против 75</button>
+                    <button type="button" data-table="law" id="tabTLaw">65 против 75</button>
+                </div>
+                <div class="table-wrap">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Возраст</th>
+                                <th>Год</th>
+                                <th>Ранний, руб/мес</th>
+                                <th>Ранний, накопилось</th>
+                                <th>Поздний, руб/мес</th>
+                                <th>Поздний, накопилось</th>
+                                <th>Разница накопилось</th>
+                            </tr>
+                        </thead>
+                        <tbody id="yearBody"></tbody>
+                    </table>
+                </div>
+                <p class="small muted" style="margin-top:8px">
+                    Суммы в таблице - в ценах 2026 года (покупательная способность).
+                    Желтая строка - год назначения. Сиреневая - 80 лет (рост фиксированной выплаты).
+                </p>
+            </div>
+        </div>
+
+        <div class="section">
+            <div class="section-title">Как считается</div>
+            <div class="section-body">
+                <p>
+                    Страховая пенсия = баллы x стоимость балла x коэффициент отсрочки
+                    + фиксированная выплата x коэффициент отсрочки.
+                    С 80 лет к фиксированной выплате добавляется еще одна базовая фиксированная выплата.
+                </p>
+                <ul class="plain">
+                    <li>Пока пенсия не назначена и идет работа: каждый полный год +10 баллов (потолок).</li>
+                    <li>После назначения при работе: каждый полный год не больше +3 балла (августовский перерасчет).</li>
+                    <li>Коэффициент отсрочки идет только после возраста права и только за полные годы, максимум 10 лет.</li>
+                    <li>Отец ребенка-инвалида с детства выходит в 55 лет, если воспитал ребенка до 8 лет, стаж не меньше 20 лет, баллы не меньше 30. Льгота только у одного из родителей.</li>
+                    <li>С 2025 года страховую пенсию индексируют и работающим пенсионерам. Из-за работы индексацию больше не теряете.</li>
+                    <li>Городской стандарт Москвы (27 401 руб. в 2026 году) для работающего с зарплатой 500 тыс. руб. не действует.</li>
+                    <li>НДФЛ со страховой пенсии не берется.</li>
+                </ul>
+                <div class="note yellow" style="margin-top:12px">
+                    Это модель, а не выписка СФР. Точные баллы, право на досрочку и дату права
+                    смотрите в выписке на Госуслугах. Расчет не заменяет консультацию СФР.
+                </div>
+            </div>
+        </div>
+
+        <div class="section">
+            <div class="section-title">Откуда цифры 2026 года</div>
+            <div class="section-body sources">
+                <ul class="plain">
+                    <li>Стоимость ИПК 156,76 руб. и фиксированная выплата 9 584,69 руб. с 01.01.2026 - СФР, индексация 7,6%.</li>
+                    <li>План индексации 2027 (7,5%) и 2028 (8%) - закон о бюджете СФР от 28.11.2025 N 427-ФЗ.</li>
+                    <li>Премиальные коэффициенты - приложения 1 и 2 к закону от 28.12.2013 N 400-ФЗ, таблица на сайте СФР.</li>
+                    <li>Потолок 3 балла работающему пенсионеру - ст. 18 закона N 400-ФЗ, перерасчет 1 августа.</li>
+                    <li>Городской социальный стандарт Москвы 27 401 руб. - постановление Правительства Москвы от 09.12.2025 N 3025-ПП.</li>
+                    <li>Досрочная пенсия одному из родителей инвалида с детства: отец в 55 при стаже 20 лет, мать в 50 при стаже 15 лет, воспитание до 8 лет - п. 1 ч. 1 ст. 32 закона N 400-ФЗ.</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        (function () {
+            "use strict";
+
+            var POINT_COST = 156.76;
+            var FV = 9584.69;
+
+            var COEF_G = {
+                0: [1, 1],
+                1: [1.07, 1.056],
+                2: [1.15, 1.12],
+                3: [1.24, 1.19],
+                4: [1.34, 1.27],
+                5: [1.45, 1.36],
+                6: [1.59, 1.46],
+                7: [1.74, 1.58],
+                8: [1.90, 1.73],
+                9: [2.09, 1.90],
+                10: [2.32, 2.11]
+            };
+
+            var COEF_E = {
+                0: [1, 1],
+                1: [1.046, 1.036],
+                2: [1.10, 1.07],
+                3: [1.16, 1.12],
+                4: [1.22, 1.16],
+                5: [1.29, 1.21],
+                6: [1.37, 1.26],
+                7: [1.45, 1.32],
+                8: [1.52, 1.38],
+                9: [1.60, 1.45],
+                10: [1.68, 1.53]
+            };
+
+            var pairMode = "early";
+            var tableMode = "early";
+            var last = null;
+
+            function $(id) {
+                return document.getElementById(id);
+            }
+
+            function num(id) {
+                return parseFloat($(id).value);
+            }
+
+            function fmt(n, digits) {
+                if (!isFinite(n)) {
+                    return "-";
+                }
+                var d = digits == null ? 0 : digits;
+                var sign = n < 0 ? "-" : "";
+                var abs = Math.abs(n);
+                var s = abs.toFixed(d);
+                var parts = s.split(".");
+                parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, " ");
+                return sign + parts.join(",");
+            }
+
+            function rub(n, digits) {
+                return fmt(n, digits) + " руб.";
+            }
+
+            function coef(years, early) {
+                var y = Math.max(0, Math.min(10, Math.floor(years)));
+                return early ? COEF_E[y] : COEF_G[y];
+            }
+
+            function rateForYear(year, longRate) {
+                if (year <= 2026) {
+                    return 0;
+                }
+                if (year === 2027) {
+                    return 0.075;
+                }
+                if (year === 2028) {
+                    return 0.08;
+                }
+                return longRate;
+            }
+
+            function indexFrom2026(year, longRate) {
+                var f = 1;
+                var y;
+                for (y = 2027; y <= year; y += 1) {
+                    f *= 1 + rateForYear(y, longRate);
+                }
+                return f;
+            }
+
+            function cfg() {
+                return {
+                    age0: num("age0"),
+                    year0: num("year0"),
+                    points0: num("points0"),
+                    stag: num("stag"),
+                    ptsWork: num("ptsWork"),
+                    ptsRet: num("ptsRet"),
+                    lawAge: num("lawAge"),
+                    ageA: num("ageA"),
+                    ageB: num("ageB"),
+                    workUntil: num("workUntil"),
+                    targetAge: num("targetAge"),
+                    longRate: num("longPct") / 100,
+                    disc: num("discPct") / 100,
+                    horizon: num("horizon"),
+                    age80bonus: $("age80bonus").checked,
+                    basis: $("basis").value
+                };
+            }
+
+            function simulate(claimAge, rightAge, early, c) {
+                var delayY = Math.min(10, Math.max(0, claimAge - rightAge));
+                var k = coef(delayY, early);
+                var kIpc = k[0];
+                var kFv = k[1];
+                var points = c.points0;
+                var extra = 0;
+                var claimed = false;
+                var pointsAtClaim = 0;
+                var rows = [];
+                var cumNom = 0;
+                var cumReal = 0;
+                var npv = 0;
+                var age;
+                var year;
+                var idx;
+                var pc;
+                var fv;
+                var monthly;
+                var ipc;
+                var fvPay;
+                var annual;
+                var annualReal;
+                var t;
+
+                for (age = c.age0; age <= c.horizon; age += 1) {
+                    year = c.year0 + (age - c.age0);
+                    idx = indexFrom2026(year, c.longRate);
+                    pc = POINT_COST * idx;
+                    fv = FV * idx;
+
+                    if (!claimed && age >= claimAge && age >= rightAge) {
+                        claimed = true;
+                        pointsAtClaim = points;
+                    }
+
+                    monthly = 0;
+                    if (claimed) {
+                        ipc = pointsAtClaim * kIpc + extra;
+                        fvPay = fv * kFv + (c.age80bonus && age >= 80 ? fv : 0);
+                        monthly = ipc * pc + fvPay;
+                    }
+
+                    annual = monthly * 12;
+                    annualReal = annual / idx;
+                    cumNom += annual;
+                    cumReal += annualReal;
+                    t = age - c.age0;
+                    npv += annualReal / Math.pow(1 + c.disc, t);
+
+                    rows.push({
+                        age: age,
+                        year: year,
+                        points: claimed ? pointsAtClaim + extra : points,
+                        monthly: monthly,
+                        monthlyReal: monthly / idx,
+                        annualReal: annualReal,
+                        cumNom: cumNom,
+                        cumReal: cumReal,
+                        npv: npv,
+                        claimed: claimed,
+                        justClaim: claimed && age === Math.max(claimAge, rightAge)
+                    });
+
+                    if (age < c.workUntil) {
+                        if (claimed) {
+                            extra += c.ptsRet;
+                        } else {
+                            points += c.ptsWork;
+                        }
+                    }
+                }
+
+                return {
+                    claimAge: claimAge,
+                    rightAge: rightAge,
+                    early: early,
+                    delayY: delayY,
+                    kIpc: kIpc,
+                    kFv: kFv,
+                    pointsAtClaim: pointsAtClaim,
+                    rows: rows
+                };
+            }
+
+            function atAge(sim, age) {
+                var i;
+                var lastRow = sim.rows[sim.rows.length - 1];
+                for (i = 0; i < sim.rows.length; i += 1) {
+                    if (sim.rows[i].age === age) {
+                        return sim.rows[i];
+                    }
+                }
+                return lastRow;
+            }
+
+            function rowClaim(sim) {
+                var i;
+                for (i = 0; i < sim.rows.length; i += 1) {
+                    if (sim.rows[i].justClaim) {
+                        return sim.rows[i];
+                    }
+                }
+                return sim.rows[0];
+            }
+
+            function breakEven(earlySim, lateSim) {
+                var i;
+                var e;
+                var l;
+                for (i = 0; i < lateSim.rows.length; i += 1) {
+                    e = earlySim.rows[i];
+                    l = lateSim.rows[i];
+                    if (l.claimed && l.cumReal >= e.cumReal) {
+                        return l.age;
+                    }
+                }
+                return null;
+            }
+
+            function cardHtml(sim, kind, title, note, isWin) {
+                var start = rowClaim(sim);
+                var atTarget = atAge(sim, last.c.targetAge);
+                var at75 = atAge(sim, 75);
+                var at80 = atAge(sim, 80);
+                var win = isWin ? '<span class="badge ok">выгоднее к ' + last.c.targetAge + '</span> ' : "";
+                return '' +
+                    '<div class="card ' + kind + (isWin ? ' winner' : '') + '">' +
+                    win + '<span class="badge ' + kind + '">' + kindLabel(kind) + '</span>' +
+                    '<h3>' + title + '</h3>' +
+                    '<p class="small muted">' + note + '</p>' +
+                    '<div class="metric"><div class="lbl">Пенсия в месяц в год назначения, цены 2026</div>' +
+                    '<div class="val">' + rub(start.monthlyReal) + '</div></div>' +
+                    '<div class="metric"><div class="lbl">Пенсия в месяц в ' + last.c.targetAge + ' лет, цены 2026</div>' +
+                    '<div class="val">' + rub(atTarget.monthlyReal) + '</div></div>' +
+                    '<p class="small">Баллы на назначении: ' + fmt(sim.pointsAtClaim, 1) +
+                    '. Отсрочка: ' + sim.delayY + ' лет. Коэф. баллов ' + fmt(sim.kIpc, 3) +
+                    ', фикс. ' + fmt(sim.kFv, 3) + '.</p>' +
+                    '<p class="small">Накоплено к 75: ' + rub(at75.cumReal) +
+                    " К 80: " + rub(at80.cumReal) +
+                    " К " + last.c.targetAge + ": <b>" + rub(atTarget.cumReal) + "</b></p>" +
+                    '</div>';
+            }
+
+            function kindLabel(kind) {
+                if (kind === "early") {
+                    return "досрочно";
+                }
+                if (kind === "law") {
+                    return "по закону";
+                }
+                return "отсрочка";
+            }
+
+            function kpiHtml(a, b, be) {
+                var ta = last.c.targetAge;
+                var ca = atAge(a, ta).cumReal;
+                var cb = atAge(b, ta).cumReal;
+                var diff = ca - cb;
+                var beText = be == null
+                    ? ("не окупается до " + last.c.horizon + " лет")
+                    : ("к " + be + " годам");
+                var npvA = atAge(a, last.c.horizon).npv;
+                var npvB = atAge(b, last.c.horizon).npv;
+                var extra = "";
+                if (last.c.disc > 0) {
+                    extra = '<div class="kpi"><div class="k">NPV раннего к ' + last.c.horizon + '</div><div class="v">' + rub(npvA) + '</div></div>' +
+                        '<div class="kpi"><div class="k">NPV позднего к ' + last.c.horizon + '</div><div class="v">' + rub(npvB) + '</div></div>';
+                }
+                return '' +
+                    '<div class="kpi"><div class="k">Сумма раннего выхода к ' + ta + '</div><div class="v">' + rub(ca) + '</div></div>' +
+                    '<div class="kpi"><div class="k">Сумма позднего выхода к ' + ta + '</div><div class="v">' + rub(cb) + '</div></div>' +
+                    '<div class="kpi"><div class="k">Выигрыш раннего к ' + ta + '</div><div class="v">' + rub(diff) + '</div></div>' +
+                    '<div class="kpi"><div class="k">Поздний догоняет</div><div class="v">' + beText + '</div></div>' + extra;
+            }
+
+            function fillSummary(s55, sMax, sLate, c, dieAge) {
+                var ages = [c.ageA, c.lawAge + 10, c.ageB, 80, 85, 90];
+                var seen = {};
+                var html = "";
+                var i;
+                var age;
+                var uniq = [];
+                for (i = 0; i < ages.length; i += 1) {
+                    age = ages[i];
+                    if (age >= c.age0 && age <= c.horizon && !seen[age]) {
+                        seen[age] = true;
+                        uniq.push(age);
+                    }
+                }
+                uniq.sort(function (x, y) { return x - y; });
+                html += "<tr style='background:#fdecea'><td>Смерть в " + dieAge +
+                    "</td><td>" + fmt(atAge(s55, dieAge).cumReal) +
+                    "</td><td>" + fmt(atAge(sMax, dieAge).cumReal) +
+                    "</td><td>" + fmt(atAge(sLate, dieAge).cumReal) + "</td></tr>";
+                for (i = 0; i < uniq.length; i += 1) {
+                    age = uniq[i];
+                    html += "<tr><td>" + age + "</td><td>" + fmt(atAge(s55, age).cumReal) +
+                        "</td><td>" + fmt(atAge(sMax, age).cumReal) +
+                        "</td><td>" + fmt(atAge(sLate, age).cumReal) + "</td></tr>";
+                }
+                $("sumBody").innerHTML = html;
+            }
+
+            function drawChart(a, b, colorA, colorB, nameA, nameB) {
+                var svg = $("chart");
+                var rowsA = a.rows;
+                var w = 1100;
+                var h = 340;
+                var padL = 70;
+                var padR = 20;
+                var padT = 18;
+                var padB = 36;
+                var i;
+                var maxY = 1;
+                var minAge = rowsA[0].age;
+                var maxAge = rowsA[rowsA.length - 1].age;
+                for (i = 0; i < rowsA.length; i += 1) {
+                    if (rowsA[i].cumReal > maxY) {
+                        maxY = rowsA[i].cumReal;
+                    }
+                    if (b.rows[i].cumReal > maxY) {
+                        maxY = b.rows[i].cumReal;
+                    }
+                }
+                maxY = maxY * 1.08;
+
+                function xPos(age) {
+                    return padL + (age - minAge) / (maxAge - minAge) * (w - padL - padR);
+                }
+
+                function yPos(val) {
+                    return padT + (1 - val / maxY) * (h - padT - padB);
+                }
+
+                function path(sim) {
+                    var d = "";
+                    var j;
+                    var r;
+                    for (j = 0; j < sim.rows.length; j += 1) {
+                        r = sim.rows[j];
+                        d += (j === 0 ? "M" : "L") + xPos(r.age).toFixed(1) + " " + yPos(r.cumReal).toFixed(1) + " ";
+                    }
+                    return d;
+                }
+
+                var ticks = "";
+                var age;
+                var yv;
+                var n;
+                for (age = Math.ceil(minAge / 5) * 5; age <= maxAge; age += 5) {
+                    ticks += '<line x1="' + xPos(age) + '" y1="' + padT + '" x2="' + xPos(age) + '" y2="' + (h - padB) + '" stroke="#e6edf2"/>';
+                    ticks += '<text x="' + xPos(age) + '" y="' + (h - 12) + '" text-anchor="middle" font-size="12" fill="#6c757d">' + age + '</text>';
+                }
+                for (n = 0; n <= 4; n += 1) {
+                    yv = maxY * n / 4;
+                    ticks += '<line x1="' + padL + '" y1="' + yPos(yv) + '" x2="' + (w - padR) + '" y2="' + yPos(yv) + '" stroke="#e6edf2"/>';
+                    ticks += '<text x="' + (padL - 8) + '" y="' + (yPos(yv) + 4) + '" text-anchor="end" font-size="11" fill="#6c757d">' + fmt(yv / 1000000, 1) + '</text>';
+                }
+
+                svg.innerHTML = ticks +
+                    '<text x="16" y="18" font-size="11" fill="#6c757d">млн руб.</text>' +
+                    '<path d="' + path(a) + '" fill="none" stroke="' + colorA + '" stroke-width="3"/>' +
+                    '<path d="' + path(b) + '" fill="none" stroke="' + colorB + '" stroke-width="3"/>';
+
+                $("legend").innerHTML =
+                    '<span><span class="swatch" style="background:' + colorA + '"></span>' + nameA + '</span>' +
+                    '<span><span class="swatch" style="background:' + colorB + '"></span>' + nameB + '</span>';
+            }
+
+            function fillTable(a, b) {
+                var html = "";
+                var i;
+                var ra;
+                var rb;
+                var cls;
+                for (i = 0; i < a.rows.length; i += 1) {
+                    ra = a.rows[i];
+                    rb = b.rows[i];
+                    cls = "";
+                    if (ra.justClaim || rb.justClaim) {
+                        cls = "claim";
+                    } else if (ra.age === 80) {
+                        cls = "age80";
+                    }
+                    html += '<tr class="' + cls + '">' +
+                        "<td>" + ra.age + "</td>" +
+                        "<td>" + ra.year + "</td>" +
+                        "<td>" + fmt(ra.monthlyReal) + "</td>" +
+                        "<td>" + fmt(ra.cumReal) + "</td>" +
+                        "<td>" + fmt(rb.monthlyReal) + "</td>" +
+                        "<td>" + fmt(rb.cumReal) + "</td>" +
+                        "<td>" + fmt(ra.cumReal - rb.cumReal) + "</td>" +
+                        "</tr>";
+                }
+                $("yearBody").innerHTML = html;
+            }
+
+            function optimalTable(rightAge, early, c) {
+                var maxClaim = Math.min(Math.max(rightAge + 10, c.ageB), c.horizon);
+                var claim;
+                var sim;
+                var start;
+                var atT;
+                var bestClaim = rightAge;
+                var bestSum = -1;
+                var html = "";
+                var mark;
+                for (claim = rightAge; claim <= maxClaim; claim += 1) {
+                    sim = simulate(claim, rightAge, early, c);
+                    start = rowClaim(sim);
+                    atT = atAge(sim, c.targetAge);
+                    if (atT.cumReal > bestSum) {
+                        bestSum = atT.cumReal;
+                        bestClaim = claim;
+                    }
+                    mark = "";
+                    html += "<tr data-claim='" + claim + "'>" +
+                        "<td>" + claim + mark + "</td>" +
+                        "<td>" + sim.delayY + "</td>" +
+                        "<td>" + fmt(sim.kIpc, 3) + "</td>" +
+                        "<td>" + fmt(start.monthlyReal) + "</td>" +
+                        "<td>" + fmt(atT.cumReal) + "</td>" +
+                        "</tr>";
+                }
+                $("optBody").innerHTML = html;
+                var rows = $("optBody").rows;
+                var r;
+                for (r = 0; r < rows.length; r += 1) {
+                    if (parseInt(rows[r].getAttribute("data-claim"), 10) === bestClaim) {
+                        rows[r].style.background = "#e8f6ec";
+                        rows[r].cells[0].innerHTML = bestClaim + " (максимум)";
+                    }
+                }
+                return bestClaim;
+            }
+
+            function nowPension(c) {
+                return c.points0 * POINT_COST + FV;
+            }
+
+            function render() {
+                var c = cfg();
+                last = { c: c };
+
+                if (c.ageB <= c.ageA) {
+                    c.ageB = c.ageA + 1;
+                }
+                if (c.horizon < c.targetAge) {
+                    c.horizon = c.targetAge;
+                }
+
+                var early = c.basis !== "man";
+                var right = c.lawAge;
+                var maxDelayAge = right + 10;
+                var stagNeed = c.basis === "father" ? 20 : 15;
+                var stagOk = c.stag >= stagNeed;
+                var pointsOk = c.points0 >= 30;
+
+                var s55 = simulate(c.ageA, right, early, c);
+                var sMax = simulate(maxDelayAge, right, early, c);
+                var sLate = simulate(c.ageB, right, early, c);
+
+                last.s55 = s55;
+                last.sMax = sMax;
+                last.sLate = sLate;
+
+                var t = c.targetAge;
+                var sum55 = atAge(s55, t).cumReal;
+                var sumMax = atAge(sMax, t).cumReal;
+                var sumLate = atAge(sLate, t).cumReal;
+                var beEarly = breakEven(s55, sLate);
+                var beMax = breakEven(sMax, sLate);
+                var earlyWins = sum55 >= sumLate;
+                var maxWinsLate = sumMax >= sumLate;
+                var dieAge = Math.max(c.age0, c.ageB - 1);
+                var die55 = atAge(s55, dieAge).cumReal;
+                var dieMax = atAge(sMax, dieAge).cumReal;
+                var dieLate = atAge(sLate, dieAge).cumReal;
+                var bestSum = Math.max(sum55, sumMax, sumLate);
+
+                $("lblB").textContent = String(c.ageB);
+                $("lblB2").textContent = String(c.ageB);
+                $("lblLaw").textContent = String(maxDelayAge);
+                $("tabEarly").textContent = c.ageA + " против " + c.ageB;
+                $("tabLaw").textContent = maxDelayAge + " против " + c.ageB;
+
+                $("rightNote").innerHTML =
+                    "<b>Право: " + (c.basis === "father"
+                        ? "отец ребенка-инвалида с детства, 55 лет"
+                        : (c.basis === "mother"
+                            ? "мать ребенка-инвалида с детства, 50 лет"
+                            : "общий порядок")) +
+                    ".</b> Ст. 32 закона N 400-ФЗ. Нужны стаж " + stagNeed +
+                    " лет (у вас " + c.stag + (stagOk ? ", хватает" : ", не хватает") +
+                    "), баллы от 30 (у вас " + fmt(c.points0, 1) +
+                    (pointsOk ? ", хватает" : ", не хватает") +
+                    "), воспитание ребенка до 8 лет. Льготой может воспользоваться только один из родителей. " +
+                    "Когда именно ребенку дали инвалидность, не важно.";
+
+                var v = $("verdict");
+                var head;
+                var body;
+                if (sumMax >= sum55 && sumMax >= sumLate) {
+                    v.className = "verdict win-mixed";
+                    head = "Ждать до " + c.ageB + " невыгодно. К " + t +
+                        " годам максимум суммы - выход в " + maxDelayAge + ".";
+                    body = "Право уже в " + right +
+                        ". Коэффициенты отсрочки растут только 10 лет, дальше вы просто не получаете пенсию. " +
+                        "Выход сразу в " + c.ageA + " надежнее: к " + dieAge +
+                        " годам уже будет " + rub(die55) +
+                        ". Выход в " + maxDelayAge + " дает больше месячную пенсию, если дожить до " + t + ".";
+                } else if (sum55 >= sumLate) {
+                    v.className = "verdict win-early";
+                    head = "Выгоднее выйти в " + c.ageA + " и продолжать работать.";
+                    body = "Ожидание до " + c.ageB + " к " + t + " годам не окупается.";
+                } else {
+                    v.className = "verdict win-wait";
+                    head = "К " + t + " годам ожидание до " + c.ageB + " набирает большую сумму.";
+                    body = "Это только если дожить до назначения. В " + dieAge +
+                        " при ожидании пенсия еще не началась.";
+                }
+
+                v.innerHTML = "<h2>" + head + "</h2><p>" + body + "</p>";
+
+                var start55 = rowClaim(s55);
+                var startMax = rowClaim(sMax);
+                var startLate = rowClaim(sLate);
+
+                $("shortAnswer").innerHTML =
+                    '<div class="note green"><b>55 против 75.</b> ' +
+                    (earlyWins ? "К " + t + " чуть выгоднее выйти в " + c.ageA + ". " : "К " + t + " сумма больше при ожидании до " + c.ageB + ". ") +
+                    "Накоплено к " + t + ": " + rub(sum55) + " против " + rub(sumLate) +
+                    ". Месячная пенсия в " + c.ageB + ": " + rub(atAge(s55, c.ageB).monthlyReal) +
+                    " против " + rub(startLate.monthlyReal) +
+                    ". Поздний выход " +
+                    (beEarly == null ? "не догоняет до " + c.horizon + " лет" : "догоняет к " + beEarly + " годам") +
+                    ".</div>" +
+                    '<div class="note blue"><b>Лучше не 75, а ' + maxDelayAge +
+                    ".</b> Это максимум досрочных коэффициентов (1,68 и 1,53) плюс еще годы пенсии. К " +
+                    t + " годам: " + rub(sumMax) + " против " + rub(sumLate) +
+                    " при ожидании до " + c.ageB +
+                    ". Месячная пенсия при выходе в " + maxDelayAge + ": " +
+                    rub(startMax.monthlyReal) + " в ценах 2026.</div>" +
+                    '<div class="note red"><b>Риск ждать до ' + c.ageB +
+                    ".</b> Если не дожить, пенсия не начнется. К " + dieAge +
+                    " при выходе в " + c.ageA + " уже " + rub(die55) +
+                    ", при выходе в " + maxDelayAge + " уже " + rub(dieMax) +
+                    ", при ожидании до " + c.ageB + " - " + rub(dieLate) +
+                    ".</div>" +
+                    '<p class="small muted" style="margin-top:10px">Сейчас права еще нет (нужно ' +
+                    right + " лет). Если бы назначили сегодня, масштаб был бы " +
+                    rub(nowPension(c), 2) + " в месяц.</p>";
+
+                $("thA").textContent = "Выход в " + c.ageA;
+                $("thLaw").textContent = "Выход в " + maxDelayAge + ", макс. отсрочка";
+                $("thBE").textContent = "Ждать до " + c.ageB;
+                fillSummary(s55, sMax, sLate, c, dieAge);
+
+                $("cardsEarly").innerHTML =
+                    cardHtml(s55, "early", "Выйти в " + c.ageA + " и работать",
+                        "Пенсия идет сразу. Дальше по " + c.ptsRet + " балла в год.",
+                        sum55 === bestSum) +
+                    cardHtml(sMax, "law", "Выйти в " + maxDelayAge + " (10 лет отсрочки)",
+                        "Максимум досрочных коэффициентов и еще годы выплат.",
+                        sumMax === bestSum) +
+                    cardHtml(sLate, "wait", "Ждать до " + c.ageB,
+                        "Коэффициенты те же, что в " + maxDelayAge + ", но " +
+                        (c.ageB - maxDelayAge) + " лет пенсии потеряны.",
+                        sumLate === bestSum);
+
+                $("cardsLaw").innerHTML =
+                    cardHtml(sMax, "law", "Выйти в " + maxDelayAge,
+                        "Потолок отсрочки. Коэф. баллов " + fmt(sMax.kIpc, 2) +
+                        ", фикс. " + fmt(sMax.kFv, 2) + ".",
+                        maxWinsLate) +
+                    cardHtml(sLate, "wait", "Ждать до " + c.ageB,
+                        "Те же коэффициенты, меньше лет получения пенсии.",
+                        !maxWinsLate);
+
+                $("kpiEarly").innerHTML = kpiHtml(s55, sLate, beEarly);
+                $("kpiLaw").innerHTML = kpiHtml(sMax, sLate, beMax);
+
+                var oneYearPension = start55.monthlyReal * 12;
+                var pointGap = (c.ptsWork - c.ptsRet) * POINT_COST * 12;
+                var yearsToCover = pointGap > 0 ? oneYearPension / pointGap : 0;
+                $("pointsTrap").innerHTML =
+                    "Разница 10 и 3 балла - это " + fmt(c.ptsWork - c.ptsRet, 1) +
+                    " балла в год, около " + rub(pointGap) +
+                    " в год в ценах 2026. А отказавшись от пенсии на год, вы теряете около " +
+                    rub(oneYearPension) + " (пенсия при выходе в " + c.ageA +
+                    "). Чтобы отбить только эту потерю добавкой баллов, нужно примерно " +
+                    fmt(yearsToCover, 1) +
+                    " лет. За жизнь не окупается. Ждать оправданно только коэффициентами отсрочки после права на пенсию, и не дольше 10 лет.";
+
+                var bestEarly = optimalTable(right, early, c);
+                $("optIntro").innerHTML = "Право в " + right +
+                    (early ? ", досрочные коэффициенты. " : ", общие коэффициенты. ") +
+                    "Максимум суммы к " + t + " годам при выходе в <b>" + bestEarly + "</b>.";
+
+                if (pairMode === "law") {
+                    drawChart(sMax, sLate, "#1a6aa3", "#6c3483",
+                        "Выход в " + maxDelayAge, "Выход в " + c.ageB);
+                } else {
+                    drawChart(s55, sLate, "#d35400", "#6c3483",
+                        "Выход в " + c.ageA, "Выход в " + c.ageB);
+                }
+
+                if (tableMode === "law") {
+                    fillTable(sMax, sLate);
+                } else {
+                    fillTable(s55, sLate);
+                }
+            }
+
+            function bindTabs() {
+                $("tabEarly").onclick = function () {
+                    pairMode = "early";
+                    $("tabEarly").className = "active";
+                    $("tabLaw").className = "";
+                    render();
+                };
+                $("tabLaw").onclick = function () {
+                    pairMode = "law";
+                    $("tabLaw").className = "active";
+                    $("tabEarly").className = "";
+                    render();
+                };
+                $("tabTEarly").onclick = function () {
+                    tableMode = "early";
+                    $("tabTEarly").className = "active";
+                    $("tabTLaw").className = "";
+                    render();
+                };
+                $("tabTLaw").onclick = function () {
+                    tableMode = "law";
+                    $("tabTLaw").className = "active";
+                    $("tabTEarly").className = "";
+                    render();
+                };
+            }
+
+            function bindInputs() {
+                var ids = [
+                    "age0", "year0", "points0", "stag", "ptsWork", "ptsRet", "lawAge",
+                    "ageA", "ageB", "workUntil", "targetAge", "longPct", "discPct", "horizon", "age80bonus"
+                ];
+                var i;
+                for (i = 0; i < ids.length; i += 1) {
+                    $(ids[i]).addEventListener("input", render);
+                    $(ids[i]).addEventListener("change", render);
+                }
+                $("basis").addEventListener("change", function () {
+                    var v = $("basis").value;
+                    if (v === "father") {
+                        $("lawAge").value = "55";
+                        $("ageA").value = "55";
+                    } else if (v === "mother") {
+                        $("lawAge").value = "50";
+                        $("ageA").value = "50";
+                    } else {
+                        $("lawAge").value = "65";
+                        $("ageA").value = "65";
+                    }
+                    render();
+                });
+            }
+
+            bindTabs();
+            bindInputs();
+            render();
+        })();
+    </script>
+</body>
+</html>
