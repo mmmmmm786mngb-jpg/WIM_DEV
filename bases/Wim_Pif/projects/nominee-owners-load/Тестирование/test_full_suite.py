@@ -592,7 +592,11 @@ def run_form_static(suite):
               "Элементы.СтраницаСтроки" in mod_bsl)
     suite.add(group, "Модуль формы: Сопоставить переключает протокол",
               "Элементы.СтраницаПротокол" in mod_bsl)
-    suite.add(group, "Объектный модуль версия 1.0.3", 'Версия = "1.0.3"' in obj_bsl)
+    suite.add(group, "Объектный модуль версия 1.0.5", 'Версия = "1.0.5"' in obj_bsl)
+    root_xml = read_text(os.path.join(PROJECT, "src", "ЗаполнениеСпискаВладельцевНД.xml"))
+    suite.add(group, "Обычная форма-мостик для дополнительных обработок",
+              "Form.ФормаОбычная" in root_xml
+              and "<DefaultForm>" in root_xml)
     suite.add(group, "Объектный модуль: шаг 2а ЗаполнитьСопоставлениеПоИмениОтчествуАдресу",
               "ЗаполнитьСопоставлениеПоИмениОтчествуАдресу" in obj_bsl)
     suite.add(group, "Объектный модуль: размножение ЛС СчетаДляИсключенияПриРазмножении",
@@ -643,7 +647,7 @@ def run_com(suite):
     suite.add("БСП", "СведенияОВнешнейОбработке возвращает структуру", sved is not None,
               method="СведенияОВнешнейОбработке")
     ver = str(getattr(sved, "Версия", ""))
-    suite.add("БСП", "Версия обработки 1.0.3", ver == "1.0.3", details="version=" + ver)
+    suite.add("БСП", "Версия обработки 1.0.5", ver == "1.0.5", details="version=" + ver)
     suite.add("БСП", "Безопасный режим выключен", getattr(sved, "БезопасныйРежим", True) is False)
     cmds = getattr(sved, "Команды", None)
     suite.add("БСП", "Есть хотя бы одна команда открытия формы", cmds is not None and cmds.Количество() >= 1)
