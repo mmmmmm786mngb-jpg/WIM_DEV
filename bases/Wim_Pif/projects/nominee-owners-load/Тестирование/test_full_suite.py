@@ -592,7 +592,7 @@ def run_form_static(suite):
               "Элементы.СтраницаСтроки" in mod_bsl)
     suite.add(group, "Модуль формы: Сопоставить переключает протокол",
               "Элементы.СтраницаПротокол" in mod_bsl)
-    suite.add(group, "Объектный модуль версия 1.0.6", 'Версия = "1.0.6"' in obj_bsl)
+    suite.add(group, "Объектный модуль версия 1.0.7", 'Версия = "1.0.7"' in obj_bsl)
     root_xml = read_text(os.path.join(PROJECT, "src", "ЗаполнениеСпискаВладельцевНД.xml"))
     suite.add(group, "Обычная форма-мостик для дополнительных обработок",
               "Form.ФормаОбычная" in root_xml
@@ -647,7 +647,7 @@ def run_com(suite):
     suite.add("БСП", "СведенияОВнешнейОбработке возвращает структуру", sved is not None,
               method="СведенияОВнешнейОбработке")
     ver = str(getattr(sved, "Версия", ""))
-    suite.add("БСП", "Версия обработки 1.0.6", ver == "1.0.6", details="version=" + ver)
+    suite.add("БСП", "Версия обработки 1.0.7", ver == "1.0.7", details="version=" + ver)
     suite.add("БСП", "Безопасный режим выключен", getattr(sved, "БезопасныйРежим", True) is False)
     cmds = getattr(sved, "Команды", None)
     suite.add("БСП", "Есть хотя бы одна команда открытия формы", cmds is not None and cmds.Количество() >= 1)
