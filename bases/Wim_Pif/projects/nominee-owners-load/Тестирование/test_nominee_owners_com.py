@@ -30,9 +30,9 @@ PREFIX = "TEST_ND_%s_" % RUN_ID
 ADDRESS = "- 614007,Permskiy kray,g Perm,ul Testovaya,d 1,kv 1"
 
 CONN_STRINGS = [
+    "Srvr='localhost';Ref='WIM_PIF';Usr='admin';Pwd='1';App='PyCOM';Locale=ru_RU;",
+    "Srvr='localhost';Ref='WIM_PIF';Usr='Admin';Pwd='1';App='PyCOM';Locale=ru_RU;",
     "Srvr='localhost';Ref='WIM_PIF';App='PyCOM';Locale=ru_RU;",
-    "Srvr='localhost';Ref='WIM_PIF';Usr='Admin';Pwd='';App='PyCOM';Locale=ru_RU;",
-    "Srvr='localhost';Ref='WIM_PIF';Usr='';Pwd='';App='PyCOM';Locale=ru_RU;",
 ]
 
 
@@ -117,10 +117,16 @@ def ensure_pif(conn):
     name = PREFIX + "FUND"
     found = find_by_name(conn, "ПИФ", name)
     if found is not None:
+        obj = found.ПолучитьОбъект()
+        if not obj.Используется:
+            obj.Используется = True
+            obj.ОбменДанными.Загрузка = True
+            obj.Записать()
         return found
     manager = conn.NewObject("СправочникМенеджер.ПИФ")
     obj = manager.СоздатьЭлемент()
     obj.Наименование = name
+    obj.Используется = True
     obj.ОбменДанными.Загрузка = True
     obj.Записать()
     return obj.Ссылка

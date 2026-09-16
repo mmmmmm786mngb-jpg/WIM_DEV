@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>WEB-тест начитки владельцев НД</title>
+<style>
+body{font-family:Segoe UI,Arial,sans-serif;margin:24px;color:#222;max-width:1100px}
+h1{color:#0d47a1}
+.ok{background:#28a745;color:#fff;padding:4px 8px}
+.fail{background:#dc3545;color:#fff;padding:4px 8px}
+.info{background:#17a2b8;color:#fff;padding:4px 8px}
+.box{padding:12px 16px;margin:12px 0;border-radius:4px}
+.blue{background:#e3f2fd;border-left:4px solid #17a2b8}
+.yellow{background:#fff3cd;border-left:4px solid #ffc107}
+.green{background:#e8f5e9;border-left:4px solid #28a745}
+.purple{background:#f3e5f5;border-left:4px solid #8e24aa}
+table{border-collapse:collapse;width:100%}
+th,td{border:1px solid #ddd;padding:8px;text-align:left;vertical-align:top}
+th{background:#1565c0;color:#fff}
+pre{background:#f5f5f5;padding:8px;overflow:auto;white-space:pre-wrap}
+</style>
+</head>
+<body>
+<h1>WEB-тест обработки «Заполнение списка владельцев НД»</h1>
+
+<h2>Введение</h2>
+<p>Проверка управляемой формы внешней обработки в веб-клиенте WIM_PIF после публикации на Apache
+и исправления отбора фондов. База разработческая, данные с префиксом WEBFIX_.</p>
+
+<h2>Технология</h2>
+<div class="box blue">
+<p><b>COM</b> (Component Object Model, pywin32) готовит фонд, номинального держателя, пайщика и Excel.
+Затем Playwright открывает веб-клиент и проходит форму как пользователь.</p>
+<p>Строка COM:</p>
+<pre>Srvr='localhost';Ref='WIM_PIF';App='PyCOM';Locale=ru_RU;</pre>
+<p>Примеры подключения:</p>
+<pre>Srvr='localhost';Ref='WIM_PIF';App='PyCOM';Locale=ru_RU;
+Srvr='localhost';Ref='WIM_PIF';Usr='Admin';Pwd='';App='PyCOM';Locale=ru_RU;
+File='C:\Bases\WIM_PIF';Usr='Admin';Pwd='';App='PyCOM';Locale=ru_RU;</pre>
+<p>Примеры запросов:</p>
+<pre>ВЫБРАТЬ Ссылка, Наименование, Используется
+ИЗ Справочник.ПИФ
+ГДЕ Наименование ПОДОБНО &amp;П1 ИЛИ Наименование ПОДОБНО &amp;П2</pre>
+<pre>ВЫБРАТЬ ПЕРВЫЕ 1 Ссылка
+ИЗ Справочник.ДополнительныеОтчетыИОбработки
+ГДЕ ИмяОбъекта = &amp;Имя</pre>
+<p>Примеры вызовов:</p>
+<pre>conn.ВнешниеОбработки.Создать(epf, False, protection)
+proc.ОбеспечитьСвойствоНРДid()
+tab_doc.Записать(xlsx_path, conn.ТипФайлаТабличногоДокумента.XLSX)</pre>
+<p>Обработка открывается в вебе через Файл / открыть EPF: кнопка «Список команд» справочника
+дополнительных обработок на веб-клиенте падает в БСП
+(<code>ДополнительныеОтчетыИОбработкиКлиентСервер</code>, переменная Перечисления).</p>
+</div>
+
+<h2>Статистика</h2>
+<p><span class="ok">8 OK</span> <span class="info">веб-клиент http://localhost/wim_pif платформа 8.3.27.1859</span></p>
+<table>
+<tr><th>Проверка</th><th>Результат</th><th>Детали</th></tr>
+<tr><td>Открытие формы EPF</td><td style="color:#28a745">OK</td><td>Заполнение списка владельцев номинального держателя</td></tr>
+<tr><td>Пустое сопоставление</td><td style="color:#28a745">OK</td><td>Сначала прочитайте файл.</td></tr>
+<tr><td>Выбор фонда</td><td style="color:#28a745">OK</td><td>WEBFIX_20260916084812_FUND, Используется=Да</td></tr>
+<tr><td>Чтение Garant Excel</td><td style="color:#28a745">OK</td><td>2 строки</td></tr>
+<tr><td>Поиск по НРД id</td><td style="color:#28a745">OK</td><td>Способ=НРДid, По НРД id: 1</td></tr>
+<tr><td>Протокол не найден</td><td style="color:#28a745">OK</td><td>Категория=НеНайден</td></tr>
+<tr><td>Создание недостающих</td><td style="color:#28a745">OK</td><td>контрагентов: 1, лицевых счетов: 2</td></tr>
+<tr><td>Документ списка владельцев</td><td style="color:#28a745">OK</td><td>ПИФ=WEBFIX_20260916084812_FUND</td></tr>
+</table>
+
+<h2>Детали тестов</h2>
+<p>Запрос фондов, которые форма выбора скрывала:</p>
+<pre>ВЫБРАТЬ Ссылка, Наименование, Используется
+ИЗ Справочник.ПИФ
+ГДЕ Наименование ПОДОБНО &amp;П1 ИЛИ Наименование ПОДОБНО &amp;П2</pre>
+<p>параметры: П1="WEBFIX_%" П2="TEST_ND_%"</p>
+<div class="box yellow">
+<b>Причина, почему поиск фонда не находил карточку</b>
+<pre>ФормаВыбора справочника ПИФ при открытии ставит отбор Используется = Истина.
+Создание через COM шло с ОбменДанными.Загрузка = Истина, заполнение по умолчанию
+(FillValue=true) не срабатывало, Используется оставался Ложь. Карточка в базе была,
+в списке выбора ее не было.</pre>
+</div>
+<p>Итоги сопоставления:</p>
+<pre>Всего строк: 2
+По НРД id: 1
+По ФИО и дате рождения: 0
+По имени, отчеству, ДР и адресу: 0
+По ИНН/ОГРН: 0
+Подмена клиента: 0
+Выбор из нескольких: 0
+Не найдено: 1
+Создано: 0</pre>
+<p>Создание: Создано контрагентов: 1, лицевых счетов: 2, банковских счетов: 0</p>
+
+<h2>Возможности</h2>
+<ul>
+<li>Форма тонкого/веб-клиента открывается, кнопки чтения и сопоставления на месте</li>
+<li>Старый поиск по НРД id</li>
+<li>Протокол «не найден»</li>
+<li>Создание карточки и технических ЛС</li>
+<li>Документ «Список владельцев номинального держателя»</li>
+<li>COM-набор (шаг 2а, ФИО+ДР, ИНН, несколько карточек, Excel/XML) закрыт отдельным отчетом</li>
+</ul>
+
+<h2>Выводы</h2>
+<div class="box green">
+Тестовый фонд нужно создавать с Используется = Да, иначе форма выбора ПИФ его не показывает.
+После установки флага веб-сценарий проходит: файл, поиск по НРД id, протокол, создание, документ.
+</div>
+</body>
+</html>

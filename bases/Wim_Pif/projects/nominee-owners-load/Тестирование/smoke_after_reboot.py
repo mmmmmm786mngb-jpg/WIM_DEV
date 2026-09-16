@@ -14,7 +14,7 @@ def main():
     lines = []
     try:
         com = win32com.client.Dispatch("V83.COMConnector")
-        conn = com.Connect("Srvr='localhost';Ref='WIM_PIF';App='PyCOM';Locale=ru_RU;")
+        conn = com.Connect("Srvr='localhost';Ref='WIM_PIF';Usr='admin';Pwd='1';App='PyCOM';Locale=ru_RU;")
         lines.append("COM connect OK")
         prot = conn.NewObject("ОписаниеЗащитыОтОпасныхДействий")
         prot.ПредупреждатьОбОпасныхДействиях = False

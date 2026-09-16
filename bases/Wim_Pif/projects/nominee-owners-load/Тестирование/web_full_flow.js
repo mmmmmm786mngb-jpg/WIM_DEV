@@ -132,7 +132,57 @@ try {
   await clickElement('Протокол');
   await wait(1);
   const proto = await readTable();
-  console.log('PROTO=' + JSON.stringify(proto).slice(0, 1500));
+  console.log('PROTO=' + JSON.stringify(proto).slice(0, 2000));
+  const protoText = JSON.stringify(proto);
+  console.log('WEB_PROTO_NOTFOUND=' + (protoText.indexOf('НеНайден') >= 0));
 } catch (e) {
   console.log('PROTO_TAB=' + e);
 }
+
+try {
+  await selectValue('Фонд', seed.fund);
+} catch (e) {
+  console.log('FUND2=' + e);
+}
+try {
+  if (seed.group) {
+    await selectValue('Группа пайщиков', seed.group);
+  }
+} catch (e) {
+  console.log('GROUP=' + e);
+}
+
+try {
+  await fillFields({
+    'ФлСоздаватьКонтрагентов': true,
+    'ФлСоздаватьЛицевыеСчета': true
+  });
+  console.log('FLAGS_OK');
+} catch (e) {
+  console.log('FLAGS=' + e);
+}
+
+try {
+  await clickElement('Создать недостающих');
+  await wait(4);
+} catch (e) {
+  console.log('CREATE_CLICK=' + e);
+}
+
+const afterCreate = await getFormState();
+const createTotals = (afterCreate.fields || []).find(f => (f.name || '') === 'ТекстИтогов');
+console.log('CREATE_TOTALS=' + JSON.stringify(createTotals && createTotals.value));
+const createTxt = String((createTotals && createTotals.value) || '');
+console.log('WEB_CREATE_OK=' + (createTxt.indexOf('контрагентов: 1') >= 0 || createTxt.indexOf('Создано контрагентов: 1') >= 0));
+
+try {
+  await clickElement('Создать документ');
+  await wait(4);
+} catch (e) {
+  console.log('DOC_CLICK=' + e);
+}
+
+const afterDoc = await getFormState();
+console.log('DOC_TITLE=' + afterDoc.title);
+console.log('DOC_FIELDS=' + JSON.stringify((afterDoc.fields || []).map(f => ({ name: f.name, value: f.value })).slice(0, 20)));
+console.log('WEB_DOC_OK=' + (String(afterDoc.title || '').indexOf('Список владельцев') >= 0 || String(JSON.stringify(afterDoc.fields)).indexOf('Документ записан') >= 0));

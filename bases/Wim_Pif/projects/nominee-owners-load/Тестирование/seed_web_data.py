@@ -57,7 +57,7 @@ def main():
     os.makedirs(os.path.dirname(SEED_JSON), exist_ok=True)
     try:
         com = win32com.client.Dispatch("V83.COMConnector")
-        conn = com.Connect("Srvr='localhost';Ref='WIM_PIF';App='PyCOM';Locale=ru_RU;")
+        conn = com.Connect("Srvr='localhost';Ref='WIM_PIF';Usr='admin';Pwd='1';App='PyCOM';Locale=ru_RU;")
         protection = conn.NewObject("ОписаниеЗащитыОтОпасныхДействий")
         protection.ПредупреждатьОбОпасныхДействиях = False
         proc = conn.ВнешниеОбработки.Создать(EPF, False, protection)
@@ -71,9 +71,16 @@ def main():
             manager = conn.NewObject("СправочникМенеджер.ПИФ")
             obj = manager.СоздатьЭлемент()
             obj.Наименование = fund_name
+            obj.Используется = True
             obj.ОбменДанными.Загрузка = True
             obj.Записать()
             fund = obj.Ссылка
+        else:
+            obj = fund.ПолучитьОбъект()
+            if not obj.Используется:
+                obj.Используется = True
+                obj.ОбменДанными.Загрузка = True
+                obj.Записать()
 
         group_name = PREFIX + "GROUP"
         group = find_by_name(conn, "Контрагенты", group_name, is_folder=True)
@@ -146,7 +153,8 @@ def main():
 
         xlsx_path = os.path.join(OUT_DIR, "web_garant.xlsx")
         tab_doc = conn.NewObject("ТабличныйДокумент")
-        values = {
+        unk_fio = PREFIX + "Unknown Petr Petrovich"
+        row_nrd = {
             5: ADDRESS,
             6: fio,
             7: "10",
@@ -156,16 +164,30 @@ def main():
             17: "6500",
             19: nrd,
         }
-        for col, value in values.items():
+        row_unk = {
+            5: "other address %s" % RUN_ID,
+            6: unk_fio,
+            7: "2",
+            8: "other address %s" % RUN_ID,
+            9: "01.06.1991",
+            16: "000001",
+            17: "6500",
+            19: "01_%s_NONE" % RUN_ID,
+        }
+        for col, value in row_nrd.items():
             tab_doc.Область(3, col).Текст = str(value)
+        for col, value in row_unk.items():
+            tab_doc.Область(4, col).Текст = str(value)
         tab_doc.Записать(xlsx_path, conn.ТипФайлаТабличногоДокумента.XLSX)
 
         seed = {
             "runId": RUN_ID,
             "prefix": PREFIX,
             "fund": fund_name,
+            "group": group_name,
             "nominee": nominee_name,
             "fio": fio,
+            "unknownFio": unk_fio,
             "nrd": nrd,
             "xlsx": xlsx_path,
             "epf": EPF,
