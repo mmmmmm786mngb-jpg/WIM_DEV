@@ -75,13 +75,16 @@ const size = await page.evaluate(() => {
     if (r.width < 200 || r.height < 40) continue;
     const cls = (el.className && el.className.toString) ? el.className.toString() : '';
     if (r.width >= 600 && r.height >= 80) {
+      const st = window.getComputedStyle(el);
       interesting.push({
         tag: el.tagName,
         cls: cls.slice(0, 80),
         w: Math.round(r.width),
         h: Math.round(r.height),
         t: Math.round(r.top),
-        l: Math.round(r.left)
+        l: Math.round(r.left),
+        maxW: st.maxWidth,
+        mw: st.width
       });
     }
   }

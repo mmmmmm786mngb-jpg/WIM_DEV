@@ -1,0 +1,79 @@
+<!DOCTYPE html><html lang="ru"><head><meta charset="utf-8">
+<title>T025 СведенияОВнешнейОбработке возвращает структуру</title><style>
+body{font-family:Segoe UI,Arial,sans-serif;margin:24px;color:#222;line-height:1.45;background:#fff}
+h1{color:#0d47a1}
+h2{color:#1565c0;border-bottom:1px solid #bbdefb;padding-bottom:4px}
+.ok{background:#28a745;color:#fff;padding:3px 8px;border-radius:4px}
+.fail{background:#dc3545;color:#fff;padding:3px 8px;border-radius:4px}
+.info{background:#17a2b8;color:#fff;padding:10px;border-radius:6px}
+.block-blue{background:#e3f2fd;padding:12px;margin:12px 0;border-radius:6px}
+.block-yellow{background:#fff3cd;padding:12px;margin:12px 0;border-radius:6px;border-left:4px solid #ffc107}
+.block-violet{background:#f3e5f5;padding:12px;margin:12px 0;border-radius:6px}
+.block-cyan{background:#e0f7fa;padding:12px;margin:12px 0;border-radius:6px}
+table{border-collapse:collapse;width:100%;margin:12px 0}
+td,th{border:1px solid #ccc;padding:6px 8px;vertical-align:top;text-align:left}
+pre{white-space:pre-wrap;background:#f7f7f7;padding:8px;border-radius:4px}
+a{color:#1565c0}
+nav a{margin-right:12px}
+</style></head><body>
+<nav><a href="index.html">Сводный отчет</a></nav>
+<h1>T025. СведенияОВнешнейОбработке возвращает структуру</h1>
+<h2>Введение</h2>
+<p>Отдельный отчет по виду теста из полного плана начитки списка владельцев номинального держателя.
+Проверка выполнена через COM-соединение с базой WIM_PIF и/или через веб-клиент Playwright.</p>
+
+<div class="block-blue">
+<h2>Технология</h2>
+<p><b>COM</b> (Component Object Model) — внешнее соединение 1С через pywin32 и объект
+<code>V83.COMConnector</code>. Это не HTTP: Python вызывает методы модуля объекта обработки
+внутри сеанса информационной базы.</p>
+<p>Параметры строки соединения: <code>Srvr</code> (сервер), <code>Ref</code> (имя базы),
+<code>Usr</code>/<code>Pwd</code> (пользователь), <code>App</code> (имя приложения),
+<code>Locale</code> (язык сеанса).</p>
+<p>Примеры подключения:</p>
+<pre>pythoncom.CoInitialize()
+com = win32com.client.Dispatch("V83.COMConnector")
+# 1) серверная база с пользователем admin
+conn = com.Connect("Srvr='localhost';Ref='WIM_PIF';Usr='admin';Pwd='1';App='PyCOM';Locale=ru_RU;")
+# 2) файловая база
+conn = com.Connect("File='D:\\Bases\\Demo';Usr='admin';Pwd='1';App='PyCOM';Locale=ru_RU;")
+# 3) попытка без пароля (после появления пользователей будет отказано)
+conn = com.Connect("Srvr='localhost';Ref='WIM_PIF';App='PyCOM';Locale=ru_RU;")</pre>
+<p>Примеры запросов:</p>
+<pre>ВЫБРАТЬ 1 КАК Один
+
+ВЫБРАТЬ
+    ВТФайла.НомерСтрокиФайла КАК НомерСтрокиФайла,
+    Контрагенты.Ссылка КАК Контрагент
+ИЗ
+    ВТФайла КАК ВТФайла
+        ВНУТРЕННЕЕ СОЕДИНЕНИЕ Справочник.Контрагенты КАК Контрагенты
+        ПО (Контрагенты.Наименование = ВТФайла.ФИО
+                ИЛИ Контрагенты.НаименованиеПолное = ВТФайла.ФИО)
+        ВНУТРЕННЕЕ СОЕДИНЕНИЕ РегистрСведений.ПаспортныеДанныеФизЛиц.СрезПервых КАК Паспорт
+        ПО Паспорт.ФизЛицо = Контрагенты.Ссылка
+ГДЕ
+    Контрагенты.ДатаРождения = ВТФайла.ДатаРождения</pre>
+<p>Примеры вызова методов: <code>СведенияОВнешнейОбработке()</code>,
+<code>СопоставитьСтрокиФайла(таблица, параметры)</code>,
+<code>Справочники.Контрагенты</code> через <code>СправочникМенеджер</code>.</p>
+<p>Обработка создаётся так: <code>ВнешниеОбработки.Создать(путь, Ложь, ОписаниеЗащиты)</code>.
+Второй параметр <code>Ложь</code> отключает безопасный режим, иначе нельзя писать справочники
+и регистры. <code>ПредупреждатьОбОпасныхДействиях=Ложь</code>.</p>
+</div>
+
+<div class="info">Статус этого теста: <span class="ok">Успех</span>. В наборе всего 143, успешно 143, ошибок 0.</div>
+<div class="block-cyan"><h2>Детали теста</h2>
+<p>Группа: <b>БСП</b></p>
+<p>Метод 1С: <code>СведенияОВнешнейОбработке</code></p>
+<p>Параметры:</p><pre>{}</pre>
+<p>Результат:</p><pre>без дополнительных сведений</pre>
+
+
+</div>
+<div class="block-violet"><h2>Возможности</h2>
+<p>Тест проверяет один конкретный вид поведения обработки: чтение файла, поиск карточки,
+создание объектов, форму или веб-клиент.</p></div>
+<h2>Выводы</h2>
+<p>Проверка пройдена.</p>
+</body></html>
