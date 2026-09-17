@@ -7,6 +7,7 @@
 - `../IMAPPS-39438.doc` - выгрузка Jira (16.09.2026). Флаг, список счетов, зерно "клиент / все портфели", примеры Абайдулина / Абайдулова / Абакарова.
 - [imapps39438_specification.html](imapps39438_specification.html) - ТЗ: постановка простым языком и готовый код расширения.
 - [imapps39438_avancor.html](imapps39438_avancor.html) - задание вендору Аванкор: куда вставить в типовую.
+- [imapps39438_avancor_tree.html](imapps39438_avancor_tree.html) - краткое дерево изменений для Аванкор.
 - [imapps39438_avancor_letter.txt](imapps39438_avancor_letter.txt) - текст письма / комментария в задачу.
 
 ## Для разработки

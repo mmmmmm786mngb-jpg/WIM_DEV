@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>IMDEV-8663.2. Дерево изменений для Аванкор</title>
+<style>
+  :root {
+    --ink: #1c1915;
+    --soft: #5c564c;
+    --line: #e4d9c8;
+    --paper: #fffdf8;
+    --bg: #f3eee6;
+    --forest: #1f4a3a;
+    --mint: #e7f4ec;
+    --peach: #fde8d0;
+    --gray: #eceae6;
+    --red: #9b2c2c;
+    --blush: #fde8e8;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    color: var(--ink);
+    font-family: "Segoe UI", Arial, Helvetica, sans-serif;
+    font-size: 15px;
+    line-height: 1.45;
+    background:
+      radial-gradient(720px 280px at 100% 0%, #f6d9bf 0%, transparent 50%),
+      var(--bg);
+  }
+  .page { max-width: 900px; margin: 0 auto; padding: 24px 16px 48px; }
+  header {
+    background: var(--forest);
+    color: #f7f1e8;
+    border-radius: 20px;
+    padding: 22px 24px 18px;
+  }
+  header .kicker {
+    font-size: 11px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    opacity: 0.75;
+    margin-bottom: 6px;
+  }
+  header h1 {
+    font-family: Georgia, "Times New Roman", serif;
+    font-size: 26px;
+    line-height: 1.2;
+    margin: 0 0 8px;
+  }
+  header p { margin: 0; color: #e5efe9; max-width: 760px; }
+  .legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 16px 0 12px;
+  }
+  .tag {
+    display: inline-block;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    padding: 2px 8px;
+    border-radius: 999px;
+    vertical-align: middle;
+  }
+  .new { background: var(--mint); color: #1f7a4d; }
+  .chg { background: var(--peach); color: #9a3412; }
+  .sig { background: #fecaca; color: var(--red); }
+  .skip { background: var(--gray); color: #555; }
+  .card {
+    background: var(--paper);
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    padding: 16px 18px 12px;
+    box-shadow: 0 10px 28px rgba(28, 25, 21, 0.05);
+  }
+  .warn {
+    background: var(--blush);
+    border: 1px solid #f5c2c2;
+    border-radius: 16px;
+    padding: 14px 16px;
+    margin-bottom: 12px;
+  }
+  .warn h2 {
+    margin: 0 0 8px;
+    font-size: 16px;
+    color: var(--red);
+  }
+  .warn p { margin: 0 0 10px; }
+  table.sig {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+    background: #fff;
+  }
+  table.sig th, table.sig td {
+    border: 1px solid #f0c8c8;
+    padding: 8px 10px;
+    text-align: left;
+    vertical-align: top;
+  }
+  table.sig th { background: #fbeaea; }
+  .tree, .tree ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+  .tree ul {
+    margin-left: 18px;
+    padding-left: 14px;
+    border-left: 1px solid var(--line);
+  }
+  .tree li { margin: 7px 0; }
+  .node {
+    font-family: Consolas, "Courier New", monospace;
+    font-size: 13px;
+  }
+  .note {
+    color: var(--soft);
+    font-family: "Segoe UI", Arial, Helvetica, sans-serif;
+    font-size: 13px;
+  }
+  .foot {
+    margin-top: 14px;
+    font-size: 13px;
+    color: var(--soft);
+  }
+  .foot b { color: var(--ink); }
+  code {
+    font-family: Consolas, "Courier New", monospace;
+    font-size: 12.5px;
+    background: #efe4d4;
+    padding: 1px 5px;
+    border-radius: 4px;
+  }
+</style>
+</head>
+<body>
+<div class="page">
+  <header>
+    <div class="kicker">IMDEV-8663.2 · Аванкор · влив в типовую</div>
+    <h1>Дерево изменений</h1>
+    <p>Референс: расширение <code style="background:#2a5c4a;color:#f7f1e8">IM86632.cfe</code> 1.0.0.4.
+    Аннотации <code style="background:#2a5c4a;color:#f7f1e8">&amp;После</code> / <code style="background:#2a5c4a;color:#f7f1e8">&amp;ИзменениеИКонтроль</code> / маркеры <code style="background:#2a5c4a;color:#f7f1e8">#Вставка</code> в типовую не копировать.
+    Префикс <code style="background:#2a5c4a;color:#f7f1e8">IM86632_</code> с перехватов снять, править исходные имена.
+    Новые процедуры и реквизиты в CFE уже без префикса. Модули целиком файлом не подменять.</p>
+  </header>
+
+  <div class="legend">
+    <span class="tag new">новое</span>
+    <span class="tag chg">правка штатного</span>
+    <span class="tag sig">сигнатура</span>
+    <span class="tag skip">не трогать</span>
+  </div>
+
+  <div class="warn">
+    <h2>Сначала сигнатуры двух процедур (в базовой CF параметров нет)</h2>
+    <p>Мало вставить тело из CFE. Сначала дописать параметр в <b>заголовок</b> типовой процедуры, иначе не скомпилируется и пакет 1000 не доедет.</p>
+    <table class="sig">
+      <tr>
+        <th>Где</th>
+        <th>Сейчас в типовой</th>
+        <th>Должно стать</th>
+      </tr>
+      <tr>
+        <td><code>Документ.РасчетСЧА_РСА</code>, модуль объекта,<br><code>ПолучитьСуммыРСАСЧА</code></td>
+        <td><code>(Отказ = Неопределено, ТекстОтказа = "")</code></td>
+        <td><code>(Отказ = Неопределено, ТекстОтказа = "", ГотовыеДанные = Неопределено)</code></td>
+      </tr>
+      <tr>
+        <td>Общий модуль <code>ИсполняемыеПроцедурыЗакрытияПериода</code>,<br><code>Операция_1000_РасчетРСА_СЧА</code></td>
+        <td>6 параметров, последний <code>ТекстОтказа</code></td>
+        <td>7-й: <code>ДополнительныеДанные = Неопределено</code></td>
+      </tr>
+    </table>
+  </div>
+
+  <div class="card">
+    <ul class="tree">
+      <li>
+        <span class="tag new">новое</span>
+        <span class="node">Константа.ИспользоватьПредварительныеЗапросыДляРегламентовСЧА_РСА</span>
+        <span class="note"> — Булево, по умолчанию Ложь. Права влить в штатные роли (как у соседних констант утро/вечер). Роль CFE <code>ПраваНаРегламентыСЧА_РСА</code> отдельным объектом не создавать. Вывести на форму настроек системы рядом с теми же константами.</span>
+      </li>
+
+      <li>
+        <span class="node">Документ.ПланРегламентныхОперацийДУ</span>
+        <ul>
+          <li>
+            <span class="tag new">новое</span>
+            <span class="node">ПланВечернихОпераций</span>
+            <span class="note"> — реквизит документа, ссылка на этот же документ. Синоним «План вечерних операций»</span>
+          </li>
+          <li>
+            <span class="tag new">новое</span>
+            <span class="node">ФормаДокумента.ПланВечернихОпераций</span>
+            <span class="note"> — поле только просмотр после <code>ГруппаОперацийПользователя</code>. Типовое поле «Комментарий» не удалять</span>
+          </li>
+          <li>
+            <span class="tag chg">правка</span>
+            <span class="node">ПередЗаписью</span>
+            <span class="note"> — тело <code>IM86632_ПередЗаписью</code> в конец штатной. Если реквизит уже заполнен — выход. Иначе только ручная запись группы 3</span>
+          </li>
+        </ul>
+      </li>
+
+      <li>
+        <span class="node">Документ.РасчетСЧА_РСА</span>
+        <ul>
+          <li>
+            <span class="node">Модуль объекта</span>
+            <ul>
+              <li>
+                <span class="tag sig">сигнатура</span>
+                <span class="tag chg">правка</span>
+                <span class="node">ПолучитьСуммыРСАСЧА</span>
+                <span class="note"> — сначала 3-й параметр <code>ГотовыеДанные</code>, затем тело <code>IM86632_ПолучитьСуммыРСАСЧА</code></span>
+              </li>
+            </ul>
+          </li>
+          <li>
+            <span class="node">Модуль менеджера</span>
+            <ul>
+              <li>
+                <span class="tag chg">правка</span>
+                <span class="node">ПолучитьСуммыРСА_СЧА</span>
+                <span class="note"> — вставка из <code>IM86632_ПолучитьСуммыРСА_СЧА</code>, сигнатуру не менять</span>
+              </li>
+              <li>
+                <span class="tag new">новое</span>
+                <span class="note">пакетные методы области IMDEV_8663_2 (копировать как есть, без префикса): <code>ПолучитьСуммыРСА_СЧА_Пакетно</code>, запросы БУ/УУ/СС, группировка по сигнатуре, наборы счетов</span>
+              </li>
+            </ul>
+          </li>
+          <li>
+            <span class="node">Форма.ФормаДокумента</span>
+            <ul>
+              <li>
+                <span class="tag new">новое</span>
+                <span class="node">ПланВечернихОпераций</span>
+                <span class="note"> — реквизит формы (не документа) + поле только просмотр после <code>ДокументОснование</code>. В <code>ДокументОснование</code> вечерний план не писать</span>
+              </li>
+              <li>
+                <span class="tag chg">правка</span>
+                <span class="node">ПриЧтенииНаСервере</span>
+                <span class="note"> — вызов <code>ЗаполнитьПланВечернихОперацийНаФорме</code></span>
+              </li>
+              <li>
+                <span class="tag new">новое</span>
+                <span class="node">ЗаполнитьПланВечернихОперацийНаФорме</span>
+              </li>
+            </ul>
+          </li>
+        </ul>
+      </li>
+
+      <li>
+        <span class="node">Справочник.РегламентныеПериоды</span>
+        <ul>
+          <li>
+            <span class="node">Модуль менеджера</span>
+            <ul>
+              <li>
+                <span class="tag new">новое</span>
+                <span class="note">коды групп: <code>КодВечернейГруппыОпераций</code>, <code>КодГруппыРасчетаСЧА_РСА</code></span>
+              </li>
+              <li>
+                <span class="tag new">новое</span>
+                <span class="note">пакет и автозапуск: <code>ЕстьПланыГруппыСЧА</code>, <code>ЗаполнитьПараметрыСохраненияПакетнымиДаннымиГруппыСЧА</code>, <code>ДатаРасчетаСЧА_РСА</code></span>
+              </li>
+              <li>
+                <span class="tag new">новое</span>
+                <span class="note">связь групп 2/3: <code>СоответствиеВечернихПланов</code>, <code>ДоговорыСПроведеннымВечернимПланом</code>, <code>НайтиПроведенныйВечернийПлан</code></span>
+              </li>
+              <li>
+                <span class="tag new">новое</span>
+                <span class="note">отмена порций: <code>ЕстьАктивныеПорцииРегламентаЗаДату</code>, <code>ОжидатьЗавершенияПорцийРегламентаЗаДату</code>, <code>АктивныеПорцииРегламентаЗаДату</code>. Ключ порций <code>IM8663_</code> не переименовывать, сами порции не отменять</span>
+              </li>
+              <li>
+                <span class="tag chg">правка</span>
+                <span class="node">СформироватьРегламентныеОперации</span>
+                <span class="note"> — вставки из <code>IM86632_СформироватьРегламентныеОперации</code></span>
+              </li>
+              <li>
+                <span class="tag chg">правка</span>
+                <span class="node">ОбработатьПачкуДиспетчером</span>
+                <span class="note"> — ключи пакета СЧА + <code>СоответствиеДоговорВечернийПлан</code></span>
+              </li>
+              <li>
+                <span class="tag chg">правка</span>
+                <span class="node">СформироватьДокументыЗакрытияПериода</span>
+                <span class="note"> — передать 7-й параметр в операцию 1000; ключ <code>"ПланВечернихОпераций"</code> в <code>СоответствиеОперацияТаблица</code></span>
+              </li>
+              <li>
+                <span class="tag chg">правка</span>
+                <span class="node">ОчиститьПакетныеДанныеПараметрыСохранения</span>
+                <span class="note"> — очистка пакетных таблиц СЧА. Ключ карты вечерних планов сюда не добавлять</span>
+              </li>
+            </ul>
+          </li>
+          <li>
+            <span class="node">Форма.РегламентныйПериод</span>
+            <ul>
+              <li>
+                <span class="tag new">новое</span>
+                <span class="node">ЗапускатьРасчетСЧАПослеВечерних</span>
+                <span class="note"> — флажок на форме. Реквизиты формы (не справочника): флажок, служебные <code>ГруппаЗапуска</code>, <code>УчитыватьВыполненныеЗапуска</code>, <code>ПропуститьПредупреждениеСЧА</code>, коды групп. Форму целиком не подменять</span>
+              </li>
+              <li>
+                <span class="tag chg">правка</span>
+                <span class="node">СформироватьРегламентныеОперации</span>
+                <span class="note"> — предупреждение о группе 3 + вызов <code>ОтобратьДоговорыДляГруппыСЧАНаСервере</code></span>
+              </li>
+              <li>
+                <span class="tag chg">правка</span>
+                <span class="node">ОбработатьРезультатЗадания</span>
+                <span class="note"> — отмена: ждать живые порции. Успех группы 2: автозапуск группы 3 по флажку</span>
+              </li>
+              <li>
+                <span class="tag chg">правка</span>
+                <span class="node">ПриСозданииНаСервере</span> / <span class="node">ГруппаРегламентныхОперацийПриИзменении</span>
+                <span class="note"> — настройка видимости флажка</span>
+              </li>
+              <li>
+                <span class="tag new">новое</span>
+                <span class="note">модуль формы как в CFE без префикса: отбор группы 3, автозапуск, ожидание порций после отмены</span>
+              </li>
+            </ul>
+          </li>
+        </ul>
+      </li>
+
+      <li>
+        <span class="node">ОбщийМодуль.ИсполняемыеПроцедурыЗакрытияПериода</span>
+        <ul>
+          <li>
+            <span class="tag sig">сигнатура</span>
+            <span class="tag chg">правка</span>
+            <span class="node">Операция_1000_РасчетРСА_СЧА</span>
+            <span class="note"> — сначала 7-й параметр <code>ДополнительныеДанные</code>, затем тело <code>IM86632_Операция_1000_РасчетРСА_СЧА</code> (передача готовых таблиц в <code>ПолучитьСуммыРСАСЧА</code>)</span>
+          </li>
+        </ul>
+      </li>
+
+      <li>
+        <span class="node">ОбщийМодуль.ФоновыеЗаданияСервер</span>
+        <ul>
+          <li>
+            <span class="tag chg">правка</span>
+            <span class="node">СоздатьПланРегламентныхОперацийДУ</span>
+            <span class="note"> — перед <code>Записать(Проведение)</code>: если в 7-м параметре есть ключ <code>"ПланВечернихОпераций"</code> — записать в реквизит документа. Сигнатуру этой функции не менять</span>
+          </li>
+        </ul>
+      </li>
+
+      <li>
+        <span class="node">РегистрСведений.ЗначенияПараметровДоговораДУ</span>
+        <ul>
+          <li>
+            <span class="tag new">новое</span>
+            <span class="node">ЗначенияПараметровДоговоровДУПакетно</span>
+            <span class="note"> — модуль менеджера, копировать как есть</span>
+          </li>
+        </ul>
+      </li>
+
+      <li>
+        <span class="tag skip">не трогать</span>
+        <span class="note">группа <code>3. "Расчет СЧА/РСА"</code> — это данные ИБ, не метаданные (делает обработка поддержки). Операции 1010–1030, кнопка «Создать», «с учетом выполненных», диспетчер порций и ключ <code>IM8663_</code> уже в типовой. Заимствования CFE (ДоговорДУ, Облигации, Сделка, Хозрасчетный и т.п.), язык, картинки, <code>Configuration.xml</code>, префикс расширения, поле «Комментарий» на форме плана.</span>
+      </li>
+    </ul>
+    <p class="foot">
+      <b>После приёмки</b> расширение IM86632 снять с информационной базы.
+    </p>
+  </div>
+</div>
+</body>
+</html>
