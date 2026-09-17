@@ -1,0 +1,708 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Презентация 01. Экономика: стоимость доработок силами Аванкор</title>
+<style>
+  :root {
+    --ink: #0c1524;
+    --ink-soft: #3a4558;
+    --muted: #6b7588;
+    --line: #d7dde8;
+    --paper: #ffffff;
+    --navy: #0b1f3a;
+    --navy-mid: #163a66;
+    --teal: #0e7c6b;
+    --teal-soft: #d8f3ee;
+    --amber: #c47a12;
+    --amber-soft: #f8ecd8;
+    --sky: #e4eef9;
+    --slide-bg: #f5f7fb;
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; }
+  body {
+    font-family: "Manrope", "Segoe UI", Arial, sans-serif;
+    color: var(--ink);
+    background: #0a1220;
+    overflow: hidden;
+  }
+  .serif { font-family: "Instrument Serif", Georgia, "Times New Roman", serif; font-weight: 400; }
+
+  .deck { position: relative; height: 100vh; overflow: hidden; }
+  .slides { display: flex; height: 100%; transition: transform .45s cubic-bezier(.4,0,.2,1); }
+  .slide {
+    flex: 0 0 100%;
+    height: 100%;
+    padding: 34px 5vw 78px;
+    background: var(--slide-bg);
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+  }
+  .slide--title {
+    background:
+      radial-gradient(900px 420px at 88% 6%, rgba(14,124,107,.35), transparent 60%),
+      linear-gradient(135deg, #0b1f3a 0%, #163a66 52%, #0e5f57 100%);
+    color: #f4f7fb;
+    justify-content: center;
+  }
+  .slide--dark {
+    background: linear-gradient(150deg, #0f1d33 0%, #1c3a5e 100%);
+    color: #e6edf6;
+  }
+
+  .eyebrow {
+    font-size: 11px; font-weight: 700; letter-spacing: .16em; text-transform: uppercase;
+    color: var(--teal); margin-bottom: 10px;
+  }
+  .slide--title .eyebrow, .slide--dark .eyebrow { color: #6fdcc6; }
+  h1 { font-size: clamp(1.9rem, 4vw, 3rem); line-height: 1.1; margin: 0 0 16px; letter-spacing: -.01em; }
+  h2 { font-size: clamp(1.4rem, 2.6vw, 2.05rem); line-height: 1.15; margin: 0 0 8px; letter-spacing: -.01em; }
+  .lead { font-size: clamp(.95rem, 1.5vw, 1.08rem); color: var(--muted); margin: 0 0 20px; max-width: 62rem; }
+  .slide--title .lead, .slide--dark .lead { color: rgba(226,234,244,.86); }
+
+  .kpi-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-top: 26px; }
+  .kpi {
+    background: rgba(255,255,255,.09);
+    border: 1px solid rgba(255,255,255,.16);
+    border-radius: 16px; padding: 18px 16px 16px; backdrop-filter: blur(6px);
+  }
+  .kpi-num {
+    font-size: clamp(1.6rem, 3vw, 2.5rem); font-weight: 800; letter-spacing: -.025em;
+    color: #fff; line-height: 1.05; white-space: nowrap;
+  }
+  .kpi-unit { font-size: .5em; font-weight: 700; margin-left: 5px; color: rgba(244,247,251,.72); letter-spacing: 0; }
+  .kpi-lbl { font-size: 13px; font-weight: 700; margin-top: 8px; color: rgba(244,247,251,.94); }
+  .kpi-sub { font-size: 11.5px; margin-top: 5px; color: rgba(226,234,244,.62); line-height: 1.4; }
+
+  .card {
+    background: var(--paper); border: 1px solid var(--line); border-radius: 16px;
+    padding: 16px 18px; box-shadow: 0 10px 30px rgba(11,31,58,.06);
+  }
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; align-items: start; }
+  .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+  .grid-donut { display: grid; grid-template-columns: 290px 1fr; gap: 16px; align-items: stretch; }
+  .grid-unpaid { display: grid; grid-template-columns: 1.15fr 1fr; gap: 16px; align-items: start; }
+  .grid-scen { display: grid; grid-template-columns: 1.25fr 1fr; gap: 16px; align-items: start; }
+  .card--center { display: flex; flex-direction: column; justify-content: center; }
+  /* Карточка на темном фоне (титул, выводы) */
+  .card--glass {
+    background: rgba(255,255,255,.07); border-color: rgba(255,255,255,.16);
+    box-shadow: none; margin-top: 26px;
+  }
+
+  table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+  th, td { text-align: left; padding: 5px 9px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th {
+    background: var(--navy); color: #eef3f9; font-size: 10.5px; font-weight: 700;
+    letter-spacing: .06em; text-transform: uppercase; position: sticky; top: 0;
+  }
+  td.n, th.n { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+  td.k { font-weight: 700; color: var(--navy-mid); white-space: nowrap; }
+  td.c { color: var(--muted); white-space: nowrap; font-size: 12px; }
+  td.hypo { color: var(--navy-mid); font-weight: 700; }
+  td.save { color: #0a5c50; font-weight: 800; background: #f0faf7; }
+  /* Полосатость только для светлых таблиц: .sum на темном слайде исключена */
+  table:not(.sum) tbody tr:nth-child(even) td { background: #fafbfd; }
+  table:not(.sum) tbody tr:nth-child(even) td.save { background: #e9f6f2; }
+  tr.total td {
+    background: var(--navy) !important; color: #fff; font-weight: 800; font-size: 13px;
+    border-bottom: 0; position: sticky; bottom: 0;
+  }
+  /* Подсветка рекомендуемого сценария */
+  tr.row-hi td { background: #eef7f4 !important; }
+  tr.row-hi td.save { background: #ddf1eb !important; }
+  /* Пояснение под названием в первой колонке */
+  td .sub { display: block; font-size: 10.5px; font-weight: 600; color: var(--muted); margin-top: 1px; }
+  td .sub--dark { color: rgba(226,234,244,.5); }
+  .table-wrap { overflow: auto; max-height: 71vh; border: 1px solid var(--line); border-radius: 12px; background: #fff; }
+
+  /* Сводная таблица на темном слайде: без светлой заливки строк */
+  .sum { width: 100%; border-collapse: collapse; font-size: 14px; }
+  .sum td { padding: 9px 2px; border-bottom: 1px solid rgba(255,255,255,.13); background: transparent; }
+  .sum tr:last-child td { border-bottom: 0; }
+  .sum td.lab { color: rgba(226,234,244,.82); }
+  .sum td.v {
+    text-align: right; font-weight: 800; font-size: 17px; font-variant-numeric: tabular-nums;
+    white-space: nowrap; letter-spacing: -.01em;
+  }
+  .sum td.v-hypo { color: #ffffff; }
+  .sum td.v-fact { color: #f3c98a; }
+  .sum td.v-save { color: #6fdcc6; }
+  /* Точное значение мелким шрифтом под округленным */
+  .v-ex {
+    display: block; font-size: 10.5px; font-weight: 600; letter-spacing: 0;
+    color: rgba(226,234,244,.45); margin-top: 1px;
+  }
+
+  .flag {
+    display: inline-block; font-size: 10px; font-weight: 700; padding: 1px 6px; border-radius: 999px;
+    background: var(--amber-soft); color: #8a550c; border: 1px solid #edd9b0; white-space: nowrap;
+  }
+
+  .legend { display: flex; gap: 18px; flex-wrap: wrap; margin: 2px 0 10px; font-size: 12.5px; color: var(--ink-soft); }
+  .legend span { display: inline-flex; align-items: center; gap: 7px; font-weight: 600; }
+  .legend i { width: 13px; height: 13px; border-radius: 3px; display: inline-block; }
+
+  /* max-height - страховка: SVG сохраняет пропорции и не выходит за слайд */
+  .chart { width: 100%; height: auto; max-height: 63vh; display: block; }
+  .chart--flat { max-height: 30vh; }
+  .donut { width: 100%; max-width: 240px; height: auto; display: block; margin: 0 auto; }
+  .chart text, .donut text { font-family: "Manrope", "Segoe UI", Arial, sans-serif; }
+  .ax { font-size: 11px; fill: #6b7588; }
+  .ax-dim { font-size: 10px; fill: #94a0b3; }
+  .ax-title { font-size: 11.5px; fill: #6b7588; font-weight: 700; }
+  .lbl { font-size: 11.5px; fill: #2c3a4f; font-weight: 700; }
+  .val { font-size: 10.5px; fill: #2c3a4f; font-weight: 700; }
+  .val-dim { fill: #8a6415; }
+  .val-big { font-size: 14px; fill: #142a44; font-weight: 800; }
+  /* Подписи диаграмм на темном слайде */
+  .d-cap { font-size: 13px; fill: rgba(226,234,244,.72); font-weight: 700; }
+  .d-val { font-size: 17px; fill: #0d2036; font-weight: 800; }
+  .d-lbl { font-size: 12.5px; fill: rgba(226,234,244,.85); font-weight: 700; }
+  .donut-num { font-size: 46px; font-weight: 800; fill: #0a5c50; }
+  .donut-cap { font-size: 13px; fill: #6b7588; font-weight: 700; }
+  .donut-sum { font-size: 19px; font-weight: 800; fill: #0d2036; }
+
+  .facts { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+  .facts li { display: flex; gap: 11px; align-items: flex-start; font-size: 14px; color: var(--ink-soft); }
+  .facts .b {
+    flex: 0 0 auto; width: 22px; height: 22px; border-radius: 7px; background: var(--teal);
+    color: #fff; font-size: 11.5px; font-weight: 800; display: grid; place-items: center; margin-top: 1px;
+  }
+  .facts strong { color: var(--ink); }
+  .slide--dark .facts li { color: rgba(226,234,244,.9); }
+  .slide--dark .facts strong { color: #fff; }
+
+  .formula {
+    background: var(--sky); border: 1px solid #cfdff2; border-radius: 12px;
+    padding: 13px 15px; font-size: 14px; color: #14314f; line-height: 1.6;
+  }
+  .formula code {
+    font-family: ui-monospace, Consolas, monospace; font-size: 13px; background: #fff;
+    padding: 2px 6px; border-radius: 5px; border: 1px solid #cfdff2;
+  }
+  .note {
+    background: var(--amber-soft); border: 1px solid #edd9b0; border-radius: 12px;
+    padding: 12px 14px; font-size: 12.5px; color: #6f4a10; line-height: 1.55;
+  }
+  .h4 {
+    font-size: 11px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase;
+    color: var(--muted); margin: 0 0 9px;
+  }
+  .improve {
+    margin-top: auto; padding-top: 16px; display: flex; align-items: center; gap: 12px;
+    flex-wrap: wrap; border-top: 1px dashed rgba(255,255,255,.25);
+  }
+  .improve .lbl2 { font-size: 11px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: rgba(226,234,244,.6); }
+  .improve .badge {
+    display: inline-flex; align-items: center; gap: 8px; padding: 8px 14px; border-radius: 999px;
+    font-size: 13px; font-weight: 800; background: rgba(14,124,107,.24); color: #a8ebda;
+    border: 1px solid rgba(111,220,198,.45);
+  }
+  .improve .badge::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: #6fdcc6; }
+
+  .src { margin-top: 14px; font-size: 11.5px; color: var(--muted); line-height: 1.5; }
+  .slide--dark .src, .slide--title .src { color: rgba(226,234,244,.6); }
+
+  /* Навигация */
+  .nav {
+    position: fixed; left: 0; right: 0; bottom: 0; height: 56px; display: flex;
+    align-items: center; justify-content: space-between; padding: 0 5vw;
+    background: rgba(10,18,32,.9); color: #cbd6e6; font-size: 12.5px; z-index: 20;
+  }
+  .dots { display: flex; gap: 7px; }
+  .dot {
+    width: 9px; height: 9px; border-radius: 50%; background: #3d4c63; border: 0;
+    cursor: pointer; padding: 0; transition: background .2s, transform .2s;
+  }
+  .dot.on { background: #6fdcc6; transform: scale(1.35); }
+  .nav-btns { display: flex; gap: 8px; }
+  .nav button.arrow {
+    background: #1c2b44; color: #dbe5f2; border: 1px solid #35486a; border-radius: 8px;
+    width: 34px; height: 30px; font-size: 14px; cursor: pointer;
+  }
+  .nav button.arrow:hover { background: #26395a; }
+  .counter { font-variant-numeric: tabular-nums; font-weight: 700; }
+  .deck-title { font-weight: 700; opacity: .75; }
+
+  @media (max-width: 1080px) {
+    .kpi-row, .grid-2, .grid-3 { grid-template-columns: 1fr 1fr; }
+    .grid-donut { grid-template-columns: 1fr; }
+  }
+  @media (max-width: 680px) {
+    .kpi-row, .grid-2, .grid-3 { grid-template-columns: 1fr; }
+    .slide { padding: 26px 20px 74px; }
+  }
+  @media print {
+    body, .deck { height: auto; overflow: visible; background: #fff; }
+    .slides { display: block; transform: none !important; }
+    .slide { height: auto; page-break-after: always; overflow: visible; }
+    .nav { display: none; }
+    .table-wrap { max-height: none; }
+  }
+</style>
+</head>
+<body>
+<div class="deck">
+  <div class="slides" id="slides">
+
+    <!-- 1. Титул -->
+    <section class="slide slide--title">
+      <div class="eyebrow">Презентация 01 &middot; Пакет 20.09.2026</div>
+      <h1 class="serif">Сколько стоили бы наши доработки,<br>если бы их делал Аванкор</h1>
+      <p class="lead">
+        По 18 платным задачам вендор выставил счет только за интеграцию наших готовых
+        решений &mdash; 411 тыс. &#8381;. Ещё 19 задач он закрыл вообще без счета.
+        Если бы всю разработку вел Аванкор, компания заплатила бы кратно больше.
+      </p>
+      <div class="kpi-row">
+<div class="kpi"><div class="kpi-num">1,2–2,2 млн<span class="kpi-unit">₽</span></div><div class="kpi-lbl">Экономия компании</div><div class="kpi-sub">диапазон сценариев: 1 229 955 – 2 205 420 ₽</div></div>
+<div class="kpi"><div class="kpi-num">×4–6,4<span class="kpi-unit"></span></div><div class="kpi-lbl">Во столько раз дороже вендор</div><div class="kpi-sub">полная разработка против фактически оплаченной интеграции</div></div>
+<div class="kpi"><div class="kpi-num">446<span class="kpi-unit">ч</span></div><div class="kpi-lbl">Работы нашей команды</div><div class="kpi-sub">18 платных задач (313,75 ч) + 19 без счета (132,5 ч)</div></div>
+<div class="kpi"><div class="kpi-num">3 900<span class="kpi-unit">₽/час</span></div><div class="kpi-lbl">Ставка Аванкор за нормо-час</div><div class="kpi-sub">из смет вендора, диапазон 3 900–4 680 ₽</div></div>
+      </div>
+      <div class="card card--glass">
+<svg viewBox="0 0 1000 128" class="chart chart--flat" role="img" aria-label="Распределение гипотетической стоимости"><text x="4" y="20" class="d-cap">Гипотетическая стоимость полной разработки вендором: 1,6 млн ₽  ·  консервативный сценарий, только платные задачи</text><rect x="4" y="40" width="248.7" height="44" rx="4" fill="#c47a12"/><rect x="252.7" y="40" width="743.3" height="44" rx="4" fill="#0e7c6b"/><text x="128.3" y="68" class="d-val" text-anchor="middle">411 тыс. ₽</text><text x="624.3" y="68" class="d-val" text-anchor="middle">1,2 млн ₽</text><text x="128.3" y="106" class="d-lbl" text-anchor="middle">Оплачено вендору (интеграция) &#183; 25%</text><text x="624.3" y="106" class="d-lbl" text-anchor="middle">Экономия компании &#183; 75%</text></svg>
+      </div>
+      <div class="improve">
+        <span class="lbl2">Вид улучшения</span>
+        <span class="badge">Снижение внешних затрат (cost avoidance)</span>
+      </div>
+      <div class="src">
+        Источники: выгрузка Jira по платным задачам вендора (37 задач, из них 18
+        с признаком оплаты), отчеты учета времени команды (6 файла, 1942,75 ч по 103 задачам).
+        Ставка и нормо-часы &mdash; из смет самого вендора.
+      </div>
+    </section>
+
+    <!-- 2. Методика -->
+    <section class="slide">
+      <div class="eyebrow">Методика расчета</div>
+      <h2>Как считаем: только фактические данные, без допущений о ставке</h2>
+      <p class="lead">
+        Ставку вендора не оценивали экспертно &mdash; она вычислена из его собственных смет,
+        где указаны и нормо-часы, и сумма в рублях.
+      </p>
+      <div class="grid-2">
+        <div class="card">
+          <p class="h4">Что берем из источников</p>
+          <ul class="facts">
+            <li><span class="b">1</span><span><strong>Часы нашей команды</strong> &mdash; из отчетов учета
+              времени (Time Sheet) по каждой задаче; при отсутствии записей &mdash; Time Spent из Jira.</span></li>
+            <li><span class="b">2</span><span><strong>Нормо-часы и сумма вендора</strong> &mdash; из поля сметы
+              в задаче Jira: например, &laquo;5 нормо-часов. Стоимость составляет 19 500 руб&raquo;.</span></li>
+            <li><span class="b">3</span><span><strong>Ставка</strong> = сумма / нормо-часы. По 18
+              задачам она составила 3 900&ndash;4 680 &#8381;, преобладающая &mdash; 3 900 &#8381;.</span></li>
+            <li><span class="b">4</span><span><strong>Две группы задач.</strong> 18 платных &mdash;
+              вендор выставил счет за интеграцию нашего решения. 19 бесплатных &mdash; счета
+              не было вовсе, работу целиком закрыла наша команда.</span></li>
+            <li><span class="b">5</span><span><strong>Что не берем в расчет.</strong> Гарантийные баги в
+              продукте вендора и подзадачи без собственного учета времени.</span></li>
+          </ul>
+        </div>
+        <div class="card">
+          <p class="h4">Формула сравнения</p>
+          <div class="formula">
+            <div><strong>Факт</strong> = <code>сумма сметы вендора</code><br>
+            <span style="color:#4a6280">вендор оплачен только за интеграцию готового решения</span></div>
+            <div style="margin-top:11px"><strong>Гипотеза</strong> =
+              <code>(наши часы &times; надбавка + нормо-часы вендора) &times; ставка</code><br>
+            <span style="color:#4a6280">полный цикл разработки силами вендора</span></div>
+            <div style="margin-top:11px"><strong>Бесплатные задачи</strong> =
+              <code>часы &times; (1 &minus; доля сопровождения) &times; надбавка &times; ставка</code><br>
+            <span style="color:#4a6280">вендор принял наш результат и не выставил счет</span></div>
+            <div style="margin-top:11px"><strong>Экономия</strong> = <code>Гипотеза &minus; Факт</code></div>
+          </div>
+          <div class="note" style="margin-top:12px">
+            <strong>Два коэффициента вместо одной цифры.</strong> <em>Надбавка</em> &mdash; насколько
+            больше времени нужно вендору на аналитику и вхождение в контекст. <em>Доля
+            сопровождения</em> &mdash; какую часть бесплатных задач он закрыл бы даром и сам.
+            Оба коэффициента меняются по сценариям, поэтому результат &mdash; диапазон, а не точка.
+          </div>
+        </div>
+      </div>
+      <div class="src">
+        Выборка: 18 платных задач вендора и 19 задач, закрытых без счета
+        (132,5 ч нашей команды). Обе группы разобраны на отдельных слайдах.
+      </div>
+    </section>
+
+    <!-- 3. Диаграмма по задачам -->
+    <section class="slide">
+      <div class="eyebrow">Сравнение по задачам</div>
+      <h2>Факт интеграции против полной разработки у вендора</h2>
+      <div class="legend">
+        <span><i style="background:#163a66"></i>Гипотеза: полная разработка силами Аванкор</span>
+        <span><i style="background:#c47a12"></i>Факт: оплачена только интеграция</span>
+      </div>
+      <div class="card">
+<svg viewBox="0 0 1200 526" class="chart" role="img" aria-label="Сравнение фактической и гипотетической стоимости по задачам"><line x1="200.0" y1="32" x2="200.0" y2="496" stroke="#d7dde8" stroke-width="1"/><text x="200.0" y="24" class="ax" text-anchor="middle">0</text><line x1="376.0" y1="32" x2="376.0" y2="496" stroke="#d7dde8" stroke-width="1"/><text x="376.0" y="24" class="ax" text-anchor="middle">100</text><line x1="552.0" y1="32" x2="552.0" y2="496" stroke="#d7dde8" stroke-width="1"/><text x="552.0" y="24" class="ax" text-anchor="middle">200</text><line x1="728.0" y1="32" x2="728.0" y2="496" stroke="#d7dde8" stroke-width="1"/><text x="728.0" y="24" class="ax" text-anchor="middle">300</text><line x1="904.0" y1="32" x2="904.0" y2="496" stroke="#d7dde8" stroke-width="1"/><text x="904.0" y="24" class="ax" text-anchor="middle">400</text><line x1="1080.0" y1="32" x2="1080.0" y2="496" stroke="#d7dde8" stroke-width="1"/><text x="1080.0" y="24" class="ax" text-anchor="middle">500</text><text x="640.0" y="514" class="ax-title" text-anchor="middle">Стоимость, тыс. ₽</text><text x="190" y="56.0" class="lbl" text-anchor="end">IMDEV-7330</text><rect x="200" y="44.0" width="782.5" height="9" rx="2" fill="#163a66" fill-opacity="0.88"/><rect x="200" y="55.0" width="164.7" height="9" rx="2" fill="#c47a12"/><text x="988.5" y="53.0" class="val">445</text><text x="370.7" y="64.0" class="val val-dim">94</text><text x="190" y="81.0" class="lbl" text-anchor="end">IMAPPS-35039</text><rect x="200" y="69.0" width="367.2" height="9" rx="2" fill="#163a66" fill-opacity="0.88"/><rect x="200" y="80.0" width="54.9" height="9" rx="2" fill="#c47a12"/><text x="573.2" y="78.0" class="val">209</text><text x="260.9" y="89.0" class="val val-dim">31</text><text x="190" y="106.0" class="lbl" text-anchor="end">IMDEV-8641</text><rect x="200" y="94.0" width="336.3" height="9" rx="2" fill="#163a66" fill-opacity="0.88"/><rect x="200" y="105.0" width="34.3" height="9" rx="2" fill="#c47a12"/><text x="542.3" y="103.0" class="val">191</text><text x="240.3" y="114.0" class="val val-dim">20</text><text x="190" y="131.0" class="lbl" text-anchor="end">IMDEV-8979</text><rect x="200" y="119.0" width="233.4" height="9" rx="2" fill="#163a66" fill-opacity="0.88"/><rect x="200" y="130.0" width="13.7" height="9" rx="2" fill="#c47a12"/><text x="439.4" y="128.0" class="val">133</text><text x="219.7" y="139.0" class="val val-dim">7,8</text><text x="190" y="156.0" class="lbl" text-anchor="end">IMAPPS-35037</text><rect x="200" y="144.0" width="216.2" height="9" rx="2" fill="#163a66" fill-opacity="0.88"/><rect x="200" y="155.0" width="27.5" height="9" rx="2" fill="#c47a12"/><text x="422.2" y="153.0" class="val">123</text><text x="233.5" y="164.0" class="val val-dim">16</text><text x="190" y="181.0" class="lbl" text-anchor="end">IMDEV-8899</text><rect x="200" y="169.0" width="205.9" height="9" rx="2" fill="#163a66" fill-opacity="0.88"/><rect x="200" y="180.0" width="34.3" height="9" rx="2" fill="#c47a12"/><text x="411.9" y="178.0" class="val">117</text><text x="240.3" y="189.0" class="val val-dim">20</text><text x="190" y="206.0" class="lbl" text-anchor="end">IMAPPS-32896</text><rect x="200" y="194.0" width="160.6" height="9" rx="2" fill="#163a66" fill-opacity="0.88"/><rect x="200" y="205.0" width="131.8" height="9" rx="2" fill="#c47a12"/><text x="366.6" y="203.0" class="val">91</text><text x="337.8" y="214.0" class="val val-dim">75</text><text x="190" y="231.0" class="lbl" text-anchor="end">IMDEV-8632</text><rect x="200" y="219.0" width="130.4" height="9" rx="2" fill="#163a66" fill-opacity="0.88"/><rect x="200" y="230.0" width="41.2" height="9" rx="2" fill="#c47a12"/><text x="336.4" y="228.0" class="val">74</text><text x="247.2" y="239.0" class="val val-dim">23</text><text x="190" y="256.0" class="lbl" text-anchor="end">IMDEV-9434</text><rect x="200" y="244.0" width="118.3" height="9" rx="2" fill="#163a66" fill-opacity="0.88"/><rect x="200" y="255.0" width="29.6" height="9" rx="2" fill="#c47a12"/><text x="324.3" y="253.0" class="val">67</text><text x="235.6" y="264.0" class="val val-dim">17</text><text x="190" y="281.0" class="lbl" text-anchor="end">IMAPPS-33647</text><rect x="200" y="269.0" width="61.8" height="9" rx="2" fill="#163a66" fill-opacity="0.88"/><rect x="200" y="280.0" width="34.3" height="9" rx="2" fill="#c47a12"/><text x="267.8" y="278.0" class="val">35</text><text x="240.3" y="289.0" class="val val-dim">20</text><text x="190" y="306.0" class="lbl" text-anchor="end">IMDEV-8639</text><rect x="200" y="294.0" width="58.3" height="9" rx="2" fill="#163a66" fill-opacity="0.88"/><rect x="200" y="305.0" width="48.0" height="9" rx="2" fill="#c47a12"/><text x="264.3" y="303.0" class="val">33</text><text x="254.0" y="314.0" class="val val-dim">27</text><text x="190" y="331.0" class="lbl" text-anchor="end">IMAPPS-35035</text><rect x="200" y="319.0" width="53.2" height="9" rx="2" fill="#163a66" fill-opacity="0.88"/><rect x="200" y="330.0" width="13.7" height="9" rx="2" fill="#c47a12"/><text x="259.2" y="328.0" class="val">30</text><text x="219.7" y="339.0" class="val val-dim">7,8</text><text x="190" y="356.0" class="lbl" text-anchor="end">IMAPPS-35316</text><rect x="200" y="344.0" width="44.6" height="9" rx="2" fill="#163a66" fill-opacity="0.88"/><rect x="200" y="355.0" width="13.7" height="9" rx="2" fill="#c47a12"/><text x="250.6" y="353.0" class="val">25</text><text x="219.7" y="364.0" class="val val-dim">7,8</text><text x="190" y="381.0" class="lbl" text-anchor="end">IMAPPS-34560</text><rect x="200" y="369.0" width="37.8" height="9" rx="2" fill="#163a66" fill-opacity="0.88"/><rect x="200" y="380.0" width="27.5" height="9" rx="2" fill="#c47a12"/><text x="243.8" y="378.0" class="val">21</text><text x="233.5" y="389.0" class="val val-dim">16</text><text x="190" y="406.0" class="lbl" text-anchor="end">IMAPPS-32897</text><rect x="200" y="394.0" width="30.9" height="9" rx="2" fill="#163a66" fill-opacity="0.88"/><rect x="200" y="405.0" width="20.6" height="9" rx="2" fill="#c47a12"/><text x="236.9" y="403.0" class="val">18</text><text x="226.6" y="414.0" class="val val-dim">12</text><text x="190" y="431.0" class="lbl" text-anchor="end">IMAPPS-32895</text><rect x="200" y="419.0" width="24.0" height="9" rx="2" fill="#163a66" fill-opacity="0.88"/><rect x="200" y="430.0" width="20.6" height="9" rx="2" fill="#c47a12"/><text x="230.0" y="428.0" class="val">14</text><text x="226.6" y="439.0" class="val val-dim">12</text><text x="190" y="456.0" class="lbl" text-anchor="end">IMAPPS-35010</text><rect x="200" y="444.0" width="17.2" height="9" rx="2" fill="#163a66" fill-opacity="0.88"/><rect x="200" y="455.0" width="6.9" height="9" rx="2" fill="#c47a12"/><text x="223.2" y="453.0" class="val">9,8</text><text x="212.9" y="464.0" class="val val-dim">3,9</text><text x="190" y="481.0" class="lbl" text-anchor="end">IMDEV-8635</text><rect x="200" y="469.0" width="10.3" height="9" rx="2" fill="#163a66" fill-opacity="0.88"/><rect x="200" y="480.0" width="6.9" height="9" rx="2" fill="#c47a12"/><text x="216.3" y="478.0" class="val">5,8</text><text x="212.9" y="489.0" class="val val-dim">3,9</text></svg>
+      </div>
+      <div class="src">
+        Задачи отсортированы по гипотетической стоимости. Все суммы &mdash; в тысячах рублей;
+        точные значения до рубля приведены в таблице на следующем слайде.
+      </div>
+    </section>
+
+    <!-- 4. Таблица -->
+    <section class="slide">
+      <div class="eyebrow">Детализация</div>
+      <h2>Все платные задачи: часы, ставки, суммы</h2>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Задача</th>
+              <th>Наименование</th>
+              <th>Контур</th>
+              <th class="n">Наши часы</th>
+              <th class="n">Нормо-часы вендора</th>
+              <th class="n">Ставка, &#8381;</th>
+              <th class="n">Факт, &#8381;</th>
+              <th class="n">Гипотеза, &#8381;</th>
+              <th class="n">Экономия, &#8381;</th>
+            </tr>
+          </thead>
+          <tbody>
+<tr><td class="k">IMDEV-7330</td><td class="t">Оптимизация 1С ФИН_Расчет НДФЛ</td><td class="c">Finance</td><td class="n">90</td><td class="n">24</td><td class="n">3 900</td><td class="n">93 600</td><td class="n hypo">444 600</td><td class="n save">351 000</td></tr>
+<tr><td class="k">IMAPPS-35039</td><td class="t">[Регл 4] Оптимизация регламентов. Вечерние операции.</td><td class="c">DU</td><td class="n">45,5</td><td class="n">8</td><td class="n">3 900</td><td class="n">31 200</td><td class="n hypo">208 650</td><td class="n save">177 450</td></tr>
+<tr><td class="k">IMDEV-8641</td><td class="t">Оптимизация выполнения регламентных операций в ФИН по…</td><td class="c">Finance</td><td class="n">44</td><td class="n">5</td><td class="n">3 900</td><td class="n">19 500</td><td class="n hypo">191 100</td><td class="n save">171 600</td></tr>
+<tr><td class="k">IMDEV-8979</td><td class="t">Добавить в конфигурацию и во внешние обработки / отче…</td><td class="c">DU</td><td class="n">32</td><td class="n">2</td><td class="n">3 900</td><td class="n">7 800</td><td class="n hypo">132 600</td><td class="n save">124 800</td></tr>
+<tr><td class="k">IMAPPS-35037</td><td class="t">[Регл 3] Оптимизация регламентов. Утренние операции.</td><td class="c">DU</td><td class="n">27,5</td><td class="n">4</td><td class="n">3 900</td><td class="n">15 600</td><td class="n hypo">122 850</td><td class="n save">107 250</td></tr>
+<tr><td class="k">IMDEV-8899</td><td class="t">Оптимизация вечерних регламентов по РДУ (Этап 2)</td><td class="c">DU</td><td class="n">25</td><td class="n">5</td><td class="n">3 900</td><td class="n">19 500</td><td class="n hypo">117 000</td><td class="n save">97 500</td></tr>
+<tr><td class="k">IMDEV-8632</td><td class="t">Возможность настройки запуска регламентных операций п…</td><td class="c">Finance</td><td class="n">13</td><td class="n">6</td><td class="n">3 900</td><td class="n">23 400</td><td class="n hypo">74 100</td><td class="n save">50 700</td></tr>
+<tr><td class="k">IMDEV-9434</td><td class="t">Оптимизация отчетов Аванкора для РДУ (ГрупповоеПереза…</td><td class="c">DU</td><td class="n">12</td><td class="n">4</td><td class="n">4 200</td><td class="n">16 800</td><td class="n hypo">67 200</td><td class="n save">50 400</td></tr>
+<tr><td class="k">IMAPPS-35035</td><td class="t">[Регл 1] Оптимизация регламентов. Справочник Регламен…</td><td class="c">DU</td><td class="n">5,75</td><td class="n">2</td><td class="n">3 900</td><td class="n">7 800</td><td class="n hypo">30 225</td><td class="n save">22 425</td></tr>
+<tr><td class="k">IMAPPS-35316</td><td class="t">[Регл 2] Оптимизация регламентов. Вознаграждение за у…</td><td class="c">DU</td><td class="n">4,5</td><td class="n">2</td><td class="n">3 900</td><td class="n">7 800</td><td class="n hypo">25 350</td><td class="n save">17 550</td></tr>
+<tr><td class="k">IMAPPS-32896</td><td class="t">IMAPPS-30448  Аванкор ПИФ. 2. Параллельно выполнять р… <span class="flag" title="Смета вендора не закрыта: разработка не оценена">смета открыта</span></td><td class="c">PIF</td><td class="n">3,5</td><td class="n">16</td><td class="n">4 680</td><td class="n">74 880</td><td class="n hypo">91 260</td><td class="n save">16 380</td></tr>
+<tr><td class="k">IMAPPS-33647</td><td class="t">IMAPPS-32413  Аванкор. [ПИФ 2.0] Медленное проведение…</td><td class="c">PIF</td><td class="n">4</td><td class="n">5</td><td class="n">3 900</td><td class="n">19 500</td><td class="n hypo">35 100</td><td class="n save">15 600</td></tr>
+<tr><td class="k">IMDEV-8639</td><td class="t">IMDEV-8636  Аванкор. [ДУ 2.0] Оптимизация Технических…</td><td class="c">Finance</td><td class="n">1,5</td><td class="n">7</td><td class="n">3 900</td><td class="n">27 300</td><td class="n hypo">33 150</td><td class="n save">5 850</td></tr>
+<tr><td class="k">IMAPPS-35010</td><td class="t">Оптимизация функции ДоговорКонтрагентаСРольюДоговорДУ…</td><td class="c">DU</td><td class="n">1,5</td><td class="n">1</td><td class="n">3 900</td><td class="n">3 900</td><td class="n hypo">9 750</td><td class="n save">5 850</td></tr>
+<tr><td class="k">IMAPPS-34560</td><td class="t">IMAPPS-34094  [Аванкор] Оптимизация кода для повышени…</td><td class="c">DU</td><td class="n">1,5</td><td class="n">4</td><td class="n">3 900</td><td class="n">15 600</td><td class="n hypo">21 450</td><td class="n save">5 850</td></tr>
+<tr><td class="k">IMAPPS-32897</td><td class="t">IMAPPS-30448  Аванкор ПИФ. 3. Проблема жестких зависа…</td><td class="c">PIF</td><td class="n">1,5</td><td class="n">3</td><td class="n">3 900</td><td class="n">11 700</td><td class="n hypo">17 550</td><td class="n save">5 850</td></tr>
+<tr><td class="k">IMDEV-8635</td><td class="t">IMDEV-8634  [для Аванкор] Оптимизация запроса остатко…</td><td class="c">DU</td><td class="n">0,5</td><td class="n">1</td><td class="n">3 900</td><td class="n">3 900</td><td class="n hypo">5 850</td><td class="n save">1 950</td></tr>
+<tr><td class="k">IMAPPS-32895</td><td class="t">IMAPPS-30448  Аванкор ПИФ. 1. Обработка АнализНарушен…</td><td class="c">PIF</td><td class="n">0,5</td><td class="n">3</td><td class="n">3 900</td><td class="n">11 700</td><td class="n hypo">13 650</td><td class="n save">1 950</td></tr>
+            <tr class="total">
+              <td colspan="3">ИТОГО по 18 задачам</td>
+              <td class="n">313,75</td>
+              <td class="n">102</td>
+              <td class="n">&mdash;</td>
+              <td class="n">411 480</td>
+              <td class="n">1 641 435</td>
+              <td class="n">1 229 955</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="src">
+        &laquo;Смета открыта&raquo; &mdash; вендор оценил только анализ, стоимость разработки не зафиксирована;
+        для такой задачи в расчет взята уже выставленная сумма.
+      </div>
+    </section>
+
+    <!-- 5. Бесплатные задачи вендора -->
+    <section class="slide">
+      <div class="eyebrow">Скрытая часть экономии</div>
+      <h2>Ещё 19 задач вендор закрыл без счета &mdash; потому что работу сделали мы</h2>
+      <p class="lead">
+        По этим задачам вендор не выставил счет вообще: мы передали готовое решение, ему осталось
+        принять результат. Если бы разработку вел он, часть этих задач стала бы платной.
+      </p>
+      <div class="grid-unpaid">
+        <div class="card">
+<svg viewBox="0 0 740 512" class="chart" role="img" aria-label="Часы нашей команды по бесплатным задачам вендора"><line x1="170.0" y1="32" x2="170.0" y2="482" stroke="#d7dde8" stroke-width="1"/><text x="170.0" y="24" class="ax" text-anchor="middle">0</text><line x1="287.5" y1="32" x2="287.5" y2="482" stroke="#d7dde8" stroke-width="1"/><text x="287.5" y="24" class="ax" text-anchor="middle">8</text><line x1="405.0" y1="32" x2="405.0" y2="482" stroke="#d7dde8" stroke-width="1"/><text x="405.0" y="24" class="ax" text-anchor="middle">16</text><line x1="522.5" y1="32" x2="522.5" y2="482" stroke="#d7dde8" stroke-width="1"/><text x="522.5" y="24" class="ax" text-anchor="middle">24</text><line x1="640.0" y1="32" x2="640.0" y2="482" stroke="#d7dde8" stroke-width="1"/><text x="640.0" y="24" class="ax" text-anchor="middle">32</text><text x="405.0" y="502" class="ax-title" text-anchor="middle">Часы нашей команды</text><text x="160" y="58.0" class="lbl" text-anchor="end">IMDEV-8636</text><rect x="170" y="44.0" width="466.3" height="19" rx="2" fill="#0e7c6b"/><text x="643.3" y="59.0" class="val val-big">31,75 ч</text><text x="160" y="94.0" class="lbl" text-anchor="end">IMDEV-8662</text><rect x="170" y="80.0" width="411.2" height="19" rx="2" fill="#0e7c6b"/><text x="588.2" y="95.0" class="val val-big">28 ч</text><text x="160" y="130.0" class="lbl" text-anchor="end">IMDEV-8638</text><rect x="170" y="116.0" width="323.1" height="19" rx="2" fill="#0e7c6b"/><text x="500.1" y="131.0" class="val val-big">22 ч</text><text x="160" y="166.0" class="lbl" text-anchor="end">IMDEV-9095</text><rect x="170" y="152.0" width="227.7" height="19" rx="2" fill="#0e7c6b"/><text x="404.7" y="167.0" class="val val-big">15,5 ч</text><text x="160" y="202.0" class="lbl" text-anchor="end">IMAPPS-33287</text><rect x="170" y="188.0" width="165.2" height="19" rx="2" fill="#0e7c6b"/><text x="342.2" y="203.0" class="val val-big">11,25 ч</text><text x="160" y="238.0" class="lbl" text-anchor="end">IMAPPS-34812</text><rect x="170" y="224.0" width="102.8" height="19" rx="2" fill="#0e7c6b"/><text x="279.8" y="239.0" class="val val-big">7 ч</text><text x="160" y="274.0" class="lbl" text-anchor="end">IMDEV-8926</text><rect x="170" y="260.0" width="88.1" height="19" rx="2" fill="#6b7588"/><text x="265.1" y="275.0" class="val val-big">6 ч &#183; гарантия, не в счет</text><text x="160" y="310.0" class="lbl" text-anchor="end">IMDEV-8637</text><rect x="170" y="296.0" width="51.4" height="19" rx="2" fill="#0e7c6b"/><text x="228.4" y="311.0" class="val val-big">3,5 ч</text><text x="160" y="346.0" class="lbl" text-anchor="end">IMDEV-8770</text><rect x="170" y="332.0" width="44.1" height="19" rx="2" fill="#0e7c6b"/><text x="221.1" y="347.0" class="val val-big">3 ч</text><text x="160" y="382.0" class="lbl" text-anchor="end">IMAPPS-32908</text><rect x="170" y="368.0" width="29.4" height="19" rx="2" fill="#0e7c6b"/><text x="206.4" y="383.0" class="val val-big">2 ч</text><text x="160" y="418.0" class="lbl" text-anchor="end">IMDEV-9105</text><rect x="170" y="404.0" width="22.0" height="19" rx="2" fill="#0e7c6b"/><text x="199.0" y="419.0" class="val val-big">1,5 ч</text><text x="160" y="454.0" class="lbl" text-anchor="end">IMAPPS-32901</text><rect x="170" y="440.0" width="14.7" height="19" rx="2" fill="#0e7c6b"/><text x="191.7" y="455.0" class="val val-big">1 ч</text></svg>
+        </div>
+        <div>
+          <div class="card">
+            <p class="h4">Из чего состоят 19 задач</p>
+            <table>
+              <thead>
+                <tr><th>Тип задачи</th><th class="n">Задач</th><th class="n">Часы</th><th>В расчете</th></tr>
+              </thead>
+              <tbody>
+<tr><td>Change Request</td><td class="n">7</td><td class="n">98</td><td>учитывается</td></tr>
+<tr><td>Sub-Task</td><td class="n">11</td><td class="n">28,5</td><td>учитывается</td></tr>
+<tr><td>Bug</td><td class="n">1</td><td class="n">6</td><td><span class="flag">гарантия, не в счет</span></td></tr>
+                <tr class="total">
+                  <td>ИТОГО</td>
+                  <td class="n">19</td>
+                  <td class="n">132,5</td>
+                  <td>126,5 ч</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="note" style="margin-top:14px">
+            <strong>Коэффициент сопровождения.</strong> Честно признаем: часть этих задач вендор
+            закрыл бы бесплатно и сам &mdash; по гарантии на свой продукт или в рамках договора
+            сопровождения. Поэтому в расчет берется не весь объем: гарантийные баги
+            (6 ч) исключены полностью, а из оставшихся
+            126,5 ч в экономию попадает только доля, не покрытая
+            сопровождением &mdash; от 0% до 70% в зависимости от сценария.
+          </div>
+        </div>
+      </div>
+      <div class="src">
+        7 задач из 19 &mdash; подзадачи без собственного учета времени
+        (часы отнесены на родительскую задачу), поэтому в расчете они не участвуют.
+        Ставка для оценки &mdash; преобладающая 3 900 &#8381; за нормо-час.
+      </div>
+    </section>
+
+    <!-- 6. Сценарии оценки -->
+    <section class="slide">
+      <div class="eyebrow">Диапазон оценки</div>
+      <h2>Три сценария: от заведомо заниженного до реалистичного</h2>
+      <p class="lead">
+        Единственная цифра всегда спорна, поэтому показываем диапазон. Сценарии различаются двумя
+        допущениями: сколько времени вендору нужно на аналитику и какую часть бесплатных задач
+        он закрыл бы сам.
+      </p>
+      <div class="grid-scen">
+        <div class="card">
+<svg viewBox="0 0 700 404" class="chart" role="img" aria-label="Экономия по сценариям оценки"><line x1="70" y1="320.0" x2="672" y2="320.0" stroke="#d7dde8" stroke-width="1"/><text x="62" y="324.0" class="ax" text-anchor="end">0</text><line x1="70" y1="249.5" x2="672" y2="249.5" stroke="#d7dde8" stroke-width="1"/><text x="62" y="253.5" class="ax" text-anchor="end">600</text><line x1="70" y1="179.0" x2="672" y2="179.0" stroke="#d7dde8" stroke-width="1"/><text x="62" y="183.0" class="ax" text-anchor="end">1 200</text><line x1="70" y1="108.5" x2="672" y2="108.5" stroke="#d7dde8" stroke-width="1"/><text x="62" y="112.5" class="ax" text-anchor="end">1 800</text><line x1="70" y1="38.0" x2="672" y2="38.0" stroke="#d7dde8" stroke-width="1"/><text x="62" y="42.0" class="ax" text-anchor="end">2 400</text><rect x="120.5" y="175.5" width="101.0" height="144.5" fill="#0e7c6b"/><text x="171.0" y="165.5" class="val val-big" text-anchor="middle">1,2 млн ₽</text><text x="171.0" y="342" class="lbl" text-anchor="middle">Консервативный</text><text x="171.0" y="357" class="ax ax-dim" text-anchor="middle">нижняя граница</text><text x="171.0" y="374" class="ax ax-dim" text-anchor="middle">надбавка +0% &#183; сопровождение 100%</text><rect x="322.5" y="175.5" width="101.0" height="144.5" fill="#0e7c6b"/><rect x="322.5" y="146.5" width="101.0" height="29.0" fill="#c47a12"/><text x="373.0" y="165.0" class="val" text-anchor="middle">+247</text><text x="373.0" y="136.5" class="val val-big" text-anchor="middle">1,5 млн ₽</text><text x="373.0" y="342" class="lbl" text-anchor="middle">Базовый</text><text x="373.0" y="357" class="ax ax-dim" text-anchor="middle">с учетом бесплатных задач</text><text x="373.0" y="374" class="ax ax-dim" text-anchor="middle">надбавка +0% &#183; сопровождение 50%</text><rect x="524.5" y="117.7" width="101.0" height="202.3" fill="#0e7c6b"/><rect x="524.5" y="60.9" width="101.0" height="56.8" fill="#c47a12"/><text x="575.0" y="93.3" class="val" text-anchor="middle">+483</text><text x="575.0" y="50.9" class="val val-big" text-anchor="middle">2,2 млн ₽</text><text x="575.0" y="342" class="lbl" text-anchor="middle">Реалистичный</text><text x="575.0" y="357" class="ax ax-dim" text-anchor="middle">ближе к практике</text><text x="575.0" y="374" class="ax ax-dim" text-anchor="middle">надбавка +40% &#183; сопровождение 30%</text><text x="373.0" y="396" class="ax-title" text-anchor="middle">Экономия компании, тыс. ₽</text></svg>
+          <div class="legend" style="justify-content:center;margin:6px 0 0">
+            <span><i style="background:#0e7c6b"></i>Экономия по 18 платным задачам</span>
+            <span><i style="background:#c47a12"></i>Экономия по бесплатным задачам</span>
+          </div>
+        </div>
+        <div class="card">
+          <p class="h4">Допущения и результат</p>
+          <table>
+            <thead>
+              <tr>
+                <th>Сценарий</th>
+                <th class="n">Надбавка вендора</th>
+                <th class="n">Ушло бы в сопровождение</th>
+                <th class="n">Экономия</th>
+              </tr>
+            </thead>
+            <tbody>
+<tr><td><strong>Консервативный</strong><span class="sub">нижняя граница</span></td><td class="n">нет</td><td class="n">100%</td><td class="n save"><strong>1,2 млн &#8381;</strong></td></tr>
+<tr><td><strong>Базовый</strong><span class="sub">с учетом бесплатных задач</span></td><td class="n">нет</td><td class="n">50%</td><td class="n save"><strong>1,5 млн &#8381;</strong></td></tr>
+<tr class="row-hi"><td><strong>Реалистичный</strong><span class="sub">ближе к практике</span></td><td class="n">+40%</td><td class="n">30%</td><td class="n save"><strong>2,2 млн &#8381;</strong></td></tr>
+            </tbody>
+          </table>
+          <div class="note" style="margin-top:12px">
+            <strong>Откуда надбавка +40%.</strong> В задаче IMAPPS-32896 вендор выставил
+            16 нормо-часов только за анализ (74 880 &#8381;) при 3,5 часах нашей команды на всю
+            задачу &mdash; и разработку в той смете еще не оценил. Надбавка 40% на аналитику и
+            вхождение в контекст на этом фоне остается осторожной.
+          </div>
+        </div>
+      </div>
+      <div class="src">
+        Надбавка применяется к часам нашей команды: вендору нужно самому проанализировать проблему,
+        изучить контекст конфигурации и согласовать решение. Нормо-часы интеграции берутся из смет без надбавки.
+      </div>
+    </section>
+
+    <!-- 5. Структура экономии -->
+    <section class="slide">
+      <div class="eyebrow">Структура</div>
+      <h2>Доля экономии в гипотетическом объеме работ</h2>
+      <div class="grid-donut">
+        <div class="card card--center">
+<svg viewBox="0 0 260 260" class="donut" role="img" aria-label="Доля экономии в гипотетической стоимости"><circle cx="130.0" cy="130.0" r="92.0" fill="none" stroke="#c47a12" stroke-width="34"/><circle cx="130.0" cy="130.0" r="92.0" fill="none" stroke="#0e7c6b" stroke-width="34" stroke-dasharray="433.14 144.91" stroke-linecap="butt" transform="rotate(-90 130.0 130.0)"/><text x="130.0" y="124.0" class="donut-num" text-anchor="middle">75%</text><text x="130.0" y="146.0" class="donut-cap" text-anchor="middle">экономия</text><text x="130.0" y="172.0" class="donut-sum" text-anchor="middle">1,2 млн ₽</text></svg>
+          <div class="legend" style="justify-content:center;margin:12px 0 0">
+            <span><i style="background:#0e7c6b"></i>Экономия</span>
+            <span><i style="background:#c47a12"></i>Фактически оплачено</span>
+          </div>
+        </div>
+        <div class="card">
+          <p class="h4">Разрез по конфигурациям</p>
+          <table>
+            <thead>
+              <tr>
+                <th>Конфигурация</th>
+                <th class="n">Задач</th>
+                <th class="n">Наши часы</th>
+                <th class="n">Нормо-часы</th>
+                <th class="n">Факт, тыс. &#8381;</th>
+                <th class="n">Гипотеза, тыс. &#8381;</th>
+                <th class="n">Экономия, тыс. &#8381;</th>
+              </tr>
+            </thead>
+            <tbody>
+<tr><td>AvancoreDU</td><td class="n">10</td><td class="n">155,75</td><td class="n">33</td><td class="n">130</td><td class="n hypo">741</td><td class="n save">611</td></tr>
+<tr><td>AvancoreFinance</td><td class="n">4</td><td class="n">148,5</td><td class="n">42</td><td class="n">164</td><td class="n hypo">743</td><td class="n save">579</td></tr>
+<tr><td>AvancorePIF</td><td class="n">4</td><td class="n">9,5</td><td class="n">27</td><td class="n">118</td><td class="n hypo">158</td><td class="n save">40</td></tr>
+            </tbody>
+          </table>
+          <div class="note" style="margin-top:12px">
+            <strong>Где эффект максимален.</strong> В контурах ДУ и Финансы наша команда закрывает
+            крупные задачи оптимизации, а вендору остается только интеграция &mdash; там и накоплена
+            основная экономия. В ПИФ доля вендора выше: задачи мелкие, и его нормо-часы сопоставимы
+            с нашими трудозатратами.
+          </div>
+        </div>
+      </div>
+      <div class="card" style="margin-top:14px">
+<svg viewBox="0 0 1000 200" class="chart chart--flat" role="img" aria-label="Экономия по конфигурациям"><line x1="64" y1="146.0" x2="976" y2="146.0" stroke="#d7dde8" stroke-width="1"/><text x="56" y="150.0" class="ax" text-anchor="end">0</text><line x1="64" y1="105.3" x2="976" y2="105.3" stroke="#d7dde8" stroke-width="1"/><text x="56" y="109.3" class="ax" text-anchor="end">250</text><line x1="64" y1="64.7" x2="976" y2="64.7" stroke="#d7dde8" stroke-width="1"/><text x="56" y="68.7" class="ax" text-anchor="end">500</text><line x1="64" y1="24.0" x2="976" y2="24.0" stroke="#d7dde8" stroke-width="1"/><text x="56" y="28.0" class="ax" text-anchor="end">750</text><rect x="156.0" y="46.6" width="120.0" height="99.4" rx="3" fill="#163a66"/><text x="216.0" y="38.6" class="val val-big" text-anchor="middle">611 тыс. ₽</text><text x="216.0" y="166" class="lbl" text-anchor="middle">DU</text><text x="216.0" y="181" class="ax ax-dim" text-anchor="middle">10 задач / 155,75 ч нашей команды</text><rect x="460.0" y="51.8" width="120.0" height="94.2" rx="3" fill="#0e7c6b"/><text x="520.0" y="43.8" class="val val-big" text-anchor="middle">579 тыс. ₽</text><text x="520.0" y="166" class="lbl" text-anchor="middle">Finance</text><text x="520.0" y="181" class="ax ax-dim" text-anchor="middle">4 задач / 148,5 ч нашей команды</text><rect x="764.0" y="139.5" width="120.0" height="6.5" rx="3" fill="#c47a12"/><text x="824.0" y="131.5" class="val val-big" text-anchor="middle">40 тыс. ₽</text><text x="824.0" y="166" class="lbl" text-anchor="middle">PIF</text><text x="824.0" y="181" class="ax ax-dim" text-anchor="middle">4 задач / 9,5 ч нашей команды</text><text x="520.0" y="196" class="ax-title" text-anchor="middle">Экономия по конфигурациям, тыс. ₽</text></svg>
+      </div>
+      <div class="src">
+        Из гипотетического объема 1,6 млн &#8381; фактически оплачено вендору 411 тыс. &#8381;
+        (25%), сэкономлено 1,2 млн &#8381; (75%).
+        Точные суммы: 1 641 435 / 411 480 / 1 229 955 &#8381;.
+      </div>
+    </section>
+
+    <!-- 6. Динамика -->
+    <section class="slide">
+      <div class="eyebrow">Динамика</div>
+      <h2>Накопленная экономия по месяцам</h2>
+      <p class="lead" style="margin-bottom:12px">
+        Экономия формируется неравномерно: основной вклад дают крупные задачи оптимизации,
+        где объем нашей разработки многократно превышает интеграционные нормо-часы вендора.
+      </p>
+      <div class="card">
+<svg viewBox="0 0 1000 250" class="chart" role="img" aria-label="Накопленная экономия по месяцам"><line x1="78" y1="200.0" x2="976" y2="200.0" stroke="#d7dde8" stroke-width="1"/><text x="70" y="204.0" class="ax" text-anchor="end">0</text><line x1="78" y1="165.2" x2="976" y2="165.2" stroke="#d7dde8" stroke-width="1"/><text x="70" y="169.2" class="ax" text-anchor="end">250</text><line x1="78" y1="130.4" x2="976" y2="130.4" stroke="#d7dde8" stroke-width="1"/><text x="70" y="134.4" class="ax" text-anchor="end">500</text><line x1="78" y1="95.6" x2="976" y2="95.6" stroke="#d7dde8" stroke-width="1"/><text x="70" y="99.6" class="ax" text-anchor="end">750</text><line x1="78" y1="60.8" x2="976" y2="60.8" stroke="#d7dde8" stroke-width="1"/><text x="70" y="64.8" class="ax" text-anchor="end">1 000</text><line x1="78" y1="26.0" x2="976" y2="26.0" stroke="#d7dde8" stroke-width="1"/><text x="70" y="30.0" class="ax" text-anchor="end">1 250</text><polygon points="78.0,200.0 78.0,151.1 206.3,150.1 334.6,145.6 462.9,144.8 591.1,144.0 719.4,97.7 847.7,35.8 976.0,28.8 976.0,200.0" fill="#0e7c6b" fill-opacity="0.12"/><polyline points="78.0,151.1 206.3,150.1 334.6,145.6 462.9,144.8 591.1,144.0 719.4,97.7 847.7,35.8 976.0,28.8" fill="none" stroke="#0e7c6b" stroke-width="3" stroke-linejoin="round"/><circle cx="78.0" cy="151.1" r="4.5" fill="#fff" stroke="#0e7c6b" stroke-width="2.5"/><text x="78.0" y="139.1" class="val" text-anchor="middle">351</text><text x="78.0" y="220" class="ax" text-anchor="middle">май 25</text><circle cx="206.3" cy="150.1" r="4.5" fill="#fff" stroke="#0e7c6b" stroke-width="2.5"/><text x="206.3" y="138.1" class="val" text-anchor="middle">359</text><text x="206.3" y="220" class="ax" text-anchor="middle">ноя 25</text><circle cx="334.6" cy="145.6" r="4.5" fill="#fff" stroke="#0e7c6b" stroke-width="2.5"/><text x="334.6" y="133.6" class="val" text-anchor="middle">391</text><text x="334.6" y="220" class="ax" text-anchor="middle">дек 25</text><circle cx="462.9" cy="144.8" r="4.5" fill="#fff" stroke="#0e7c6b" stroke-width="2.5"/><text x="462.9" y="132.8" class="val" text-anchor="middle">397</text><text x="462.9" y="220" class="ax" text-anchor="middle">янв 26</text><circle cx="591.1" cy="144.0" r="4.5" fill="#fff" stroke="#0e7c6b" stroke-width="2.5"/><text x="591.1" y="132.0" class="val" text-anchor="middle">402</text><text x="591.1" y="220" class="ax" text-anchor="middle">мар 26</text><circle cx="719.4" cy="97.7" r="4.5" fill="#fff" stroke="#0e7c6b" stroke-width="2.5"/><text x="719.4" y="85.7" class="val" text-anchor="middle">735</text><text x="719.4" y="220" class="ax" text-anchor="middle">май 26</text><circle cx="847.7" cy="35.8" r="4.5" fill="#fff" stroke="#0e7c6b" stroke-width="2.5"/><text x="847.7" y="23.8" class="val" text-anchor="middle">1 180</text><text x="847.7" y="220" class="ax" text-anchor="middle">июл 26</text><circle cx="976.0" cy="28.8" r="4.5" fill="#fff" stroke="#0e7c6b" stroke-width="2.5"/><text x="976.0" y="16.8" class="val" text-anchor="middle">1 230</text><text x="976.0" y="220" class="ax" text-anchor="middle">сен 26</text><text x="527.0" y="242" class="ax-title" text-anchor="middle">Накопленная экономия, тыс. ₽ (по месяцу закрытия задачи)</text></svg>
+      </div>
+      <div class="grid-3" style="margin-top:14px">
+        <div class="card">
+          <p class="h4">Источник часов команды</p>
+          <table>
+            <thead><tr><th>Файл учета времени</th><th class="n">Записей</th><th class="n">Часов</th></tr></thead>
+            <tbody>
+<tr><td>Time Sheet Report (1).xls</td><td class="n">114</td><td class="n">591</td></tr>
+<tr><td>Time Sheet Report (2).xls</td><td class="n">50</td><td class="n">242</td></tr>
+<tr><td>Time Sheet Report (3).xls</td><td class="n">49</td><td class="n">138,25</td></tr>
+<tr><td>Time Sheet Report (4).xls</td><td class="n">86</td><td class="n">253,5</td></tr>
+<tr><td>Time Sheet Report (5).xls</td><td class="n">120</td><td class="n">336</td></tr>
+<tr><td>Time Sheet Report.xls</td><td class="n">67</td><td class="n">382</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="card">
+          <p class="h4">Что в этом объеме</p>
+          <ul class="facts">
+            <li><span class="b">&#8226;</span><span>1942,75 ч учтенного времени по 103 задачам всего</span></li>
+            <li><span class="b">&#8226;</span><span>313,75 ч из них &mdash; по 18 платным задачам вендора</span></li>
+            <li><span class="b">&#8226;</span><span>102 нормо-часов &mdash; вклад вендора (интеграция)</span></li>
+          </ul>
+        </div>
+        <div class="card">
+          <p class="h4">Ключевой механизм</p>
+          <p style="margin:0;font-size:13.5px;color:var(--ink-soft);line-height:1.55">
+            Наша команда выполняет анализ, разработку и тестирование, вендору передается
+            готовое расширение с планом внедрения. Вендор оплачивается только за проверку
+            и включение доработки в свою поставку.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <!-- 7. Выводы -->
+    <section class="slide slide--dark">
+      <div class="eyebrow">Выводы</div>
+      <h2 class="serif" style="font-size:clamp(1.7rem,3.2vw,2.5rem)">Что это значит для компании</h2>
+      <div class="grid-2" style="margin-top:8px">
+        <div>
+          <ul class="facts">
+            <li><span class="b">1</span><span><strong>От 1,2 млн до 2,2 млн &#8381;
+              не израсходовано</strong> на внешнюю разработку. Нижняя граница &mdash; только платные
+              задачи без надбавок, верхняя &mdash; с бесплатными задачами и реальными накладными вендора.</span></li>
+            <li><span class="b">2</span><span><strong>Полная разработка у вендора обошлась бы в
+              4&ndash;6,4 раза дороже</strong> фактически оплаченной
+              интеграции (411 тыс. &#8381;).</span></li>
+            <li><span class="b">3</span><span><strong>76% объема работ</strong> в часах закрыто
+              внутренней командой &mdash; вендор выступает только приемной стороной.</span></li>
+            <li><span class="b">4</span><span><strong>Даже нижняя граница честная:</strong> ставка взята
+              из смет вендора, гарантийные баги исключены, а половина бесплатных задач списана
+              в его сопровождение.</span></li>
+          </ul>
+        </div>
+        <div>
+          <div class="card" style="background:rgba(255,255,255,.07);border-color:rgba(255,255,255,.16)">
+            <p class="h4" style="color:rgba(226,234,244,.6)">Экономия по сценариям</p>
+            <table class="sum">
+              <tbody>
+<tr><td class="lab">Консервативный<span class="sub sub--dark">нижняя граница</span></td><td class="v v-hypo">1,2 млн &#8381;<span class="v-ex">1 229 955 &#8381;</span></td></tr>
+<tr><td class="lab">Базовый<span class="sub sub--dark">с учетом бесплатных задач</span></td><td class="v v-hypo">1,5 млн &#8381;<span class="v-ex">1 476 630 &#8381;</span></td></tr>
+<tr><td class="lab">Реалистичный<span class="sub sub--dark">ближе к практике</span></td><td class="v v-save">2,2 млн &#8381;<span class="v-ex">2 205 420 &#8381;</span></td></tr>
+                <tr><td class="lab">Фактически оплачено вендору</td>
+                    <td class="v v-fact">411 тыс. &#8381;<span class="v-ex">411 480 &#8381;</span></td></tr>
+                <tr><td class="lab">Работы нашей команды по всем 37 задачам</td>
+                    <td class="v v-hypo">446 ч<span class="v-ex">313,75 + 132,5 ч</span></td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+      <div class="card card--glass" style="margin-top:18px">
+<svg viewBox="0 0 1000 128" class="chart chart--flat" role="img" aria-label="Распределение гипотетической стоимости"><text x="4" y="20" class="d-cap">Гипотетическая стоимость полной разработки вендором: 1,6 млн ₽  ·  консервативный сценарий, только платные задачи</text><rect x="4" y="40" width="248.7" height="44" rx="4" fill="#c47a12"/><rect x="252.7" y="40" width="743.3" height="44" rx="4" fill="#0e7c6b"/><text x="128.3" y="68" class="d-val" text-anchor="middle">411 тыс. ₽</text><text x="624.3" y="68" class="d-val" text-anchor="middle">1,2 млн ₽</text><text x="128.3" y="106" class="d-lbl" text-anchor="middle">Оплачено вендору (интеграция) &#183; 25%</text><text x="624.3" y="106" class="d-lbl" text-anchor="middle">Экономия компании &#183; 75%</text></svg>
+      </div>
+      <div class="improve">
+        <span class="lbl2">Вид улучшения</span>
+        <span class="badge">Снижение внешних затрат (cost avoidance)</span>
+      </div>
+      <div class="src">
+        Расчет по выгрузкам Jira и отчетам учета времени на 17.09.2026. Ставка вендора и нормо-часы &mdash;
+        из его собственных смет в задачах. Гипотетическая стоимость &mdash; расчетная величина;
+        коэффициенты надбавки и сопровождения по каждому сценарию приведены на слайде 6.
+      </div>
+    </section>
+
+  </div>
+
+  <nav class="nav">
+    <span class="deck-title">01 &middot; Экономика: стоимость доработок силами Аванкор</span>
+    <div class="dots" id="dots"></div>
+    <div class="nav-btns">
+      <span class="counter" id="counter" style="margin-right:10px;align-self:center"></span>
+      <button class="arrow" id="prev" aria-label="Назад">&#8592;</button>
+      <button class="arrow" id="next" aria-label="Вперед">&#8594;</button>
+    </div>
+  </nav>
+</div>
+
+<script>
+(function () {
+  var slidesEl = document.getElementById('slides');
+  var total = slidesEl.children.length;
+  var current = 0;
+  var dotsEl = document.getElementById('dots');
+  var counterEl = document.getElementById('counter');
+
+  for (var i = 0; i < total; i++) {
+    var dot = document.createElement('button');
+    dot.className = 'dot';
+    dot.setAttribute('aria-label', 'Слайд ' + (i + 1));
+    dot.dataset.index = i;
+    dotsEl.appendChild(dot);
+  }
+
+  function render() {
+    slidesEl.style.transform = 'translateX(-' + (current * 100) + '%)';
+    var dots = dotsEl.children;
+    for (var i = 0; i < dots.length; i++) {
+      dots[i].className = 'dot' + (i === current ? ' on' : '');
+    }
+    counterEl.textContent = (current + 1) + ' / ' + total;
+  }
+
+  function go(index) {
+    current = Math.max(0, Math.min(total - 1, index));
+    render();
+  }
+
+  document.getElementById('prev').addEventListener('click', function () { go(current - 1); });
+  document.getElementById('next').addEventListener('click', function () { go(current + 1); });
+  dotsEl.addEventListener('click', function (e) {
+    if (e.target.dataset.index !== undefined) { go(parseInt(e.target.dataset.index, 10)); }
+  });
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'ArrowRight' || e.key === 'PageDown' || e.key === ' ') { go(current + 1); }
+    else if (e.key === 'ArrowLeft' || e.key === 'PageUp') { go(current - 1); }
+    else if (e.key === 'Home') { go(0); }
+    else if (e.key === 'End') { go(total - 1); }
+  });
+
+  render();
+})();
+</script>
+</body>
+</html>
