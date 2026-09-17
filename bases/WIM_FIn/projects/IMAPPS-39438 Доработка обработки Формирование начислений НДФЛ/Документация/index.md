@@ -10,7 +10,7 @@
 - [imapps39438_avancor_tree.html](imapps39438_avancor_tree.html) - краткое дерево изменений для Аванкор.
 - [imapps39438_avancor_letter.txt](imapps39438_avancor_letter.txt) - текст письма / комментария в задачу.
 - [imapps39438_jira_comments.html](imapps39438_jira_comments.html) - два кратких комментария в задачу: отсев без дохода, затем отсев РДУ.
-- [imapps39438_rdu_filter_proposal.html](imapps39438_rdu_filter_proposal.html) - доп. отбор: флажок и выбор пула (по умолчанию «Розничное ДУ»), без отбора по номеру «МИИ».
+- [imapps39438_rdu_filter_proposal.html](imapps39438_rdu_filter_proposal.html) - доп. отбор: флажок и выбор пула. «Розничное ДУ» - РДУ, пустое поле - не-РДУ.
 
 ## Для разработки
 
