@@ -5,6 +5,9 @@
 
 Проверяет верстку каждого слайда и попутно ищет проблемы:
 переполнение по вертикали, нулевые размеры диаграмм.
+
+Запуск:
+  python shoot_slides.py 02_cursor_speedup.html p02
 """
 
 import os
@@ -14,7 +17,6 @@ from playwright.sync_api import sync_playwright
 
 SCRIPTS = os.path.dirname(os.path.abspath(__file__))
 SHOTS = os.path.join(SCRIPTS, "shots")
-URL = "http://localhost:8899/01_avancor_economy.html"
 WIDTH, HEIGHT = 1600, 900
 
 
@@ -26,17 +28,21 @@ def safe_print(text):
 
 
 def main():
+    html_name = sys.argv[1] if len(sys.argv) > 1 else "01_avancor_economy.html"
+    prefix = sys.argv[2] if len(sys.argv) > 2 else "p01"
+    url = "http://localhost:8899/" + html_name
+
     os.makedirs(SHOTS, exist_ok=True)
     with sync_playwright() as pw:
         browser = pw.chromium.launch()
         page = browser.new_page(viewport={"width": WIDTH, "height": HEIGHT})
-        page.goto(URL, wait_until="load")
+        page.goto(url, wait_until="load")
         page.wait_for_timeout(700)
 
         total = page.locator(".slide").count()
-        safe_print("slides = %d ; viewport = %dx%d" % (total, WIDTH, HEIGHT))
+        safe_print("file = %s ; slides = %d ; viewport = %dx%d" % (
+            html_name, total, WIDTH, HEIGHT))
 
-        # Диагностика: переполнение контента и размеры диаграмм
         report = page.evaluate("""() => {
             const out = [];
             document.querySelectorAll('.slide').forEach((s, i) => {
@@ -62,12 +68,13 @@ def main():
             page.evaluate("i => { document.getElementById('slides')"
                           ".style.transform = 'translateX(-' + (i*100) + '%)'; }", idx)
             page.wait_for_timeout(520)
-            path = os.path.join(SHOTS, "p01_s%d.png" % (idx + 1))
+            path = os.path.join(SHOTS, "%s_s%d.png" % (prefix, idx + 1))
             page.screenshot(path=path)
             safe_print("  saved %s" % os.path.basename(path))
 
         browser.close()
     safe_print("OK done")
+    return 0
 
 
 if __name__ == "__main__":

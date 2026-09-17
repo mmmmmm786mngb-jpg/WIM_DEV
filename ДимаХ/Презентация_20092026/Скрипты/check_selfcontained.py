@@ -10,7 +10,6 @@ import re
 import sys
 
 BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-TARGET = os.path.join(BASE, "01_avancor_economy.html")
 
 
 def safe_print(text):
@@ -21,11 +20,13 @@ def safe_print(text):
 
 
 def main():
-    with open(TARGET, "r", encoding="utf-8") as fh:
+    name = sys.argv[1] if len(sys.argv) > 1 else "01_avancor_economy.html"
+    target = os.path.join(BASE, name)
+    with open(target, "r", encoding="utf-8") as fh:
         text = fh.read()
 
     external = re.findall(r"""(?:src|href)\s*=\s*["'](https?://[^"']+)""", text)
-    safe_print("file: %s" % os.path.basename(TARGET))
+    safe_print("file: %s" % os.path.basename(target))
     safe_print("size: %.1f KB" % (len(text.encode("utf-8")) / 1024.0))
     safe_print("slides: %d" % len(re.findall(r'class="slide[ "]', text)))
     safe_print("inline svg charts: %d" % text.count("<svg"))

@@ -86,6 +86,22 @@ def ratio(value):
     return ("%.1f" % value).replace(".", ",")
 
 
+def fte_months(hours, month_hours=168.0):
+    """Человеко-месяцы: 21 рабочий день x 8 часов = 168 ч.
+
+    Параметры:
+      hours       - Число - человеко-часы
+      month_hours - Число - часов в одном человеко-месяце
+
+    Возвращаемое значение:
+      Строка - например "2,5"
+    """
+    value = hours / float(month_hours)
+    if abs(value - round(value)) < 0.05:
+        return str(int(round(value)))
+    return ("%.1f" % value).replace(".", ",")
+
+
 def hrs(value):
     """Часы без лишних нулей.
 
@@ -96,8 +112,28 @@ def hrs(value):
       Строка - например "314" или "313,75"
     """
     if abs(value - round(value)) < 0.01:
+        return num_int(value)
+    formatted = ("%.2f" % value).rstrip("0").rstrip(".").replace(".", ",")
+    if "," in formatted:
+        whole, frac = formatted.split(",", 1)
+        try:
+            whole = num_int(int(whole))
+        except ValueError:
+            pass
+        return whole + "," + frac
+    return formatted
+
+
+def num_int(value):
+    """Целое с разделителями разрядов: 1065 -> '1 065'."""
+    return "{:,}".format(int(round(value))).replace(",", "\u00a0")
+
+
+def pct(value):
+    """Процент без лишнего знака после запятой, если он нулевой."""
+    if abs(value - round(value)) < 0.05:
         return str(int(round(value)))
-    return ("%.2f" % value).rstrip("0").rstrip(".").replace(".", ",")
+    return ("%.1f" % value).replace(".", ",")
 
 
 # Множители "круглого" шага шкалы. Набор плотнее, чем классический 1/2/5:

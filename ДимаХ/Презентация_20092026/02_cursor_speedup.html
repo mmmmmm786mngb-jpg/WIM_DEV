@@ -1,0 +1,592 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Презентация 02. Эффект Cursor: экономия человеко-часов ИТ</title>
+<style>
+  :root {
+    --ink: #0c1524;
+    --ink-soft: #3a4558;
+    --muted: #6b7588;
+    --line: #d7dde8;
+    --paper: #ffffff;
+    --navy: #0b1f3a;
+    --navy-mid: #163a66;
+    --teal: #0e7c6b;
+    --teal-soft: #d8f3ee;
+    --amber: #c47a12;
+    --amber-soft: #f8ecd8;
+    --sky: #e4eef9;
+    --slide-bg: #f5f7fb;
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; }
+  body {
+    font-family: "Manrope", "Segoe UI", Arial, sans-serif;
+    color: var(--ink);
+    background: #0a1220;
+    overflow: hidden;
+  }
+  .serif { font-family: "Instrument Serif", Georgia, "Times New Roman", serif; font-weight: 400; }
+  .deck { position: relative; height: 100vh; overflow: hidden; }
+  .slides { display: flex; height: 100%; transition: transform .45s cubic-bezier(.4,0,.2,1); }
+  .slide {
+    flex: 0 0 100%; height: 100%; padding: 34px 5vw 78px;
+    background: var(--slide-bg); overflow-y: auto; display: flex; flex-direction: column;
+  }
+  .slide--title {
+    background:
+      radial-gradient(900px 420px at 88% 6%, rgba(14,124,107,.35), transparent 60%),
+      linear-gradient(135deg, #0b1f3a 0%, #163a66 52%, #0e5f57 100%);
+    color: #f4f7fb; justify-content: center;
+  }
+  .slide--dark { background: linear-gradient(150deg, #0f1d33 0%, #1c3a5e 100%); color: #e6edf6; }
+  .eyebrow {
+    font-size: 11px; font-weight: 700; letter-spacing: .16em; text-transform: uppercase;
+    color: var(--teal); margin-bottom: 10px;
+  }
+  .slide--title .eyebrow, .slide--dark .eyebrow { color: #6fdcc6; }
+  h1 { font-size: clamp(1.9rem, 4vw, 3rem); line-height: 1.1; margin: 0 0 16px; letter-spacing: -.01em; }
+  h2 { font-size: clamp(1.4rem, 2.6vw, 2.05rem); line-height: 1.15; margin: 0 0 8px; letter-spacing: -.01em; }
+  .lead { font-size: clamp(.95rem, 1.5vw, 1.08rem); color: var(--muted); margin: 0 0 20px; max-width: 62rem; }
+  .slide--title .lead, .slide--dark .lead { color: rgba(226,234,244,.86); }
+  .kpi-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-top: 22px; }
+  .kpi {
+    background: rgba(255,255,255,.09); border: 1px solid rgba(255,255,255,.16);
+    border-radius: 16px; padding: 18px 16px 16px; backdrop-filter: blur(6px);
+  }
+  .kpi-num {
+    font-size: clamp(1.45rem, 2.7vw, 2.35rem); font-weight: 800; letter-spacing: -.025em;
+    color: #fff; line-height: 1.05; white-space: nowrap;
+  }
+  .kpi-unit { font-size: .48em; font-weight: 700; margin-left: 5px; color: rgba(244,247,251,.72); }
+  .kpi-lbl { font-size: 13px; font-weight: 700; margin-top: 8px; color: rgba(244,247,251,.94); }
+  .kpi-sub { font-size: 11.5px; margin-top: 5px; color: rgba(226,234,244,.62); line-height: 1.4; }
+  .card {
+    background: var(--paper); border: 1px solid var(--line); border-radius: 16px;
+    padding: 16px 18px; box-shadow: 0 10px 30px rgba(11,31,58,.06);
+  }
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; align-items: start; }
+  .grid-scen { display: grid; grid-template-columns: 1.15fr 1fr; gap: 16px; align-items: start; }
+  .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+  .card--glass {
+    background: rgba(255,255,255,.07); border: 1px solid rgba(255,255,255,.16);
+    box-shadow: none; margin-top: 22px; border-radius: 16px; padding: 10px 16px 6px;
+  }
+  table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+  th, td { text-align: left; padding: 5px 9px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th {
+    background: var(--navy); color: #eef3f9; font-size: 10.5px; font-weight: 700;
+    letter-spacing: .06em; text-transform: uppercase; position: sticky; top: 0;
+  }
+  td.n, th.n { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+  td.k { font-weight: 700; color: var(--navy-mid); white-space: nowrap; }
+  td.c { color: var(--muted); white-space: nowrap; font-size: 12px; }
+  td.hypo { color: var(--navy-mid); font-weight: 700; }
+  td.save { color: #0a5c50; font-weight: 800; background: #f0faf7; }
+  table:not(.sum) tbody tr:nth-child(even) td { background: #fafbfd; }
+  table:not(.sum) tbody tr:nth-child(even) td.save { background: #e9f6f2; }
+  tr.total td {
+    background: var(--navy) !important; color: #fff; font-weight: 800; font-size: 13px;
+    border-bottom: 0; position: sticky; bottom: 0;
+  }
+  tr.row-hi td { background: #eef7f4 !important; }
+  tr.row-hi td.save { background: #ddf1eb !important; }
+  td .sub { display: block; font-size: 10.5px; font-weight: 600; color: var(--muted); margin-top: 1px; }
+  td .sub--dark { color: rgba(226,234,244,.5); }
+  .table-wrap { overflow: auto; max-height: 62vh; border: 1px solid var(--line); border-radius: 12px; background: #fff; }
+  .sum { width: 100%; border-collapse: collapse; font-size: 14px; }
+  .sum td { padding: 9px 2px; border-bottom: 1px solid rgba(255,255,255,.13); background: transparent; }
+  .sum tr:last-child td { border-bottom: 0; }
+  .sum td.lab { color: rgba(226,234,244,.82); }
+  .sum td.v {
+    text-align: right; font-weight: 800; font-size: 17px; font-variant-numeric: tabular-nums;
+    white-space: nowrap; letter-spacing: -.01em;
+  }
+  .sum td.v-hypo { color: #ffffff; }
+  .sum td.v-fact { color: #f3c98a; }
+  .sum td.v-save { color: #6fdcc6; }
+  .v-ex { display: block; font-size: 10.5px; font-weight: 600; color: rgba(226,234,244,.45); margin-top: 1px; }
+  .legend { display: flex; gap: 18px; flex-wrap: wrap; margin: 2px 0 10px; font-size: 12.5px; color: var(--ink-soft); }
+  .legend span { display: inline-flex; align-items: center; gap: 7px; font-weight: 600; }
+  .legend i { width: 13px; height: 13px; border-radius: 3px; display: inline-block; }
+  .chart { width: 100%; height: auto; max-height: 63vh; display: block; }
+  .chart--flat { max-height: 30vh; }
+  .chart text { font-family: "Manrope", "Segoe UI", Arial, sans-serif; }
+  .ax { font-size: 11px; fill: #6b7588; }
+  .ax-dim { font-size: 10px; fill: #94a0b3; }
+  .ax-title { font-size: 11.5px; fill: #6b7588; font-weight: 700; }
+  .lbl { font-size: 11.5px; fill: #2c3a4f; font-weight: 700; }
+  .val { font-size: 10.5px; fill: #2c3a4f; font-weight: 700; }
+  .val-dim { fill: #0a5c50; }
+  .val-big { font-size: 14px; fill: #142a44; font-weight: 800; }
+  .d-cap { font-size: 13px; fill: rgba(226,234,244,.72); font-weight: 700; }
+  .d-val { font-size: 17px; fill: #0d2036; font-weight: 800; }
+  .d-lbl { font-size: 12.5px; fill: rgba(226,234,244,.85); font-weight: 700; }
+  .facts { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+  .facts li { display: flex; gap: 11px; align-items: flex-start; font-size: 14px; color: var(--ink-soft); }
+  .facts .b {
+    flex: 0 0 auto; width: 22px; height: 22px; border-radius: 7px; background: var(--teal);
+    color: #fff; font-size: 11.5px; font-weight: 800; display: grid; place-items: center; margin-top: 1px;
+  }
+  .facts strong { color: var(--ink); }
+  .slide--dark .facts li { color: rgba(226,234,244,.9); }
+  .slide--dark .facts strong { color: #fff; }
+  .formula {
+    background: var(--sky); border: 1px solid #cfdff2; border-radius: 12px;
+    padding: 13px 15px; font-size: 14px; color: #14314f; line-height: 1.6;
+  }
+  .formula code {
+    font-family: ui-monospace, Consolas, monospace; font-size: 13px; background: #fff;
+    padding: 2px 6px; border-radius: 5px; border: 1px solid #cfdff2;
+  }
+  .note {
+    background: var(--amber-soft); border: 1px solid #edd9b0; border-radius: 12px;
+    padding: 12px 14px; font-size: 12.5px; color: #6f4a10; line-height: 1.55;
+  }
+  .h4 {
+    font-size: 11px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase;
+    color: var(--muted); margin: 0 0 9px;
+  }
+  .impact {
+    background: var(--paper); border: 1px solid var(--line); border-radius: 14px; padding: 14px 14px 12px;
+  }
+  .impact .n {
+    font-size: 1.35rem; font-weight: 800; color: var(--navy); letter-spacing: -.02em; line-height: 1.1;
+  }
+  .impact p { margin: 6px 0 0; font-size: 12.5px; color: var(--ink-soft); line-height: 1.45; }
+  .improve {
+    margin-top: auto; padding-top: 16px; display: flex; align-items: center; gap: 12px;
+    flex-wrap: wrap; border-top: 1px dashed rgba(255,255,255,.25);
+  }
+  .improve .lbl2 { font-size: 11px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: rgba(226,234,244,.6); }
+  .improve .badge {
+    display: inline-flex; align-items: center; gap: 8px; padding: 8px 14px; border-radius: 999px;
+    font-size: 13px; font-weight: 800; background: rgba(14,124,107,.24); color: #a8ebda;
+    border: 1px solid rgba(111,220,198,.45);
+  }
+  .improve .badge::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: #6fdcc6; }
+  .src { margin-top: 14px; font-size: 11.5px; color: var(--muted); line-height: 1.5; }
+  .slide--dark .src, .slide--title .src { color: rgba(226,234,244,.6); }
+  .nav {
+    position: fixed; left: 0; right: 0; bottom: 0; height: 56px; display: flex;
+    align-items: center; justify-content: space-between; padding: 0 5vw;
+    background: rgba(10,18,32,.9); color: #cbd6e6; font-size: 12.5px; z-index: 20;
+  }
+  .dots { display: flex; gap: 7px; }
+  .dot {
+    width: 9px; height: 9px; border-radius: 50%; background: #3d4c63; border: 0;
+    cursor: pointer; padding: 0; transition: background .2s, transform .2s;
+  }
+  .dot.on { background: #6fdcc6; transform: scale(1.35); }
+  .nav-btns { display: flex; gap: 8px; }
+  .nav button.arrow {
+    background: #1c2b44; color: #dbe5f2; border: 1px solid #35486a; border-radius: 8px;
+    width: 34px; height: 30px; font-size: 14px; cursor: pointer;
+  }
+  .nav button.arrow:hover { background: #26395a; }
+  .counter { font-variant-numeric: tabular-nums; font-weight: 700; }
+  .deck-title { font-weight: 700; opacity: .75; }
+  @media (max-width: 1080px) {
+    .kpi-row, .grid-2, .grid-4 { grid-template-columns: 1fr 1fr; }
+    .grid-scen { grid-template-columns: 1fr; }
+  }
+  @media print {
+    body, .deck { height: auto; overflow: visible; background: #fff; }
+    .slides { display: block; transform: none !important; }
+    .slide { height: auto; page-break-after: always; overflow: visible; }
+    .nav { display: none; }
+  }
+</style>
+</head>
+<body>
+<div class="deck">
+  <div class="slides" id="slides">
+
+    <section class="slide slide--title">
+      <div class="eyebrow">Презентация 02 &middot; Пакет 20.09.2026</div>
+      <h1 class="serif">Cursor высвобождает человеко-часы ИТ<br>без расширения штата</h1>
+      <p class="lead">
+        За 10 месяцев (5 ноя 2025 — 15 сен 2026) внутренние задачи
+        (не Аванкор) ведутся с Cursor. 52 задачи закрыты за 1 065 ч.
+        Без ИИ тот же объем занял бы 1 491&ndash;1 917 ч.
+        Разница &mdash; 426&ndash;852 ч за период:
+        41&ndash;83 ч каждый месяц, или 500&ndash;990 ч в год.
+      </p>
+      <div class="kpi-row">
+<div class="kpi"><div class="kpi-num">426–852<span class="kpi-unit">ч</span></div><div class="kpi-lbl">За 10 месяцев</div><div class="kpi-sub">5 ноя 2025 — 15 сен 2026, 52 задачи, факт 1 065 ч</div></div>
+<div class="kpi"><div class="kpi-num">41–83<span class="kpi-unit">ч/мес</span></div><div class="kpi-lbl">Средний темп экономии</div><div class="kpi-sub">период уже включает и тихие месяцы, и пик лета 2026</div></div>
+<div class="kpi"><div class="kpi-num">500–990<span class="kpi-unit">ч/год</span></div><div class="kpi-lbl">Оценка на год</div><div class="kpi-sub">средний темп × 12 · 0,25–0,5 ставки ИТ постоянно</div></div>
+<div class="kpi"><div class="kpi-num">1,9–3,9 млн<span class="kpi-unit">₽/год</span></div><div class="kpi-lbl">Эквивалент внешней разработки</div><div class="kpi-sub">ставка 3 900 ₽/ч из смет Аванкор, презентация 01</div></div>
+      </div>
+      <div class="card--glass">
+<svg viewBox="0 0 1000 128" class="chart chart--flat" role="img" aria-label="Факт и экономия часов"><text x="4" y="20" class="d-cap">Объем без Cursor: 1 491 ч  ·  консервативный сценарий</text><rect x="4" y="40" width="708.6" height="44" rx="4" fill="#c47a12"/><rect x="712.6" y="40" width="283.4" height="44" rx="4" fill="#0e7c6b"/><text x="358.3" y="68" class="d-val" text-anchor="middle">1 065 ч</text><text x="854.3" y="68" class="d-val" text-anchor="middle">426 ч</text><text x="358.3" y="106" class="d-lbl" text-anchor="middle">Факт с Cursor &#183; 71%</text><text x="854.3" y="106" class="d-lbl" text-anchor="middle">Не потрачено &#183; 29%</text></svg>
+      </div>
+      <div class="improve">
+        <span class="lbl2">Вид улучшения</span>
+        <span class="badge">Экономия ресурсов ИТ / рост capacity</span>
+      </div>
+      <div class="src">
+        Выборка: внутренние задачи Jira, созданные с 01.11.2025, без пересечения
+        с выгрузкой Аванкор, с учтенным временем. Горизонт факта &mdash;
+        5 ноя 2025 — 15 сен 2026 (10,3 мес.).
+        Ставка для денежного эквивалента &mdash; 3 900 &#8381;/ч из смет вендора (презентация 01).
+      </div>
+    </section>
+
+    <section class="slide">
+      <div class="eyebrow">Методика</div>
+      <h2>Считаем часы, а не «магию ИИ»: факт из учета, коэффициент из исследований</h2>
+      <div class="grid-2">
+        <div class="card">
+          <p class="h4">Что берем из учетных систем</p>
+          <ul class="facts">
+            <li><span class="b">1</span><span><strong>Факт часов</strong> &mdash; Time Sheet по каждой задаче,
+              иначе Time Spent из Jira. По выборке это 1 065 ч.</span></li>
+            <li><span class="b">2</span><span><strong>Граница Cursor.</strong> В расчет входят задачи,
+              созданные 01.11.2025 и позже. Более ранние не смешиваем: часть работы могла идти без ИИ.</span></li>
+            <li><span class="b">3</span><span><strong>Не Аванкор.</strong> Пересечение с выгрузкой вендора
+              исключено (0 задач). Дубли и отмены тоже.</span></li>
+            <li><span class="b">4</span><span><strong>Деньги &mdash; не зарплата.</strong> Часы умножаем
+              на ставку внешней разработки 3 900 &#8381;, чтобы показать, сколько стоил бы этот объем
+              подрядчику. Это сопоставимо с презентацией 01.</span></li>
+          </ul>
+        </div>
+        <div>
+          <div class="card">
+            <p class="h4">Формула</p>
+            <div class="formula">
+              <div><strong>Факт</strong> = <code>часы Time Sheet</code></div>
+              <div style="margin-top:10px"><strong>Без Cursor</strong> =
+                <code>факт &times; k</code><br>
+                <span style="color:#4a6280">k = 1,40 / 1,50 / 1,80 по сценариям</span></div>
+              <div style="margin-top:10px"><strong>Экономия часов</strong> =
+                <code>без Cursor &minus; факт</code></div>
+              <div style="margin-top:10px"><strong>Темп</strong> =
+                <code>экономия / 10,3 мес.</code>
+                &nbsp;&rarr;&nbsp; <code>&times; 12 = год</code></div>
+            </div>
+            <div class="note" style="margin-top:12px">
+              <strong>Два языка процентов.</strong> «+40% к факту» (k = 1,40) &mdash; это 29% ускорения,
+              а не «на 40% быстрее». «На 55% быстрее» из лабораторного GitHub Copilot дало бы k = 2,26.
+              Такой коэффициент мы не берем: это верхняя лабораторная оценка, не портфель задач 1С.
+              Год &mdash; экстраполяция среднего темпа за 10,3 мес., а не отдельный факт.
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="card" style="margin-top:14px">
+        <p class="h4">Откуда коэффициенты</p>
+        <table>
+          <thead><tr><th>Источник</th><th>Что показали</th></tr></thead>
+          <tbody>
+<tr><td><strong>GitHub Copilot / Peng et al., 2022-2023</strong></td><td>Контролируемый эксперимент: задача HTTP-сервера на JavaScript. С Copilot на 55,8% быстрее (71 мин против 161 мин). 95% ДИ 21-89%.</td></tr>
+<tr><td><strong>McKinsey, июнь 2023</strong></td><td>Документация кода 45-50% меньше времени, написание кода 35-45%, рефакторинг 20-30%, задачи высокой сложности менее 10%.</td></tr>
+<tr><td><strong>Google enterprise RCT, 2024</strong></td><td>Полевой эксперимент в корпоративной разработке: около 21% быстрее (оценка ниже лабораторных 56% и ближе к практике).</td></tr>
+<tr><td><strong>IBM Software / McKinsey, 2024</strong></td><td>Разработчики IBM с gen AI: рост производительности 30-40%. Формула ценности: capacity той же команды + cost avoidance найма.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="slide">
+      <div class="eyebrow">Сравнение по задачам</div>
+      <h2>Факт с Cursor против прогноза без ИИ</h2>
+      <div class="legend">
+        <span><i style="background:#163a66"></i>Прогноз без Cursor (консервативно, +40%)</span>
+        <span><i style="background:#0e7c6b"></i>Факт с Cursor</span>
+      </div>
+      <div class="card">
+<svg viewBox="0 0 1158 470" class="chart" role="img" aria-label="Факт с Cursor против прогноза без ИИ"><line x1="168.0" y1="32" x2="168.0" y2="440" stroke="#d7dde8" stroke-width="1"/><text x="168.0" y="24" class="ax" text-anchor="middle">0</text><line x1="348.0" y1="32" x2="348.0" y2="440" stroke="#d7dde8" stroke-width="1"/><text x="348.0" y="24" class="ax" text-anchor="middle">30</text><line x1="528.0" y1="32" x2="528.0" y2="440" stroke="#d7dde8" stroke-width="1"/><text x="528.0" y="24" class="ax" text-anchor="middle">60</text><line x1="708.0" y1="32" x2="708.0" y2="440" stroke="#d7dde8" stroke-width="1"/><text x="708.0" y="24" class="ax" text-anchor="middle">90</text><line x1="888.0" y1="32" x2="888.0" y2="440" stroke="#d7dde8" stroke-width="1"/><text x="888.0" y="24" class="ax" text-anchor="middle">120</text><line x1="1068.0" y1="32" x2="1068.0" y2="440" stroke="#d7dde8" stroke-width="1"/><text x="1068.0" y="24" class="ax" text-anchor="middle">150</text><text x="618.0" y="460" class="ax-title" text-anchor="middle">Человеко-часы</text><text x="158" y="58.0" class="lbl" text-anchor="end">IMDEV-8829</text><rect x="168" y="44.0" width="865.2" height="10" rx="2" fill="#163a66" fill-opacity="0.88"/><rect x="168" y="56.0" width="618.0" height="10" rx="2" fill="#0e7c6b"/><text x="1039.2" y="53.0" class="val">144</text><text x="792.0" y="66.0" class="val val-dim">103</text><text x="158" y="86.0" class="lbl" text-anchor="end">IMDEV-9106</text><rect x="168" y="72.0" width="806.4" height="10" rx="2" fill="#163a66" fill-opacity="0.88"/><rect x="168" y="84.0" width="576.0" height="10" rx="2" fill="#0e7c6b"/><text x="980.4" y="81.0" class="val">134</text><text x="750.0" y="94.0" class="val val-dim">96</text><text x="158" y="114.0" class="lbl" text-anchor="end">IMDEV-8972</text><rect x="168" y="100.0" width="579.6" height="10" rx="2" fill="#163a66" fill-opacity="0.88"/><rect x="168" y="112.0" width="414.0" height="10" rx="2" fill="#0e7c6b"/><text x="753.6" y="109.0" class="val">97</text><text x="588.0" y="122.0" class="val val-dim">69</text><text x="158" y="142.0" class="lbl" text-anchor="end">IMDEV-8928</text><rect x="168" y="128.0" width="445.2" height="10" rx="2" fill="#163a66" fill-opacity="0.88"/><rect x="168" y="140.0" width="318.0" height="10" rx="2" fill="#0e7c6b"/><text x="619.2" y="137.0" class="val">74</text><text x="492.0" y="150.0" class="val val-dim">53</text><text x="158" y="170.0" class="lbl" text-anchor="end">IMAPPS-34094</text><rect x="168" y="156.0" width="420.0" height="10" rx="2" fill="#163a66" fill-opacity="0.88"/><rect x="168" y="168.0" width="300.0" height="10" rx="2" fill="#0e7c6b"/><text x="594.0" y="165.0" class="val">70</text><text x="474.0" y="178.0" class="val val-dim">50</text><text x="158" y="198.0" class="lbl" text-anchor="end">IMDEV-8665</text><rect x="168" y="184.0" width="386.4" height="10" rx="2" fill="#163a66" fill-opacity="0.88"/><rect x="168" y="196.0" width="276.0" height="10" rx="2" fill="#0e7c6b"/><text x="560.4" y="193.0" class="val">64</text><text x="450.0" y="206.0" class="val val-dim">46</text><text x="158" y="226.0" class="lbl" text-anchor="end">IMDEV-9198</text><rect x="168" y="212.0" width="361.2" height="10" rx="2" fill="#163a66" fill-opacity="0.88"/><rect x="168" y="224.0" width="258.0" height="10" rx="2" fill="#0e7c6b"/><text x="535.2" y="221.0" class="val">60</text><text x="432.0" y="234.0" class="val val-dim">43</text><text x="158" y="254.0" class="lbl" text-anchor="end">IMDEV-8843</text><rect x="168" y="240.0" width="319.2" height="10" rx="2" fill="#163a66" fill-opacity="0.88"/><rect x="168" y="252.0" width="228.0" height="10" rx="2" fill="#0e7c6b"/><text x="493.2" y="249.0" class="val">53</text><text x="402.0" y="262.0" class="val val-dim">38</text><text x="158" y="282.0" class="lbl" text-anchor="end">IMDEV-9153</text><rect x="168" y="268.0" width="302.4" height="10" rx="2" fill="#163a66" fill-opacity="0.88"/><rect x="168" y="280.0" width="216.0" height="10" rx="2" fill="#0e7c6b"/><text x="476.4" y="277.0" class="val">50</text><text x="390.0" y="290.0" class="val val-dim">36</text><text x="158" y="310.0" class="lbl" text-anchor="end">IMDEV-9096</text><rect x="168" y="296.0" width="294.0" height="10" rx="2" fill="#163a66" fill-opacity="0.88"/><rect x="168" y="308.0" width="210.0" height="10" rx="2" fill="#0e7c6b"/><text x="468.0" y="305.0" class="val">49</text><text x="384.0" y="318.0" class="val val-dim">35</text><text x="158" y="338.0" class="lbl" text-anchor="end">IMDEV-9202</text><rect x="168" y="324.0" width="285.6" height="10" rx="2" fill="#163a66" fill-opacity="0.88"/><rect x="168" y="336.0" width="204.0" height="10" rx="2" fill="#0e7c6b"/><text x="459.6" y="333.0" class="val">48</text><text x="378.0" y="346.0" class="val val-dim">34</text><text x="158" y="366.0" class="lbl" text-anchor="end">IMDEV-9005</text><rect x="168" y="352.0" width="277.2" height="10" rx="2" fill="#163a66" fill-opacity="0.88"/><rect x="168" y="364.0" width="198.0" height="10" rx="2" fill="#0e7c6b"/><text x="451.2" y="361.0" class="val">46</text><text x="372.0" y="374.0" class="val val-dim">33</text><text x="158" y="394.0" class="lbl" text-anchor="end">IMAPPS-34356</text><rect x="168" y="380.0" width="275.1" height="10" rx="2" fill="#163a66" fill-opacity="0.88"/><rect x="168" y="392.0" width="196.5" height="10" rx="2" fill="#0e7c6b"/><text x="449.1" y="389.0" class="val">46</text><text x="370.5" y="402.0" class="val val-dim">32,75</text><text x="158" y="422.0" class="lbl" text-anchor="end">IMDEV-9192</text><rect x="168" y="408.0" width="260.4" height="10" rx="2" fill="#163a66" fill-opacity="0.88"/><rect x="168" y="420.0" width="186.0" height="10" rx="2" fill="#0e7c6b"/><text x="434.4" y="417.0" class="val">43</text><text x="360.0" y="430.0" class="val val-dim">31</text></svg>
+      </div>
+      <div class="src">
+        Показаны 14 крупнейших задач (около двух третей объема). Диаграмма &mdash;
+        консервативный сценарий (+40% к факту). Реалистичный увеличивает прогноз без ИИ до +80%.
+      </div>
+    </section>
+
+    <section class="slide">
+      <div class="eyebrow">Детализация</div>
+      <h2>Крупнейшие задачи: часы, прогноз, экономия</h2>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Задача</th>
+              <th>Наименование</th>
+              <th>Контур</th>
+              <th class="n">Факт, ч</th>
+              <th class="n">Без Cursor, ч</th>
+              <th class="n">Экономия, ч</th>
+              <th class="n">Доля</th>
+            </tr>
+          </thead>
+          <tbody>
+<tr><td class="k">IMDEV-8829</td><td class="t">Утренняя подготовка фронт-офисных систем к торгам (…</td><td class="c">МО</td><td class="n">103</td><td class="n hypo">144</td><td class="n save">41</td><td class="n">29%</td></tr>
+<tr><td class="k">IMDEV-9106</td><td class="t">Оптимизация процедуры загрузка статики по клиентам…</td><td class="c">МО</td><td class="n">96</td><td class="n hypo">134</td><td class="n save">38</td><td class="n">29%</td></tr>
+<tr><td class="k">IMDEV-8972</td><td class="t">Добавить вызов замеров времени в объекты конфигурац…</td><td class="c">МО</td><td class="n">69</td><td class="n hypo">97</td><td class="n save">28</td><td class="n">29%</td></tr>
+<tr><td class="k">IMDEV-8928</td><td class="t">Обновить подсистему &quot;Оценка Производительности&quot; до…</td><td class="c">МО</td><td class="n">53</td><td class="n hypo">74</td><td class="n save">21</td><td class="n">29%</td></tr>
+<tr><td class="k">IMAPPS-34094</td><td class="t">Оптимизация ДУ: Исполнение сделок T+</td><td class="c">ДУ</td><td class="n">50</td><td class="n hypo">70</td><td class="n save">20</td><td class="n">29%</td></tr>
+<tr><td class="k">IMDEV-8665</td><td class="t">Оптимизировать пересчет MV в Ритейл МО</td><td class="c">МО</td><td class="n">46</td><td class="n hypo">64</td><td class="n save">18</td><td class="n">29%</td></tr>
+<tr><td class="k">IMDEV-9198</td><td class="t">Оптимизировать алгоритмы выгрузки данных в кабинет…</td><td class="c">МО</td><td class="n">43</td><td class="n hypo">60</td><td class="n save">17</td><td class="n">29%</td></tr>
+<tr><td class="k">IMDEV-8843</td><td class="t">Массовое построение Отчетов РДУ и выгрузка в КК</td><td class="c">ДУ</td><td class="n">38</td><td class="n hypo">53</td><td class="n save">15</td><td class="n">29%</td></tr>
+<tr><td class="k">IMDEV-9153</td><td class="t">Оптимизация начисления ВУК РДУ в регламентные даты</td><td class="c">ДУ</td><td class="n">36</td><td class="n hypo">50</td><td class="n save">14</td><td class="n">29%</td></tr>
+<tr><td class="k">IMDEV-9096</td><td class="t">Оптимизация загрузки банковских выписок</td><td class="c">ДУ</td><td class="n">35</td><td class="n hypo">49</td><td class="n save">14</td><td class="n">29%</td></tr>
+<tr><td class="k">IMDEV-9202</td><td class="t">Оптимизировать алгоритмы оплаты вознаграждений (фор…</td><td class="c">ДУ</td><td class="n">34</td><td class="n hypo">48</td><td class="n save">14</td><td class="n">29%</td></tr>
+<tr><td class="k">IMDEV-9005</td><td class="t">Оптимизация 431-ой формы xbrl отчетности в Аванкоре…</td><td class="c">ДУ+МО</td><td class="n">33</td><td class="n hypo">46</td><td class="n save">13</td><td class="n">29%</td></tr>
+<tr><td class="k">IMAPPS-34356</td><td class="t">Оптимизация Отчета о финансовом результате по данны…</td><td class="c">ФИН</td><td class="n">32,75</td><td class="n hypo">46</td><td class="n save">13</td><td class="n">29%</td></tr>
+<tr><td class="k">IMDEV-9192</td><td class="t">Сверка денежных средств и ценных бумаг (в шт) между…</td><td class="c">МО</td><td class="n">31</td><td class="n hypo">43</td><td class="n save">12</td><td class="n">29%</td></tr>
+<tr><td class="k">IMDEV-9335</td><td class="t">Проверить список ключевых операций, на потребность…</td><td class="c">МО</td><td class="n">30</td><td class="n hypo">42</td><td class="n save">12</td><td class="n">29%</td></tr>
+<tr><td class="k">IMDEV-9191</td><td class="t">Оптимизировать сверку позиций FO BO</td><td class="c">МО</td><td class="n">27</td><td class="n hypo">38</td><td class="n save">11</td><td class="n">29%</td></tr>
+<tr><td class="k">IMAPPS-34861</td><td class="t">Оптимизация обработки внЗагрузкаСделокDU-NEW</td><td class="c">ДУ</td><td class="n">24,5</td><td class="n hypo">34</td><td class="n save">10</td><td class="n">29%</td></tr>
+<tr><td class="k">IMDEV-8663</td><td class="t">Оптимизация вечерних регламентов по РДУ (Этап 3)</td><td class="c">ДУ</td><td class="n">24</td><td class="n hypo">34</td><td class="n save">10</td><td class="n">29%</td></tr>
+<tr><td class="k">прочие</td><td class="t">ещё 34 задач с меньшим объемом</td><td class="c">—</td><td class="n">260</td><td class="n hypo">364</td><td class="n save">104</td><td class="n">29%</td></tr>
+            <tr class="total">
+              <td colspan="3">ИТОГО по 52 задачам, консервативный сценарий</td>
+              <td class="n">1 065</td>
+              <td class="n">1 491</td>
+              <td class="n">426</td>
+              <td class="n">29%</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="src">
+        «Без Cursor» = факт &times; 1,40. Доля экономии в гипотетическом объеме постоянна по задачам
+        (29%) &mdash; коэффициент общий. Различается абсолют: чем больше задача, тем больше часов возвращается.
+      </div>
+    </section>
+
+    <section class="slide">
+      <div class="eyebrow">Динамика и контуры</div>
+      <h2>Экономия копится неровно: пик &mdash; лето 2026, ядро &mdash; МО и ДУ</h2>
+      <div class="card">
+<svg viewBox="0 0 1000 220" class="chart" role="img" aria-label="Накопленная экономия часов"><line x1="62" y1="168.0" x2="976" y2="168.0" stroke="#d7dde8" stroke-width="1"/><text x="54" y="172.0" class="ax" text-anchor="end">0</text><line x1="62" y1="133.0" x2="976" y2="133.0" stroke="#d7dde8" stroke-width="1"/><text x="54" y="137.0" class="ax" text-anchor="end">150</text><line x1="62" y1="98.0" x2="976" y2="98.0" stroke="#d7dde8" stroke-width="1"/><text x="54" y="102.0" class="ax" text-anchor="end">300</text><line x1="62" y1="63.0" x2="976" y2="63.0" stroke="#d7dde8" stroke-width="1"/><text x="54" y="67.0" class="ax" text-anchor="end">450</text><line x1="62" y1="28.0" x2="976" y2="28.0" stroke="#d7dde8" stroke-width="1"/><text x="54" y="32.0" class="ax" text-anchor="end">600</text><polygon points="62.0,168.0 62.0,168.0 163.6,155.9 265.1,154.9 366.7,152.6 468.2,148.6 569.8,140.0 671.3,133.8 772.9,122.4 874.4,74.2 976.0,68.6 976.0,168.0" fill="#0e7c6b" fill-opacity="0.12"/><polyline points="62.0,168.0 163.6,155.9 265.1,154.9 366.7,152.6 468.2,148.6 569.8,140.0 671.3,133.8 772.9,122.4 874.4,74.2 976.0,68.6" fill="none" stroke="#0e7c6b" stroke-width="2.5"/><circle cx="62.0" cy="168.0" r="4.5" fill="#fff" stroke="#0e7c6b" stroke-width="2"/><text x="62.0" y="156.0" class="val" text-anchor="middle">0</text><text x="62.0" y="188" class="ax" text-anchor="middle">ноя 25</text><circle cx="163.6" cy="155.9" r="4.5" fill="#fff" stroke="#0e7c6b" stroke-width="2"/><text x="163.6" y="143.9" class="val" text-anchor="middle">52</text><text x="163.6" y="188" class="ax" text-anchor="middle">янв 26</text><circle cx="265.1" cy="154.9" r="4.5" fill="#fff" stroke="#0e7c6b" stroke-width="2"/><text x="265.1" y="142.9" class="val" text-anchor="middle">56</text><text x="265.1" y="188" class="ax" text-anchor="middle">фев 26</text><circle cx="366.7" cy="152.6" r="4.5" fill="#fff" stroke="#0e7c6b" stroke-width="2"/><text x="366.7" y="140.6" class="val" text-anchor="middle">66</text><text x="366.7" y="188" class="ax" text-anchor="middle">мар 26</text><circle cx="468.2" cy="148.6" r="4.5" fill="#fff" stroke="#0e7c6b" stroke-width="2"/><text x="468.2" y="136.6" class="val" text-anchor="middle">83</text><text x="468.2" y="188" class="ax" text-anchor="middle">апр 26</text><circle cx="569.8" cy="140.0" r="4.5" fill="#fff" stroke="#0e7c6b" stroke-width="2"/><text x="569.8" y="128.0" class="val" text-anchor="middle">120</text><text x="569.8" y="188" class="ax" text-anchor="middle">май 26</text><circle cx="671.3" cy="133.8" r="4.5" fill="#fff" stroke="#0e7c6b" stroke-width="2"/><text x="671.3" y="121.8" class="val" text-anchor="middle">146</text><text x="671.3" y="188" class="ax" text-anchor="middle">июн 26</text><circle cx="772.9" cy="122.4" r="4.5" fill="#fff" stroke="#0e7c6b" stroke-width="2"/><text x="772.9" y="110.4" class="val" text-anchor="middle">196</text><text x="772.9" y="188" class="ax" text-anchor="middle">июл 26</text><circle cx="874.4" cy="74.2" r="4.5" fill="#fff" stroke="#0e7c6b" stroke-width="2"/><text x="874.4" y="62.2" class="val" text-anchor="middle">402</text><text x="874.4" y="188" class="ax" text-anchor="middle">авг 26</text><circle cx="976.0" cy="68.6" r="4.5" fill="#fff" stroke="#0e7c6b" stroke-width="2"/><text x="976.0" y="56.6" class="val" text-anchor="middle">426</text><text x="976.0" y="188" class="ax" text-anchor="middle">сен 26</text><text x="519.0" y="212" class="ax-title" text-anchor="middle">Накопленная экономия часов, консервативный сценарий (+40% к факту)</text></svg>
+      </div>
+      <div class="grid-2" style="margin-top:10px">
+        <div class="card">
+<svg viewBox="0 0 1000 168" class="chart chart--flat" role="img" aria-label="Часы по контурам"><line x1="54" y1="120.0" x2="980" y2="120.0" stroke="#d7dde8" stroke-width="1"/><text x="46" y="124.0" class="ax" text-anchor="end">0</text><line x1="54" y1="89.3" x2="980" y2="89.3" stroke="#d7dde8" stroke-width="1"/><text x="46" y="93.3" class="ax" text-anchor="end">200</text><line x1="54" y1="58.7" x2="980" y2="58.7" stroke="#d7dde8" stroke-width="1"/><text x="46" y="62.7" class="ax" text-anchor="end">400</text><line x1="54" y1="28.0" x2="980" y2="28.0" stroke="#d7dde8" stroke-width="1"/><text x="46" y="32.0" class="ax" text-anchor="end">600</text><rect x="98.8" y="38.9" width="64.8" height="81.1" rx="3" fill="#163a66"/><text x="131.2" y="30.9" class="val val-big" text-anchor="middle">529 ч</text><text x="131.2" y="138" class="lbl" text-anchor="middle">МО</text><text x="131.2" y="152" class="ax ax-dim" text-anchor="middle">16 задач</text><rect x="253.1" y="55.0" width="64.8" height="65.0" rx="3" fill="#0e7c6b"/><text x="285.5" y="47.0" class="val val-big" text-anchor="middle">423,75 ч</text><text x="285.5" y="138" class="lbl" text-anchor="middle">ДУ</text><text x="285.5" y="152" class="ax ax-dim" text-anchor="middle">27 задач</text><rect x="407.4" y="112.1" width="64.8" height="7.9" rx="3" fill="#c47a12"/><text x="439.8" y="104.1" class="val val-big" text-anchor="middle">51,25 ч</text><text x="439.8" y="138" class="lbl" text-anchor="middle">ФИН</text><text x="439.8" y="152" class="ax ax-dim" text-anchor="middle">5 задач</text><rect x="561.8" y="114.9" width="64.8" height="5.1" rx="3" fill="#4b6fa8"/><text x="594.2" y="106.9" class="val val-big" text-anchor="middle">33 ч</text><text x="594.2" y="138" class="lbl" text-anchor="middle">ДУ+МО</text><text x="594.2" y="152" class="ax ax-dim" text-anchor="middle">1 задач</text><rect x="716.1" y="117.1" width="64.8" height="2.9" rx="3" fill="#7a8da6"/><text x="748.5" y="109.1" class="val val-big" text-anchor="middle">19 ч</text><text x="748.5" y="138" class="lbl" text-anchor="middle">ПИФ</text><text x="748.5" y="152" class="ax ax-dim" text-anchor="middle">2 задач</text><rect x="870.4" y="118.6" width="64.8" height="1.4" rx="3" fill="#9aa7b8"/><text x="902.8" y="110.6" class="val val-big" text-anchor="middle">9 ч</text><text x="902.8" y="138" class="lbl" text-anchor="middle">ДУ+ФИН</text><text x="902.8" y="152" class="ax ax-dim" text-anchor="middle">1 задач</text></svg>
+        </div>
+        <div class="card">
+          <p class="h4">Разрез по контурам, консервативный / реалистичный</p>
+          <table>
+            <thead>
+              <tr>
+                <th>Контур</th><th class="n">Задач</th><th class="n">Факт, ч</th>
+                <th class="n">Экон. min, ч</th><th class="n">Экон. max, ч</th>
+              </tr>
+            </thead>
+            <tbody>
+<tr><td>МО</td><td class="n">16</td><td class="n">529</td><td class="n save">211,6</td><td class="n save">423,2</td></tr>
+<tr><td>ДУ</td><td class="n">27</td><td class="n">423,75</td><td class="n save">169,5</td><td class="n save">339</td></tr>
+<tr><td>ФИН</td><td class="n">5</td><td class="n">51,25</td><td class="n save">20,5</td><td class="n save">41</td></tr>
+<tr><td>ДУ+МО</td><td class="n">1</td><td class="n">33</td><td class="n save">13,2</td><td class="n save">26,4</td></tr>
+<tr><td>ПИФ</td><td class="n">2</td><td class="n">19</td><td class="n save">7,6</td><td class="n save">15,2</td></tr>
+<tr><td>ДУ+ФИН</td><td class="n">1</td><td class="n">9</td><td class="n save">3,6</td><td class="n save">7,2</td></tr>
+            </tbody>
+          </table>
+          <div class="note" style="margin-top:12px">
+            <strong>Где эффект для бизнеса.</strong> Большая часть часов &mdash; оптимизация оперативного
+            учета МО и ДУ при росте клиентской базы. Средний темп
+            41&ndash;83 ч/мес уже учитывает и зиму, и пик лета 2026:
+            годовая оценка = этот средний &times; 12, а не пиковый август.
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="slide">
+      <div class="eyebrow">Диапазон оценки</div>
+      <h2>Три сценария: от нижней границы ТЗ до McKinsey по новому коду</h2>
+      <p class="lead">
+        Единственная цифра всегда спорна. Поэтому &mdash; диапазон, и каждая оценка
+        приведена к месяцу и году. GitHub Copilot 55,8% быстрее сознательно не используем:
+        это лаборатория, не наш портфель.
+      </p>
+      <div class="grid-scen">
+        <div class="card">
+<svg viewBox="0 0 700 390" class="chart" role="img" aria-label="Экономия часов по сценариям"><line x1="58" y1="312.0" x2="680" y2="312.0" stroke="#d7dde8" stroke-width="1"/><text x="50" y="316.0" class="ax" text-anchor="end">0</text><line x1="58" y1="243.0" x2="680" y2="243.0" stroke="#d7dde8" stroke-width="1"/><text x="50" y="247.0" class="ax" text-anchor="end">250</text><line x1="58" y1="174.0" x2="680" y2="174.0" stroke="#d7dde8" stroke-width="1"/><text x="50" y="178.0" class="ax" text-anchor="end">500</text><line x1="58" y1="105.0" x2="680" y2="105.0" stroke="#d7dde8" stroke-width="1"/><text x="50" y="109.0" class="ax" text-anchor="end">750</text><line x1="58" y1="36.0" x2="680" y2="36.0" stroke="#d7dde8" stroke-width="1"/><text x="50" y="40.0" class="ax" text-anchor="end">1 000</text><rect x="111.9" y="194.4" width="99.5" height="117.6" rx="4" fill="#163a66"/><text x="161.7" y="184.4" class="val val-big" text-anchor="middle">426 ч</text><text x="161.7" y="334" class="lbl" text-anchor="middle">Консервативный</text><text x="161.7" y="349" class="ax ax-dim" text-anchor="middle">нижняя граница</text><text x="161.7" y="364" class="ax ax-dim" text-anchor="middle">41 ч/мес &#183; 500 ч/год</text><rect x="319.2" y="165.0" width="99.5" height="147.0" rx="4" fill="#0e7c6b"/><text x="369.0" y="155.0" class="val val-big" text-anchor="middle">532 ч</text><text x="369.0" y="334" class="lbl" text-anchor="middle">Базовый</text><text x="369.0" y="349" class="ax ax-dim" text-anchor="middle">оценка по ТЗ</text><text x="369.0" y="364" class="ax ax-dim" text-anchor="middle">52 ч/мес &#183; 620 ч/год</text><rect x="526.6" y="76.8" width="99.5" height="235.2" rx="4" fill="#c47a12"/><text x="576.3" y="66.8" class="val val-big" text-anchor="middle">852 ч</text><text x="576.3" y="334" class="lbl" text-anchor="middle">Реалистичный</text><text x="576.3" y="349" class="ax ax-dim" text-anchor="middle">ближе к практике Cursor</text><text x="576.3" y="364" class="ax ax-dim" text-anchor="middle">83 ч/мес &#183; 990 ч/год</text><text x="369.0" y="382" class="ax-title" text-anchor="middle">Часы за период</text></svg>
+        </div>
+        <div class="card">
+          <p class="h4">Допущения и результат</p>
+          <table>
+            <thead>
+              <tr>
+                <th>Сценарий</th>
+                <th class="n">За 10 мес., ч</th>
+                <th class="n">Ч/мес</th>
+                <th class="n">Ч/год</th>
+                <th class="n">&#8381;/год</th>
+              </tr>
+            </thead>
+            <tbody>
+<tr><td><strong>Консервативный</strong><span class="sub">нижняя граница, +40% к факту</span></td><td class="n save"><strong>426</strong></td><td class="n save">41</td><td class="n save">500</td><td class="n">1,9 млн</td></tr>
+<tr><td><strong>Базовый</strong><span class="sub">оценка по ТЗ, +50% к факту</span></td><td class="n save"><strong>532</strong></td><td class="n save">52</td><td class="n save">620</td><td class="n">2,4 млн</td></tr>
+<tr class="row-hi"><td><strong>Реалистичный</strong><span class="sub">ближе к практике Cursor, +80% к факту</span></td><td class="n save"><strong>852</strong></td><td class="n save">83</td><td class="n save">990</td><td class="n">3,9 млн</td></tr>
+            </tbody>
+          </table>
+          <div class="note" style="margin-top:12px">
+            <strong>Почему реалистичный все еще осторожен.</strong> McKinsey дает 35&ndash;45% экономии
+            времени на написание нового кода. +80% к факту (k = 1,80) &mdash; это 44% ускорения,
+            верх диапазона McKinsey. Лабораторный GitHub 55,8% (k = 2,26) отбрасываем.
+          </div>
+        </div>
+      </div>
+      <div class="src">
+        Консервативный сценарий совпадает с формулировкой ТЗ «+40% к фактическому времени».
+        Базовый &mdash; «+50%». Реалистичный &mdash; «+80% к факту», то есть «на 44% быстрее»
+        по верхней границе McKinsey для нового кода. Часы в месяц = экономия за период /
+        10,3 мес.; год = месяц &times; 12.
+      </div>
+    </section>
+
+    <section class="slide">
+      <div class="eyebrow">На что влияет</div>
+      <h2>Высвобожденные часы &mdash; это не «экономия на бумаге», а capacity компании</h2>
+      <p class="lead">
+        IBM и McKinsey описывают ценность gen AI в разработке так: не сокращение штата,
+        а тот же состав делает больше &mdash; без найма и без подрядчика.
+      </p>
+      <div class="grid-4">
+        <div class="impact">
+          <p class="h4">Capacity без найма</p>
+          <div class="n">&times;1,4&ndash;1,8</div>
+          <p>Та же команда закрывает в 1,4&ndash;1,8 раза больший объем работ за тот же календарный срок.</p>
+        </div>
+        <div class="impact">
+          <p class="h4">Темп без найма</p>
+          <div class="n">41&ndash;83 ч/мес</div>
+          <p>0,25&ndash;0,5 ставки ИТ постоянно. Штат не растет,
+            подрядчик не вызывается, тот же состав закрывает больший объем.</p>
+        </div>
+        <div class="impact">
+          <p class="h4">Оценка на год</p>
+          <div class="n">500&ndash;990 ч</div>
+          <p>если средний темп сохранится: 1,9 млн&ndash;3,9 млн &#8381;/год
+            по ставке вендора. Пик лета уже внутри среднего.</p>
+        </div>
+        <div class="impact">
+          <p class="h4">Приоритеты бизнеса</p>
+          <div class="n">92%</div>
+          <p>фактических часов &mdash; Change Request (оптимизация учета), а не разбор мелочи.
+            Высвобождение идет в ту же работу, за которую спрашивает бизнес.</p>
+        </div>
+      </div>
+      <div class="card" style="margin-top:16px">
+        <p class="h4">Как это стыкуется с презентацией 01</p>
+        <p style="margin:0;font-size:14px;color:var(--ink-soft);line-height:1.55">
+          Там экономия &mdash; счета вендора, которых не выставили. Здесь &mdash; часы самой команды,
+          которых не пришлось тратить. Складывать 1,2&ndash;2,2 млн за вендора и
+          1,9 млн&ndash;3,9 млн в год внутренней емкости напрямую нельзя:
+          это разные контуры. Вместе они показывают, что Cursor работает и наружу, и внутрь.
+        </p>
+      </div>
+      <div class="src">
+        Формулировка «value = capacity + cost avoidance» &mdash; McKinsey / IBM, 2024.
+        Человеко-месяц принят как 168 ч. Темп &mdash; экономия за 10,3 мес., деленная
+        на длительность. Денежный эквивалент &mdash; ставка Аванкор 3 900 &#8381;/ч.
+      </div>
+    </section>
+
+    <section class="slide slide--dark">
+      <div class="eyebrow">Выводы</div>
+      <h2 class="serif" style="font-size:clamp(1.7rem,3.2vw,2.5rem)">Что это значит для компании</h2>
+      <div class="grid-2" style="margin-top:8px">
+        <div>
+          <ul class="facts">
+            <li><span class="b">1</span><span><strong>За 10 месяцев высвобождено
+              426&ndash;852 ч ИТ</strong> на внутренних задачах
+              (5 ноя 2025 — 15 сен 2026). Cursor сокращает цикл, а не качество.</span></li>
+            <li><span class="b">2</span><span><strong>Это 41&ndash;83 ч каждый месяц
+              и 500&ndash;990 ч в год</strong> &mdash; 0,25&ndash;0,5 ставки
+              без найма. Штат не растет, подрядчик не вызывается, бэклог идет быстрее.</span></li>
+            <li><span class="b">3</span><span><strong>Нижняя граница честная:</strong> +40% к факту
+              (29% ускорения) ниже лабораторного GitHub и внутри диапазона McKinsey по рефакторингу.</span></li>
+            <li><span class="b">4</span><span><strong>Верх не фантазия:</strong> +80% к факту = «на 44%
+              быстрее» по верхней границе McKinsey для нового кода. 55,8% GitHub в расчет не входят.</span></li>
+          </ul>
+        </div>
+        <div>
+          <div class="card" style="background:rgba(255,255,255,.07);border-color:rgba(255,255,255,.16)">
+            <p class="h4" style="color:rgba(226,234,244,.6)">Экономия часов: период, месяц, год</p>
+            <table class="sum">
+              <tbody>
+<tr><td class="lab">Консервативный<span class="sub sub--dark">нижняя граница</span></td><td class="v v-hypo">426 ч<span class="v-ex">41 ч/мес · 500 ч/год · 1,9 млн ₽/год</span></td></tr>
+<tr><td class="lab">Базовый<span class="sub sub--dark">оценка по ТЗ</span></td><td class="v v-hypo">532 ч<span class="v-ex">52 ч/мес · 620 ч/год · 2,4 млн ₽/год</span></td></tr>
+<tr><td class="lab">Реалистичный<span class="sub sub--dark">ближе к практике Cursor</span></td><td class="v v-save">852 ч<span class="v-ex">83 ч/мес · 990 ч/год · 3,9 млн ₽/год</span></td></tr>
+                <tr><td class="lab">Факт с Cursor</td>
+                    <td class="v v-fact">1 065 ч<span class="v-ex">52 задачи</span></td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+      <div class="card--glass">
+<svg viewBox="0 0 1000 128" class="chart chart--flat" role="img" aria-label="Факт и экономия часов"><text x="4" y="20" class="d-cap">Объем без Cursor: 1 491 ч  ·  консервативный сценарий</text><rect x="4" y="40" width="708.6" height="44" rx="4" fill="#c47a12"/><rect x="712.6" y="40" width="283.4" height="44" rx="4" fill="#0e7c6b"/><text x="358.3" y="68" class="d-val" text-anchor="middle">1 065 ч</text><text x="854.3" y="68" class="d-val" text-anchor="middle">426 ч</text><text x="358.3" y="106" class="d-lbl" text-anchor="middle">Факт с Cursor &#183; 71%</text><text x="854.3" y="106" class="d-lbl" text-anchor="middle">Не потрачено &#183; 29%</text></svg>
+      </div>
+      <div class="improve">
+        <span class="lbl2">Вид улучшения</span>
+        <span class="badge">Экономия ресурсов ИТ / рост capacity</span>
+      </div>
+      <div class="src">
+        Расчет по выгрузке внутренних задач Jira и Time Sheet на 17.09.2026,
+        горизонт 5 ноя 2025 — 15 сен 2026 (10,3 мес.).
+        Коэффициенты &mdash; GitHub Copilot 2023, McKinsey 2023, Google enterprise RCT 2024, IBM/McKinsey 2024.
+        Гипотетическое время без Cursor &mdash; расчетная величина. Год &mdash; средний темп &times; 12.
+      </div>
+    </section>
+
+  </div>
+  <nav class="nav">
+    <span class="deck-title">02 &middot; Эффект Cursor: экономия человеко-часов ИТ</span>
+    <div class="dots" id="dots"></div>
+    <div class="nav-btns">
+      <span class="counter" id="counter" style="margin-right:10px;align-self:center"></span>
+      <button class="arrow" id="prev" aria-label="Назад">&#8592;</button>
+      <button class="arrow" id="next" aria-label="Вперед">&#8594;</button>
+    </div>
+  </nav>
+</div>
+<script>
+(function () {
+  var slidesEl = document.getElementById('slides');
+  var total = slidesEl.children.length;
+  var current = 0;
+  var dotsEl = document.getElementById('dots');
+  var counterEl = document.getElementById('counter');
+  for (var i = 0; i < total; i++) {
+    var dot = document.createElement('button');
+    dot.className = 'dot';
+    dot.setAttribute('aria-label', 'Слайд ' + (i + 1));
+    dot.dataset.index = i;
+    dotsEl.appendChild(dot);
+  }
+  function render() {
+    slidesEl.style.transform = 'translateX(-' + (current * 100) + '%)';
+    var dots = dotsEl.children;
+    for (var i = 0; i < dots.length; i++) {
+      dots[i].className = 'dot' + (i === current ? ' on' : '');
+    }
+    counterEl.textContent = (current + 1) + ' / ' + total;
+  }
+  function go(index) {
+    current = Math.max(0, Math.min(total - 1, index));
+    render();
+  }
+  document.getElementById('prev').addEventListener('click', function () { go(current - 1); });
+  document.getElementById('next').addEventListener('click', function () { go(current + 1); });
+  dotsEl.addEventListener('click', function (e) {
+    if (e.target.dataset.index !== undefined) { go(parseInt(e.target.dataset.index, 10)); }
+  });
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'ArrowRight' || e.key === 'PageDown' || e.key === ' ') { go(current + 1); }
+    else if (e.key === 'ArrowLeft' || e.key === 'PageUp') { go(current - 1); }
+    else if (e.key === 'Home') { go(0); }
+    else if (e.key === 'End') { go(total - 1); }
+  });
+  render();
+})();
+</script>
+</body>
+</html>
