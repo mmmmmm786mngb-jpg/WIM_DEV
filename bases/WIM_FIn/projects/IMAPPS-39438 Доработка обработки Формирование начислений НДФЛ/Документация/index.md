@@ -9,6 +9,8 @@
 - [imapps39438_avancor.html](imapps39438_avancor.html) - задание вендору Аванкор: куда вставить в типовую.
 - [imapps39438_avancor_tree.html](imapps39438_avancor_tree.html) - краткое дерево изменений для Аванкор.
 - [imapps39438_avancor_letter.txt](imapps39438_avancor_letter.txt) - текст письма / комментария в задачу.
+- [imapps39438_jira_comments.html](imapps39438_jira_comments.html) - два кратких комментария в задачу: отсев без дохода, затем отсев РДУ.
+- [imapps39438_rdu_filter_proposal.html](imapps39438_rdu_filter_proposal.html) - доп. отбор: флажок и выбор пула (по умолчанию «Розничное ДУ»), без отбора по номеру «МИИ».
 
 ## Для разработки
 
@@ -21,4 +23,4 @@
 
 ## Статус
 
-Анализ есть. Расширение `IMAPPS39438_EmptyTurnover` собрано: реквизиты, форма, `&После` на `ЗаполнитьДатыДокументов` и `УправлениеФормой`.
+Анализ есть. Расширение `IMAPPS39438_EmptyTurnover` собрано: отбор по оборотам и доп. отбор по пулу.
