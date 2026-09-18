@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Презентация 04. Скорость операционного учёта 1С</title>
+<style>
+  :root {
+    --bg: #090b0e; --panel: #14171c; --lime: #c8ff3d; --coral: #ff5a3c;
+    --ink: #f2f4ef; --dim: #8d9388; --line: #2a2e36;
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; }
+  body {
+    font-family: "Segoe UI", Arial, sans-serif;
+    color: var(--ink); background: var(--bg); overflow: hidden;
+  }
+  .deck { position: relative; height: 100vh; overflow: hidden; }
+  .slides { display: flex; height: 100%; transition: transform .4s cubic-bezier(.4,0,.2,1); }
+  .slide {
+    flex: 0 0 100%; height: 100%; padding: 22px 40px 68px;
+    background: var(--bg); overflow: hidden; display: flex; flex-direction: column;
+  }
+  .fill { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; gap: 12px; }
+  .fill > .hero-row, .fill > .ai-grid, .fill > .posters, .fill > .conclusions,
+  .fill > .chart--bars, .fill > .bar-slot { flex: 1 1 auto; min-height: 0; }
+  .fill > .teaser, .fill > .xgrid, .fill > .contrast, .fill > .cite,
+  .fill > .facts, .fill > table, .fill > .out { flex: 0 0 auto; }
+  .eyebrow {
+    font-size: 11px; font-weight: 700; letter-spacing: .18em; text-transform: uppercase;
+    color: var(--lime); margin: 0 0 6px;
+  }
+  h1 { font-size: clamp(2.1rem, 4.2vw, 3.15rem); line-height: .95; margin: 0 0 8px; letter-spacing: -.03em; }
+  h2 { font-size: clamp(1.55rem, 2.8vw, 2.15rem); line-height: 1.05; margin: 0 0 8px; letter-spacing: -.02em; }
+  h3 { font-size: clamp(1.05rem, 1.6vw, 1.25rem); margin: 0 0 6px; font-weight: 700; }
+  .lead { font-size: 17px; line-height: 1.35; color: var(--dim); margin: 0 0 12px; max-width: 58rem; }
+  .hero-row {
+    flex: 1 1 auto; min-height: 0;
+    display: grid; grid-template-columns: minmax(380px, 1.05fr) 1fr;
+    gap: 12px 36px; align-items: center;
+  }
+  .hero-x {
+    font-size: clamp(8rem, 18vw, 13.2rem); font-weight: 800; line-height: .78;
+    letter-spacing: -.08em; color: var(--lime); margin: 0;
+  }
+  .hero-side { display: flex; flex-direction: column; gap: 12px; height: 100%; justify-content: center; }
+  .hero-vs { display: flex; gap: 12px; }
+  .hero-side .hero-vs { flex-direction: column; }
+  .was-box, .now-box {
+    flex: 1; border-radius: 16px; padding: 14px 18px 16px; min-height: 96px;
+  }
+  .teaser {
+    display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px;
+    flex: 0 0 auto; margin-top: 10px;
+  }
+  .chip {
+    background: var(--panel); border: 1px solid var(--line); border-radius: 12px;
+    padding: 10px 12px 11px;
+  }
+  .chip .cx { font-size: 1.7rem; font-weight: 800; color: var(--lime); letter-spacing: -.04em; line-height: 1; }
+  .chip .cn { font-size: 11px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--dim); margin-top: 4px; }
+  .chip .ct { font-size: 13px; margin-top: 2px; }
+  .saved {
+    margin-top: 8px; font-size: clamp(1.5rem, 2.6vw, 2rem); font-weight: 800;
+    color: var(--lime); letter-spacing: -.03em;
+  }
+  .was-box { background: #2a1210; border: 1px solid #5a221c; }
+  .now-box { background: #1a260c; border: 1px solid #4a6a18; }
+  .tiny { font-size: 11px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; }
+  .was-box .tiny { color: var(--coral); }
+  .now-box .tiny { color: var(--lime); }
+  .big { font-size: clamp(1.8rem, 3.4vw, 2.6rem); font-weight: 800; letter-spacing: -.03em; margin-top: 4px; }
+  .was-box .big { color: var(--coral); }
+  .now-box .big { color: var(--lime); }
+  .xgrid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; flex: 0 0 auto; }
+  .xcard {
+    background: var(--panel); border: 1px solid var(--line); border-radius: 14px;
+    padding: 12px 12px 10px; display: flex; flex-direction: column;
+  }
+  .xc-k { font-size: 11px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: var(--dim); }
+  .xc-x { font-size: clamp(2.4rem, 4.6vw, 3.2rem); font-weight: 800; color: var(--lime); letter-spacing: -.05em; line-height: .95; margin: 4px 0 2px; }
+  .xc-n { font-size: 15px; font-weight: 700; line-height: 1.2; }
+  .xc-t { margin-top: 8px; font-size: 14px; font-weight: 700; }
+  .was { color: var(--coral); }
+  .now { color: var(--lime); }
+  .arr { color: var(--dim); font-weight: 600; }
+  .xc-v { font-size: 12px; color: var(--dim); margin-top: 4px; }
+  .ai-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; flex: 1; min-height: 0; }
+  .ai-card {
+    background: var(--panel); border-radius: 16px; padding: 14px 16px 12px;
+    border: 1px solid var(--line); display: flex; flex-direction: column;
+  }
+  .ai-n { font-size: 11px; font-weight: 800; color: var(--lime); letter-spacing: .12em; text-transform: uppercase; }
+  .ai-stat {
+    font-size: clamp(2.2rem, 4vw, 3rem); font-weight: 800; color: var(--lime);
+    letter-spacing: -.05em; line-height: .95; margin: 6px 0 4px;
+  }
+  .ai-card h3 { font-size: 1.15rem; margin: 2px 0 8px; }
+  .ai-card p { margin: 0; font-size: 16.5px; line-height: 1.4; color: #c9cec4; }
+  .ai-map { color: var(--lime) !important; font-size: 15px !important; font-weight: 700; margin-top: 12px !important; padding-top: 0; }
+  .cite { margin: 8px 0 0; font-size: 12px; line-height: 1.35; color: var(--dim); }
+  .contrast {
+    margin-top: 12px; background: #1a260c; border-left: 4px solid var(--lime);
+    border-radius: 0 12px 12px 0; padding: 12px 16px; font-size: 16px; line-height: 1.35;
+  }
+  .posters { display: grid; gap: 12px; flex: 1; min-height: 0; }
+  .posters.two { grid-template-columns: 1fr 1fr; }
+  .posters.three { grid-template-columns: 1fr 1fr 1fr; }
+  .poster {
+    background: var(--panel); border-radius: 16px; padding: 12px 14px 10px;
+    border: 1px solid var(--line); display: flex; flex-direction: column; min-height: 0;
+  }
+  .p-top { display: flex; justify-content: space-between; gap: 8px; font-size: 11px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--dim); }
+  .p-x {
+    font-size: clamp(3.4rem, 7vw, 6.2rem); font-weight: 800; color: var(--lime);
+    letter-spacing: -.07em; line-height: .85; margin: 4px 0 8px;
+    flex: 1 1 auto; display: flex; align-items: center; min-height: 0;
+  }
+  .p-vs { display: flex; gap: 8px; }
+  .poster .was-box, .poster .now-box { min-height: 72px; padding: 8px 10px; }
+  .poster .big { font-size: clamp(1.0rem, 1.55vw, 1.28rem); }
+  .p-saved { margin: 8px 0 0; font-size: 16px; font-weight: 800; color: var(--lime); }
+  .p-meta, .p-what, .p-note { font-size: 15px; line-height: 1.32; margin: 6px 0 0; color: #c9cec4; }
+  .p-note { color: var(--dim); }
+  .facts { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-top: 8px; flex: 0 0 auto; }
+  .fact { background: var(--panel); border-radius: 12px; padding: 12px 14px; border: 1px solid var(--line); }
+  .fact b { display: block; font-size: 1.35rem; margin-bottom: 4px; }
+  .fact span { color: var(--dim); font-size: 14.5px; }
+  .bar-slot { flex: 1 1 auto; min-height: 0; display: flex; }
+  .bar-slot .chart { width: 100%; height: 100%; }
+  .chart--bars { flex: 1 1 auto; min-height: 0; height: 100%; }
+  .d-cap { font-size: 13px; fill: #8d9388; font-family: "Segoe UI", Arial, sans-serif; }
+  .chart { width: 100%; display: block; }
+  .lbl { font-size: 14px; fill: #8d9388; font-family: "Segoe UI", Arial, sans-serif; }
+  .val { font-size: 18px; font-weight: 700; font-family: "Segoe UI", Arial, sans-serif; }
+  .val-on { font-size: 16px; font-weight: 800; font-family: "Segoe UI", Arial, sans-serif; }
+  table { width: 100%; border-collapse: collapse; font-size: 15.5px; margin-top: 8px; }
+  th, td { text-align: left; padding: 7px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { color: var(--dim); font-size: 11px; letter-spacing: .12em; text-transform: uppercase; }
+  .out { font-size: 14px; color: var(--dim); margin-top: 8px; }
+  .conclusions { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; flex: 1; }
+  .conc {
+    background: var(--panel); border-radius: 16px; padding: 18px 20px;
+    border: 1px solid var(--line); display: flex; flex-direction: column; justify-content: center;
+  }
+  .conc .mark { font-size: 13px; font-weight: 800; color: var(--lime); letter-spacing: .12em; text-transform: uppercase; }
+  .conc p { margin: 8px 0 0; font-size: 19px; line-height: 1.38; }
+  nav.bar {
+    position: absolute; left: 0; right: 0; bottom: 0; height: 56px;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 28px; background: linear-gradient(transparent, rgba(9,11,14,.96) 40%);
+  }
+  .dots { display: flex; gap: 8px; }
+  .dot { width: 9px; height: 9px; border-radius: 50%; border: 0; background: #3a3f48; cursor: pointer; padding: 0; }
+  .dot.on { background: var(--lime); }
+  .counter { font-size: 12px; color: var(--dim); letter-spacing: .08em; }
+  .arrows { display: flex; gap: 8px; }
+  .arrow {
+    width: 36px; height: 28px; border-radius: 8px; border: 1px solid var(--line);
+    background: var(--panel); color: var(--ink); cursor: pointer; font-size: 16px;
+  }
+</style>
+</head>
+<body>
+<div class="deck">
+  <div class="slides" id="slides">
+
+    <section class="slide" data-slide="1">
+      <div class="eyebrow">Презентация 04 · скорость операционного учёта 1С</div>
+      <h1>Окно то же. Клиентов больше.</h1>
+      <p class="lead">Не часы разработчика. Минуты и часы самой операции, пока растёт клиентская база.</p>
+      <div class="fill">
+        <div class="hero-row">
+          <div class="hero-x">x10</div>
+          <div class="hero-side">
+            <div class="hero-vs">
+              <div class="was-box">
+                <div class="tiny">было · IMDEV-7330</div>
+                <div class="big">55 ч 05 мин</div>
+              </div>
+              <div class="now-box">
+                <div class="tiny">стало · 27 292 клиента</div>
+                <div class="big">5 ч 33 мин</div>
+              </div>
+            </div>
+            <div class="saved">минус 49,5 ч с прогона</div>
+            <p class="lead" style="margin:0">Расчёт НДФЛ. Пакетные запросы, кэш НКД, параллель, снятие блокировок 1 222</p>
+          </div>
+        </div>
+        <div class="teaser"><div class="chip"><div class="cx">x9,9</div><div class="cn">ФИН</div><div class="ct">Расчёт НДФЛ</div></div>
+<div class="chip"><div class="cx">x9,2</div><div class="cn">ДУ</div><div class="ct">Начисление вознаграждения РДУ</div></div>
+<div class="chip"><div class="cx">x13,3</div><div class="cn">ДУ</div><div class="ct">Загрузка сделок</div></div>
+<div class="chip"><div class="cx">x4,7</div><div class="cn">МО / ФИН</div><div class="ct">Обмен ДУ - Финансы</div></div>
+<div class="chip"><div class="cx">x4,8</div><div class="cn">ДУ</div><div class="ct">Проведение сделок Т-1</div></div></div>
+      </div>
+    </section>
+
+    <section class="slide" data-slide="2">
+      <div class="eyebrow">Пять закрытых замеров · ФИН · ДУ · МО</div>
+      <h2>Самые тяжёлые операции стали короче в разы</h2>
+      <p class="lead">Сопоставимо: либо тот же объём, либо время на 1 000 объектов. Утренний регламент ФО в пятёрку не входит: нет закрытого «стало».</p>
+      <div class="fill">
+        <div class="xgrid">
+          <div class="xcard"><div class="xc-k">ФИН</div><div class="xc-x">x9,9</div><div class="xc-n">Расчёт НДФЛ</div><div class="xc-t"><span class="was">55 ч</span><span class="arr"> -&gt; </span><span class="now">5,5 ч</span></div><div class="xc-v">27 292 клиента</div></div>
+<div class="xcard"><div class="xc-k">ДУ</div><div class="xc-x">x9,2</div><div class="xc-n">Начисление вознаграждения РДУ</div><div class="xc-t"><span class="was">10 ч</span><span class="arr"> -&gt; </span><span class="now">1 ч</span></div><div class="xc-v">20 467 договоров</div></div>
+<div class="xcard"><div class="xc-k">ДУ</div><div class="xc-x">x13,3</div><div class="xc-n">Загрузка сделок</div><div class="xc-t"><span class="was">22 мин</span><span class="arr"> -&gt; </span><span class="now">1,7 мин</span></div><div class="xc-v">на 1 000</div></div>
+<div class="xcard"><div class="xc-k">МО / ФИН</div><div class="xc-x">x4,7</div><div class="xc-n">Обмен ДУ - Финансы</div><div class="xc-t"><span class="was">17 мин</span><span class="arr"> -&gt; </span><span class="now">3,7 мин</span></div><div class="xc-v">на 1 000</div></div>
+<div class="xcard"><div class="xc-k">ДУ</div><div class="xc-x">x4,8</div><div class="xc-n">Проведение сделок Т-1</div><div class="xc-t"><span class="was">3,6 ч</span><span class="arr"> -&gt; </span><span class="now">45 мин</span></div><div class="xc-v">30 000 сделок</div></div>
+        </div>
+        <svg viewBox="0 0 1480 300" class="chart chart--bars" role="img" aria-label="Кратность ускорения пяти операций"><rect x="104.0" y="78.4" width="120.0" height="181.6" rx="8" fill="#c8ff3d"/><text x="164.0" y="106.4" class="val-on" text-anchor="middle" fill="#111">x9,9</text><text x="164.0" y="278" class="lbl" text-anchor="middle">Расчёт НДФЛ</text><text x="164.0" y="294" class="d-cap" text-anchor="middle">ФИН</text><rect x="392.0" y="91.2" width="120.0" height="168.8" rx="8" fill="#c8ff3d"/><text x="452.0" y="119.2" class="val-on" text-anchor="middle" fill="#111">x9,2</text><text x="452.0" y="278" class="lbl" text-anchor="middle">Начисление вознаграждения РДУ</text><text x="452.0" y="294" class="d-cap" text-anchor="middle">ДУ</text><rect x="680.0" y="16.0" width="120.0" height="244.0" rx="8" fill="#c8ff3d"/><text x="740.0" y="44.0" class="val-on" text-anchor="middle" fill="#111">x13,3</text><text x="740.0" y="278" class="lbl" text-anchor="middle">Загрузка сделок</text><text x="740.0" y="294" class="d-cap" text-anchor="middle">ДУ</text><rect x="968.0" y="173.8" width="120.0" height="86.2" rx="8" fill="#c8ff3d"/><text x="1028.0" y="201.8" class="val-on" text-anchor="middle" fill="#111">x4,7</text><text x="1028.0" y="278" class="lbl" text-anchor="middle">Обмен ДУ - Финансы</text><text x="1028.0" y="294" class="d-cap" text-anchor="middle">МО / ФИН</text><rect x="1256.0" y="171.9" width="120.0" height="88.1" rx="8" fill="#c8ff3d"/><text x="1316.0" y="199.9" class="val-on" text-anchor="middle" fill="#111">x4,8</text><text x="1316.0" y="278" class="lbl" text-anchor="middle">Проведение сделок Т-1</text><text x="1316.0" y="294" class="d-cap" text-anchor="middle">ДУ</text></svg>
+      </div>
+    </section>
+
+    <section class="slide" data-slide="3">
+      <div class="eyebrow">Почему ИИ здесь сильнее человека · внешние источники</div>
+      <h2>Где ответ можно проверить, ИИ сильнее. Где нельзя - человек.</h2>
+      <p class="lead">ИИ не лучше человека во всём. Если результат можно проверить (есть образец, секундомер, правильный ответ) - люди с ИИ быстрее и делают работу заметно качественнее. Если эталона нет - с ИИ ошибаются чаще, чем без него. Наши кейсы проверяемые: операция уже есть, замер до и после.</p>
+      <div class="fill">
+        <div class="ai-grid"><div class="ai-card"><div class="ai-n">HBS / BCG, 2023</div><div class="ai-stat">+25% / +40%</div><h3>Когда ответ можно проверить</h3><p>758 консультантов BCG работали с GPT-4. На задачах с понятным эталоном: +25% к скорости, качество выше более чем на 40%. На задачах без эталона верных ответов стало меньше, чем у коллег без ИИ.</p><p class="ai-map">НДФЛ, СЧА, сделки: запрос уже работает, секундомер показывает, стало лучше или нет.</p></div>
+<div class="ai-card"><div class="ai-n">McKinsey, июнь 2023</div><div class="ai-stat">20-30%</div><h3>Существующий код, не система с нуля</h3><p>Эмпирика на Copilot: рефакторинг и оптимизация уже написанного кода - на 20-30% меньше времени. Документация и чтение кода: 45-50%. Инструмент силён, когда нужно объяснить и переписать модуль, а не придумать продукт.</p><p class="ai-map">НДФЛ, СЧА, сделки - читать вендорский модуль и найти цикл.</p></div>
+<div class="ai-card"><div class="ai-n">McKinsey, сложные задачи</div><div class="ai-stat">&lt;10%</div><h3>Там, где человек нужнее</h3><p>На очень сложных задачах экономия времени падает ниже 10%. Это новая архитектура или работа без образца правильного ответа. ИИ не заменяет приёмку замера. Он быстрее предлагает варианты запроса.</p><p class="ai-map">Человек ставит цель и читает секундомер. ИИ перебирает пакет, кэш, потоки.</p></div></div>
+        <div class="contrast">Исследования меряют часы разработчика. Презентация 02 - это 25% таких часов (McKinsey, рефакторинг). Здесь другой эффект: найденная правка сокращает саму операцию в 3-13 раз. Слепое принятие ответа ИИ здесь не проходит: замер отсекает ошибочную гипотезу.</div>
+        <p class="cite">Dell'Acqua et al., Navigating the Jagged Technological Frontier, HBS Working Paper 24-013 / SSRN 4573321, 2023 (BCG, n=758). McKinsey, Unleashing developer productivity with generative AI, 27 июня 2023: refactoring 20-30%, documentation 45-50%, high-complexity &lt;10%.</p>
+      </div>
+    </section>
+
+    <section class="slide" data-slide="4">
+      <div class="eyebrow">Самый тяжёлый кейс · ФИН</div>
+      <h2>Расчёт НДФЛ · IMDEV-7330</h2>
+      <div class="fill">
+        <div class="hero-vs" style="flex:0 0 auto">
+          <div class="was-box">
+            <div class="tiny">было · эталон 2.8.5.5</div>
+            <div class="big">55 ч 05 мин</div>
+          </div>
+          <div class="now-box">
+            <div class="tiny">стало · чистый расчёт</div>
+            <div class="big">5 ч 33 мин</div>
+          </div>
+        </div>
+        <div class="saved">минус 49,5 ч с прогона</div>
+        <div class="bar-slot"><svg viewBox="0 0 1480 260" class="chart" role="img" aria-label="Чистый расчёт НДФЛ, минуты"><text x="168" y="22" class="d-cap">Чистый расчёт НДФЛ, минуты</text><text x="154" y="74.6" class="lbl" text-anchor="end">было</text><rect x="168" y="40.0" width="1102.0" height="48" rx="6" fill="#ff5a3c"/><text x="1280.0" y="74.6" class="val" fill="#ff5a3c">55 ч 05 мин</text><text x="154" y="144.6" class="lbl" text-anchor="end">стало</text><rect x="168" y="110.0" width="111.0" height="48" rx="6" fill="#c8ff3d"/><text x="289.0" y="144.6" class="val" fill="#c8ff3d">5 ч 33 мин</text></svg></div>
+        <div class="facts">
+          <div class="fact"><b>x9,9</b><span>кратность чистого расчёта</span></div>
+          <div class="fact"><b>27 292 клиента</b><span>объём прогона</span></div>
+          <div class="fact"><b>пакет, кэш, потоки</b><span>Пакетные запросы, кэш НКД, параллель, снятие блокировок 1 222</span></div>
+          <div class="fact"><b>стена 6 ч 40 мин</b><span>с паузами это x8,3. Среда: DR, эталон 01-02.09.2026, релиз 2.8.5.5</span></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="slide" data-slide="5">
+      <div class="eyebrow">ДУ · ночное окно</div>
+      <h2>Вознаграждение и вечерние регламенты</h2>
+      <div class="fill">
+        <div class="posters two">
+          <article class="poster"><div class="p-top"><span class="p-k">ДУ</span><span class="p-key">IMDEV-9153</span></div><h3>Начисление вознаграждения РДУ</h3><div class="p-x">x9,2</div><div class="p-vs"><div class="was-box"><div class="tiny">было</div><div class="big">9 ч 52 мин</div></div><div class="now-box"><div class="tiny">стало</div><div class="big">1 ч 05 мин</div></div></div><svg viewBox="0 0 680 210" class="chart" role="img" aria-label="было и стало"><text x="64" y="47.4" class="lbl" text-anchor="end">было</text><rect x="78" y="10.0" width="484.0" height="52" rx="6" fill="#ff5a3c"/><text x="572.0" y="47.4" class="val" fill="#ff5a3c">10 ч</text><text x="64" y="117.4" class="lbl" text-anchor="end">стало</text><rect x="78" y="80.0" width="52.8" height="52" rx="6" fill="#c8ff3d"/><text x="140.8" y="117.4" class="val" fill="#c8ff3d">1 ч</text></svg><p class="p-saved">минус 8,8 ч с прогона</p><p class="p-meta">20 467 договоров · DR, параллельная версия, 12 потоков</p><p class="p-what">Последовательный прогон заменён параллельным</p><p class="p-note">Точно: 1 ч 04 мин 34 сек.</p></article>
+          <article class="poster">
+            <div class="p-top"><span class="p-k">ДУ</span><span class="p-key">IMDEV-8663</span></div>
+            <h3>Вечерние регламенты / СЧА-РСА</h3>
+            <div class="p-x">x2,8</div>
+            <div class="p-vs">
+              <div class="was-box"><div class="tiny">было</div><div class="big">118 мин</div></div>
+              <div class="now-box"><div class="tiny">стало</div><div class="big">42 мин</div></div>
+            </div>
+            <svg viewBox="0 0 680 210" class="chart" role="img" aria-label="было и стало"><text x="64" y="47.4" class="lbl" text-anchor="end">было</text><rect x="78" y="10.0" width="484.0" height="52" rx="6" fill="#ff5a3c"/><text x="572.0" y="47.4" class="val" fill="#ff5a3c">118 мин</text><text x="64" y="117.4" class="lbl" text-anchor="end">стало</text><rect x="78" y="80.0" width="173.9" height="52" rx="6" fill="#c8ff3d"/><text x="261.9" y="117.4" class="val" fill="#c8ff3d">42 мин</text></svg>
+            <p class="p-saved">минус 1,3 ч с прогона</p>
+            <p class="p-meta">полный объём базы · разработческая после оптимизации, IMDEV-8663.1</p>
+            <p class="p-what">Фоновые задания, пакетный расчёт СЧА/РСА, вынос в конец</p>
+            <p class="p-note">Пакетный СЧА: 122 мин -&gt; 69 мин на 21 993 договора (x1,8), регресс документов 0.</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section class="slide" data-slide="6">
+      <div class="eyebrow">Сделки · обмен · проведение</div>
+      <h2>База выросла. Время на 1 000 объектов упало.</h2>
+      <div class="fill">
+        <div class="posters three">
+          <article class="poster"><div class="p-top"><span class="p-k">ДУ</span><span class="p-key">IMAPPS-34094</span></div><h3>Загрузка сделок</h3><div class="p-x">x13,3</div><div class="p-vs"><div class="was-box"><div class="tiny">было</div><div class="big">22,2 мин / 1 000</div></div><div class="now-box"><div class="tiny">стало</div><div class="big">1,67 мин / 1 000</div></div></div><svg viewBox="0 0 680 210" class="chart" role="img" aria-label="было и стало"><text x="64" y="47.4" class="lbl" text-anchor="end">было</text><rect x="78" y="10.0" width="484.0" height="52" rx="6" fill="#ff5a3c"/><text x="572.0" y="47.4" class="val" fill="#ff5a3c">22 мин</text><text x="64" y="117.4" class="lbl" text-anchor="end">стало</text><rect x="78" y="80.0" width="36.4" height="52" rx="6" fill="#c8ff3d"/><text x="124.4" y="117.4" class="val" fill="#c8ff3d">1,7 мин</text></svg><p class="p-saved">минус 20,5 мин на 1 000</p><p class="p-meta">было 900 сделок; стало 30 000 · тест, 10 потоков, сопоставимо на 1 000 сделок</p><p class="p-what">Параллельное создание документов</p><p class="p-note">Доп. тест 100 000 сделок: 0,45 мин / 1 000. Не смешиваем объёмы.</p></article>
+          <article class="poster"><div class="p-top"><span class="p-k">МО / ФИН</span><span class="p-key">обмен ДУ-Финансы 3.0</span></div><h3>Обмен ДУ - Финансы</h3><div class="p-x">x4,7</div><div class="p-vs"><div class="was-box"><div class="tiny">было</div><div class="big">17,1 мин / 1 000</div></div><div class="now-box"><div class="tiny">стало</div><div class="big">3,67 мин / 1 000</div></div></div><svg viewBox="0 0 680 210" class="chart" role="img" aria-label="было и стало"><text x="64" y="47.4" class="lbl" text-anchor="end">было</text><rect x="78" y="10.0" width="484.0" height="52" rx="6" fill="#ff5a3c"/><text x="572.0" y="47.4" class="val" fill="#ff5a3c">17 мин</text><text x="64" y="117.4" class="lbl" text-anchor="end">стало</text><rect x="78" y="80.0" width="104.1" height="52" rx="6" fill="#c8ff3d"/><text x="192.1" y="117.4" class="val" fill="#c8ff3d">3,7 мин</text></svg><p class="p-saved">минус 13,4 мин на 1 000</p><p class="p-meta">было 15 000; стало 30 000 сделок · многопоточный обмен 1+6 потоков</p><p class="p-what">Параллельный обмен вместо одного потока</p><p class="p-note">Было 4 ч 16 мин на 15 тыс. Стало 1 ч 50 мин на 30 тыс.</p></article>
+          <article class="poster"><div class="p-top"><span class="p-k">ДУ</span><span class="p-key">исполнение сделок Т-1</span></div><h3>Проведение сделок Т-1</h3><div class="p-x">x4,8</div><div class="p-vs"><div class="was-box"><div class="tiny">было</div><div class="big">3 ч 36 мин</div></div><div class="now-box"><div class="tiny">стало</div><div class="big">45 мин</div></div></div><svg viewBox="0 0 680 210" class="chart" role="img" aria-label="было и стало"><text x="64" y="47.4" class="lbl" text-anchor="end">было</text><rect x="78" y="10.0" width="484.0" height="52" rx="6" fill="#ff5a3c"/><text x="572.0" y="47.4" class="val" fill="#ff5a3c">3,6 ч</text><text x="64" y="117.4" class="lbl" text-anchor="end">стало</text><rect x="78" y="80.0" width="100.8" height="52" rx="6" fill="#c8ff3d"/><text x="188.8" y="117.4" class="val" fill="#c8ff3d">45 мин</text></svg><p class="p-saved">минус 2,9 ч с прогона</p><p class="p-meta">30 000 сделок · тот же объём до и после, цель достигнута</p><p class="p-what">Переписанные запросы проведения, потоки</p><p class="p-note">7,2 мин / 1 000 стало 1,5 мин / 1 000.</p></article>
+        </div>
+      </div>
+    </section>
+
+    <section class="slide" data-slide="7">
+      <div class="eyebrow">Выводы</div>
+      <h2>Окно ночи не растягивается. Операции - да.</h2>
+      <div class="fill">
+        <div class="conclusions">
+          <div class="conc">
+            <div class="mark">Рост</div>
+            <p>Клиентов и сделок больше. Ночное и утреннее окно те же. Без ускорения операций база упирается в часы.</p>
+          </div>
+          <div class="conc">
+            <div class="mark">Замеры</div>
+            <p>НДФЛ x10, вознаграждение x9, загрузка сделок x13, обмен x5, проведение Т-1 x5. Это закрытые протоколы, не оценка.</p>
+          </div>
+          <div class="conc">
+            <div class="mark">Почему ИИ</div>
+            <p>Harvard и BCG: на проверяемых задачах качество выше на 40%+, без эталона ИИ чаще ошибается, чем человек. McKinsey: переписать существующий код - 20-30% быстрее, придумать сложное с нуля - менее 10%. Наши кейсы - существующая операция и замер, не новая система.</p>
+          </div>
+          <div class="conc">
+            <div class="mark">Не складывать</div>
+            <p>Деньги презентаций 01 и 02 сюда не входят. Часы оптимизации уже в 02. Здесь только длительность операции.</p>
+          </div>
+        </div>
+        <table>
+          <thead><tr><th>Источник</th><th>Что зафиксировано</th></tr></thead>
+          <tbody><tr><td>IMDEV-7330</td><td>НДФЛ: 55 ч 05 мин -&gt; 5 ч 33 мин, 27 292 клиента</td></tr>
+<tr><td>IMDEV-9153 / 9393</td><td>Вознаграждение РДУ: 9 ч 52 мин -&gt; 1 ч 05 мин, 20 467 договоров</td></tr>
+<tr><td>IMDEV-8663 / 9393</td><td>Вечерние: 118 мин -&gt; 42 мин; пакет СЧА 122 -&gt; 69 мин</td></tr>
+<tr><td>Переход 01.04 / 28.04.2026</td><td>Загрузка сделок, обмен ДУ-Финансы, проведение Т-1</td></tr>
+<tr><td>IMDEV-9393</td><td>26 273 замера ключевых операций PROD, сценарий 25 тыс. -&gt; 250 тыс.</td></tr></tbody>
+        </table>
+        <p class="out">Утренний регламент ФО (IMDEV-8829, порядка 5 ч 30 мин) - тот же класс задач, окно к открытию торгов. Закрытого «стало» в протоколах нет, в пятёрку не входит.</p>
+      </div>
+    </section>
+
+  </div>
+  <nav class="bar">
+    <div class="dots" id="dots"></div>
+    <div class="counter" id="counter">1 / 7</div>
+    <div class="arrows">
+      <button class="arrow" id="prev" aria-label="Назад">&#8592;</button>
+      <button class="arrow" id="next" aria-label="Вперед">&#8594;</button>
+    </div>
+  </nav>
+</div>
+<script>
+(function () {
+  var slidesEl = document.getElementById('slides');
+  var total = slidesEl.children.length;
+  var current = 0;
+  var dotsEl = document.getElementById('dots');
+  var counterEl = document.getElementById('counter');
+  for (var i = 0; i < total; i++) {
+    var dot = document.createElement('button');
+    dot.className = 'dot';
+    dot.setAttribute('aria-label', 'Слайд ' + (i + 1));
+    dot.dataset.index = i;
+    dotsEl.appendChild(dot);
+  }
+  function render() {
+    slidesEl.style.transform = 'translateX(-' + (current * 100) + '%)';
+    var dots = dotsEl.children;
+    for (var i = 0; i < dots.length; i++) {
+      dots[i].className = 'dot' + (i === current ? ' on' : '');
+    }
+    counterEl.textContent = (current + 1) + ' / ' + total;
+  }
+  function go(index) {
+    current = Math.max(0, Math.min(total - 1, index));
+    render();
+  }
+  document.getElementById('prev').addEventListener('click', function () { go(current - 1); });
+  document.getElementById('next').addEventListener('click', function () { go(current + 1); });
+  dotsEl.addEventListener('click', function (e) {
+    if (e.target.dataset.index !== undefined) { go(parseInt(e.target.dataset.index, 10)); }
+  });
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'ArrowRight' || e.key === 'PageDown' || e.key === ' ') { go(current + 1); }
+    else if (e.key === 'ArrowLeft' || e.key === 'PageUp') { go(current - 1); }
+    else if (e.key === 'Home') { go(0); }
+    else if (e.key === 'End') { go(total - 1); }
+  });
+  render();
+})();
+</script>
+</body>
+</html>

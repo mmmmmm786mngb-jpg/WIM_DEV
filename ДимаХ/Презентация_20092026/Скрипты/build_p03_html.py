@@ -89,7 +89,7 @@ def svg_clock(window):
 
 def svg_window_strip(window):
     """Лента 10 рабочих дней июля 2026."""
-    width, height = 1180, 118
+    width, height = 1180, 132
     pad = 16
     slot = (width - pad * 2) / len(window["days"])
     box_w = slot - 8
@@ -112,19 +112,19 @@ def svg_window_strip(window):
         parts.append('<text x="%.1f" y="68" text-anchor="middle" fill="%s" class="strip-l">%s</text>'
                      % (x + box_w / 2, fg, esc(day["label"])))
         if day.get("event"):
-            parts.append('<text x="%.1f" y="102" text-anchor="middle" class="strip-ev">%s</text>'
+            parts.append('<text x="%.1f" y="112" text-anchor="middle" class="strip-ev">%s</text>'
                          % (x + box_w / 2, esc(day["event"])))
     parts.append("</svg>")
     return "".join(parts)
 
 
-def svg_paths(paths):
+def svg_paths(paths, tall=False):
     """Сравнение путей: помещается ли визуализация в рабочий день."""
     visual = [p for p in paths if p["id"] != "vendor"]
-    width, height = 1100, 320
+    width, height = 1100, (420 if tall else 320)
     pad_l, pad_t = 268, 36
     plot_w, row_h = 760, 78
-    parts = ['<svg viewBox="0 0 %d %d" class="chart" role="img" '
+    parts = ['<svg viewBox="0 0 %d %d" class="chart chart--vol" role="img" '
              'aria-label="Пути визуализации XBRL">' % (width, height)]
     parts.append('<text x="%d" y="22" class="ax-title">Время, чтобы увидеть пакет (не разработка)</text>'
                  % pad_l)
@@ -146,7 +146,7 @@ def svg_paths(paths):
 def svg_volume(forms, total_rows):
     """Строки июньского пакета по формам. 0420431 доминирует — это и есть проблема."""
     rows = [f for f in forms if f["rows"] > 0]
-    width, height = 1100, 250
+    width, height = 1100, 380
     pad_l, pad_t, pad_b = 90, 32, 44
     plot_w = width - pad_l - 24
     plot_h = height - pad_t - pad_b
@@ -211,12 +211,19 @@ def build(payload):
         for q in payload["quotes"]
     )
 
+    extra = {
+        "portal": "Excel не дает. Больше рабочего дня на одну загрузку.",
+        "converter": "Форму 431 режет на части. Критерий ТЗ: минуты, не часы.",
+        "vendor": "Это не «открыть файл», а написать парсер 77 таблиц.",
+        "vibe": "78 листов, 214 904 строки. Заявку на 431-ю закрыли всем пакетом.",
+    }
     path_cards = "\n".join(
         '<div class="path %s"><p class="h4">%s</p>'
-        '<div class="n">%s</div><p>%s</p>'
+        '<div class="n">%s</div><p>%s</p><p>%s</p>'
         '<span class="fit">%s</span></div>'
         % ("path-ok" if p["fits"] else "path-bad",
            esc(p["name"]), esc(p["time"]), esc(p["note"]),
+           esc(extra.get(p["id"], "")),
            "в окне" if p["fits"] else "не в окне")
         for p in payload["paths"]
     )
@@ -269,8 +276,8 @@ def build(payload):
   .deck { position: relative; height: 100vh; overflow: hidden; }
   .slides { display: flex; height: 100%%; transition: transform .45s cubic-bezier(.4,0,.2,1); }
   .slide {
-    flex: 0 0 100%%; height: 100%%; padding: 34px 5vw 78px;
-    background: var(--slide-bg); overflow-y: auto; display: flex; flex-direction: column;
+    flex: 0 0 100%%; height: 100%%; padding: 22px 4vw 64px;
+    background: var(--slide-bg); overflow: hidden; display: flex; flex-direction: column;
   }
   .slide--title {
     background:
@@ -284,15 +291,15 @@ def build(payload):
     color: var(--amber); margin-bottom: 10px;
   }
   .slide--title .eyebrow, .slide--dark .eyebrow { color: #f3c98a; }
-  h1 { font-size: clamp(1.7rem, 3.4vw, 2.55rem); line-height: 1.1; margin: 0 0 10px; }
-  h2 { font-size: clamp(1.35rem, 2.5vw, 2rem); line-height: 1.15; margin: 0 0 8px; }
-  .lead { font-size: clamp(.94rem, 1.45vw, 1.06rem); color: var(--muted); margin: 0 0 12px; max-width: 64rem; }
+  h1 { font-size: clamp(1.85rem, 3.8vw, 2.75rem); line-height: 1.08; margin: 0 0 8px; letter-spacing: -.01em; }
+  h2 { font-size: clamp(1.45rem, 2.6vw, 2.05rem); line-height: 1.12; margin: 0 0 8px; letter-spacing: -.01em; }
+  .lead { font-size: clamp(.98rem, 1.5vw, 1.1rem); color: var(--muted); margin: 0 0 10px; max-width: 64rem; }
   .slide--title .lead, .slide--dark .lead { color: rgba(226,234,244,.88); }
   .q-row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin: 4px 0 8px; }
   .q {
     margin: 0; background: rgba(255,255,255,.08); border-left: 3px solid #f3c98a;
     border-radius: 0 10px 10px 0; padding: 10px 12px 11px;
-    font-size: 12.5px; line-height: 1.4; color: rgba(244,247,251,.94);
+    font-size: 15px; line-height: 1.4; color: rgba(244,247,251,.94);
   }
   .q-tag {
     display: block; font-size: 10px; font-weight: 800; letter-spacing: .12em;
@@ -317,15 +324,65 @@ def build(payload):
     background: var(--paper); border: 1px solid var(--line); border-radius: 16px;
     padding: 16px 18px; box-shadow: 0 10px 30px rgba(11,31,58,.06);
   }
-  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; align-items: start; }
-  .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; }
-  .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
-  .grid-clock { display: grid; grid-template-columns: 340px 1fr; gap: 20px; align-items: center; }
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; align-items: stretch; }
+  .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; align-items: stretch; }
+  .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; align-items: stretch; }
+  .grid-clock { display: grid; grid-template-columns: minmax(300px, 0.88fr) 1.12fr; gap: 20px; align-items: stretch; }
+  .fill {
+    flex: 1; display: flex; flex-direction: column; gap: 12px; min-height: 0;
+  }
+  .fill > .grid-clock { flex: 1; min-height: 0; align-items: stretch; }
+  .fill > .case-kpis { flex: 0 0 auto; align-items: stretch; }
+  .fill .chart-box {
+    flex: 1; min-height: 0; position: relative; overflow: hidden;
+  }
+  .fill .chart-box .chart {
+    position: absolute; left: 12px; top: 8px;
+    width: calc(100%% - 24px); height: calc(100%% - 16px);
+    max-height: none;
+  }
+  .fill > .grid-2, .fill > .grid-3 { flex: 1; min-height: 0; align-items: stretch; }
+  .fill > .grid-4 { flex: 0 1 auto; min-height: 0; align-items: stretch; }
+  .fill > .card { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+  .fill > .grid-2 > .card,
+  .fill > .grid-3 > .card {
+    display: flex; flex-direction: column; min-height: 0; height: 100%%;
+  }
+  .fill > .card .chart:not(.chart--flat),
+  .fill > .grid-2 > .card .chart {
+    flex: 1; min-height: 0; height: 100%%; max-height: none;
+  }
+  .fill > .card--glass { flex: 0 0 auto; }
+  .fill .facts { flex: 1; align-content: space-between; }
+  .fill > .risk-row { flex: 0 0 auto; }
+  .card--navy {
+    background: var(--navy); border-color: transparent; padding: 8px 14px 6px;
+  }
+  .clock-card {
+    display: flex; align-items: center; justify-content: center; height: 100%%;
+  }
+  .clock-card .chart { width: 100%%; height: auto; max-height: 280px; }
+  .case-kpis {
+    display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px;
+  }
+  .case-kpis .cell {
+    background: var(--paper); border: 1px solid var(--line); border-radius: 14px;
+    padding: 18px 16px 16px; display: flex; flex-direction: column; justify-content: center;
+  }
+  .case-kpis .n {
+    font-size: clamp(1.7rem, 3.2vw, 2.4rem); font-weight: 800;
+    color: var(--navy); letter-spacing: -.02em; line-height: 1.1;
+  }
+  .case-kpis .cell--ok .n { color: var(--teal); }
+  .case-kpis .cell--warn .n { color: var(--amber); }
+  .case-kpis .lbl {
+    font-size: 14px; font-weight: 700; color: var(--ink-soft); margin-top: 8px; line-height: 1.35;
+  }
   .card--glass {
     background: rgba(255,255,255,.07); border: 1px solid rgba(255,255,255,.16);
     box-shadow: none; margin-top: 12px; border-radius: 16px; padding: 6px 12px 2px;
   }
-  table { width: 100%%; border-collapse: collapse; font-size: 12.5px; }
+  table { width: 100%%; border-collapse: collapse; font-size: 15px; }
   th, td { text-align: left; padding: 5px 9px; border-bottom: 1px solid var(--line); vertical-align: top; }
   th {
     background: var(--navy); color: #eef3f9; font-size: 10.5px; font-weight: 700;
@@ -335,7 +392,7 @@ def build(payload):
   table:not(.sum) tbody tr:nth-child(even) td { background: #fafbfd; }
   tr.row-hi td { background: #f8ecd8 !important; font-weight: 700; }
   tr.total td { background: var(--navy) !important; color: #fff; font-weight: 800; border-bottom: 0; }
-  .sum { width: 100%%; border-collapse: collapse; font-size: 14px; }
+  .sum { width: 100%%; border-collapse: collapse; font-size: 15.5px; }
   .sum td { padding: 9px 2px; border-bottom: 1px solid rgba(255,255,255,.13); background: transparent; }
   .sum tr:last-child td { border-bottom: 0; }
   .sum td.lab { color: rgba(226,234,244,.82); }
@@ -351,45 +408,60 @@ def build(payload):
     color: var(--muted); margin: 0 0 8px;
   }
   .effect {
-    background: var(--paper); border: 1px solid var(--line); border-radius: 16px; padding: 16px 16px 14px;
+    background: var(--paper); border: 1px solid var(--line); border-radius: 16px;
+    padding: 20px 20px 18px; display: flex; flex-direction: column;
+    justify-content: space-between; height: 100%%;
   }
-  .effect .n { font-size: 1.15rem; font-weight: 800; color: var(--navy); margin: 0 0 8px; }
-  .effect p { margin: 0; font-size: 13px; color: var(--ink-soft); line-height: 1.45; }
+  .effect .n {
+    font-size: clamp(1.55rem, 2.8vw, 2.15rem); font-weight: 800;
+    color: var(--navy); margin: 0 0 12px; letter-spacing: -.02em; line-height: 1.1;
+  }
+  .effect p { margin: 0 0 10px; font-size: 16.5px; color: var(--ink-soft); line-height: 1.45; }
+  .effect p:last-child { margin-bottom: 0; }
   .effect--here { border-color: var(--amber); box-shadow: 0 0 0 3px rgba(196,122,18,.15); }
   .effect--here .n { color: var(--amber); }
   .path {
-    background: var(--paper); border: 1px solid var(--line); border-radius: 14px; padding: 14px;
-    display: flex; flex-direction: column; gap: 6px;
+    background: var(--paper); border: 1px solid var(--line); border-radius: 16px;
+    padding: 18px 18px 16px;
+    display: flex; flex-direction: column; gap: 8px; height: 100%%;
+    justify-content: space-between;
   }
-  .path .n { font-size: 1.45rem; font-weight: 800; color: var(--navy); }
-  .path p { margin: 0; font-size: 12.5px; color: var(--ink-soft); line-height: 1.45; }
+  .path .n {
+    font-size: clamp(2.1rem, 4.2vw, 3.1rem); font-weight: 800;
+    color: var(--navy); letter-spacing: -.03em; line-height: 1;
+  }
+  .path p { margin: 0; font-size: 15px; color: var(--ink-soft); line-height: 1.45; }
   .path .fit {
-    margin-top: auto; align-self: flex-start; font-size: 11px; font-weight: 800;
-    letter-spacing: .08em; text-transform: uppercase; padding: 4px 8px; border-radius: 999px;
+    margin-top: auto; align-self: flex-start; font-size: 13px; font-weight: 800;
+    letter-spacing: .08em; text-transform: uppercase; padding: 7px 12px; border-radius: 999px;
   }
   .path-bad .fit { background: #fde8e6; color: var(--risk); }
   .path-ok .fit { background: #d8f3ee; color: var(--teal); }
+  .path-ok .n { color: var(--teal); }
   .path-ok { border-color: #9ad9ce; }
   .quote {
-    background: var(--amber-soft); border-left: 4px solid var(--amber);
-    border-radius: 0 12px 12px 0; padding: 14px 16px; font-size: 15px; line-height: 1.45;
+    background: var(--amber-soft); border-left: 5px solid var(--amber);
+    border-radius: 0 14px 14px 0; padding: 18px 20px; font-size: 18px; line-height: 1.45;
     color: #5a3a0a; margin: 0;
   }
-  .quote .who { display: block; margin-top: 8px; font-size: 12px; font-weight: 700; color: #8a6a2a; }
+  .quote .who { display: block; margin-top: 10px; font-size: 13px; font-weight: 700; color: #8a6a2a; }
   .risk {
-    background: #fff6f4; border: 1px solid #f0c4be; border-radius: 14px; padding: 14px;
+    background: #fff6f4; border: 1px solid #f0c4be; border-radius: 16px;
+    padding: 18px 18px 16px; height: 100%%;
   }
-  .risk .n { font-size: 1.3rem; font-weight: 800; color: var(--risk); }
-  .risk p { margin: 6px 0 0; font-size: 12.5px; color: var(--ink-soft); line-height: 1.45; }
+  .risk .n { font-size: clamp(1.45rem, 2.6vw, 1.95rem); font-weight: 800; color: var(--risk); letter-spacing: -.02em; }
+  .risk p { margin: 8px 0 0; font-size: 16px; color: var(--ink-soft); line-height: 1.45; }
+  .risk-row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; }
   .note {
     background: var(--amber-soft); border: 1px solid #edd9b0; border-radius: 12px;
-    padding: 12px 14px; font-size: 12.5px; color: #6f4a10; line-height: 1.55;
+    padding: 14px 16px; font-size: 14.5px; color: #6f4a10; line-height: 1.55;
   }
-  .facts { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
-  .facts li { display: flex; gap: 11px; align-items: flex-start; font-size: 14px; color: var(--ink-soft); }
+  .facts { list-style: none; margin: 0; padding: 0; display: grid; gap: 14px; }
+  .facts li { display: flex; gap: 12px; align-items: flex-start; font-size: 16.5px; color: var(--ink-soft); line-height: 1.45; }
+  .facts--room li { font-size: 16.5px; gap: 14px; }
   .facts .b {
-    flex: 0 0 auto; width: 22px; height: 22px; border-radius: 7px; background: var(--amber);
-    color: #fff; font-size: 11.5px; font-weight: 800; display: grid; place-items: center; margin-top: 1px;
+    flex: 0 0 auto; width: 26px; height: 26px; border-radius: 8px; background: var(--amber);
+    color: #fff; font-size: 13px; font-weight: 800; display: grid; place-items: center; margin-top: 1px;
   }
   .facts strong { color: var(--ink); }
   .slide--dark .facts li { color: rgba(226,234,244,.9); }
@@ -407,7 +479,7 @@ def build(payload):
   .improve .badge::before { content: ""; width: 8px; height: 8px; border-radius: 50%%; background: #f3c98a; }
   .src { margin-top: 12px; font-size: 11.5px; color: var(--muted); line-height: 1.5; }
   .slide--dark .src, .slide--title .src { color: rgba(226,234,244,.6); }
-  .chart { width: 100%%; height: auto; max-height: 58vh; display: block; }
+  .chart { width: 100%%; height: auto; max-height: 36vh; display: block; }
   .chart--flat { max-height: 22vh; }
   .chart--vol { max-height: 28vh; }
   .chart text { font-family: "Manrope", "Segoe UI", Arial, sans-serif; }
@@ -417,12 +489,12 @@ def build(payload):
   .lbl { font-size: 12px; fill: #2c3a4f; font-weight: 700; }
   .val-big { font-size: 13px; fill: #142a44; font-weight: 800; }
   .d-cap { font-size: 12px; fill: rgba(226,234,244,.78); font-weight: 700; }
-  .clk-n { font-size: 13px; font-weight: 800; }
-  .clk-big { font-size: 22px; font-weight: 800; fill: #fff; }
-  .clk-sub { font-size: 12px; fill: rgba(226,234,244,.7); font-weight: 700; }
-  .strip-n { font-size: 14px; font-weight: 800; }
-  .strip-l { font-size: 10px; font-weight: 700; }
-  .strip-ev { font-size: 10.5px; font-weight: 800; fill: %(amber)s; }
+  .clk-n { font-size: 16px; font-weight: 800; }
+  .clk-big { font-size: 28px; font-weight: 800; fill: #fff; }
+  .clk-sub { font-size: 14px; fill: rgba(226,234,244,.7); font-weight: 700; }
+  .strip-n { font-size: 16px; font-weight: 800; }
+  .strip-l { font-size: 11px; font-weight: 700; }
+  .strip-ev { font-size: 11.5px; font-weight: 800; fill: %(amber)s; }
   .legend { display: flex; gap: 16px; flex-wrap: wrap; margin: 4px 0 8px; font-size: 12.5px; color: var(--ink-soft); }
   .legend span { display: inline-flex; align-items: center; gap: 7px; font-weight: 600; }
   .legend i { width: 13px; height: 13px; border-radius: 3px; display: inline-block; }
@@ -460,11 +532,11 @@ def build(payload):
       <div class="eyebrow">Презентация 03 &middot; Пакет 20.09.2026 &middot; кейс %(key)s</div>
       <h1 class="serif">Не экономия часов.<br>Срок, который нельзя сорвать</h1>
       <p class="lead">
-        Back-Office Settle просил увидеть XBRL в Excel до сдачи в Банк России.
-        Классика &mdash; часы и сбои. С vibe-coding обработка собрана за 14 часов:
-        весь пакет виден за 4 минуты. Задача закрыта 12 августа, за 2 рабочих дня до дедлайна июля.
+        Цитаты &mdash; из заявки бэк-офиса. Без Excel по XBRL нельзя оценить качество пакета до сдачи в Банк России.
+        Классика не помещается в 10 рабочих дней. С vibe-coding обработка собрана за 14 часов:
+        весь пакет виден за минуты, не за часы.
       </p>
-      <p class="q-who">Из заявки Карасевой Ольги, IM Back-Office Settle, 17.07.2026, приоритет High</p>
+      <p class="q-who">Karaseva, Olga &middot; IM Back-Office Settle &middot; постановка %(key)s, 17.07.2026, приоритет High</p>
       <div class="q-row">
 %(quotes)s
       </div>
@@ -480,7 +552,7 @@ def build(payload):
       </div>
       <div class="src">
         Это не презентация 01 (счета вендора) и не 02 (часы команды). Здесь цена вопроса &mdash;
-        окно сдачи и качество пакета. 14 ч этой задачи уже внутри выборки 02, повторно не считаем.
+        окно сдачи и качество пакета. 14 ч уже внутри 1 065 ч презентации 02, повторно не считаем.
       </div>
     </section>
 
@@ -512,23 +584,22 @@ def build(payload):
         <div class="card">
           <p class="h4">Что смотрим вместо млн ₽</p>
           <p style="margin:0;font-size:13.5px;color:var(--ink-soft);line-height:1.5">
-            Цитаты постановки, ленту из 10 рабочих дней, карточку штрафа как <em>риска</em>
+            Ленту из 10 рабочих дней, карточку штрафа как <em>риска</em>, цитату бэк-офиса
             и сравнение путей: портал / конвертер / вендор / vibe.
           </p>
         </div>
         <div class="card">
-          <p class="h4">Один кейс, не портфель</p>
+          <p class="h4">Один кейс и приёмка</p>
           <p style="margin:0;font-size:13.5px;color:var(--ink-soft);line-height:1.5">
-            IMDEV-9182, контур ДУ, таксономия 7.1. Разработка 14 ч, код %(bsl)s строк.
-            XBRL в Excel: 4 мин на эталоне июня. Следующий месяц &mdash; то же окно.
+            IMDEV-9182, контур ДУ. Постановщик &mdash; Карасева Ольга (Back-Office Settle).
+            Закрыто 12.08 с резолюцией Done, приоритет High. Следующий месяц &mdash; то же окно, тот же инструмент.
           </p>
         </div>
         <div class="card">
-          <p class="h4">Приёмка заказчиком</p>
+          <p class="h4">Чего нет на слайдах</p>
           <p style="margin:0;font-size:13.5px;color:var(--ink-soft);line-height:1.5">
-            Постановщик &mdash; Карасева Ольга (IM Back-Office Settle), приоритет High.
-            Задача Closed, резолюция Done 12.08.2026. Отдельного текста комментария приёмки
-            в выгрузке Jira нет: зафиксированы постановщик и закрытие Done.
+            Нет сценариев +40/+80%%, нет ч/мес и млн/год, нет сложения с 1,2–3,9 млн
+            презентаций 01 и 02.
           </p>
         </div>
       </div>
@@ -542,12 +613,12 @@ def build(payload):
     <section class="slide">
       <div class="eyebrow">Регуляторные часы</div>
       <h2>10 рабочих дней &mdash; это не метафора, а точка входа XBRL</h2>
-      <div class="grid-clock">
-        <div class="card">%(clock)s</div>
-        <div>
-          <div class="card">
+      <div class="fill">
+        <div class="grid-clock">
+          <div class="card clock-card">%(clock)s</div>
+          <div class="card" style="height:100%%">
             <p class="h4">Что тикает</p>
-            <ul class="facts">
+            <ul class="facts facts--room">
               <li><span class="b">1</span><span><strong>НСО ПУРЦБ, таксономия 7.1.</strong>
                 Точка входа <code>%(entry)s</code>: пакет в Банк России в течение 10 рабочих дней
                 после отчетной даты. Окно повторяется каждый месяц.</span></li>
@@ -555,26 +626,32 @@ def build(payload):
                 дедлайн 14 августа. Задача закрыта 12 августа &mdash; 8-й рабочий день окна,
                 2 дня запаса на сдачу и правки.</span></li>
               <li><span class="b">3</span><span><strong>Заявка 17 июля</strong> пришла уже после
-                июньского дедлайна (14 июля). Инструмент нужен был к июльскому окну, не «когда-нибудь в бэклоге».</span></li>
+                июньского дедлайна (14 июля). Инструмент нужен был к июльскому окну,
+                не «когда-нибудь в бэклоге».</span></li>
+              <li><span class="b">4</span><span><strong>Штраф &mdash; мера риска, не факт выплаты.</strong>
+                Без визуализации пакета сдавать вслепую нельзя. Бизнес просил именно контроль качества
+                до отправки в ЦБ.</span></li>
             </ul>
           </div>
-          <div class="grid-2" style="margin-top:12px">
-            <div class="risk">
-              <p class="h4">Юридическое лицо</p>
-              <div class="n">500–700 тыс. ₽</div>
-              <p>%(article)s: непредставление, просрочка или недостоверность информации в Банк России.</p>
-            </div>
-            <div class="risk">
-              <p class="h4">Должностное лицо</p>
-              <div class="n">20–30 тыс. ₽</div>
-              <p>или дисквалификация %(disq)s. Плюс отклонение пакета на техническом контроле и повтор в том же окне.</p>
-            </div>
+        </div>
+        <div class="card card--navy">%(strip)s</div>
+        <div class="risk-row">
+          <div class="risk">
+            <p class="h4">Юридическое лицо</p>
+            <div class="n">500-700 тыс. &#8381;</div>
+            <p>%(article)s: непредставление, просрочка или недостоверность информации в Банк России.</p>
+          </div>
+          <div class="risk">
+            <p class="h4">Должностное лицо</p>
+            <div class="n">20-30 тыс. &#8381;</div>
+            <p>или дисквалификация %(disq)s. Персональная ответственность на окне сдачи.</p>
+          </div>
+          <div class="risk">
+            <p class="h4">Техконтроль ЦБ</p>
+            <div class="n">отклонение пакета</div>
+            <p>Повторная сдача в том же 10-дневном окне. Надзорный и репутационный след.</p>
           </div>
         </div>
-      </div>
-      <div class="src">
-        Штраф &mdash; мера риска, не утверждение, что его выписали бы. Бизнес просил инструмент контроля качества,
-        без которого сдавать пакет вслепую нельзя.
       </div>
     </section>
 
@@ -585,18 +662,18 @@ def build(payload):
         «%(quote)s»
         <span class="who">%(quote_who)s</span>
       </blockquote>
-      <div class="grid-4" style="margin-top:16px">
+      <div class="fill" style="margin-top:16px">
+        <div class="grid-4">
 %(path_cards)s
-      </div>
-      <div class="note" style="margin-top:16px">
-        <strong>Почему классика не в окне.</strong> Портал Аванкор съедает больше рабочего дня на одну загрузку
-        и не дает Excel. Конвертер режет форму 431 на части, идет больше часа и сбоит &mdash; чужое ПО.
-        Вендор на парсер таксономии 7.1 и 77 таблиц не встанет в 10 дней. Vibe-coding собрал обработку 1С,
-        которая выгружает <em>весь</em> пакет одним запуском.
-      </div>
-      <div class="src">
-        Исходная заявка просила форму 0420431. Сделали весь пакет (78 листов): иначе контроль качества
-        снова остался бы «частями». Скорость на эталоне июня: 4 мин 3 с vs конвертер &gt;1 ч и портал &gt;8 ч.
+        </div>
+        <div class="card chart-box">%(paths_chart_tall)s</div>
+        <div class="note">
+          <strong>Почему классика не в окне.</strong> Портал Аванкор съедает больше рабочего дня на одну загрузку
+          и не дает Excel. Конвертер режет форму 431 на части, идет больше часа и сбоит &mdash; чужое ПО.
+          Вендор на парсер таксономии 7.1 и 77 таблиц не встанет в 10 дней. Vibe-coding собрал обработку 1С,
+          которая выгружает <em>весь</em> пакет одним запуском: эталон июня &mdash; 4 мин 3 с vs конвертер &gt;1 ч
+          и портал &gt;8 ч.
+        </div>
       </div>
     </section>
 
@@ -607,8 +684,9 @@ def build(payload):
         <span><i style="background:%(amber)s"></i>0420431, тяжёлая форма</span>
         <span><i style="background:%(navy_mid)s"></i>прочие формы пакета</span>
       </div>
-      <div class="card">%(volume)s</div>
-      <div class="grid-2" style="margin-top:12px">
+      <div class="fill">
+      <div class="card chart-box">%(volume)s</div>
+      <div class="grid-2">
         <div class="card">
           <table>
             <thead><tr><th>Форма</th><th class="n">Листов</th><th class="n">Строк</th><th class="n">Доля</th></tr></thead>
@@ -626,11 +704,12 @@ def build(payload):
               Именно это бизнес назвал причиной сбоев конвертера.</span></li>
             <li><span class="b">2</span><span><strong>Пакеты «уже ~500 МБ»</strong> в постановке.
               Июньский тестовый ZIP &mdash; эталон состава: 77 таблиц + оглавление.</span></li>
-            <li><span class="b">3</span><span><strong>Скорость:</strong> эталон июня &mdash; весь пакет за 4 мин 3 с
-              (v1.4.10, режим таксономии). Январский меньший пакет &mdash; 29 с. Было: конвертер &gt;1 ч частями,
-              портал &gt;8 ч.</span></li>
+            <li><span class="b">3</span><span><strong>Скорость:</strong> эталон июня &mdash; весь пакет за %(conv_exact)s
+              (78 листов, %(rows)s строк). Январский меньший пакет &mdash; %(conv_jan)s.
+              Было: конвертер &gt;1 ч частями, портал &gt;8 ч.</span></li>
           </ul>
         </div>
+      </div>
       </div>
     </section>
 
@@ -642,7 +721,7 @@ def build(payload):
         поймать сбой, поправить, повторить. Классикой этот цикл не влезает в окно сдачи.
       </p>
       <div class="grid-2">
-        <div class="card">%(paths_chart)s</div>
+        <div class="card chart-box">%(paths_chart)s</div>
         <div class="card">
           <p class="h4">Цикл, который поместился</p>
           <ul class="facts">
@@ -650,25 +729,26 @@ def build(payload):
               Нужен Excel для контроля качества, не замена сдачи в ЦБ.</span></li>
             <li><span class="b">2</span><span><strong>Итерации на живых пакетах</strong> (январь, апрель, июнь, июль).
               Версия обработки 1.4.10 &mdash; это не «написал и забыл», а дожим до устойчивого прогона.</span></li>
-            <li><span class="b">3</span><span><strong>12 августа, 14 ч Time Sheet.</strong>
-              Обработка в 1С: %(bsl)s строк, только платформа, весь пакет одним запуском.
-              Постановщик Карасева: Closed / Done.</span></li>
-            <li><span class="b">4</span><span><strong>14 августа</strong> &mdash; дедлайн июля.
-              2 рабочих дня остаются на сдачу и правки, а не на изобретение конвертера.</span></li>
+            <li><span class="b">3</span><span><strong>12 августа, 14 ч Time Sheet, %(bsl)s строк.</strong>
+              Обработка в 1С, весь пакет одним запуском. Конвертация эталона июня &mdash; %(conv_exact)s.</span></li>
+            <li><span class="b">4</span><span><strong>Приёмка Карасевой.</strong> Она постановщик заявки (приоритет High).
+              Задача Closed / Done 12.08.2026. Отдельного текста комментария приёмки в выгрузке Jira нет &mdash;
+              зафиксированы постановщик, резолюция Done и закрытие.</span></li>
           </ul>
         </div>
       </div>
+      </div>
       <div class="src">
         %(bsl)s строк модуля объекта &mdash; парсер instance + таксономия 7.1 + XLSX.
-        Разработка отмечена в коде как выполненная с Cursor. 14 ч &mdash; факт учёта.
-        Конвертация эталона июня: 4 мин 3 с на весь пакет.
+        Разработка отмечена в коде как выполненная с Cursor. 14 ч &mdash; факт учёта, не оценка.
       </div>
     </section>
 
     <section class="slide slide--dark">
       <div class="eyebrow">Выводы</div>
       <h2 class="serif" style="font-size:clamp(1.7rem,3.2vw,2.5rem)">Что это значит для компании</h2>
-      <div class="grid-2" style="margin-top:8px">
+      <div class="fill">
+      <div class="grid-2">
         <ul class="facts">
           <li><span class="b">1</span><span><strong>Окно не сдвинуть.</strong> 10 рабочих дней повторяются
             каждый месяц. Инструмент остаётся: следующий пакет не ждёт новую разработку.</span></li>
@@ -689,20 +769,19 @@ def build(payload):
               <tr><td class="lab">Окно июля</td><td class="v">31.07 &rarr; 14.08</td></tr>
               <tr><td class="lab">Закрыто</td><td class="v v-save">12.08 · день 8 из 10</td></tr>
               <tr><td class="lab">Факт часов</td><td class="v v-fact">14 ч · %(bsl)s строк</td></tr>
-              <tr><td class="lab">XBRL в Excel</td>
-                  <td class="v v-save">4 мин<span class="v-ex">эталон июня · 78 листов · %(rows)s строк</span></td></tr>
-              <tr><td class="lab">Приёмка</td>
-                  <td class="v">Карасева · Done<span class="v-ex">постановщик, Closed 12.08, приоритет High</span></td></tr>
+              <tr><td class="lab">XBRL &rarr; Excel</td><td class="v v-save">%(conv_label)s<span class="v-ex">эталон июня, весь пакет</span></td></tr>
+              <tr><td class="lab">Приёмка</td><td class="v">Карасева · Done<span class="v-ex">постановщик, Closed 12.08, High</span></td></tr>
             </tbody>
           </table>
         </div>
+      </div>
       </div>
       <div class="improve">
         <span class="lbl2">Вид улучшения</span>
         <span class="badge">Снижение регуляторного риска / дедлайн</span>
       </div>
       <div class="src">
-        Источники: постановка IMDEV-9182 (Карасева), Time Sheet, эталон июня 2026 (4 мин 3 с),
+        Источники: постановка IMDEV-9182 (Карасева), Time Sheet, эталон июня 2026 (замер конвертации),
         разъяснения ЦБ по точкам входа НСО ПУРЦБ, ст. 19.7.3 КоАП РФ, McKinsey CIB / regulatory submissions.
         Гипотетическое время вендора в окно не входит и в млн рублей презентаций 01–02 не добавляется.
       </div>
@@ -771,6 +850,7 @@ def build(payload):
         "path_cards": path_cards,
         "volume": svg_volume(v["by_form"], v["rows_total"]),
         "paths_chart": svg_paths(payload["paths"]),
+        "paths_chart_tall": svg_paths(payload["paths"], tall=True),
         "form_rows": form_rows,
         "src_rows": src_rows,
         "key": s["key"],
@@ -783,6 +863,9 @@ def build(payload):
         "sheets": v["sheets_data"],
         "max_rows": num_int(v["max_rows_one_sheet"]),
         "bsl": num_int(s["bsl_lines"]),
+        "conv_label": esc(conv["june_label"]),
+        "conv_exact": esc(conv["june_exact"]),
+        "conv_jan": esc(conv["january_label"]),
     }
     return html
 

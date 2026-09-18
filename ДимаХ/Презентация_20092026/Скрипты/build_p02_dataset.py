@@ -10,10 +10,10 @@
 Ставка для денежной оценки: преобладающая ставка Аванкор из презентации 01
 (документированный рыночный эквивалент часа разработки 1С).
 
-Сценарии задают надбавку к фактическому времени («сколько заняло бы без ИИ»):
-  min  +40%  — нижняя граница, ТЗ и полевые замеры enterprise
-  base +50%  — консервативная оценка из ТЗ
-  real +80%  — ближе к кодогенерации по McKinsey, всё ещё ниже лабораторных 55,8%
+Коэффициент один, без диапазона. Портфель — доработки существующей конфигурации 1С
+(Change Request / оптимизация МО и ДУ). Из исследований этому типу работы соответствует
+McKinsey, июнь 2023, «рефакторинг 20-30% меньше времени». Берём середину: 25% быстрее.
+Это k = 4/3 (+33% к факту). Лабораторные 55,8% GitHub Copilot (JS HTTP-сервер) не берём.
 """
 
 import io
@@ -53,39 +53,29 @@ COMPONENT_SHORT = {
     "XBRL": "XBRL",
 }
 
-# time_without = fact * (1 + overhead)
-# faster_pct = 1 - 1/(1+overhead)  — на сколько процентов быстрее с ИИ
-SCENARIOS = [
-    {
-        "id": "min",
-        "name": "Консервативный",
-        "tag": "нижняя граница",
-        "overhead": 0.40,
-        "note": "Без Cursor задача заняла бы на 40% больше времени. "
-                "Это 29% ускорения — чуть выше полевого RCT Google (~21%) "
-                "и внутри диапазона McKinsey по рефакторингу (20-30%).",
-        "anchor": "Google enterprise RCT, 2024: ~21% быстрее; McKinsey, 2023: рефакторинг 20-30%.",
-    },
-    {
-        "id": "base",
-        "name": "Базовый",
-        "tag": "оценка по ТЗ",
-        "overhead": 0.50,
-        "note": "Надбавка +50% к факту — верхняя консервативная граница из постановки. "
-                "Ускорение 33%, нижняя половина диапазона IBM 30-40%.",
-        "anchor": "Постановка презентации: +40-50% к фактическому времени. IBM Software: +30-40% производительности.",
-    },
-    {
-        "id": "real",
-        "name": "Реалистичный",
-        "tag": "ближе к практике Cursor",
-        "overhead": 0.80,
-        "note": "Надбавка +80%: без ИИ ушло бы почти вдвое больше времени. "
-                "Ускорение 44% — уровень McKinsey по написанию кода (35-45%), "
-                "всё ещё ниже лабораторных 55,8% GitHub Copilot.",
-        "anchor": "McKinsey, 2023: кодогенерация 35-45% меньше времени. GitHub Copilot lab, 2022: 55,8% быстрее (не берём).",
-    },
-]
+# Коэффициент ускорения. Один, потому что портфель однородный:
+# 91% часов — Change Request на существующих конфигурациях Аванкор (оптимизация).
+# McKinsey, июнь 2023: рефакторинг 20-30% меньше времени. Середина = 25% быстрее.
+# k = 1 / (1 - 0,25) = 4/3. Без Cursor = факт * 4/3. Экономия = факт / 3.
+FASTER_PCT = 25.0
+OVERHEAD = FASTER_PCT / (100.0 - FASTER_PCT)
+K_WITHOUT = 1.0 + OVERHEAD
+
+COEFF = {
+    "id": "chosen",
+    "name": "Рефакторинг существующего кода 1С",
+    "tag": "McKinsey, середина 20-30%",
+    "faster_pct": FASTER_PCT,
+    "overhead": OVERHEAD,
+    "k": K_WITHOUT,
+    "note": "91% часов выборки — Change Request: оптимизация уже работающих конфигураций "
+            "МО и ДУ, а не написание систем с нуля. McKinsey для рефакторинга дает "
+            "20-30% экономии времени. Берём середину: 25% быстрее.",
+    "anchor": "McKinsey, Unleashing developer productivity with generative AI, июнь 2023: "
+              "refactoring 20-30% less time. Середина 25%. Google enterprise RCT 2024 (~21%) "
+              "подтверждает, что полевой эффект близок к нижней границе этой полосы, "
+              "а не к лабораторным 56%.",
+}
 
 
 def safe_print(text):
@@ -215,23 +205,26 @@ def vendor_rate():
     return 3900.0
 
 
-def compute_scenario(sc, fact_hours, rate, period_months):
-    without = fact_hours * (1.0 + sc["overhead"])
+def compute_effect(fact_hours, rate, period_months):
+    """Считает высвобожденные часы и рубли при одном коэффициенте.
+
+    Параметры:
+      fact_hours     - Число - фактические часы с Cursor
+      rate           - Число - ставка Аванкор, руб./ч
+      period_months  - Число - длина периода выборки, месяцы
+
+    Возвращаемое значение:
+      Структура - без Cursor, экономия часов, рубли за период / месяц / год.
+    """
+    sc = dict(COEFF)
+    without = fact_hours * sc["k"]
     saved = without - fact_hours
     money = int(round(saved * rate))
-    faster = 100.0 * sc["overhead"] / (1.0 + sc["overhead"])
     months = period_months if period_months else 1.0
     hours_month = saved / months
     hours_year = hours_month * 12.0
-    return {
-        "id": sc["id"],
-        "name": sc["name"],
-        "tag": sc["tag"],
-        "note": sc["note"],
-        "anchor": sc["anchor"],
-        "overhead": sc["overhead"],
+    sc.update({
         "overhead_pct": int(round(sc["overhead"] * 100)),
-        "faster_pct": round(faster, 1),
         "fact_hours": round(fact_hours, 2),
         "without_hours": round(without, 2),
         "saved_hours": round(saved, 2),
@@ -242,7 +235,10 @@ def compute_scenario(sc, fact_hours, rate, period_months):
         "saved_money_month": int(round(money / months)),
         "saved_money_year": int(round(money / months * 12.0)),
         "fte_ongoing": round(hours_month / MONTH_HOURS, 2),
-    }
+        "money_check": "%s ч x %s руб/ч = %s руб" % (
+            round(saved, 2), int(rate), money),
+    })
+    return sc
 
 
 def main():
@@ -288,17 +284,13 @@ def main():
     period_days = (end_dt - start_dt).days
     period_months = round(period_days / 30.44, 1)
 
-    scenarios = [compute_scenario(sc, fact_hours, rate, period_months) for sc in SCENARIOS]
+    effect = compute_effect(fact_hours, rate, period_months)
+    k = effect["k"]
+    ovh = effect["overhead"]
 
-    # Позадачный расчёт для базового сценария (+50%) — основной ряд диаграммы
-    base_k = 1.50
     for row in selected:
-        row["without_min"] = round(row["our_hours"] * 1.40, 2)
-        row["without_base"] = round(row["our_hours"] * base_k, 2)
-        row["without_real"] = round(row["our_hours"] * 1.80, 2)
-        row["saved_min"] = round(row["without_min"] - row["our_hours"], 2)
-        row["saved_base"] = round(row["without_base"] - row["our_hours"], 2)
-        row["saved_real"] = round(row["without_real"] - row["our_hours"], 2)
+        row["without_hours"] = round(row["our_hours"] * k, 2)
+        row["saved_hours"] = round(row["without_hours"] - row["our_hours"], 2)
 
     by_component = {}
     for r in selected:
@@ -309,9 +301,7 @@ def main():
         agg["hours"] += r["our_hours"]
     for agg in by_component.values():
         agg["hours"] = round(agg["hours"], 2)
-        agg["saved_min"] = round(agg["hours"] * 0.40, 2)
-        agg["saved_base"] = round(agg["hours"] * 0.50, 2)
-        agg["saved_real"] = round(agg["hours"] * 0.80, 2)
+        agg["saved"] = round(agg["hours"] * ovh, 2)
 
     by_type = {}
     for r in selected:
@@ -322,7 +312,9 @@ def main():
     for agg in by_type.values():
         agg["hours"] = round(agg["hours"], 2)
 
-    # Накопленная экономия по месяцу закрытия (базовый сценарий)
+    cr = next((t for t in by_type.values() if t["issue_type"] == "Change Request"), None)
+    cr_share = round(100.0 * cr["hours"] / fact_hours, 1) if cr and fact_hours else 0.0
+
     monthly = defaultdict(lambda: {"tasks": 0, "hours": 0.0})
     for r in selected:
         stamp = r["resolved_iso"] or r["created_iso"]
@@ -335,20 +327,18 @@ def main():
     cum_h = cum_s = 0.0
     for month in sorted(monthly):
         hours = round(monthly[month]["hours"], 2)
-        saved = round(hours * 0.50, 2)
+        saved = round(hours * ovh, 2)
         cum_h += hours
         cum_s += saved
         timeline.append({
             "month": month,
             "tasks": monthly[month]["tasks"],
             "hours": hours,
-            "saved_base": saved,
+            "saved": saved,
             "cumulative_hours": round(cum_h, 2),
             "cumulative_saved": round(cum_s, 2),
         })
 
-    sc_min = scenarios[0]
-    sc_real = scenarios[2]
     summary = {
         "cutoff": "2025-11-01",
         "tasks_in_export": len(internal),
@@ -361,24 +351,20 @@ def main():
         "period_to": last,
         "period_days": period_days,
         "period_months": period_months,
-        "saved_hours_min": sc_min["saved_hours"],
-        "saved_hours_max": sc_real["saved_hours"],
-        "saved_hours_month_min": sc_min["saved_hours_month"],
-        "saved_hours_month_max": sc_real["saved_hours_month"],
-        "saved_hours_year_min": sc_min["saved_hours_year"],
-        "saved_hours_year_max": sc_real["saved_hours_year"],
-        "saved_money_min": sc_min["saved_money"],
-        "saved_money_max": sc_real["saved_money"],
-        "saved_money_month_min": sc_min["saved_money_month"],
-        "saved_money_month_max": sc_real["saved_money_month"],
-        "saved_money_year_min": sc_min["saved_money_year"],
-        "saved_money_year_max": sc_real["saved_money_year"],
-        "person_months_min": sc_min["person_months"],
-        "person_months_max": sc_real["person_months"],
-        "fte_ongoing_min": sc_min["fte_ongoing"],
-        "fte_ongoing_max": sc_real["fte_ongoing"],
-        "without_min": sc_min["without_hours"],
-        "without_max": sc_real["without_hours"],
+        "k": round(k, 4),
+        "overhead": round(ovh, 4),
+        "faster_pct": effect["faster_pct"],
+        "overhead_pct": effect["overhead_pct"],
+        "without_hours": effect["without_hours"],
+        "saved_hours": effect["saved_hours"],
+        "saved_hours_month": effect["saved_hours_month"],
+        "saved_hours_year": effect["saved_hours_year"],
+        "saved_money": effect["saved_money"],
+        "saved_money_month": effect["saved_money_month"],
+        "saved_money_year": effect["saved_money_year"],
+        "person_months": effect["person_months"],
+        "fte_ongoing": effect["fte_ongoing"],
+        "cr_share": cr_share,
         "timesheet_files": ts["files"],
         "timesheet_hours_total": round(sum(f["hours"] for f in ts["files"]), 2),
         "assignees": sorted({r["assignee"] for r in selected if r["assignee"]}),
@@ -386,39 +372,47 @@ def main():
 
     payload = {
         "summary": summary,
-        "scenarios": scenarios,
+        "coeff": effect,
+        "scenarios": [effect],
         "tasks": sorted(selected, key=lambda r: -r["our_hours"]),
         "by_component": sorted(by_component.values(), key=lambda a: -a["hours"]),
         "by_type": sorted(by_type.values(), key=lambda a: -a["hours"]),
         "timeline": timeline,
         "sources": [
             {
-                "id": "github",
-                "who": "GitHub Copilot / Peng et al., 2022-2023",
-                "what": "Контролируемый эксперимент: задача HTTP-сервера на JavaScript. "
-                        "С Copilot на 55,8% быстрее (71 мин против 161 мин). 95% ДИ 21-89%.",
-                "url": "https://github.blog/news-insights/research/research-quantifying-github-copilots-impact-on-developer-productivity-and-happiness/",
-            },
-            {
-                "id": "mckinsey",
-                "who": "McKinsey, июнь 2023",
-                "what": "Документация кода 45-50% меньше времени, написание кода 35-45%, "
-                        "рефакторинг 20-30%, задачи высокой сложности менее 10%.",
-                "url": "https://www.mckinsey.com/capabilities/mckinsey-digital/our-insights/unleashing-developer-productivity-with-generative-ai",
+                "id": "mckinsey_ref",
+                "fit": "chosen",
+                "who": "McKinsey, июнь 2023, рефакторинг",
+                "what": "Доработки существующего кода: 20-30% меньше времени. "
+                        "Середина 25% — выбранный коэффициент. Совпадает с типом наших задач.",
             },
             {
                 "id": "google",
+                "fit": "support",
                 "who": "Google enterprise RCT, 2024",
-                "what": "Полевой эксперимент в корпоративной разработке: около 21% быстрее "
-                        "(оценка ниже лабораторных 56% и ближе к практике).",
-                "url": "https://arxiv.org/html/2410.12944",
+                "what": "Полевой замер в корпоративной разработке: около 21% быстрее. "
+                        "Подтверждает, что 25% не завышены относительно лаборатории.",
+            },
+            {
+                "id": "mckinsey_new",
+                "fit": "reject",
+                "who": "McKinsey, июнь 2023, новый код",
+                "what": "Написание нового кода: 35-45% меньше времени. Не берём: "
+                        "у нас не greenfield, а оптимизация уже работающих конфигураций.",
+            },
+            {
+                "id": "github",
+                "fit": "reject",
+                "who": "GitHub Copilot / Peng et al., 2022-2023",
+                "what": "Лаборатория: HTTP-сервер на JavaScript, 55,8% быстрее. "
+                        "Не берём: не 1С, не существующая конфигурация, не корпоративный контур.",
             },
             {
                 "id": "ibm",
+                "fit": "context",
                 "who": "IBM Software / McKinsey, 2024",
-                "what": "Разработчики IBM с gen AI: рост производительности 30-40%. "
-                        "Формула ценности: capacity той же команды + cost avoidance найма.",
-                "url": "https://www.mckinsey.com/capabilities/tech-and-ai/our-insights/the-gen-ai-skills-revolution-rethinking-your-talent-strategy",
+                "what": "Не источник коэффициента, а формула ценности: "
+                        "value = capacity той же команды + cost avoidance найма.",
             },
         ],
     }
@@ -429,10 +423,11 @@ def main():
     safe_print("OK dataset written")
     safe_print("selected=%d hours=%.1f excluded=%s" % (len(selected), fact_hours, excluded))
     safe_print("period %s .. %s (%s months)" % (first, last, period_months))
-    for sc in scenarios:
-        safe_print("%-14s +%d%%  saved=%.0f h  %.0f h/mo  %.0f h/y  %.2f FTE" % (
-            sc["id"], sc["overhead_pct"], sc["saved_hours"],
-            sc["saved_hours_month"], sc["saved_hours_year"], sc["fte_ongoing"]))
+    safe_print("k=%.4f  faster=%.0f%%  saved=%.0f h  %.0f h/mo  %.0f h/y" % (
+        effect["k"], effect["faster_pct"], effect["saved_hours"],
+        effect["saved_hours_month"], effect["saved_hours_year"]))
+    safe_print("money period=%d  year=%d  rate=%.0f  check=%s" % (
+        effect["saved_money"], effect["saved_money_year"], rate, effect["money_check"]))
     return 0
 
 

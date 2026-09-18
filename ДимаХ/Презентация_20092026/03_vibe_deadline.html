@@ -21,8 +21,8 @@
   .deck { position: relative; height: 100vh; overflow: hidden; }
   .slides { display: flex; height: 100%; transition: transform .45s cubic-bezier(.4,0,.2,1); }
   .slide {
-    flex: 0 0 100%; height: 100%; padding: 34px 5vw 78px;
-    background: var(--slide-bg); overflow-y: auto; display: flex; flex-direction: column;
+    flex: 0 0 100%; height: 100%; padding: 22px 4vw 64px;
+    background: var(--slide-bg); overflow: hidden; display: flex; flex-direction: column;
   }
   .slide--title {
     background:
@@ -36,15 +36,15 @@
     color: var(--amber); margin-bottom: 10px;
   }
   .slide--title .eyebrow, .slide--dark .eyebrow { color: #f3c98a; }
-  h1 { font-size: clamp(1.7rem, 3.4vw, 2.55rem); line-height: 1.1; margin: 0 0 10px; }
-  h2 { font-size: clamp(1.35rem, 2.5vw, 2rem); line-height: 1.15; margin: 0 0 8px; }
-  .lead { font-size: clamp(.94rem, 1.45vw, 1.06rem); color: var(--muted); margin: 0 0 12px; max-width: 64rem; }
+  h1 { font-size: clamp(1.85rem, 3.8vw, 2.75rem); line-height: 1.08; margin: 0 0 8px; letter-spacing: -.01em; }
+  h2 { font-size: clamp(1.45rem, 2.6vw, 2.05rem); line-height: 1.12; margin: 0 0 8px; letter-spacing: -.01em; }
+  .lead { font-size: clamp(.98rem, 1.5vw, 1.1rem); color: var(--muted); margin: 0 0 10px; max-width: 64rem; }
   .slide--title .lead, .slide--dark .lead { color: rgba(226,234,244,.88); }
   .q-row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin: 4px 0 8px; }
   .q {
     margin: 0; background: rgba(255,255,255,.08); border-left: 3px solid #f3c98a;
     border-radius: 0 10px 10px 0; padding: 10px 12px 11px;
-    font-size: 12.5px; line-height: 1.4; color: rgba(244,247,251,.94);
+    font-size: 15px; line-height: 1.4; color: rgba(244,247,251,.94);
   }
   .q-tag {
     display: block; font-size: 10px; font-weight: 800; letter-spacing: .12em;
@@ -69,15 +69,65 @@
     background: var(--paper); border: 1px solid var(--line); border-radius: 16px;
     padding: 16px 18px; box-shadow: 0 10px 30px rgba(11,31,58,.06);
   }
-  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; align-items: start; }
-  .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; }
-  .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
-  .grid-clock { display: grid; grid-template-columns: 340px 1fr; gap: 20px; align-items: center; }
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; align-items: stretch; }
+  .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; align-items: stretch; }
+  .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; align-items: stretch; }
+  .grid-clock { display: grid; grid-template-columns: minmax(300px, 0.88fr) 1.12fr; gap: 20px; align-items: stretch; }
+  .fill {
+    flex: 1; display: flex; flex-direction: column; gap: 12px; min-height: 0;
+  }
+  .fill > .grid-clock { flex: 1; min-height: 0; align-items: stretch; }
+  .fill > .case-kpis { flex: 0 0 auto; align-items: stretch; }
+  .fill .chart-box {
+    flex: 1; min-height: 0; position: relative; overflow: hidden;
+  }
+  .fill .chart-box .chart {
+    position: absolute; left: 12px; top: 8px;
+    width: calc(100% - 24px); height: calc(100% - 16px);
+    max-height: none;
+  }
+  .fill > .grid-2, .fill > .grid-3 { flex: 1; min-height: 0; align-items: stretch; }
+  .fill > .grid-4 { flex: 0 1 auto; min-height: 0; align-items: stretch; }
+  .fill > .card { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+  .fill > .grid-2 > .card,
+  .fill > .grid-3 > .card {
+    display: flex; flex-direction: column; min-height: 0; height: 100%;
+  }
+  .fill > .card .chart:not(.chart--flat),
+  .fill > .grid-2 > .card .chart {
+    flex: 1; min-height: 0; height: 100%; max-height: none;
+  }
+  .fill > .card--glass { flex: 0 0 auto; }
+  .fill .facts { flex: 1; align-content: space-between; }
+  .fill > .risk-row { flex: 0 0 auto; }
+  .card--navy {
+    background: var(--navy); border-color: transparent; padding: 8px 14px 6px;
+  }
+  .clock-card {
+    display: flex; align-items: center; justify-content: center; height: 100%;
+  }
+  .clock-card .chart { width: 100%; height: auto; max-height: 280px; }
+  .case-kpis {
+    display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px;
+  }
+  .case-kpis .cell {
+    background: var(--paper); border: 1px solid var(--line); border-radius: 14px;
+    padding: 18px 16px 16px; display: flex; flex-direction: column; justify-content: center;
+  }
+  .case-kpis .n {
+    font-size: clamp(1.7rem, 3.2vw, 2.4rem); font-weight: 800;
+    color: var(--navy); letter-spacing: -.02em; line-height: 1.1;
+  }
+  .case-kpis .cell--ok .n { color: var(--teal); }
+  .case-kpis .cell--warn .n { color: var(--amber); }
+  .case-kpis .lbl {
+    font-size: 14px; font-weight: 700; color: var(--ink-soft); margin-top: 8px; line-height: 1.35;
+  }
   .card--glass {
     background: rgba(255,255,255,.07); border: 1px solid rgba(255,255,255,.16);
     box-shadow: none; margin-top: 12px; border-radius: 16px; padding: 6px 12px 2px;
   }
-  table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+  table { width: 100%; border-collapse: collapse; font-size: 15px; }
   th, td { text-align: left; padding: 5px 9px; border-bottom: 1px solid var(--line); vertical-align: top; }
   th {
     background: var(--navy); color: #eef3f9; font-size: 10.5px; font-weight: 700;
@@ -87,7 +137,7 @@
   table:not(.sum) tbody tr:nth-child(even) td { background: #fafbfd; }
   tr.row-hi td { background: #f8ecd8 !important; font-weight: 700; }
   tr.total td { background: var(--navy) !important; color: #fff; font-weight: 800; border-bottom: 0; }
-  .sum { width: 100%; border-collapse: collapse; font-size: 14px; }
+  .sum { width: 100%; border-collapse: collapse; font-size: 15.5px; }
   .sum td { padding: 9px 2px; border-bottom: 1px solid rgba(255,255,255,.13); background: transparent; }
   .sum tr:last-child td { border-bottom: 0; }
   .sum td.lab { color: rgba(226,234,244,.82); }
@@ -103,45 +153,60 @@
     color: var(--muted); margin: 0 0 8px;
   }
   .effect {
-    background: var(--paper); border: 1px solid var(--line); border-radius: 16px; padding: 16px 16px 14px;
+    background: var(--paper); border: 1px solid var(--line); border-radius: 16px;
+    padding: 20px 20px 18px; display: flex; flex-direction: column;
+    justify-content: space-between; height: 100%;
   }
-  .effect .n { font-size: 1.15rem; font-weight: 800; color: var(--navy); margin: 0 0 8px; }
-  .effect p { margin: 0; font-size: 13px; color: var(--ink-soft); line-height: 1.45; }
+  .effect .n {
+    font-size: clamp(1.55rem, 2.8vw, 2.15rem); font-weight: 800;
+    color: var(--navy); margin: 0 0 12px; letter-spacing: -.02em; line-height: 1.1;
+  }
+  .effect p { margin: 0 0 10px; font-size: 16.5px; color: var(--ink-soft); line-height: 1.45; }
+  .effect p:last-child { margin-bottom: 0; }
   .effect--here { border-color: var(--amber); box-shadow: 0 0 0 3px rgba(196,122,18,.15); }
   .effect--here .n { color: var(--amber); }
   .path {
-    background: var(--paper); border: 1px solid var(--line); border-radius: 14px; padding: 14px;
-    display: flex; flex-direction: column; gap: 6px;
+    background: var(--paper); border: 1px solid var(--line); border-radius: 16px;
+    padding: 18px 18px 16px;
+    display: flex; flex-direction: column; gap: 8px; height: 100%;
+    justify-content: space-between;
   }
-  .path .n { font-size: 1.45rem; font-weight: 800; color: var(--navy); }
-  .path p { margin: 0; font-size: 12.5px; color: var(--ink-soft); line-height: 1.45; }
+  .path .n {
+    font-size: clamp(2.1rem, 4.2vw, 3.1rem); font-weight: 800;
+    color: var(--navy); letter-spacing: -.03em; line-height: 1;
+  }
+  .path p { margin: 0; font-size: 15px; color: var(--ink-soft); line-height: 1.45; }
   .path .fit {
-    margin-top: auto; align-self: flex-start; font-size: 11px; font-weight: 800;
-    letter-spacing: .08em; text-transform: uppercase; padding: 4px 8px; border-radius: 999px;
+    margin-top: auto; align-self: flex-start; font-size: 13px; font-weight: 800;
+    letter-spacing: .08em; text-transform: uppercase; padding: 7px 12px; border-radius: 999px;
   }
   .path-bad .fit { background: #fde8e6; color: var(--risk); }
   .path-ok .fit { background: #d8f3ee; color: var(--teal); }
+  .path-ok .n { color: var(--teal); }
   .path-ok { border-color: #9ad9ce; }
   .quote {
-    background: var(--amber-soft); border-left: 4px solid var(--amber);
-    border-radius: 0 12px 12px 0; padding: 14px 16px; font-size: 15px; line-height: 1.45;
+    background: var(--amber-soft); border-left: 5px solid var(--amber);
+    border-radius: 0 14px 14px 0; padding: 18px 20px; font-size: 18px; line-height: 1.45;
     color: #5a3a0a; margin: 0;
   }
-  .quote .who { display: block; margin-top: 8px; font-size: 12px; font-weight: 700; color: #8a6a2a; }
+  .quote .who { display: block; margin-top: 10px; font-size: 13px; font-weight: 700; color: #8a6a2a; }
   .risk {
-    background: #fff6f4; border: 1px solid #f0c4be; border-radius: 14px; padding: 14px;
+    background: #fff6f4; border: 1px solid #f0c4be; border-radius: 16px;
+    padding: 18px 18px 16px; height: 100%;
   }
-  .risk .n { font-size: 1.3rem; font-weight: 800; color: var(--risk); }
-  .risk p { margin: 6px 0 0; font-size: 12.5px; color: var(--ink-soft); line-height: 1.45; }
+  .risk .n { font-size: clamp(1.45rem, 2.6vw, 1.95rem); font-weight: 800; color: var(--risk); letter-spacing: -.02em; }
+  .risk p { margin: 8px 0 0; font-size: 16px; color: var(--ink-soft); line-height: 1.45; }
+  .risk-row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; }
   .note {
     background: var(--amber-soft); border: 1px solid #edd9b0; border-radius: 12px;
-    padding: 12px 14px; font-size: 12.5px; color: #6f4a10; line-height: 1.55;
+    padding: 14px 16px; font-size: 14.5px; color: #6f4a10; line-height: 1.55;
   }
-  .facts { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
-  .facts li { display: flex; gap: 11px; align-items: flex-start; font-size: 14px; color: var(--ink-soft); }
+  .facts { list-style: none; margin: 0; padding: 0; display: grid; gap: 14px; }
+  .facts li { display: flex; gap: 12px; align-items: flex-start; font-size: 16.5px; color: var(--ink-soft); line-height: 1.45; }
+  .facts--room li { font-size: 16.5px; gap: 14px; }
   .facts .b {
-    flex: 0 0 auto; width: 22px; height: 22px; border-radius: 7px; background: var(--amber);
-    color: #fff; font-size: 11.5px; font-weight: 800; display: grid; place-items: center; margin-top: 1px;
+    flex: 0 0 auto; width: 26px; height: 26px; border-radius: 8px; background: var(--amber);
+    color: #fff; font-size: 13px; font-weight: 800; display: grid; place-items: center; margin-top: 1px;
   }
   .facts strong { color: var(--ink); }
   .slide--dark .facts li { color: rgba(226,234,244,.9); }
@@ -159,7 +224,7 @@
   .improve .badge::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: #f3c98a; }
   .src { margin-top: 12px; font-size: 11.5px; color: var(--muted); line-height: 1.5; }
   .slide--dark .src, .slide--title .src { color: rgba(226,234,244,.6); }
-  .chart { width: 100%; height: auto; max-height: 58vh; display: block; }
+  .chart { width: 100%; height: auto; max-height: 36vh; display: block; }
   .chart--flat { max-height: 22vh; }
   .chart--vol { max-height: 28vh; }
   .chart text { font-family: "Manrope", "Segoe UI", Arial, sans-serif; }
@@ -169,12 +234,12 @@
   .lbl { font-size: 12px; fill: #2c3a4f; font-weight: 700; }
   .val-big { font-size: 13px; fill: #142a44; font-weight: 800; }
   .d-cap { font-size: 12px; fill: rgba(226,234,244,.78); font-weight: 700; }
-  .clk-n { font-size: 13px; font-weight: 800; }
-  .clk-big { font-size: 22px; font-weight: 800; fill: #fff; }
-  .clk-sub { font-size: 12px; fill: rgba(226,234,244,.7); font-weight: 700; }
-  .strip-n { font-size: 14px; font-weight: 800; }
-  .strip-l { font-size: 10px; font-weight: 700; }
-  .strip-ev { font-size: 10.5px; font-weight: 800; fill: #c47a12; }
+  .clk-n { font-size: 16px; font-weight: 800; }
+  .clk-big { font-size: 28px; font-weight: 800; fill: #fff; }
+  .clk-sub { font-size: 14px; fill: rgba(226,234,244,.7); font-weight: 700; }
+  .strip-n { font-size: 16px; font-weight: 800; }
+  .strip-l { font-size: 11px; font-weight: 700; }
+  .strip-ev { font-size: 11.5px; font-weight: 800; fill: #c47a12; }
   .legend { display: flex; gap: 16px; flex-wrap: wrap; margin: 4px 0 8px; font-size: 12.5px; color: var(--ink-soft); }
   .legend span { display: inline-flex; align-items: center; gap: 7px; font-weight: 600; }
   .legend i { width: 13px; height: 13px; border-radius: 3px; display: inline-block; }
@@ -212,11 +277,11 @@
       <div class="eyebrow">Презентация 03 &middot; Пакет 20.09.2026 &middot; кейс IMDEV-9182</div>
       <h1 class="serif">Не экономия часов.<br>Срок, который нельзя сорвать</h1>
       <p class="lead">
-        Back-Office Settle просил увидеть XBRL в Excel до сдачи в Банк России.
-        Классика &mdash; часы и сбои. С vibe-coding обработка собрана за 14 часов:
-        весь пакет виден за 4 минуты. Задача закрыта 12 августа, за 2 рабочих дня до дедлайна июля.
+        Цитаты &mdash; из заявки бэк-офиса. Без Excel по XBRL нельзя оценить качество пакета до сдачи в Банк России.
+        Классика не помещается в 10 рабочих дней. С vibe-coding обработка собрана за 14 часов:
+        весь пакет виден за минуты, не за часы.
       </p>
-      <p class="q-who">Из заявки Карасевой Ольги, IM Back-Office Settle, 17.07.2026, приоритет High</p>
+      <p class="q-who">Karaseva, Olga &middot; IM Back-Office Settle &middot; постановка IMDEV-9182, 17.07.2026, приоритет High</p>
       <div class="q-row">
 <blockquote class="q"><span class="q-tag">Зачем</span>«Для нас это абсолютно необходимый инструмент, позволяющий оценить качество и правильность данных в форме.»</blockquote>
 <blockquote class="q"><span class="q-tag">Проблема</span>«Пакет уже ~500 МБ. Конвертер выгружает только частями: больше часа, возможны сбои. Портал Аванкор — свыше 8 часов.»</blockquote>
@@ -229,7 +294,7 @@
 <div class="kpi"><div class="kpi-num">Done</div><div class="kpi-lbl">Приёмка заказчиком</div><div class="kpi-sub">Karaseva, Olga · Closed 12.08 · приоритет High</div></div>
       </div>
       <div class="card--glass">
-<svg viewBox="0 0 1180 118" class="chart chart--flat" role="img" aria-label="Лента окна сдачи июля 2026"><text x="16" y="18" class="d-cap">Окно сдачи XBRL за июль 2026 · 10 рабочих дней</text><rect x="16.0" y="28" width="106.8" height="52" rx="8" fill="#e8edf5"/><text x="69.4" y="50" text-anchor="middle" fill="#0b1f3a" class="strip-n">1</text><text x="69.4" y="68" text-anchor="middle" fill="#0b1f3a" class="strip-l">3 авг</text><rect x="130.8" y="28" width="106.8" height="52" rx="8" fill="#e8edf5"/><text x="184.2" y="50" text-anchor="middle" fill="#0b1f3a" class="strip-n">2</text><text x="184.2" y="68" text-anchor="middle" fill="#0b1f3a" class="strip-l">4 авг</text><rect x="245.6" y="28" width="106.8" height="52" rx="8" fill="#e8edf5"/><text x="299.0" y="50" text-anchor="middle" fill="#0b1f3a" class="strip-n">3</text><text x="299.0" y="68" text-anchor="middle" fill="#0b1f3a" class="strip-l">5 авг</text><rect x="360.4" y="28" width="106.8" height="52" rx="8" fill="#e8edf5"/><text x="413.8" y="50" text-anchor="middle" fill="#0b1f3a" class="strip-n">4</text><text x="413.8" y="68" text-anchor="middle" fill="#0b1f3a" class="strip-l">6 авг</text><rect x="475.2" y="28" width="106.8" height="52" rx="8" fill="#e8edf5"/><text x="528.6" y="50" text-anchor="middle" fill="#0b1f3a" class="strip-n">5</text><text x="528.6" y="68" text-anchor="middle" fill="#0b1f3a" class="strip-l">7 авг</text><rect x="590.0" y="28" width="106.8" height="52" rx="8" fill="#e8edf5"/><text x="643.4" y="50" text-anchor="middle" fill="#0b1f3a" class="strip-n">6</text><text x="643.4" y="68" text-anchor="middle" fill="#0b1f3a" class="strip-l">10 авг</text><rect x="704.8" y="28" width="106.8" height="52" rx="8" fill="#e8edf5"/><text x="758.2" y="50" text-anchor="middle" fill="#0b1f3a" class="strip-n">7</text><text x="758.2" y="68" text-anchor="middle" fill="#0b1f3a" class="strip-l">11 авг</text><rect x="819.6" y="28" width="106.8" height="52" rx="8" fill="#0e7c6b"/><text x="873.0" y="50" text-anchor="middle" fill="#fff" class="strip-n">8</text><text x="873.0" y="68" text-anchor="middle" fill="#fff" class="strip-l">12 авг</text><text x="873.0" y="102" text-anchor="middle" class="strip-ev">задача закрыта</text><rect x="934.4" y="28" width="106.8" height="52" rx="8" fill="#e8edf5"/><text x="987.8" y="50" text-anchor="middle" fill="#0b1f3a" class="strip-n">9</text><text x="987.8" y="68" text-anchor="middle" fill="#0b1f3a" class="strip-l">13 авг</text><rect x="1049.2" y="28" width="106.8" height="52" rx="8" fill="#c47a12"/><text x="1102.6" y="50" text-anchor="middle" fill="#fff" class="strip-n">10</text><text x="1102.6" y="68" text-anchor="middle" fill="#fff" class="strip-l">14 авг</text><text x="1102.6" y="102" text-anchor="middle" class="strip-ev">дедлайн ЦБ</text></svg>
+<svg viewBox="0 0 1180 132" class="chart chart--flat" role="img" aria-label="Лента окна сдачи июля 2026"><text x="16" y="18" class="d-cap">Окно сдачи XBRL за июль 2026 · 10 рабочих дней</text><rect x="16.0" y="28" width="106.8" height="52" rx="8" fill="#e8edf5"/><text x="69.4" y="50" text-anchor="middle" fill="#0b1f3a" class="strip-n">1</text><text x="69.4" y="68" text-anchor="middle" fill="#0b1f3a" class="strip-l">3 авг</text><rect x="130.8" y="28" width="106.8" height="52" rx="8" fill="#e8edf5"/><text x="184.2" y="50" text-anchor="middle" fill="#0b1f3a" class="strip-n">2</text><text x="184.2" y="68" text-anchor="middle" fill="#0b1f3a" class="strip-l">4 авг</text><rect x="245.6" y="28" width="106.8" height="52" rx="8" fill="#e8edf5"/><text x="299.0" y="50" text-anchor="middle" fill="#0b1f3a" class="strip-n">3</text><text x="299.0" y="68" text-anchor="middle" fill="#0b1f3a" class="strip-l">5 авг</text><rect x="360.4" y="28" width="106.8" height="52" rx="8" fill="#e8edf5"/><text x="413.8" y="50" text-anchor="middle" fill="#0b1f3a" class="strip-n">4</text><text x="413.8" y="68" text-anchor="middle" fill="#0b1f3a" class="strip-l">6 авг</text><rect x="475.2" y="28" width="106.8" height="52" rx="8" fill="#e8edf5"/><text x="528.6" y="50" text-anchor="middle" fill="#0b1f3a" class="strip-n">5</text><text x="528.6" y="68" text-anchor="middle" fill="#0b1f3a" class="strip-l">7 авг</text><rect x="590.0" y="28" width="106.8" height="52" rx="8" fill="#e8edf5"/><text x="643.4" y="50" text-anchor="middle" fill="#0b1f3a" class="strip-n">6</text><text x="643.4" y="68" text-anchor="middle" fill="#0b1f3a" class="strip-l">10 авг</text><rect x="704.8" y="28" width="106.8" height="52" rx="8" fill="#e8edf5"/><text x="758.2" y="50" text-anchor="middle" fill="#0b1f3a" class="strip-n">7</text><text x="758.2" y="68" text-anchor="middle" fill="#0b1f3a" class="strip-l">11 авг</text><rect x="819.6" y="28" width="106.8" height="52" rx="8" fill="#0e7c6b"/><text x="873.0" y="50" text-anchor="middle" fill="#fff" class="strip-n">8</text><text x="873.0" y="68" text-anchor="middle" fill="#fff" class="strip-l">12 авг</text><text x="873.0" y="112" text-anchor="middle" class="strip-ev">задача закрыта</text><rect x="934.4" y="28" width="106.8" height="52" rx="8" fill="#e8edf5"/><text x="987.8" y="50" text-anchor="middle" fill="#0b1f3a" class="strip-n">9</text><text x="987.8" y="68" text-anchor="middle" fill="#0b1f3a" class="strip-l">13 авг</text><rect x="1049.2" y="28" width="106.8" height="52" rx="8" fill="#c47a12"/><text x="1102.6" y="50" text-anchor="middle" fill="#fff" class="strip-n">10</text><text x="1102.6" y="68" text-anchor="middle" fill="#fff" class="strip-l">14 авг</text><text x="1102.6" y="112" text-anchor="middle" class="strip-ev">дедлайн ЦБ</text></svg>
       </div>
       <div class="improve">
         <span class="lbl2">Вид улучшения</span>
@@ -237,7 +302,7 @@
       </div>
       <div class="src">
         Это не презентация 01 (счета вендора) и не 02 (часы команды). Здесь цена вопроса &mdash;
-        окно сдачи и качество пакета. 14 ч этой задачи уже внутри выборки 02, повторно не считаем.
+        окно сдачи и качество пакета. 14 ч уже внутри 1 065 ч презентации 02, повторно не считаем.
       </div>
     </section>
 
@@ -269,23 +334,22 @@
         <div class="card">
           <p class="h4">Что смотрим вместо млн ₽</p>
           <p style="margin:0;font-size:13.5px;color:var(--ink-soft);line-height:1.5">
-            Цитаты постановки, ленту из 10 рабочих дней, карточку штрафа как <em>риска</em>
+            Ленту из 10 рабочих дней, карточку штрафа как <em>риска</em>, цитату бэк-офиса
             и сравнение путей: портал / конвертер / вендор / vibe.
           </p>
         </div>
         <div class="card">
-          <p class="h4">Один кейс, не портфель</p>
+          <p class="h4">Один кейс и приёмка</p>
           <p style="margin:0;font-size:13.5px;color:var(--ink-soft);line-height:1.5">
-            IMDEV-9182, контур ДУ, таксономия 7.1. Разработка 14 ч, код 5 332 строк.
-            XBRL в Excel: 4 мин на эталоне июня. Следующий месяц &mdash; то же окно.
+            IMDEV-9182, контур ДУ. Постановщик &mdash; Карасева Ольга (Back-Office Settle).
+            Закрыто 12.08 с резолюцией Done, приоритет High. Следующий месяц &mdash; то же окно, тот же инструмент.
           </p>
         </div>
         <div class="card">
-          <p class="h4">Приёмка заказчиком</p>
+          <p class="h4">Чего нет на слайдах</p>
           <p style="margin:0;font-size:13.5px;color:var(--ink-soft);line-height:1.5">
-            Постановщик &mdash; Карасева Ольга (IM Back-Office Settle), приоритет High.
-            Задача Closed, резолюция Done 12.08.2026. Отдельного текста комментария приёмки
-            в выгрузке Jira нет: зафиксированы постановщик и закрытие Done.
+            Нет сценариев +40/+80%, нет ч/мес и млн/год, нет сложения с 1,2–3,9 млн
+            презентаций 01 и 02.
           </p>
         </div>
       </div>
@@ -299,12 +363,12 @@
     <section class="slide">
       <div class="eyebrow">Регуляторные часы</div>
       <h2>10 рабочих дней &mdash; это не метафора, а точка входа XBRL</h2>
-      <div class="grid-clock">
-        <div class="card"><svg viewBox="0 0 340 340" class="chart" role="img" aria-label="Окно сдачи 10 рабочих дней"><path d="M 173.6 22.0 A 148 148 0 0 1 254.0 48.2 L 223.4 92.6 A 94 94 0 0 0 172.3 76.0 Z" fill="#163a66"/><text x="207.4" y="58.9" text-anchor="middle" class="clk-n" fill="#fff">1</text><path d="M 259.9 52.4 A 148 148 0 0 1 309.6 120.8 L 258.7 138.8 A 94 94 0 0 0 227.1 95.3 Z" fill="#163a66"/><text x="267.9" y="102.9" text-anchor="middle" class="clk-n" fill="#fff">2</text><path d="M 311.8 127.7 A 148 148 0 0 1 311.8 212.3 L 260.1 196.9 A 94 94 0 0 0 260.1 143.1 Z" fill="#163a66"/><text x="291.0" y="174.0" text-anchor="middle" class="clk-n" fill="#fff">3</text><path d="M 309.6 219.2 A 148 148 0 0 1 259.9 287.6 L 227.1 244.7 A 94 94 0 0 0 258.7 201.2 Z" fill="#163a66"/><text x="267.9" y="245.1" text-anchor="middle" class="clk-n" fill="#fff">4</text><path d="M 254.0 291.8 A 148 148 0 0 1 173.6 318.0 L 172.3 264.0 A 94 94 0 0 0 223.4 247.4 Z" fill="#163a66"/><text x="207.4" y="289.1" text-anchor="middle" class="clk-n" fill="#fff">5</text><path d="M 166.4 318.0 A 148 148 0 0 1 86.0 291.8 L 116.6 247.4 A 94 94 0 0 0 167.7 264.0 Z" fill="#163a66"/><text x="132.6" y="289.1" text-anchor="middle" class="clk-n" fill="#fff">6</text><path d="M 80.1 287.6 A 148 148 0 0 1 30.4 219.2 L 81.3 201.2 A 94 94 0 0 0 112.9 244.7 Z" fill="#163a66"/><text x="72.1" y="245.1" text-anchor="middle" class="clk-n" fill="#fff">7</text><path d="M 28.2 212.3 A 148 148 0 0 1 28.2 127.7 L 79.9 143.1 A 94 94 0 0 0 79.9 196.9 Z" fill="#0e7c6b"/><text x="49.0" y="174.0" text-anchor="middle" class="clk-n" fill="#fff">8</text><path d="M 30.4 120.8 A 148 148 0 0 1 80.1 52.4 L 112.9 95.3 A 94 94 0 0 0 81.3 138.8 Z" fill="#d7dde8"/><text x="72.1" y="102.9" text-anchor="middle" class="clk-n" fill="#5a6578">9</text><path d="M 86.0 48.2 A 148 148 0 0 1 166.4 22.0 L 167.7 76.0 A 94 94 0 0 0 116.6 92.6 Z" fill="#c47a12"/><text x="132.6" y="58.9" text-anchor="middle" class="clk-n" fill="#fff">10</text><circle cx="170" cy="170" r="84" fill="#0b1f3a"/><text x="170" y="162" text-anchor="middle" class="clk-big">день 8</text><text x="170" y="186" text-anchor="middle" class="clk-sub">из 10 рабочих</text></svg></div>
-        <div>
-          <div class="card">
+      <div class="fill">
+        <div class="grid-clock">
+          <div class="card clock-card"><svg viewBox="0 0 340 340" class="chart" role="img" aria-label="Окно сдачи 10 рабочих дней"><path d="M 173.6 22.0 A 148 148 0 0 1 254.0 48.2 L 223.4 92.6 A 94 94 0 0 0 172.3 76.0 Z" fill="#163a66"/><text x="207.4" y="58.9" text-anchor="middle" class="clk-n" fill="#fff">1</text><path d="M 259.9 52.4 A 148 148 0 0 1 309.6 120.8 L 258.7 138.8 A 94 94 0 0 0 227.1 95.3 Z" fill="#163a66"/><text x="267.9" y="102.9" text-anchor="middle" class="clk-n" fill="#fff">2</text><path d="M 311.8 127.7 A 148 148 0 0 1 311.8 212.3 L 260.1 196.9 A 94 94 0 0 0 260.1 143.1 Z" fill="#163a66"/><text x="291.0" y="174.0" text-anchor="middle" class="clk-n" fill="#fff">3</text><path d="M 309.6 219.2 A 148 148 0 0 1 259.9 287.6 L 227.1 244.7 A 94 94 0 0 0 258.7 201.2 Z" fill="#163a66"/><text x="267.9" y="245.1" text-anchor="middle" class="clk-n" fill="#fff">4</text><path d="M 254.0 291.8 A 148 148 0 0 1 173.6 318.0 L 172.3 264.0 A 94 94 0 0 0 223.4 247.4 Z" fill="#163a66"/><text x="207.4" y="289.1" text-anchor="middle" class="clk-n" fill="#fff">5</text><path d="M 166.4 318.0 A 148 148 0 0 1 86.0 291.8 L 116.6 247.4 A 94 94 0 0 0 167.7 264.0 Z" fill="#163a66"/><text x="132.6" y="289.1" text-anchor="middle" class="clk-n" fill="#fff">6</text><path d="M 80.1 287.6 A 148 148 0 0 1 30.4 219.2 L 81.3 201.2 A 94 94 0 0 0 112.9 244.7 Z" fill="#163a66"/><text x="72.1" y="245.1" text-anchor="middle" class="clk-n" fill="#fff">7</text><path d="M 28.2 212.3 A 148 148 0 0 1 28.2 127.7 L 79.9 143.1 A 94 94 0 0 0 79.9 196.9 Z" fill="#0e7c6b"/><text x="49.0" y="174.0" text-anchor="middle" class="clk-n" fill="#fff">8</text><path d="M 30.4 120.8 A 148 148 0 0 1 80.1 52.4 L 112.9 95.3 A 94 94 0 0 0 81.3 138.8 Z" fill="#d7dde8"/><text x="72.1" y="102.9" text-anchor="middle" class="clk-n" fill="#5a6578">9</text><path d="M 86.0 48.2 A 148 148 0 0 1 166.4 22.0 L 167.7 76.0 A 94 94 0 0 0 116.6 92.6 Z" fill="#c47a12"/><text x="132.6" y="58.9" text-anchor="middle" class="clk-n" fill="#fff">10</text><circle cx="170" cy="170" r="84" fill="#0b1f3a"/><text x="170" y="162" text-anchor="middle" class="clk-big">день 8</text><text x="170" y="186" text-anchor="middle" class="clk-sub">из 10 рабочих</text></svg></div>
+          <div class="card" style="height:100%">
             <p class="h4">Что тикает</p>
-            <ul class="facts">
+            <ul class="facts facts--room">
               <li><span class="b">1</span><span><strong>НСО ПУРЦБ, таксономия 7.1.</strong>
                 Точка входа <code>ep_nso_purcb_*_10rd</code>: пакет в Банк России в течение 10 рабочих дней
                 после отчетной даты. Окно повторяется каждый месяц.</span></li>
@@ -312,26 +376,32 @@
                 дедлайн 14 августа. Задача закрыта 12 августа &mdash; 8-й рабочий день окна,
                 2 дня запаса на сдачу и правки.</span></li>
               <li><span class="b">3</span><span><strong>Заявка 17 июля</strong> пришла уже после
-                июньского дедлайна (14 июля). Инструмент нужен был к июльскому окну, не «когда-нибудь в бэклоге».</span></li>
+                июньского дедлайна (14 июля). Инструмент нужен был к июльскому окну,
+                не «когда-нибудь в бэклоге».</span></li>
+              <li><span class="b">4</span><span><strong>Штраф &mdash; мера риска, не факт выплаты.</strong>
+                Без визуализации пакета сдавать вслепую нельзя. Бизнес просил именно контроль качества
+                до отправки в ЦБ.</span></li>
             </ul>
           </div>
-          <div class="grid-2" style="margin-top:12px">
-            <div class="risk">
-              <p class="h4">Юридическое лицо</p>
-              <div class="n">500–700 тыс. ₽</div>
-              <p>ст. 19.7.3 КоАП РФ: непредставление, просрочка или недостоверность информации в Банк России.</p>
-            </div>
-            <div class="risk">
-              <p class="h4">Должностное лицо</p>
-              <div class="n">20–30 тыс. ₽</div>
-              <p>или дисквалификация до 1 года. Плюс отклонение пакета на техническом контроле и повтор в том же окне.</p>
-            </div>
+        </div>
+        <div class="card card--navy"><svg viewBox="0 0 1180 132" class="chart chart--flat" role="img" aria-label="Лента окна сдачи июля 2026"><text x="16" y="18" class="d-cap">Окно сдачи XBRL за июль 2026 · 10 рабочих дней</text><rect x="16.0" y="28" width="106.8" height="52" rx="8" fill="#e8edf5"/><text x="69.4" y="50" text-anchor="middle" fill="#0b1f3a" class="strip-n">1</text><text x="69.4" y="68" text-anchor="middle" fill="#0b1f3a" class="strip-l">3 авг</text><rect x="130.8" y="28" width="106.8" height="52" rx="8" fill="#e8edf5"/><text x="184.2" y="50" text-anchor="middle" fill="#0b1f3a" class="strip-n">2</text><text x="184.2" y="68" text-anchor="middle" fill="#0b1f3a" class="strip-l">4 авг</text><rect x="245.6" y="28" width="106.8" height="52" rx="8" fill="#e8edf5"/><text x="299.0" y="50" text-anchor="middle" fill="#0b1f3a" class="strip-n">3</text><text x="299.0" y="68" text-anchor="middle" fill="#0b1f3a" class="strip-l">5 авг</text><rect x="360.4" y="28" width="106.8" height="52" rx="8" fill="#e8edf5"/><text x="413.8" y="50" text-anchor="middle" fill="#0b1f3a" class="strip-n">4</text><text x="413.8" y="68" text-anchor="middle" fill="#0b1f3a" class="strip-l">6 авг</text><rect x="475.2" y="28" width="106.8" height="52" rx="8" fill="#e8edf5"/><text x="528.6" y="50" text-anchor="middle" fill="#0b1f3a" class="strip-n">5</text><text x="528.6" y="68" text-anchor="middle" fill="#0b1f3a" class="strip-l">7 авг</text><rect x="590.0" y="28" width="106.8" height="52" rx="8" fill="#e8edf5"/><text x="643.4" y="50" text-anchor="middle" fill="#0b1f3a" class="strip-n">6</text><text x="643.4" y="68" text-anchor="middle" fill="#0b1f3a" class="strip-l">10 авг</text><rect x="704.8" y="28" width="106.8" height="52" rx="8" fill="#e8edf5"/><text x="758.2" y="50" text-anchor="middle" fill="#0b1f3a" class="strip-n">7</text><text x="758.2" y="68" text-anchor="middle" fill="#0b1f3a" class="strip-l">11 авг</text><rect x="819.6" y="28" width="106.8" height="52" rx="8" fill="#0e7c6b"/><text x="873.0" y="50" text-anchor="middle" fill="#fff" class="strip-n">8</text><text x="873.0" y="68" text-anchor="middle" fill="#fff" class="strip-l">12 авг</text><text x="873.0" y="112" text-anchor="middle" class="strip-ev">задача закрыта</text><rect x="934.4" y="28" width="106.8" height="52" rx="8" fill="#e8edf5"/><text x="987.8" y="50" text-anchor="middle" fill="#0b1f3a" class="strip-n">9</text><text x="987.8" y="68" text-anchor="middle" fill="#0b1f3a" class="strip-l">13 авг</text><rect x="1049.2" y="28" width="106.8" height="52" rx="8" fill="#c47a12"/><text x="1102.6" y="50" text-anchor="middle" fill="#fff" class="strip-n">10</text><text x="1102.6" y="68" text-anchor="middle" fill="#fff" class="strip-l">14 авг</text><text x="1102.6" y="112" text-anchor="middle" class="strip-ev">дедлайн ЦБ</text></svg></div>
+        <div class="risk-row">
+          <div class="risk">
+            <p class="h4">Юридическое лицо</p>
+            <div class="n">500-700 тыс. &#8381;</div>
+            <p>ст. 19.7.3 КоАП РФ: непредставление, просрочка или недостоверность информации в Банк России.</p>
+          </div>
+          <div class="risk">
+            <p class="h4">Должностное лицо</p>
+            <div class="n">20-30 тыс. &#8381;</div>
+            <p>или дисквалификация до 1 года. Персональная ответственность на окне сдачи.</p>
+          </div>
+          <div class="risk">
+            <p class="h4">Техконтроль ЦБ</p>
+            <div class="n">отклонение пакета</div>
+            <p>Повторная сдача в том же 10-дневном окне. Надзорный и репутационный след.</p>
           </div>
         </div>
-      </div>
-      <div class="src">
-        Штраф &mdash; мера риска, не утверждение, что его выписали бы. Бизнес просил инструмент контроля качества,
-        без которого сдавать пакет вслепую нельзя.
       </div>
     </section>
 
@@ -342,21 +412,21 @@
         «Для нас это абсолютно необходимый инструмент, позволяющий оценить качество и правильность данных в форме.»
         <span class="who">Karaseva, Olga / IM Back-Office Settle, постановка IMDEV-9182, приоритет High</span>
       </blockquote>
-      <div class="grid-4" style="margin-top:16px">
-<div class="path path-bad"><p class="h4">Портал Аванкор XBRL</p><div class="n">&gt; 8 ч</div><p>загрузка и проверка пакета. Как инструмент визуализации непригоден.</p><span class="fit">не в окне</span></div>
-<div class="path path-bad"><p class="h4">Внешний XBRL-конвертер</p><div class="n">&gt; 1 ч</div><p>только частями, возможны сбои. Чужое ПО, доработать нельзя.</p><span class="fit">не в окне</span></div>
-<div class="path path-bad"><p class="h4">Классическая разработка / вендор</p><div class="n">недели</div><p>парсер таксономии 7.1 и 77 таблиц не помещается в окно 10 дней.</p><span class="fit">не в окне</span></div>
-<div class="path path-ok"><p class="h4">Vibe-coding, обработка 1С</p><div class="n">4 мин</div><p>весь пакет одним запуском. Эталон июня 2026: 4 мин 3 с (v1.4.10, режим таксономии).</p><span class="fit">в окне</span></div>
-      </div>
-      <div class="note" style="margin-top:16px">
-        <strong>Почему классика не в окне.</strong> Портал Аванкор съедает больше рабочего дня на одну загрузку
-        и не дает Excel. Конвертер режет форму 431 на части, идет больше часа и сбоит &mdash; чужое ПО.
-        Вендор на парсер таксономии 7.1 и 77 таблиц не встанет в 10 дней. Vibe-coding собрал обработку 1С,
-        которая выгружает <em>весь</em> пакет одним запуском.
-      </div>
-      <div class="src">
-        Исходная заявка просила форму 0420431. Сделали весь пакет (78 листов): иначе контроль качества
-        снова остался бы «частями». Скорость на эталоне июня: 4 мин 3 с vs конвертер &gt;1 ч и портал &gt;8 ч.
+      <div class="fill" style="margin-top:16px">
+        <div class="grid-4">
+<div class="path path-bad"><p class="h4">Портал Аванкор XBRL</p><div class="n">&gt; 8 ч</div><p>загрузка и проверка пакета. Как инструмент визуализации непригоден.</p><p>Excel не дает. Больше рабочего дня на одну загрузку.</p><span class="fit">не в окне</span></div>
+<div class="path path-bad"><p class="h4">Внешний XBRL-конвертер</p><div class="n">&gt; 1 ч</div><p>только частями, возможны сбои. Чужое ПО, доработать нельзя.</p><p>Форму 431 режет на части. Критерий ТЗ: минуты, не часы.</p><span class="fit">не в окне</span></div>
+<div class="path path-bad"><p class="h4">Классическая разработка / вендор</p><div class="n">недели</div><p>парсер таксономии 7.1 и 77 таблиц не помещается в окно 10 дней.</p><p>Это не «открыть файл», а написать парсер 77 таблиц.</p><span class="fit">не в окне</span></div>
+<div class="path path-ok"><p class="h4">Vibe-coding, обработка 1С</p><div class="n">4 мин</div><p>весь пакет одним запуском. Эталон июня 2026: 4 мин 3 с (v1.4.10, режим таксономии).</p><p>78 листов, 214 904 строки. Заявку на 431-ю закрыли всем пакетом.</p><span class="fit">в окне</span></div>
+        </div>
+        <div class="card chart-box"><svg viewBox="0 0 1100 420" class="chart chart--vol" role="img" aria-label="Пути визуализации XBRL"><text x="268" y="22" class="ax-title">Время, чтобы увидеть пакет (не разработка)</text><text x="254" y="68.0" class="lbl" text-anchor="end">Портал Аванкор XBRL</text><rect x="268" y="46.0" width="760.0" height="34" rx="7" fill="#c47a12"/><text x="1040.0" y="70.0" class="val-big" fill="#c47a12">&gt; 8 ч</text><text x="254" y="146.0" class="lbl" text-anchor="end">Внешний XBRL-конвертер</text><rect x="268" y="124.0" width="95.0" height="34" rx="7" fill="#163a66"/><text x="375.0" y="148.0" class="val-big" fill="#163a66">&gt; 1 ч</text><text x="254" y="224.0" class="lbl" text-anchor="end">Vibe-coding, обработка 1С</text><rect x="268" y="202.0" width="22.0" height="34" rx="7" fill="#0e7c6b"/><text x="302.0" y="226.0" class="val-big" fill="#0e7c6b">4 мин</text></svg></div>
+        <div class="note">
+          <strong>Почему классика не в окне.</strong> Портал Аванкор съедает больше рабочего дня на одну загрузку
+          и не дает Excel. Конвертер режет форму 431 на части, идет больше часа и сбоит &mdash; чужое ПО.
+          Вендор на парсер таксономии 7.1 и 77 таблиц не встанет в 10 дней. Vibe-coding собрал обработку 1С,
+          которая выгружает <em>весь</em> пакет одним запуском: эталон июня &mdash; 4 мин 3 с vs конвертер &gt;1 ч
+          и портал &gt;8 ч.
+        </div>
       </div>
     </section>
 
@@ -367,8 +437,9 @@
         <span><i style="background:#c47a12"></i>0420431, тяжёлая форма</span>
         <span><i style="background:#163a66"></i>прочие формы пакета</span>
       </div>
-      <div class="card"><svg viewBox="0 0 1100 250" class="chart" role="img" aria-label="Строки пакета по формам"><text x="90" y="20" class="ax-title">Строки данных в Excel, июнь 2026 · всего 214 904</text><rect x="127.2" y="32.0" width="90.0" height="174.0" rx="4" fill="#c47a12"/><text x="172.2" y="54.0" class="val-big" text-anchor="middle" fill="#fff">213 279</text><text x="172.2" y="222" class="lbl" text-anchor="middle">0420431</text><text x="172.2" y="236" class="ax ax-dim" text-anchor="middle">26 л.</text><rect x="291.5" y="205.1" width="90.0" height="2.0" rx="4" fill="#163a66"/><text x="336.5" y="197.1" class="val-big" text-anchor="middle">1 042</text><text x="336.5" y="222" class="lbl" text-anchor="middle">0420415</text><text x="336.5" y="236" class="ax ax-dim" text-anchor="middle">12 л.</text><rect x="455.8" y="205.6" width="90.0" height="2.0" rx="4" fill="#163a66"/><text x="500.8" y="197.6" class="val-big" text-anchor="middle">550</text><text x="500.8" y="222" class="lbl" text-anchor="middle">0420459</text><text x="500.8" y="236" class="ax ax-dim" text-anchor="middle">3 л.</text><rect x="620.2" y="206.0" width="90.0" height="2.0" rx="4" fill="#163a66"/><text x="665.2" y="198.0" class="val-big" text-anchor="middle">16</text><text x="665.2" y="222" class="lbl" text-anchor="middle">прочее</text><text x="665.2" y="236" class="ax ax-dim" text-anchor="middle">7 л.</text><rect x="784.5" y="206.0" width="90.0" height="2.0" rx="4" fill="#163a66"/><text x="829.5" y="198.0" class="val-big" text-anchor="middle">13</text><text x="829.5" y="222" class="lbl" text-anchor="middle">0420437</text><text x="829.5" y="236" class="ax ax-dim" text-anchor="middle">2 л.</text><rect x="948.8" y="206.0" width="90.0" height="2.0" rx="4" fill="#163a66"/><text x="993.8" y="198.0" class="val-big" text-anchor="middle">4</text><text x="993.8" y="222" class="lbl" text-anchor="middle">0420414</text><text x="993.8" y="236" class="ax ax-dim" text-anchor="middle">2 л.</text></svg></div>
-      <div class="grid-2" style="margin-top:12px">
+      <div class="fill">
+      <div class="card chart-box"><svg viewBox="0 0 1100 380" class="chart" role="img" aria-label="Строки пакета по формам"><text x="90" y="20" class="ax-title">Строки данных в Excel, июнь 2026 · всего 214 904</text><rect x="127.2" y="32.0" width="90.0" height="304.0" rx="4" fill="#c47a12"/><text x="172.2" y="54.0" class="val-big" text-anchor="middle" fill="#fff">213 279</text><text x="172.2" y="352" class="lbl" text-anchor="middle">0420431</text><text x="172.2" y="366" class="ax ax-dim" text-anchor="middle">26 л.</text><rect x="291.5" y="334.5" width="90.0" height="2.0" rx="4" fill="#163a66"/><text x="336.5" y="326.5" class="val-big" text-anchor="middle">1 042</text><text x="336.5" y="352" class="lbl" text-anchor="middle">0420415</text><text x="336.5" y="366" class="ax ax-dim" text-anchor="middle">12 л.</text><rect x="455.8" y="335.2" width="90.0" height="2.0" rx="4" fill="#163a66"/><text x="500.8" y="327.2" class="val-big" text-anchor="middle">550</text><text x="500.8" y="352" class="lbl" text-anchor="middle">0420459</text><text x="500.8" y="366" class="ax ax-dim" text-anchor="middle">3 л.</text><rect x="620.2" y="336.0" width="90.0" height="2.0" rx="4" fill="#163a66"/><text x="665.2" y="328.0" class="val-big" text-anchor="middle">16</text><text x="665.2" y="352" class="lbl" text-anchor="middle">прочее</text><text x="665.2" y="366" class="ax ax-dim" text-anchor="middle">7 л.</text><rect x="784.5" y="336.0" width="90.0" height="2.0" rx="4" fill="#163a66"/><text x="829.5" y="328.0" class="val-big" text-anchor="middle">13</text><text x="829.5" y="352" class="lbl" text-anchor="middle">0420437</text><text x="829.5" y="366" class="ax ax-dim" text-anchor="middle">2 л.</text><rect x="948.8" y="336.0" width="90.0" height="2.0" rx="4" fill="#163a66"/><text x="993.8" y="328.0" class="val-big" text-anchor="middle">4</text><text x="993.8" y="352" class="lbl" text-anchor="middle">0420414</text><text x="993.8" y="366" class="ax ax-dim" text-anchor="middle">2 л.</text></svg></div>
+      <div class="grid-2">
         <div class="card">
           <table>
             <thead><tr><th>Форма</th><th class="n">Листов</th><th class="n">Строк</th><th class="n">Доля</th></tr></thead>
@@ -392,10 +463,11 @@
             <li><span class="b">2</span><span><strong>Пакеты «уже ~500 МБ»</strong> в постановке.
               Июньский тестовый ZIP &mdash; эталон состава: 77 таблиц + оглавление.</span></li>
             <li><span class="b">3</span><span><strong>Скорость:</strong> эталон июня &mdash; весь пакет за 4 мин 3 с
-              (v1.4.10, режим таксономии). Январский меньший пакет &mdash; 29 с. Было: конвертер &gt;1 ч частями,
-              портал &gt;8 ч.</span></li>
+              (78 листов, 214 904 строк). Январский меньший пакет &mdash; 29 с.
+              Было: конвертер &gt;1 ч частями, портал &gt;8 ч.</span></li>
           </ul>
         </div>
+      </div>
       </div>
     </section>
 
@@ -407,7 +479,7 @@
         поймать сбой, поправить, повторить. Классикой этот цикл не влезает в окно сдачи.
       </p>
       <div class="grid-2">
-        <div class="card"><svg viewBox="0 0 1100 320" class="chart" role="img" aria-label="Пути визуализации XBRL"><text x="268" y="22" class="ax-title">Время, чтобы увидеть пакет (не разработка)</text><text x="254" y="68.0" class="lbl" text-anchor="end">Портал Аванкор XBRL</text><rect x="268" y="46.0" width="760.0" height="34" rx="7" fill="#c47a12"/><text x="1040.0" y="70.0" class="val-big" fill="#c47a12">&gt; 8 ч</text><text x="254" y="146.0" class="lbl" text-anchor="end">Внешний XBRL-конвертер</text><rect x="268" y="124.0" width="95.0" height="34" rx="7" fill="#163a66"/><text x="375.0" y="148.0" class="val-big" fill="#163a66">&gt; 1 ч</text><text x="254" y="224.0" class="lbl" text-anchor="end">Vibe-coding, обработка 1С</text><rect x="268" y="202.0" width="22.0" height="34" rx="7" fill="#0e7c6b"/><text x="302.0" y="226.0" class="val-big" fill="#0e7c6b">4 мин</text></svg></div>
+        <div class="card chart-box"><svg viewBox="0 0 1100 320" class="chart chart--vol" role="img" aria-label="Пути визуализации XBRL"><text x="268" y="22" class="ax-title">Время, чтобы увидеть пакет (не разработка)</text><text x="254" y="68.0" class="lbl" text-anchor="end">Портал Аванкор XBRL</text><rect x="268" y="46.0" width="760.0" height="34" rx="7" fill="#c47a12"/><text x="1040.0" y="70.0" class="val-big" fill="#c47a12">&gt; 8 ч</text><text x="254" y="146.0" class="lbl" text-anchor="end">Внешний XBRL-конвертер</text><rect x="268" y="124.0" width="95.0" height="34" rx="7" fill="#163a66"/><text x="375.0" y="148.0" class="val-big" fill="#163a66">&gt; 1 ч</text><text x="254" y="224.0" class="lbl" text-anchor="end">Vibe-coding, обработка 1С</text><rect x="268" y="202.0" width="22.0" height="34" rx="7" fill="#0e7c6b"/><text x="302.0" y="226.0" class="val-big" fill="#0e7c6b">4 мин</text></svg></div>
         <div class="card">
           <p class="h4">Цикл, который поместился</p>
           <ul class="facts">
@@ -415,25 +487,26 @@
               Нужен Excel для контроля качества, не замена сдачи в ЦБ.</span></li>
             <li><span class="b">2</span><span><strong>Итерации на живых пакетах</strong> (январь, апрель, июнь, июль).
               Версия обработки 1.4.10 &mdash; это не «написал и забыл», а дожим до устойчивого прогона.</span></li>
-            <li><span class="b">3</span><span><strong>12 августа, 14 ч Time Sheet.</strong>
-              Обработка в 1С: 5 332 строк, только платформа, весь пакет одним запуском.
-              Постановщик Карасева: Closed / Done.</span></li>
-            <li><span class="b">4</span><span><strong>14 августа</strong> &mdash; дедлайн июля.
-              2 рабочих дня остаются на сдачу и правки, а не на изобретение конвертера.</span></li>
+            <li><span class="b">3</span><span><strong>12 августа, 14 ч Time Sheet, 5 332 строк.</strong>
+              Обработка в 1С, весь пакет одним запуском. Конвертация эталона июня &mdash; 4 мин 3 с.</span></li>
+            <li><span class="b">4</span><span><strong>Приёмка Карасевой.</strong> Она постановщик заявки (приоритет High).
+              Задача Closed / Done 12.08.2026. Отдельного текста комментария приёмки в выгрузке Jira нет &mdash;
+              зафиксированы постановщик, резолюция Done и закрытие.</span></li>
           </ul>
         </div>
       </div>
+      </div>
       <div class="src">
         5 332 строк модуля объекта &mdash; парсер instance + таксономия 7.1 + XLSX.
-        Разработка отмечена в коде как выполненная с Cursor. 14 ч &mdash; факт учёта.
-        Конвертация эталона июня: 4 мин 3 с на весь пакет.
+        Разработка отмечена в коде как выполненная с Cursor. 14 ч &mdash; факт учёта, не оценка.
       </div>
     </section>
 
     <section class="slide slide--dark">
       <div class="eyebrow">Выводы</div>
       <h2 class="serif" style="font-size:clamp(1.7rem,3.2vw,2.5rem)">Что это значит для компании</h2>
-      <div class="grid-2" style="margin-top:8px">
+      <div class="fill">
+      <div class="grid-2">
         <ul class="facts">
           <li><span class="b">1</span><span><strong>Окно не сдвинуть.</strong> 10 рабочих дней повторяются
             каждый месяц. Инструмент остаётся: следующий пакет не ждёт новую разработку.</span></li>
@@ -454,20 +527,19 @@
               <tr><td class="lab">Окно июля</td><td class="v">31.07 &rarr; 14.08</td></tr>
               <tr><td class="lab">Закрыто</td><td class="v v-save">12.08 · день 8 из 10</td></tr>
               <tr><td class="lab">Факт часов</td><td class="v v-fact">14 ч · 5 332 строк</td></tr>
-              <tr><td class="lab">XBRL в Excel</td>
-                  <td class="v v-save">4 мин<span class="v-ex">эталон июня · 78 листов · 214 904 строк</span></td></tr>
-              <tr><td class="lab">Приёмка</td>
-                  <td class="v">Карасева · Done<span class="v-ex">постановщик, Closed 12.08, приоритет High</span></td></tr>
+              <tr><td class="lab">XBRL &rarr; Excel</td><td class="v v-save">4 мин<span class="v-ex">эталон июня, весь пакет</span></td></tr>
+              <tr><td class="lab">Приёмка</td><td class="v">Карасева · Done<span class="v-ex">постановщик, Closed 12.08, High</span></td></tr>
             </tbody>
           </table>
         </div>
+      </div>
       </div>
       <div class="improve">
         <span class="lbl2">Вид улучшения</span>
         <span class="badge">Снижение регуляторного риска / дедлайн</span>
       </div>
       <div class="src">
-        Источники: постановка IMDEV-9182 (Карасева), Time Sheet, эталон июня 2026 (4 мин 3 с),
+        Источники: постановка IMDEV-9182 (Карасева), Time Sheet, эталон июня 2026 (замер конвертации),
         разъяснения ЦБ по точкам входа НСО ПУРЦБ, ст. 19.7.3 КоАП РФ, McKinsey CIB / regulatory submissions.
         Гипотетическое время вендора в окно не входит и в млн рублей презентаций 01–02 не добавляется.
       </div>

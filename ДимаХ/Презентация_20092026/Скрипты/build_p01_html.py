@@ -75,7 +75,7 @@ def svg_bars(tasks):
     """Горизонтальные парные столбцы: факт интеграции vs гипотеза полной разработки."""
     rows = sorted(tasks, key=lambda t: -t["hypo_cost"])
     ticks = 5
-    max_cost = nice_max(max(t["hypo_cost"] for t in rows), ticks)
+    max_cost = nice_max(max(max(t["hypo_cost"], t["fact_cost"]) for t in rows), ticks)
 
     # Пропорции подобраны так, чтобы диаграмма целиком укладывалась в слайд 16:9
     label_w = 200
@@ -337,9 +337,10 @@ def svg_scenarios(scenarios):
                      % (x + bar_w / 2, height - 62, esc(sc["name"])))
         parts.append('<text x="%.1f" y="%d" class="ax ax-dim" text-anchor="middle">%s</text>'
                      % (x + bar_w / 2, height - 47, esc(sc["tag"])))
+        ovh = ("надбавка +%d%%" % sc["overhead_pct"]) if sc["overhead_pct"] else "без надбавки"
         parts.append('<text x="%.1f" y="%d" class="ax ax-dim" text-anchor="middle">'
-                     'надбавка +%d%% &#183; сопровождение %d%%</text>'
-                     % (x + bar_w / 2, height - 30, sc["overhead_pct"], sc["support_pct"]))
+                     '%s &#183; сопровождение %d%%</text>'
+                     % (x + bar_w / 2, height - 30, ovh, sc["support_pct"]))
 
     parts.append('<text x="%.1f" y="%d" class="ax-title" text-anchor="middle">'
                  'Экономия компании, тыс. \u20bd</text>' % (pad_l + plot_w / 2, height - 8))
@@ -354,7 +355,8 @@ def svg_components(components):
     plot_w = width - pad_l - 24
     plot_h = height - pad_t - pad_b
     ticks = 3
-    max_val = nice_max(max(c["saving"] for c in components), ticks)
+    peak = max(c["saving"] for c in components)
+    max_val = nice_max(max(peak, 1), ticks)
     slot = plot_w / len(components)
     bar_w = min(slot * 0.42, 120)
 
@@ -371,12 +373,13 @@ def svg_components(components):
     palette = [C_NAVY_MID, C_TEAL, C_AMBER, C_MUTED]
     for i, c in enumerate(components):
         x = pad_l + slot * i + (slot - bar_w) / 2
-        h = plot_h * c["saving"] / max_val
+        h = plot_h * max(c["saving"], 0) / max_val
         y = pad_t + plot_h - h
         parts.append('<rect x="%.1f" y="%.1f" width="%.1f" height="%.1f" rx="3" fill="%s"/>'
-                     % (x, y, bar_w, h, palette[i % len(palette)]))
+                     % (x, y, bar_w, max(h, 0), palette[i % len(palette)]))
+        label_y = (y - 8) if h > 2 else (pad_t + plot_h - 8)
         parts.append('<text x="%.1f" y="%.1f" class="val val-big" text-anchor="middle">%s \u20bd</text>'
-                     % (x + bar_w / 2, y - 8, money_head(c["saving"])))
+                     % (x + bar_w / 2, label_y, money_head(c["saving"])))
         parts.append('<text x="%.1f" y="%d" class="lbl" text-anchor="middle">%s</text>'
                      % (x + bar_w / 2, height - 34, esc(c["component"].replace("Avancore", ""))))
         parts.append('<text x="%.1f" y="%d" class="ax ax-dim" text-anchor="middle">'
@@ -399,6 +402,7 @@ def table_rows(tasks):
     out = []
     for t in rows:
         note = ' <span class="flag" title="Смета вендора не закрыта: разработка не оценена">смета открыта</span>' if t.get("estimate_open") else ""
+        save_cls = "n save-neg" if t["saving"] < 0 else "n save"
         out.append(
             "<tr>"
             '<td class="k">%s</td>'
@@ -409,13 +413,13 @@ def table_rows(tasks):
             '<td class="n">%s</td>'
             '<td class="n">%s</td>'
             '<td class="n hypo">%s</td>'
-            '<td class="n save">%s</td>'
+            '<td class="%s">%s</td>'
             "</tr>"
             % (esc(t["key"]), esc(short_title(t["summary"])), note,
                esc(t["component"].replace("Avancore", "")),
                hrs(t["our_hours"]), hrs(t["avancor_norm_hours"] or 0),
                rub(t["rate_used"]), rub(t["fact_cost"]),
-               rub(t["hypo_cost"]), rub(t["saving"]))
+               rub(t["hypo_cost"]), save_cls, rub(t["saving"]))
         )
     return "\n".join(out)
 
@@ -534,18 +538,35 @@ def build(payload):
   .slide {
     flex: 0 0 100%%;
     height: 100%%;
-    padding: 34px 5vw 78px;
+    padding: 22px 4vw 64px;
     background: var(--slide-bg);
-    overflow-y: auto;
+    overflow: hidden;
     display: flex;
     flex-direction: column;
   }
+  .fill {
+    flex: 1 1 auto; min-height: 0;
+    display: flex; flex-direction: column; gap: 12px;
+  }
+  .fill > .grid-2,
+  .fill > .grid-3,
+  .fill > .grid-unpaid,
+  .fill > .grid-scen,
+  .fill > .grid-donut,
+  .fill > .card,
+  .fill > .table-wrap,
+  .fill > .kpi-row,
+  .fill > .card--glass {
+    flex: 1 1 auto; min-height: 0;
+  }
+  .fill .facts { flex: 1; align-content: space-between; }
+  .fill .formula { flex: 1; }
   .slide--title {
     background:
       radial-gradient(900px 420px at 88%% 6%%, rgba(14,124,107,.35), transparent 60%%),
       linear-gradient(135deg, #0b1f3a 0%%, #163a66 52%%, #0e5f57 100%%);
     color: #f4f7fb;
-    justify-content: center;
+    justify-content: flex-start;
   }
   .slide--dark {
     background: linear-gradient(150deg, #0f1d33 0%%, #1c3a5e 100%%);
@@ -557,19 +578,20 @@ def build(payload):
     color: var(--teal); margin-bottom: 10px;
   }
   .slide--title .eyebrow, .slide--dark .eyebrow { color: #6fdcc6; }
-  h1 { font-size: clamp(1.9rem, 4vw, 3rem); line-height: 1.1; margin: 0 0 16px; letter-spacing: -.01em; }
-  h2 { font-size: clamp(1.4rem, 2.6vw, 2.05rem); line-height: 1.15; margin: 0 0 8px; letter-spacing: -.01em; }
-  .lead { font-size: clamp(.95rem, 1.5vw, 1.08rem); color: var(--muted); margin: 0 0 20px; max-width: 62rem; }
+  h1 { font-size: clamp(2.05rem, 4.2vw, 3.15rem); line-height: 1.08; margin: 0 0 10px; letter-spacing: -.01em; }
+  h2 { font-size: clamp(1.5rem, 2.8vw, 2.2rem); line-height: 1.12; margin: 0 0 8px; letter-spacing: -.01em; }
+  .lead { font-size: clamp(1.02rem, 1.55vw, 1.14rem); color: var(--muted); margin: 0 0 12px; max-width: 64rem; }
   .slide--title .lead, .slide--dark .lead { color: rgba(226,234,244,.86); }
 
-  .kpi-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-top: 26px; }
+  .kpi-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-top: 12px; }
   .kpi {
     background: rgba(255,255,255,.09);
     border: 1px solid rgba(255,255,255,.16);
     border-radius: 16px; padding: 18px 16px 16px; backdrop-filter: blur(6px);
+    display: flex; flex-direction: column; justify-content: center;
   }
   .kpi-num {
-    font-size: clamp(1.6rem, 3vw, 2.5rem); font-weight: 800; letter-spacing: -.025em;
+    font-size: clamp(1.75rem, 3.2vw, 2.65rem); font-weight: 800; letter-spacing: -.025em;
     color: #fff; line-height: 1.05; white-space: nowrap;
   }
   .kpi-unit { font-size: .5em; font-weight: 700; margin-left: 5px; color: rgba(244,247,251,.72); letter-spacing: 0; }
@@ -579,21 +601,24 @@ def build(payload):
   .card {
     background: var(--paper); border: 1px solid var(--line); border-radius: 16px;
     padding: 16px 18px; box-shadow: 0 10px 30px rgba(11,31,58,.06);
+    display: flex; flex-direction: column;
   }
-  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; align-items: start; }
-  .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; align-items: stretch; }
+  .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; align-items: stretch; }
   .grid-donut { display: grid; grid-template-columns: 290px 1fr; gap: 16px; align-items: stretch; }
-  .grid-unpaid { display: grid; grid-template-columns: 1.15fr 1fr; gap: 16px; align-items: start; }
-  .grid-scen { display: grid; grid-template-columns: 1.25fr 1fr; gap: 16px; align-items: start; }
+  .grid-unpaid { display: grid; grid-template-columns: 1.15fr 1fr; gap: 16px; align-items: stretch; }
+  .grid-scen { display: grid; grid-template-columns: 1.25fr 1fr; gap: 16px; align-items: stretch; }
+  .grid-unpaid > div { display: flex; flex-direction: column; gap: 12px; min-height: 0; }
+  .grid-unpaid > div > .card { flex: 1; }
   .card--center { display: flex; flex-direction: column; justify-content: center; }
   /* Карточка на темном фоне (титул, выводы) */
   .card--glass {
     background: rgba(255,255,255,.07); border-color: rgba(255,255,255,.16);
-    box-shadow: none; margin-top: 26px;
+    box-shadow: none; margin-top: 0;
   }
 
-  table { width: 100%%; border-collapse: collapse; font-size: 12.5px; }
-  th, td { text-align: left; padding: 5px 9px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  table { width: 100%%; border-collapse: collapse; font-size: 15px; }
+  th, td { text-align: left; padding: 7px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
   th {
     background: var(--navy); color: #eef3f9; font-size: 10.5px; font-weight: 700;
     letter-spacing: .06em; text-transform: uppercase; position: sticky; top: 0;
@@ -603,9 +628,11 @@ def build(payload):
   td.c { color: var(--muted); white-space: nowrap; font-size: 12px; }
   td.hypo { color: var(--navy-mid); font-weight: 700; }
   td.save { color: #0a5c50; font-weight: 800; background: #f0faf7; }
+  td.save-neg { color: #8a1f16; font-weight: 800; background: #fff4f2; }
   /* Полосатость только для светлых таблиц: .sum на темном слайде исключена */
   table:not(.sum) tbody tr:nth-child(even) td { background: #fafbfd; }
   table:not(.sum) tbody tr:nth-child(even) td.save { background: #e9f6f2; }
+  table:not(.sum) tbody tr:nth-child(even) td.save-neg { background: #fdecea; }
   tr.total td {
     background: var(--navy) !important; color: #fff; font-weight: 800; font-size: 13px;
     border-bottom: 0; position: sticky; bottom: 0;
@@ -616,7 +643,7 @@ def build(payload):
   /* Пояснение под названием в первой колонке */
   td .sub { display: block; font-size: 10.5px; font-weight: 600; color: var(--muted); margin-top: 1px; }
   td .sub--dark { color: rgba(226,234,244,.5); }
-  .table-wrap { overflow: auto; max-height: 71vh; border: 1px solid var(--line); border-radius: 12px; background: #fff; }
+  .table-wrap { overflow: auto; flex: 1; min-height: 0; border: 1px solid var(--line); border-radius: 12px; background: #fff; }
 
   /* Сводная таблица на темном слайде: без светлой заливки строк */
   .sum { width: 100%%; border-collapse: collapse; font-size: 14px; }
@@ -646,8 +673,8 @@ def build(payload):
   .legend i { width: 13px; height: 13px; border-radius: 3px; display: inline-block; }
 
   /* max-height - страховка: SVG сохраняет пропорции и не выходит за слайд */
-  .chart { width: 100%%; height: auto; max-height: 63vh; display: block; }
-  .chart--flat { max-height: 30vh; }
+  .chart { width: 100%%; height: 100%%; max-height: none; display: block; flex: 1; min-height: 0; }
+  .chart--flat { max-height: none; height: auto; flex: 0 0 auto; }
   .donut { width: 100%%; max-width: 240px; height: auto; display: block; margin: 0 auto; }
   .chart text, .donut text { font-family: "Manrope", "Segoe UI", Arial, sans-serif; }
   .ax { font-size: 11px; fill: %(muted)s; }
@@ -665,8 +692,8 @@ def build(payload):
   .donut-cap { font-size: 13px; fill: %(muted)s; font-weight: 700; }
   .donut-sum { font-size: 19px; font-weight: 800; fill: #0d2036; }
 
-  .facts { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
-  .facts li { display: flex; gap: 11px; align-items: flex-start; font-size: 14px; color: var(--ink-soft); }
+  .facts { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; }
+  .facts li { display: flex; gap: 11px; align-items: flex-start; font-size: 17px; color: var(--ink-soft); line-height: 1.42; }
   .facts .b {
     flex: 0 0 auto; width: 22px; height: 22px; border-radius: 7px; background: var(--teal);
     color: #fff; font-size: 11.5px; font-weight: 800; display: grid; place-items: center; margin-top: 1px;
@@ -677,15 +704,15 @@ def build(payload):
 
   .formula {
     background: var(--sky); border: 1px solid #cfdff2; border-radius: 12px;
-    padding: 13px 15px; font-size: 14px; color: #14314f; line-height: 1.6;
+    padding: 16px 16px; font-size: 16px; color: #14314f; line-height: 1.55;
   }
   .formula code {
-    font-family: ui-monospace, Consolas, monospace; font-size: 13px; background: #fff;
+    font-family: ui-monospace, Consolas, monospace; font-size: 14.5px; background: #fff;
     padding: 2px 6px; border-radius: 5px; border: 1px solid #cfdff2;
   }
   .note {
     background: var(--amber-soft); border: 1px solid #edd9b0; border-radius: 12px;
-    padding: 12px 14px; font-size: 12.5px; color: #6f4a10; line-height: 1.55;
+    padding: 14px 16px; font-size: 14.5px; color: #6f4a10; line-height: 1.5;
   }
   .h4 {
     font-size: 11px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase;
@@ -757,20 +784,23 @@ def build(payload):
         решений &mdash; %(fact_h)s &#8381;. Ещё %(tasks_unpaid)d задач он закрыл вообще без счета.
         Если бы всю разработку вел Аванкор, компания заплатила бы кратно больше.
       </p>
+      <div class="fill">
       <div class="kpi-row">
 %(kpi)s
       </div>
       <div class="card card--glass">
 %(split)s
       </div>
+      </div>
       <div class="improve">
         <span class="lbl2">Вид улучшения</span>
         <span class="badge">Снижение внешних затрат (cost avoidance)</span>
       </div>
       <div class="src">
-        Источники: выгрузка Jira по платным задачам вендора (%(tasks_total)d задач, из них %(tasks_paid)d
-        с признаком оплаты), отчеты учета времени команды (%(ts_files)d файла, %(ts_hours)s ч по %(ts_tasks)d задачам).
-        Ставка и нормо-часы &mdash; из смет самого вендора.
+        Источники: выгрузка Jira по задачам вендора (%(tasks_total)d в расчете, из них %(tasks_paid)d
+        с признаком оплаты). Контур ПИФ (%(tasks_excluded)d задачи) в расчет не входит.
+        Отчеты учета времени команды: %(ts_files)d файла, %(ts_hours)s ч по %(ts_tasks)d задачам.
+        Ставка &mdash; из смет вендора. Нормо-часы копирования в гипотезу не входят.
       </div>
     </section>
 
@@ -782,6 +812,7 @@ def build(payload):
         Ставку вендора не оценивали экспертно &mdash; она вычислена из его собственных смет,
         где указаны и нормо-часы, и сумма в рублях.
       </p>
+      <div class="fill">
       <div class="grid-2">
         <div class="card">
           <p class="h4">Что берем из источников</p>
@@ -803,26 +834,28 @@ def build(payload):
           <p class="h4">Формула сравнения</p>
           <div class="formula">
             <div><strong>Факт</strong> = <code>сумма сметы вендора</code><br>
-            <span style="color:#4a6280">вендор оплачен только за интеграцию готового решения</span></div>
+            <span style="color:#4a6280">оплачено копирование нашего готового модуля в поставку вендора</span></div>
             <div style="margin-top:11px"><strong>Гипотеза</strong> =
-              <code>(наши часы &times; надбавка + нормо-часы вендора) &times; ставка</code><br>
-            <span style="color:#4a6280">полный цикл разработки силами вендора</span></div>
+              <code>наши часы &times; надбавка &times; ставка</code><br>
+            <span style="color:#4a6280">если бы вендор разрабатывал сам, он потратил бы примерно столько же времени, сколько мы (чуть больше без ИИ)</span></div>
             <div style="margin-top:11px"><strong>Бесплатные задачи</strong> =
               <code>часы &times; (1 &minus; доля сопровождения) &times; надбавка &times; ставка</code><br>
             <span style="color:#4a6280">вендор принял наш результат и не выставил счет</span></div>
             <div style="margin-top:11px"><strong>Экономия</strong> = <code>Гипотеза &minus; Факт</code></div>
           </div>
           <div class="note" style="margin-top:12px">
-            <strong>Два коэффициента вместо одной цифры.</strong> <em>Надбавка</em> &mdash; насколько
-            больше времени нужно вендору на аналитику и вхождение в контекст. <em>Доля
-            сопровождения</em> &mdash; какую часть бесплатных задач он закрыл бы даром и сам.
-            Оба коэффициента меняются по сценариям, поэтому результат &mdash; диапазон, а не точка.
+            <strong>Почему нормо-часы вендора не прибавляем.</strong> Сейчас он тратит их на разбор
+            и встраивание нашего модуля. Если бы разработку вел сам, копировать было бы нечего:
+            эти часы не появились бы, а уже выставленная сумма сидит в факте. <em>Надбавка</em> &mdash;
+            сколько дольше заняло бы без ИИ. <em>Доля сопровождения</em> &mdash; какую часть бесплатных
+            задач он закрыл бы даром. Оба коэффициента меняются по сценариям.
           </div>
         </div>
       </div>
+      </div>
       <div class="src">
         Выборка: %(tasks_priced)d платных задач вендора и %(tasks_unpaid)d задач, закрытых без счета
-        (%(unpaid_hours)s ч нашей команды). Обе группы разобраны на отдельных слайдах.
+        (%(unpaid_hours)s ч нашей команды). Контур ПИФ (%(tasks_excluded)d задачи) в расчет не входит.
       </div>
     </section>
 
@@ -834,8 +867,10 @@ def build(payload):
         <span><i style="background:%(navy_mid)s"></i>Гипотеза: полная разработка силами Аванкор</span>
         <span><i style="background:%(amber)s"></i>Факт: оплачена только интеграция</span>
       </div>
+      <div class="fill">
       <div class="card">
 %(bars)s
+      </div>
       </div>
       <div class="src">
         Задачи отсортированы по гипотетической стоимости. Все суммы &mdash; в тысячах рублей;
@@ -847,6 +882,7 @@ def build(payload):
     <section class="slide">
       <div class="eyebrow">Детализация</div>
       <h2>Все платные задачи: часы, ставки, суммы</h2>
+      <div class="fill">
       <div class="table-wrap">
         <table>
           <thead>
@@ -876,9 +912,11 @@ def build(payload):
           </tbody>
         </table>
       </div>
+      </div>
       <div class="src">
-        &laquo;Смета открыта&raquo; &mdash; вендор оценил только анализ, стоимость разработки не зафиксирована;
-        для такой задачи в расчет взята уже выставленная сумма.
+        Нормо-часы вендора в таблице &mdash; оплаченное копирование, в гипотезу они не входят.
+        Отрицательная экономия: на этой задаче счет за копирование больше, чем стоила бы
+        разработка по нашим часам. &laquo;Смета открыта&raquo; &mdash; вендор оценил только анализ.
       </div>
     </section>
 
@@ -886,10 +924,11 @@ def build(payload):
     <section class="slide">
       <div class="eyebrow">Скрытая часть экономии</div>
       <h2>Ещё %(tasks_unpaid)d задач вендор закрыл без счета &mdash; потому что работу сделали мы</h2>
-      <p class="lead">
+      <p class="lead lead--light">
         По этим задачам вендор не выставил счет вообще: мы передали готовое решение, ему осталось
         принять результат. Если бы разработку вел он, часть этих задач стала бы платной.
       </p>
+      <div class="fill">
       <div class="grid-unpaid">
         <div class="card">
 %(unpaid_bars)s
@@ -922,6 +961,7 @@ def build(payload):
           </div>
         </div>
       </div>
+      </div>
       <div class="src">
         %(unpaid_no_hours_tasks)d задач из %(tasks_unpaid)d &mdash; подзадачи без собственного учета времени
         (часы отнесены на родительскую задачу), поэтому в расчете они не участвуют.
@@ -933,11 +973,12 @@ def build(payload):
     <section class="slide">
       <div class="eyebrow">Диапазон оценки</div>
       <h2>Три сценария: от заведомо заниженного до реалистичного</h2>
-      <p class="lead">
+      <p class="lead lead--light">
         Единственная цифра всегда спорна, поэтому показываем диапазон. Сценарии различаются двумя
-        допущениями: сколько времени вендору нужно на аналитику и какую часть бесплатных задач
-        он закрыл бы сам.
+        допущениями: сколько времени вендору нужно без ИИ относительно наших часов и какую часть
+        бесплатных задач он закрыл бы сам.
       </p>
+      <div class="fill">
       <div class="grid-scen">
         <div class="card">
 %(scenarios_chart)s
@@ -962,16 +1003,17 @@ def build(payload):
             </tbody>
           </table>
           <div class="note" style="margin-top:12px">
-            <strong>Откуда надбавка +40%%.</strong> В задаче IMAPPS-32896 вендор выставил
-            16 нормо-часов только за анализ (74 880 &#8381;) при 3,5 часах нашей команды на всю
-            задачу &mdash; и разработку в той смете еще не оценил. Надбавка 40%% на аналитику и
-            вхождение в контекст на этом фоне остается осторожной.
+            <strong>Откуда надбавка +40%%.</strong> Это не часы копирования из сметы.
+            Оценка, сколько дольше вендор без ИИ делал бы ту же разработку относительно
+            фактических часов нашей команды с Cursor. Коэффициент презентации 02
+            (25%% быстрее на внутренних задачах) сюда не переносится: там другой контур.
           </div>
         </div>
       </div>
+      </div>
       <div class="src">
-        Надбавка применяется к часам нашей команды: вендору нужно самому проанализировать проблему,
-        изучить контекст конфигурации и согласовать решение. Нормо-часы интеграции берутся из смет без надбавки.
+        Надбавка применяется только к часам нашей команды. Нормо-часы из смет вендора в гипотезу
+        не входят: это копирование готового модуля, они уже внутри факта.
       </div>
     </section>
 
@@ -979,6 +1021,7 @@ def build(payload):
     <section class="slide">
       <div class="eyebrow">Структура</div>
       <h2>Доля экономии в гипотетическом объеме работ</h2>
+      <div class="fill">
       <div class="grid-donut">
         <div class="card card--center">
 %(donut)s
@@ -1006,20 +1049,19 @@ def build(payload):
             </tbody>
           </table>
           <div class="note" style="margin-top:12px">
-            <strong>Где эффект максимален.</strong> В контурах ДУ и Финансы наша команда закрывает
-            крупные задачи оптимизации, а вендору остается только интеграция &mdash; там и накоплена
-            основная экономия. В ПИФ доля вендора выше: задачи мелкие, и его нормо-часы сопоставимы
-            с нашими трудозатратами.
+            <strong>Где эффект максимален.</strong> В обоих контурах &mdash; ДУ и Финансы &mdash; команда
+            закрывает крупные задачи оптимизации, вендору остается встроить готовое. Там и копится экономия.
           </div>
         </div>
       </div>
-      <div class="card" style="margin-top:14px">
+      <div class="card" style="margin-top:0">
 %(components)s
+      </div>
       </div>
       <div class="src">
         Из гипотетического объема %(hypo_h)s &#8381; фактически оплачено вендору %(fact_h)s &#8381;
         (%(fact_share)s%%), сэкономлено %(saving_h)s &#8381; (%(saving_pct)s%%).
-        Точные суммы: %(hypo)s / %(fact)s / %(saving)s &#8381;.
+        Точные суммы: %(hypo)s / %(fact)s / %(saving)s &#8381;. Контур ПИФ в расчет не входит.
       </div>
     </section>
 
@@ -1029,12 +1071,13 @@ def build(payload):
       <h2>Накопленная экономия по месяцам</h2>
       <p class="lead" style="margin-bottom:12px">
         Экономия формируется неравномерно: основной вклад дают крупные задачи оптимизации,
-        где объем нашей разработки многократно превышает интеграционные нормо-часы вендора.
+        где наши часы разработки многократно больше счета за копирование.
       </p>
+      <div class="fill">
       <div class="card">
 %(timeline)s
       </div>
-      <div class="grid-3" style="margin-top:14px">
+      <div class="grid-3">
         <div class="card">
           <p class="h4">Источник часов команды</p>
           <table>
@@ -1049,17 +1092,19 @@ def build(payload):
           <ul class="facts">
             <li><span class="b">&#8226;</span><span>%(ts_hours)s ч учтенного времени по %(ts_tasks)d задачам всего</span></li>
             <li><span class="b">&#8226;</span><span>%(our_hours)s ч из них &mdash; по %(tasks_priced)d платным задачам вендора</span></li>
-            <li><span class="b">&#8226;</span><span>%(av_hours)s нормо-часов &mdash; вклад вендора (интеграция)</span></li>
+            <li><span class="b">&#8226;</span><span>%(av_hours)s нормо-часов вендора &mdash; копирование,
+              в гипотезу не входят</span></li>
           </ul>
         </div>
         <div class="card">
           <p class="h4">Ключевой механизм</p>
-          <p style="margin:0;font-size:13.5px;color:var(--ink-soft);line-height:1.55">
+          <p style="margin:0;font-size:16px;color:var(--ink-soft);line-height:1.5">
             Наша команда выполняет анализ, разработку и тестирование, вендору передается
             готовое расширение с планом внедрения. Вендор оплачивается только за проверку
             и включение доработки в свою поставку.
           </p>
         </div>
+      </div>
       </div>
     </section>
 
@@ -1067,20 +1112,22 @@ def build(payload):
     <section class="slide slide--dark">
       <div class="eyebrow">Выводы</div>
       <h2 class="serif" style="font-size:clamp(1.7rem,3.2vw,2.5rem)">Что это значит для компании</h2>
-      <div class="grid-2" style="margin-top:8px">
+      <div class="fill">
+      <div class="grid-2">
         <div>
           <ul class="facts">
             <li><span class="b">1</span><span><strong>От %(saving_h)s до %(saving_max_h)s &#8381;
               не израсходовано</strong> на внешнюю разработку. Нижняя граница &mdash; только платные
-              задачи без надбавок, верхняя &mdash; с бесплатными задачами и реальными накладными вендора.</span></li>
+              задачи без надбавки, верхняя &mdash; с бесплатными задачами и +40%% времени без ИИ.</span></li>
             <li><span class="b">2</span><span><strong>Полная разработка у вендора обошлась бы в
               %(ratio)s&ndash;%(ratio_max)s раза дороже</strong> фактически оплаченной
               интеграции (%(fact_h)s &#8381;).</span></li>
-            <li><span class="b">3</span><span><strong>%(our_share)s%% объема работ</strong> в часах закрыто
-              внутренней командой &mdash; вендор выступает только приемной стороной.</span></li>
-            <li><span class="b">4</span><span><strong>Даже нижняя граница честная:</strong> ставка взята
-              из смет вендора, гарантийные баги исключены, а половина бесплатных задач списана
-              в его сопровождение.</span></li>
+            <li><span class="b">3</span><span><strong>Нормо-часы вендора в гипотезу не входят.</strong>
+              Это часы копирования нашего модуля: если бы вендор делал разработку сам, их не было бы.
+              Выставленная сумма уже сидит в факте.</span></li>
+            <li><span class="b">4</span><span><strong>Нижняя граница честная:</strong> гипотеза =
+              наши часы &times; ставка из смет вендора, без надбавки и без бесплатных задач.
+              Гарантийные баги исключены.</span></li>
           </ul>
         </div>
         <div>
@@ -1098,17 +1145,18 @@ def build(payload):
           </div>
         </div>
       </div>
-      <div class="card card--glass" style="margin-top:18px">
+      <div class="card card--glass">
 %(split)s
+      </div>
       </div>
       <div class="improve">
         <span class="lbl2">Вид улучшения</span>
         <span class="badge">Снижение внешних затрат (cost avoidance)</span>
       </div>
       <div class="src">
-        Расчет по выгрузкам Jira и отчетам учета времени на 17.09.2026. Ставка вендора и нормо-часы &mdash;
-        из его собственных смет в задачах. Гипотетическая стоимость &mdash; расчетная величина;
-        коэффициенты надбавки и сопровождения по каждому сценарию приведены на слайде 6.
+        Расчет по выгрузкам Jira и отчетам учета времени на 17.09.2026. Контур ПИФ в расчет не входит.
+        Ставка вендора &mdash; из его собственных смет. Гипотеза = наши часы &times; надбавка &times; ставка;
+        нормо-часы копирования в гипотезу не входят. Коэффициенты по сценариям &mdash; на слайде 6.
       </div>
     </section>
 
@@ -1195,6 +1243,7 @@ def build(payload):
         "tasks_paid": s["tasks_paid"],
         "tasks_priced": s["tasks_priced"],
         "tasks_unpaid": s["tasks_unpaid"],
+        "tasks_excluded": s.get("tasks_excluded", 0),
         "unpaid_hours": hrs(s["unpaid_hours"]),
         "unpaid_billable_hours": hrs(s["unpaid_billable_hours"]),
         "unpaid_warranty_hours": hrs(s["unpaid_warranty_hours"]),

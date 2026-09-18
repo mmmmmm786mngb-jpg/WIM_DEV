@@ -12,8 +12,10 @@
   - Из поля "Ext Estimate" разбирается смета Аванкор: нормо-часы и стоимость в рублях.
     Отсюда получается фактическая ставка Аванкор (руб./нормо-час).
   - Часы нашей команды берутся из Time Sheet (приоритет) либо из Jira Time Spent.
-  - Гипотетическая стоимость "если бы Аванкор делал всё" = (наши часы * надбавка
-    + нормо-часы Аванкор) * ставка Аванкор.
+  - Гипотетическая стоимость "если бы Аванкор делал всё" = наши часы * надбавка
+    * ставка Аванкор. Нормо-часы вендора в гипотезу не входят: сейчас это часы
+    копирования нашего модуля, а если бы вендор разрабатывал сам, копировать
+    было бы нечего. Эти часы уже внутри фактически оплаченной сметы.
   - Экономия = гипотетическая стоимость - фактически оплаченная интеграция.
 
 Учитываются две группы задач:
@@ -22,8 +24,10 @@
      Часть из них он закрыл бы бесплатно и сам (гарантия на баги, сопровождение),
      поэтому применяется коэффициент доли сопровождения.
 
+Контур ПИФ (AvancorePIF) в расчет не входит.
+
 Сценарии (см. SCENARIOS): от предельно консервативного до реалистичного -
-различаются надбавкой на аналитику вендора и долей бесплатного сопровождения.
+различаются надбавкой «без ИИ» к нашим часам и долей бесплатного сопровождения.
 
 Результат: p01_dataset.json (UTF-8) для сборки HTML-презентации.
 """
@@ -58,10 +62,15 @@ WORD_HOURS = {
 # Из расчета экономии по бесплатным задачам исключаются полностью.
 WARRANTY_TYPES = ("bug",)
 
+# Контуры вне этой презентации. ПИФ не смешиваем с ДУ/Финансами:
+# там мелкие задачи, счет за копирование часто больше наших часов разработки.
+EXCLUDE_COMPONENTS = ("avancorepif",)
+
 # Сценарии оценки. Отличаются двумя коэффициентами:
-#   overhead - надбавка к нашим часам на аналитику и вхождение вендора в контекст.
-#              Основание: в IMAPPS-32896 вендор выставил 16 нормо-часов только за
-#              анализ при наших 3,5 часах на всю задачу (разработка не оценена).
+#   overhead - во сколько раз дольше вендор делал бы разработку без ИИ
+#              относительно наших фактических часов. Часы копирования из сметы
+#              сюда не входят. +40% — отдельная оценка по вендору, не коэффициент
+#              презентации 02 (там 25% быстрее на внутренних задачах команды).
 #   support  - доля бесплатных задач, которую вендор закрыл бы даром в рамках
 #              сопровождения (эта часть в экономию не попадает).
 SCENARIOS = [
@@ -71,8 +80,8 @@ SCENARIOS = [
         "tag": "нижняя граница",
         "overhead": 1.0,
         "support": 1.0,
-        "note": "Вендор тратит ровно столько же часов, сколько наша команда. "
-                "Бесплатные задачи не учитываем вовсе.",
+        "note": "Вендор на разработку тратит столько же часов, сколько мы. "
+                "Часы копирования не добавляем. Бесплатные задачи не учитываем.",
     },
     {
         "id": "base",
@@ -80,7 +89,7 @@ SCENARIOS = [
         "tag": "с учетом бесплатных задач",
         "overhead": 1.0,
         "support": 0.5,
-        "note": "Надбавки на аналитику вендора нет. Половину бесплатных задач "
+        "note": "То же время, что у нашей команды. Половину бесплатных задач "
                 "вендор закрыл бы сам в рамках сопровождения.",
     },
     {
@@ -89,8 +98,8 @@ SCENARIOS = [
         "tag": "ближе к практике",
         "overhead": 1.4,
         "support": 0.3,
-        "note": "Вендору нужно на 40% больше времени: аналитика, изучение нашего "
-                "контекста, согласования. По сопровождению прошло бы 30% бесплатных задач.",
+        "note": "Без ИИ вендору нужно на 40% больше времени на ту же разработку. "
+                "По сопровождению прошло бы 30% бесплатных задач.",
     },
 ]
 
@@ -244,6 +253,12 @@ def parse_jira_date(text):
         return None
 
 
+def is_excluded(row):
+    """Контур ПИФ не входит в экономику этой презентации."""
+    comp = (row.get("component") or "").replace(" ", "").lower()
+    return comp in EXCLUDE_COMPONENTS
+
+
 def compute_scenario(scenario, priced, unpaid_billable, base_rate):
     """Считает экономию по одному сценарию оценки.
 
@@ -259,11 +274,12 @@ def compute_scenario(scenario, priced, unpaid_billable, base_rate):
     k_ovh = scenario["overhead"]
     k_sup = scenario["support"]
 
-    # Платные задачи: вендор уже получил оплату за интеграцию
+    # Платные задачи: вендор уже получил оплату за копирование/интеграцию.
+    # Гипотеза — только наши часы (как если бы вендор разрабатывал сам).
     paid_hypo = 0
     paid_hours = 0.0
     for r in priced:
-        hours = r["our_hours"] * k_ovh + (r["avancor_norm_hours"] or 0.0)
+        hours = r["our_hours"] * k_ovh
         paid_hours += hours
         paid_hypo += int(round(hours * r["rate_used"]))
     paid_fact = sum(r["fact_cost"] for r in priced)
@@ -306,9 +322,11 @@ def main():
     avancor = load_avancor()
     ts = load_timesheets()
 
-    # Фактическая ставка Аванкор по сметам, где есть и часы, и стоимость
+    # Фактическая ставка Аванкор по сметам контуров, которые входят в расчет
     rates = []
     for row in avancor:
+        if is_excluded(row):
+            continue
         if row["avancor_norm_hours"] and row["avancor_cost"]:
             rates.append(round(row["avancor_cost"] / row["avancor_norm_hours"], 2))
     rate_counts = {}
@@ -333,8 +351,7 @@ def main():
         row["rate_used"] = rate
 
         fact_cost = row["avancor_cost"] or 0
-        av_hours = row["avancor_norm_hours"] or 0.0
-        hypo_hours = row["our_hours"] + av_hours
+        hypo_hours = row["our_hours"]
         row["hypo_hours"] = round(hypo_hours, 2)
         row["hypo_cost"] = int(round(hypo_hours * rate))
         row["fact_cost"] = int(fact_cost)
@@ -345,9 +362,12 @@ def main():
         raw = row["ext_estimate_raw"].lower()
         row["estimate_open"] = "ожида" in raw or "?" in raw
 
-    paid_yes = [r for r in avancor if r["paid"] == "yes"]
+    excluded = [r for r in avancor if is_excluded(r)]
+    scoped = [r for r in avancor if not is_excluded(r)]
+
+    paid_yes = [r for r in scoped if r["paid"] == "yes"]
     priced = [r for r in paid_yes if r["avancor_cost"]]
-    unpaid = [r for r in avancor if r["paid"] != "yes"]
+    unpaid = [r for r in scoped if r["paid"] != "yes"]
 
     # Бесплатные задачи: отделяем гарантийные (Bug) от тех, что вендор выставил бы в счет
     for r in unpaid:
@@ -417,10 +437,12 @@ def main():
         })
 
     summary = {
-        "tasks_total": len(avancor),
+        "tasks_total": len(scoped),
         "tasks_paid": len(paid_yes),
         "tasks_priced": len(priced),
         "tasks_unpaid": len(unpaid),
+        "tasks_excluded": len(excluded),
+        "excluded_component": "AvancorePIF",
         "unpaid_hours": round(sum(r["our_hours"] for r in unpaid), 2),
         "unpaid_billable_tasks": len(unpaid_billable),
         "unpaid_billable_hours": round(sum(r["our_hours"] for r in unpaid_billable), 2),
@@ -453,10 +475,11 @@ def main():
         round(1.0 * summary["hypo_cost_total"] / summary["fact_cost_total"], 2)
         if summary["fact_cost_total"] else 0.0
     )
-    # Доля работ, выполненная нашей командой (в часах)
-    total_hours = summary["our_hours_priced"] + summary["avancor_norm_hours_priced"]
+    # Справка: наши часы разработки vs нормо-часы копирования в смете.
+    # В гипотезу копирование не входит, показатель только для контекста.
+    billed_hours = summary["our_hours_priced"] + summary["avancor_norm_hours_priced"]
     summary["our_hours_share_pct"] = (
-        round(100.0 * summary["our_hours_priced"] / total_hours, 1) if total_hours else 0.0
+        round(100.0 * summary["our_hours_priced"] / billed_hours, 1) if billed_hours else 0.0
     )
 
     # Диапазон оценки: от нижней границы до реалистичного сценария
@@ -465,7 +488,8 @@ def main():
 
     payload = {
         "summary": summary,
-        "tasks": avancor,
+        "tasks": scoped,
+        "excluded_tasks": excluded,
         "scenarios": scenarios,
         "unpaid_tasks": sorted(unpaid, key=lambda r: -r["our_hours"]),
         "unpaid_by_type": sorted(unpaid_by_type.values(), key=lambda a: -a["hours"]),
@@ -477,8 +501,9 @@ def main():
         json.dump(payload, fh, ensure_ascii=False, indent=2)
 
     safe_print("OK dataset written")
-    safe_print("tasks total=%d paid=%d priced=%d" % (
-        summary["tasks_total"], summary["tasks_paid"], summary["tasks_priced"]))
+    safe_print("tasks total=%d paid=%d priced=%d excluded_pif=%d" % (
+        summary["tasks_total"], summary["tasks_paid"], summary["tasks_priced"],
+        summary["tasks_excluded"]))
     safe_print("base rate = %.0f RUB/hour; distribution=%s" % (base_rate, rate_counts))
     safe_print("our hours (priced) = %.1f ; avancor norm-hours = %.1f" % (
         summary["our_hours_priced"], summary["avancor_norm_hours_priced"]))
