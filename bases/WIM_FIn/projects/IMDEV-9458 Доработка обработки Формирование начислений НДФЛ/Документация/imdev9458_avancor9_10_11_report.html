@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>IMDEV-9458. Сверка прогонов 9, 10 и 11</title>
+<style>
+  :root { --ok:#28a745; --err:#dc3545; --warn:#b78100; --ink:#212529; --soft:#6c757d;
+    --bg:#f5f6f8; --card:#fff; --line:#dee2e6; }
+  * { box-sizing:border-box; }
+  body { margin:0; font-family:"Segoe UI", Arial, Helvetica, sans-serif; font-size:15px;
+    line-height:1.45; color:var(--ink); background:var(--bg); }
+  .wrap { max-width:980px; margin:0 auto; padding:24px 16px 48px; }
+  header { background:#1f4a3a; color:#f7f1e8; border-radius:16px; padding:22px 24px; margin-bottom:20px; }
+  header .kicker { font-size:11px; letter-spacing:.1em; text-transform:uppercase; opacity:.75; margin-bottom:6px; }
+  header h1 { margin:0 0 8px; font-size:24px; font-family:Georgia, "Times New Roman", serif; }
+  header p { margin:0; color:#dce8e2; }
+  section { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:18px 20px; margin-bottom:16px; }
+  h2 { margin:0 0 12px; font-size:18px; }
+  h3 { margin:16px 0 8px; font-size:16px; }
+  p, ul, ol { margin:0 0 10px; }
+  ul, ol { padding-left:20px; }
+  table { width:100%; border-collapse:collapse; margin:10px 0 4px; font-size:14px; }
+  th, td { border:1px solid var(--line); padding:8px 10px; text-align:left; vertical-align:top; }
+  th { background:#eef2f0; }
+  .num { text-align:right; font-variant-numeric:tabular-nums; white-space:nowrap; }
+  .ok { color:var(--ok); font-weight:600; }
+  .warn { color:var(--warn); font-weight:600; }
+  .err { color:var(--err); font-weight:600; }
+  .box-green { background:#e8f6ec; border:1px solid #b7e0c2; border-radius:10px; padding:12px 14px; margin:10px 0; }
+  .box-blue { background:#e7f4fb; border:1px solid #b9d7ea; border-radius:10px; padding:12px 14px; margin:10px 0; }
+  .box-yellow { background:#fff8e1; border:1px solid #f0d78c; border-radius:10px; padding:12px 14px; margin:10px 0; }
+  .grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:10px; margin:10px 0; }
+  .stat { background:#f8faf9; border:1px solid var(--line); border-radius:10px; padding:12px; }
+  .stat .v { font-size:22px; font-weight:700; }
+  .stat .l { font-size:12px; color:var(--soft); margin-top:4px; }
+  .muted { color:var(--soft); font-size:13px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <div class="kicker">IMDEV-9458 · тесты 9, 10 и 11</div>
+  <h1>Сверка полного набора, пустого пула и Розничного ДУ</h1>
+  <p>Прогон 9 — все клиенты. Прогон 10 — пустой пул (не-РДУ). Прогон 11 — пул «Розничное ДУ».</p>
+</header>
+
+<section>
+  <h2>1. Введение</h2>
+  <p>Три прогона одного расчёта на одной базе. Прогон 10 должен быть не-РДУ частью полного набора, прогон 11 — РДУ-частью. Вместе по живым документам они должны дать прогон 9. Смешанная пара (есть портфель РДУ и портфель не-РДУ) может попасть в оба отбора: заполнение держит пару «клиент + УК» целиком.</p>
+  <div class="box-green"><strong>Итог.</strong> <span class="ok">По живым документам 10 и 11 покрывают 9 без остатка. Суммы совпали, кроме одной известной дельты Ивашкина в прогоне 10. В оба отбора попали пять смешанных пар — с теми же суммами, что в полном прогоне.</span></div>
+</section>
+
+<section>
+  <h2>2. Технология</h2>
+  <p>Сверялись выгрузки документов по УК и по портфелю, лог формирования и файл сообщений. Колонки «Клиент» в выгрузке нет: ФИО берётся из скобок в наименовании портфеля. Ключ сверки УК — полный набор портфелей табличной части, не номер документа (имена ПИФ у разных клиентов совпадают). Документ считался пустым, если доход и сумма к удержанию равны нулю (для портфеля ещё исчисленный налог = 0).</p>
+  <div class="box-blue">
+    <ul>
+      <li>Прогон 9: 20.09.2026 19:47:30 — 21.09.2026 02:29:08, ошибок 0</li>
+      <li>Прогон 10: 21.09.2026 08:44:13 — 21.09.2026 09:22:01, ошибок 0</li>
+      <li>Прогон 11: 21.09.2026 10:04:07 — 21.09.2026 14:02:02, ошибок 0</li>
+    </ul>
+  </div>
+</section>
+
+<section>
+  <h2>3. Статистика</h2>
+  <div class="grid">
+    <div class="stat"><div class="v">27 157</div><div class="l">УК, прогон 9</div></div>
+    <div class="stat"><div class="v">2 164</div><div class="l">УК, прогон 10</div></div>
+    <div class="stat"><div class="v">22 457</div><div class="l">УК, прогон 11</div></div>
+    <div class="stat"><div class="v">5</div><div class="l">Смешанных пар УК</div></div>
+  </div>
+  <h3>Документы по УК</h3>
+  <table>
+    <tr><th>Метрика</th><th class="num">Прогон 9 полный</th><th class="num">Прогон 10 не-РДУ</th><th class="num">Прогон 11 РДУ</th></tr>
+    <tr><td>Документов</td><td class="num">27 157</td><td class="num">2 164</td><td class="num">22 457</td></tr>
+    <tr><td>Пустых</td><td class="num">2 632</td><td class="num">88</td><td class="num">3</td></tr>
+    <tr><td>С суммами</td><td class="num">24 525</td><td class="num">2 076</td><td class="num">22 454</td></tr>
+    <tr><td>Сумма дохода</td><td class="num">79 512 491 628.99</td><td class="num">77 419 928 455.01</td><td class="num">2 148 054 695.91</td></tr>
+    <tr><td>Сумма к удержанию</td><td class="num">868 865 601.00</td><td class="num">854 836 243.00</td><td class="num">14 666 544.00</td></tr>
+  </table>
+  <p class="muted">2 076 + 22 454 − 5 смешанных = 24 525 живых УК прогона 9.</p>
+  <h3>Документы по портфелю</h3>
+  <table>
+    <tr><th>Метрика</th><th class="num">Прогон 9 полный</th><th class="num">Прогон 10 не-РДУ</th><th class="num">Прогон 11 РДУ</th></tr>
+    <tr><td>Документов</td><td class="num">28 966</td><td class="num">2 747</td><td class="num">23 597</td></tr>
+    <tr><td>Пустых</td><td class="num">3 162</td><td class="num">304</td><td class="num">227</td></tr>
+    <tr><td>С суммами</td><td class="num">25 804</td><td class="num">2 443</td><td class="num">23 370</td></tr>
+    <tr><td>Сумма дохода</td><td class="num">81 854 836 240.74</td><td class="num">78 554 937 242.06</td><td class="num">3 344 388 359.32</td></tr>
+    <tr><td>Сумма к удержанию</td><td class="num">1 175 485 201.00</td><td class="num">1 159 098 002.00</td><td class="num">17 058 451.00</td></tr>
+  </table>
+  <p class="muted">Предупреждений «налог на первый портфель»: 404 / 16 / 389. Ошибок в логах нет.</p>
+</section>
+
+<section>
+  <h2>4. Детали сверки</h2>
+  <h3>10 и 11 против 9</h3>
+  <table>
+    <tr><th>Срез</th><th>Сопоставление</th><th class="num">Расхождений сумм</th></tr>
+    <tr><td>УК, прогон 10</td><td>2 164 из 2 164, тот же набор портфелей</td><td class="num">1</td></tr>
+    <tr><td>УК, прогон 11</td><td>22 457 из 22 457, тот же набор портфелей</td><td class="num ok">0</td></tr>
+    <tr><td>Портфель, прогон 10</td><td>2 747 из 2 747 по имени</td><td class="num ok">0</td></tr>
+    <tr><td>Портфель, прогон 11</td><td>23 597 из 23 597 по имени</td><td class="num ok">0</td></tr>
+    <tr><td>Живые УК прогона 9 без пары в 10 или 11</td><td>—</td><td class="num ok">0</td></tr>
+    <tr><td>Живые портфели прогона 9 без пары в 10 или 11</td><td>—</td><td class="num ok">0</td></tr>
+  </table>
+
+  <h3>Единственная дельта сумм: Ивашкин А.Г., прогон 10</h3>
+  <p>Документ УК <code>000000000025249</code>, портфели ДУ 5970, ДУ 9056 и «Ивашкин Алексей Георгиевич». Доход совпал: 60 280 872.14. К удержанию в прогоне 10 на 49 больше (1 526 803 против 1 526 754). Вычет меньше на 325,60, налогооблагаемая больше на 325,60. В прогоне 11 этой пары нет — она не-РДУ.</p>
+
+  <div class="box-yellow">
+    <strong>Смешанные пары.</strong> Пять документов УК с одним и тем же составом портфелей есть и в прогоне 10, и в прогоне 11, и суммы равны полному прогону 9. Отбор по пулу оставил пару целиком, создание записало все портфели пары.
+  </div>
+  <table>
+    <tr><th>Клиент</th><th>Номер УК</th><th class="num">Портфелей</th><th class="num">Доход</th></tr>
+    <tr><td>Петров А.А.</td><td>000000000032075</td><td class="num">4</td><td class="num">14 734.65</td></tr>
+    <tr><td>Борисов С.В.</td><td>000000000028327</td><td class="num">3</td><td class="num">9 489 696.92</td></tr>
+    <tr><td>Ханкеев А.А.</td><td>000000000039497</td><td class="num">3</td><td class="num">33 536 778.74</td></tr>
+    <tr><td>Никерова М.В.</td><td>000000000041545</td><td class="num">5</td><td class="num">11 696 950.42</td></tr>
+    <tr><td>Хлестков В.Л.</td><td>000000000041138</td><td class="num">3</td><td class="num">753 361.20</td></tr>
+  </table>
+  <p class="muted">По портфелю 11 наименований встретились и в прогоне 10, и в прогоне 11 — тот же эффект создания по всей паре.</p>
+
+  <h3>Львов и Баландин</h3>
+  <p>Оба есть в полном прогоне 9 и в пустом пуле 10, с теми же номерами и суммами. В прогоне 11 с пулом «Розничное ДУ» их нет: у пары ДУ плюс ПИФ, поле пула у ДУ пустое, это не-РДУ.</p>
+  <table>
+    <tr><th>Клиент</th><th>Прогон</th><th>Номер УК</th><th class="num">Доход</th><th>Состав</th></tr>
+    <tr><td>Львов Павел Глебович</td><td>9 и 10</td><td>000000000045592</td><td class="num">2 094 457.77</td><td>ДУ 7407, ПИФ «ВИМ — Акции. Российские эмитенты»</td></tr>
+    <tr><td>Львов Павел Глебович</td><td>11</td><td colspan="3">нет документа</td></tr>
+    <tr><td>Баландин Дмитрий Викторович</td><td>9 и 10</td><td>000000000046843</td><td class="num">3 604 822.93</td><td>ДУ 3742, ПИФ «ВИМ — Акции», ПИФ «Сбалансированный. Рантье»</td></tr>
+    <tr><td>Баландин Дмитрий Викторович</td><td>11</td><td colspan="3">нет документа</td></tr>
+  </table>
+</section>
+
+<section>
+  <h2>5. Возможности</h2>
+  <ul>
+    <li>Пять смешанных пар — ожидаемое поведение зерна «клиент + УК», не ошибка отбора по пулу.</li>
+    <li>Обработка проверки проведенных документов по РДУ как раз покажет чужие портфели в ТЧ этих пяти документов.</li>
+    <li>Дельту Ивашкина по-прежнему смотреть в ТЧ документа 000000000025249: вычет и удержание.</li>
+  </ul>
+</section>
+
+<section>
+  <h2>6. Выводы</h2>
+  <ol>
+    <li>Прогон 10 — не-РДУ часть полного набора: 2 164 документа УК из 27 157.</li>
+    <li>Прогон 11 — РДУ часть: 22 457 документов УК, основная масса полного прогона.</li>
+    <li>Все живые документы 9 нашлись в 10 или в 11. Пустые из 9 в основном не создавались повторно.</li>
+    <li>Суммы прогона 11 совпали с 9 полностью. В прогоне 10 — одно расхождение, Ивашкин А.Г.</li>
+    <li>Пять смешанных пар попали в оба отбора с теми же суммами, что в полном расчёте.</li>
+    <li>Львов и Баландин — не-РДУ (ДУ с пустым пулом плюс ПИФ), в прогоне 11 их нет.</li>
+    <li>Ошибок в логах трёх прогонов нет.</li>
+  </ol>
+</section>
+<p class="muted">Отчёт по выгрузкам прогонов 9, 10 и 11, задача IMDEV-9458.</p>
+</div>
+</body>
+</html>
