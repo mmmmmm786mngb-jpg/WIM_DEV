@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>IMDEV-9458. Сравнение Аванкор 9 и Аванкор 8</title>
+<style>
+  :root {
+    --ok: #28a745;
+    --err: #dc3545;
+    --info: #17a2b8;
+    --warn: #ffc107;
+    --ink: #212529;
+    --soft: #6c757d;
+    --bg: #f5f6f8;
+    --card: #ffffff;
+    --line: #dee2e6;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: "Segoe UI", Arial, Helvetica, sans-serif;
+    font-size: 15px;
+    line-height: 1.45;
+    color: var(--ink);
+    background: var(--bg);
+  }
+  .wrap { max-width: 960px; margin: 0 auto; padding: 24px 16px 48px; }
+  header {
+    background: #1f4a3a;
+    color: #f7f1e8;
+    border-radius: 16px;
+    padding: 22px 24px;
+    margin-bottom: 20px;
+  }
+  header .kicker {
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    opacity: 0.75;
+    margin-bottom: 6px;
+  }
+  header h1 { margin: 0 0 8px; font-size: 24px; font-family: Georgia, "Times New Roman", serif; }
+  header p { margin: 0; color: #dce8e2; }
+  section {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 18px 20px;
+    margin-bottom: 16px;
+  }
+  h2 { margin: 0 0 12px; font-size: 18px; }
+  h3 { margin: 16px 0 8px; font-size: 16px; }
+  p { margin: 0 0 10px; }
+  ul { margin: 0 0 10px; padding-left: 20px; }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 10px 0 4px;
+    font-size: 14px;
+  }
+  th, td {
+    border: 1px solid var(--line);
+    padding: 8px 10px;
+    text-align: left;
+    vertical-align: top;
+  }
+  th { background: #eef2f0; }
+  .num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .ok { color: var(--ok); font-weight: 600; }
+  .warn { color: #b78100; font-weight: 600; }
+  .err { color: var(--err); font-weight: 600; }
+  .info { color: var(--info); }
+  .pill {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 600;
+  }
+  .pill-ok { background: #d4edda; color: #155724; }
+  .pill-warn { background: #fff3cd; color: #856404; }
+  .pill-info { background: #d1ecf1; color: #0c5460; }
+  .box-yellow {
+    background: #fff8e1;
+    border: 1px solid #ffe082;
+    border-radius: 8px;
+    padding: 12px 14px;
+    margin: 12px 0;
+  }
+  .box-blue {
+    background: #e8f4fd;
+    border: 1px solid #b6dcf5;
+    border-radius: 8px;
+    padding: 12px 14px;
+    margin: 12px 0;
+  }
+  .box-green {
+    background: #e8f5e9;
+    border: 1px solid #a5d6a7;
+    border-radius: 8px;
+    padding: 12px 14px;
+    margin: 12px 0;
+  }
+  .hl {
+    background: #fff3cd;
+    font-weight: 600;
+  }
+  pre {
+    background: #f8f9fa;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    padding: 10px 12px;
+    overflow-x: auto;
+    font-size: 13px;
+    margin: 8px 0;
+  }
+  .muted { color: var(--soft); font-size: 13px; }
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 10px;
+    margin: 12px 0;
+  }
+  .stat {
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 12px;
+    background: #fafbfc;
+  }
+  .stat .v { font-size: 22px; font-weight: 700; }
+  .stat .l { font-size: 12px; color: var(--soft); margin-top: 4px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <div class="kicker">IMDEV-9458 · тест обработки Формирование начислений НДФЛ</div>
+  <h1>Сравнение прогонов Аванкор 9 и Аванкор 8</h1>
+  <p>База 24889. Прогон 9 — без флага отбора клиентов с доходами. Прогон 8 — с отбором по доходам (эталон сумм).</p>
+</header>
+
+<section>
+  <h2>1. Введение</h2>
+  <p>
+    Цель сравнения — проверить гипотезу: при выключенном флаге
+    «В заполнение включать только клиентов с доходами» суммы по «живым» документам
+    совпадают с прогоном 8, а лишними оказываются только пустые документы.
+  </p>
+  <div class="box-green">
+    <strong>Итог.</strong>
+    По документам начисления НДФЛ по портфелю гипотеза подтверждена полностью.
+    По документам по управляющей компании — почти полностью: добавлены ожидаемые пустые,
+    но выделены <strong>два</strong> дополнительных документа УК с доходом и нулевым удержанием
+    (см. раздел 5). Известный кейс Платонова Д.В. в отчёт не включён (старый баг, не связан с флагом доходов).
+  </div>
+</section>
+
+<section>
+  <h2>2. Технология сравнения</h2>
+  <p>Сравнивались выгрузки двух прогонов одной тестовой базы:</p>
+  <ul>
+    <li>лог формирования начислений НДФЛ (xlsx);</li>
+    <li>сообщения пользователю (txt);</li>
+    <li>выгрузка документов «Начисление НДФЛ по УК» (xlsx, строки табличных частей);</li>
+    <li>выгрузка документов «Начисление НДФЛ по портфелю» (xlsx, строки табличных частей).</li>
+  </ul>
+  <p>Документы группировались по номеру. «Пустой» документ: сумма дохода = 0 и сумма к удержанию = 0
+  (для портфеля дополнительно исчисленный налог = 0).</p>
+  <div class="box-blue">
+    <strong>Параметры прогонов</strong>
+    <ul>
+      <li>Аванкор 8: 20.09.2026 09:02–13:34, ошибок в логе: 0</li>
+      <li>Аванкор 9: 20.09.2026 19:47 – 21.09.2026 02:29, ошибок в логе: 0</li>
+      <li>Прогон 9: флаг отбора по доходам выключен</li>
+      <li>Прогон 8: отбор по доходам включён (эталон для сумм)</li>
+    </ul>
+  </div>
+</section>
+
+<section>
+  <h2>3. Статистика</h2>
+
+  <h3>Документы по портфелю</h3>
+  <div class="grid">
+    <div class="stat"><div class="v ok">0</div><div class="l">Дельта «живых»</div></div>
+    <div class="stat"><div class="v info">+2 635</div><div class="l">Пустых документов</div></div>
+    <div class="stat"><div class="v ok">0</div><div class="l">Дельта сумм</div></div>
+    <div class="stat"><div class="v ok">OK</div><div class="l">Совпадение с эталоном</div></div>
+  </div>
+  <table>
+    <tr>
+      <th>Метрика</th>
+      <th class="num">Аванкор 8</th>
+      <th class="num">Аванкор 9</th>
+      <th class="num">Дельта</th>
+    </tr>
+    <tr>
+      <td>Документов всего</td>
+      <td class="num">26 331</td>
+      <td class="num">28 966</td>
+      <td class="num">+2 635</td>
+    </tr>
+    <tr>
+      <td>Пустых</td>
+      <td class="num">527</td>
+      <td class="num">3 162</td>
+      <td class="num">+2 635</td>
+    </tr>
+    <tr>
+      <td>С ненулевыми суммами</td>
+      <td class="num">25 804</td>
+      <td class="num">25 804</td>
+      <td class="num ok">0</td>
+    </tr>
+    <tr>
+      <td>Сумма дохода</td>
+      <td class="num">81 854 836 240,74</td>
+      <td class="num">81 854 836 240,74</td>
+      <td class="num ok">0</td>
+    </tr>
+    <tr>
+      <td>Сумма к удержанию</td>
+      <td class="num">1 175 485 201</td>
+      <td class="num">1 175 485 201</td>
+      <td class="num ok">0</td>
+    </tr>
+    <tr>
+      <td>Исчисленный налог</td>
+      <td class="num">1 326 151 719</td>
+      <td class="num">1 326 151 719</td>
+      <td class="num ok">0</td>
+    </tr>
+  </table>
+  <p class="muted">Все номера «живых» документов портфеля из прогона 8 присутствуют в прогоне 9. Лишние 2 635 — только пустые.</p>
+
+  <h3>Документы по управляющей компании</h3>
+  <div class="grid">
+    <div class="stat"><div class="v info">+2 541</div><div class="l">Пустых UK</div></div>
+    <div class="stat"><div class="v warn">+2</div><div class="l">UK с доходом only-9</div></div>
+    <div class="stat"><div class="v ok">OK</div><div class="l">Ожидаемые пустые</div></div>
+    <div class="stat"><div class="v warn">2 ФИО</div><div class="l">К проверке</div></div>
+  </div>
+  <table>
+    <tr>
+      <th>Метрика</th>
+      <th class="num">Аванкор 8</th>
+      <th class="num">Аванкор 9</th>
+      <th class="num">Дельта</th>
+    </tr>
+    <tr>
+      <td>Документов всего</td>
+      <td class="num">24 614</td>
+      <td class="num">27 157</td>
+      <td class="num">+2 543</td>
+    </tr>
+    <tr>
+      <td>Пустых</td>
+      <td class="num">91</td>
+      <td class="num">2 632</td>
+      <td class="num">+2 541</td>
+    </tr>
+    <tr>
+      <td>С ненулевыми суммами</td>
+      <td class="num">24 523</td>
+      <td class="num">24 525</td>
+      <td class="num warn">+2</td>
+    </tr>
+  </table>
+
+  <h3>Лог и сообщения</h3>
+  <table>
+    <tr>
+      <th>Показатель</th>
+      <th class="num">Аванкор 8</th>
+      <th class="num">Аванкор 9</th>
+    </tr>
+    <tr>
+      <td>Ошибок в логе</td>
+      <td class="num ok">0</td>
+      <td class="num ok">0</td>
+    </tr>
+    <tr>
+      <td>Skip «отсутствуют данные для расчета» (строки лога)</td>
+      <td class="num">275</td>
+      <td class="num">635</td>
+    </tr>
+    <tr>
+      <td>Коллизии номера документа</td>
+      <td class="num ok">0</td>
+      <td class="num ok">0</td>
+    </tr>
+    <tr>
+      <td>Блокировки / «временная таблица уже существует»</td>
+      <td class="num ok">0</td>
+      <td class="num ok">0</td>
+    </tr>
+    <tr>
+      <td>«Невозможно распределить…»</td>
+      <td class="num">402</td>
+      <td class="num">404</td>
+    </tr>
+    <tr>
+      <td>«Граница актуальности сдвинута»</td>
+      <td class="num">0</td>
+      <td class="num">109</td>
+    </tr>
+  </table>
+  <p class="muted">Рост skip и предупреждений о границе актуальности при выключенном отборе по доходам ожидаем: в заполнение попадает больше пар клиент+УК.</p>
+</section>
+
+<section>
+  <h2>4. Детали сравнения</h2>
+  <p>
+    <span class="pill pill-ok">Портфели</span>
+    Полное совпадение «живых» документов и сумм с прогоном 8.
+  </p>
+  <p>
+    <span class="pill pill-info">УК пустые</span>
+    +2 541 пустых документов УК — ожидаемый эффект выключенного флага доходов.
+  </p>
+  <p>
+    <span class="pill pill-warn">УК исключения</span>
+    Ниже — только два клиента, по которым в прогоне 9 появился документ УК с доходом при нулевом удержании.
+    Этих документов не было в прогоне 8.
+  </p>
+</section>
+
+<section>
+  <h2>5. Выделенные клиенты УК (только прогон 9)</h2>
+  <div class="box-yellow">
+    <strong>Внимание.</strong> Эти два документа не являются «пустыми»: в табличной части «Начисления» есть доход,
+    сумма к удержанию = 0. Они не объясняются одним только появлением пустых документов при выключенном флаге.
+  </div>
+
+  <table>
+    <tr>
+      <th>ФИО клиента</th>
+      <th>Номер документа УК</th>
+      <th>Портфель / объекты в ТЧ</th>
+      <th class="num">Сумма дохода</th>
+      <th class="num">Сумма к удержанию</th>
+    </tr>
+    <tr class="hl">
+      <td><strong>Львов Павел Глебович</strong></td>
+      <td>000000000045592</td>
+      <td>
+        ДУ 7407 (Львов П.Г.);<br>
+        ОПИФРФИ «ВИМ - Акции. Российские эмитенты»
+      </td>
+      <td class="num">2 094 457,77</td>
+      <td class="num">0</td>
+    </tr>
+    <tr class="hl">
+      <td><strong>Баландин Дмитрий Викторович</strong></td>
+      <td>000000000046843</td>
+      <td>
+        ДУ 3742 (Баландин Д.В.);<br>
+        ОПИФРФИ «ВИМ - Акции»;<br>
+        ОПИФРФИ «Сбалансированный. Рантье»
+      </td>
+      <td class="num">3 604 822,93</td>
+      <td class="num">0</td>
+    </tr>
+  </table>
+
+  <h3>Краткая расшифровка ТЧ</h3>
+  <p><strong>Львов Павел Глебович</strong> — в «Начисления» одна строка по клиенту: доход 2 094 457,77, вычет 2 020 949,23, налогооблагаемая 73 508,54, код дохода 1530. Удержание 0.</p>
+  <p><strong>Баландин Дмитрий Викторович</strong> — две строки «Начисления» (доходы 215 383,75 и 3 174 055,43) и строка «Удержания» по ОПИФ с доходом 215 383,75 при удержании 0.</p>
+</section>
+
+<section>
+  <h2>6. Возможности дальнейшего анализа</h2>
+  <ul>
+    <li>Открыть документы УК <code>000000000045592</code> и <code>000000000046843</code> в базе 24889 и проверить, почему налог к удержанию не сформировался.</li>
+    <li>Сверить, попадали ли эти клиенты в заполнение прогона 8 (при включённом отборе по доходам) и почему документ УК тогда не создался.</li>
+    <li>При необходимости — точечный повтор «Заполнить + Создать» только по этим двум клиентам на той же дате/периоде.</li>
+  </ul>
+</section>
+
+<section>
+  <h2>7. Выводы</h2>
+  <ol>
+    <li>Отбор по доходам на шаге заполнения работает: без флага появляются тысячи пустых документов портфеля и УК, а «живые» портфельные суммы совпадают с эталоном (Аванкор 8).</li>
+    <li>Критических ошибок прогона 9 нет: 0 ошибок в логе, нет коллизий номера и блокировок СУБД.</li>
+    <li>Для ручной проверки остаются только два клиента УК:
+      <strong>Львов Павел Глебович</strong> и
+      <strong>Баландин Дмитрий Викторович</strong>
+      (документы с доходом и нулевым удержанием, отсутствующие в прогоне 8).
+    </li>
+  </ol>
+</section>
+
+<p class="muted">Отчёт подготовлен по выгрузкам Аванкор 8 и Аванкор 9 (задача IMDEV-9458 / контекст IMDEV-7330).</p>
+
+</div>
+</body>
+</html>
