@@ -51,11 +51,20 @@ def main():
         report = ext.ВыполнитьДиагностику(params)
         text = "" if report is None else str(report)
 
+        print("Running source diagnosis...")
+        report_src = ext.ВыполнитьДиагностикуИсточников(params)
+        text_src = "" if report_src is None else str(report_src)
+
         OUT.parent.mkdir(parents=True, exist_ok=True)
         OUT.write_text(text, encoding="utf-8")
+        OUT_SRC = OUT.with_name("diag_two_uk_sources_report.txt")
+        OUT_SRC.write_text(text_src, encoding="utf-8")
         print("WROTE", OUT)
+        print("WROTE", OUT_SRC)
         print("--- REPORT ---")
         print(text)
+        print("--- SOURCES ---")
+        print(text_src)
         return 0
     except Exception as exc:
         print("ERROR", type(exc).__name__, exc)
