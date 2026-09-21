@@ -1,0 +1,66 @@
+{
+  "title": "Проверка документов НДФЛ по пулу РДУ",
+  "properties": { "autoTitle": false },
+  "events": { "OnCreateAtServer": "ПриСозданииНаСервере" },
+  "elements": [
+    {
+      "group": "alwaysHorizontal",
+      "name": "ГруппаПараметры",
+      "children": [
+        { "input": "ДатаДокументов", "path": "ДатаДокументов", "title": "Дата документов" },
+        { "input": "Пул", "path": "Пул", "title": "Пул", "choiceButton": true, "clearButton": true },
+        { "input": "УправляющаяКомпания", "path": "УправляющаяКомпания", "title": "УК", "choiceButton": true, "clearButton": true },
+        { "check": "ПоЗакрытымПортфелям", "path": "ПоЗакрытымПортфелям", "title": "Учитывать закрытые портфели", "titleLocation": "right" }
+      ]
+    },
+    { "input": "Результат", "path": "Результат", "multiLine": true, "height": 8, "readOnly": true, "title": "Итог" },
+    {
+      "table": "Нарушения",
+      "path": "Нарушения",
+      "changeRowSet": false,
+      "changeRowOrder": false,
+      "height": 12,
+      "title": "Нарушения и непроведенные по пулу",
+      "columns": [
+        { "labelField": "НарушенияВид", "path": "Нарушения.Вид", "title": "Вид" },
+        { "labelField": "НарушенияДокумент", "path": "Нарушения.Документ", "title": "Документ" },
+        { "labelField": "НарушенияКлиент", "path": "Нарушения.Клиент", "title": "Клиент" },
+        { "labelField": "НарушенияУК", "path": "Нарушения.УправляющаяКомпания", "title": "УК" },
+        { "labelField": "НарушенияПортфель", "path": "Нарушения.Портфель", "title": "Портфель" },
+        { "labelField": "НарушенияПул", "path": "Нарушения.ПулПортфеля", "title": "Пул портфеля" },
+        { "labelField": "НарушенияПричина", "path": "Нарушения.Причина", "title": "Причина" }
+      ]
+    },
+    {
+      "autoCmdBar": "ФормаКоманднаяПанель",
+      "autofill": true,
+      "children": [
+        { "button": "Проверить", "command": "Проверить", "defaultButton": true, "title": "Проверить" }
+      ]
+    }
+  ],
+  "attributes": [
+    { "name": "Объект", "type": "ExternalDataProcessorObject.IMDEV9458_CheckRduPool", "main": true },
+    { "name": "ДатаДокументов", "type": "dateTime" },
+    { "name": "Пул", "type": "CatalogRef.Пул" },
+    { "name": "УправляющаяКомпания", "type": "CatalogRef.Контрагенты" },
+    { "name": "ПоЗакрытымПортфелям", "type": "boolean" },
+    { "name": "Результат", "type": "string" },
+    {
+      "name": "Нарушения",
+      "type": "ValueTable",
+      "columns": [
+        { "name": "Вид", "type": "string(40)" },
+        { "name": "Документ", "type": "DocumentRef.НачислениеНДФЛПоУправляющейКомпании | DocumentRef.НачислениеНДФЛПоПортфелю" },
+        { "name": "Клиент", "type": "CatalogRef.Контрагенты" },
+        { "name": "УправляющаяКомпания", "type": "CatalogRef.Контрагенты" },
+        { "name": "Портфель", "type": "CatalogRef.Портфели | CatalogRef.ПортфелиСтороннихСистем" },
+        { "name": "ПулПортфеля", "type": "CatalogRef.Пул" },
+        { "name": "Причина", "type": "string(300)" }
+      ]
+    }
+  ],
+  "commands": [
+    { "name": "Проверить", "action": "Проверить", "title": "Проверить" }
+  ]
+}
