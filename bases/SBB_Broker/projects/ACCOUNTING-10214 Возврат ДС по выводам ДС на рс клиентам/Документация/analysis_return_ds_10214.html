@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ACCOUNTING-10214: возврат ДС ушел на невыясненные</title>
+<style>
+    * { box-sizing: border-box; }
+    body {
+        font-family: Calibri, "Segoe UI", Arial, sans-serif;
+        font-size: 15px;
+        line-height: 1.55;
+        color: #222;
+        background: #f4f6f8;
+        margin: 0;
+        padding: 0;
+    }
+    .page {
+        max-width: 1140px;
+        margin: 0 auto;
+        background: #fff;
+        padding: 0 0 52px 0;
+        box-shadow: 0 0 18px rgba(0,0,0,0.08);
+    }
+    header.doc-head {
+        background: #1f3c88;
+        color: #fff;
+        padding: 32px 44px 26px 44px;
+    }
+    header.doc-head .kicker {
+        font-size: 13px;
+        letter-spacing: 1.2px;
+        text-transform: uppercase;
+        opacity: 0.85;
+        margin-bottom: 10px;
+    }
+    header.doc-head h1 {
+        margin: 0 0 14px 0;
+        font-size: 26px;
+        line-height: 1.28;
+        font-weight: 600;
+    }
+    header.doc-head .sub { font-size: 16px; opacity: 0.92; }
+    .badges { margin-top: 16px; }
+    .badge {
+        display: inline-block;
+        font-size: 12px;
+        padding: 4px 10px;
+        border-radius: 12px;
+        margin-right: 8px;
+        font-weight: 600;
+    }
+    .badge.red { background: #dc3545; color: #fff; }
+    .badge.green { background: #28a745; color: #fff; }
+    .badge.blue { background: #17a2b8; color: #fff; }
+    .meta { display: table; width: 100%; border-collapse: collapse; font-size: 14px; }
+    .meta td { border: 1px solid #dfe3e8; padding: 9px 14px; vertical-align: top; }
+    .meta td.k { background: #f0f3f7; width: 240px; font-weight: 600; color: #45536b; }
+    .content { padding: 0 44px; }
+    h2 {
+        font-size: 21px;
+        color: #1f3c88;
+        margin: 38px 0 14px 0;
+        padding-bottom: 8px;
+        border-bottom: 2px solid #e3e8ef;
+    }
+    h3 { font-size: 17px; color: #24365c; margin: 28px 0 10px 0; }
+    p { margin: 0 0 12px 0; }
+    ul, ol { margin: 0 0 14px 0; padding-left: 24px; }
+    li { margin-bottom: 7px; }
+    table.grid { width: 100%; border-collapse: collapse; margin: 14px 0 22px 0; font-size: 14px; }
+    table.grid th {
+        background: #eef2f7;
+        border: 1px solid #d5dbe3;
+        padding: 9px 11px;
+        text-align: left;
+        color: #26385c;
+        font-weight: 600;
+    }
+    table.grid td { border: 1px solid #d5dbe3; padding: 9px 11px; vertical-align: top; }
+    table.grid tr:nth-child(even) td { background: #fafbfc; }
+    .box {
+        border-left: 5px solid #17a2b8;
+        background: #eaf7fa;
+        padding: 14px 18px;
+        margin: 16px 0 22px 0;
+        border-radius: 0 4px 4px 0;
+    }
+    .box.warn { border-left-color: #ffc107; background: #fff8e1; }
+    .box.bad { border-left-color: #dc3545; background: #fdecee; }
+    .box.good { border-left-color: #28a745; background: #eaf7ec; }
+    .box.violet { border-left-color: #6f42c1; background: #f3eefc; }
+    .box .bt { font-weight: 700; display: block; margin-bottom: 6px; color: #1f3c88; }
+    .box.warn .bt { color: #8a6100; }
+    .box.bad .bt { color: #a71d2a; }
+    .box.good .bt { color: #1e7e34; }
+    .box.violet .bt { color: #5a32a3; }
+    code {
+        font-family: Consolas, "Courier New", monospace;
+        font-size: 13.5px;
+        background: #f0f2f5;
+        padding: 1px 5px;
+        border-radius: 3px;
+        color: #1f3c88;
+    }
+    pre {
+        background: #1e2430;
+        color: #e6e9ef;
+        border-radius: 5px;
+        padding: 14px 16px;
+        overflow-x: auto;
+        font-family: Consolas, "Courier New", monospace;
+        font-size: 13px;
+        line-height: 1.5;
+        margin: 12px 0 18px 0;
+        white-space: pre-wrap;
+    }
+    pre .c { color: #8b9bb4; }
+    pre .k { color: #7ec8e3; }
+    pre .s { color: #c3e88d; }
+    pre .n { color: #ffcb6b; }
+    .toc { background: #f7f9fb; border: 1px solid #e1e6ec; border-radius: 5px; padding: 16px 22px; margin: 22px 0 0 0; }
+    .toc ol { margin: 0; padding-left: 22px; }
+    .toc li { margin-bottom: 4px; }
+    .toc a { color: #1f3c88; text-decoration: none; }
+    .toc a:hover { text-decoration: underline; }
+    footer.doc-foot {
+        margin: 44px 44px 0 44px;
+        padding-top: 16px;
+        border-top: 2px solid #e3e8ef;
+        font-size: 13px;
+        color: #6b7480;
+    }
+    .cards { display: table; width: 100%; border-collapse: separate; border-spacing: 12px 0; margin: 16px 0 22px 0; }
+    .card { display: table-cell; width: 50%; border: 1px solid #d5dbe3; border-radius: 6px; padding: 14px 16px; vertical-align: top; }
+    .card.ok { border-top: 4px solid #28a745; }
+    .card.fail { border-top: 4px solid #dc3545; }
+    .card h4 { margin: 0 0 10px 0; font-size: 15px; }
+    .card.ok h4 { color: #1e7e34; }
+    .card.fail h4 { color: #a71d2a; }
+    .card .purpose {
+        font-family: Consolas, "Courier New", monospace;
+        font-size: 12.5px;
+        background: #f7f9fb;
+        padding: 10px 12px;
+        border-radius: 4px;
+        margin: 8px 0;
+        word-break: break-word;
+    }
+    .hl { background: #ffe08a; padding: 0 3px; border-radius: 2px; font-weight: 700; }
+    .flow { display: table; width: 100%; margin: 12px 0 20px 0; border-collapse: separate; border-spacing: 8px 0; }
+    .step {
+        display: table-cell;
+        background: #f7f9fb;
+        border: 1px solid #d5dbe3;
+        border-radius: 6px;
+        padding: 12px 12px 10px 12px;
+        vertical-align: top;
+        width: 25%;
+    }
+    .step .num {
+        display: inline-block;
+        width: 24px; height: 24px;
+        background: #1f3c88; color: #fff;
+        border-radius: 50%;
+        text-align: center;
+        line-height: 24px;
+        font-size: 12px;
+        font-weight: 700;
+        margin-bottom: 8px;
+    }
+    .step.break .num { background: #dc3545; }
+    .step h5 { margin: 0 0 6px 0; font-size: 13px; color: #1f3c88; }
+    .step p { margin: 0; font-size: 13px; color: #445; }
+    figure { margin: 14px 0 22px 0; }
+    figure img {
+        max-width: 100%;
+        border: 1px solid #d5dbe3;
+        border-radius: 4px;
+        display: block;
+    }
+    figcaption { font-size: 13px; color: #6b7480; margin-top: 8px; }
+    a { color: #1f3c88; }
+</style>
+</head>
+<body>
+<div class="page">
+<header class="doc-head">
+    <div class="kicker">SBB_Broker / 1С ИЦ / бэк-офис брокера</div>
+    <h1>Возврат ДС ушел на невыясненные</h1>
+    <div class="sub">Разбор инцидента 21.09.2026. Задачи ACCOUNTING-10214 и ACCOUNTING-15493 уже в конфигурации, сценарий на сумме 1 000 000 не сработал.</div>
+    <div class="badges">
+        <span class="badge red">невыясненные</span>
+        <span class="badge blue">ACCOUNTING-10214</span>
+        <span class="badge green">причина найдена</span>
+    </div>
+</header>
+
+<div class="content">
+<table class="meta" style="margin-top:0">
+    <tr><td class="k">Письмо</td><td>Кузьмина Арина, 21.09.2026 17:16. Тема: возврат ДС по выводам на р/с клиентам не работает</td></tr>
+    <tr><td class="k">Кейс</td><td>Возврат ДС по действующему ДОФР, причина банка - счет получателя закрыт</td></tr>
+    <tr><td class="k">Сломалось</td><td>Операция с ДС <b>260921-00076</b>, 1 000 000 SUR, договор НЕВЫЯСНЕННЫЕ/ОШИБОЧНЫЕ ПЛАТЕЖИ БПИ</td></tr>
+    <tr><td class="k">Эталон</td><td>Операция <b>260630-00001</b> от 30.06.2026, 23 000 000 SUR, договор 1006427, флажок «Возврат ДС»</td></tr>
+    <tr><td class="k">Точка входа</td><td>Обработка <code>ОбработкаРеестровНРДAPIРКО</code>, процедура <code>СформироватьВводДС</code></td></tr>
+</table>
+
+<div class="toc">
+    <b>Содержание</b>
+    <ol>
+        <li><a href="#sit">Ситуация</a></li>
+        <li><a href="#compare">Сравнение назначений</a></li>
+        <li><a href="#why">Причина</a></li>
+        <li><a href="#code">Где в коде</a></li>
+        <li><a href="#fix">Как исправить</a></li>
+        <li><a href="#check">Что проверить в базе</a></li>
+    </ol>
+</div>
+
+<h2 id="sit">1. Ситуация</h2>
+<p>
+Регламент загрузки реестров НРД (API РКО) создает документ «Операции с денежными средствами» с типом <b>Ввод</b>.
+Если это банковский возврат вывода на р/с клиента, должен сработать сценарий ACCOUNTING-10214:
+флажок <b>Возврат ДС</b>, основание = исходный вывод, дальше этапы сами делают Перевод ДС и платежное поручение.
+</p>
+<p>
+Сегодня входящее зачисление от ВТБ на счет НРД 30411810000001001190 легло на невыясненные. Робот прислал письмо «Невыясненный платеж!» по операции 260921-00076.
+</p>
+
+<div class="cards">
+    <div class="card fail">
+        <h4>21.09.2026 - не сработало</h4>
+        <p>Банк-клиент, п/п <b>43867</b>, сумма 1 000 000. Номер списания и возврата совпадает.</p>
+        <div class="purpose">Возврат средств по ПД № 43867 от 21/09/2026 на сумму <span class="hl">1000000</span>RUB. Счет получателя закрыт. Без НДС</div>
+        <p>В 1С: договор и клиент «НЕВЫЯСНЕННЫЕ/ОШИБОЧНЫЕ ПЛАТЕЖИ БПИ», портфель «Основной портфель».</p>
+    </div>
+    <div class="card ok">
+        <h4>30.06.2026 - эталон</h4>
+        <p>Банк-клиент, п/п <b>27623</b>, сумма 23 000 000. Документ 260630-00001.</p>
+        <div class="purpose">Возврат средств на сумму <span class="hl">23,000,000.00</span> по п/п № 27623 от 29.06.26 в связи с закрытием счета получателя</div>
+        <p>В 1С: флажок «Возврат», основание 260629-00055, договор и портфель 1006427, клиент МТС-Инвест.</p>
+    </div>
+</div>
+
+<figure>
+    <img src="screenshots/01_vtb_bank_today_pp43867.png" alt="Банк-клиент 21.09.2026, п/п 43867">
+    <figcaption>Сегодня: списание и возврат с одним номером 43867. В назначении возврата сумма без разделителей: 1000000RUB.</figcaption>
+</figure>
+<figure>
+    <img src="screenshots/03_operatsii_ds_260630_00001_success.png" alt="Документ 260630-00001">
+    <figcaption>Эталон 30.06.2026: тип Ввод, флажок «Возврат», основание на исходный вывод, счет НРД СБС.</figcaption>
+</figure>
+
+<div class="box">
+    <span class="bt">Как задумано в 10214</span>
+    Для действующего ДОФР ввод заполняется как исходный вывод (клиент, договор, портфель, р/счет клиента).
+    Для закрытого ДОФР - невыясненные БПИ, портфель с кодом «номер_», технический р/счет.
+    Сегодняшний кейс - договор действующий, закрыт только банковский счет получателя. Ожидался эталонный вариант, как 30.06.2026.
+</div>
+
+<h2 id="compare">2. Сравнение назначений</h2>
+<p>
+Тестовые XML задачи 10214 - тот же шаблон ВТБ, что и сегодня. Разница только в записи суммы.
+</p>
+<table class="grid">
+    <tr>
+        <th>Источник</th>
+        <th>Фрагмент суммы в назначении</th>
+        <th>Семь цифр подряд</th>
+        <th>Ветка возврата</th>
+    </tr>
+    <tr>
+        <td>Тест 10214, XML НРД</td>
+        <td><code>на сумму 81.60RUB</code> / <code>73.85RUB</code></td>
+        <td>Нет: точка рвет цифры</td>
+        <td style="color:#1e7e34;font-weight:600">Включается</td>
+    </tr>
+    <tr>
+        <td>Эталон 30.06.2026, Альфа-Банк</td>
+        <td><code>на сумму 23,000,000.00</code></td>
+        <td>Нет: запятые рвут цифры</td>
+        <td style="color:#1e7e34;font-weight:600">Включается</td>
+    </tr>
+    <tr>
+        <td>Инцидент 21.09.2026, ВТБ</td>
+        <td><code>на сумму 1000000RUB</code></td>
+        <td>Да: <b>1000000</b>, затем буквы RUB</td>
+        <td style="color:#a71d2a;font-weight:600">Не включается</td>
+    </tr>
+</table>
+<div class="box warn">
+    <span class="bt">«ПД» вместо «п/п» ни при чем</span>
+    Номер п/п из назначения берется как первая группа цифр. Для сегодняшнего текста это <code>43867</code> - верно.
+    До этого разбора выполнение не доходит.
+</div>
+
+<h2 id="why">3. Причина</h2>
+<p>
+Автовозврат включается <b>только если</b> из назначения не извлекли номер договора (ровно семь цифр подряд) <b>и</b> текст начинается со слова «Возврат».
+Порядок сейчас такой:
+</p>
+
+<div class="flow">
+    <div class="step">
+        <div class="num">1</div>
+        <h5>Ищем 7 цифр</h5>
+        <p><code>НомерДоговораИзНазначенияПлатежа</code>. Сегодня находит <b>1000000</b>.</p>
+    </div>
+    <div class="step break">
+        <div class="num">2</div>
+        <h5>Это не возврат</h5>
+        <p>Номер договора не пустой. <code>ЭтоВозвратДС = Ложь</code>. Ветка 10214 пропускается.</p>
+    </div>
+    <div class="step break">
+        <div class="num">3</div>
+        <h5>Клиента нет</h5>
+        <p>Контрагент с кодом 1000000 не находится. Данные вывода не подставляются.</p>
+    </div>
+    <div class="step break">
+        <div class="num">4</div>
+        <h5>Невыясненные</h5>
+        <p><code>НовыйВводДС</code> заполняет договор по умолчанию и шлет «Невыясненный платеж!».</p>
+    </div>
+</div>
+
+<div class="box bad">
+    <span class="bt">Корень ошибки</span>
+    Сумма <code>1000000RUB</code> без пробелов и запятых совпадает по длине с номером ДОФР (7 цифр).
+    Функция поиска договора не отличает сумму платежа от номера договора.
+    В тестах 10214 такого формата суммы не было, поэтому дефект не поймали.
+</div>
+
+<p>
+Связанная задача ACCOUNTING-15493 закрывала другой случай: номер п/п в файле НРД не совпадал с номером вывода
+(в назначении 163276, в файле 14475). Тогда добавили запасной поиск вывода по цифрам из назначения.
+Сегодня этот код <b>не запускается</b>: он живет внутри <code>ДополнитьДанныеДляЗаполненияПоВозврату</code>, а туда мы не заходим.
+</p>
+
+<h2 id="code">4. Где в коде</h2>
+<table class="grid">
+    <tr>
+        <th>Что</th>
+        <th>Объект</th>
+        <th>Процедура / функция</th>
+    </tr>
+    <tr>
+        <td>Точка входа, развилка «обычный ввод / возврат»</td>
+        <td>Обработка <code>ОбработкаРеестровНРДAPIРКО</code>, модуль объекта</td>
+        <td><code>СформироватьВводДС</code></td>
+    </tr>
+    <tr>
+        <td>Семь цифр = номер договора</td>
+        <td>Общий модуль <code>РаботаСПоручениямиПовтИсп</code></td>
+        <td><code>НомерДоговораИзНазначенияПлатежа</code></td>
+    </tr>
+    <tr>
+        <td>Заполнение ввода-возврата, флаг и основание</td>
+        <td>Та же обработка</td>
+        <td><code>ДополнитьДанныеДляЗаполненияПоВозврату</code></td>
+    </tr>
+    <tr>
+        <td>Поиск исходного вывода</td>
+        <td>РС <code>ОперацииПоВыплатеДохода</code>, модуль менеджера</td>
+        <td><code>ДанныеВыводаДСПоСуммеИНомеруПоручения</code></td>
+    </tr>
+    <tr>
+        <td>Номер п/п из текста (доработка 15493)</td>
+        <td><code>РаботаСПоручениямиПовтИсп</code></td>
+        <td><code>НомерПлатежногоПорученияИзНазначенияПлатежа</code></td>
+    </tr>
+    <tr>
+        <td>Создание документа и письмо робота</td>
+        <td>Документ <code>ОперацииДС</code>, модуль менеджера</td>
+        <td><code>НовыйВводДС</code></td>
+    </tr>
+</table>
+
+<h3>Развилка, которая сегодня уводит мимо возврата</h3>
+<pre><span class="c">// ОбработкаРеестровНРДAPIРКО, СформироватьВводДС</span>
+НомерДоговора = РаботаСПоручениямиПовтИсп.НомерДоговораИзНазначенияПлатежа(СтрокаДанных.НазначениеПлатежа);
+<span class="k">Если</span> ПустаяСтрока(НомерДоговора) <span class="k">Тогда</span>
+    ЭтоВозвратДС = СтрНайти(СтрокаДанных.НазначениеПлатежа, <span class="s">"Возврат"</span>) = 1;
+    <span class="c">// ... ЗаполнитьДаннымиПоУмолчанию = Истина</span>
+<span class="k">Иначе</span>
+    ЭтоВозвратДС = <span class="k">Ложь</span>;          <span class="c">// &lt;- сегодня сюда: договор = "1000000"</span>
+    ЗаполнитьДаннымиПоУмолчанию = <span class="k">Ложь</span>;
+<span class="k">КонецЕсли</span>;
+
+<span class="k">Если</span> ЗаполнитьДаннымиПоУмолчанию <span class="k">Тогда</span>
+    <span class="k">Если</span> ЭтоВозвратДС <span class="k">Тогда</span>
+        ДополнитьДанныеДляЗаполненияПоВозврату(СтрокаДанных, ДанныеДляЗаполнения);
+    <span class="k">КонецЕсли</span>;
+    <span class="c">// ... НовыйВводДС</span>
+<span class="k">КонецЕсли</span>;</pre>
+
+<h3>Почему 1000000 становится договором</h3>
+<pre><span class="c">// РаботаСПоручениямиПовтИсп.НомерДоговораИзНазначенияПлатежа</span>
+<span class="c">// Ищет в строке ровно 7 цифр подряд</span>
+<span class="k">Если</span> СтрДлина(НомерДоговора) = 7 <span class="k">Тогда</span>
+    <span class="k">Возврат</span> НомерДоговора;
+<span class="k">КонецЕсли</span>;
+
+<span class="c">// "на сумму 1000000RUB"  ->  1000000  (7 цифр, дальше буква R)</span>
+<span class="c">// "на сумму 81.60RUB"    ->  нет семи цифр (точка)</span>
+<span class="c">// "23,000,000.00"        ->  нет семи цифр (запятые)</span></pre>
+
+<h3>Куда должны были зайти</h3>
+<pre><span class="c">// ДополнитьДанныеДляЗаполненияПоВозврату</span>
+<span class="c">// 1) поиск вывода по сумме и НомерПП из файла НРД</span>
+<span class="c">// 2) если не нашли - первая группа цифр из назначения (15493), для сегодня это 43867</span>
+ДанныеДляЗаполнения.Вставить(<span class="s">"ВозвратДС"</span>, <span class="k">Истина</span>);
+ДанныеДляЗаполнения.Вставить(<span class="s">"Основание"</span>, РеквизитыВыводаДС.ВыводДС);</pre>
+
+<h2 id="fix">5. Как исправить</h2>
+<div class="box violet">
+    <span class="bt">Рекомендуемый вариант: сначала слово «Возврат», потом номер договора</span>
+    Так и было задумано в постановке 10214: если первое слово назначения «Возврат», это возврат вывода, а не ввод по договору.
+    Сейчас проверка договора стоит раньше и перекрывает возврат.
+</div>
+
+<p>В <code>СформироватьВводДС</code> поменять порядок:</p>
+<pre><span class="c">// Было: сначала 7 цифр, и только если пусто - смотрим "Возврат"</span>
+<span class="c">// Надо: сначала "Возврат", договор из назначения для возврата не используем</span>
+
+ЭтоВозвратДС = СтрНайти(СтрокаДанных.НазначениеПлатежа, <span class="s">"Возврат"</span>) = 1;
+<span class="k">Если</span> ЭтоВозвратДС <span class="k">Тогда</span>
+    НомерДоговора = <span class="s">""</span>;
+    ЗаполнитьДаннымиПоУмолчанию = <span class="k">Истина</span>;
+    Уведомить(<span class="s">"Получен возврат от банка получателя!"</span>);
+<span class="k">Иначе</span>
+    НомерДоговора = РаботаСПоручениямиПовтИсп.НомерДоговораИзНазначенияПлатежа(СтрокаДанных.НазначениеПлатежа);
+    ЗаполнитьДаннымиПоУмолчанию = ПустаяСтрока(НомерДоговора);
+    <span class="k">Если</span> ЗаполнитьДаннымиПоУмолчанию <span class="k">Тогда</span>
+        Уведомить(<span class="s">"Не удалось определить номер договора по назначению платежа!"</span>);
+    <span class="k">КонецЕсли</span>;
+<span class="k">КонецЕсли</span>;</pre>
+
+<p>Дальше существующие <code>ДополнитьДанныеДляЗаполненияПоВозврату</code> и запасной поиск 15493 отработают сами: вывода ищут по сумме и номеру п/п, договор берут из найденного вывода, а не из семи цифр суммы.</p>
+
+<h3>Запасной вариант, если менять развилку нельзя</h3>
+<p>
+В <code>НомерДоговораИзНазначенияПлатежа</code> не возвращать семь цифр, если сразу после них идет валюта (<code>RUB</code>, <code>SUR</code>, <code>USD</code>) или фрагмент <code>на сумму</code>.
+Это уже, хуже читается, не закрывает другие ложные семерки в тексте банка.
+</p>
+
+<div class="box good">
+    <span class="bt">Что не надо чинить</span>
+    Разбор «ПД» / «п/п» / «РД Плат.пор.» трогать не нужно: для текущего текста первая группа цифр уже 43867.
+    Поиск вывода по сумме и номеру тоже менять не нужно, если включить ветку возврата.
+</div>
+
+<h3>Минимальный набор регресса</h3>
+<ol>
+    <li>Назначение как сегодня: <code>на сумму 1000000RUB</code> - должен создаться ввод с флажком «Возврат ДС» и основанием на вывод 43867, договор 1003084.</li>
+    <li>Тестовые XML 10214: <code>81.60RUB</code> / <code>73.85RUB</code> - действующий и закрытый договор как раньше.</li>
+    <li>Эталон июня: <code>23,000,000.00</code> - без регресса.</li>
+    <li>Кейс 15493: в файле НРД один номер п/п, в назначении другой - запасной поиск по цифрам из текста все еще работает.</li>
+    <li>Обычный ввод с настоящим номером ДОФР из семи цифр в назначении - по-прежнему находится договор, это не возврат.</li>
+</ol>
+
+<h2 id="check">6. Что проверить в базе</h2>
+<ol>
+    <li>Документ <code>260921-00076</code>: флажок «Возврат ДС» снят, основание пустое, договор невыясненных - это следствие, не отдельный сбой.</li>
+    <li>Исходный вывод по п/п <b>43867</b> на 1 000 000 (ДОФР 1003084, действующий): он должен был стать основанием.</li>
+    <li>РС «Операции по выплате дохода» по этому выводу: тип Вывод, сумма, <code>НомерПП</code>.</li>
+    <li>Сравнить с эталоном <code>260630-00001</code> / основанием <code>260629-00055</code>.</li>
+</ol>
+</div>
+
+<footer class="doc-foot">
+    Разбор по письму Кузьминой Арины от 21.09.2026, тестовым XML ACCOUNTING-10214 и доработке ACCOUNTING-15493.
+    Конфигурация SBB_Broker, обработка реестров НРД API РКО.
+</footer>
+</div>
+</body>
+</html>
