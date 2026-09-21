@@ -17,6 +17,7 @@
 - [imdev9458_avancor10_vs9_report.html](imdev9458_avancor10_vs9_report.html) - сверка прогона 10 (пустой пул) с полным прогоном 9.
 - [imdev9458_avancor9_10_11_report.html](imdev9458_avancor9_10_11_report.html) - сверка 9 (полный), 10 (не-РДУ) и 11 (Розничное ДУ).
 - [imdev9458_rdu_check.html](imdev9458_rdu_check.html) - краткая проверка отбора по РДУ (прогон 11).
+- [imdev9458_testing_report.html](imdev9458_testing_report.html) - сводный отчёт ИТ-тестирования: шаги 7-11, скриншоты, схема и графики.
 - [imdev9458_rdu_filter_proposal.html](imdev9458_rdu_filter_proposal.html) - доп. отбор: флажок и выбор пула. «Розничное ДУ» - РДУ, пустое поле - не-РДУ.
 
 ## Для разработки

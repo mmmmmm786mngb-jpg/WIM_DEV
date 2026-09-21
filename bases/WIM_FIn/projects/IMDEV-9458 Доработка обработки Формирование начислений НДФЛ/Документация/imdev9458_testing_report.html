@@ -1,0 +1,465 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>IMDEV-9458. Сводный отчёт о тестировании</title>
+<style>
+  :root { --ok:#28a745; --err:#dc3545; --info:#17a2b8; --warn:#b78100; --ink:#212529;
+    --soft:#6c757d; --bg:#f5f6f8; --card:#fff; --line:#dee2e6; --head:#1f4a3a; }
+  * { box-sizing:border-box; }
+  body { margin:0; font-family:"Segoe UI", Arial, Helvetica, sans-serif; font-size:15px;
+    line-height:1.45; color:var(--ink); background:var(--bg); }
+  .wrap { max-width:1080px; margin:0 auto; padding:24px 16px 56px; }
+  header.hero { background:var(--head); color:#f7f1e8; border-radius:16px; padding:22px 24px; margin-bottom:18px; }
+  header.hero .kicker { font-size:11px; letter-spacing:.1em; text-transform:uppercase; opacity:.75; margin-bottom:6px; }
+  header.hero h1 { margin:0 0 8px; font-size:26px; font-family:Georgia, "Times New Roman", serif; }
+  header.hero p { margin:0; color:#dce8e2; }
+  nav.toc { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:14px 18px; margin-bottom:16px; }
+  nav.toc a { color:#1f4a3a; }
+  section { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:18px 20px; margin-bottom:16px; }
+  h2 { margin:0 0 12px; font-size:19px; }
+  h3 { margin:16px 0 8px; font-size:16px; }
+  p, ul, ol { margin:0 0 10px; }
+  ul, ol { padding-left:20px; }
+  table { width:100%; border-collapse:collapse; margin:10px 0 4px; font-size:14px; }
+  th, td { border:1px solid var(--line); padding:8px 10px; text-align:left; vertical-align:top; }
+  th { background:#eef2f0; }
+  .num { text-align:right; font-variant-numeric:tabular-nums; white-space:nowrap; }
+  .ok { color:var(--ok); font-weight:600; }
+  .err { color:var(--err); font-weight:600; }
+  .warn { color:var(--warn); font-weight:600; }
+  .box-green { background:#e8f6ec; border:1px solid #b7e0c2; border-radius:10px; padding:12px 14px; margin:10px 0; }
+  .box-blue { background:#e7f4fb; border:1px solid #b9d7ea; border-radius:10px; padding:12px 14px; margin:10px 0; }
+  .box-yellow { background:#fff8e1; border:1px solid #f0d78c; border-radius:10px; padding:12px 14px; margin:10px 0; }
+  .grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:10px; margin:10px 0; }
+  .stat { background:#f8faf9; border:1px solid var(--line); border-radius:10px; padding:12px; }
+  .stat .v { font-size:22px; font-weight:700; }
+  .stat .l { font-size:12px; color:var(--soft); margin-top:4px; }
+  .muted { color:var(--soft); font-size:13px; }
+  figure { margin:12px 0 16px; }
+  figure img { display:block; width:100%; max-height:520px; object-fit:contain; object-position:top left;
+    background:#f4f6f5; border:1px solid var(--line); border-radius:8px; }
+  figcaption { font-size:13px; color:var(--soft); margin-top:6px; }
+  .step { border-left:4px solid #1f4a3a; padding:4px 0 4px 14px; margin:18px 0; }
+  .step h3 { margin-top:0; }
+  .bar { display:flex; align-items:center; gap:10px; margin:6px 0; font-size:13px; }
+  .bar .lab { width:88px; flex:none; }
+  .bar .track { flex:1; background:#e9eeec; border-radius:6px; height:18px; overflow:hidden; }
+  .bar .fill { height:18px; background:#2a7a5a; border-radius:6px; }
+  .bar .fill.alt { background:#17a2b8; }
+  .bar .val { width:110px; flex:none; text-align:right; font-variant-numeric:tabular-nums; }
+  .flow { width:100%; overflow-x:auto; }
+  .flow svg { max-width:100%; height:auto; }
+  .two { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+  .intro-lead { font-size:16px; max-width:820px; }
+  .tasks { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin:14px 0 8px; }
+  .task { background:#f8faf9; border:1px solid var(--line); border-radius:14px; padding:14px 16px 14px 14px;
+    display:grid; grid-template-columns:44px 1fr; gap:12px; align-items:start; }
+  .task .n { width:40px; height:40px; border-radius:12px; background:#1f4a3a; color:#f7f1e8;
+    display:flex; align-items:center; justify-content:center; font-weight:700; font-size:18px; }
+  .task h3 { margin:0 0 6px; font-size:15px; font-family:Georgia, "Times New Roman", serif; color:#1f4a3a; }
+  .task p { margin:0 0 8px; font-size:14px; color:#3a3f3d; }
+  .task p:last-child { margin-bottom:0; }
+  .pill { display:inline-block; font-size:11px; font-weight:700; letter-spacing:.04em; text-transform:uppercase;
+    padding:2px 8px; border-radius:999px; background:#e8f6ec; color:#1f7a4d; }
+  .pill.wait { background:#e7f4fb; color:#0d6e86; }
+  .flags { display:flex; flex-wrap:wrap; gap:8px; margin:10px 0 4px; }
+  .flag { background:#e7f4ec; color:#1f4a3a; border-radius:8px; padding:4px 10px; font-size:13px; font-weight:600; }
+  section.finale { background:var(--head); color:#f7f1e8; border:none; padding:36px 32px 40px; }
+  .finale-kicker { font-size:11px; letter-spacing:.14em; text-transform:uppercase; opacity:.65; margin:0 0 14px; }
+  section.finale h2 { font-family:Georgia, "Times New Roman", serif; font-size:34px; line-height:1.12;
+    margin:0 0 14px; color:#f7f1e8; max-width:14em; font-weight:400; }
+  .finale-line { font-size:17px; color:#dce8e2; margin:0 0 28px; max-width:36em; }
+  .finale-proof { display:grid; grid-template-columns:repeat(3,1fr); gap:1px; background:rgba(255,255,255,.12);
+    border-radius:14px; overflow:hidden; margin:0 0 28px; }
+  .finale-proof > div { background:var(--head); padding:22px 18px; }
+  .finale-proof b { display:block; font-family:Georgia, "Times New Roman", serif; font-size:42px;
+    font-weight:400; line-height:1; margin:0 0 8px; color:#f7f1e8; }
+  .finale-proof span { font-size:13px; color:#c5d4cc; letter-spacing:.02em; }
+  .finale-slides { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+  .slide { background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.1); border-radius:14px; padding:18px 18px 16px; }
+  .slide .idx { font-size:11px; letter-spacing:.12em; text-transform:uppercase; color:#9cb5a8; margin:0 0 8px; }
+  .slide h3 { margin:0 0 8px; font-size:18px; font-family:Georgia, "Times New Roman", serif; color:#f7f1e8; font-weight:400; }
+  .slide p { margin:0; font-size:14px; color:#c5d4cc; line-height:1.45; }
+  @media (max-width:800px) {
+    .two, .tasks, .finale-slides, .finale-proof { grid-template-columns:1fr; }
+    section.finale h2 { font-size:26px; }
+    .finale-proof b { font-size:34px; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+<header class="hero">
+  <div class="kicker">IMDEV-9458 · ИТ-тестирование · 19-21.09.2026</div>
+  <h1>Сводный отчёт: отбор по доходам, ПИФ, пулу РДУ</h1>
+  <p>Базовая конфигурация «Доверительное управление, редакция 2», версия 2.8.8.2. Расширение IMDEV9458_EmptyTurnover, версия 1.0.0.11. Контур UAT, период 2026, УК АО ВИМ Инвестиции.</p>
+</header>
+
+<nav class="toc">
+  <strong>Содержание.</strong>
+  1. <a href="#s1">Введение</a> ·
+  2. <a href="#s2">Технология</a> ·
+  3. <a href="#s3">Статистика</a> ·
+  4. <a href="#s4">Пошаговый план</a> ·
+  5. <a href="#s5">Выводы</a>
+</nav>
+
+<section id="s1">
+  <h2>1. Введение</h2>
+  <p class="intro-lead">Вендору Аванкор передаём точечный влив в типовую обработку «Формирование начислений НДФЛ»: два отбора на заполнении, повтор записи при коллизии номера и устойчивый повтор запроса оборотов. Расчёт налога и состав документов начисления не меняются - меняется только список пар клиент + УК после «Заполнить». Референс - расширение IMDEV9458_EmptyTurnover версии 1.0.0.11 на базовой 2.8.8.2; после приёмки расширение снимаем.</p>
+  <p>На форме два флажка, оба по умолчанию выключены. Можно включить по одному или вместе: сначала пул, затем доход.</p>
+  <div class="flags">
+    <span class="flag">Только клиенты с доходами</span>
+    <span class="flag">Только клиенты выбранного пула</span>
+  </div>
+
+  <h3>Что просим перенести в типовую</h3>
+  <div class="tasks">
+    <article class="task">
+      <div class="n">1</div>
+      <div>
+        <h3>Отбор по доходам на счетах 90 и 91</h3>
+        <p>Флажок и поле счетов справа. Умолчание: 90.01, 91.01, 91.03. После заполнения остаются пары, у которых за период есть обороты по этим счетам. Субсчета подхватываются сами, 91.02 доходом не считается.</p>
+        <p><span class="pill">Проверено, прогоны 7 и 8</span></p>
+      </div>
+    </article>
+    <article class="task">
+      <div class="n">2</div>
+      <div>
+        <h3>Доход ПИФ не отсекать</h3>
+        <p>Если по счетам оборотов нет, но в регистре сведений о доходах НДФЛ есть сумма из сторонней системы (не «своя» ДУ), пара остаётся. Так в заполнение попадают клиенты, у которых доход пришёл из ПИФ.</p>
+        <p><span class="pill">Проверено, Львов и Баландин в прогоне 9</span></p>
+      </div>
+    </article>
+    <article class="task">
+      <div class="n">3</div>
+      <div>
+        <h3>Отбор по пулу: РДУ и не-РДУ</h3>
+        <p>Флажок и поле пула. «Розничное ДУ» - клиенты РДУ. Пустое поле - не-РДУ (портфель без пула). Смотрим реквизит портфеля «Пул», не номер договора. Зерно - пара клиент + УК: достаточно одного портфеля с выбранным пулом.</p>
+        <p><span class="pill">Проверено, прогоны 10 и 11</span></p>
+      </div>
+    </article>
+    <article class="task">
+      <div class="n">4</div>
+      <div>
+        <h3>Коллизия номера документа УК</h3>
+        <p>При записи «Начисление НДФЛ по УК» повторять N раз: сначала текущий номер, затем новый. Иначе пачка падает с «значение поля Номер не уникально».</p>
+        <p><span class="pill">Проверено, дефект в прогоне 7, повтор 8 без ошибок</span></p>
+      </div>
+    </article>
+    <article class="task">
+      <div class="n">5</div>
+      <div>
+        <h3>Повтор запроса оборотов по портфелю</h3>
+        <p>В «ОбщиеОбороты» документа по портфелю не создавать явный менеджер временных таблиц. Иначе после блокировки СУБД повтор пакета падает: «временная таблица уже существует». Сделано: прогон 11 шёл уже без явного МВТ.</p>
+        <p><span class="pill">Проверено, прогон 11 без явного МВТ, ошибок 0</span></p>
+      </div>
+    </article>
+  </div>
+  <div class="box-green"><strong>Итог ИТ-прогонов.</strong> <span class="ok">Задачи 1-5 на контуре подтверждены.</span> Эталон - прогон 9 (полный набор с доходами и ПИФ). Прогоны 10 и 11 - срезы того же расчёта: пустой пул и «Розничное ДУ». Прогон 11 шёл уже без явного МВТ в «ОбщиеОбороты». Живые документы РДУ совпали с эталоном по составу портфелей и суммам. Пять смешанных пар попали в оба пула - так устроено зерно «клиент + УК».</div>
+</section>
+
+<section id="s2">
+  <h2>2. Технология</h2>
+  <p>Тесты выполнялись в тонком клиенте 1С на контуре AVC_UAT_RFIN_PERFTEST, базовая конфигурация 2.8.8.2, расширение IMDEV9458_EmptyTurnover 1.0.0.11, платформа 8.3.27.2214. Обработка открывалась из интерфейса, заполнение и создание документов - кнопками формы, проведение пачками фоновых заданий. После каждого прогона выгружались лог формирования, сообщения, документы «по УК» и «по портфелю». Сверка - по полному набору портфелей в табличной части, не по номеру документа (номера ПИФ у разных клиентов совпадают).</p>
+  <div class="box-blue">
+    <ul>
+      <li>Период: 01.01.2026 - 31.12.2026, налоговый период 2026.</li>
+      <li>УК: АО ВИМ Инвестиции. Схема выплаты: все схемы.</li>
+      <li>Закрытые портфели: включены (в том числе с поступившим НКД).</li>
+      <li>Пустой документ при сверке: доход = 0 и к удержанию = 0.</li>
+    </ul>
+  </div>
+  <h3>Схема прогонов</h3>
+  <div class="flow">
+    <svg viewBox="0 0 1040 220" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Схема прогонов 7-11">
+      <defs>
+        <marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+          <path d="M 0 0 L 10 5 L 0 10 z" fill="#1f4a3a"/>
+        </marker>
+      </defs>
+      <rect x="8" y="24" width="150" height="56" rx="8" fill="#fff8e1" stroke="#d4b24a"/>
+      <text x="83" y="48" text-anchor="middle" font-size="12" font-family="Segoe UI, Arial">7. Без доходов</text>
+      <text x="83" y="66" text-anchor="middle" font-size="11" fill="#6c757d">ошибка номера</text>
+      <rect x="198" y="24" width="150" height="56" rx="8" fill="#e7f4fb" stroke="#8bb8d0"/>
+      <text x="273" y="48" text-anchor="middle" font-size="12" font-family="Segoe UI, Arial">Хвост 408</text>
+      <text x="273" y="66" text-anchor="middle" font-size="11" fill="#6c757d">6 мин</text>
+      <rect x="388" y="24" width="150" height="56" rx="8" fill="#f8faf9" stroke="#c5cfd0"/>
+      <text x="463" y="48" text-anchor="middle" font-size="12" font-family="Segoe UI, Arial">Очистка</text>
+      <text x="463" y="66" text-anchor="middle" font-size="11" fill="#6c757d">50 945 док.</text>
+      <rect x="578" y="24" width="150" height="56" rx="8" fill="#e7f4fb" stroke="#8bb8d0"/>
+      <text x="653" y="48" text-anchor="middle" font-size="12" font-family="Segoe UI, Arial">8. Без доходов</text>
+      <text x="653" y="66" text-anchor="middle" font-size="11" fill="#6c757d">после фикса номера</text>
+      <rect x="768" y="24" width="150" height="56" rx="8" fill="#e8f6ec" stroke="#8fcaa0"/>
+      <text x="843" y="48" text-anchor="middle" font-size="12" font-family="Segoe UI, Arial">9. С доходами</text>
+      <text x="843" y="66" text-anchor="middle" font-size="11" fill="#6c757d">полный эталон</text>
+      <rect x="198" y="140" width="150" height="56" rx="8" fill="#f8faf9" stroke="#c5cfd0"/>
+      <text x="273" y="164" text-anchor="middle" font-size="12" font-family="Segoe UI, Arial">Очистка</text>
+      <text x="273" y="182" text-anchor="middle" font-size="11" fill="#6c757d">56 123 док.</text>
+      <rect x="388" y="140" width="150" height="56" rx="8" fill="#e7f4fb" stroke="#8bb8d0"/>
+      <text x="463" y="164" text-anchor="middle" font-size="12" font-family="Segoe UI, Arial">10. Пустой пул</text>
+      <text x="463" y="182" text-anchor="middle" font-size="11" fill="#6c757d">не-РДУ</text>
+      <rect x="578" y="140" width="150" height="56" rx="8" fill="#e8f6ec" stroke="#8fcaa0"/>
+      <text x="653" y="164" text-anchor="middle" font-size="12" font-family="Segoe UI, Arial">11. Розничное ДУ</text>
+      <text x="653" y="182" text-anchor="middle" font-size="11" fill="#6c757d">РДУ, суммы = 9</text>
+      <rect x="768" y="140" width="150" height="56" rx="8" fill="#1f4a3a"/>
+      <text x="843" y="164" text-anchor="middle" font-size="12" fill="#f7f1e8" font-family="Segoe UI, Arial">Сверка 9 / 10 / 11</text>
+      <text x="843" y="182" text-anchor="middle" font-size="11" fill="#dce8e2">покрытие живых 9</text>
+      <line x1="158" y1="52" x2="198" y2="52" stroke="#1f4a3a" marker-end="url(#ar)"/>
+      <line x1="348" y1="52" x2="388" y2="52" stroke="#1f4a3a" marker-end="url(#ar)"/>
+      <line x1="538" y1="52" x2="578" y2="52" stroke="#1f4a3a" marker-end="url(#ar)"/>
+      <line x1="728" y1="52" x2="768" y2="52" stroke="#1f4a3a" marker-end="url(#ar)"/>
+      <line x1="843" y1="80" x2="843" y2="118" stroke="#1f4a3a"/>
+      <line x1="843" y1="118" x2="273" y2="118" stroke="#1f4a3a"/>
+      <line x1="273" y1="118" x2="273" y2="140" stroke="#1f4a3a" marker-end="url(#ar)"/>
+      <line x1="348" y1="168" x2="388" y2="168" stroke="#1f4a3a" marker-end="url(#ar)"/>
+      <line x1="538" y1="168" x2="578" y2="168" stroke="#1f4a3a" marker-end="url(#ar)"/>
+      <line x1="728" y1="168" x2="768" y2="168" stroke="#1f4a3a" marker-end="url(#ar)"/>
+    </svg>
+  </div>
+</section>
+
+<section id="s3">
+  <h2>3. Статистика</h2>
+  <div class="grid">
+    <div class="stat"><div class="v">27 157</div><div class="l">УК, эталон (прогон 9)</div></div>
+    <div class="stat"><div class="v">2 164</div><div class="l">УК, не-РДУ (прогон 10)</div></div>
+    <div class="stat"><div class="v">22 457</div><div class="l">УК, РДУ (прогон 11)</div></div>
+    <div class="stat"><div class="v ok">0</div><div class="l">Ошибок в логах 8-11</div></div>
+  </div>
+
+  <h3>Длительность создания документов</h3>
+  <p class="muted">По логам формы (мин:сек) и пометкам плана. Прогон 7 с ошибкой уникальности номера в пачке 11.</p>
+  <div class="bar"><span class="lab">7 без дох.</span><div class="track"><div class="fill" style="width:66%"></div></div><span class="val">302:24 / 4 ч 40</span></div>
+  <div class="bar"><span class="lab">7 хвост</span><div class="track"><div class="fill" style="width:1.4%"></div></div><span class="val">6:21 / 408 кл.</span></div>
+  <div class="bar"><span class="lab">8 без дох.</span><div class="track"><div class="fill" style="width:70%"></div></div><span class="val">317:18 / 5 ч 15</span></div>
+  <div class="bar"><span class="lab">9 эталон</span><div class="track"><div class="fill" style="width:100%"></div></div><span class="val">454:54 / 7,5 ч</span></div>
+  <div class="bar"><span class="lab">10 не-РДУ</span><div class="track"><div class="fill alt" style="width:8%"></div></div><span class="val">38 мин</span></div>
+  <div class="bar"><span class="lab">11 РДУ</span><div class="track"><div class="fill alt" style="width:57%"></div></div><span class="val">258:34 / 4 ч 18</span></div>
+
+  <h3>Документы УК после проведения</h3>
+  <div class="bar"><span class="lab">8</span><div class="track"><div class="fill" style="width:91%"></div></div><span class="val">24 614</span></div>
+  <div class="bar"><span class="lab">9 эталон</span><div class="track"><div class="fill" style="width:100%"></div></div><span class="val">27 157</span></div>
+  <div class="bar"><span class="lab">10 не-РДУ</span><div class="track"><div class="fill alt" style="width:8%"></div></div><span class="val">2 164</span></div>
+  <div class="bar"><span class="lab">11 РДУ</span><div class="track"><div class="fill alt" style="width:83%"></div></div><span class="val">22 457</span></div>
+  <p class="muted">2 076 живых УК в 10 + 22 454 живых в 11 - 5 смешанных = 24 525 живых УК эталона 9.</p>
+
+  <table>
+    <tr><th>Прогон</th><th>Режим заполнения</th><th class="num">Строк на форме</th><th class="num">УК создано</th><th class="num">Портфелей</th><th>Лог</th></tr>
+    <tr><td>7</td><td>Без доходов, счета 90/91</td><td class="num">24 889</td><td class="num">-</td><td class="num">-</td><td>ошибка номера в пачке, затем 0 ошибок</td></tr>
+    <tr><td>7 хвост</td><td>По клиентам без НДФЛ на конец периода</td><td class="num">408</td><td class="num">-</td><td class="num">-</td><td>0 ошибок, 6:21</td></tr>
+    <tr><td>8</td><td>Без доходов, после фикса номера</td><td class="num">24 889</td><td class="num">24 614</td><td class="num">26 331</td><td>0 ошибок</td></tr>
+    <tr><td>9</td><td>С доходами (счета или ПИФ), все строки</td><td class="num">27 792</td><td class="num">27 157</td><td class="num">28 966</td><td>0 ошибок</td></tr>
+    <tr><td>10</td><td>С доходами + пул пустой (не-РДУ)</td><td class="num">2 208</td><td class="num">2 164</td><td class="num">2 747</td><td>0 ошибок</td></tr>
+    <tr><td>11</td><td>С доходами + пул «Розничное ДУ»</td><td class="num">22 688</td><td class="num">22 457</td><td class="num">23 597</td><td>0 ошибок</td></tr>
+  </table>
+</section>
+
+<section id="s4">
+  <h2>4. Пошаговый план и результаты</h2>
+
+  <div class="step">
+    <h3>Шаг 1. Заполнить «без доходов» (прогон 7)</h3>
+    <p>Флаг отсева без оборотов по 90.01 / 91.01 / 91.03 включён. На форме 24 889 строк. Создание документов пачками.</p>
+    <figure>
+      <img src="media/plan9458/image1.png" alt="Форма: без доходов, 24889 строк">
+      <figcaption>Форма обработки: период 2026, УК АО ВИМ Инвестиции, отсев без оборотов, 24 889 клиентов.</figcaption>
+    </figure>
+    <div class="box-yellow"><strong>Обнаружен дефект уникальности номера.</strong> В логе пачка 11: значение «000000000044095» поля «Номер» не уникально при записи документа УК. После исправления прогон повторили. Итог этого запуска в логе: 0 ошибок, 19.09.2026 19:41 - 20.09.2026 00:04, длительность 302:24.</div>
+    <div class="two">
+      <figure>
+        <img src="media/plan9458/image2.png" alt="Лог прогона 7 с ошибкой номера">
+        <figcaption>Лог: ошибка уникальности номера, затем сводка «Ошибок: 0».</figcaption>
+      </figure>
+      <figure>
+        <img src="media/plan9458/image3.png" alt="Выгрузки Аванкор 7">
+        <figcaption>Выгрузки прогона 7: портфели, УК, сообщения, лог.</figcaption>
+      </figure>
+    </div>
+  </div>
+
+  <div class="step">
+    <h3>Шаг 2. Досоздать клиентов без НДФЛ на конец периода - 408</h3>
+    <p>Вкладка «По всем клиентам на конец периода без НДФЛ». На форме 408 строк. Старт 20.09.2026 07:05, финиш 07:11.</p>
+    <figure>
+      <img src="media/plan9458/image4.png" alt="Форма хвоста 408 клиентов">
+      <figcaption>408 клиентов без начисления на конец периода, отсев без оборотов включён.</figcaption>
+    </figure>
+    <div class="two">
+      <figure>
+        <img src="media/plan9458/image5.png" alt="Лог хвоста 408">
+        <figcaption>Лог хвоста: 0 ошибок, 6:21. Часть строк - «отсутствуют данные для расчета» (пустой пропуск).</figcaption>
+      </figure>
+      <figure>
+        <img src="media/plan9458/image6.png" alt="Выгрузки хвоста 7">
+        <figcaption>Выгрузки с суффиксом «хвост» рядом с основным прогоном 7.</figcaption>
+      </figure>
+    </div>
+  </div>
+
+  <div class="step">
+    <h3>Шаг 3. Очистить проведенные начисления</h3>
+    <p>Обработка «Отмена проведения начислений НДФЛ», дата документов 31.12.2026, 10 потоков.</p>
+    <div class="two">
+      <figure>
+        <img src="media/plan9458/image7.png" alt="Отмена проведения в процессе">
+        <figcaption>В работе: 50 946 документов к отмене, 5 из 10 потоков.</figcaption>
+      </figure>
+      <figure>
+        <img src="media/plan9458/image12.png" alt="Отмена проведения завершена">
+        <figcaption>Завершено: отменено 50 945, длительность 18:07.</figcaption>
+      </figure>
+    </div>
+  </div>
+
+  <div class="step">
+    <h3>Шаг 4. Повтор «без доходов» после фикса номера (прогон 8)</h3>
+    <p>Тот же отсев без оборотов, 24 889 строк. Старт 20.09.2026 08:28 (диалог) / лог 09:02 - 13:34, 317:18, ошибок 0.</p>
+    <figure>
+      <img src="media/plan9458/image8.png" alt="Повтор без доходов, прогресс">
+      <figcaption>Повторный запуск без доходов, 24 889 клиентов к расчёту.</figcaption>
+    </figure>
+    <figure>
+      <img src="media/plan9458/image9.png" alt="Лог прогона 8">
+      <figcaption>Лог прогона 8: ошибок 0, проведение по УК и по портфелю.</figcaption>
+    </figure>
+    <div class="two">
+      <figure>
+        <img src="media/plan9458/image10.png" alt="Выгрузка УК прогона 8">
+        <figcaption>Выгрузка «НДФЛ_Управление» прогона 8.</figcaption>
+      </figure>
+      <figure>
+        <img src="media/plan9458/image11.png" alt="Выгрузка портфелей прогона 8">
+        <figcaption>Выгрузка «НДФЛ_Портфели» прогона 8.</figcaption>
+      </figure>
+    </div>
+  </div>
+
+  <div class="step">
+    <h3>Шаг 5. Полный прогон «с доходами» и ПИФ (прогон 9, эталон)</h3>
+    <p>Флаг отсева выключен: «как раньше, все строки», 10 потоков. На форме 27 792 клиента. Лог: 20.09.2026 19:47 - 21.09.2026 02:29, 454:54, ошибок 0.</p>
+    <figure>
+      <img src="media/plan9458/image13.png" alt="Запуск с доходами 27792">
+      <figcaption>Заполнение без отсева по счетам: 27 792 клиента к расчёту.</figcaption>
+    </figure>
+    <figure>
+      <img src="media/plan9458/image14.png" alt="Лог прогона 9">
+      <figcaption>Лог эталона: ошибок 0, длительность 454:54.</figcaption>
+    </figure>
+    <figure>
+      <img src="media/plan9458/image15.png" alt="Выгрузка портфелей прогона 9">
+      <figcaption>Выгрузка портфелей прогона 9 - база для сверки 10 и 11.</figcaption>
+    </figure>
+  </div>
+
+  <div class="step">
+    <h3>Шаг 6. Сверить 8 и 9, ПИФ и ИИС</h3>
+    <p>Живые документы по портфелю совпали: 25 804 в обоих прогонах, дельта сумм 0. Лишние 2 635 в прогоне 9 - только пустые. По УК: +2 живых (Львов, Баландин) - доход из ПИФ, на 90/91 его нет. После доработки флага «с доходами» они подтягиваются в заполнение.</p>
+    <figure>
+      <img src="media/plan9458/image16.png" alt="Сравнение Аванкор 8 и 9">
+      <figcaption>Сверка 8 против 9: живые портфели и суммы - OK, два ФИО к проверке.</figcaption>
+    </figure>
+    <figure>
+      <img src="media/plan9458/image17.png" alt="Львов в заполнении после учёта ПИФ">
+      <figcaption>После учёта доходов ПИФ Львов Павел Глебович есть в заполнении (строка 12 627 из 24 891).</figcaption>
+    </figure>
+    <figure>
+      <img src="media/plan9458/image18.png" alt="Проверка ИИС">
+      <figcaption>ИИС: отдельных документов по портфелю и строк налога нет. 108 ИИС только в служебных ТЧ внутри документа УК - допустимо.</figcaption>
+    </figure>
+  </div>
+
+  <div class="step">
+    <h3>Шаг 7. Снова очистить контур</h3>
+    <p>Перед срезами по пулу. 21.09.2026 06:09, 56 123 документа к отмене.</p>
+    <figure>
+      <img src="media/plan9458/image19.png" alt="Вторая отмена проведения">
+      <figcaption>Отмена проведения перед прогонами 10 и 11, дата 31.12.2026.</figcaption>
+    </figure>
+  </div>
+
+  <div class="step">
+    <h3>Шаг 8. Не-РДУ: пул пустой (прогон 10)</h3>
+    <p>Флаги: клиенты с доходами + только выбранный пул, поле пула пустое. На форме 2 208 строк. Старт диалога 21.09.2026 08:32.</p>
+    <div class="two">
+      <figure>
+        <img src="media/plan9458/image20.png" alt="Заполнение пустой пул 2208">
+        <figcaption>Заполнение не-РДУ: пул пустой, 2 208 клиентов.</figcaption>
+      </figure>
+      <figure>
+        <img src="media/plan9458/image21.png" alt="Создание документов не-РДУ">
+        <figcaption>Создание документов не-РДУ, 2 208 к расчёту.</figcaption>
+      </figure>
+    </div>
+    <p>Создано 2 164 УК / 2 747 портфелей. Все живые нашлись в эталоне 9. Единственная дельта сумм - Ивашкин А.Г. (вычет -325,60, к удержанию +49).</p>
+  </div>
+
+  <div class="step">
+    <h3>Шаг 9. Только РДУ: пул «Розничное ДУ» (прогон 11)</h3>
+    <p>Те же флаги доходов, пул «Розничное ДУ». На форме 22 688 строк. Диалог старта 09:56, лог 10:04 - 14:02, 258:34, ошибок 0. Этот прогон уже без явного менеджера временных таблиц в «ОбщиеОбороты».</p>
+    <figure>
+      <img src="media/plan9458/image22.png" alt="Запуск РДУ 22688">
+      <figcaption>Заполнение РДУ: пул «Розничное ДУ», 22 688 клиентов.</figcaption>
+    </figure>
+    <figure>
+      <img src="media/plan9458/image23.png" alt="Лог прогона 11">
+      <figcaption>Лог РДУ: ошибок 0, длительность 258:34.</figcaption>
+    </figure>
+    <figure>
+      <img src="media/plan9458/image24.png" alt="Выгрузка портфелей прогона 11">
+      <figcaption>Выгрузка портфелей прогона 11 (в том числе ДУ 4749 Петров А.А. - смешанная пара).</figcaption>
+    </figure>
+  </div>
+
+  <div class="step">
+    <h3>Шаг 10. Сверить РДУ с эталоном и смешанные пары</h3>
+    <p>Все 22 457 документов УК прогона 11 есть в прогоне 9 с тем же составом портфелей. Расхождений сумм нет. Львов и Баландин в РДУ нет: у них ДУ с пустым пулом и ПИФ, это не-РДУ.</p>
+    <figure>
+      <img src="media/plan9458/image25.png" alt="Краткая проверка РДУ">
+      <figcaption>Итог проверки РДУ против полного набора: отбор сработал, сумм-дельт 0.</figcaption>
+    </figure>
+    <p>Пять пар попали и в РДУ, и в пустой пул (зерно клиент+УК): Петров А.А., Борисов С.В., Ханкеев А.А., Никерова М.В., Хлестков В.Л. Пример Борисова: два договора ДУ с разными префиксами.</p>
+    <figure>
+      <img src="media/plan9458/image26.png" alt="Карточка Борисова два портфеля ДУ">
+      <figcaption>Борисов С.В.: ДУ 8735 и ДУ МИ28953. Разные пулы в одной паре клиент+УК.</figcaption>
+    </figure>
+  </div>
+</section>
+
+<section id="s5" class="finale">
+  <p class="finale-kicker">5. Выводы</p>
+  <h2>Отборы работают. Эталон держится.</h2>
+  <p class="finale-line">Пять задач Аванкору подтверждены на базовой 2.8.8.2 и расширении 1.0.0.11. Список после «Заполнить» стал управляемым. Расчёт налога не сдвинулся.</p>
+  <div class="finale-proof">
+    <div><b>0</b><span>ошибок в логах 8, 9, 10 и 11</span></div>
+    <div><b>9</b><span>полный эталон: 27 157 УК, 7,5 часа</span></div>
+    <div><b>11</b><span>РДУ совпал с эталоном по суммам</span></div>
+  </div>
+  <div class="finale-slides">
+    <article class="slide">
+      <p class="idx">Доход</p>
+      <h3>Пустых отсекли. ПИФ оставили.</h3>
+      <p>Счета 90.01, 91.01, 91.03 убирают пары без оборотов. Доход из ПИФ пару сохраняет: Львов и Баландин вошли в прогон 9.</p>
+    </article>
+    <article class="slide">
+      <p class="idx">Номер</p>
+      <h3>Коллизию закрыли с первого исправления.</h3>
+      <p>Прогон 7 упал на неуникальном номере УК. После повтора записи прогон 8 прошёл чисто.</p>
+    </article>
+    <article class="slide">
+      <p class="idx">Пул</p>
+      <h3>РДУ - точное подмножество полного набора.</h3>
+      <p>Прогон 11 без явного МВТ. Живые документы и суммы совпали с 9. Пять смешанных пар в обоих пулах - зерно клиент + УК, не ошибка.</p>
+    </article>
+    <article class="slide">
+      <p class="idx">ИИС</p>
+      <h3>Отдельного налога по ИИС нет.</h3>
+      <p>Нет документов по портфелю ИИС и нет строк начисления. Служебные ТЧ внутри документа УК допустимы.</p>
+    </article>
+  </div>
+</section>
+</div>
+</body>
+</html>
