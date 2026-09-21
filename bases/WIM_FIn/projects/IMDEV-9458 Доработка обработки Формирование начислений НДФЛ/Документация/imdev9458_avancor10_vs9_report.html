@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>IMDEV-9458. Сверка прогона 10 с прогоном 9</title>
+<style>
+  :root { --ok:#28a745; --err:#dc3545; --warn:#b78100; --ink:#212529; --soft:#6c757d;
+    --bg:#f5f6f8; --card:#fff; --line:#dee2e6; }
+  * { box-sizing:border-box; }
+  body { margin:0; font-family:"Segoe UI", Arial, Helvetica, sans-serif; font-size:15px;
+    line-height:1.45; color:var(--ink); background:var(--bg); }
+  .wrap { max-width:960px; margin:0 auto; padding:24px 16px 48px; }
+  header { background:#1f4a3a; color:#f7f1e8; border-radius:16px; padding:22px 24px; margin-bottom:20px; }
+  header .kicker { font-size:11px; letter-spacing:.1em; text-transform:uppercase; opacity:.75; margin-bottom:6px; }
+  header h1 { margin:0 0 8px; font-size:24px; font-family:Georgia, "Times New Roman", serif; }
+  header p { margin:0; color:#dce8e2; }
+  section { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:18px 20px; margin-bottom:16px; }
+  h2 { margin:0 0 12px; font-size:18px; }
+  h3 { margin:16px 0 8px; font-size:16px; }
+  p, ul { margin:0 0 10px; }
+  ul { padding-left:20px; }
+  table { width:100%; border-collapse:collapse; margin:10px 0 4px; font-size:14px; }
+  th, td { border:1px solid var(--line); padding:8px 10px; text-align:left; vertical-align:top; }
+  th { background:#eef2f0; }
+  .num { text-align:right; font-variant-numeric:tabular-nums; white-space:nowrap; }
+  .ok { color:var(--ok); font-weight:600; }
+  .warn { color:var(--warn); font-weight:600; }
+  .err { color:var(--err); font-weight:600; }
+  .box-green { background:#e8f6ec; border:1px solid #b7e0c2; border-radius:10px; padding:12px 14px; margin:10px 0; }
+  .box-blue { background:#e7f4fb; border:1px solid #b9d7ea; border-radius:10px; padding:12px 14px; margin:10px 0; }
+  .grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:10px; margin:10px 0; }
+  .stat { background:#f8faf9; border:1px solid var(--line); border-radius:10px; padding:12px; }
+  .stat .v { font-size:22px; font-weight:700; }
+  .stat .l { font-size:12px; color:var(--soft); margin-top:4px; }
+  .muted { color:var(--soft); font-size:13px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <div class="kicker">IMDEV-9458 · тест 10 против теста 9</div>
+  <h1>Сверка сумм и документов</h1>
+  <p>Прогон 9 — полный набор. Прогон 10 — тот же расчёт, флажок пула включён, поле пула пустое (не-РДУ).</p>
+</header>
+
+<section>
+  <h2>1. Введение</h2>
+  <p>Сверяем не «кто РДУ», а документы и суммы клиентов, которые остались после заполнения с пустым пулом: они должны совпасть с прогоном 9.</p>
+  <div class="box-green"><strong>Итог.</strong> <span class="err">Есть расхождения сумм или лишние живые документы в прогоне 10.</span></div>
+</section>
+
+<section>
+  <h2>2. Технология</h2>
+  <p>Выгрузки логов, сообщений, документов по УК и по портфелю. Строки ТЧ сгруппированы по номеру документа. Пустой документ: доход = 0, к удержанию = 0 (для портфеля ещё исчисленный налог = 0).</p>
+  <div class="box-blue">
+    <ul>
+      <li>Прогон 9: Начало выполнения: 20.09.2026 19:47:30, окончание выполнения: 21.09.2026 02:29:08 | Ошибок: 0</li>
+      <li>Прогон 10: Начало выполнения: 21.09.2026 08:44:13, окончание выполнения: 21.09.2026 09:22:01 | Ошибок: 0</li>
+    </ul>
+  </div>
+</section>
+
+<section>
+  <h2>3. Статистика</h2>
+  <div class="grid">
+    <div class="stat"><div class="v">2 164</div><div class="l">УК в прогоне 10</div></div>
+    <div class="stat"><div class="v">27 157</div><div class="l">УК в прогоне 9</div></div>
+    <div class="stat"><div class="v err">1</div><div class="l">Расхождений сумм УК</div></div>
+    <div class="stat"><div class="v ok">0</div><div class="l">Расхождений сумм портфеля</div></div>
+  </div>
+  <h3>Документы по УК</h3>
+  <table>
+    <tr><th>Метрика</th><th class="num">Прогон 9</th><th class="num">Прогон 10</th></tr>
+    <tr><td>Документов</td><td class="num">27 157</td><td class="num">2 164</td></tr>
+    <tr><td>Пустых</td><td class="num">2 632</td><td class="num">88</td></tr>
+    <tr><td>С суммами</td><td class="num">24 525</td><td class="num">2 076</td></tr>
+    <tr><td>Клиентов</td><td class="num">0</td><td class="num">0</td></tr>
+    <tr><td>Сумма дохода</td><td class="num">79 512 491 628.99</td><td class="num">77 419 928 455.01</td></tr>
+    <tr><td>Сумма к удержанию</td><td class="num">868 865 601.00</td><td class="num">854 836 243.00</td></tr>
+  </table>
+  <h3>Документы по портфелю</h3>
+  <table>
+    <tr><th>Метрика</th><th class="num">Прогон 9</th><th class="num">Прогон 10</th></tr>
+    <tr><td>Документов</td><td class="num">28 966</td><td class="num">2 747</td></tr>
+    <tr><td>Пустых</td><td class="num">3 162</td><td class="num">304</td></tr>
+    <tr><td>С суммами</td><td class="num">25 804</td><td class="num">2 443</td></tr>
+    <tr><td>Сумма дохода</td><td class="num">81 854 836 240.74</td><td class="num">78 554 937 242.06</td></tr>
+    <tr><td>Сумма к удержанию</td><td class="num">1 175 485 201.00</td><td class="num">1 159 098 002.00</td></tr>
+  </table>
+</section>
+
+<section>
+  <h2>4. Детали сверки 10 против 9</h2>
+  <table>
+    <tr><th>Срез</th><th class="num">Общих номеров</th><th class="num">Только в 10, живые</th><th class="num">Только в 9, живые</th><th class="num">Расхождений сумм</th></tr>
+    <tr><td>УК</td><td class="num">2 164</td><td class="num">0</td><td class="num">22 449</td><td class="num">1</td></tr>
+    <tr><td>Портфель</td><td class="num">2 747</td><td class="num">0</td><td class="num">23 361</td><td class="num">0</td></tr>
+  </table>
+  <h3>Живые УК, которых не было в прогоне 9</h3>
+  <table>
+    <tr><th>Клиент</th><th>Номер</th><th class="num">Сумма дохода</th><th class="num">К удержанию</th></tr>
+    <tr><td colspan='4'>Нет. Все живые документы УК прогона 10 есть в прогоне 9.</td></tr>
+
+  </table>
+  <h3>Расхождения сумм по общим номерам</h3>
+  <table>
+    <tr><th>Номер</th><th>Клиент</th><th>Дельта</th></tr>
+    <tr><td>000000000025249</td><td></td><td>СуммаВычета: -325.60, НалогооблагаемаяCумма: 325.60, СуммаКУдержанию: 49.00</td></tr>
+
+  </table>
+  <h3>Львов и Баландин</h3>
+  <table>
+    <tr><th>Клиент</th><th>Номер УК в 10</th><th class="num">Доход</th><th class="num">К удержанию</th><th>С прогоном 9</th></tr>
+    <tr><td><strong>Львов Павел Глебович</strong></td><td>не было в 9</td><td colspan='3'>В прогоне 10 нет</td></tr>
+<tr><td><strong>Баландин Дмитрий Викторович</strong></td><td>не было в 9</td><td colspan='3'>В прогоне 10 нет</td></tr>
+
+  </table>
+</section>
+
+<section>
+  <h2>5. Возможности</h2>
+  <ul>
+    <li>Зеркальный прогон с пулом «Розничное ДУ».</li>
+    <li>Если появится дельта по общему номеру — открыть документ в базе 24889 и сравнить ТЧ.</li>
+  </ul>
+</section>
+
+<section>
+  <h2>6. Выводы</h2>
+  <ol>
+    <li>Прогон 10 короче полного набора 9: остались клиенты с пустым пулом.</li>
+    <li>По общим документам суммы разошлись.</li>
+    <li>Ошибок в логе прогона 10: 0.</li>
+  </ol>
+</section>
+<p class="muted">Отчёт по выгрузкам прогонов 9 и 10, задача IMDEV-9458.</p>
+</div>
+</body>
+</html>
