@@ -13,6 +13,7 @@
 - [imdev9458_avancor_letter.txt](imdev9458_avancor_letter.txt) - текст письма / комментария в задачу.
 - [imdev9458_jira_comments.html](imdev9458_jira_comments.html) - два кратких комментария в задачу: отсев без дохода, затем отсев РДУ.
 - [imdev9458_jira_comment_iis.html](imdev9458_jira_comment_iis.html) - ответ в задачу: активные ИИС; постановка из письма и что видно по коду (начисление уже не создаётся).
+- [imdev9458_iis_avancor9_report.html](imdev9458_iis_avancor9_report.html) - сверка списка ИИС с прогоном Аванкор 9: пустых документов по ИИС нет, налог по ИИС = 0.
 - [imdev9458_rdu_filter_proposal.html](imdev9458_rdu_filter_proposal.html) - доп. отбор: флажок и выбор пула. «Розничное ДУ» - РДУ, пустое поле - не-РДУ.
 
 ## Для разработки

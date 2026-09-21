@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>IMDEV-9458. ИИС и прогон Аванкор 9</title>
+<style>
+  :root {
+    --ok: #28a745;
+    --err: #dc3545;
+    --info: #17a2b8;
+    --warn: #b78100;
+    --ink: #212529;
+    --bg: #f5f6f8;
+    --card: #ffffff;
+    --line: #dee2e6;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: "Segoe UI", Arial, Helvetica, sans-serif;
+    font-size: 15px;
+    line-height: 1.45;
+    color: var(--ink);
+    background: var(--bg);
+  }
+  .wrap { max-width: 960px; margin: 0 auto; padding: 24px 16px 48px; }
+  header {
+    background: #1f4a3a;
+    color: #f7f1e8;
+    border-radius: 16px;
+    padding: 22px 24px;
+    margin-bottom: 20px;
+  }
+  header .kicker {
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    opacity: 0.75;
+    margin-bottom: 6px;
+  }
+  header h1 {
+    margin: 0 0 8px;
+    font-size: 24px;
+    font-family: Georgia, "Times New Roman", serif;
+  }
+  header p { margin: 0; color: #dce8e2; }
+  section {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 18px 20px;
+    margin-bottom: 16px;
+  }
+  h2 { margin: 0 0 12px; font-size: 18px; }
+  h3 { margin: 16px 0 8px; font-size: 16px; }
+  p { margin: 0 0 10px; }
+  ul { margin: 0 0 10px; padding-left: 20px; }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 10px 0 4px;
+    font-size: 14px;
+  }
+  th, td {
+    border: 1px solid var(--line);
+    padding: 8px 10px;
+    text-align: left;
+    vertical-align: top;
+  }
+  th { background: #eef2f0; }
+  .num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .ok { color: var(--ok); font-weight: 600; }
+  .warn { color: var(--warn); font-weight: 600; }
+  .err { color: var(--err); font-weight: 600; }
+  .box-ok {
+    background: #e7f4ec;
+    border-radius: 10px;
+    padding: 12px 14px;
+    margin: 8px 0 0;
+  }
+  .box-warn {
+    background: #fff3cd;
+    border-radius: 10px;
+    padding: 12px 14px;
+    margin: 8px 0 0;
+  }
+  .box-info {
+    background: #e8f4f8;
+    border-radius: 10px;
+    padding: 12px 14px;
+    margin: 8px 0 0;
+  }
+  code {
+    font-family: Consolas, "Courier New", monospace;
+    font-size: 13px;
+    background: #eef2f0;
+    padding: 1px 5px;
+    border-radius: 4px;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="kicker">IMDEV-9458 · проверка по замечанию заказчика</div>
+    <h1>Активные ИИС и прогон Аванкор 9</h1>
+    <p>
+      Сверка списка портфелей «Индивидуальные инвестиционные счета»
+      с выгрузками документов прогона 9 (база 24889). Рядом — те же метрики по прогону 8.
+    </p>
+  </header>
+
+  <section>
+    <h2>1. Замечание заказчика</h2>
+    <p>
+      Активный портфель ИИС (тип клиента «Индивидуальные инвестиционные счета»,
+      дата окончания пустая) не должен давать начисление НДФЛ из обработки
+      «Формирование начислений НДФЛ»: ни отдельного документа по портфелю,
+      ни строк налога («Начисления» / «Удержания») в документе по УК.
+    </p>
+    <div class="box-info">
+      Список для сверки: выгрузка портфелей ИИС — <strong>760</strong> портфелей,
+      <strong>731</strong> клиентов.
+      Источник сверки: Excel-выгрузки УК / портфелей / лога прогона Аванкор 9.
+    </div>
+  </section>
+
+  <section>
+    <h2>2. Вердикт по прогону 9</h2>
+    <div class='box-ok'><strong class='ok'>Требование по налогу выполняется.</strong> По списку ИИС в прогоне 9 нет отдельных документов по портфелю и нет строк «Начисления» / «Удержания» с портфелем ИИС. Массовых «пустых» документов УК, собранных только из портфелей ИИС, тоже нет.</div>
+    <table>
+      <tr>
+        <th>Проверка</th>
+        <th class="num">Аванкор 9</th>
+        <th class="num">Аванкор 8</th>
+        <th>Ожидание</th>
+      </tr>
+      <tr>
+        <td>ИИС в документах по портфелю</td>
+        <td class="num">0</td>
+        <td class="num">0</td>
+        <td class="ok">0</td>
+      </tr>
+      <tr>
+        <td>ИИС со строками налога (Начисления / Удержания)</td>
+        <td class="num">0</td>
+        <td class="num">0</td>
+        <td class="ok">0</td>
+      </tr>
+      <tr>
+        <td>«Пустые» документы УК только из портфелей ИИС</td>
+        <td class="num">0</td>
+        <td class="num">0</td>
+        <td class="ok">0</td>
+      </tr>
+      <tr>
+        <td>ИИС только в служебных ТЧ (Выводы / Общие расходы)</td>
+        <td class="num">108</td>
+        <td class="num">108</td>
+        <td>допустимо внутри документа УК с расчётом по другим договорам</td>
+      </tr>
+    </table>
+  </section>
+
+  <section>
+    <h2>3. Статистика документов прогона</h2>
+    <table>
+      <tr>
+        <th>Показатель</th>
+        <th class="num">Аванкор 9</th>
+        <th class="num">Аванкор 8</th>
+        <th class="num">Дельта 9−8</th>
+      </tr>
+      <tr>
+        <td>Документов УК</td>
+        <td class="num">27 157</td>
+        <td class="num">24 614</td>
+        <td class="num">2 543</td>
+      </tr>
+      <tr>
+        <td>из них с ТЧ налога</td>
+        <td class="num">24 529</td>
+        <td class="num">24 523</td>
+        <td class="num">6</td>
+      </tr>
+      <tr>
+        <td>«Полые» УК (без Начислений/Удержаний)</td>
+        <td class="num">2 628</td>
+        <td class="num">91</td>
+        <td class="num">2 537</td>
+      </tr>
+      <tr>
+        <td>Документов по портфелю</td>
+        <td class="num">28 966</td>
+        <td class="num">26 331</td>
+        <td class="num">2 635</td>
+      </tr>
+    </table>
+    <div class="box-warn">
+      Прирост документов УК в прогоне 9 (+2 543)
+      связан с выключенным отбором по оборотам доходов, а не с созданием пустых начислений по ИИС.
+      По списку ИИС отдельных «пустых» документов УК не появилось.
+    </div>
+  </section>
+
+  <section>
+    <h2>4. Где ИИС всё же встречается в документе УК</h2>
+    <p>
+      В прогоне 9 портфель из списка ИИС встречается в выгрузке УК у
+      <strong>108</strong> портфелей.
+      Все такие вхождения — только служебные табличные части:
+    </p>
+    <table>
+      <tr><th>Табличная часть</th><th class="num">Строк с ИИС</th></tr>
+      <tr><td>Выводы</td><td class='num'>108</td></tr>
+<tr><td>ОбщиеРасходы</td><td class='num'>108</td></tr>
+
+    </table>
+    <p>
+      Жёстких (налог): <strong class="ok">0</strong>.
+      Только служебные: <strong>108</strong>
+      (в прогоне 8 было 108; общих — 108,
+      только в 9 — 0, только в 8 — 0).
+    </p>
+    <h3>Примеры ИИС только в Выводы / Общие расходы (прогон 9)</h3>
+    <table>
+      <tr><th>Портфель</th></tr>
+      <tr><td>ДУ 10051 (Лурье М.В.)</td></tr>
+<tr><td>ДУ 10052 (Лурье М.В.)</td></tr>
+<tr><td>ДУ 7279 (Кудрявцев Д.Г.)</td></tr>
+<tr><td>ДУ 7367 (Вахидова И.Д.)</td></tr>
+<tr><td>ДУ 7390 (Жамнов А.Ю.)</td></tr>
+<tr><td>ДУ 7415 (Крыштановская С.О.)</td></tr>
+<tr><td>ДУ 7445 (Мещеряков Д.А.)</td></tr>
+<tr><td>ДУ 7449 (Сухинин А.В.)</td></tr>
+<tr><td>ДУ 7454 (Остертах В.В.)</td></tr>
+<tr><td>ДУ 7460 (Зиновьев Ю.Д.)</td></tr>
+<tr><td>ДУ 7473 (Лагерев А.А.)</td></tr>
+<tr><td>ДУ 7477 (Гринберг А.И.)</td></tr>
+<tr><td>ДУ 7484 (Белых Н.Ю.)</td></tr>
+<tr><td>ДУ 7487 (Горбатов А.В.)</td></tr>
+<tr><td>ДУ 7491 (Христенко В.Б.)</td></tr>
+<tr><td>ДУ 7494 (Балаев А.Л.)</td></tr>
+<tr><td>ДУ 7529 (Шеховцов Е.В.)</td></tr>
+<tr><td>ДУ 7540 (Гринберг И.С.)</td></tr>
+<tr><td>ДУ 7568 (Шестаков А.В.)</td></tr>
+<tr><td>ДУ 7604 (Федченко О.А.)</td></tr>
+<tr><td>ДУ 7624 (Швалев В.А.)</td></tr>
+<tr><td>ДУ 7627 (Тихонов А.Г.)</td></tr>
+<tr><td>ДУ 7666 (Дюбарова М.Г.)</td></tr>
+<tr><td>ДУ 7667 (Дюбарова М.Г.)</td></tr>
+<tr><td>ДУ 7668 (Дюбарова М.Г.)</td></tr><tr><td><em>... и ещё 83 портфелей</em></td></tr>
+    </table>
+  </section>
+
+  <section>
+    <h2>5. Лог и сообщения</h2>
+    <table>
+      <tr>
+        <th>Показатель</th>
+        <th class="num">Аванкор 9</th>
+        <th class="num">Аванкор 8</th>
+      </tr>
+      <tr>
+        <td>Сообщений «не записан: отсутствуют данные для расчета»</td>
+        <td class="num">0</td>
+        <td class="num">0</td>
+      </tr>
+      <tr>
+        <td>Клиентов из списка ИИС в блоках отказа / нулевого НДФЛ (лог)</td>
+        <td class="num">61</td>
+        <td class="num">19</td>
+      </tr>
+      <tr>
+        <td>Клиентов из списка ИИС в файле сообщений</td>
+        <td class="num">0</td>
+        <td class="num">0</td>
+      </tr>
+    </table>
+    <p>
+      Отказ записи документа УК без данных для расчёта — штатный шаг «Создать»,
+      а не эффект отбора по оборотам на «Заполнить». Клиент с ИИС может остаться
+      в таблице после заполнения, а документ по нему не создаётся, если считать нечего.
+    </p>
+  </section>
+
+  <section>
+    <h2>6. Вывод для заказчика</h2>
+    <ul>
+      <li>По замечанию об активных ИИС в прогоне Аванкор 9 <strong>пустые документы начисления по списку ИИС не создавались</strong>.</li>
+      <li>Отдельных документов по портфелю ИИС — <strong>0</strong>.</li>
+      <li>Строк налога по ИИС в документе УК — <strong>0</strong>.</li>
+      <li>Единичные / массовые попадания ИИС возможны только в служебных ТЧ внутри документа УК, где уже есть расчёт по другим договорам того же клиента (как и в прогоне 8).</li>
+      <li>Отдельный флажок на форме под ИИС по-прежнему не требуется: правило закрыто логикой «Создать» / отбора портфелей.</li>
+    </ul>
+  </section>
+</div>
+</body>
+</html>
