@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Удаление пустых проводок Управленческий (ПИФ)</title>
+<style>
+  :root {
+    --ok: #28a745;
+    --info: #17a2b8;
+    --warn: #856404;
+    --text: #1f2937;
+    --muted: #6b7280;
+    --border: #e5e7eb;
+    --bg: #f5f7fa;
+    --card: #ffffff;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: "Segoe UI", Tahoma, Arial, sans-serif;
+    background: #eef2f7;
+    color: var(--text);
+    line-height: 1.55;
+  }
+  .wrap {
+    max-width: 880px;
+    margin: 0 auto;
+    padding: 28px 18px 48px;
+  }
+  h1 {
+    font-size: 1.4rem;
+    margin: 0 0 8px;
+    color: #0b3b36;
+  }
+  .sub {
+    color: var(--muted);
+    margin: 0 0 20px;
+    font-size: 0.95rem;
+  }
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 18px 20px;
+    margin-bottom: 14px;
+  }
+  .card h2 {
+    margin: 0 0 10px;
+    font-size: 1.08rem;
+    color: #0f766e;
+  }
+  .verdict {
+    border: 2px solid #0f766e;
+    background: linear-gradient(180deg, #ecfdf5 0%, #ffffff 50%);
+  }
+  .badge {
+    display: inline-block;
+    background: #0f766e;
+    color: #fff;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    padding: 4px 10px;
+    border-radius: 999px;
+    margin-bottom: 10px;
+  }
+  .ok {
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: #166534;
+    margin: 0 0 10px;
+  }
+  pre, code {
+    font-family: Consolas, "Courier New", monospace;
+  }
+  pre {
+    background: #0f172a;
+    color: #e2e8f0;
+    border-radius: 8px;
+    padding: 14px 16px;
+    overflow-x: auto;
+    font-size: 0.86rem;
+    line-height: 1.45;
+    white-space: pre;
+  }
+  ul { margin: 8px 0 0 18px; padding: 0; }
+  li { margin: 6px 0; }
+  .note {
+    background: #fff8db;
+    border: 1px solid #f5e6a3;
+    border-left: 4px solid #e0b400;
+    border-radius: 8px;
+    padding: 12px 14px;
+    color: #5c4b00;
+  }
+  .info {
+    background: #e8f7fb;
+    border: 1px solid #b6e4ee;
+    border-left: 4px solid var(--info);
+    border-radius: 8px;
+    padding: 12px 14px;
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.95rem;
+  }
+  th, td {
+    border: 1px solid var(--border);
+    padding: 8px 10px;
+    text-align: left;
+    vertical-align: top;
+  }
+  th {
+    background: #f0fdfa;
+    color: #115e59;
+    width: 32%;
+  }
+  .muted { color: var(--muted); font-size: 0.9rem; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <h1>Можно ли так удалять пустые проводки?</h1>
+  <p class="sub">Конфигурация ПИФ, регистр бухгалтерии <b>Управленческий</b></p>
+
+  <div class="card verdict">
+    <div class="badge">Ответ</div>
+    <p class="ok">Да, так удалять можно.</p>
+    <p style="margin:0;">
+      Это штатный способ убрать строки из набора движений <b>в памяти</b>:
+      сначала отобрать записи, потом вызвать <code>Удалить</code>.
+      В ПИФ такой приём уже используется.
+    </p>
+  </div>
+
+  <div class="card">
+    <h2>Разбираемый код</h2>
+<pre>Процедура УдалитьПустыеПроводки()
+
+    МассивДвиженийУдалить = Новый Массив;
+
+    Для Каждого Движение Из Движения.Управленческий Цикл
+        Если Движение.Сумма = 0 Тогда
+            МассивДвиженийУдалить.Добавить(Движение);
+        КонецЕсли;
+    КонецЦикла;
+
+    Для Каждого Движение Из МассивДвиженийУдалить Цикл
+        Движения.Управленческий.Удалить(Движение);
+    КонецЦикла;
+
+КонецПроцедуры</pre>
+  </div>
+
+  <div class="card">
+    <h2>Почему это корректно</h2>
+    <table>
+      <tr>
+        <th>Что проверяли</th>
+        <td>Вывод</td>
+      </tr>
+      <tr>
+        <th>Тип набора</th>
+        <td>
+          <code>Движения.Управленческий</code> — набор записей регистра бухгалтерии
+          <b>Управленческий</b> (с корреспонденцией).
+        </td>
+      </tr>
+      <tr>
+        <th>Поле Сумма</th>
+        <td>
+          Ресурс регистра <code>Сумма</code>, тип <code>Число(20, 2)</code>.
+          Обращение <code>Движение.Сумма</code> допустимо.
+        </td>
+      </tr>
+      <tr>
+        <th>Метод Удалить</th>
+        <td>
+          У набора записей регистра бухгалтерии есть метод <code>Удалить()</code>.
+          Параметр — объект записи (как в коде) либо индекс записи.
+        </td>
+      </tr>
+      <tr>
+        <th>Два цикла</th>
+        <td>
+          Нельзя удалять из набора внутри <code>Для Каждого</code> по этому же набору:
+          коллекция меняется во время обхода. Сначала отбор в массив, потом удаление —
+          правильный приём.
+        </td>
+      </tr>
+    </table>
+  </div>
+
+  <div class="card">
+    <h2>Уже есть в ПИФ</h2>
+    <p style="margin-top:0;">
+      Тот же фрагмент используется в проведении, после формирования проводок,
+      при <code>Движения.Управленческий.Записывать = Истина</code>:
+    </p>
+    <ul>
+      <li>документ <b>Начисление задолженности по купонам</b> — процедура <code>УдалитьПустыеПроводки</code></li>
+      <li>документ <b>Перевод НКД в задолженность эмитента</b> — та же процедура</li>
+      <li>документ <b>Погашение паев</b> — тот же приём: массив проводок, затем <code>Движения.Управленческий.Удалить(...)</code></li>
+    </ul>
+    <div class="info" style="margin-top:12px;">
+      В конце проведения платформа запишет уже урезанный набор.
+      Сам вызов <code>Удалить</code> базу не трогает — только записи в памяти.
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>На что обратить внимание</h2>
+    <div class="note">
+      <ol style="margin:0; padding-left:18px;">
+        <li style="margin-bottom:8px;">
+          <b>Контекст проведения.</b> Набор должен быть уже заполнен
+          (<code>Добавить</code> в этом же проведении либо <code>Прочитать()</code>).
+          Иначе цикл просто ничего не увидит.
+        </li>
+        <li style="margin-bottom:8px;">
+          <b>Критерий только <code>Сумма = 0</code>.</b>
+          У регистра ещё есть ресурсы <code>Количество</code> и <code>ВалютнаяСумма</code>.
+          Проводка с нулевой суммой, но ненулевым количеством или валютной суммой,
+          тоже будет удалена. Для количественных / валютных счетов это уже не «пустая» проводка.
+        </li>
+        <li>
+          <b>Не удалять внутри первого цикла</b> — ни по объекту, ни по индексу.
+        </li>
+      </ol>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Если нужно учитывать количество и валюту</h2>
+    <p style="margin-top:0;">Тогда условие лучше расширить, например:</p>
+<pre>Если Движение.Сумма = 0
+    И Движение.Количество = 0
+    И Движение.ВалютнаяСумма = 0 Тогда
+    МассивДвиженийУдалить.Добавить(Движение);
+КонецЕсли;</pre>
+    <p class="muted" style="margin-bottom:0;">
+      Для текущих документов с купонами, где чистятся именно нулевые суммовые проводки,
+      исходного условия <code>Сумма = 0</code> достаточно.
+    </p>
+  </div>
+
+  <div class="card">
+    <h2>Итог</h2>
+    <p style="margin:0;">
+      Для очистки нулевых суммовых проводок в модуле документа ПИФ при проведении —
+      <b>так делать можно</b>, платформа это поддерживает, в конфигурации приём уже применяется.
+    </p>
+  </div>
+
+</div>
+</body>
+</html>
