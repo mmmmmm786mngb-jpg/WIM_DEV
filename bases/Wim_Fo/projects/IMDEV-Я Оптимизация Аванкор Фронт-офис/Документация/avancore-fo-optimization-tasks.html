@@ -1,0 +1,1062 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Постановка задач. Оптимизация Аванкор Фронт-офис</title>
+<style>
+  :root {
+    --bg: #e7e1d6;
+    --paper: #fbf9f4;
+    --ink: #1b2330;
+    --muted: #5e675f;
+    --line: #ddd4c6;
+    --teal: #0e4f45;
+    --teal-2: #1f7a68;
+    --gold: #8d5e16;
+    --navy: #1b3348;
+    --burgundy: #8a3140;
+    --shadow: 0 16px 40px rgba(27, 35, 48, 0.08);
+  }
+
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0;
+    color: var(--ink);
+    background:
+      radial-gradient(1200px 500px at 10% -10%, rgba(31, 122, 104, 0.16), transparent 55%),
+      radial-gradient(900px 420px at 110% 0%, rgba(141, 94, 22, 0.12), transparent 50%),
+      var(--bg);
+    font-family: "Segoe UI", "PT Sans", sans-serif;
+    line-height: 1.5;
+  }
+
+  a { color: var(--teal); text-decoration-thickness: 1px; text-underline-offset: 3px; }
+  code, .mono {
+    font-family: Consolas, "Courier New", monospace;
+    font-size: 0.92em;
+  }
+
+  .wrap { width: min(1120px, calc(100% - 32px)); margin: 0 auto; }
+  .topbar {
+    background: var(--navy);
+    color: #f6f1e7;
+    border-bottom: 4px solid #c6a15b;
+  }
+  .topbar .wrap {
+    display: flex;
+    justify-content: space-between;
+    gap: 16px;
+    align-items: center;
+    padding: 14px 0;
+    font-size: 13px;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+  .topbar strong { font-weight: 650; letter-spacing: 0.08em; }
+
+  header.hero { padding: 36px 0 12px; }
+  .kicker {
+    display: inline-block;
+    margin-bottom: 12px;
+    padding: 4px 10px;
+    border-radius: 999px;
+    background: #efe4cf;
+    color: var(--gold);
+    font-size: 13px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+  h1 {
+    margin: 0 0 12px;
+    font-family: Palatino, "Palatino Linotype", Georgia, serif;
+    font-size: clamp(32px, 5vw, 52px);
+    line-height: 1.05;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+  }
+  .lead { max-width: 760px; font-size: 18px; color: #2c3644; margin: 0; }
+
+  .meta {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+    margin: 28px 0 8px;
+  }
+  .meta article, .card, .panel, .task, .gap, .check {
+    background: var(--paper);
+    border: 1px solid rgba(27, 35, 48, 0.06);
+    box-shadow: var(--shadow);
+  }
+  .meta article { padding: 14px 16px; border-radius: 14px; }
+  .meta span, .label {
+    display: block;
+    color: var(--muted);
+    font-size: 12px;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+  }
+  .meta b { display: block; margin-top: 4px; font-weight: 650; }
+
+  nav.toc {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 22px 0 8px;
+  }
+  nav.toc a {
+    text-decoration: none;
+    background: rgba(251, 249, 244, 0.8);
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    padding: 6px 12px;
+    color: var(--navy);
+    font-size: 14px;
+  }
+  nav.toc a:hover { background: #fff; }
+
+  section { margin: 28px 0; }
+  h2 {
+    font-family: Palatino, "Palatino Linotype", Georgia, serif;
+    font-size: 32px;
+    margin: 0 0 8px;
+    font-weight: 600;
+  }
+  h3 { margin: 0 0 8px; font-size: 20px; }
+  .sub { color: var(--muted); margin: 0 0 16px; }
+
+  .tracks { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .card { border-radius: 18px; padding: 22px; position: relative; overflow: hidden; }
+  .card:before {
+    content: "";
+    position: absolute;
+    left: 0; top: 0; bottom: 0;
+    width: 6px;
+  }
+  .local:before { background: var(--teal-2); }
+  .global:before { background: var(--gold); }
+  .card p { margin: 8px 0; }
+  .status {
+    display: inline-block;
+    margin-bottom: 8px;
+    padding: 3px 8px;
+    border-radius: 999px;
+    font-size: 12px;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+  .local .status { background: #e5f3ef; color: var(--teal); }
+  .global .status { background: #f8efdc; color: var(--gold); }
+  ul.clean { margin: 8px 0 0; padding-left: 18px; }
+  ul.clean li { margin: 4px 0; }
+
+  .pyramid { display: grid; gap: 10px; }
+  .level {
+    border-radius: 14px;
+    padding: 16px 18px;
+    background: var(--paper);
+    border: 1px solid var(--line);
+  }
+  .level.main { background: #1b3348; color: #f7f3ea; border-color: #1b3348; }
+  .level.second { background: #0e4f45; color: #f4faf8; border-color: #0e4f45; }
+  .level .who { font-size: 12px; letter-spacing: 0.06em; text-transform: uppercase; opacity: 0.8; }
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+  .chip {
+    background: rgba(255,255,255,0.14);
+    border-radius: 999px;
+    padding: 4px 10px;
+    font-size: 14px;
+  }
+  .level.prep .chip { background: #efe8dc; color: var(--ink); }
+
+  .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+  .stat { background: var(--paper); border-radius: 16px; padding: 16px; border: 1px solid var(--line); }
+  .stat b { display: block; font-family: Palatino, Georgia, serif; font-size: 34px; line-height: 1; }
+  .stat span { color: var(--muted); font-size: 14px; }
+
+  .filters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    align-items: end;
+    margin-bottom: 14px;
+  }
+  .filters label { display: flex; flex-direction: column; gap: 4px; font-size: 13px; color: var(--muted); }
+  select, input[type="search"] {
+    background: var(--paper);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 8px 10px;
+    color: var(--ink);
+    font: inherit;
+    min-width: 180px;
+  }
+  .count { margin-left: auto; color: var(--muted); font-size: 14px; align-self: center; }
+
+  .group-title {
+    margin: 18px 0 8px;
+    font-size: 13px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .task { border-radius: 16px; margin: 10px 0; overflow: hidden; }
+  .task[hidden] { display: none; }
+  .task summary {
+    cursor: pointer;
+    list-style: none;
+    display: grid;
+    grid-template-columns: 72px 1fr auto;
+    gap: 12px;
+    align-items: center;
+    padding: 14px 16px;
+  }
+  .task summary::-webkit-details-marker { display: none; }
+  .prio {
+    width: 64px;
+    height: 36px;
+    border-radius: 10px;
+    display: grid;
+    place-items: center;
+    font-weight: 700;
+    font-size: 14px;
+  }
+  .p0 { background: #f6e4e7; color: var(--burgundy); }
+  .p1 { background: #f8eadf; color: #9a4512; }
+  .p2 { background: #f7f0dc; color: var(--gold); }
+  .p3 { background: #e5eef6; color: #1e4d7b; }
+  .p4 { background: #e6f2ec; color: #245743; }
+  .p5 { background: #eceff2; color: #3e4a57; }
+  .p10 { background: #f0eaf6; color: #5b3f72; }
+  .pnone { background: #f3efe9; color: #6b5e52; }
+  .task h3 { font-size: 18px; }
+  .task .hint { color: var(--muted); font-size: 14px; }
+  .owners { display: flex; gap: 6px; }
+  .tag {
+    border-radius: 999px;
+    padding: 3px 8px;
+    font-size: 12px;
+    background: #efe8dc;
+    white-space: nowrap;
+  }
+  .tag.av { background: #f8efdc; color: #6d4a10; }
+  .tag.wim { background: #e5f3ef; color: #0e4f45; }
+  .body { padding: 0 16px 16px 100px; display: grid; grid-template-columns: 1.3fr 0.7fr; gap: 16px; }
+  .body dl { margin: 0; display: grid; grid-template-columns: 150px 1fr; gap: 6px 10px; }
+  .body dt { color: var(--muted); }
+  .body dd { margin: 0; }
+  .do {
+    background: #f6f3ec;
+    border-radius: 12px;
+    padding: 12px 14px;
+  }
+  .do strong { display: block; margin-bottom: 6px; }
+  .do ol { margin: 0; padding-left: 18px; }
+  .do li { margin: 4px 0; }
+
+  table { width: 100%; border-collapse: collapse; background: var(--paper); border-radius: 16px; overflow: hidden; }
+  th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--line); vertical-align: top; font-size: 14px; }
+  th { background: #1b3348; color: #f6f1e7; font-weight: 600; }
+  tr:last-child td { border-bottom: 0; }
+  .scroll { overflow-x: auto; border-radius: 16px; box-shadow: var(--shadow); }
+
+  .day { display: grid; grid-template-columns: 90px 1fr; gap: 8px 14px; }
+  .time { font-variant-numeric: tabular-nums; font-weight: 700; color: var(--teal); }
+  .slot { background: var(--paper); border-radius: 12px; padding: 10px 12px; border: 1px solid var(--line); }
+
+  .checks { display: grid; gap: 10px; }
+  .check { border-radius: 16px; padding: 16px 18px; display: grid; grid-template-columns: 42px 1fr; gap: 12px; }
+  .num {
+    width: 42px; height: 42px; border-radius: 12px;
+    display: grid; place-items: center;
+    background: #1b3348; color: #f6f1e7; font-weight: 700;
+  }
+  .gaps { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .gap { border-radius: 16px; padding: 16px 18px; border-top: 4px solid var(--gold); }
+  .gap h3 { font-size: 17px; }
+
+  .note {
+    background: #f8efdc;
+    border-left: 4px solid var(--gold);
+    border-radius: 12px;
+    padding: 12px 14px;
+    margin: 12px 0;
+  }
+
+  footer {
+    margin-top: 20px;
+    padding: 22px 0 40px;
+    color: var(--muted);
+    font-size: 14px;
+  }
+
+  @media (max-width: 900px) {
+    .meta, .tracks, .stats, .gaps, .body { grid-template-columns: 1fr; }
+    .body { padding-left: 16px; }
+    .task summary { grid-template-columns: 64px 1fr; }
+    .owners { grid-column: 2; }
+    .count { margin-left: 0; }
+    .topbar .wrap { flex-direction: column; align-items: flex-start; }
+  }
+  @media print {
+    body { background: #fff; }
+    .topbar, nav.toc, .filters { display: none; }
+    .task { break-inside: avoid; box-shadow: none; }
+    .task .body { display: grid !important; }
+  }
+</style>
+</head>
+<body>
+  <div class="topbar">
+    <div class="wrap">
+      <strong>Аванкор Фронт-офис</strong>
+      <span>Розница. Оптимизация. Постановка от 23.09.2026</span>
+    </div>
+  </div>
+
+  <header class="hero">
+    <div class="wrap">
+      <div class="kicker">Постановка задач</div>
+      <h1>Оптимизация Аванкор Фронт-офис</h1>
+      <p class="lead">Работы делятся на локальный контур до 150&nbsp;000 клиентов и глобальный контур до 500&nbsp;000. Главный результат системы - предконтроль и постконтроль лимитов. Список операций уже задан, локальный контур можно начинать по возрастанию приоритета.</p>
+      <div class="meta">
+        <article><span>Источник</span><b>Письмо С. Хромова, 16.09.2026</b></article>
+        <article><span>Список операций</span><b>Список ключевых операций ФО</b></article>
+        <article><span>Адресат чек-листа</span><b>Виктор, Аванкор</b></article>
+        <article><span>Копия</span><b>А. Константинов</b></article>
+      </div>
+      <nav class="toc">
+        <a href="#decisions">Решения</a>
+        <a href="#tracks">Участники</a>
+        <a href="#functions">Функции</a>
+        <a href="#tasks">Задачи</a>
+        <a href="#day">Суточный ритм</a>
+        <a href="#measures">Замеры</a>
+        <a href="#global">Глобальный контур</a>
+        <a href="#gaps">Пробелы</a>
+        <a href="#table">Сводка</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <section id="decisions">
+      <h2>Что уже решено</h2>
+      <p class="sub">Ниже только то, что прямо зафиксировано в письме. Это рамка для обеих команд.</p>
+      <div class="tracks">
+        <article class="card local">
+          <div class="status">Можно начинать</div>
+          <h3>Локальный контур</h3>
+          <p>Цель - 150&nbsp;000 клиентов. Ведет внутренняя команда ВИМ, задачи ставятся в Аванкор. Лимиты не пересобираются: используются текущие, уже настроенные в системе.</p>
+          <p>Порядок работ - список ключевых операций по возрастанию приоритета. В файле приоритет лежит в колонке «Примечание»: 0, затем 1, 2 и далее.</p>
+        </article>
+        <article class="card global">
+          <div class="status">Ждет вход от вендора</div>
+          <h3>Глобальный контур</h3>
+          <p>Цель - 500&nbsp;000 клиентов. Ведет команда вендора Аванкор. Старт после чек-листа: что нужно собрать до проекта. Чек-лист заполняют ИТ и бизнес ВИМ.</p>
+          <p>До начала работ с бизнесом фиксируются количество и качество лимитов на горизонте 2 лет. Скорость контролей зависит и от числа портфелей, и от состава проверок.</p>
+        </article>
+      </div>
+    </section>
+
+    <section id="tracks">
+      <h2>Участники письма</h2>
+      <p class="sub">Отправитель - Сергей Хромов. В адресатах обе стороны работ.</p>
+      <div class="stats">
+        <article class="stat"><b>ВИМ</b><span>А. Чмыхалов, Д. Харитонов, А. Константинов</span></article>
+        <article class="stat"><b>Аванкор</b><span>Виктор, Артём Тюрин</span></article>
+        <article class="stat"><b>16</b><span>операций в списке, номера 1-15 и 17</span></article>
+        <article class="stat"><b>3</b><span>операции с числовым ориентиром по времени</span></article>
+      </div>
+      <div class="note">Числа «23&nbsp;000 клиентов за 3 часа» и «23&nbsp;000 клиентов за 43 минуты» в файле - текущий наблюдаемый объем, а не цель контура. Цель локального контура - 150&nbsp;000, глобального - 500&nbsp;000. Формального критерия приемки локального контура в письме нет.</div>
+    </section>
+
+    <section id="functions">
+      <h2>Иерархия функций</h2>
+      <p class="sub">Письмо задает важность жестче, чем номера строк. При равном приоритете сначала то, что ближе к контролю лимитов и отправке на биржу.</p>
+      <div class="pyramid">
+        <article class="level main">
+          <div class="who">Основная задача системы</div>
+          <h3>Предконтроль и постконтроль лимитов</h3>
+          <div class="chips">
+            <span class="chip">Приоритет 0. Предконтроль поручения</span>
+            <span class="chip">Приоритет 0. Постконтроль по портфелям</span>
+          </div>
+        </article>
+        <article class="level second">
+          <div class="who">Вторая по важности</div>
+          <h3>Скорость отправки поручений на биржу</h3>
+          <p style="margin:6px 0 0">В процедуру входят и предконтроль, и время доставки поручения. В списке это отдельная операция приоритета 1.</p>
+        </article>
+        <article class="level prep">
+          <div class="who">Подготовка для двух первых</div>
+          <div class="chips">
+            <span class="chip">Установка лимитов: что и как проверять</span>
+            <span class="chip">Остатки по портфелям</span>
+            <span class="chip">Характеристики активов: цены, НКД, рейтинги</span>
+            <span class="chip">Изменение количества активов: сделки и неторговые поручения</span>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <section id="tasks">
+      <h2>Задачи локального контура</h2>
+      <p class="sub">Собраны из списка операций. Идентификаторы объектов сохранены как в файле. Очевидные опечатки в подписях исправлены в тексте задачи.</p>
+      <div class="filters">
+        <label>Приоритет
+          <select id="f-priority">
+            <option value="all">Все</option>
+            <option value="0">0 - контроль лимитов</option>
+            <option value="1">1 - поручения</option>
+            <option value="2">2 - остатки и сделки</option>
+            <option value="3">3 - установка лимитов</option>
+            <option value="4">4</option>
+            <option value="5">5 - справочные загрузки</option>
+            <option value="10">10 - упаковка</option>
+            <option value="none">Без приоритета</option>
+          </select>
+        </label>
+        <label>Исполнитель
+          <select id="f-owner">
+            <option value="all">Все</option>
+            <option value="avancore">Аванкор</option>
+            <option value="wim">ИТ ВИМ</option>
+            <option value="both">Обе стороны</option>
+            <option value="none">Не назначен</option>
+          </select>
+        </label>
+        <label>Поиск
+          <input id="f-search" type="search" placeholder="Операция, объект, модуль">
+        </label>
+        <div class="count" id="shown"></div>
+      </div>
+
+      <div class="group-title">Приоритет 0. Начать с этих двух</div>
+
+      <details class="task" open data-priority="0" data-owner="avancore" data-group="limits">
+        <summary>
+          <span class="prio p0">0</span>
+          <div>
+            <h3>1. Предконтроль поручений</h3>
+            <div class="hint">На каждое поручение. Ориентир: 10 секунд на проверку одного поручения.</div>
+          </div>
+          <div class="owners"><span class="tag av">Аванкор</span></div>
+        </summary>
+        <div class="body">
+          <dl>
+            <dt>Система</dt><dd>Аванкор ФО</dd>
+            <dt>Где</dt><dd>Блоттер и форма поручения, кнопки «Проверить» и «Проверить и отправить»</dd>
+            <dt>Запуск</dt><dd>Проверка каждого поручения и списка поручений</dd>
+            <dt>Замеры</dt><dd>Уже есть. Главный замер «Проверка», под ним: действующие лимиты, чтение наборов данных лимитов, пороги и базисы, обработка проверки, запись результатов.</dd>
+            <dt>Окно</dt><dd>Время начала и допустимое окно в файле не заданы: операция событийная.</dd>
+          </dl>
+          <div class="do">
+            <strong>Что сделать</strong>
+            <ol>
+              <li>Разобрать уже снятый замер «Проверка» и отделить время правил от чтения данных и записи результата.</li>
+              <li>Удержать ориентир 10 секунд на одно поручение на текущих лимитах.</li>
+              <li>Показать, как это время ведет себя при росте числа портфелей к 150&nbsp;000, не меняя состав лимитов.</li>
+            </ol>
+          </div>
+        </div>
+      </details>
+
+      <details class="task" open data-priority="0" data-owner="avancore">
+        <summary>
+          <span class="prio p0">0</span>
+          <div>
+            <h3>2. Постконтроль по всем портфелям</h3>
+            <div class="hint">Несколько раз в день, старт в 11:00. Сейчас: 23&nbsp;000 клиентов за 3 часа.</div>
+          </div>
+          <div class="owners"><span class="tag av">Аванкор</span></div>
+        </summary>
+        <div class="body">
+          <dl>
+            <dt>Система</dt><dd>Аванкор ФО</dd>
+            <dt>Объект</dt><dd class="mono">АванкорВыполнениеРегламентныхЗаданий.ПроверкаПоЛимитам</dd>
+            <dt>Запуск</dt><dd class="mono">Обработки.ПроверкаЛимитовПоПортфелям.ПроверкаПоЛимитамПоРасписанию</dd>
+            <dt>Замеры</dt><dd>Тот же контур, что у предконтроля: замер «Проверка» и вложенные шаги чтения, порогов, обработки и записи.</dd>
+            <dt>Окно</dt><dd>Допустимое окно не заполнено. Нужно зафиксировать, до какого времени должен закончиться прогон после 11:00.</dd>
+          </dl>
+          <div class="do">
+            <strong>Что сделать</strong>
+            <ol>
+              <li>Принять 3 часа на 23&nbsp;000 клиентов как базовую линию, не как целевой SLA контура 150&nbsp;000.</li>
+              <li>Найти, какая доля этих 3 часов приходится на чтение наборов, расчет и запись.</li>
+              <li>Оценить длительность полного прогона на текущих лимитах при масштабе локального контура.</li>
+            </ol>
+          </div>
+        </div>
+      </details>
+
+      <div class="group-title">Приоритет 1. Поручения</div>
+
+      <details class="task" data-priority="1" data-owner="avancore">
+        <summary>
+          <span class="prio p1">1</span>
+          <div>
+            <h3>4. Отправка поручений на биржу</h3>
+            <div class="hint">Ежедневно. Вторая функция системы: предконтроль плюс доставка.</div>
+          </div>
+          <div class="owners"><span class="tag av">Аванкор</span></div>
+        </summary>
+        <div class="body">
+          <dl>
+            <dt>Система</dt><dd>Аванкор ФО</dd>
+            <dt>Где</dt><dd>Блоттер и форма поручения, кнопка «Проверить и отправить»</dd>
+            <dt>Запуск</dt><dd class="mono">РаботаСПоручениямиКлиент.ОбработатьПорученияФормы</dd>
+            <dt>Замеры</dt><dd>В списке не описаны. Отдельного ориентира по времени нет.</dd>
+          </dl>
+          <div class="do">
+            <strong>Что сделать</strong>
+            <ol>
+              <li>Разложить операцию на предконтроль и доставку поручения. Предконтроль не оптимизировать вторым контуром: он уже задача 1.</li>
+              <li>Снять время от подтверждения отправки до принятия поручения биржей.</li>
+              <li>Согласовать целевое время. В файле его нет, а письмо называет эту скорость второй по важности.</li>
+            </ol>
+          </div>
+        </div>
+      </details>
+
+      <details class="task" data-priority="1" data-owner="wim">
+        <summary>
+          <span class="prio p1">1</span>
+          <div>
+            <h3>5. Создание торговых поручений РОСТ</h3>
+            <div class="hint">Ежедневно. Регламентное задание, внешняя обработка.</div>
+          </div>
+          <div class="owners"><span class="tag wim">ИТ ВИМ</span></div>
+        </summary>
+        <div class="body">
+          <dl>
+            <dt>Система</dt><dd>Аванкор ФО</dd>
+            <dt>Запуск</dt><dd>Внешние обработки. Создание торговых поручений РОСТ</dd>
+            <dt>Замеры</dt><dd>Не описаны. Ориентир по времени не задан.</dd>
+          </dl>
+          <div class="do">
+            <strong>Что сделать</strong>
+            <ol>
+              <li>Зафиксировать объем: сколько поручений создается за прогон и в пиковый день.</li>
+              <li>Добавить замер длительности создания и доли отбракованных поручений.</li>
+              <li>Проверить, что созданные поручения не раздувают очередь предконтроля.</li>
+            </ol>
+          </div>
+        </div>
+      </details>
+
+      <div class="group-title">Приоритет 2. Данные для контроля и изменение активов</div>
+
+      <details class="task" data-priority="2" data-owner="both">
+        <summary>
+          <span class="prio p2">2</span>
+          <div>
+            <h3>6. Загрузка остатков</h3>
+            <div class="hint">Ежедневно в 06:00. Сейчас по данным МО: 23&nbsp;000 клиентов за 43 минуты.</div>
+          </div>
+          <div class="owners"><span class="tag wim">ИТ ВИМ</span><span class="tag av">Аванкор</span></div>
+        </summary>
+        <div class="body">
+          <dl>
+            <dt>Откуда</dt><dd>Аванкор МО, обработка <span class="mono">внВыгрузкаОстатковМО_ФО</span></dd>
+            <dt>Куда</dt><dd>Обработка <span class="mono">ОбменДаннымиБэкОфис</span>, загрузка регистров сведений</dd>
+            <dt>Канал</dt><dd>Web-сервис Avancor DownloadPosition</dd>
+            <dt>Замеры</dt><dd>Нужен отдельный замер на каждый регистр сведений.</dd>
+          </dl>
+          <div class="do">
+            <strong>Что сделать</strong>
+            <ol>
+              <li>Подтвердить базу 43 минуты на 23&nbsp;000 клиентов и разложить ее по регистрам.</li>
+              <li>Выделить регистры, которые кормят предконтроль и постконтроль. Их ускорять раньше справочных загрузок.</li>
+              <li>Оценить окно до 11:00: постконтроль не должен стартовать на неполных остатках.</li>
+            </ol>
+          </div>
+        </div>
+      </details>
+
+      <details class="task" data-priority="2" data-owner="avancore">
+        <summary>
+          <span class="prio p2">2</span>
+          <div>
+            <h3>15. Исполнение сделок</h3>
+            <div class="hint">Ежедневно в 23:55. Регламентное задание.</div>
+          </div>
+          <div class="owners"><span class="tag av">Аванкор</span></div>
+        </summary>
+        <div class="body">
+          <dl>
+            <dt>Система</dt><dd>Аванкор ФО</dd>
+            <dt>Запуск</dt><dd class="mono">Обработки.ГрупповоеИсполнениеСделок</dd>
+            <dt>Замеры</dt><dd>Добавить. Ориентир по времени не задан.</dd>
+            <dt>Зачем</dt><dd>Письмо относит сделки к изменению количества активов - это подготовка контролей следующего дня.</dd>
+          </dl>
+          <div class="do">
+            <strong>Что сделать</strong>
+            <ol>
+              <li>Снять длительность группового исполнения и число сделок в прогоне.</li>
+              <li>Проверить, что результат успевает в загрузку остатков к 06:00.</li>
+            </ol>
+          </div>
+        </div>
+      </details>
+
+      <div class="group-title">Приоритет 3. Состав проверок</div>
+
+      <details class="task" data-priority="3" data-owner="both">
+        <summary>
+          <span class="prio p3">3</span>
+          <div>
+            <h3>3. Установка лимитов</h3>
+            <div class="hint">Ежедневно. Для локального контура состав проверок не меняется.</div>
+          </div>
+          <div class="owners"><span class="tag wim">ИТ ВИМ</span><span class="tag av">Аванкор</span></div>
+        </summary>
+        <div class="body">
+          <dl>
+            <dt>Система</dt><dd>Аванкор ФО</dd>
+            <dt>Запуск</dt><dd>Загрузка правил лимитов для новых портфелей</dd>
+            <dt>Объект</dt><dd>В файле не указан</dd>
+            <dt>Смысл</dt><dd>Письмо: установка лимитов определяет, что и как проверяют предконтроль и постконтроль.</dd>
+          </dl>
+          <div class="do">
+            <strong>Что сделать</strong>
+            <ol>
+              <li>Зафиксировать текущий каталог лимитов как неизменяемую базу локального контура.</li>
+              <li>Отдельно посчитать, сколько правил вешается на новый портфель и сколько длится эта загрузка.</li>
+              <li>Не смешивать эту работу с пересмотром качества лимитов: пересмотр на 2 года - вход глобального контура.</li>
+            </ol>
+          </div>
+        </div>
+      </details>
+
+      <div class="group-title">Приоритет 4. Загрузки, которые кормят позиции</div>
+
+      <details class="task" data-priority="4" data-owner="wim">
+        <summary>
+          <span class="prio p4">4</span>
+          <div>
+            <h3>9. Загрузка депозитов</h3>
+            <div class="hint">Ежедневно в 05:00. Раньше остатков.</div>
+          </div>
+          <div class="owners"><span class="tag wim">ИТ ВИМ</span></div>
+        </summary>
+        <div class="body">
+          <dl>
+            <dt>Система</dt><dd>Аванкор ФО</dd>
+            <dt>Запуск</dt><dd>Регламентное задание, внешняя обработка загрузки депозитов</dd>
+            <dt>Замеры</dt><dd>Добавить, с количеством депозитов в загрузке.</dd>
+          </dl>
+          <div class="do">
+            <strong>Что сделать</strong>
+            <ol>
+              <li>Снять время и объем до старта остатков в 06:00.</li>
+              <li>Подтвердить, что депозиты попадают в остатки того же утра, а не следующим днем.</li>
+            </ol>
+          </div>
+        </div>
+      </details>
+
+      <details class="task" data-priority="4" data-owner="wim">
+        <summary>
+          <span class="prio p4">4</span>
+          <div>
+            <h3>13. Загрузка неторговых поручений РОСТ</h3>
+            <div class="hint">Каждые 10 минут с 10:00.</div>
+          </div>
+          <div class="owners"><span class="tag wim">ИТ ВИМ</span></div>
+        </summary>
+        <div class="body">
+          <dl>
+            <dt>Система</dt><dd>Аванкор ФО</dd>
+            <dt>Запуск</dt><dd>Дополнительная обработка: загрузка неторговых поручений РОСТ</dd>
+            <dt>Замеры</dt><dd>Добавить. В файле ожидание: на производительность влиять не должно. Это надо подтвердить замером, а не оставить как допущение.</dd>
+            <dt>Зачем</dt><dd>Письмо относит неторговые поручения к изменению количества активов.</dd>
+          </dl>
+          <div class="do">
+            <strong>Что сделать</strong>
+            <ol>
+              <li>Снять длительность одного цикла и число поручений в цикле в пик.</li>
+              <li>Проверить, не пересекается ли цикл с постконтролем после 11:00.</li>
+            </ol>
+          </div>
+        </div>
+      </details>
+
+      <div class="group-title">Приоритет 5. Характеристики активов и справочники</div>
+
+      <details class="task" data-priority="5" data-owner="both">
+        <summary>
+          <span class="prio p5">5</span>
+          <div>
+            <h3>7. Загрузка мандатов</h3>
+            <div class="hint">Каждый час с 09:00.</div>
+          </div>
+          <div class="owners"><span class="tag wim">ИТ ВИМ</span><span class="tag av">Аванкор</span></div>
+        </summary>
+        <div class="body">
+          <dl>
+            <dt>Откуда</dt><dd>Аванкор МО, обработка <span class="mono">внВыгрузкаСчетовМандатов_МО_ФО.epf</span></dd>
+            <dt>Куда</dt><dd><span class="mono">ОбменДаннымиБэкОфис</span>, загрузка справочников</dd>
+            <dt>Канал</dt><dd>В файле указан тот же Web-сервис Avancor DownloadPosition, что у остатков и котировок. Проверить, что это не копирование строки.</dd>
+            <dt>Замеры</dt><dd>Отдельная процедура на каждый справочник.</dd>
+          </dl>
+          <div class="do">
+            <strong>Что сделать</strong>
+            <ol>
+              <li>Разложить час на справочники и оставить в приоритете только те, без которых не считаются лимиты.</li>
+              <li>Зафиксировать допустимую задержку: почасовой цикл не должен блокировать отправку поручений.</li>
+            </ol>
+          </div>
+        </div>
+      </details>
+
+      <details class="task" data-priority="5" data-owner="both">
+        <summary>
+          <span class="prio p5">5</span>
+          <div>
+            <h3>8. Загрузка котировок из МО</h3>
+            <div class="hint">Ежедневно в 09:00. Цены и НКД для проверок.</div>
+          </div>
+          <div class="owners"><span class="tag wim">ИТ ВИМ</span><span class="tag av">Аванкор</span></div>
+        </summary>
+        <div class="body">
+          <dl>
+            <dt>Откуда</dt><dd>Аванкор МО, обработка <span class="mono">внВыгрузкаКотировок_МО_ФО.epf</span></dd>
+            <dt>Куда</dt><dd><span class="mono">ОбменДаннымиБэкОфис</span>, загрузка документов</dd>
+            <dt>Канал</dt><dd>Web-сервис Avancor DownloadPosition - та же оговорка, что у мандатов.</dd>
+            <dt>Замеры</dt><dd>Отдельный замер на каждый документ.</dd>
+          </dl>
+          <div class="do">
+            <strong>Что сделать</strong>
+            <ol>
+              <li>Связать документы котировок с проверками лимитов: какие цены обязаны быть до 11:00.</li>
+              <li>Отделить рыночные данные, без которых контроль некорректен, от остальных документов пакета.</li>
+            </ol>
+          </div>
+        </div>
+      </details>
+
+      <details class="task" data-priority="5" data-owner="wim">
+        <summary>
+          <span class="prio p5">5</span>
+          <div>
+            <h3>10. Загрузка котировок ММВБ</h3>
+            <div class="hint">Ежедневно в 09:00. Дополнительная обработка на стороне ФО.</div>
+          </div>
+          <div class="owners"><span class="tag wim">ИТ ВИМ</span></div>
+        </summary>
+        <div class="body">
+          <dl>
+            <dt>Запуск</dt><dd>Дополнительная обработка: загрузка котировок (ММВБ)</dd>
+            <dt>Замеры</dt><dd>Добавить. Ожидание файла: на производительность влиять не должно.</dd>
+          </dl>
+          <div class="do">
+            <strong>Что сделать</strong>
+            <ol>
+              <li>Снять факт и сравнить с котировками из МО: нет ли двойной загрузки одних и тех же цен.</li>
+              <li>Если влияние на контроль нулевое, оставить операцию в наблюдаемых, не в критическом пути.</li>
+            </ol>
+          </div>
+        </div>
+      </details>
+
+      <details class="task" data-priority="5" data-owner="wim">
+        <summary>
+          <span class="prio p5">5</span>
+          <div>
+            <h3>11. Загрузка индексов</h3>
+            <div class="hint">Ежедневно в 08:00.</div>
+          </div>
+          <div class="owners"><span class="tag wim">ИТ ВИМ</span></div>
+        </summary>
+        <div class="body">
+          <dl>
+            <dt>Запуск</dt><dd>Дополнительная обработка: загрузка индексов</dd>
+            <dt>Замеры</dt><dd>Добавить. Ожидание файла: на производительность влиять не должно.</dd>
+          </dl>
+          <div class="do">
+            <strong>Что сделать</strong>
+            <ol>
+              <li>Подтвердить замером длительность и число индексов.</li>
+              <li>Понять, входят ли индексы в расчеты лимитов или это справочный контур.</li>
+            </ol>
+          </div>
+        </div>
+      </details>
+
+      <details class="task" data-priority="5" data-owner="wim">
+        <summary>
+          <span class="prio p5">5</span>
+          <div>
+            <h3>12. Загрузка TCRIS</h3>
+            <div class="hint">Ежедневно. Время начала в файле не указано.</div>
+          </div>
+          <div class="owners"><span class="tag wim">ИТ ВИМ</span></div>
+        </summary>
+        <div class="body">
+          <dl>
+            <dt>Запуск</dt><dd>Дополнительная обработка: загрузка дополнительного реквизита TCRIS</dd>
+            <dt>Замеры</dt><dd>Добавить. Ожидание файла: на производительность влиять не должно.</dd>
+            <dt>Зачем</dt><dd>По письму рейтинги относятся к характеристикам активов для контролей. Надо подтвердить, что TCRIS - этот контур, а не побочный реквизит.</dd>
+          </dl>
+          <div class="do">
+            <strong>Что сделать</strong>
+            <ol>
+              <li>Назначить время старта так, чтобы рейтинг был доступен до предконтроля утренних поручений.</li>
+              <li>Снять объем и длительность. Если связь с лимитами есть, приоритет 5 для этой строки стоит пересмотреть.</li>
+            </ol>
+          </div>
+        </div>
+      </details>
+
+      <div class="group-title">Приоритет 10 и строка без приоритета</div>
+
+      <details class="task" data-priority="10" data-owner="both">
+        <summary>
+          <span class="prio p10">10</span>
+          <div>
+            <h3>17. Алгоритмы упаковки данных</h3>
+            <div class="hint">Ежедневно. Объект, запуск и замеры не заданы.</div>
+          </div>
+          <div class="owners"><span class="tag wim">ИТ ВИМ</span><span class="tag av">Аванкор</span></div>
+        </summary>
+        <div class="body">
+          <dl>
+            <dt>Система</dt><dd>Аванкор ФО</dd>
+            <dt>Формулировка</dt><dd>В файле: «Проанализировать алгоритмы упаковки данных». Это исследование, не регламентная операция.</dd>
+          </dl>
+          <div class="do">
+            <strong>Что сделать</strong>
+            <ol>
+              <li>Не ставить в текущую очередь локального контура, пока не закрыты приоритеты 0-2.</li>
+              <li>Когда дойдет очередь: назвать конкретные процедуры упаковки и какой операции из списка они мешают.</li>
+            </ol>
+          </div>
+        </div>
+      </details>
+
+      <details class="task" data-priority="none" data-owner="none">
+        <summary>
+          <span class="prio pnone">-</span>
+          <div>
+            <h3>14. Загрузка сделок</h3>
+            <div class="hint">Ежедневно. Строка почти пустая: нет приоритета, объекта, запуска, замеров и исполнителя.</div>
+          </div>
+          <div class="owners"><span class="tag">Не назначено</span></div>
+        </summary>
+        <div class="body">
+          <dl>
+            <dt>Система</dt><dd>Аванкор ФО</dd>
+            <dt>Рядом</dt><dd>Исполнение сделок уже описано как задача 15. Загрузка - отдельный шаг, в файле он не раскрыт.</dd>
+          </dl>
+          <div class="do">
+            <strong>Что сделать</strong>
+            <ol>
+              <li>Дописать строку по тому же шаблону, что у остатков: источник, объект, запуск, замер, исполнитель, приоритет.</li>
+              <li>Пока строка пустая, в работу ее не брать, чтобы не придумать второй контур исполнения сделок.</li>
+            </ol>
+          </div>
+        </div>
+      </details>
+    </section>
+
+    <section id="day">
+      <h2>Суточный ритм</h2>
+      <p class="sub">Только операции, у которых в файле заполнено время начала. Событийные проверки и отправка идут в течение дня поверх этого расписания.</p>
+      <div class="day">
+        <div class="time">05:00</div><div class="slot">Депозиты. Должны завершиться до остатков.</div>
+        <div class="time">06:00</div><div class="slot">Остатки из МО. База: 43 минуты на 23&nbsp;000 клиентов.</div>
+        <div class="time">08:00</div><div class="slot">Индексы.</div>
+        <div class="time">09:00</div><div class="slot">Котировки из МО, котировки ММВБ. С 09:00 каждый час - мандаты.</div>
+        <div class="time">10:00</div><div class="slot">Неторговые поручения РОСТ, далее каждые 10 минут.</div>
+        <div class="time">11:00</div><div class="slot">Постконтроль по портфелям, несколько раз в день. База: 3 часа на 23&nbsp;000 клиентов.</div>
+        <div class="time">23:55</div><div class="slot">Групповое исполнение сделок.</div>
+        <div class="time">День</div><div class="slot">Предконтроль каждого поручения и отправка на биржу. Создание торговых поручений РОСТ - ежедневно, час в файле не указан.</div>
+      </div>
+    </section>
+
+    <section id="measures">
+      <h2>Программа замеров</h2>
+      <p class="sub">Отдельный пакет работ: без него приоритеты 1-5 нельзя сравнить между собой.</p>
+      <div class="scroll">
+        <table>
+          <thead>
+            <tr><th>Операция</th><th>Состояние</th><th>Что добавить</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>1 и 2. Контроль лимитов</td><td>Замер «Проверка» уже есть</td><td>Оставить вложенные шаги: лимиты, чтение наборов, пороги, обработка, запись</td></tr>
+            <tr><td>6. Остатки</td><td>Нет детализации</td><td>Отдельная процедура на каждый регистр сведений</td></tr>
+            <tr><td>7. Мандаты</td><td>Нет детализации</td><td>Отдельная процедура на каждый справочник</td></tr>
+            <tr><td>8. Котировки МО</td><td>Нет детализации</td><td>Отдельная процедура на каждый документ</td></tr>
+            <tr><td>9. Депозиты</td><td>Нет</td><td>Длительность и количество депозитов</td></tr>
+            <tr><td>10, 11, 12, 13</td><td>Нет</td><td>Замер есть в поручении. Гипотеза файла «не влияет на производительность» проверяется фактом</td></tr>
+            <tr><td>15. Исполнение сделок</td><td>Нет</td><td>Длительность и число сделок</td></tr>
+            <tr><td>4, 5, 3, 14, 17</td><td>Не описаны</td><td>Согласовать состав замера до оптимизации</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="global">
+      <h2>Глобальный контур: что запросить у Аванкор</h2>
+      <p class="sub">Письмо просит Виктора прислать чек-лист на старт. Ниже тот черновик, который ВИМ уже предложил. Ответ вендора либо подтверждает эти шесть пунктов, либо заменяет их своим шаблоном брифа.</p>
+      <div class="checks">
+        <article class="check">
+          <div class="num">1</div>
+          <div>
+            <h3>Формат списка операций и SLA</h3>
+            <p>Нужен ли список ключевых операций с целевым временем по каждой, или достаточно групп. Нужен ли параллелизм: сколько таких операций идет одновременно в пике, а не только длительность одной.</p>
+          </div>
+        </article>
+        <article class="check">
+          <div class="num">2</div>
+          <div>
+            <h3>Метрики нагрузки</h3>
+            <p>Кроме числа клиентов: поручения в день и в пиковые часы, распределение по времени суток, одновременные проверки на открытии торгов, количество лимитов. Нужен полный перечень величин, которые вендор закладывает в расчет.</p>
+          </div>
+        </article>
+        <article class="check">
+          <div class="num">3</div>
+          <div>
+            <h3>Сложность бизнес-правил</h3>
+            <p>Время части операций зависит от числа и сложности проверок риска и комплаенса. Нужны ли эти данные сейчас и на горизонте 3-5 лет, и в каком виде. Рядом, отдельно: с бизнесом ВИМ фиксируются количество и качество лимитов на 2 года.</p>
+          </div>
+        </article>
+        <article class="check">
+          <div class="num">4</div>
+          <div>
+            <h3>Текущая архитектура</h3>
+            <p>Какие артефакты нужны на discovery: схема данных, конфигурация кластера, объемы таблиц, характеристики оборудования. Список должен закрываться одним пакетом.</p>
+          </div>
+        </article>
+        <article class="check">
+          <div class="num">5</div>
+          <div>
+            <h3>Критерии приемки 500&nbsp;000</h3>
+            <p>Чем вендор предлагает подтверждать, что архитектура держит 500&nbsp;000 клиентов: нагрузочный тест, поэтапная приемка или иной способ, и на каком этапе это фиксируется.</p>
+          </div>
+        </article>
+        <article class="check">
+          <div class="num">6</div>
+          <div>
+            <h3>Шаблон брифа</h3>
+            <p>Если у Аванкор уже есть форма сбора входных данных discovery, ее нужно прислать вместо самостоятельного изобретения состава.</p>
+          </div>
+        </article>
+      </div>
+      <div class="note">Пока ответа нет, глобальный контур не стартует. Локальный от этого ответа не зависит.</div>
+    </section>
+
+    <section id="gaps">
+      <h2>Что в списке операций не закрыто</h2>
+      <p class="sub">Это не новые требования. Это дыры исходного Excel, без которых постановку легко прочитать по-разному.</p>
+      <div class="gaps">
+        <article class="gap">
+          <h3>Колонка «Допустимое окно» пустая</h3>
+          <p>Нет ни у одной операции. Для постконтроля, остатков и отправки без окна нельзя отличить успех от опоздания.</p>
+        </article>
+        <article class="gap">
+          <h3>Приоритет записан как «Примечание»</h3>
+          <p>Числа 0, 1, 2, 3, 4, 5 и 10 стоят в колонке «Примечание». В письме это названо приоритетом. Последняя колонка с ориентирами времени в файле без имени.</p>
+        </article>
+        <article class="gap">
+          <h3>Нет номера 16, номер 15 стоит перед 14</h3>
+          <p>Порядок строк в файле не равен порядку работ. Рабочий порядок - по числу приоритета, внутри одного числа - по важности из письма.</p>
+        </article>
+        <article class="gap">
+          <h3>Три загрузки МО с одним сервисом</h3>
+          <p>Остатки, мандаты и котировки ссылаются на Web-сервис Avancor DownloadPosition. Для мандатов и котировок это может быть копирование. Нужна проверка до оценки канала.</p>
+        </article>
+        <article class="gap">
+          <h3>Ориентир есть только у трех строк</h3>
+          <p>10 секунд на поручение, 3 часа постконтроля и 43 минуты остатков. Все три сняты около 23&nbsp;000 клиентов. На 150&nbsp;000 цель времени еще не назначена.</p>
+        </article>
+        <article class="gap">
+          <h3>Две строки нельзя брать в работу как есть</h3>
+          <p>«Загрузка сделок» без приоритета и исполнителя. «Упаковка данных» - анализ без объекта. Их сначала дописывают, потом планируют.</p>
+        </article>
+      </div>
+    </section>
+
+    <section id="table">
+      <h2>Сводка списка</h2>
+      <p class="sub">Полное содержание вложения, выстроенное по приоритету. Группы файла: лимиты (1-3), поручения (4-5), загрузка данных (6-13), сделки (14-15), упаковка (17).</p>
+      <div class="scroll">
+        <table>
+          <thead>
+            <tr>
+              <th>Приоритет</th>
+              <th>N</th>
+              <th>Операция</th>
+              <th>Когда</th>
+              <th>Кто</th>
+              <th>Ориентир в файле</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td>0</td><td>1</td><td>Предконтроль поручений</td><td>На каждое поручение</td><td>Аванкор</td><td>10 секунд на 1 поручение</td></tr>
+            <tr><td>0</td><td>2</td><td>Постконтроль по портфелям</td><td>Несколько раз в день, 11:00</td><td>Аванкор</td><td>23&nbsp;000 клиентов за 3 часа</td></tr>
+            <tr><td>1</td><td>4</td><td>Отправка поручений</td><td>Ежедневно</td><td>Аванкор</td><td>Не задан</td></tr>
+            <tr><td>1</td><td>5</td><td>Торговые поручения РОСТ</td><td>Ежедневно</td><td>ИТ ВИМ</td><td>Не задан</td></tr>
+            <tr><td>2</td><td>6</td><td>Загрузка остатков</td><td>Ежедневно, 06:00</td><td>ИТ ВИМ и Аванкор</td><td>23&nbsp;000 клиентов за 43 минуты</td></tr>
+            <tr><td>2</td><td>15</td><td>Исполнение сделок</td><td>Ежедневно, 23:55</td><td>Аванкор</td><td>Не задан</td></tr>
+            <tr><td>3</td><td>3</td><td>Установка лимитов</td><td>Ежедневно</td><td>ИТ ВИМ и Аванкор</td><td>Не задан</td></tr>
+            <tr><td>4</td><td>9</td><td>Загрузка депозитов</td><td>Ежедневно, 05:00</td><td>ИТ ВИМ</td><td>Не задан</td></tr>
+            <tr><td>4</td><td>13</td><td>Неторговые поручения РОСТ</td><td>Каждые 10 минут с 10:00</td><td>ИТ ВИМ</td><td>Не задан</td></tr>
+            <tr><td>5</td><td>7</td><td>Загрузка мандатов</td><td>Каждый час с 09:00</td><td>ИТ ВИМ и Аванкор</td><td>Не задан</td></tr>
+            <tr><td>5</td><td>8</td><td>Котировки из МО</td><td>Ежедневно, 09:00</td><td>ИТ ВИМ и Аванкор</td><td>Не задан</td></tr>
+            <tr><td>5</td><td>10</td><td>Котировки ММВБ</td><td>Ежедневно, 09:00</td><td>ИТ ВИМ</td><td>Не задан</td></tr>
+            <tr><td>5</td><td>11</td><td>Индексы</td><td>Ежедневно, 08:00</td><td>ИТ ВИМ</td><td>Не задан</td></tr>
+            <tr><td>5</td><td>12</td><td>TCRIS</td><td>Ежедневно</td><td>ИТ ВИМ</td><td>Не задан</td></tr>
+            <tr><td>10</td><td>17</td><td>Алгоритмы упаковки данных</td><td>Ежедневно</td><td>ИТ ВИМ и Аванкор</td><td>Не задан</td></tr>
+            <tr><td>-</td><td>14</td><td>Загрузка сделок</td><td>Ежедневно</td><td>Не назначено</td><td>Не задан</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <footer>
+      <p>Составлено 23.09.2026 по письму «Оптимизация Аванкор Фронт - офис» от 16.09.2026 и вложенному списку ключевых операций розничного фронт-офиса. Адресаты письма: А. Чмыхалов, Виктор, Д. Харитонов, А. Тюрин. Копия: А. Константинов.</p>
+    </footer>
+  </main>
+
+  <script>
+    var priority = document.getElementById("f-priority");
+    var owner = document.getElementById("f-owner");
+    var search = document.getElementById("f-search");
+    var shown = document.getElementById("shown");
+    var tasks = Array.prototype.slice.call(document.querySelectorAll(".task"));
+
+    function applyFilters() {
+      var p = priority.value;
+      var o = owner.value;
+      var q = search.value.trim().toLowerCase();
+      var visible = 0;
+      tasks.forEach(function (el) {
+        var okP = p === "all" || el.getAttribute("data-priority") === p;
+        var okO = o === "all" || el.getAttribute("data-owner") === o;
+        var okQ = !q || el.innerText.toLowerCase().indexOf(q) !== -1;
+        var show = okP && okO && okQ;
+        el.hidden = !show;
+        if (show) visible += 1;
+      });
+      document.querySelectorAll(".group-title").forEach(function (title) {
+        var node = title.nextElementSibling;
+        var any = false;
+        while (node && !node.classList.contains("group-title")) {
+          if (node.classList.contains("task") && !node.hidden) any = true;
+          node = node.nextElementSibling;
+        }
+        title.hidden = !any;
+      });
+      shown.textContent = "Показано " + visible + " из " + tasks.length;
+    }
+
+    priority.addEventListener("change", applyFilters);
+    owner.addEventListener("change", applyFilters);
+    search.addEventListener("input", applyFilters);
+    applyFilters();
+  </script>
+</body>
+</html>
