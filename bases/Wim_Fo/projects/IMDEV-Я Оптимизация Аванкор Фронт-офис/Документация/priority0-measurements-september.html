@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Замеры сентября. Предконтроль и постконтроль</title>
+<style>
+  :root { --ink:#1b2330; --muted:#5c6570; --line:#e2ddd4; --bg:#f4f1ea; --paper:#fffcf7; --ok:#0e4f45; --ok-bg:#e7f4ef; --bad:#8a3140; --bad-bg:#f8ecee; }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--ink); font:16px/1.5 "Segoe UI", sans-serif; }
+  header { background:#1b3348; color:#f6f1e7; padding:22px 20px 18px; }
+  header h1 { margin:0 0 6px; font-family:Palatino, Georgia, serif; font-size:32px; font-weight:600; }
+  header p { margin:0; max-width:760px; color:#d9e2ea; }
+  .wrap { max-width:920px; margin:0 auto; padding:18px 16px 40px; }
+  h2 { font-family:Palatino, Georgia, serif; font-size:26px; margin:22px 0 8px; }
+  .verdicts { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-top:16px; }
+  .card { background:var(--paper); border-radius:14px; padding:16px 18px; border:1px solid rgba(27,35,48,.06); }
+  .ok { background:var(--ok-bg); border-top:5px solid var(--ok); }
+  .bad { background:var(--bad-bg); border-top:5px solid var(--bad); }
+  .label { font-size:12px; letter-spacing:.06em; text-transform:uppercase; font-weight:700; }
+  .ok .label { color:var(--ok); }
+  .bad .label { color:var(--bad); }
+  .card h2 { margin:4px 0 8px; font-size:22px; }
+  .card p { margin:6px 0; }
+  table { width:100%; border-collapse:collapse; background:var(--paper); border-radius:12px; overflow:hidden; }
+  th, td { text-align:left; padding:8px 10px; border-bottom:1px solid var(--line); vertical-align:top; }
+  th { background:#1b3348; color:#f6f1e7; font-weight:600; }
+  .note { background:#f8efdc; border-left:4px solid #8d5e16; padding:10px 12px; border-radius:8px; margin:12px 0; }
+  @media (max-width:800px) { .verdicts { grid-template-columns:1fr; } }
+</style>
+</head>
+<body>
+<header>
+  <h1>Есть ли проблема на контроле лимитов</h1>
+  <p>Замеры розничного фронт-офиса за 1-22 сентября 2026. Две операции приоритета 0: предконтроль поручения и постконтроль по портфелям. Ошибок в замерах нет.</p>
+</header>
+<div class="wrap">
+
+<div class="verdicts">
+  <article class="card ok">
+    <div class="label">Проблемы нет</div>
+    <h2>Предконтроль</h2>
+    <p>Обычная проверка длится 11 секунд. В письме ориентир 10 секунд на поручение. Типичный вызов уже рядом с этим ориентиром.</p>
+    <p>Дольше бывает, но редко: 95 из 100 прогонов короче 21 секунды. Самый долгий в сентябре - 83 секунды.</p>
+  </article>
+  <article class="card bad">
+    <div class="label">Проблема есть</div>
+    <h2>Постконтроль</h2>
+    <p>Регламентная проверка всего объема обычно идет 3 часа 16 минут. В письме ориентир - 3 часа. Дольше 3 часов длился 51 прогон из 72.</p>
+    <p>Пять прогонов длиннее 4 часов. Самый долгий - 4 часа 31 минута.</p>
+  </article>
+</div>
+
+<h2>Что измеряли</h2>
+<p>Родительский замер называется «Проверка». В него входят дочерние шаги: чтение данных, пороги, обработка проверки, запись результата. Вес замера - это число строк плана «портфель на лимит», а не число клиентов и не число поручений.</p>
+<table>
+  <thead><tr><th></th><th>Предконтроль</th><th>Постконтроль</th></tr></thead>
+  <tbody>
+    <tr><td>Кто запускает</td><td>Человек с блоттера, 955 прогонов</td><td>Регламент, пользователь svc_avancore, 72 прогона, 3-4 раза в день</td></tr>
+    <tr><td>Объем</td><td>обычно 36 строк плана на вызов</td><td>около 551 тысячи строк плана, от прогона к прогону почти одно и то же</td></tr>
+    <tr><td>Обычное время</td><td>11 секунд</td><td>3 часа 16 минут</td></tr>
+    <tr><td>95 из 100 прогонов короче</td><td>21 секунды</td><td>4 часов</td></tr>
+    <tr><td>Время на одну строку плана</td><td>0,16 секунды</td><td>0,02 секунды</td></tr>
+  </tbody>
+</table>
+<div class="note">Постконтроль на одну строку быстрее предконтроля. Долгим его делает объем: сотни тысяч строк против нескольких десятков. Три регламентных прогона с тем же объемом заняли меньше 10 минут. Они не похожи на остальные и не меняют вывод: обычный прогон длиннее 3 часов.</div>
+
+<h2>Куда уходит время</h2>
+<table>
+  <thead><tr><th>Шаг</th><th>Предконтроль, обычный вызов</th><th>Постконтроль, обычный прогон</th></tr></thead>
+  <tbody>
+    <tr><td>Обработка проверки</td><td>4 секунды, половина вызова</td><td>около 3 часов, 96% прогона</td></tr>
+    <tr><td>Чтение наборов данных</td><td>1,6 секунды</td><td>около 1 минуты</td></tr>
+    <tr><td>Пороги и базисы</td><td>0,9 секунды</td><td>около 25 секунд</td></tr>
+    <tr><td>Действующие лимиты</td><td>0,5 секунды</td><td>около 3 минут</td></tr>
+    <tr><td>Запись результатов</td><td>0,03 секунды</td><td>почти ноль</td></tr>
+    <tr><td>Отправка на биржу</td><td>0,6 секунды, не в каждом вызове</td><td>нет, постконтроль ничего не отправляет</td></tr>
+  </tbody>
+</table>
+<p>И в короткой проверке поручения, и в длинной проверке портфелей время сидит в одном шаге: обработка проверки. Запись результата и пороги проблему 3 часов не создают.</p>
+
+<h2>Чего эти замеры не говорят</h2>
+<p>Нет замера на 150 000 и на 500 000 клиентов. Сентябрь показывает текущий объем. Если строк плана станет больше, постконтроль вырастет почти пропорционально: сейчас 0,02 секунды на строку, и 96% времени уже в расчете.</p>
+<p>Загрузка остатков «43 минуты» в этом файле не измерялась. Вывод только про две операции приоритета 0.</p>
+
+</div>
+</body>
+</html>
