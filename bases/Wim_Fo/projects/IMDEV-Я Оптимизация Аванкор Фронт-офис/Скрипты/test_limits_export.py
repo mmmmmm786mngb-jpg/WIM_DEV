@@ -241,7 +241,7 @@ def ensure_installation(conn, portfolio, limit_ref, limit_class):
 
 def run_export(conn):
     processor = conn.ВнешниеОбработки.Создать(EPF, False)
-    text = processor.ВыгрузитьЛимиты(OUT)
+    text = processor.ВыгрузитьЛимитыАрхивом(OUT)
     safe_print(text)
     return text
 
