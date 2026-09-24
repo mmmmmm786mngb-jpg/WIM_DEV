@@ -133,7 +133,10 @@ def main():
     pre_rows = rows_of(conn, pre_id)
     out.append("rows\t%s" % len(pre_rows))
     out.extend(pre_rows)
-    path = os.path.join(ROOT, "Тестирование", "reports", "shape_round_old.txt")
+    label = "old"
+    if len(__import__("sys").argv) > 1:
+        label = __import__("sys").argv[1]
+    path = os.path.join(ROOT, "Тестирование", "reports", "shape_round_%s.txt" % label)
     with open(path, "w", encoding="utf-8") as handle:
         handle.write("\n".join(out))
     pack.safe_print("post %s rows %s refusal %s" % (
