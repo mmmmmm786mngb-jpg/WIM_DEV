@@ -11,6 +11,7 @@
 - [imdev9458_avancor.html](imdev9458_avancor.html) - задание вендору Аванкор: куда вставить в типовую.
 - [imdev9458_avancor_tree.html](imdev9458_avancor_tree.html) - краткое дерево изменений для Аванкор.
 - [imdev9458_avancor_letter.txt](imdev9458_avancor_letter.txt) - текст письма / комментария в задачу.
+- [imdev9458_avancor_task.txt](imdev9458_avancor_task.txt) - тема и краткое описание задачи Аванкору (вложения: расширение и дерево).
 - [imdev9458_jira_comments.html](imdev9458_jira_comments.html) - два кратких комментария в задачу: отсев без дохода, затем отсев РДУ.
 - [imdev9458_jira_comment_iis.html](imdev9458_jira_comment_iis.html) - ответ в задачу: активные ИИС; постановка из письма и что видно по коду (начисление уже не создаётся).
 - [imdev9458_iis_avancor9_report.html](imdev9458_iis_avancor9_report.html) - сверка списка ИИС с прогоном Аванкор 9: пустых документов по ИИС нет, налог по ИИС = 0.
