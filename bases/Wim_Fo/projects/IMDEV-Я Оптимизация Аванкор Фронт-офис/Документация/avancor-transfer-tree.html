@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Пакетная проверка лимитов. Дерево изменений для Аванкор</title>
+<style>
+  :root {
+    --ink: #1c1915;
+    --soft: #5c564c;
+    --line: #e4d9c8;
+    --paper: #fffdf8;
+    --bg: #f3eee6;
+    --forest: #1f4a3a;
+    --mint: #e7f4ec;
+    --peach: #fde8d0;
+    --gray: #eceae6;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    color: var(--ink);
+    font-family: "Segoe UI", Arial, Helvetica, sans-serif;
+    font-size: 15px;
+    line-height: 1.45;
+    background:
+      radial-gradient(720px 280px at 100% 0%, #f6d9bf 0%, transparent 50%),
+      var(--bg);
+  }
+  .page { max-width: 860px; margin: 0 auto; padding: 24px 16px 48px; }
+  header {
+    background: var(--forest);
+    color: #f7f1e8;
+    border-radius: 20px;
+    padding: 22px 24px 18px;
+  }
+  header .kicker {
+    font-size: 11px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    opacity: 0.75;
+    margin-bottom: 6px;
+  }
+  header h1 {
+    font-family: Georgia, "Times New Roman", serif;
+    font-size: 26px;
+    line-height: 1.2;
+    margin: 0 0 8px;
+  }
+  header p { margin: 0; color: #e5efe9; max-width: 680px; }
+  .legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 16px 0 12px;
+  }
+  .tag {
+    display: inline-block;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    padding: 2px 8px;
+    border-radius: 999px;
+    vertical-align: middle;
+  }
+  .new { background: var(--mint); color: #1f7a4d; }
+  .chg { background: var(--peach); color: #9a3412; }
+  .skip { background: var(--gray); color: #555; }
+  .card {
+    background: var(--paper);
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    padding: 16px 18px 12px;
+    box-shadow: 0 10px 28px rgba(28, 25, 21, 0.05);
+  }
+  .tree, .tree ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+  .tree ul {
+    margin-left: 18px;
+    padding-left: 14px;
+    border-left: 1px solid var(--line);
+  }
+  .tree li { margin: 7px 0; }
+  .node {
+    font-family: Consolas, "Courier New", monospace;
+    font-size: 13px;
+  }
+  .note {
+    color: var(--soft);
+    font-family: "Segoe UI", Arial, Helvetica, sans-serif;
+    font-size: 13px;
+  }
+  .foot {
+    margin-top: 16px;
+    padding-top: 12px;
+    border-top: 1px solid var(--line);
+    font-size: 14px;
+    color: var(--ink);
+  }
+  .foot p { margin: 0 0 10px; color: var(--soft); }
+  .foot p b { color: var(--ink); }
+  .foot h2 {
+    font-family: Georgia, "Times New Roman", serif;
+    font-size: 16px;
+    margin: 14px 0 8px;
+    color: var(--forest);
+  }
+  .foot ol, .foot ul {
+    margin: 0;
+    padding-left: 20px;
+  }
+  .foot li { margin: 4px 0; }
+  code {
+    font-family: Consolas, "Courier New", monospace;
+    font-size: 12.5px;
+    background: #efe4d4;
+    padding: 1px 5px;
+    border-radius: 4px;
+  }
+</style>
+</head>
+<body>
+<div class="page">
+  <header>
+    <div class="kicker">Аванкор · фронт-офис и розница · перенос в базовую конфигурацию</div>
+    <h1>Дерево изменений</h1>
+    <p>Базовая конфигурация: RQW, версия 1.4.9.5. Обычный фронт-офис и розница, одна правка.
+    Референс: расширение <code style="background:#2a5c4a;color:#f7f1e8">FO_LimitShare</code>, «Пакетная проверка лимитов», назначение Patch.
+    Объект: общий модуль «Исполнители», функция обработки проверки. Аннотацию <code style="background:#2a5c4a;color:#f7f1e8">&amp;ИзменениеИКонтроль</code> в типовую не копировать, маркеры <code style="background:#2a5c4a;color:#f7f1e8">#Вставка</code> / <code style="background:#2a5c4a;color:#f7f1e8">#Удаление</code> не переносить, префикс <code style="background:#2a5c4a;color:#f7f1e8">FO_LimitShare_</code> с процедур снять.</p>
+  </header>
+
+  <div class="legend">
+    <span class="tag new">новое</span>
+    <span class="tag chg">правка штатного</span>
+    <span class="tag skip">не трогать</span>
+  </div>
+
+  <div class="card">
+    <ul class="tree">
+      <li>
+        <span class="node">ОбщийМодуль.Исполнители</span>
+        <ul>
+          <li>
+            <span class="node">Модуль</span>
+            <ul>
+              <li>
+                <span class="tag chg">правка</span>
+                <span class="node">ПроверкаИОтправка_ОбработкаПроверки</span>
+                <span class="note"> — пять мест в штатном теле, остальной текст процедуры не менять</span>
+                <ul>
+                  <li>
+                    <span class="note">После <code>НаборДанныхТекущий = Неопределено</code>: три соответствия на время вызова (базисы, готовые результаты, суммы и пороги)</span>
+                  </li>
+                  <li>
+                    <span class="note">Ветка структуры: вместо <code>КэшВмПороги.СведенияОПорогах</code> на каждый лимит вызвать <code>СведенияПачки</code></span>
+                  </li>
+                  <li>
+                    <span class="note">Начало области базисов: готовый базис портфеля подставить и не считать заново</span>
+                  </li>
+                  <li>
+                    <span class="note">Конец области базисов: сохранить базис структурного лимита, источник не поручение</span>
+                  </li>
+                  <li>
+                    <span class="note">Вместо безусловного <code>ПроверкаЛимитов.Проверить</code>: быстрый структурный счет, иначе копия результата, иначе штатный <code>Проверить</code> и запоминание</span>
+                  </li>
+                </ul>
+              </li>
+              <li>
+                <span class="tag new">новое</span>
+                <span class="node">БазисПачки</span>
+                <span class="note"> — чтение и запись кэша базиса структурного лимита. Копировать целиком, префикс снять</span>
+              </li>
+              <li>
+                <span class="tag new">новое</span>
+                <span class="node">ЗаполнитьСтруктурныйРезультат</span>
+                <span class="note"> — процент от РСА: разбор отбора, одна сумма фильтра, порог и зона. Если правило не разобрано, возвращает Ложь. Копировать целиком, префикс снять</span>
+              </li>
+              <li>
+                <span class="tag new">новое</span>
+                <span class="node">ПроверитьИлиПодставить</span>
+                <span class="note"> — штатный <code>Проверить</code> либо копия уже посчитанного состава или поручения. Копировать целиком, префикс снять</span>
+              </li>
+              <li>
+                <span class="tag new">новое</span>
+                <span class="node">СведенияПачки</span>
+                <span class="note"> — один запрос <code>КэшВмПороги</code> по вместилищу. Копировать целиком, префикс снять</span>
+              </li>
+              <li>
+                <span class="tag skip">не трогать</span>
+                <span class="note">остальной код модуля «Исполнители»</span>
+              </li>
+            </ul>
+          </li>
+        </ul>
+      </li>
+      <li>
+        <span class="node">ОбщийМодуль.ПроверкаЛимитов</span>
+        <ul>
+          <li>
+            <span class="tag skip">не трогать</span>
+            <span class="node">Проверить</span>
+            <span class="note"> — запасной путь. Вызывается, если быстрый счет вернул Ложь и готовой копии нет</span>
+          </li>
+          <li>
+            <span class="tag skip">не трогать</span>
+            <span class="node">ПроцентОтСуммы</span>
+            <span class="note"> — быстрый путь вызывает как есть, долю не переписывать</span>
+          </li>
+        </ul>
+      </li>
+      <li>
+        <span class="node">ОбщийМодуль.РаботаСЛимитами</span>
+        <ul>
+          <li>
+            <span class="tag skip">не трогать</span>
+            <span class="note"><code>ДобавитьВТ_ТаблицаНабораДанных</code> по-прежнему строит набор один раз. <code>ЗаписатьПорциюРезультатов</code> пишет те же строки <code>КэшВмКратко</code></span>
+          </li>
+        </ul>
+      </li>
+      <li>
+        <span class="node">ОбщийМодуль.Распорядители</span>
+        <ul>
+          <li>
+            <span class="tag skip">не трогать</span>
+            <span class="node">ПроверкаИОтправка</span>
+            <span class="note"> — вызывает обработку проверки как раньше. Замер «Обработка проверки» не переименовывать</span>
+          </li>
+        </ul>
+      </li>
+      <li>
+        <span class="node">РегистрСведений.КэшВмПороги</span>
+        <ul>
+          <li>
+            <span class="tag skip">не трогать</span>
+            <span class="note">метаданные. Меняется только способ чтения: один запрос по вместилищу вместо запроса на лимит</span>
+          </li>
+        </ul>
+      </li>
+      <li>
+        <span class="node">РегистрСведений.КэшВмКратко</span>
+        <ul>
+          <li>
+            <span class="tag skip">не трогать</span>
+            <span class="note">состав. Копия меняет идентификатор, исполнителя, лимит и имя лимита в пояснении</span>
+          </li>
+        </ul>
+      </li>
+      <li>
+        <span class="tag skip">не трогать</span>
+        <span class="note">справочник лимитов, наборы данных, пороги, группы портфелей, рассылка, роли расширения. Заглушки отправки и почты в этот перенос не входят</span>
+      </li>
+    </ul>
+    <div class="foot">
+      <p><b>После переноса в базовую конфигурацию</b> просим провести парный прогон пост-контроля и предконтроля: старый текст процедуры и новый, один поток. После успешной приемки расширение снять.</p>
+      <h2>Что внедряем</h2>
+      <ol>
+        <li>Для структурного лимита «процент от РСА» сумма по отбору считается один раз, порог каждого лимита применяется отдельно.</li>
+        <li>Базис портфеля внутри одного вызова обработки проверки не пересчитывается на каждый такой лимит.</li>
+        <li>Одинаковые состав и поручение получают копию уже посчитанного результата, с подменой лимита в пояснении.</li>
+        <li>Пороги вместилища читаются одним запросом.</li>
+        <li>Правило, которое не разобралось, остается на штатном <code>ПроверкаЛимитов.Проверить</code>.</li>
+      </ol>
+      <h2>Приемка</h2>
+      <ul>
+        <li>Зона, отказ, базис и пояснение по паре «портфель и лимит» и «поручение и лимит» совпали.</li>
+        <li>Ключ «Обработка проверки» короче. Чтение набора не выросло.</li>
+        <li>Ускорение около 1,2 раза не принимать: базис или отбор все еще внутри цикла по лимитам.</li>
+      </ul>
+    </div>
+  </div>
+</div>
+</body>
+</html>

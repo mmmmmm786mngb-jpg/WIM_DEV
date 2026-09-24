@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Что изменить в типовой проверке лимитов</title>
+<style>
+  :root { --ink:#1b2330; --muted:#5c6570; --line:#e2ddd4; --bg:#1b3348; --paper:#fffcf7; --ok:#0e4f45; --ok-bg:#e7f4ef; --bad:#8a3140; --bad-bg:#f8ecee; --warm:#8d5e16; --warm-bg:#f8efdc; }
+  * { box-sizing: border-box; }
+  html, body { margin:0; height:100%; background:var(--bg); color:var(--ink); font:17px/1.45 "Segoe UI", sans-serif; }
+  .deck { height:100%; overflow-y:scroll; scroll-snap-type:y mandatory; }
+  .slide { min-height:100%; scroll-snap-align:start; display:flex; align-items:center; justify-content:center; padding:28px 18px 64px; }
+  .sheet { width:min(980px, 100%); background:var(--paper); border-radius:16px; padding:28px 32px 24px; }
+  h1 { margin:0 0 8px; font-family:Palatino, Georgia, serif; font-size:34px; font-weight:600; line-height:1.15; }
+  h2 { margin:0 0 12px; font-family:Palatino, Georgia, serif; font-size:30px; font-weight:600; }
+  p { margin:8px 0; }
+  .kicker { color:var(--muted); font-size:13px; letter-spacing:.08em; text-transform:uppercase; font-weight:700; margin-bottom:8px; }
+  .lead { font-size:20px; }
+  table { width:100%; border-collapse:collapse; margin:12px 0; }
+  th, td { text-align:left; padding:8px 10px; border-bottom:1px solid var(--line); vertical-align:top; }
+  th { background:#1b3348; color:#f6f1e7; font-weight:600; }
+  .grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-top:12px; }
+  .card { border-radius:12px; padding:14px 16px; }
+  .bad { background:var(--bad-bg); border-top:5px solid var(--bad); }
+  .ok { background:var(--ok-bg); border-top:5px solid var(--ok); }
+  .warm { background:var(--warm-bg); border-top:5px solid var(--warm); }
+  .label { font-size:12px; letter-spacing:.06em; text-transform:uppercase; font-weight:700; }
+  .bad .label { color:var(--bad); }
+  .ok .label { color:var(--ok); }
+  .warm .label { color:var(--warm); }
+  .card h3 { margin:4px 0 8px; font-size:20px; }
+  ul, ol { margin:8px 0; padding-left:22px; }
+  li { margin:4px 0; }
+  .nav { position:fixed; right:16px; bottom:14px; display:flex; gap:8px; align-items:center; color:#f6f1e7; }
+  button { background:#fffcf7; color:#1b3348; border:0; border-radius:8px; padding:8px 12px; font:inherit; cursor:pointer; }
+  .num { min-width:52px; text-align:center; font-size:14px; }
+  @media (max-width:800px) {
+    .grid { grid-template-columns:1fr; }
+    h1 { font-size:28px; }
+    .sheet { padding:20px 16px; }
+  }
+  @media print {
+    .deck { height:auto; overflow:visible; }
+    .slide { min-height:auto; page-break-after:always; padding:0; }
+    .nav { display:none; }
+    body { background:#fff; }
+  }
+</style>
+</head>
+<body>
+<div class="deck" id="deck">
+
+<section class="slide">
+  <div class="sheet">
+    <div class="kicker">Обычный фронт-офис и розница</div>
+    <h1>Что изменить в типовой проверке лимитов</h1>
+    <p class="lead">Одна правка в шаге "Обработка проверки". Настройки лимитов, портфелей и рассылки не меняются. Зоны, суммы и базис остаются теми же.</p>
+    <p>Конфигурация одна. Отличаются только состав лимитов и число портфелей. Поэтому правка общая для обеих баз.</p>
+  </div>
+</section>
+
+<section class="slide">
+  <div class="sheet">
+    <div class="kicker">Сентябрь 2026</div>
+    <h2>Время сидит в одном шаге</h2>
+    <table>
+      <thead><tr><th></th><th>Обычный фронт-офис</th><th>Розница</th></tr></thead>
+      <tbody>
+        <tr><td>Ночная проверка портфелей</td><td>около 29 минут</td><td>около 3 часов 16 минут</td></tr>
+        <tr><td>Из них обработка проверки</td><td>около 10,5 минут, 35%</td><td>около 3 часов, 96%</td></tr>
+        <tr><td>Проверка поручения пользователем</td><td>около 24 секунд, половина - этот шаг</td><td>около 11 секунд, половина - этот шаг</td></tr>
+      </tbody>
+    </table>
+    <p>Чтение данных, пороги и запись результата вместе не создают ночной простой. В рознице они короче 5 минут. В обычном фронт-офисе чтение набора занимает около 6 минут и этой правкой не сокращается.</p>
+  </div>
+</section>
+
+<section class="slide">
+  <div class="sheet">
+    <div class="kicker">Почему шаг долгий</div>
+    <h2>Один и тот же портфель считается заново на каждый лимит</h2>
+    <div class="grid">
+      <article class="card bad">
+        <div class="label">Сейчас</div>
+        <h3>Полный проход на каждый лимит</h3>
+        <p>Набор портфелей уже прочитан. Дальше каждый лимит заново отбирает те же бумаги и заново сравнивает долю с порогом.</p>
+        <p>В обычном фронт-офисе около 25 структурных лимитов смотрят один набор на примерно 3 100 портфелях. В рознице шаблон из 11 лимитов смотрит один набор на 26 506 портфелях.</p>
+      </article>
+      <article class="card ok">
+        <div class="label">После правки</div>
+        <h3>Один проход, разные пороги</h3>
+        <p>Позиция по фильтру складывается один раз. Каждый лимит только подставляет свой порог и получает свою зону.</p>
+        <p>Лимит с другим фильтром или с правилом, которое нельзя свести к сумме и порогу, считается по-старому.</p>
+      </article>
+    </div>
+  </div>
+</section>
+
+<section class="slide">
+  <div class="sheet">
+    <div class="kicker">Куда вносить изменение</div>
+    <h2>Одна процедура типового кода</h2>
+    <p>Меняется шаг "Обработка проверки" в общем модуле "Исполнители", процедура проверки и отправки. Остальной контур проверки не переписывается: чтение набора, список действующих лимитов, запись результата, рассылка ведомостей.</p>
+    <ol>
+      <li>Когда набор уже построен, собрать лимиты этого набора, которые считаются одинаково.</li>
+      <li>Один раз сложить стоимость по портфелю и по полям отбора: вид актива, валюта, страна эмитента и другие поля, которые уже стоят в лимите.</li>
+      <li>Базис портфеля посчитать один раз, а не внутри каждого лимита.</li>
+      <li>Каждому лимиту отдать его порог. Зону записать тем же способом, что и сейчас.</li>
+      <li>Лимит, который в эту схему не вошел, оставить на текущем расчете.</li>
+    </ol>
+  </div>
+</section>
+
+<section class="slide">
+  <div class="sheet">
+    <div class="kicker">Какие лимиты попадают сами</div>
+    <h2>Три привычные формы, без отдельной ветки розницы</h2>
+    <table>
+      <thead><tr><th>Форма</th><th>Как считается сейчас</th><th>Что делает один проход</th></tr></thead>
+      <tbody>
+        <tr><td>Структура, процент от РСА или от рыночной стоимости</td><td>Сумма отобранных бумаг делится на базис портфеля и сравнивается с порогом</td><td>Сумма одна, порог у каждого лимита свой</td></tr>
+        <tr><td>Состав</td><td>Запрещенный или разрешенный список бумаг</td><td>Список отмечается один раз, каждый лимит получает свои строки</td></tr>
+        <tr><td>Поручение, только предконтроль</td><td>Квалификатор на строках поручения</td><td>Один проход по поручению вместо проверки каждого лимита отдельно</td></tr>
+      </tbody>
+    </table>
+    <p>Отбор по наименованию лимита не нужен. В пачку попадает лимит по форме правила. Сравнение, которое схема не понимает, остается на старом пути и не ломает результат.</p>
+  </div>
+</section>
+
+<section class="slide">
+  <div class="sheet">
+    <div class="kicker">Что для бизнеса не меняется</div>
+    <h2>Те же зоны, те же суммы, те же настройки</h2>
+    <ul>
+      <li>Зона, отказ, базис и текст пояснения по паре "портфель и лимит" или "поручение и лимит" совпадают со старым расчетом.</li>
+      <li>Справочник лимитов, пороги, группы портфелей и состав набора данных не перенастраиваются.</li>
+      <li>В рознице набор по-прежнему включает активы в РЕПО. В обычном фронт-офисе этот кусок набора остается выключенным.</li>
+      <li>Рассылка ведомостей и отправка на биржу не затрагиваются. Ночная проверка по-прежнему ничего не отправляет.</li>
+    </ul>
+  </div>
+</section>
+
+<section class="slide">
+  <div class="sheet">
+    <div class="kicker">Обычный фронт-офис</div>
+    <h2>Ночная проверка короче примерно на 8 минут</h2>
+    <table>
+      <thead><tr><th></th><th>Сентябрь</th><th>После правки, ориентир</th></tr></thead>
+      <tbody>
+        <tr><td>Обработка проверки</td><td>около 10,5 минут</td><td>около 2 минут</td></tr>
+        <tr><td>Чтение набора</td><td>около 6 минут</td><td>около 6 минут, без изменения</td></tr>
+        <tr><td>Весь регламент</td><td>около 29 минут</td><td>около 21 минуты</td></tr>
+      </tbody>
+    </table>
+    <p>Пять раз относится к шагу обработки проверки, не ко всему получасу. Чтение набора остается. Предконтроль поручения короче за счет того же шага: сейчас он занимает около половины из 24 секунд.</p>
+  </div>
+</section>
+
+<section class="slide">
+  <div class="sheet">
+    <div class="kicker">Розница</div>
+    <h2>Ночная проверка теряет главный кусок</h2>
+    <table>
+      <thead><tr><th></th><th>Сентябрь</th><th>После правки, ориентир</th></tr></thead>
+      <tbody>
+        <tr><td>Обработка проверки</td><td>около 3 часов, 96% прогона</td><td>в несколько раз короче: 11 лимитов одного набора считаются одним проходом</td></tr>
+        <tr><td>Остальные шаги регламента</td><td>короче 5 минут вместе</td><td>без изменения</td></tr>
+        <tr><td>Весь регламент</td><td>около 3 часов 16 минут</td><td>ориентир около часа, если повтор и есть эти 3 часа</td></tr>
+      </tbody>
+    </table>
+    <p>Лимит на другом наборе один, делить его не с кем, он остается на старом пути. Регламент розницы лимиты вида "Поручение" не проверяет, поэтому предконтроль розницы этот ночной прогон не ускоряет. Само нажатие "Проверить" на поручении становится короче.</p>
+  </div>
+</section>
+
+<section class="slide">
+  <div class="sheet">
+    <div class="kicker">Проверка на тестовом объеме</div>
+    <h2>Результат совпал, повторный проход стал короче</h2>
+    <p>Набор лимитов повторяет выгрузку справочника: один и тот же отбор много раз, разные пороги, большая часть портфелей вне зоны нарушения.</p>
+    <table>
+      <thead><tr><th></th><th>Старый расчет</th><th>Новый расчет</th></tr></thead>
+      <tbody>
+        <tr><td>Постконтроль, обработка проверки</td><td>4,3 секунды</td><td>1,5 секунды, в 2,8 раза</td></tr>
+        <tr><td>Предконтроль, обработка проверки</td><td>0,39 секунды</td><td>0,21 секунды, в 1,9 раза</td></tr>
+        <tr><td>Строки результата</td><td>5 600 и 500</td><td>совпали полностью: зона, базис, отказ, пояснение</td></tr>
+      </tbody>
+    </table>
+    <p>Это не ночной объем. На нем постоянные шаги занимают большую долю, поэтому ускорение меньше, чем на сентябрьском регламенте. Проверка подтверждает другое: зоны не разъехались, а повторный счет уже не выполняется на каждый лимит.</p>
+  </div>
+</section>
+
+<section class="slide">
+  <div class="sheet">
+    <div class="kicker">Как принять изменение</div>
+    <h2>Сначала совпадение результата, потом время</h2>
+    <ol>
+      <li>Один и тот же план прогнать старым и новым расчетом. Сверить зону, отказ, базис и пояснение по каждому портфелю и лимиту.</li>
+      <li>Обычный фронт-офис: структурные лимиты одного набора на полном списке портфелей. Шаг "Обработка проверки" около 2 минут, весь регламент около 21 минуты. Чтение набора не выросло.</li>
+      <li>Розница: шаблон из структурных и составных лимитов одного набора. Этот шаг короче в несколько раз. Лимит другого набора сошелся со старым результатом.</li>
+      <li>Предконтроль: одно поручение и несколько лимитов вида "Поручение". Зоны те же, проход по поручению один.</li>
+      <li>Повторить сверку зон при рабочем числе потоков.</li>
+    </ol>
+    <article class="card warm">
+      <div class="label">Не принимать</div>
+      <h3>Ускорение около 1,2 раза</h3>
+      <p>Такой результат значит, что базис или отбор все еще считаются внутри цикла по лимитам. Повтор не убран.</p>
+    </article>
+  </div>
+</section>
+
+</div>
+<div class="nav">
+  <button type="button" id="prev">Назад</button>
+  <span class="num" id="num">1 / 10</span>
+  <button type="button" id="next">Дальше</button>
+</div>
+<script>
+(function () {
+  var deck = document.getElementById("deck");
+  var slides = deck.querySelectorAll(".slide");
+  var num = document.getElementById("num");
+  function current() {
+    var index = 0;
+    var top = deck.scrollTop;
+    for (var i = 0; i < slides.length; i++) {
+      if (slides[i].offsetTop <= top + 40) index = i;
+    }
+    return index;
+  }
+  function show(index) {
+    if (index < 0) index = 0;
+    if (index >= slides.length) index = slides.length - 1;
+    deck.scrollTo({top: slides[index].offsetTop - deck.offsetTop, behavior: "smooth"});
+  }
+  function paint() {
+    num.textContent = (current() + 1) + " / " + slides.length;
+  }
+  document.getElementById("prev").onclick = function () { show(current() - 1); };
+  document.getElementById("next").onclick = function () { show(current() + 1); };
+  document.addEventListener("keydown", function (event) {
+    if (event.key === "ArrowRight" || event.key === "PageDown" || event.key === " ") { event.preventDefault(); show(current() + 1); }
+    if (event.key === "ArrowLeft" || event.key === "PageUp") { event.preventDefault(); show(current() - 1); }
+  });
+  deck.addEventListener("scroll", paint);
+  paint();
+})();
+</script>
+</body>
+</html>
