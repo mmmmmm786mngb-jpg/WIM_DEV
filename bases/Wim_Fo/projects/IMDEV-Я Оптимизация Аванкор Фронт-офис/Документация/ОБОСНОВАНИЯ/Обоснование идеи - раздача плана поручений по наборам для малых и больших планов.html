@@ -1,0 +1,1406 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Раздача плана по наборам</title>
+<style>
+:root{
+  --bg:#f4f6f9;--paper:#ffffff;--ink:#27313f;--muted:#6b7585;--line:#e1e5ec;
+  --brand:#52648a;--brand-ink:#3b4a68;--brand-soft:#eef1f6;
+  --good:#3f7d5c;--good-soft:#edf5f0;--warn:#9a7433;--warn-soft:#f8f3e8;--bad:#a0575a;--bad-soft:#f7eded;
+  --neutral-soft:#f3f4f7;--code:#f6f7f9;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#15181e;--paper:#1c2028;--ink:#dde2ea;--muted:#9099a8;--line:#2c323d;
+    --brand:#9fb0d0;--brand-ink:#b9c6de;--brand-soft:#232a37;
+    --good:#7fbf9b;--good-soft:#1c2a23;--warn:#d0ad6c;--warn-soft:#2b261b;--bad:#d69497;--bad-soft:#2d2021;
+    --neutral-soft:#222730;--code:#191d24;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#15181e;--paper:#1c2028;--ink:#dde2ea;--muted:#9099a8;--line:#2c323d;
+  --brand:#9fb0d0;--brand-ink:#b9c6de;--brand-soft:#232a37;
+  --good:#7fbf9b;--good-soft:#1c2a23;--warn:#d0ad6c;--warn-soft:#2b261b;--bad:#d69497;--bad-soft:#2d2021;
+  --neutral-soft:#222730;--code:#191d24;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.55 "Segoe UI",Roboto,Arial,sans-serif}
+.wrap{max-width:1040px;margin:0 auto;padding:0 16px}
+h2{font-size:19px;line-height:1.3;margin:0 0 4px;color:var(--brand-ink);font-weight:650}
+h3{font-size:15px;margin:14px 0 6px;font-weight:650}
+p{margin:6px 0}
+ul{margin:6px 0;padding-left:20px}
+li{margin:3px 0}
+section{padding:28px 0 4px}
+.sec-no{display:inline-block;font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:2px}
+.sec-lead{color:var(--muted);max-width:780px;margin-bottom:12px}
+code{font-family:Consolas,"Cascadia Mono",monospace;font-size:12.5px;background:var(--code);border:1px solid var(--line);padding:0 4px;border-radius:3px}
+
+/* header */
+.hero{background:var(--paper);border-bottom:1px solid var(--line);padding:14px 0 18px}
+.brandbar{display:flex;align-items:center;justify-content:space-between;gap:12px;padding-bottom:12px;margin-bottom:14px;border-bottom:1px solid var(--line)}
+.logo{height:24px;width:auto;color:var(--brand);display:block;flex:none}
+.kicker{font-size:11.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin:0;text-align:right}
+.hero h1{font-size:21px;line-height:1.3;margin:0 0 12px;font-weight:650;color:var(--brand-ink);max-width:860px}
+.hero h1 span{color:var(--good)}
+.hero .sub{color:var(--muted);max-width:860px;margin:0 0 14px}
+.ba-hero{display:flex;align-items:stretch;gap:10px;flex-wrap:wrap;margin:0 0 14px}
+.ba-box{border-radius:8px;padding:8px 14px 9px;min-width:170px;border:1px solid var(--line);background:var(--neutral-soft)}
+.ba-box .l{font-size:11px;letter-spacing:.08em;text-transform:uppercase;font-weight:700;color:var(--muted)}
+.ba-box .v{font-size:28px;font-weight:700;line-height:1.15;white-space:nowrap;font-variant-numeric:tabular-nums;color:var(--ink)}
+.ba-box .v small{font-size:14px;font-weight:600;margin:0 6px 0 2px;color:var(--muted)}
+.ba-box .v small:last-child{margin-right:0}
+.ba-box .s{font-size:12px;color:var(--muted)}
+.ba-box.was{border-left:3px solid var(--bad)}
+.ba-box.now{border-left:3px solid var(--good);background:var(--good-soft)}
+.ba-box.now .v{color:var(--good)}
+.ba-arrow{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;color:var(--muted);padding:0 2px}
+.ba-arrow .a{font-size:22px;line-height:1}
+.ba-arrow .x{font-size:12px;font-weight:700;color:var(--good);white-space:nowrap}
+.goals{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.goal{background:var(--paper);border:1px solid var(--line);border-radius:8px;padding:10px 14px}
+.goal .g-head{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:6px}
+.goal .g-name{font-weight:650;font-size:14px;color:var(--brand-ink)}
+.pill{display:inline-block;font-size:11px;font-weight:600;padding:1px 8px;border-radius:999px;white-space:nowrap;border:1px solid}
+.pill.done{color:var(--good);border-color:var(--good);background:var(--good-soft)}
+.pill.next{color:var(--warn);border-color:var(--warn);background:var(--warn-soft)}
+.goal .g-row{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.goal .g-cell .l{font-size:11.5px;color:var(--muted)}
+.goal .g-cell .v{font-size:16px;font-weight:650;line-height:1.25}
+.goal .g-cell .v.win{color:var(--good)}
+.goal .g-note{font-size:12.5px;color:var(--muted);margin-top:6px}
+
+nav.jump{position:sticky;top:0;z-index:10;background:color-mix(in srgb,var(--paper) 94%,transparent);border-bottom:1px solid var(--line);backdrop-filter:blur(6px)}
+nav.jump .wrap{display:flex;gap:4px 16px;flex-wrap:wrap;padding-top:7px;padding-bottom:7px;font-size:12.5px}
+nav.jump a{color:var(--brand-ink);text-decoration:none}
+nav.jump a:hover{text-decoration:underline}
+
+.card{background:var(--paper);border:1px solid var(--line);border-radius:8px;padding:12px 16px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.callout{border-left:3px solid var(--brand);background:var(--brand-soft);border-radius:6px;padding:8px 12px;margin:10px 0}
+.callout.good{border-color:var(--good);background:var(--good-soft)}
+.callout.warn{border-color:var(--warn);background:var(--warn-soft)}
+
+.scope dl{display:grid;grid-template-columns:140px 1fr;gap:4px 12px;margin:0}
+.scope dt{color:var(--muted);font-size:13px}
+.scope dd{margin:0}
+
+.hyp{display:grid;gap:8px}
+.h{display:grid;grid-template-columns:34px 1fr auto;gap:12px;align-items:start;background:var(--paper);border:1px solid var(--line);border-radius:8px;padding:10px 14px}
+.h .num{width:28px;height:28px;border-radius:6px;display:grid;place-items:center;font-weight:700;font-size:13px;background:var(--neutral-soft);color:var(--muted)}
+.h.ok .num{background:var(--good-soft);color:var(--good)}
+.h.no .num{background:var(--bad-soft);color:var(--bad)}
+.h.later .num{background:var(--warn-soft);color:var(--warn)}
+.h .t{font-weight:650;font-size:14px;margin-bottom:2px}
+.h .d{color:var(--muted);font-size:13px}
+.h .d b{color:var(--ink);font-weight:600}
+.verdict{font-size:11px;font-weight:600;padding:1px 8px;border-radius:999px;white-space:nowrap;border:1px solid}
+.h.ok .verdict{color:var(--good);border-color:var(--good)}
+.h.no .verdict{color:var(--bad);border-color:var(--bad)}
+.h.later .verdict{color:var(--warn);border-color:var(--warn)}
+
+.ba{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px}
+.ba .card h3{margin-top:0;font-size:14px}
+.dots{display:flex;flex-direction:column;gap:4px;margin:8px 0}
+.dots .row{display:flex;gap:3px;align-items:center;font-size:11.5px;color:var(--muted)}
+.dots i{display:inline-block;width:11px;height:11px;border-radius:3px;background:var(--line)}
+.dots i.scan{background:var(--bad)}
+.dots i.new{background:var(--brand)}
+.dots i.hit{background:var(--good)}
+.dots .row span{margin-left:6px}
+pre{background:var(--code);border:1px solid var(--line);border-radius:6px;padding:10px 12px;overflow-x:auto;font:12px/1.5 Consolas,"Cascadia Mono",monospace;margin:6px 0}
+pre .del{color:var(--bad)}
+pre .ins{color:var(--good)}
+
+.checks{list-style:none;padding:0;margin:0;display:grid;gap:6px}
+.checks li{display:grid;grid-template-columns:20px 1fr;gap:6px;align-items:start;margin:0}
+.checks .ic{width:17px;height:17px;border-radius:50%;display:grid;place-items:center;font-size:10.5px;font-weight:700;margin-top:2px}
+.checks .ic.y{background:var(--good-soft);color:var(--good)}
+.checks .ic.n{background:var(--warn-soft);color:var(--warn)}
+
+.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:4px 0 10px}
+.kpi{background:var(--paper);border:1px solid var(--line);border-radius:8px;padding:9px 12px}
+.kpi .l{font-size:12px;color:var(--muted);min-height:32px}
+.kpi .v{font-size:20px;font-weight:650;line-height:1.15;color:var(--brand-ink);white-space:nowrap}
+.kpi .v.good{color:var(--good)}
+.kpi .s{font-size:12px;color:var(--muted);margin-top:2px}
+
+.bars{display:grid;gap:8px;margin:8px 0 4px}
+.bar{display:grid;grid-template-columns:130px 1fr 76px;gap:10px;align-items:center}
+.bar .lab{font-size:12.5px;color:var(--muted)}
+.bar .track{position:relative;height:18px;background:var(--neutral-soft);border-radius:4px;overflow:hidden}
+.bar .fill{position:absolute;left:0;top:0;bottom:0;border-radius:4px}
+.bar .fill.old{background:color-mix(in srgb,var(--bad) 70%,transparent)}
+.bar .fill.fc{background:repeating-linear-gradient(45deg,color-mix(in srgb,var(--warn) 60%,transparent) 0 5px,transparent 5px 10px)}
+.bar .fill.new{background:var(--good)}
+.bar .fill.target{background:none;border-right:2px dashed var(--brand);border-radius:0}
+.bar .val{font-weight:650;font-size:13px;text-align:right}
+.axis{display:grid;grid-template-columns:130px 1fr 76px;gap:10px;font-size:11px;color:var(--muted)}
+.axis .ticks{display:flex;justify-content:space-between}
+
+.stack{display:flex;height:26px;border-radius:6px;overflow:hidden;margin:10px 0 8px;border:1px solid var(--line)}
+.stack div{display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;color:#fff;white-space:nowrap;overflow:hidden}
+.legend{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:12px;color:var(--muted)}
+.legend span{display:inline-flex;align-items:center;gap:5px}
+.legend i{width:10px;height:10px;border-radius:2px;display:inline-block}
+.c1{background:#52648a}.c2{background:#7d8cab}.c3{background:#a3aec4}.c4{background:#c3b89e}.c5{background:#3f7d5c}.c6{background:#c9ccd3}
+
+.tbl-wrap{overflow-x:auto;border-radius:8px;border:1px solid var(--line)}
+table{border-collapse:collapse;width:100%;background:var(--paper);font-size:13px}
+th,td{padding:6px 10px;text-align:left;vertical-align:top;border-bottom:1px solid var(--line)}
+th{background:var(--brand-soft);color:var(--brand-ink);font-weight:600;font-size:12.5px}
+tr:last-child td{border-bottom:none}
+td.n{text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
+
+.road{display:grid;gap:10px}
+.step{display:grid;grid-template-columns:70px 1fr;gap:12px;background:var(--paper);border:1px solid var(--line);border-radius:8px;padding:12px 16px}
+.step .tag{font-size:10.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.step .big{font-size:22px;font-weight:700;color:var(--brand);line-height:1.1}
+.step h3{margin:0 0 4px}
+.step .eff{display:inline-block;margin-top:6px;font-size:12px;color:var(--muted);background:var(--neutral-soft);padding:1px 8px;border-radius:999px}
+.ideas{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-top:8px}
+.idea{border:1px solid var(--line);border-radius:6px;padding:8px 12px;background:var(--paper)}
+.idea b{display:block;margin-bottom:2px;font-weight:650}
+.idea .why{font-size:13px;color:var(--muted)}
+
+footer{padding:28px 0 40px;color:var(--muted);font-size:12.5px}
+
+/* screenshots */
+.shot{margin:10px 0 0;background:var(--paper);border:1px solid var(--line);border-radius:8px;padding:10px 12px}
+.shot-title{font-weight:650;font-size:13.5px;margin-bottom:8px}
+.shot-title .tag{display:inline-block;font-size:10.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--brand-ink);background:var(--brand-soft);border-radius:4px;padding:0 6px;margin-right:6px;vertical-align:1px}
+.shot-img{display:block;width:100%;padding:0;border:1px solid var(--line);border-radius:4px;background:#fff;cursor:zoom-in;overflow:hidden}
+.shot-img img{display:block;width:100%;height:auto}
+.shot-cap{font-size:12.5px;color:var(--muted);margin-top:8px}
+.shot-cap b{color:var(--ink);font-weight:600}
+.lightbox{position:fixed;inset:0;z-index:50;background:rgba(10,14,22,.85);display:none;align-items:center;justify-content:center;padding:16px;cursor:zoom-out}
+.lightbox.open{display:flex}
+.lightbox img{max-width:100%;max-height:100%;border-radius:4px;background:#fff}
+
+@media (max-width:820px){
+  .goals,.grid2,.grid3,.ba,.ideas{grid-template-columns:1fr}
+  .kpis{grid-template-columns:1fr 1fr}
+  .step{grid-template-columns:1fr}
+  .bar,.axis{grid-template-columns:90px 1fr 64px}
+  .scope dl{grid-template-columns:1fr}
+  .scope dt{margin-top:4px}
+}
+@media (max-width:520px){
+  .brandbar{flex-direction:column;align-items:flex-start}
+  .kicker{text-align:left}
+  .h{grid-template-columns:28px 1fr}
+  .h .verdict{grid-column:2;justify-self:start}
+  .ba-hero{flex-direction:column}
+  .ba-arrow{flex-direction:row;gap:8px}
+  .ba-arrow .a{transform:rotate(90deg)}
+}
+
+.diagram .setlbl{font-size:11px;font-weight:700;fill:#fff}
+.diagram .cnt{font-size:12px;font-weight:700}
+.diagram .cnt.bad{fill:var(--bad)}
+.diagram .cnt.good{fill:var(--good)}
+.diagram .note{font-size:11.5px;fill:var(--muted)}
+.formula{font-family:Consolas,"Cascadia Mono",monospace;font-size:13px;background:var(--paper);border:1px solid var(--line);border-radius:6px;padding:8px 12px;display:inline-block}
+
+.kicker .env{text-transform:none;letter-spacing:0;font-size:12px;margin-top:3px;color:var(--muted)}
+.kicker .env b{color:var(--brand-ink);font-weight:600;font-family:Consolas,"Cascadia Mono",monospace;font-size:11.5px}
+.prose p{margin:0 0 10px;line-height:1.6}
+.diagram .c-new{fill:var(--brand)}
+.diagram .c-scan{fill:var(--bad);opacity:.75}
+.diagram .c-hit{fill:var(--good)}
+.diagram .t.bad{fill:var(--bad)}
+.diagram .t.good{fill:var(--good)}
+.grid2>*,.grid3>*{min-width:0}
+pre .del{color:var(--bad)}
+pre .ins{color:var(--good)}
+.diagram svg{width:100%;height:auto;display:block;font-family:"Segoe UI",Roboto,Arial,sans-serif}
+.diagram .lane{font-size:12px;font-weight:700;fill:var(--muted);letter-spacing:.04em}
+.diagram .sep{stroke:var(--line);stroke-dasharray:4 4}
+.diagram .box{fill:var(--paper);stroke:var(--line);stroke-width:1.2}
+.diagram .box.old{fill:var(--bad-soft);stroke:var(--bad)}
+.diagram .box.new{fill:var(--good-soft);stroke:var(--good)}
+.diagram .store{fill:var(--brand-soft);stroke:var(--brand);stroke-width:1.2}
+.diagram .t{font-size:13px;font-weight:650;fill:var(--ink)}
+.diagram .s{font-size:11.5px;fill:var(--muted)}
+.diagram .mute{font-style:italic}
+.diagram .k{font-size:11.5px;font-weight:600;fill:var(--good)}
+.diagram .ln{fill:none;stroke:var(--muted);stroke-width:1.4}
+.diagram .ln.key{stroke:var(--good);stroke-width:2}
+.diagram .arh{fill:var(--muted)}
+.diagram .setall{fill:var(--bad-soft);stroke:var(--bad)}
+.diagram .setplan{fill:var(--good-soft);stroke:var(--good)}
+.diagram .setread{fill:var(--paper);stroke:var(--brand);stroke-width:1.5}
+
+.diagram .setlbl{font-size:11px;font-weight:700;fill:#fff}
+.mode{display:inline-block;font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;padding:2px 8px;border-radius:10px;margin-right:6px}
+.mode.small{background:var(--brand-soft);color:var(--brand-ink)}
+.mode.big{background:var(--good-soft);color:var(--good)}
+
+</style>
+</head>
+<body>
+<header class="hero">
+  <div class="wrap">
+    <div class="brandbar">
+      <svg class="logo" role="img" aria-label="ВИМ Инвестиции" viewBox="0 0 176 42" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g clip-path="url(#vimLogoClip)">
+<path d="M111.155 16.6987C110.691 15.765 110.009 14.9925 109.109 14.385C108.49 13.9688 107.786 13.6387 107.002 13.3987C108.08 12.93 108.977 12.2588 109.685 11.3813C110.624 10.2225 111.095 8.8275 111.095 7.1925C111.095 4.98 110.273 3.22875 108.634 1.935C106.99 0.645001 104.65 0 101.605 0H88.1016V27.8625H101.963C104.028 27.8625 105.796 27.5475 107.266 26.9137C108.735 26.28 109.866 25.365 110.661 24.1688C111.456 22.9688 111.852 21.5662 111.852 19.9612C111.852 18.7237 111.618 17.6363 111.159 16.7025L111.155 16.6987ZM95.0511 5.33625H100.256C101.631 5.33625 102.626 5.56875 103.233 6.02625C103.844 6.4875 104.145 7.2075 104.145 8.17875C104.145 9.15 103.84 9.8775 103.233 10.3538C102.623 10.8263 101.631 11.0663 100.256 11.0663H95.0511V5.33625ZM104.759 20.5725C104.665 20.9025 104.514 21.1913 104.303 21.4425C104.092 21.6938 103.84 21.8962 103.55 22.0537C103.259 22.2112 102.894 22.3313 102.457 22.41C102.02 22.4888 101.537 22.53 101.006 22.53H95.0473V16.365H101.006C101.533 16.365 102.02 16.41 102.457 16.5038C102.894 16.5975 103.256 16.7287 103.55 16.8975C103.84 17.07 104.092 17.2725 104.303 17.5088C104.514 17.745 104.669 18.03 104.759 18.36C104.854 18.69 104.899 19.065 104.899 19.485C104.899 19.8788 104.854 20.2425 104.759 20.5725Z" fill="currentColor"/>
+<path d="M135.638 0L122.768 16.1062V0H115.977V27.8625H121.339L134.206 11.625V27.8625H141.001V0H135.638Z" fill="currentColor"/>
+<path d="M169.44 0L161.179 20.1713L152.759 0H146.164V27.8625H152.759V12.8887L159.113 27.8625H163.044L169.44 12.735V27.8625H176.031V0H169.44Z" fill="currentColor"/>
+<path d="M35.5203 20.3991L29.8785 12.9141H0L20.5208 40.5441H20.5245L35.5203 20.3991Z" fill="url(#paint0_linear_1756_3195)"/>
+<path d="M50.7038 0.00390625L35.5195 20.4002L50.7038 40.5452L79.9831 0.00390625H50.7038Z" fill="url(#paint1_linear_1756_3195)"/>
+<path d="M20.5234 40.5454H50.7035L35.5192 20.4004L20.5234 40.5454Z" fill="url(#paint2_linear_1756_3195)"/>
+<path d="M88.8062 39.281V34.0723H88.0977V40.5185H88.678L92.59 35.2985V40.5185H93.291V34.0723H92.7106L88.8062 39.281Z" fill="currentColor"/>
+<path d="M102.296 36.926H98.41V34.0723H97.6562V40.5185H98.41V37.5748H102.296V40.5185H103.049V34.0723H102.296V36.926Z" fill="currentColor"/>
+<path d="M111.563 37.4248C111.412 37.331 111.239 37.2635 111.047 37.2148C111.325 37.1173 111.552 36.9673 111.732 36.761C111.966 36.491 112.087 36.1573 112.087 35.756C112.087 35.2198 111.902 34.8035 111.537 34.511C111.171 34.2185 110.655 34.0723 109.991 34.0723H107.398V40.5185H110.101C110.553 40.5185 110.941 40.451 111.258 40.316C111.574 40.181 111.819 39.9823 111.989 39.716C112.158 39.4498 112.241 39.1273 112.241 38.741C112.241 38.441 112.185 38.1823 112.068 37.961C111.951 37.7398 111.781 37.5598 111.563 37.421V37.4248ZM108.137 34.676H109.882C110.361 34.676 110.722 34.7735 110.971 34.9648C111.22 35.156 111.344 35.441 111.344 35.8198C111.344 36.1985 111.22 36.4648 110.971 36.6598C110.722 36.8548 110.361 36.9523 109.882 36.9523H108.137V34.676ZM111.442 39.1648C111.401 39.2923 111.344 39.401 111.261 39.4948C111.182 39.5848 111.084 39.6635 110.967 39.7273C110.851 39.791 110.715 39.8398 110.56 39.8698C110.406 39.8998 110.229 39.9148 110.033 39.9148H108.141V37.556H110.033C110.229 37.556 110.406 37.571 110.56 37.601C110.715 37.631 110.854 37.676 110.967 37.7398C111.084 37.7998 111.182 37.8785 111.261 37.9723C111.341 38.066 111.401 38.1748 111.442 38.3023C111.484 38.426 111.503 38.5723 111.503 38.7373C111.503 38.9023 111.484 39.0373 111.442 39.1685V39.1648Z" fill="currentColor"/>
+<path d="M116.367 40.5185H120.456V39.8885H117.102V37.5635H120.264V36.9335H117.102V34.7023H120.456V34.0723H116.367V40.5185Z" fill="currentColor"/>
+<path d="M127.298 34.6765C127.664 34.6765 127.999 34.7365 128.305 34.8527C128.606 34.9727 128.9 35.164 129.183 35.4227L129.477 34.8115C129.221 34.5415 128.9 34.339 128.52 34.2002C128.139 34.0615 127.728 33.9902 127.28 33.9902C126.643 33.9902 126.096 34.1252 125.644 34.3915C125.192 34.6615 124.841 35.0402 124.6 35.5277C124.359 36.0152 124.238 36.604 124.238 37.2865C124.238 37.969 124.359 38.5577 124.6 39.049C124.841 39.544 125.188 39.9227 125.644 40.1927C126.096 40.4627 126.643 40.594 127.28 40.594C127.728 40.594 128.139 40.5227 128.52 40.3802C128.9 40.2377 129.217 40.0352 129.477 39.7727L129.183 39.1615C128.9 39.424 128.61 39.6152 128.305 39.7315C128.003 39.8515 127.668 39.9115 127.298 39.9115C126.571 39.9115 126.013 39.6827 125.625 39.2215C125.241 38.7602 125.045 38.1152 125.045 37.2865C125.045 36.4577 125.237 35.8127 125.625 35.359C126.01 34.9015 126.567 34.6727 127.298 34.6727V34.6765Z" fill="currentColor"/>
+<path d="M132.66 34.721H135.012V40.5185H135.773V34.721H138.125V34.0723H132.66V34.721Z" fill="currentColor"/>
+<path d="M142.416 39.281V34.0723H141.707V40.5185H142.284L146.199 35.2985V40.5185H146.897V34.0723H146.32L142.416 39.281Z" fill="currentColor"/>
+<path d="M156.61 34.0723H155.848V39.8698H152.015V34.0723H151.262V40.5185H156.839V41.9548H157.529V39.8698H156.61V34.0723Z" fill="currentColor"/>
+<path d="M161.99 39.281V34.0723H161.285V40.5185H161.862L165.777 35.2985V40.5185H166.475V34.0723H165.898L161.99 39.281Z" fill="currentColor"/>
+<path d="M175.453 34.0723L171.548 39.281V34.0723H170.84V40.5185H171.42L175.332 35.2985V40.5185H176.029V34.0723H175.453Z" fill="currentColor"/>
+</g>
+<defs>
+<linearGradient id="paint0_linear_1756_3195" x1="9.68188" y1="5.87156" x2="30.0896" y2="33.5202" gradientUnits="userSpaceOnUse">
+<stop stop-color="#73A8BA"/>
+<stop offset="1" stop-color="#52648A"/>
+</linearGradient>
+<linearGradient id="paint1_linear_1756_3195" x1="70.5273" y1="-6.86984" x2="40.955" y2="33.8156" gradientUnits="userSpaceOnUse">
+<stop stop-color="#CBDFE6"/>
+<stop offset="1" stop-color="#73A8BA"/>
+</linearGradient>
+<linearGradient id="paint2_linear_1756_3195" x1="35.6135" y1="20.4004" x2="35.6135" y2="40.5454" gradientUnits="userSpaceOnUse">
+<stop stop-color="white"/>
+<stop offset="1" stop-color="#73A8BA"/>
+</linearGradient>
+<clipPath id="vimLogoClip">
+<rect width="176" height="42" fill="white"/>
+</clipPath>
+</defs>
+</svg>
+      <div class="kicker">Аванкор Фронт-офис - проверка лимитов - оптимизация 3 - обоснование для архитектора - 26.09.2026<div class="env">Код: конфигурация "Аванкор: Фронт-офис" 1.4.9.5, расширение <b>FO_LimitCheckOpt</b>; малые планы проверены на Т-1, большие - на базе разработчика, замер Т-1 впереди</div></div>
+    </div>
+    <h1>Почему план проверки поручений можно раздавать заданиям с учетом наборов данных<br><span>Одна причина, два режима: малый план раздается частями наборов, большой режется штатными кусками по порядку наборов</span></h1>
+    <p class="sub">Шаг "Обработка проверки" делит план между фоновыми заданиями, и каждое задание строит временную таблицу для каждого своего набора данных. Штатная нарезка берет строки подряд и не смотрит на наборы, поэтому одни и те же таблицы строятся во многих заданиях. Расширение меняет только номер задания в строке плана - так, чтобы задание получало строки одного-двух наборов. Для малого и большого плана это делается по-разному, доказательство корректности у них общее.</p>
+  </div>
+</header>
+
+<nav class="jump">
+  <div class="wrap">
+    <a href="#text">Обоснование словами</a>
+    <a href="#why">1. Причина</a>
+    <a href="#modes">2. Два режима</a>
+    <a href="#small">3. Малый план</a>
+    <a href="#big">4. Большой план</a>
+    <a href="#code">5. Код</a>
+    <a href="#proof">6. Обоснование по шагам</a>
+    <a href="#edge">7. Границы</a>
+    <a href="#test">8. Проверка</a>
+  </div>
+</nav>
+
+<main class="wrap">
+
+<section id="text">
+  <div class="sec-no">Кратко</div>
+  <h2>Словесное обоснование</h2>
+  <div class="card prose">
+    <p><b>Что делает штатный код.</b> <code>РаботаСЛимитами.ПланОбработкиПроверки</code> проходит строки плана и пишет в каждую <code>НомерИсполнителя</code>: по <code>КоличествоНаЗадание + 1</code> строк подряд на номер, где <code>КоличествоНаЗадание</code> - строк на поток, но не меньше 10. На каждый номер запускается фоновое задание, и оно читает только свои строки (<code>ПланПроверкиИсполнителя(Вместилище, Параметры.Данные[0])</code>).</p>
+    <p><b>Где теряется время.</b> Для каждого своего набора задание один раз строит таблицу набора (<code>ДобавитьВТ_ТаблицаНабораДанных</code>): позиции всех портфелей проверки по набору, статика активов, портфелей, мест хранения, контрагентов, рейтинги. Строки плана к этому моменту идут не по наборам, поэтому кусок подряд идущих строк задевает несколько наборов, и один набор строится во многих заданиях.</p>
+    <p><b>Малый план</b> (строк на поток меньше 50, выборка из нескольких поручений). Кусок - два десятка строк, а построение таблицы - секунды. Наборы режутся на части до 50 строк, части раскладываются по заданиям от крупных к мелким в наименее загруженное. Строк у задания становится больше, но таблиц оно строит одну-две. На Т-1: 28 построений - 11, проверка 2 поручений 31,5 с - 22,6 с.</p>
+    <p><b>Большой план</b> (строк на поток от 50, выборка из десятков и сотен поручений). Кусок в тысячи строк содержит строки всех наборов, и каждое задание строит полные таблицы всех наборов. Размер куска остается штатным, меняется только, какие строки в него попадают: номера выдаются так, как если бы строки шли набор за набором. Кусок задевает один набор, на стыке - соседние. Для 500 поручений, 12 потоков и 8 наборов: 96 построений - 19, у задания 1-3 вместо 8.</p>
+    <p><b>Почему результат тот же в обоих режимах.</b> Меняется только колонка <code>НомерИсполнителя</code>, которую конфигурация читает в одном месте - отбором строк задания. Каждая строка получает ровно один номер, номера идут от 0 без пропусков, их не больше числа потоков. Таблица набора строится по дате, реквизитам набора, биржам и вместилищу и не зависит от того, какое задание ее строит. Состав плана, порядок строк, лимиты, пороги, расчет зон и запись результатов не меняются.</p>
+    <p style="margin-bottom:0"><b>Где не применяется.</b> Регламентный постконтроль (в плане нет поручений), один поток, один набор - номера штатные.</p>
+  </div>
+</section>
+
+<section id="why">
+  <div class="sec-no">Раздел 1</div>
+  <h2>Причина: три факта из кода и замер Т-1</h2>
+  <div class="grid3">
+    <div class="card"><h3 style="margin-top:0">1. Таблица - одна на задание и набор</h3><p style="margin:0">Задание строит таблицу, если ее нет в его менеджере временных таблиц: <code>Менеджер.Таблицы.Найти("ВТ_ТаблицаНабораДанных" + КлючНабора)</code>. При смене набора удаляются только таблицы без ключа набора. Построений в задании столько, сколько разных наборов в его строках.</p></div>
+    <div class="card"><h3 style="margin-top:0">2. Таблица - по всем портфелям проверки</h3><p style="margin:0">Отбор <code>КэшВмПозиция</code>: <code>НаборДанных = &amp;НаборДанных И Вместилище = &amp;Вместилище</code>. Вместилище одно на проверку, поэтому таблица растет с размером выборки поручений, а не с куском задания.</p></div>
+    <div class="card"><h3 style="margin-top:0">3. Строки идут не по наборам</h3><p style="margin:0"><code>ПланПроверки</code> упорядочивает строки по набору и лимиту, но <code>ОтобранныеСтрокиПланаПроверки</code> пропускает их через временную таблицу без упорядочивания. На Т-1 порядок не сохранился:</p></div>
+  </div>
+  <div class="card diagram" style="margin-top:14px">
+<svg viewBox="0 0 900 150" role="img" aria-label="Факт Т-1: 28 построений больше предела 18">
+<text x="20" y="20" class="t">Факт Т-1, 2 поручения: 229 строк, 11 кусков по 21 строке, 8 наборов</text>
+<text x="20" y="55" class="s">Если бы строки шли по наборам - не больше</text>
+<rect x="420" y="40" width="252.0" height="20" rx="4" class="box new"/>
+<text x="680.0" y="55" class="cnt good">18</text>
+<text x="20" y="87" class="s">Минимум (каждое задание - 1 набор, наборов меньше заданий)</text>
+<rect x="420" y="72" width="154.0" height="20" rx="4" class="box new"/>
+<text x="582.0" y="87" class="cnt good">11</text>
+<text x="20" y="119" class="s">Замер без расширения</text>
+<rect x="420" y="104" width="392.0" height="20" rx="4" class="box old"/>
+<text x="820.0" y="119" class="cnt bad">28</text>
+<text x="20" y="144" class="note">28 больше предела 18 - значит, в задания пришли строки не по порядку наборов. На большом плане при таком порядке каждый кусок задевает все наборы</text>
+</svg>
+  </div>
+</section>
+
+<section id="modes">
+  <div class="sec-no">Раздел 2</div>
+  <h2>Два режима: какой когда</h2>
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr><th>Условие</th><th>Режим</th><th>Почему так</th></tr></thead>
+      <tbody>
+        <tr><td>Нет поручений в плане, один поток или один набор</td><td>Штатно</td><td>Повторных построений нет или правка не относится к предконтролю.</td></tr>
+        <tr><td>Строк на поток меньше 50</td><td><span class="mode small">части наборов</span></td><td>Построение таблицы дороже проверки десятков строк: выгоднее дать заданию больше строк, но меньше наборов. Нагрузка заданий становится неравной, на малом плане это дешево.</td></tr>
+        <tr><td>Строк на поток 50 и больше</td><td><span class="mode big">подряд по наборам</span></td><td>Неравная нагрузка на большом плане стоила бы дорого, поэтому кусок остается штатным. Сокращается только число наборов в куске.</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="sec-lead" style="margin-top:10px">Порог 50 строк - <code>FO_LimitCheckOpt_МинимумСтрокЧастиНабора()</code>. На малом плане режим частей дает меньше построений, чем режим подряд (на Т-1 11 против предела 18), на большом - режим подряд не меняет нагрузку заданий.</p>
+</section>
+
+<section id="small">
+  <div class="sec-no">Раздел 3</div>
+  <h2><span class="mode small">части наборов</span>Малый план: 2 поручения</h2>
+  <div class="card diagram">
+<svg viewBox="0 0 900 470" role="img" aria-label="Нарезка плана: штатно и с расширением">
+<text x="20" y="22" class="t">План проверки: 229 строк, 2 поручения, 8 наборов данных (A-H), 12 потоков. Размеры наборов условные</text>
+<rect x="20.0" y="40" width="112.7" height="22" fill="#6f8fb0" stroke="#fff" stroke-width=".8"/>
+<text x="76.3" y="55" text-anchor="middle" class="setlbl" fill="#fff" style="fill:#fff">A</text>
+<rect x="132.7" y="40" width="75.1" height="22" fill="#8fa98a" stroke="#fff" stroke-width=".8"/>
+<text x="170.2" y="55" text-anchor="middle" class="setlbl" fill="#fff" style="fill:#fff">B</text>
+<rect x="207.8" y="40" width="67.6" height="22" fill="#b59a6a" stroke="#fff" stroke-width=".8"/>
+<text x="241.6" y="55" text-anchor="middle" class="setlbl" fill="#fff" style="fill:#fff">C</text>
+<rect x="275.4" y="40" width="56.3" height="22" fill="#9c86b0" stroke="#fff" stroke-width=".8"/>
+<text x="303.5" y="55" text-anchor="middle" class="setlbl" fill="#fff" style="fill:#fff">D</text>
+<rect x="331.7" y="40" width="45.1" height="22" fill="#6fa5a0" stroke="#fff" stroke-width=".8"/>
+<text x="354.2" y="55" text-anchor="middle" class="setlbl" fill="#fff" style="fill:#fff">E</text>
+<rect x="376.8" y="40" width="37.6" height="22" fill="#b08080" stroke="#fff" stroke-width=".8"/>
+<text x="395.5" y="55" text-anchor="middle" class="setlbl" fill="#fff" style="fill:#fff">F</text>
+<rect x="414.3" y="40" width="22.5" height="22" fill="#8a8f99" stroke="#fff" stroke-width=".8"/>
+<text x="425.6" y="55" text-anchor="middle" class="setlbl" fill="#fff" style="fill:#fff">G</text>
+<rect x="436.9" y="40" width="15.0" height="22" fill="#a8a070" stroke="#fff" stroke-width=".8"/>
+<text x="444.4" y="55" text-anchor="middle" class="setlbl" fill="#fff" style="fill:#fff">H</text>
+<rect x="451.9" y="40" width="112.7" height="22" fill="#6f8fb0" stroke="#fff" stroke-width=".8"/>
+<text x="508.2" y="55" text-anchor="middle" class="setlbl" fill="#fff" style="fill:#fff">A</text>
+<rect x="564.5" y="40" width="75.1" height="22" fill="#8fa98a" stroke="#fff" stroke-width=".8"/>
+<text x="602.1" y="55" text-anchor="middle" class="setlbl" fill="#fff" style="fill:#fff">B</text>
+<rect x="639.7" y="40" width="63.8" height="22" fill="#b59a6a" stroke="#fff" stroke-width=".8"/>
+<text x="671.6" y="55" text-anchor="middle" class="setlbl" fill="#fff" style="fill:#fff">C</text>
+<rect x="703.5" y="40" width="56.3" height="22" fill="#9c86b0" stroke="#fff" stroke-width=".8"/>
+<text x="731.7" y="55" text-anchor="middle" class="setlbl" fill="#fff" style="fill:#fff">D</text>
+<rect x="759.8" y="40" width="48.8" height="22" fill="#6fa5a0" stroke="#fff" stroke-width=".8"/>
+<text x="784.2" y="55" text-anchor="middle" class="setlbl" fill="#fff" style="fill:#fff">E</text>
+<rect x="808.6" y="40" width="37.6" height="22" fill="#b08080" stroke="#fff" stroke-width=".8"/>
+<text x="827.4" y="55" text-anchor="middle" class="setlbl" fill="#fff" style="fill:#fff">F</text>
+<rect x="846.2" y="40" width="22.5" height="22" fill="#8a8f99" stroke="#fff" stroke-width=".8"/>
+<text x="857.5" y="55" text-anchor="middle" class="setlbl" fill="#fff" style="fill:#fff">G</text>
+<rect x="868.7" y="40" width="11.3" height="22" fill="#a8a070" stroke="#fff" stroke-width=".8"/>
+<text x="20" y="78" class="s">поручение 1</text><text x="455.9" y="78" class="s">поручение 2</text>
+<text x="20" y="120" class="t bad">Было: план режется подряд кусками по 21 строке, наборы не учитываются</text>
+<rect x="20.0" y="132" width="75.9" height="26" rx="4" class="box old"/>
+<text x="57.9" y="149" text-anchor="middle" class="cnt bad">1</text>
+<rect x="98.9" y="132" width="75.9" height="26" rx="4" class="box old"/>
+<text x="136.8" y="149" text-anchor="middle" class="cnt bad">2</text>
+<rect x="177.7" y="132" width="75.9" height="26" rx="4" class="box old"/>
+<text x="215.7" y="149" text-anchor="middle" class="cnt bad">2</text>
+<rect x="256.6" y="132" width="75.9" height="26" rx="4" class="box old"/>
+<text x="294.5" y="149" text-anchor="middle" class="cnt bad">3</text>
+<rect x="335.5" y="132" width="75.9" height="26" rx="4" class="box old"/>
+<text x="373.4" y="149" text-anchor="middle" class="cnt bad">2</text>
+<rect x="414.3" y="132" width="75.9" height="26" rx="4" class="box old"/>
+<text x="452.3" y="149" text-anchor="middle" class="cnt bad">3</text>
+<rect x="493.2" y="132" width="75.9" height="26" rx="4" class="box old"/>
+<text x="531.1" y="149" text-anchor="middle" class="cnt bad">2</text>
+<rect x="572.1" y="132" width="75.9" height="26" rx="4" class="box old"/>
+<text x="610.0" y="149" text-anchor="middle" class="cnt bad">2</text>
+<rect x="650.9" y="132" width="75.9" height="26" rx="4" class="box old"/>
+<text x="688.8" y="149" text-anchor="middle" class="cnt bad">2</text>
+<rect x="729.8" y="132" width="75.9" height="26" rx="4" class="box old"/>
+<text x="767.7" y="149" text-anchor="middle" class="cnt bad">2</text>
+<rect x="808.6" y="132" width="68.4" height="26" rx="4" class="box old"/>
+<text x="842.8" y="149" text-anchor="middle" class="cnt bad">3</text>
+<text x="20" y="178" class="s">число в задании - сколько раз оно строит таблицу набора. Итого 11 заданий, 24 построений на 8 наборов</text>
+<text x="20" y="225" class="t good">Стало: наборы режутся на части не больше 50 строк, части раздаются в наименее загруженное задание</text>
+<rect x="24.0" y="239.0" width="87.6" height="104.0" rx="3" fill="#8fa98a"/>
+<text x="67.8" y="295.0" text-anchor="middle" style="fill:#fff" class="setlbl">B - 40</text>
+<text x="67.8" y="419" text-anchor="middle" class="cnt good">1</text>
+<rect x="119.6" y="239.0" width="87.6" height="91.0" rx="3" fill="#b59a6a"/>
+<text x="163.3" y="288.5" text-anchor="middle" style="fill:#fff" class="setlbl">C - 35</text>
+<text x="163.3" y="419" text-anchor="middle" class="cnt good">1</text>
+<rect x="215.1" y="239.0" width="87.6" height="78.0" rx="3" fill="#6f8fb0"/>
+<text x="258.9" y="282.0" text-anchor="middle" style="fill:#fff" class="setlbl">A - 30</text>
+<text x="258.9" y="419" text-anchor="middle" class="cnt good">1</text>
+<rect x="310.7" y="239.0" width="87.6" height="78.0" rx="3" fill="#6f8fb0"/>
+<text x="354.4" y="282.0" text-anchor="middle" style="fill:#fff" class="setlbl">A - 30</text>
+<text x="354.4" y="419" text-anchor="middle" class="cnt good">1</text>
+<rect x="406.2" y="239.0" width="87.6" height="78.0" rx="3" fill="#9c86b0"/>
+<text x="450.0" y="282.0" text-anchor="middle" style="fill:#fff" class="setlbl">D - 30</text>
+<text x="450.0" y="419" text-anchor="middle" class="cnt good">1</text>
+<rect x="501.8" y="239.0" width="87.6" height="65.0" rx="3" fill="#6fa5a0"/>
+<text x="545.6" y="275.5" text-anchor="middle" style="fill:#fff" class="setlbl">E - 25</text>
+<text x="545.6" y="419" text-anchor="middle" class="cnt good">1</text>
+<rect x="597.3" y="239.0" width="87.6" height="52.0" rx="3" fill="#b08080"/>
+<text x="641.1" y="269.0" text-anchor="middle" style="fill:#fff" class="setlbl">F - 20</text>
+<text x="641.1" y="419" text-anchor="middle" class="cnt good">1</text>
+<rect x="692.9" y="239.0" width="87.6" height="31.2" rx="3" fill="#8a8f99"/>
+<text x="736.7" y="258.6" text-anchor="middle" style="fill:#fff" class="setlbl">G - 12</text>
+<text x="736.7" y="419" text-anchor="middle" class="cnt good">1</text>
+<rect x="788.4" y="239.0" width="87.6" height="18.2" rx="3" fill="#a8a070"/>
+<text x="832.2" y="252.1" text-anchor="middle" style="fill:#fff" class="setlbl">H - 7</text>
+<text x="832.2" y="419" text-anchor="middle" class="cnt good">1</text>
+<text x="20" y="445" class="s">9 заданий, 9 построений на 8 наборов; строк на задание до 40 вместо 21: проверка строки дешевле построения таблицы набора</text>
+</svg>
+  </div>
+  <p class="sec-lead" style="margin-top:10px">Условные размеры наборов, те же правила, что в коде. На Т-1 по фактическим наборам: 28 построений - 11, их суммарное время 67 с - 22,6 с, "Обработка проверки" 16,6 с - 8,9 с.</p>
+</section>
+
+<section id="big">
+  <div class="sec-no">Раздел 4</div>
+  <h2><span class="mode big">подряд по наборам</span>Большой план: 500 поручений</h2>
+  <p class="sec-lead">Условный пример: 500 поручений по ~115 строк, 57 250 строк плана, 12 потоков, 8 наборов в пропорциях Т-1. Штатный кусок - 4 772 строки.</p>
+  <div class="card diagram">
+<svg viewBox="0 0 900 250" role="img" aria-label="Было: каждое задание получает строки всех наборов">
+<text x="20" y="20" class="t bad">Было: 57 250 строк плана режутся подряд по 4 772 строк; строки идут не по наборам</text>
+<text x="20" y="40" class="s">Строки поручений перемешаны по наборам (на рисунке - как если бы шли поручение за поручением: A B C D E F G H, A B C ...)</text>
+<rect x="20.00" y="54" width="3.76" height="22" fill="#6f8fb0"/>
+<rect x="23.76" y="54" width="2.50" height="22" fill="#8fa98a"/>
+<rect x="26.26" y="54" width="2.19" height="22" fill="#b59a6a"/>
+<rect x="28.45" y="54" width="1.88" height="22" fill="#9c86b0"/>
+<rect x="30.33" y="54" width="1.56" height="22" fill="#6fa5a0"/>
+<rect x="31.89" y="54" width="1.25" height="22" fill="#b08080"/>
+<rect x="33.14" y="54" width="0.75" height="22" fill="#8a8f99"/>
+<rect x="33.90" y="54" width="0.44" height="22" fill="#a8a070"/>
+<rect x="34.33" y="54" width="3.76" height="22" fill="#6f8fb0"/>
+<rect x="38.09" y="54" width="2.50" height="22" fill="#8fa98a"/>
+<rect x="40.59" y="54" width="2.19" height="22" fill="#b59a6a"/>
+<rect x="42.78" y="54" width="1.88" height="22" fill="#9c86b0"/>
+<rect x="44.66" y="54" width="1.56" height="22" fill="#6fa5a0"/>
+<rect x="46.23" y="54" width="1.25" height="22" fill="#b08080"/>
+<rect x="47.48" y="54" width="0.75" height="22" fill="#8a8f99"/>
+<rect x="48.23" y="54" width="0.44" height="22" fill="#a8a070"/>
+<rect x="48.67" y="54" width="3.76" height="22" fill="#6f8fb0"/>
+<rect x="52.42" y="54" width="2.50" height="22" fill="#8fa98a"/>
+<rect x="54.93" y="54" width="2.19" height="22" fill="#b59a6a"/>
+<rect x="57.12" y="54" width="1.88" height="22" fill="#9c86b0"/>
+<rect x="58.99" y="54" width="1.56" height="22" fill="#6fa5a0"/>
+<rect x="60.56" y="54" width="1.25" height="22" fill="#b08080"/>
+<rect x="61.81" y="54" width="0.75" height="22" fill="#8a8f99"/>
+<rect x="62.56" y="54" width="0.44" height="22" fill="#a8a070"/>
+<rect x="63.00" y="54" width="3.76" height="22" fill="#6f8fb0"/>
+<rect x="66.76" y="54" width="2.50" height="22" fill="#8fa98a"/>
+<rect x="69.26" y="54" width="2.19" height="22" fill="#b59a6a"/>
+<rect x="71.45" y="54" width="1.88" height="22" fill="#9c86b0"/>
+<rect x="73.33" y="54" width="1.56" height="22" fill="#6fa5a0"/>
+<rect x="74.89" y="54" width="1.25" height="22" fill="#b08080"/>
+<rect x="76.14" y="54" width="0.75" height="22" fill="#8a8f99"/>
+<rect x="76.90" y="54" width="0.44" height="22" fill="#a8a070"/>
+<rect x="77.33" y="54" width="3.76" height="22" fill="#6f8fb0"/>
+<rect x="81.09" y="54" width="2.50" height="22" fill="#8fa98a"/>
+<rect x="83.59" y="54" width="2.19" height="22" fill="#b59a6a"/>
+<rect x="85.78" y="54" width="1.88" height="22" fill="#9c86b0"/>
+<rect x="87.66" y="54" width="1.56" height="22" fill="#6fa5a0"/>
+<rect x="89.23" y="54" width="1.25" height="22" fill="#b08080"/>
+<rect x="90.48" y="54" width="0.75" height="22" fill="#8a8f99"/>
+<rect x="91.23" y="54" width="0.44" height="22" fill="#a8a070"/>
+<rect x="91.67" y="54" width="3.76" height="22" fill="#6f8fb0"/>
+<rect x="95.42" y="54" width="2.50" height="22" fill="#8fa98a"/>
+<rect x="97.93" y="54" width="2.19" height="22" fill="#b59a6a"/>
+<rect x="100.12" y="54" width="1.88" height="22" fill="#9c86b0"/>
+<rect x="101.99" y="54" width="1.56" height="22" fill="#6fa5a0"/>
+<rect x="103.56" y="54" width="1.25" height="22" fill="#b08080"/>
+<rect x="104.81" y="54" width="0.75" height="22" fill="#8a8f99"/>
+<rect x="105.56" y="54" width="0.44" height="22" fill="#a8a070"/>
+<rect x="106.00" y="54" width="3.76" height="22" fill="#6f8fb0"/>
+<rect x="109.76" y="54" width="2.50" height="22" fill="#8fa98a"/>
+<rect x="112.26" y="54" width="2.19" height="22" fill="#b59a6a"/>
+<rect x="114.45" y="54" width="1.88" height="22" fill="#9c86b0"/>
+<rect x="116.33" y="54" width="1.56" height="22" fill="#6fa5a0"/>
+<rect x="117.89" y="54" width="1.25" height="22" fill="#b08080"/>
+<rect x="119.14" y="54" width="0.75" height="22" fill="#8a8f99"/>
+<rect x="119.90" y="54" width="0.44" height="22" fill="#a8a070"/>
+<rect x="120.33" y="54" width="3.76" height="22" fill="#6f8fb0"/>
+<rect x="124.09" y="54" width="2.50" height="22" fill="#8fa98a"/>
+<rect x="126.59" y="54" width="2.19" height="22" fill="#b59a6a"/>
+<rect x="128.78" y="54" width="1.88" height="22" fill="#9c86b0"/>
+<rect x="130.66" y="54" width="1.56" height="22" fill="#6fa5a0"/>
+<rect x="132.23" y="54" width="1.25" height="22" fill="#b08080"/>
+<rect x="133.48" y="54" width="0.75" height="22" fill="#8a8f99"/>
+<rect x="134.23" y="54" width="0.44" height="22" fill="#a8a070"/>
+<rect x="134.67" y="54" width="3.76" height="22" fill="#6f8fb0"/>
+<rect x="138.42" y="54" width="2.50" height="22" fill="#8fa98a"/>
+<rect x="140.93" y="54" width="2.19" height="22" fill="#b59a6a"/>
+<rect x="143.12" y="54" width="1.88" height="22" fill="#9c86b0"/>
+<rect x="144.99" y="54" width="1.56" height="22" fill="#6fa5a0"/>
+<rect x="146.56" y="54" width="1.25" height="22" fill="#b08080"/>
+<rect x="147.81" y="54" width="0.75" height="22" fill="#8a8f99"/>
+<rect x="148.56" y="54" width="0.44" height="22" fill="#a8a070"/>
+<rect x="149.00" y="54" width="3.76" height="22" fill="#6f8fb0"/>
+<rect x="152.76" y="54" width="2.50" height="22" fill="#8fa98a"/>
+<rect x="155.26" y="54" width="2.19" height="22" fill="#b59a6a"/>
+<rect x="157.45" y="54" width="1.88" height="22" fill="#9c86b0"/>
+<rect x="159.33" y="54" width="1.56" height="22" fill="#6fa5a0"/>
+<rect x="160.89" y="54" width="1.25" height="22" fill="#b08080"/>
+<rect x="162.14" y="54" width="0.75" height="22" fill="#8a8f99"/>
+<rect x="162.90" y="54" width="0.44" height="22" fill="#a8a070"/>
+<rect x="163.33" y="54" width="3.76" height="22" fill="#6f8fb0"/>
+<rect x="167.09" y="54" width="2.50" height="22" fill="#8fa98a"/>
+<rect x="169.59" y="54" width="2.19" height="22" fill="#b59a6a"/>
+<rect x="171.78" y="54" width="1.88" height="22" fill="#9c86b0"/>
+<rect x="173.66" y="54" width="1.56" height="22" fill="#6fa5a0"/>
+<rect x="175.23" y="54" width="1.25" height="22" fill="#b08080"/>
+<rect x="176.48" y="54" width="0.75" height="22" fill="#8a8f99"/>
+<rect x="177.23" y="54" width="0.44" height="22" fill="#a8a070"/>
+<rect x="177.67" y="54" width="3.76" height="22" fill="#6f8fb0"/>
+<rect x="181.42" y="54" width="2.50" height="22" fill="#8fa98a"/>
+<rect x="183.93" y="54" width="2.19" height="22" fill="#b59a6a"/>
+<rect x="186.12" y="54" width="1.88" height="22" fill="#9c86b0"/>
+<rect x="187.99" y="54" width="1.56" height="22" fill="#6fa5a0"/>
+<rect x="189.56" y="54" width="1.25" height="22" fill="#b08080"/>
+<rect x="190.81" y="54" width="0.75" height="22" fill="#8a8f99"/>
+<rect x="191.56" y="54" width="0.44" height="22" fill="#a8a070"/>
+<rect x="192.00" y="54" width="3.76" height="22" fill="#6f8fb0"/>
+<rect x="195.76" y="54" width="2.50" height="22" fill="#8fa98a"/>
+<rect x="198.26" y="54" width="2.19" height="22" fill="#b59a6a"/>
+<rect x="200.45" y="54" width="1.88" height="22" fill="#9c86b0"/>
+<rect x="202.33" y="54" width="1.56" height="22" fill="#6fa5a0"/>
+<rect x="203.89" y="54" width="1.25" height="22" fill="#b08080"/>
+<rect x="205.14" y="54" width="0.75" height="22" fill="#8a8f99"/>
+<rect x="205.90" y="54" width="0.44" height="22" fill="#a8a070"/>
+<rect x="206.33" y="54" width="3.76" height="22" fill="#6f8fb0"/>
+<rect x="210.09" y="54" width="2.50" height="22" fill="#8fa98a"/>
+<rect x="212.59" y="54" width="2.19" height="22" fill="#b59a6a"/>
+<rect x="214.78" y="54" width="1.88" height="22" fill="#9c86b0"/>
+<rect x="216.66" y="54" width="1.56" height="22" fill="#6fa5a0"/>
+<rect x="218.23" y="54" width="1.25" height="22" fill="#b08080"/>
+<rect x="219.48" y="54" width="0.75" height="22" fill="#8a8f99"/>
+<rect x="220.23" y="54" width="0.44" height="22" fill="#a8a070"/>
+<rect x="220.67" y="54" width="3.76" height="22" fill="#6f8fb0"/>
+<rect x="224.42" y="54" width="2.50" height="22" fill="#8fa98a"/>
+<rect x="226.93" y="54" width="2.19" height="22" fill="#b59a6a"/>
+<rect x="229.12" y="54" width="1.88" height="22" fill="#9c86b0"/>
+<rect x="230.99" y="54" width="1.56" height="22" fill="#6fa5a0"/>
+<rect x="232.56" y="54" width="1.25" height="22" fill="#b08080"/>
+<rect x="233.81" y="54" width="0.75" height="22" fill="#8a8f99"/>
+<rect x="234.56" y="54" width="0.44" height="22" fill="#a8a070"/>
+<rect x="235.00" y="54" width="3.76" height="22" fill="#6f8fb0"/>
+<rect x="238.76" y="54" width="2.50" height="22" fill="#8fa98a"/>
+<rect x="241.26" y="54" width="2.19" height="22" fill="#b59a6a"/>
+<rect x="243.45" y="54" width="1.88" height="22" fill="#9c86b0"/>
+<rect x="245.33" y="54" width="1.56" height="22" fill="#6fa5a0"/>
+<rect x="246.89" y="54" width="1.25" height="22" fill="#b08080"/>
+<rect x="248.14" y="54" width="0.75" height="22" fill="#8a8f99"/>
+<rect x="248.90" y="54" width="0.44" height="22" fill="#a8a070"/>
+<rect x="249.33" y="54" width="3.76" height="22" fill="#6f8fb0"/>
+<rect x="253.09" y="54" width="2.50" height="22" fill="#8fa98a"/>
+<rect x="255.59" y="54" width="2.19" height="22" fill="#b59a6a"/>
+<rect x="257.78" y="54" width="1.88" height="22" fill="#9c86b0"/>
+<rect x="259.66" y="54" width="1.56" height="22" fill="#6fa5a0"/>
+<rect x="261.23" y="54" width="1.25" height="22" fill="#b08080"/>
+<rect x="262.48" y="54" width="0.75" height="22" fill="#8a8f99"/>
+<rect x="263.23" y="54" width="0.44" height="22" fill="#a8a070"/>
+<rect x="263.67" y="54" width="3.76" height="22" fill="#6f8fb0"/>
+<rect x="267.42" y="54" width="2.50" height="22" fill="#8fa98a"/>
+<rect x="269.93" y="54" width="2.19" height="22" fill="#b59a6a"/>
+<rect x="272.12" y="54" width="1.88" height="22" fill="#9c86b0"/>
+<rect x="273.99" y="54" width="1.56" height="22" fill="#6fa5a0"/>
+<rect x="275.56" y="54" width="1.25" height="22" fill="#b08080"/>
+<rect x="276.81" y="54" width="0.75" height="22" fill="#8a8f99"/>
+<rect x="277.56" y="54" width="0.44" height="22" fill="#a8a070"/>
+<rect x="278.00" y="54" width="3.76" height="22" fill="#6f8fb0"/>
+<rect x="281.76" y="54" width="2.50" height="22" fill="#8fa98a"/>
+<rect x="284.26" y="54" width="2.19" height="22" fill="#b59a6a"/>
+<rect x="286.45" y="54" width="1.88" height="22" fill="#9c86b0"/>
+<rect x="288.33" y="54" width="1.56" height="22" fill="#6fa5a0"/>
+<rect x="289.89" y="54" width="1.25" height="22" fill="#b08080"/>
+<rect x="291.14" y="54" width="0.75" height="22" fill="#8a8f99"/>
+<rect x="291.90" y="54" width="0.44" height="22" fill="#a8a070"/>
+<rect x="292.33" y="54" width="3.76" height="22" fill="#6f8fb0"/>
+<rect x="296.09" y="54" width="2.50" height="22" fill="#8fa98a"/>
+<rect x="298.59" y="54" width="2.19" height="22" fill="#b59a6a"/>
+<rect x="300.78" y="54" width="1.88" height="22" fill="#9c86b0"/>
+<rect x="302.66" y="54" width="1.56" height="22" fill="#6fa5a0"/>
+<rect x="304.23" y="54" width="1.25" height="22" fill="#b08080"/>
+<rect x="305.48" y="54" width="0.75" height="22" fill="#8a8f99"/>
+<rect x="306.23" y="54" width="0.44" height="22" fill="#a8a070"/>
+<rect x="306.67" y="54" width="3.76" height="22" fill="#6f8fb0"/>
+<rect x="310.42" y="54" width="2.50" height="22" fill="#8fa98a"/>
+<rect x="312.93" y="54" width="2.19" height="22" fill="#b59a6a"/>
+<rect x="315.12" y="54" width="1.88" height="22" fill="#9c86b0"/>
+<rect x="316.99" y="54" width="1.56" height="22" fill="#6fa5a0"/>
+<rect x="318.56" y="54" width="1.25" height="22" fill="#b08080"/>
+<rect x="319.81" y="54" width="0.75" height="22" fill="#8a8f99"/>
+<rect x="320.56" y="54" width="0.44" height="22" fill="#a8a070"/>
+<rect x="321.00" y="54" width="3.76" height="22" fill="#6f8fb0"/>
+<rect x="324.76" y="54" width="2.50" height="22" fill="#8fa98a"/>
+<rect x="327.26" y="54" width="2.19" height="22" fill="#b59a6a"/>
+<rect x="329.45" y="54" width="1.88" height="22" fill="#9c86b0"/>
+<rect x="331.33" y="54" width="1.56" height="22" fill="#6fa5a0"/>
+<rect x="332.89" y="54" width="1.25" height="22" fill="#b08080"/>
+<rect x="334.14" y="54" width="0.75" height="22" fill="#8a8f99"/>
+<rect x="334.90" y="54" width="0.44" height="22" fill="#a8a070"/>
+<rect x="335.33" y="54" width="3.76" height="22" fill="#6f8fb0"/>
+<rect x="339.09" y="54" width="2.50" height="22" fill="#8fa98a"/>
+<rect x="341.59" y="54" width="2.19" height="22" fill="#b59a6a"/>
+<rect x="343.78" y="54" width="1.88" height="22" fill="#9c86b0"/>
+<rect x="345.66" y="54" width="1.56" height="22" fill="#6fa5a0"/>
+<rect x="347.23" y="54" width="1.25" height="22" fill="#b08080"/>
+<rect x="348.48" y="54" width="0.75" height="22" fill="#8a8f99"/>
+<rect x="349.23" y="54" width="0.44" height="22" fill="#a8a070"/>
+<rect x="349.67" y="54" width="3.76" height="22" fill="#6f8fb0"/>
+<rect x="353.42" y="54" width="2.50" height="22" fill="#8fa98a"/>
+<rect x="355.93" y="54" width="2.19" height="22" fill="#b59a6a"/>
+<rect x="358.12" y="54" width="1.88" height="22" fill="#9c86b0"/>
+<rect x="359.99" y="54" width="1.56" height="22" fill="#6fa5a0"/>
+<rect x="361.56" y="54" width="1.25" height="22" fill="#b08080"/>
+<rect x="362.81" y="54" width="0.75" height="22" fill="#8a8f99"/>
+<rect x="363.56" y="54" width="0.44" height="22" fill="#a8a070"/>
+<rect x="364.00" y="54" width="3.76" height="22" fill="#6f8fb0"/>
+<rect x="367.76" y="54" width="2.50" height="22" fill="#8fa98a"/>
+<rect x="370.26" y="54" width="2.19" height="22" fill="#b59a6a"/>
+<rect x="372.45" y="54" width="1.88" height="22" fill="#9c86b0"/>
+<rect x="374.33" y="54" width="1.56" height="22" fill="#6fa5a0"/>
+<rect x="375.89" y="54" width="1.25" height="22" fill="#b08080"/>
+<rect x="377.14" y="54" width="0.75" height="22" fill="#8a8f99"/>
+<rect x="377.90" y="54" width="0.44" height="22" fill="#a8a070"/>
+<rect x="378.33" y="54" width="3.76" height="22" fill="#6f8fb0"/>
+<rect x="382.09" y="54" width="2.50" height="22" fill="#8fa98a"/>
+<rect x="384.59" y="54" width="2.19" height="22" fill="#b59a6a"/>
+<rect x="386.78" y="54" width="1.88" height="22" fill="#9c86b0"/>
+<rect x="388.66" y="54" width="1.56" height="22" fill="#6fa5a0"/>
+<rect x="390.23" y="54" width="1.25" height="22" fill="#b08080"/>
+<rect x="391.48" y="54" width="0.75" height="22" fill="#8a8f99"/>
+<rect x="392.23" y="54" width="0.44" height="22" fill="#a8a070"/>
+<rect x="392.67" y="54" width="3.76" height="22" fill="#6f8fb0"/>
+<rect x="396.42" y="54" width="2.50" height="22" fill="#8fa98a"/>
+<rect x="398.93" y="54" width="2.19" height="22" fill="#b59a6a"/>
+<rect x="401.12" y="54" width="1.88" height="22" fill="#9c86b0"/>
+<rect x="402.99" y="54" width="1.56" height="22" fill="#6fa5a0"/>
+<rect x="404.56" y="54" width="1.25" height="22" fill="#b08080"/>
+<rect x="405.81" y="54" width="0.75" height="22" fill="#8a8f99"/>
+<rect x="406.56" y="54" width="0.44" height="22" fill="#a8a070"/>
+<rect x="407.00" y="54" width="3.76" height="22" fill="#6f8fb0"/>
+<rect x="410.76" y="54" width="2.50" height="22" fill="#8fa98a"/>
+<rect x="413.26" y="54" width="2.19" height="22" fill="#b59a6a"/>
+<rect x="415.45" y="54" width="1.88" height="22" fill="#9c86b0"/>
+<rect x="417.33" y="54" width="1.56" height="22" fill="#6fa5a0"/>
+<rect x="418.89" y="54" width="1.25" height="22" fill="#b08080"/>
+<rect x="420.14" y="54" width="0.75" height="22" fill="#8a8f99"/>
+<rect x="420.90" y="54" width="0.44" height="22" fill="#a8a070"/>
+<rect x="421.33" y="54" width="3.76" height="22" fill="#6f8fb0"/>
+<rect x="425.09" y="54" width="2.50" height="22" fill="#8fa98a"/>
+<rect x="427.59" y="54" width="2.19" height="22" fill="#b59a6a"/>
+<rect x="429.78" y="54" width="1.88" height="22" fill="#9c86b0"/>
+<rect x="431.66" y="54" width="1.56" height="22" fill="#6fa5a0"/>
+<rect x="433.23" y="54" width="1.25" height="22" fill="#b08080"/>
+<rect x="434.48" y="54" width="0.75" height="22" fill="#8a8f99"/>
+<rect x="435.23" y="54" width="0.44" height="22" fill="#a8a070"/>
+<rect x="435.67" y="54" width="3.76" height="22" fill="#6f8fb0"/>
+<rect x="439.42" y="54" width="2.50" height="22" fill="#8fa98a"/>
+<rect x="441.93" y="54" width="2.19" height="22" fill="#b59a6a"/>
+<rect x="444.12" y="54" width="1.88" height="22" fill="#9c86b0"/>
+<rect x="445.99" y="54" width="1.56" height="22" fill="#6fa5a0"/>
+<rect x="447.56" y="54" width="1.25" height="22" fill="#b08080"/>
+<rect x="448.81" y="54" width="0.75" height="22" fill="#8a8f99"/>
+<rect x="449.56" y="54" width="0.44" height="22" fill="#a8a070"/>
+<rect x="450.00" y="54" width="3.76" height="22" fill="#6f8fb0"/>
+<rect x="453.76" y="54" width="2.50" height="22" fill="#8fa98a"/>
+<rect x="456.26" y="54" width="2.19" height="22" fill="#b59a6a"/>
+<rect x="458.45" y="54" width="1.88" height="22" fill="#9c86b0"/>
+<rect x="460.33" y="54" width="1.56" height="22" fill="#6fa5a0"/>
+<rect x="461.89" y="54" width="1.25" height="22" fill="#b08080"/>
+<rect x="463.14" y="54" width="0.75" height="22" fill="#8a8f99"/>
+<rect x="463.90" y="54" width="0.44" height="22" fill="#a8a070"/>
+<rect x="464.33" y="54" width="3.76" height="22" fill="#6f8fb0"/>
+<rect x="468.09" y="54" width="2.50" height="22" fill="#8fa98a"/>
+<rect x="470.59" y="54" width="2.19" height="22" fill="#b59a6a"/>
+<rect x="472.78" y="54" width="1.88" height="22" fill="#9c86b0"/>
+<rect x="474.66" y="54" width="1.56" height="22" fill="#6fa5a0"/>
+<rect x="476.23" y="54" width="1.25" height="22" fill="#b08080"/>
+<rect x="477.48" y="54" width="0.75" height="22" fill="#8a8f99"/>
+<rect x="478.23" y="54" width="0.44" height="22" fill="#a8a070"/>
+<rect x="478.67" y="54" width="3.76" height="22" fill="#6f8fb0"/>
+<rect x="482.42" y="54" width="2.50" height="22" fill="#8fa98a"/>
+<rect x="484.93" y="54" width="2.19" height="22" fill="#b59a6a"/>
+<rect x="487.12" y="54" width="1.88" height="22" fill="#9c86b0"/>
+<rect x="488.99" y="54" width="1.56" height="22" fill="#6fa5a0"/>
+<rect x="490.56" y="54" width="1.25" height="22" fill="#b08080"/>
+<rect x="491.81" y="54" width="0.75" height="22" fill="#8a8f99"/>
+<rect x="492.56" y="54" width="0.44" height="22" fill="#a8a070"/>
+<rect x="493.00" y="54" width="3.76" height="22" fill="#6f8fb0"/>
+<rect x="496.76" y="54" width="2.50" height="22" fill="#8fa98a"/>
+<rect x="499.26" y="54" width="2.19" height="22" fill="#b59a6a"/>
+<rect x="501.45" y="54" width="1.88" height="22" fill="#9c86b0"/>
+<rect x="503.33" y="54" width="1.56" height="22" fill="#6fa5a0"/>
+<rect x="504.89" y="54" width="1.25" height="22" fill="#b08080"/>
+<rect x="506.14" y="54" width="0.75" height="22" fill="#8a8f99"/>
+<rect x="506.90" y="54" width="0.44" height="22" fill="#a8a070"/>
+<rect x="507.33" y="54" width="3.76" height="22" fill="#6f8fb0"/>
+<rect x="511.09" y="54" width="2.50" height="22" fill="#8fa98a"/>
+<rect x="513.59" y="54" width="2.19" height="22" fill="#b59a6a"/>
+<rect x="515.78" y="54" width="1.88" height="22" fill="#9c86b0"/>
+<rect x="517.66" y="54" width="1.56" height="22" fill="#6fa5a0"/>
+<rect x="519.23" y="54" width="1.25" height="22" fill="#b08080"/>
+<rect x="520.48" y="54" width="0.75" height="22" fill="#8a8f99"/>
+<rect x="521.23" y="54" width="0.44" height="22" fill="#a8a070"/>
+<rect x="521.67" y="54" width="3.76" height="22" fill="#6f8fb0"/>
+<rect x="525.42" y="54" width="2.50" height="22" fill="#8fa98a"/>
+<rect x="527.93" y="54" width="2.19" height="22" fill="#b59a6a"/>
+<rect x="530.12" y="54" width="1.88" height="22" fill="#9c86b0"/>
+<rect x="531.99" y="54" width="1.56" height="22" fill="#6fa5a0"/>
+<rect x="533.56" y="54" width="1.25" height="22" fill="#b08080"/>
+<rect x="534.81" y="54" width="0.75" height="22" fill="#8a8f99"/>
+<rect x="535.56" y="54" width="0.44" height="22" fill="#a8a070"/>
+<rect x="536.00" y="54" width="3.76" height="22" fill="#6f8fb0"/>
+<rect x="539.76" y="54" width="2.50" height="22" fill="#8fa98a"/>
+<rect x="542.26" y="54" width="2.19" height="22" fill="#b59a6a"/>
+<rect x="544.45" y="54" width="1.88" height="22" fill="#9c86b0"/>
+<rect x="546.33" y="54" width="1.56" height="22" fill="#6fa5a0"/>
+<rect x="547.89" y="54" width="1.25" height="22" fill="#b08080"/>
+<rect x="549.14" y="54" width="0.75" height="22" fill="#8a8f99"/>
+<rect x="549.90" y="54" width="0.44" height="22" fill="#a8a070"/>
+<rect x="550.33" y="54" width="3.76" height="22" fill="#6f8fb0"/>
+<rect x="554.09" y="54" width="2.50" height="22" fill="#8fa98a"/>
+<rect x="556.59" y="54" width="2.19" height="22" fill="#b59a6a"/>
+<rect x="558.78" y="54" width="1.88" height="22" fill="#9c86b0"/>
+<rect x="560.66" y="54" width="1.56" height="22" fill="#6fa5a0"/>
+<rect x="562.23" y="54" width="1.25" height="22" fill="#b08080"/>
+<rect x="563.48" y="54" width="0.75" height="22" fill="#8a8f99"/>
+<rect x="564.23" y="54" width="0.44" height="22" fill="#a8a070"/>
+<rect x="564.67" y="54" width="3.76" height="22" fill="#6f8fb0"/>
+<rect x="568.42" y="54" width="2.50" height="22" fill="#8fa98a"/>
+<rect x="570.93" y="54" width="2.19" height="22" fill="#b59a6a"/>
+<rect x="573.12" y="54" width="1.88" height="22" fill="#9c86b0"/>
+<rect x="574.99" y="54" width="1.56" height="22" fill="#6fa5a0"/>
+<rect x="576.56" y="54" width="1.25" height="22" fill="#b08080"/>
+<rect x="577.81" y="54" width="0.75" height="22" fill="#8a8f99"/>
+<rect x="578.56" y="54" width="0.44" height="22" fill="#a8a070"/>
+<rect x="579.00" y="54" width="3.76" height="22" fill="#6f8fb0"/>
+<rect x="582.76" y="54" width="2.50" height="22" fill="#8fa98a"/>
+<rect x="585.26" y="54" width="2.19" height="22" fill="#b59a6a"/>
+<rect x="587.45" y="54" width="1.88" height="22" fill="#9c86b0"/>
+<rect x="589.33" y="54" width="1.56" height="22" fill="#6fa5a0"/>
+<rect x="590.89" y="54" width="1.25" height="22" fill="#b08080"/>
+<rect x="592.14" y="54" width="0.75" height="22" fill="#8a8f99"/>
+<rect x="592.90" y="54" width="0.44" height="22" fill="#a8a070"/>
+<rect x="593.33" y="54" width="3.76" height="22" fill="#6f8fb0"/>
+<rect x="597.09" y="54" width="2.50" height="22" fill="#8fa98a"/>
+<rect x="599.59" y="54" width="2.19" height="22" fill="#b59a6a"/>
+<rect x="601.78" y="54" width="1.88" height="22" fill="#9c86b0"/>
+<rect x="603.66" y="54" width="1.56" height="22" fill="#6fa5a0"/>
+<rect x="605.23" y="54" width="1.25" height="22" fill="#b08080"/>
+<rect x="606.48" y="54" width="0.75" height="22" fill="#8a8f99"/>
+<rect x="607.23" y="54" width="0.44" height="22" fill="#a8a070"/>
+<rect x="607.67" y="54" width="3.76" height="22" fill="#6f8fb0"/>
+<rect x="611.42" y="54" width="2.50" height="22" fill="#8fa98a"/>
+<rect x="613.93" y="54" width="2.19" height="22" fill="#b59a6a"/>
+<rect x="616.12" y="54" width="1.88" height="22" fill="#9c86b0"/>
+<rect x="617.99" y="54" width="1.56" height="22" fill="#6fa5a0"/>
+<rect x="619.56" y="54" width="1.25" height="22" fill="#b08080"/>
+<rect x="620.81" y="54" width="0.75" height="22" fill="#8a8f99"/>
+<rect x="621.56" y="54" width="0.44" height="22" fill="#a8a070"/>
+<rect x="622.00" y="54" width="3.76" height="22" fill="#6f8fb0"/>
+<rect x="625.76" y="54" width="2.50" height="22" fill="#8fa98a"/>
+<rect x="628.26" y="54" width="2.19" height="22" fill="#b59a6a"/>
+<rect x="630.45" y="54" width="1.88" height="22" fill="#9c86b0"/>
+<rect x="632.33" y="54" width="1.56" height="22" fill="#6fa5a0"/>
+<rect x="633.89" y="54" width="1.25" height="22" fill="#b08080"/>
+<rect x="635.14" y="54" width="0.75" height="22" fill="#8a8f99"/>
+<rect x="635.90" y="54" width="0.44" height="22" fill="#a8a070"/>
+<rect x="636.33" y="54" width="3.76" height="22" fill="#6f8fb0"/>
+<rect x="640.09" y="54" width="2.50" height="22" fill="#8fa98a"/>
+<rect x="642.59" y="54" width="2.19" height="22" fill="#b59a6a"/>
+<rect x="644.78" y="54" width="1.88" height="22" fill="#9c86b0"/>
+<rect x="646.66" y="54" width="1.56" height="22" fill="#6fa5a0"/>
+<rect x="648.23" y="54" width="1.25" height="22" fill="#b08080"/>
+<rect x="649.48" y="54" width="0.75" height="22" fill="#8a8f99"/>
+<rect x="650.23" y="54" width="0.44" height="22" fill="#a8a070"/>
+<rect x="650.67" y="54" width="3.76" height="22" fill="#6f8fb0"/>
+<rect x="654.42" y="54" width="2.50" height="22" fill="#8fa98a"/>
+<rect x="656.93" y="54" width="2.19" height="22" fill="#b59a6a"/>
+<rect x="659.12" y="54" width="1.88" height="22" fill="#9c86b0"/>
+<rect x="660.99" y="54" width="1.56" height="22" fill="#6fa5a0"/>
+<rect x="662.56" y="54" width="1.25" height="22" fill="#b08080"/>
+<rect x="663.81" y="54" width="0.75" height="22" fill="#8a8f99"/>
+<rect x="664.56" y="54" width="0.44" height="22" fill="#a8a070"/>
+<rect x="665.00" y="54" width="3.76" height="22" fill="#6f8fb0"/>
+<rect x="668.76" y="54" width="2.50" height="22" fill="#8fa98a"/>
+<rect x="671.26" y="54" width="2.19" height="22" fill="#b59a6a"/>
+<rect x="673.45" y="54" width="1.88" height="22" fill="#9c86b0"/>
+<rect x="675.33" y="54" width="1.56" height="22" fill="#6fa5a0"/>
+<rect x="676.89" y="54" width="1.25" height="22" fill="#b08080"/>
+<rect x="678.14" y="54" width="0.75" height="22" fill="#8a8f99"/>
+<rect x="678.90" y="54" width="0.44" height="22" fill="#a8a070"/>
+<rect x="679.33" y="54" width="3.76" height="22" fill="#6f8fb0"/>
+<rect x="683.09" y="54" width="2.50" height="22" fill="#8fa98a"/>
+<rect x="685.59" y="54" width="2.19" height="22" fill="#b59a6a"/>
+<rect x="687.78" y="54" width="1.88" height="22" fill="#9c86b0"/>
+<rect x="689.66" y="54" width="1.56" height="22" fill="#6fa5a0"/>
+<rect x="691.23" y="54" width="1.25" height="22" fill="#b08080"/>
+<rect x="692.48" y="54" width="0.75" height="22" fill="#8a8f99"/>
+<rect x="693.23" y="54" width="0.44" height="22" fill="#a8a070"/>
+<rect x="693.67" y="54" width="3.76" height="22" fill="#6f8fb0"/>
+<rect x="697.42" y="54" width="2.50" height="22" fill="#8fa98a"/>
+<rect x="699.93" y="54" width="2.19" height="22" fill="#b59a6a"/>
+<rect x="702.12" y="54" width="1.88" height="22" fill="#9c86b0"/>
+<rect x="703.99" y="54" width="1.56" height="22" fill="#6fa5a0"/>
+<rect x="705.56" y="54" width="1.25" height="22" fill="#b08080"/>
+<rect x="706.81" y="54" width="0.75" height="22" fill="#8a8f99"/>
+<rect x="707.56" y="54" width="0.44" height="22" fill="#a8a070"/>
+<rect x="708.00" y="54" width="3.76" height="22" fill="#6f8fb0"/>
+<rect x="711.76" y="54" width="2.50" height="22" fill="#8fa98a"/>
+<rect x="714.26" y="54" width="2.19" height="22" fill="#b59a6a"/>
+<rect x="716.45" y="54" width="1.88" height="22" fill="#9c86b0"/>
+<rect x="718.33" y="54" width="1.56" height="22" fill="#6fa5a0"/>
+<rect x="719.89" y="54" width="1.25" height="22" fill="#b08080"/>
+<rect x="721.14" y="54" width="0.75" height="22" fill="#8a8f99"/>
+<rect x="721.90" y="54" width="0.44" height="22" fill="#a8a070"/>
+<rect x="722.33" y="54" width="3.76" height="22" fill="#6f8fb0"/>
+<rect x="726.09" y="54" width="2.50" height="22" fill="#8fa98a"/>
+<rect x="728.59" y="54" width="2.19" height="22" fill="#b59a6a"/>
+<rect x="730.78" y="54" width="1.88" height="22" fill="#9c86b0"/>
+<rect x="732.66" y="54" width="1.56" height="22" fill="#6fa5a0"/>
+<rect x="734.23" y="54" width="1.25" height="22" fill="#b08080"/>
+<rect x="735.48" y="54" width="0.75" height="22" fill="#8a8f99"/>
+<rect x="736.23" y="54" width="0.44" height="22" fill="#a8a070"/>
+<rect x="736.67" y="54" width="3.76" height="22" fill="#6f8fb0"/>
+<rect x="740.42" y="54" width="2.50" height="22" fill="#8fa98a"/>
+<rect x="742.93" y="54" width="2.19" height="22" fill="#b59a6a"/>
+<rect x="745.12" y="54" width="1.88" height="22" fill="#9c86b0"/>
+<rect x="746.99" y="54" width="1.56" height="22" fill="#6fa5a0"/>
+<rect x="748.56" y="54" width="1.25" height="22" fill="#b08080"/>
+<rect x="749.81" y="54" width="0.75" height="22" fill="#8a8f99"/>
+<rect x="750.56" y="54" width="0.44" height="22" fill="#a8a070"/>
+<rect x="751.00" y="54" width="3.76" height="22" fill="#6f8fb0"/>
+<rect x="754.76" y="54" width="2.50" height="22" fill="#8fa98a"/>
+<rect x="757.26" y="54" width="2.19" height="22" fill="#b59a6a"/>
+<rect x="759.45" y="54" width="1.88" height="22" fill="#9c86b0"/>
+<rect x="761.33" y="54" width="1.56" height="22" fill="#6fa5a0"/>
+<rect x="762.89" y="54" width="1.25" height="22" fill="#b08080"/>
+<rect x="764.14" y="54" width="0.75" height="22" fill="#8a8f99"/>
+<rect x="764.90" y="54" width="0.44" height="22" fill="#a8a070"/>
+<rect x="765.33" y="54" width="3.76" height="22" fill="#6f8fb0"/>
+<rect x="769.09" y="54" width="2.50" height="22" fill="#8fa98a"/>
+<rect x="771.59" y="54" width="2.19" height="22" fill="#b59a6a"/>
+<rect x="773.78" y="54" width="1.88" height="22" fill="#9c86b0"/>
+<rect x="775.66" y="54" width="1.56" height="22" fill="#6fa5a0"/>
+<rect x="777.23" y="54" width="1.25" height="22" fill="#b08080"/>
+<rect x="778.48" y="54" width="0.75" height="22" fill="#8a8f99"/>
+<rect x="779.23" y="54" width="0.44" height="22" fill="#a8a070"/>
+<rect x="779.67" y="54" width="3.76" height="22" fill="#6f8fb0"/>
+<rect x="783.42" y="54" width="2.50" height="22" fill="#8fa98a"/>
+<rect x="785.93" y="54" width="2.19" height="22" fill="#b59a6a"/>
+<rect x="788.12" y="54" width="1.88" height="22" fill="#9c86b0"/>
+<rect x="789.99" y="54" width="1.56" height="22" fill="#6fa5a0"/>
+<rect x="791.56" y="54" width="1.25" height="22" fill="#b08080"/>
+<rect x="792.81" y="54" width="0.75" height="22" fill="#8a8f99"/>
+<rect x="793.56" y="54" width="0.44" height="22" fill="#a8a070"/>
+<rect x="794.00" y="54" width="3.76" height="22" fill="#6f8fb0"/>
+<rect x="797.76" y="54" width="2.50" height="22" fill="#8fa98a"/>
+<rect x="800.26" y="54" width="2.19" height="22" fill="#b59a6a"/>
+<rect x="802.45" y="54" width="1.88" height="22" fill="#9c86b0"/>
+<rect x="804.33" y="54" width="1.56" height="22" fill="#6fa5a0"/>
+<rect x="805.89" y="54" width="1.25" height="22" fill="#b08080"/>
+<rect x="807.14" y="54" width="0.75" height="22" fill="#8a8f99"/>
+<rect x="807.90" y="54" width="0.44" height="22" fill="#a8a070"/>
+<rect x="808.33" y="54" width="3.76" height="22" fill="#6f8fb0"/>
+<rect x="812.09" y="54" width="2.50" height="22" fill="#8fa98a"/>
+<rect x="814.59" y="54" width="2.19" height="22" fill="#b59a6a"/>
+<rect x="816.78" y="54" width="1.88" height="22" fill="#9c86b0"/>
+<rect x="818.66" y="54" width="1.56" height="22" fill="#6fa5a0"/>
+<rect x="820.23" y="54" width="1.25" height="22" fill="#b08080"/>
+<rect x="821.48" y="54" width="0.75" height="22" fill="#8a8f99"/>
+<rect x="822.23" y="54" width="0.44" height="22" fill="#a8a070"/>
+<rect x="822.67" y="54" width="3.76" height="22" fill="#6f8fb0"/>
+<rect x="826.42" y="54" width="2.50" height="22" fill="#8fa98a"/>
+<rect x="828.93" y="54" width="2.19" height="22" fill="#b59a6a"/>
+<rect x="831.12" y="54" width="1.88" height="22" fill="#9c86b0"/>
+<rect x="832.99" y="54" width="1.56" height="22" fill="#6fa5a0"/>
+<rect x="834.56" y="54" width="1.25" height="22" fill="#b08080"/>
+<rect x="835.81" y="54" width="0.75" height="22" fill="#8a8f99"/>
+<rect x="836.56" y="54" width="0.44" height="22" fill="#a8a070"/>
+<rect x="837.00" y="54" width="3.76" height="22" fill="#6f8fb0"/>
+<rect x="840.76" y="54" width="2.50" height="22" fill="#8fa98a"/>
+<rect x="843.26" y="54" width="2.19" height="22" fill="#b59a6a"/>
+<rect x="845.45" y="54" width="1.88" height="22" fill="#9c86b0"/>
+<rect x="847.33" y="54" width="1.56" height="22" fill="#6fa5a0"/>
+<rect x="848.89" y="54" width="1.25" height="22" fill="#b08080"/>
+<rect x="850.14" y="54" width="0.75" height="22" fill="#8a8f99"/>
+<rect x="850.90" y="54" width="0.44" height="22" fill="#a8a070"/>
+<rect x="851.33" y="54" width="3.76" height="22" fill="#6f8fb0"/>
+<rect x="855.09" y="54" width="2.50" height="22" fill="#8fa98a"/>
+<rect x="857.59" y="54" width="2.19" height="22" fill="#b59a6a"/>
+<rect x="859.78" y="54" width="1.88" height="22" fill="#9c86b0"/>
+<rect x="861.66" y="54" width="1.56" height="22" fill="#6fa5a0"/>
+<rect x="863.23" y="54" width="1.25" height="22" fill="#b08080"/>
+<rect x="864.48" y="54" width="0.75" height="22" fill="#8a8f99"/>
+<rect x="865.23" y="54" width="0.44" height="22" fill="#a8a070"/>
+<rect x="865.67" y="54" width="3.76" height="22" fill="#6f8fb0"/>
+<rect x="869.42" y="54" width="2.50" height="22" fill="#8fa98a"/>
+<rect x="871.93" y="54" width="2.19" height="22" fill="#b59a6a"/>
+<rect x="874.12" y="54" width="1.88" height="22" fill="#9c86b0"/>
+<rect x="875.99" y="54" width="1.56" height="22" fill="#6fa5a0"/>
+<rect x="877.56" y="54" width="1.25" height="22" fill="#b08080"/>
+<rect x="878.81" y="54" width="0.75" height="22" fill="#8a8f99"/>
+<rect x="879.56" y="54" width="0.44" height="22" fill="#a8a070"/>
+<rect x="21.0" y="88" width="69.7" height="92" rx="5" class="box old"/>
+<text x="55.8" y="106" text-anchor="middle" class="s">задание 1</text>
+<rect x="28.0" y="114" width="10.9" height="16" rx="3" fill="#6f8fb0"/>
+<text x="33.5" y="126" text-anchor="middle" class="setlbl">A</text>
+<rect x="41.9" y="114" width="10.9" height="16" rx="3" fill="#8fa98a"/>
+<text x="47.4" y="126" text-anchor="middle" class="setlbl">B</text>
+<rect x="55.8" y="114" width="10.9" height="16" rx="3" fill="#b59a6a"/>
+<text x="61.3" y="126" text-anchor="middle" class="setlbl">C</text>
+<rect x="69.8" y="114" width="10.9" height="16" rx="3" fill="#9c86b0"/>
+<text x="75.2" y="126" text-anchor="middle" class="setlbl">D</text>
+<rect x="28.0" y="134" width="10.9" height="16" rx="3" fill="#6fa5a0"/>
+<text x="33.5" y="146" text-anchor="middle" class="setlbl">E</text>
+<rect x="41.9" y="134" width="10.9" height="16" rx="3" fill="#b08080"/>
+<text x="47.4" y="146" text-anchor="middle" class="setlbl">F</text>
+<rect x="55.8" y="134" width="10.9" height="16" rx="3" fill="#8a8f99"/>
+<text x="61.3" y="146" text-anchor="middle" class="setlbl">G</text>
+<rect x="69.8" y="134" width="10.9" height="16" rx="3" fill="#a8a070"/>
+<text x="75.2" y="146" text-anchor="middle" class="setlbl">H</text>
+<text x="55.8" y="172" text-anchor="middle" class="cnt bad">8</text>
+<rect x="92.7" y="88" width="69.7" height="92" rx="5" class="box old"/>
+<text x="127.5" y="106" text-anchor="middle" class="s">задание 2</text>
+<rect x="99.7" y="114" width="10.9" height="16" rx="3" fill="#6f8fb0"/>
+<text x="105.1" y="126" text-anchor="middle" class="setlbl">A</text>
+<rect x="113.6" y="114" width="10.9" height="16" rx="3" fill="#8fa98a"/>
+<text x="119.0" y="126" text-anchor="middle" class="setlbl">B</text>
+<rect x="127.5" y="114" width="10.9" height="16" rx="3" fill="#b59a6a"/>
+<text x="133.0" y="126" text-anchor="middle" class="setlbl">C</text>
+<rect x="141.4" y="114" width="10.9" height="16" rx="3" fill="#9c86b0"/>
+<text x="146.9" y="126" text-anchor="middle" class="setlbl">D</text>
+<rect x="99.7" y="134" width="10.9" height="16" rx="3" fill="#6fa5a0"/>
+<text x="105.1" y="146" text-anchor="middle" class="setlbl">E</text>
+<rect x="113.6" y="134" width="10.9" height="16" rx="3" fill="#b08080"/>
+<text x="119.0" y="146" text-anchor="middle" class="setlbl">F</text>
+<rect x="127.5" y="134" width="10.9" height="16" rx="3" fill="#8a8f99"/>
+<text x="133.0" y="146" text-anchor="middle" class="setlbl">G</text>
+<rect x="141.4" y="134" width="10.9" height="16" rx="3" fill="#a8a070"/>
+<text x="146.9" y="146" text-anchor="middle" class="setlbl">H</text>
+<text x="127.5" y="172" text-anchor="middle" class="cnt bad">8</text>
+<rect x="164.3" y="88" width="69.7" height="92" rx="5" class="box old"/>
+<text x="199.2" y="106" text-anchor="middle" class="s">задание 3</text>
+<rect x="171.3" y="114" width="10.9" height="16" rx="3" fill="#6f8fb0"/>
+<text x="176.8" y="126" text-anchor="middle" class="setlbl">A</text>
+<rect x="185.2" y="114" width="10.9" height="16" rx="3" fill="#8fa98a"/>
+<text x="190.7" y="126" text-anchor="middle" class="setlbl">B</text>
+<rect x="199.2" y="114" width="10.9" height="16" rx="3" fill="#b59a6a"/>
+<text x="204.6" y="126" text-anchor="middle" class="setlbl">C</text>
+<rect x="213.1" y="114" width="10.9" height="16" rx="3" fill="#9c86b0"/>
+<text x="218.5" y="126" text-anchor="middle" class="setlbl">D</text>
+<rect x="171.3" y="134" width="10.9" height="16" rx="3" fill="#6fa5a0"/>
+<text x="176.8" y="146" text-anchor="middle" class="setlbl">E</text>
+<rect x="185.2" y="134" width="10.9" height="16" rx="3" fill="#b08080"/>
+<text x="190.7" y="146" text-anchor="middle" class="setlbl">F</text>
+<rect x="199.2" y="134" width="10.9" height="16" rx="3" fill="#8a8f99"/>
+<text x="204.6" y="146" text-anchor="middle" class="setlbl">G</text>
+<rect x="213.1" y="134" width="10.9" height="16" rx="3" fill="#a8a070"/>
+<text x="218.5" y="146" text-anchor="middle" class="setlbl">H</text>
+<text x="199.2" y="172" text-anchor="middle" class="cnt bad">8</text>
+<rect x="236.0" y="88" width="69.7" height="92" rx="5" class="box old"/>
+<text x="270.8" y="106" text-anchor="middle" class="s">задание 4</text>
+<rect x="243.0" y="114" width="10.9" height="16" rx="3" fill="#6f8fb0"/>
+<text x="248.5" y="126" text-anchor="middle" class="setlbl">A</text>
+<rect x="256.9" y="114" width="10.9" height="16" rx="3" fill="#8fa98a"/>
+<text x="262.4" y="126" text-anchor="middle" class="setlbl">B</text>
+<rect x="270.8" y="114" width="10.9" height="16" rx="3" fill="#b59a6a"/>
+<text x="276.3" y="126" text-anchor="middle" class="setlbl">C</text>
+<rect x="284.8" y="114" width="10.9" height="16" rx="3" fill="#9c86b0"/>
+<text x="290.2" y="126" text-anchor="middle" class="setlbl">D</text>
+<rect x="243.0" y="134" width="10.9" height="16" rx="3" fill="#6fa5a0"/>
+<text x="248.5" y="146" text-anchor="middle" class="setlbl">E</text>
+<rect x="256.9" y="134" width="10.9" height="16" rx="3" fill="#b08080"/>
+<text x="262.4" y="146" text-anchor="middle" class="setlbl">F</text>
+<rect x="270.8" y="134" width="10.9" height="16" rx="3" fill="#8a8f99"/>
+<text x="276.3" y="146" text-anchor="middle" class="setlbl">G</text>
+<rect x="284.8" y="134" width="10.9" height="16" rx="3" fill="#a8a070"/>
+<text x="290.2" y="146" text-anchor="middle" class="setlbl">H</text>
+<text x="270.8" y="172" text-anchor="middle" class="cnt bad">8</text>
+<rect x="307.7" y="88" width="69.7" height="92" rx="5" class="box old"/>
+<text x="342.5" y="106" text-anchor="middle" class="s">задание 5</text>
+<rect x="314.7" y="114" width="10.9" height="16" rx="3" fill="#6f8fb0"/>
+<text x="320.1" y="126" text-anchor="middle" class="setlbl">A</text>
+<rect x="328.6" y="114" width="10.9" height="16" rx="3" fill="#8fa98a"/>
+<text x="334.0" y="126" text-anchor="middle" class="setlbl">B</text>
+<rect x="342.5" y="114" width="10.9" height="16" rx="3" fill="#b59a6a"/>
+<text x="348.0" y="126" text-anchor="middle" class="setlbl">C</text>
+<rect x="356.4" y="114" width="10.9" height="16" rx="3" fill="#9c86b0"/>
+<text x="361.9" y="126" text-anchor="middle" class="setlbl">D</text>
+<rect x="314.7" y="134" width="10.9" height="16" rx="3" fill="#6fa5a0"/>
+<text x="320.1" y="146" text-anchor="middle" class="setlbl">E</text>
+<rect x="328.6" y="134" width="10.9" height="16" rx="3" fill="#b08080"/>
+<text x="334.0" y="146" text-anchor="middle" class="setlbl">F</text>
+<rect x="342.5" y="134" width="10.9" height="16" rx="3" fill="#8a8f99"/>
+<text x="348.0" y="146" text-anchor="middle" class="setlbl">G</text>
+<rect x="356.4" y="134" width="10.9" height="16" rx="3" fill="#a8a070"/>
+<text x="361.9" y="146" text-anchor="middle" class="setlbl">H</text>
+<text x="342.5" y="172" text-anchor="middle" class="cnt bad">8</text>
+<rect x="379.3" y="88" width="69.7" height="92" rx="5" class="box old"/>
+<text x="414.2" y="106" text-anchor="middle" class="s">задание 6</text>
+<rect x="386.3" y="114" width="10.9" height="16" rx="3" fill="#6f8fb0"/>
+<text x="391.8" y="126" text-anchor="middle" class="setlbl">A</text>
+<rect x="400.3" y="114" width="10.9" height="16" rx="3" fill="#8fa98a"/>
+<text x="405.7" y="126" text-anchor="middle" class="setlbl">B</text>
+<rect x="414.2" y="114" width="10.9" height="16" rx="3" fill="#b59a6a"/>
+<text x="419.6" y="126" text-anchor="middle" class="setlbl">C</text>
+<rect x="428.1" y="114" width="10.9" height="16" rx="3" fill="#9c86b0"/>
+<text x="433.5" y="126" text-anchor="middle" class="setlbl">D</text>
+<rect x="386.3" y="134" width="10.9" height="16" rx="3" fill="#6fa5a0"/>
+<text x="391.8" y="146" text-anchor="middle" class="setlbl">E</text>
+<rect x="400.3" y="134" width="10.9" height="16" rx="3" fill="#b08080"/>
+<text x="405.7" y="146" text-anchor="middle" class="setlbl">F</text>
+<rect x="414.2" y="134" width="10.9" height="16" rx="3" fill="#8a8f99"/>
+<text x="419.6" y="146" text-anchor="middle" class="setlbl">G</text>
+<rect x="428.1" y="134" width="10.9" height="16" rx="3" fill="#a8a070"/>
+<text x="433.5" y="146" text-anchor="middle" class="setlbl">H</text>
+<text x="414.2" y="172" text-anchor="middle" class="cnt bad">8</text>
+<rect x="451.0" y="88" width="69.7" height="92" rx="5" class="box old"/>
+<text x="485.8" y="106" text-anchor="middle" class="s">задание 7</text>
+<rect x="458.0" y="114" width="10.9" height="16" rx="3" fill="#6f8fb0"/>
+<text x="463.5" y="126" text-anchor="middle" class="setlbl">A</text>
+<rect x="471.9" y="114" width="10.9" height="16" rx="3" fill="#8fa98a"/>
+<text x="477.4" y="126" text-anchor="middle" class="setlbl">B</text>
+<rect x="485.8" y="114" width="10.9" height="16" rx="3" fill="#b59a6a"/>
+<text x="491.3" y="126" text-anchor="middle" class="setlbl">C</text>
+<rect x="499.8" y="114" width="10.9" height="16" rx="3" fill="#9c86b0"/>
+<text x="505.2" y="126" text-anchor="middle" class="setlbl">D</text>
+<rect x="458.0" y="134" width="10.9" height="16" rx="3" fill="#6fa5a0"/>
+<text x="463.5" y="146" text-anchor="middle" class="setlbl">E</text>
+<rect x="471.9" y="134" width="10.9" height="16" rx="3" fill="#b08080"/>
+<text x="477.4" y="146" text-anchor="middle" class="setlbl">F</text>
+<rect x="485.8" y="134" width="10.9" height="16" rx="3" fill="#8a8f99"/>
+<text x="491.3" y="146" text-anchor="middle" class="setlbl">G</text>
+<rect x="499.8" y="134" width="10.9" height="16" rx="3" fill="#a8a070"/>
+<text x="505.2" y="146" text-anchor="middle" class="setlbl">H</text>
+<text x="485.8" y="172" text-anchor="middle" class="cnt bad">8</text>
+<rect x="522.7" y="88" width="69.7" height="92" rx="5" class="box old"/>
+<text x="557.5" y="106" text-anchor="middle" class="s">задание 8</text>
+<rect x="529.7" y="114" width="10.9" height="16" rx="3" fill="#6f8fb0"/>
+<text x="535.1" y="126" text-anchor="middle" class="setlbl">A</text>
+<rect x="543.6" y="114" width="10.9" height="16" rx="3" fill="#8fa98a"/>
+<text x="549.0" y="126" text-anchor="middle" class="setlbl">B</text>
+<rect x="557.5" y="114" width="10.9" height="16" rx="3" fill="#b59a6a"/>
+<text x="563.0" y="126" text-anchor="middle" class="setlbl">C</text>
+<rect x="571.4" y="114" width="10.9" height="16" rx="3" fill="#9c86b0"/>
+<text x="576.9" y="126" text-anchor="middle" class="setlbl">D</text>
+<rect x="529.7" y="134" width="10.9" height="16" rx="3" fill="#6fa5a0"/>
+<text x="535.1" y="146" text-anchor="middle" class="setlbl">E</text>
+<rect x="543.6" y="134" width="10.9" height="16" rx="3" fill="#b08080"/>
+<text x="549.0" y="146" text-anchor="middle" class="setlbl">F</text>
+<rect x="557.5" y="134" width="10.9" height="16" rx="3" fill="#8a8f99"/>
+<text x="563.0" y="146" text-anchor="middle" class="setlbl">G</text>
+<rect x="571.4" y="134" width="10.9" height="16" rx="3" fill="#a8a070"/>
+<text x="576.9" y="146" text-anchor="middle" class="setlbl">H</text>
+<text x="557.5" y="172" text-anchor="middle" class="cnt bad">8</text>
+<rect x="594.3" y="88" width="69.7" height="92" rx="5" class="box old"/>
+<text x="629.2" y="106" text-anchor="middle" class="s">задание 9</text>
+<rect x="601.3" y="114" width="10.9" height="16" rx="3" fill="#6f8fb0"/>
+<text x="606.8" y="126" text-anchor="middle" class="setlbl">A</text>
+<rect x="615.2" y="114" width="10.9" height="16" rx="3" fill="#8fa98a"/>
+<text x="620.7" y="126" text-anchor="middle" class="setlbl">B</text>
+<rect x="629.2" y="114" width="10.9" height="16" rx="3" fill="#b59a6a"/>
+<text x="634.6" y="126" text-anchor="middle" class="setlbl">C</text>
+<rect x="643.1" y="114" width="10.9" height="16" rx="3" fill="#9c86b0"/>
+<text x="648.5" y="126" text-anchor="middle" class="setlbl">D</text>
+<rect x="601.3" y="134" width="10.9" height="16" rx="3" fill="#6fa5a0"/>
+<text x="606.8" y="146" text-anchor="middle" class="setlbl">E</text>
+<rect x="615.2" y="134" width="10.9" height="16" rx="3" fill="#b08080"/>
+<text x="620.7" y="146" text-anchor="middle" class="setlbl">F</text>
+<rect x="629.2" y="134" width="10.9" height="16" rx="3" fill="#8a8f99"/>
+<text x="634.6" y="146" text-anchor="middle" class="setlbl">G</text>
+<rect x="643.1" y="134" width="10.9" height="16" rx="3" fill="#a8a070"/>
+<text x="648.5" y="146" text-anchor="middle" class="setlbl">H</text>
+<text x="629.2" y="172" text-anchor="middle" class="cnt bad">8</text>
+<rect x="666.0" y="88" width="69.7" height="92" rx="5" class="box old"/>
+<text x="700.8" y="106" text-anchor="middle" class="s">задание 10</text>
+<rect x="673.0" y="114" width="10.9" height="16" rx="3" fill="#6f8fb0"/>
+<text x="678.5" y="126" text-anchor="middle" class="setlbl">A</text>
+<rect x="686.9" y="114" width="10.9" height="16" rx="3" fill="#8fa98a"/>
+<text x="692.4" y="126" text-anchor="middle" class="setlbl">B</text>
+<rect x="700.8" y="114" width="10.9" height="16" rx="3" fill="#b59a6a"/>
+<text x="706.3" y="126" text-anchor="middle" class="setlbl">C</text>
+<rect x="714.8" y="114" width="10.9" height="16" rx="3" fill="#9c86b0"/>
+<text x="720.2" y="126" text-anchor="middle" class="setlbl">D</text>
+<rect x="673.0" y="134" width="10.9" height="16" rx="3" fill="#6fa5a0"/>
+<text x="678.5" y="146" text-anchor="middle" class="setlbl">E</text>
+<rect x="686.9" y="134" width="10.9" height="16" rx="3" fill="#b08080"/>
+<text x="692.4" y="146" text-anchor="middle" class="setlbl">F</text>
+<rect x="700.8" y="134" width="10.9" height="16" rx="3" fill="#8a8f99"/>
+<text x="706.3" y="146" text-anchor="middle" class="setlbl">G</text>
+<rect x="714.8" y="134" width="10.9" height="16" rx="3" fill="#a8a070"/>
+<text x="720.2" y="146" text-anchor="middle" class="setlbl">H</text>
+<text x="700.8" y="172" text-anchor="middle" class="cnt bad">8</text>
+<rect x="737.7" y="88" width="69.7" height="92" rx="5" class="box old"/>
+<text x="772.5" y="106" text-anchor="middle" class="s">задание 11</text>
+<rect x="744.7" y="114" width="10.9" height="16" rx="3" fill="#6f8fb0"/>
+<text x="750.1" y="126" text-anchor="middle" class="setlbl">A</text>
+<rect x="758.6" y="114" width="10.9" height="16" rx="3" fill="#8fa98a"/>
+<text x="764.0" y="126" text-anchor="middle" class="setlbl">B</text>
+<rect x="772.5" y="114" width="10.9" height="16" rx="3" fill="#b59a6a"/>
+<text x="778.0" y="126" text-anchor="middle" class="setlbl">C</text>
+<rect x="786.4" y="114" width="10.9" height="16" rx="3" fill="#9c86b0"/>
+<text x="791.9" y="126" text-anchor="middle" class="setlbl">D</text>
+<rect x="744.7" y="134" width="10.9" height="16" rx="3" fill="#6fa5a0"/>
+<text x="750.1" y="146" text-anchor="middle" class="setlbl">E</text>
+<rect x="758.6" y="134" width="10.9" height="16" rx="3" fill="#b08080"/>
+<text x="764.0" y="146" text-anchor="middle" class="setlbl">F</text>
+<rect x="772.5" y="134" width="10.9" height="16" rx="3" fill="#8a8f99"/>
+<text x="778.0" y="146" text-anchor="middle" class="setlbl">G</text>
+<rect x="786.4" y="134" width="10.9" height="16" rx="3" fill="#a8a070"/>
+<text x="791.9" y="146" text-anchor="middle" class="setlbl">H</text>
+<text x="772.5" y="172" text-anchor="middle" class="cnt bad">8</text>
+<rect x="809.3" y="88" width="69.7" height="92" rx="5" class="box old"/>
+<text x="844.2" y="106" text-anchor="middle" class="s">задание 12</text>
+<rect x="816.3" y="114" width="10.9" height="16" rx="3" fill="#6f8fb0"/>
+<text x="821.8" y="126" text-anchor="middle" class="setlbl">A</text>
+<rect x="830.2" y="114" width="10.9" height="16" rx="3" fill="#8fa98a"/>
+<text x="835.7" y="126" text-anchor="middle" class="setlbl">B</text>
+<rect x="844.2" y="114" width="10.9" height="16" rx="3" fill="#b59a6a"/>
+<text x="849.6" y="126" text-anchor="middle" class="setlbl">C</text>
+<rect x="858.1" y="114" width="10.9" height="16" rx="3" fill="#9c86b0"/>
+<text x="863.5" y="126" text-anchor="middle" class="setlbl">D</text>
+<rect x="816.3" y="134" width="10.9" height="16" rx="3" fill="#6fa5a0"/>
+<text x="821.8" y="146" text-anchor="middle" class="setlbl">E</text>
+<rect x="830.2" y="134" width="10.9" height="16" rx="3" fill="#b08080"/>
+<text x="835.7" y="146" text-anchor="middle" class="setlbl">F</text>
+<rect x="844.2" y="134" width="10.9" height="16" rx="3" fill="#8a8f99"/>
+<text x="849.6" y="146" text-anchor="middle" class="setlbl">G</text>
+<rect x="858.1" y="134" width="10.9" height="16" rx="3" fill="#a8a070"/>
+<text x="863.5" y="146" text-anchor="middle" class="setlbl">H</text>
+<text x="844.2" y="172" text-anchor="middle" class="cnt bad">8</text>
+<text x="20" y="204" class="t bad">Число под заданием - сколько таблиц набора оно строит. Итого 12 x 8 = 96 построений</text>
+<text x="20" y="224" class="note">каждое построение - полная таблица набора по позициям всех портфелей проверки (всех 500 поручений), а не только своего куска;</text>
+<text x="20" y="242" class="note">задание начинает проверку лимитов набора только после построения его таблицы: у каждого задания в пути 8 полных построений</text>
+</svg>
+  </div>
+  <div class="card diagram" style="margin-top:14px">
+<svg viewBox="0 0 900 250" role="img" aria-label="Стало: строки упорядочены по набору и режутся подряд">
+<text x="20" y="20" class="t good">Стало: номера выдаются так  как если бы строки шли по наборам  и режутся подряд по 4 772 строк</text>
+<text x="20" y="40" class="s">Сами строки не переставляются - меняется только номер задания. Размер куска тот же, что штатно</text>
+<rect x="20.0" y="54" width="225.3" height="22" fill="#6f8fb0" stroke="#fff" stroke-width=".8"/>
+<text x="132.7" y="69" text-anchor="middle" class="setlbl">A</text>
+<rect x="245.3" y="54" width="150.2" height="22" fill="#8fa98a" stroke="#fff" stroke-width=".8"/>
+<text x="320.4" y="69" text-anchor="middle" class="setlbl">B</text>
+<rect x="395.5" y="54" width="131.4" height="22" fill="#b59a6a" stroke="#fff" stroke-width=".8"/>
+<text x="461.3" y="69" text-anchor="middle" class="setlbl">C</text>
+<rect x="527.0" y="54" width="112.7" height="22" fill="#9c86b0" stroke="#fff" stroke-width=".8"/>
+<text x="583.3" y="69" text-anchor="middle" class="setlbl">D</text>
+<rect x="639.7" y="54" width="93.9" height="22" fill="#6fa5a0" stroke="#fff" stroke-width=".8"/>
+<text x="686.6" y="69" text-anchor="middle" class="setlbl">E</text>
+<rect x="733.5" y="54" width="75.1" height="22" fill="#b08080" stroke="#fff" stroke-width=".8"/>
+<text x="771.1" y="69" text-anchor="middle" class="setlbl">F</text>
+<rect x="808.6" y="54" width="45.1" height="22" fill="#8a8f99" stroke="#fff" stroke-width=".8"/>
+<text x="831.2" y="69" text-anchor="middle" class="setlbl">G</text>
+<rect x="853.7" y="54" width="26.3" height="22" fill="#a8a070" stroke="#fff" stroke-width=".8"/>
+<text x="866.9" y="69" text-anchor="middle" class="setlbl">H</text>
+<rect x="21.0" y="88" width="69.7" height="92" rx="5" class="box new"/>
+<text x="55.8" y="106" text-anchor="middle" class="s">задание 1</text>
+<rect x="28.0" y="114" width="10.9" height="16" rx="3" fill="#6f8fb0"/>
+<text x="33.5" y="126" text-anchor="middle" class="setlbl">A</text>
+<text x="55.8" y="172" text-anchor="middle" class="cnt good">1</text>
+<rect x="92.7" y="88" width="69.7" height="92" rx="5" class="box new"/>
+<text x="127.5" y="106" text-anchor="middle" class="s">задание 2</text>
+<rect x="99.7" y="114" width="10.9" height="16" rx="3" fill="#6f8fb0"/>
+<text x="105.1" y="126" text-anchor="middle" class="setlbl">A</text>
+<text x="127.5" y="172" text-anchor="middle" class="cnt good">1</text>
+<rect x="164.4" y="88" width="69.7" height="92" rx="5" class="box new"/>
+<text x="199.2" y="106" text-anchor="middle" class="s">задание 3</text>
+<rect x="171.4" y="114" width="10.9" height="16" rx="3" fill="#6f8fb0"/>
+<text x="176.8" y="126" text-anchor="middle" class="setlbl">A</text>
+<text x="199.2" y="172" text-anchor="middle" class="cnt good">1</text>
+<rect x="236.1" y="88" width="69.7" height="92" rx="5" class="box new"/>
+<text x="270.9" y="106" text-anchor="middle" class="s">задание 4</text>
+<rect x="243.1" y="114" width="10.9" height="16" rx="3" fill="#6f8fb0"/>
+<text x="248.5" y="126" text-anchor="middle" class="setlbl">A</text>
+<rect x="257.0" y="114" width="10.9" height="16" rx="3" fill="#8fa98a"/>
+<text x="262.4" y="126" text-anchor="middle" class="setlbl">B</text>
+<text x="270.9" y="172" text-anchor="middle" class="cnt good">2</text>
+<rect x="307.7" y="88" width="69.7" height="92" rx="5" class="box new"/>
+<text x="342.6" y="106" text-anchor="middle" class="s">задание 5</text>
+<rect x="314.7" y="114" width="10.9" height="16" rx="3" fill="#8fa98a"/>
+<text x="320.2" y="126" text-anchor="middle" class="setlbl">B</text>
+<text x="342.6" y="172" text-anchor="middle" class="cnt good">1</text>
+<rect x="379.4" y="88" width="69.7" height="92" rx="5" class="box new"/>
+<text x="414.3" y="106" text-anchor="middle" class="s">задание 6</text>
+<rect x="386.4" y="114" width="10.9" height="16" rx="3" fill="#8fa98a"/>
+<text x="391.9" y="126" text-anchor="middle" class="setlbl">B</text>
+<rect x="400.3" y="114" width="10.9" height="16" rx="3" fill="#b59a6a"/>
+<text x="405.8" y="126" text-anchor="middle" class="setlbl">C</text>
+<text x="414.3" y="172" text-anchor="middle" class="cnt good">2</text>
+<rect x="451.1" y="88" width="69.7" height="92" rx="5" class="box new"/>
+<text x="485.9" y="106" text-anchor="middle" class="s">задание 7</text>
+<rect x="458.1" y="114" width="10.9" height="16" rx="3" fill="#b59a6a"/>
+<text x="463.6" y="126" text-anchor="middle" class="setlbl">C</text>
+<text x="485.9" y="172" text-anchor="middle" class="cnt good">1</text>
+<rect x="522.8" y="88" width="69.7" height="92" rx="5" class="box new"/>
+<text x="557.6" y="106" text-anchor="middle" class="s">задание 8</text>
+<rect x="529.8" y="114" width="10.9" height="16" rx="3" fill="#b59a6a"/>
+<text x="535.2" y="126" text-anchor="middle" class="setlbl">C</text>
+<rect x="543.7" y="114" width="10.9" height="16" rx="3" fill="#9c86b0"/>
+<text x="549.2" y="126" text-anchor="middle" class="setlbl">D</text>
+<text x="557.6" y="172" text-anchor="middle" class="cnt good">2</text>
+<rect x="594.5" y="88" width="69.7" height="92" rx="5" class="box new"/>
+<text x="629.3" y="106" text-anchor="middle" class="s">задание 9</text>
+<rect x="601.5" y="114" width="10.9" height="16" rx="3" fill="#9c86b0"/>
+<text x="606.9" y="126" text-anchor="middle" class="setlbl">D</text>
+<rect x="615.4" y="114" width="10.9" height="16" rx="3" fill="#6fa5a0"/>
+<text x="620.9" y="126" text-anchor="middle" class="setlbl">E</text>
+<text x="629.3" y="172" text-anchor="middle" class="cnt good">2</text>
+<rect x="666.2" y="88" width="69.7" height="92" rx="5" class="box new"/>
+<text x="701.0" y="106" text-anchor="middle" class="s">задание 10</text>
+<rect x="673.2" y="114" width="10.9" height="16" rx="3" fill="#6fa5a0"/>
+<text x="678.6" y="126" text-anchor="middle" class="setlbl">E</text>
+<rect x="687.1" y="114" width="10.9" height="16" rx="3" fill="#b08080"/>
+<text x="692.5" y="126" text-anchor="middle" class="setlbl">F</text>
+<text x="701.0" y="172" text-anchor="middle" class="cnt good">2</text>
+<rect x="737.8" y="88" width="69.7" height="92" rx="5" class="box new"/>
+<text x="772.7" y="106" text-anchor="middle" class="s">задание 11</text>
+<rect x="744.8" y="114" width="10.9" height="16" rx="3" fill="#b08080"/>
+<text x="750.3" y="126" text-anchor="middle" class="setlbl">F</text>
+<text x="772.7" y="172" text-anchor="middle" class="cnt good">1</text>
+<rect x="809.5" y="88" width="69.5" height="92" rx="5" class="box new"/>
+<text x="844.3" y="106" text-anchor="middle" class="s">задание 12</text>
+<rect x="816.5" y="114" width="10.9" height="16" rx="3" fill="#b08080"/>
+<text x="822.0" y="126" text-anchor="middle" class="setlbl">F</text>
+<rect x="830.4" y="114" width="10.9" height="16" rx="3" fill="#8a8f99"/>
+<text x="835.8" y="126" text-anchor="middle" class="setlbl">G</text>
+<rect x="844.3" y="114" width="10.9" height="16" rx="3" fill="#a8a070"/>
+<text x="849.7" y="126" text-anchor="middle" class="setlbl">H</text>
+<text x="844.3" y="172" text-anchor="middle" class="cnt good">3</text>
+<text x="20" y="204" class="t good">Число под заданием - сколько таблиц набора оно строит. Итого 19 вместо 96; у задания 1-3 вместо 8</text>
+<text x="20" y="224" class="note">строк на задание столько же  сколько штатно (4 772)  поэтому нагрузка заданий по числу строк не меняется;</text>
+<text x="20" y="242" class="note">в общем случае построений не больше, чем заданий + наборов - 1 = 12 + 8 - 1 = 19</text>
+</svg>
+  </div>
+  <div class="card prose" style="margin-top:14px">
+    <p style="margin-bottom:6px"><b>Путь самого медленного задания</b>, которого ждет главный сеанс: <span class="formula">было 8 x Построение + 4 772 x Проверка строки</span> &nbsp; <span class="formula">стало 1-3 x Построение + 4 772 x Проверка строки</span></p>
+    <p style="margin:0">Проверка строк не меняется, сокращаются построения полных таблиц. Стоимость одного построения на выборке в сотни поручений будет получена замером на Т-1; на 2 поручениях она 2-3 с и растет с числом портфелей проверки.</p>
+  </div>
+</section>
+
+<section id="code">
+  <div class="sec-no">Раздел 5</div>
+  <h2>Код</h2>
+  <p class="sec-lead">Перехват <code>&amp;ИзменениеИКонтроль("ПланОбработкиПроверки")</code>, три вставки, штатные строки не удаляются. Режим выбирается в новой функции раскладки.</p>
+  <div class="grid2">
+    <div class="card">
+      <h3 style="margin-top:0">Вставки в штатную функцию</h3>
+<pre>ПланПроверки = ОтобранныеСтрокиПланаПроверки(ПланПроверки,
+    ЛимитыПоТипам.Стандарт);
+<span class="ins">#Вставка
+НомераПоНаборам = FO_LimitCheckOpt_НомераИсполнителейПоНаборам(
+    ПланПроверки, ПотоковОбработкиПроверки, КоличествоНаЗадание);
+#КонецВставки</span>
+...
+Для Каждого Строка Из ПланПроверки Цикл
+    ...
+    Строка.НомерИсполнителя = НомерИсполнителя;
+<span class="ins">#Вставка
+    Если НомераПоНаборам &lt;&gt; Неопределено Тогда
+        Строка.НомерИсполнителя =
+            FO_LimitCheckOpt_НомерИсполнителяСтроки(
+                НомераПоНаборам, Строка.НаборДанных);
+    КонецЕсли;
+#КонецВставки</span>
+    ...
+КонецЦикла;
+<span class="ins">#Вставка
+Если НомераПоНаборам &lt;&gt; Неопределено Тогда
+    Результат.НомераИсполнителей =
+        НомераПоНаборам.НомераИсполнителей;
+КонецЕсли;
+#КонецВставки</span></pre>
+    </div>
+    <div class="card">
+      <h3 style="margin-top:0">Раскладка (новые функции расширения)</h3>
+<pre>Если потоков &lt;= 1 или нет поручений или набор один
+    - Возврат Неопределено;                 // штатно
+ДоляПотока = ceil(строк / потоков);
+
+<span class="ins">Если ДоляПотока &gt;= 50 Тогда                // подряд по наборам
+    РазмерКуска = КоличествоНаЗадание + 1;  // штатный
+    Смещение набора = строк всех наборов перед ним;
+    Номер строки = Цел((Смещение набора
+        + номер строки внутри набора) / РазмерКуска);
+КонецЕсли;</span>
+
+// части наборов
+Набор режется на части до 50 строк;
+Части по убыванию - в наименее загруженное задание,
+заданий Мин(потоков, частей);
+Строки набора по очереди заполняют его части.</pre>
+      <p style="font-size:12.5px;color:var(--muted);margin-bottom:0">"Номер строки внутри набора" - порядковый номер среди строк этого набора в порядке обхода плана. Строки не переставляются.</p>
+    </div>
+  </div>
+</section>
+
+<section id="proof">
+  <div class="sec-no">Раздел 6</div>
+  <h2>Обоснование по шагам</h2>
+  <div class="road">
+    <div class="step"><div><div class="tag">Утв.</div><div class="big">1</div></div><div><h3>Меняется только номер задания</h3><p style="margin:0">Вставки стоят после штатного отбора строк и не добавляют, не удаляют и не переставляют строк. <code>АвтоНомер</code>, вместилище, лимит, портфель, группа, поручение, установка лимитов - штатные.</p></div></div>
+    <div class="step"><div><div class="tag">Утв.</div><div class="big">2</div></div><div><h3>Номер задания нигде больше не участвует</h3><p style="margin:0">В конфигурации <code>НомерИсполнителя</code> читается одним отбором: <code>Т.НомерИсполнителя = &amp;НомерИсполнителя</code> в <code>КэшВмПланПроверки.ПланПроверкиИсполнителя</code>. Расчет зон, пороги и запись результатов его не видят.</p></div></div>
+    <div class="step"><div><div class="tag">Утв.</div><div class="big">3</div></div><div><h3>Каждая строка проверяется ровно один раз</h3><p style="margin:0"><span class="mode small">части</span> каждая строка набора попадает в одну часть, каждая часть - в одно задание; первые задания получают по части, пока все пустые, поэтому пустых номеров нет. <span class="mode big">подряд</span> позиции строк в последовательности по наборам - 0..N-1 без повторов, номер - <code>Цел(позиция / РазмерКуска)</code>, номера 0..Цел((N-1) / РазмерКуска) все заняты.</p></div></div>
+    <div class="step"><div><div class="tag">Утв.</div><div class="big">4</div></div><div><h3>Заданий не больше, чем потоков</h3><p style="margin:0">Задание берет только первый номер (<code>Параметры.Данные[0]</code>). <span class="mode small">части</span> заданий <code>Мин(потоков, частей)</code>. <span class="mode big">подряд</span> кусок штатный: <code>КоличествоНаЗадание + 1</code> больше "строк / потоков", поэтому кусков не больше потоков. Штатный цикл иногда добавляет лишний пустой номер, когда строки делятся на куски нацело; здесь его нет.</p></div></div>
+    <div class="step"><div><div class="tag">Утв.</div><div class="big">5</div></div><div><h3>Данные набора одинаковы в любом задании</h3><p style="margin:0">Таблица набора строится по <code>Секрет</code> (дата, реквизиты набора, биржи котировок, вместилище) и не видит строк задания. Отбор по портфелям при проверке собирается из тех же строк, что и раньше.</p></div></div>
+    <div class="step"><div><div class="tag">Утв.</div><div class="big">6</div></div><div><h3>Построений меньше</h3><p style="margin:0"><span class="mode small">части</span> в задании одна-две части, наборов столько же. <span class="mode big">подряд</span> в последовательности по наборам каждый набор - один отрезок, кусок пересекает отрезки подряд, каждая граница наборов добавляет не больше одного построения: всего не больше "заданий + наборов - 1".</p></div></div>
+    <div class="step"><div><div class="tag">Вывод</div><div class="big">=</div></div><div><h3>Результат тот же, путь задания короче</h3><p style="margin:0">Каждая строка плана проверяется один раз, с теми же параметрами и по той же таблице набора. Сокращается только число построений таблиц наборов в заданиях.</p></div></div>
+  </div>
+</section>
+
+<section id="edge">
+  <div class="sec-no">Раздел 7</div>
+  <h2>Границы и особые случаи</h2>
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr><th>Случай</th><th>Что происходит</th></tr></thead>
+      <tbody>
+        <tr><td>Регламентный постконтроль</td><td>В плане нет поручений - номера штатные. Постконтроль ускоряют оптимизации 1 и 2.</td></tr>
+        <tr><td>Строки и так идут по наборам</td><td><span class="mode big">подряд</span> номера совпадают со штатными, вреда нет.</td></tr>
+        <tr><td>Один набор занимает большую часть плана</td><td>Его строки делятся между несколькими заданиями, каждое строит его таблицу - это неизбежно при параллельной проверке одного набора.</td></tr>
+        <tr><td>Нагрузка заданий</td><td><span class="mode small">части</span> неравная (в схеме до 40 строк вместо 21), выгодно, пока проверка строки дешевле построения таблицы. <span class="mode big">подряд</span> штатная.</td></tr>
+        <tr><td>Внешние лимиты (по алгоритму)</td><td>Отдельный план и отдельный шаг, правка их не затрагивает.</td></tr>
+        <tr><td>Стоимость одного построения</td><td>Не меняется. Строить таблицу только по портфелям задания - отдельный, более глубокий вариант; он требует разбора лимитов по группам и лимитов, считающих по всем портфелям сразу.</td></tr>
+        <tr><td>Изменение функции при обновлении</td><td>Перехват <code>&amp;ИзменениеИКонтроль</code> контролирует текст функции: при изменении вендором платформа не применит расширение и сообщит о расхождении.</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section id="test">
+  <div class="sec-no">Раздел 8</div>
+  <h2>Проверка</h2>
+  <p class="sec-lead">База разработчика, 12 потоков, фоновые задания включены. Тестовых наборов данных в базе 4, поэтому построений меньше, чем на Т-1 (8 наборов). Сверка - краткий итог по каждой паре "лимит - фокус - поручение" с расширением и без, по всем полям зоны, базиса и порогов.</p>
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr><th>Поручений</th><th>Строк плана</th><th>Режим</th><th>Заданий: штатно / с расширением</th><th>Построений таблиц наборов: штатно / с расширением</th><th>Строк у заданий с расширением</th><th>Расхождений итога</th></tr></thead>
+      <tbody>
+        <tr><td>1</td><td>71</td><td><span class="mode small">части</span></td><td>7 / 5</td><td>10 / 5</td><td>28, 28, 10, 4, 1</td><td>0</td></tr>
+        <tr><td>2</td><td>142</td><td><span class="mode small">части</span></td><td>11 / 6</td><td>15 / 6</td><td>38, 38, 36, 20, 8, 2</td><td>0</td></tr>
+        <tr><td>10</td><td>710</td><td><span class="mode big">подряд</span></td><td>12 / 12</td><td>14 / 14</td><td>11 x 61 и 39 - как штатно</td><td>0</td></tr>
+        <tr><td>50</td><td>3 550</td><td><span class="mode big">подряд</span></td><td>12 / 12</td><td>19 / 15</td><td>11 x 297 и 283 - как штатно</td><td>0</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="grid3" style="margin-top:14px">
+    <div class="card"><h3 style="margin-top:0">Что подтверждено</h3><p style="margin:0">Результат проверки совпал во всех четырех прогонах. В режиме подряд задания и строки в них - штатные, построений на 50 поручениях 15, это ровно предел "заданий + наборов - 1" = 12 + 4 - 1. На 10 поручениях штатная нарезка уже дала 14 из предела 15.</p></div>
+    <div class="card"><h3 style="margin-top:0">Замер Т-1, малый план</h3><p style="margin:0">Обычный ФО, 2 поручения, 229-236 строк: проверка 31,5 с - 22,6 с, "Обработка проверки" 16,6 с - 8,9 с, построений 28 - 11, их суммарное время 67 с - 22,6 с.</p></div>
+    <div class="card"><h3 style="margin-top:0">Замер Т-1, большой план - впереди</h3><p style="margin:0">Выборка 300-500 поручений, "Проверить", с расширением и без, замер производительности всех сеансов. Покажет число построений на задание и стоимость одного построения на таком объеме; время на базе разработчика не показательно - там построение занимает доли секунды.</p></div>
+  </div>
+
+</section>
+
+</main>
+
+<footer>
+  <div class="wrap">
+    <b>Основание.</b> Код конфигурации "Аванкор: Фронт-офис" 1.4.9.5: РаботаСЛимитами.ПланПроверки, ОтобранныеСтрокиПланаПроверки, ПланОбработкиПроверки, ДобавитьВТ_ТаблицаНабораДанных, УдалитьВременныеТаблицы и Толкования; РегистрСведений.КэшВмПланПроверки.ПланПроверкиИсполнителя; Исполнители.ПроверкаИОтправка_ОбработкаПроверки. Замеры проверки 2 поручений на Т-1 обычного ФО, сентябрьские замеры проверок поручений на ПРОД, прогоны на базе разработчика 26.09.2026.
+  </div>
+</footer>
+
+</body>
+</html>
