@@ -1,0 +1,499 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Пороги по парам плана</title>
+<style>
+:root{
+  --bg:#f4f6f9;--paper:#ffffff;--ink:#27313f;--muted:#6b7585;--line:#e1e5ec;
+  --brand:#52648a;--brand-ink:#3b4a68;--brand-soft:#eef1f6;
+  --good:#3f7d5c;--good-soft:#edf5f0;--warn:#9a7433;--warn-soft:#f8f3e8;--bad:#a0575a;--bad-soft:#f7eded;
+  --neutral-soft:#f3f4f7;--code:#f6f7f9;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#15181e;--paper:#1c2028;--ink:#dde2ea;--muted:#9099a8;--line:#2c323d;
+    --brand:#9fb0d0;--brand-ink:#b9c6de;--brand-soft:#232a37;
+    --good:#7fbf9b;--good-soft:#1c2a23;--warn:#d0ad6c;--warn-soft:#2b261b;--bad:#d69497;--bad-soft:#2d2021;
+    --neutral-soft:#222730;--code:#191d24;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#15181e;--paper:#1c2028;--ink:#dde2ea;--muted:#9099a8;--line:#2c323d;
+  --brand:#9fb0d0;--brand-ink:#b9c6de;--brand-soft:#232a37;
+  --good:#7fbf9b;--good-soft:#1c2a23;--warn:#d0ad6c;--warn-soft:#2b261b;--bad:#d69497;--bad-soft:#2d2021;
+  --neutral-soft:#222730;--code:#191d24;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.55 "Segoe UI",Roboto,Arial,sans-serif}
+.wrap{max-width:1040px;margin:0 auto;padding:0 16px}
+h2{font-size:19px;line-height:1.3;margin:0 0 4px;color:var(--brand-ink);font-weight:650}
+h3{font-size:15px;margin:14px 0 6px;font-weight:650}
+p{margin:6px 0}
+ul{margin:6px 0;padding-left:20px}
+li{margin:3px 0}
+section{padding:28px 0 4px}
+.sec-no{display:inline-block;font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:2px}
+.sec-lead{color:var(--muted);max-width:780px;margin-bottom:12px}
+code{font-family:Consolas,"Cascadia Mono",monospace;font-size:12.5px;background:var(--code);border:1px solid var(--line);padding:0 4px;border-radius:3px}
+
+/* header */
+.hero{background:var(--paper);border-bottom:1px solid var(--line);padding:14px 0 18px}
+.brandbar{display:flex;align-items:center;justify-content:space-between;gap:12px;padding-bottom:12px;margin-bottom:14px;border-bottom:1px solid var(--line)}
+.logo{height:24px;width:auto;color:var(--brand);display:block;flex:none}
+.kicker{font-size:11.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin:0;text-align:right}
+.hero h1{font-size:21px;line-height:1.3;margin:0 0 12px;font-weight:650;color:var(--brand-ink);max-width:860px}
+.hero h1 span{color:var(--good)}
+.hero .sub{color:var(--muted);max-width:860px;margin:0 0 14px}
+.ba-hero{display:flex;align-items:stretch;gap:10px;flex-wrap:wrap;margin:0 0 14px}
+.ba-box{border-radius:8px;padding:8px 14px 9px;min-width:170px;border:1px solid var(--line);background:var(--neutral-soft)}
+.ba-box .l{font-size:11px;letter-spacing:.08em;text-transform:uppercase;font-weight:700;color:var(--muted)}
+.ba-box .v{font-size:28px;font-weight:700;line-height:1.15;white-space:nowrap;font-variant-numeric:tabular-nums;color:var(--ink)}
+.ba-box .v small{font-size:14px;font-weight:600;margin:0 6px 0 2px;color:var(--muted)}
+.ba-box .v small:last-child{margin-right:0}
+.ba-box .s{font-size:12px;color:var(--muted)}
+.ba-box.was{border-left:3px solid var(--bad)}
+.ba-box.now{border-left:3px solid var(--good);background:var(--good-soft)}
+.ba-box.now .v{color:var(--good)}
+.ba-arrow{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;color:var(--muted);padding:0 2px}
+.ba-arrow .a{font-size:22px;line-height:1}
+.ba-arrow .x{font-size:12px;font-weight:700;color:var(--good);white-space:nowrap}
+.goals{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.goal{background:var(--paper);border:1px solid var(--line);border-radius:8px;padding:10px 14px}
+.goal .g-head{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:6px}
+.goal .g-name{font-weight:650;font-size:14px;color:var(--brand-ink)}
+.pill{display:inline-block;font-size:11px;font-weight:600;padding:1px 8px;border-radius:999px;white-space:nowrap;border:1px solid}
+.pill.done{color:var(--good);border-color:var(--good);background:var(--good-soft)}
+.pill.next{color:var(--warn);border-color:var(--warn);background:var(--warn-soft)}
+.goal .g-row{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.goal .g-cell .l{font-size:11.5px;color:var(--muted)}
+.goal .g-cell .v{font-size:16px;font-weight:650;line-height:1.25}
+.goal .g-cell .v.win{color:var(--good)}
+.goal .g-note{font-size:12.5px;color:var(--muted);margin-top:6px}
+
+nav.jump{position:sticky;top:0;z-index:10;background:color-mix(in srgb,var(--paper) 94%,transparent);border-bottom:1px solid var(--line);backdrop-filter:blur(6px)}
+nav.jump .wrap{display:flex;gap:4px 16px;flex-wrap:wrap;padding-top:7px;padding-bottom:7px;font-size:12.5px}
+nav.jump a{color:var(--brand-ink);text-decoration:none}
+nav.jump a:hover{text-decoration:underline}
+
+.card{background:var(--paper);border:1px solid var(--line);border-radius:8px;padding:12px 16px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.callout{border-left:3px solid var(--brand);background:var(--brand-soft);border-radius:6px;padding:8px 12px;margin:10px 0}
+.callout.good{border-color:var(--good);background:var(--good-soft)}
+.callout.warn{border-color:var(--warn);background:var(--warn-soft)}
+
+.scope dl{display:grid;grid-template-columns:140px 1fr;gap:4px 12px;margin:0}
+.scope dt{color:var(--muted);font-size:13px}
+.scope dd{margin:0}
+
+.hyp{display:grid;gap:8px}
+.h{display:grid;grid-template-columns:34px 1fr auto;gap:12px;align-items:start;background:var(--paper);border:1px solid var(--line);border-radius:8px;padding:10px 14px}
+.h .num{width:28px;height:28px;border-radius:6px;display:grid;place-items:center;font-weight:700;font-size:13px;background:var(--neutral-soft);color:var(--muted)}
+.h.ok .num{background:var(--good-soft);color:var(--good)}
+.h.no .num{background:var(--bad-soft);color:var(--bad)}
+.h.later .num{background:var(--warn-soft);color:var(--warn)}
+.h .t{font-weight:650;font-size:14px;margin-bottom:2px}
+.h .d{color:var(--muted);font-size:13px}
+.h .d b{color:var(--ink);font-weight:600}
+.verdict{font-size:11px;font-weight:600;padding:1px 8px;border-radius:999px;white-space:nowrap;border:1px solid}
+.h.ok .verdict{color:var(--good);border-color:var(--good)}
+.h.no .verdict{color:var(--bad);border-color:var(--bad)}
+.h.later .verdict{color:var(--warn);border-color:var(--warn)}
+
+.ba{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px}
+.ba .card h3{margin-top:0;font-size:14px}
+.dots{display:flex;flex-direction:column;gap:4px;margin:8px 0}
+.dots .row{display:flex;gap:3px;align-items:center;font-size:11.5px;color:var(--muted)}
+.dots i{display:inline-block;width:11px;height:11px;border-radius:3px;background:var(--line)}
+.dots i.scan{background:var(--bad)}
+.dots i.new{background:var(--brand)}
+.dots i.hit{background:var(--good)}
+.dots .row span{margin-left:6px}
+pre{background:var(--code);border:1px solid var(--line);border-radius:6px;padding:10px 12px;overflow-x:auto;font:12px/1.5 Consolas,"Cascadia Mono",monospace;margin:6px 0}
+pre .del{color:var(--bad)}
+pre .ins{color:var(--good)}
+
+.checks{list-style:none;padding:0;margin:0;display:grid;gap:6px}
+.checks li{display:grid;grid-template-columns:20px 1fr;gap:6px;align-items:start;margin:0}
+.checks .ic{width:17px;height:17px;border-radius:50%;display:grid;place-items:center;font-size:10.5px;font-weight:700;margin-top:2px}
+.checks .ic.y{background:var(--good-soft);color:var(--good)}
+.checks .ic.n{background:var(--warn-soft);color:var(--warn)}
+
+.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:4px 0 10px}
+.kpi{background:var(--paper);border:1px solid var(--line);border-radius:8px;padding:9px 12px}
+.kpi .l{font-size:12px;color:var(--muted);min-height:32px}
+.kpi .v{font-size:20px;font-weight:650;line-height:1.15;color:var(--brand-ink);white-space:nowrap}
+.kpi .v.good{color:var(--good)}
+.kpi .s{font-size:12px;color:var(--muted);margin-top:2px}
+
+.bars{display:grid;gap:8px;margin:8px 0 4px}
+.bar{display:grid;grid-template-columns:130px 1fr 76px;gap:10px;align-items:center}
+.bar .lab{font-size:12.5px;color:var(--muted)}
+.bar .track{position:relative;height:18px;background:var(--neutral-soft);border-radius:4px;overflow:hidden}
+.bar .fill{position:absolute;left:0;top:0;bottom:0;border-radius:4px}
+.bar .fill.old{background:color-mix(in srgb,var(--bad) 70%,transparent)}
+.bar .fill.fc{background:repeating-linear-gradient(45deg,color-mix(in srgb,var(--warn) 60%,transparent) 0 5px,transparent 5px 10px)}
+.bar .fill.new{background:var(--good)}
+.bar .fill.target{background:none;border-right:2px dashed var(--brand);border-radius:0}
+.bar .val{font-weight:650;font-size:13px;text-align:right}
+.axis{display:grid;grid-template-columns:130px 1fr 76px;gap:10px;font-size:11px;color:var(--muted)}
+.axis .ticks{display:flex;justify-content:space-between}
+
+.stack{display:flex;height:26px;border-radius:6px;overflow:hidden;margin:10px 0 8px;border:1px solid var(--line)}
+.stack div{display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;color:#fff;white-space:nowrap;overflow:hidden}
+.legend{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:12px;color:var(--muted)}
+.legend span{display:inline-flex;align-items:center;gap:5px}
+.legend i{width:10px;height:10px;border-radius:2px;display:inline-block}
+.c1{background:#52648a}.c2{background:#7d8cab}.c3{background:#a3aec4}.c4{background:#c3b89e}.c5{background:#3f7d5c}.c6{background:#c9ccd3}
+
+.tbl-wrap{overflow-x:auto;border-radius:8px;border:1px solid var(--line)}
+table{border-collapse:collapse;width:100%;background:var(--paper);font-size:13px}
+th,td{padding:6px 10px;text-align:left;vertical-align:top;border-bottom:1px solid var(--line)}
+th{background:var(--brand-soft);color:var(--brand-ink);font-weight:600;font-size:12.5px}
+tr:last-child td{border-bottom:none}
+td.n{text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
+
+.road{display:grid;gap:10px}
+.step{display:grid;grid-template-columns:70px 1fr;gap:12px;background:var(--paper);border:1px solid var(--line);border-radius:8px;padding:12px 16px}
+.step .tag{font-size:10.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.step .big{font-size:22px;font-weight:700;color:var(--brand);line-height:1.1}
+.step h3{margin:0 0 4px}
+.step .eff{display:inline-block;margin-top:6px;font-size:12px;color:var(--muted);background:var(--neutral-soft);padding:1px 8px;border-radius:999px}
+.ideas{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-top:8px}
+.idea{border:1px solid var(--line);border-radius:6px;padding:8px 12px;background:var(--paper)}
+.idea b{display:block;margin-bottom:2px;font-weight:650}
+.idea .why{font-size:13px;color:var(--muted)}
+
+footer{padding:28px 0 40px;color:var(--muted);font-size:12.5px}
+
+/* screenshots */
+.shot{margin:10px 0 0;background:var(--paper);border:1px solid var(--line);border-radius:8px;padding:10px 12px}
+.shot-title{font-weight:650;font-size:13.5px;margin-bottom:8px}
+.shot-title .tag{display:inline-block;font-size:10.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--brand-ink);background:var(--brand-soft);border-radius:4px;padding:0 6px;margin-right:6px;vertical-align:1px}
+.shot-img{display:block;width:100%;padding:0;border:1px solid var(--line);border-radius:4px;background:#fff;cursor:zoom-in;overflow:hidden}
+.shot-img img{display:block;width:100%;height:auto}
+.shot-cap{font-size:12.5px;color:var(--muted);margin-top:8px}
+.shot-cap b{color:var(--ink);font-weight:600}
+.lightbox{position:fixed;inset:0;z-index:50;background:rgba(10,14,22,.85);display:none;align-items:center;justify-content:center;padding:16px;cursor:zoom-out}
+.lightbox.open{display:flex}
+.lightbox img{max-width:100%;max-height:100%;border-radius:4px;background:#fff}
+
+@media (max-width:820px){
+  .goals,.grid2,.grid3,.ba,.ideas{grid-template-columns:1fr}
+  .kpis{grid-template-columns:1fr 1fr}
+  .step{grid-template-columns:1fr}
+  .bar,.axis{grid-template-columns:90px 1fr 64px}
+  .scope dl{grid-template-columns:1fr}
+  .scope dt{margin-top:4px}
+}
+@media (max-width:520px){
+  .brandbar{flex-direction:column;align-items:flex-start}
+  .kicker{text-align:left}
+  .h{grid-template-columns:28px 1fr}
+  .h .verdict{grid-column:2;justify-self:start}
+  .ba-hero{flex-direction:column}
+  .ba-arrow{flex-direction:row;gap:8px}
+  .ba-arrow .a{transform:rotate(90deg)}
+}
+
+.kicker .env{text-transform:none;letter-spacing:0;font-size:12px;margin-top:3px;color:var(--muted)}
+.kicker .env b{color:var(--brand-ink);font-weight:600;font-family:Consolas,"Cascadia Mono",monospace;font-size:11.5px}
+.prose p{margin:0 0 10px;line-height:1.6}
+.diagram svg{width:100%;height:auto;display:block;font-family:"Segoe UI",Roboto,Arial,sans-serif}
+.diagram .lane{font-size:12px;font-weight:700;fill:var(--muted);letter-spacing:.04em}
+.diagram .sep{stroke:var(--line);stroke-dasharray:4 4}
+.diagram .box{fill:var(--paper);stroke:var(--line);stroke-width:1.2}
+.diagram .box.old{fill:var(--bad-soft);stroke:var(--bad)}
+.diagram .box.new{fill:var(--good-soft);stroke:var(--good)}
+.diagram .store{fill:var(--brand-soft);stroke:var(--brand);stroke-width:1.2}
+.diagram .t{font-size:13px;font-weight:650;fill:var(--ink)}
+.diagram .s{font-size:11.5px;fill:var(--muted)}
+.diagram .mute{font-style:italic}
+.diagram .k{font-size:11.5px;font-weight:600;fill:var(--good)}
+.diagram .ln{fill:none;stroke:var(--muted);stroke-width:1.4}
+.diagram .ln.key{stroke:var(--good);stroke-width:2}
+.diagram .arh{fill:var(--muted)}
+.diagram .setall{fill:var(--bad-soft);stroke:var(--bad)}
+.diagram .setplan{fill:var(--good-soft);stroke:var(--good)}
+.diagram .setread{fill:var(--paper);stroke:var(--brand);stroke-width:1.5}
+
+</style>
+</head>
+<body>
+<header class="hero">
+  <div class="wrap">
+    <div class="brandbar">
+      <svg class="logo" role="img" aria-label="ВИМ Инвестиции" viewBox="0 0 176 42" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g clip-path="url(#vimLogoClip)">
+<path d="M111.155 16.6987C110.691 15.765 110.009 14.9925 109.109 14.385C108.49 13.9688 107.786 13.6387 107.002 13.3987C108.08 12.93 108.977 12.2588 109.685 11.3813C110.624 10.2225 111.095 8.8275 111.095 7.1925C111.095 4.98 110.273 3.22875 108.634 1.935C106.99 0.645001 104.65 0 101.605 0H88.1016V27.8625H101.963C104.028 27.8625 105.796 27.5475 107.266 26.9137C108.735 26.28 109.866 25.365 110.661 24.1688C111.456 22.9688 111.852 21.5662 111.852 19.9612C111.852 18.7237 111.618 17.6363 111.159 16.7025L111.155 16.6987ZM95.0511 5.33625H100.256C101.631 5.33625 102.626 5.56875 103.233 6.02625C103.844 6.4875 104.145 7.2075 104.145 8.17875C104.145 9.15 103.84 9.8775 103.233 10.3538C102.623 10.8263 101.631 11.0663 100.256 11.0663H95.0511V5.33625ZM104.759 20.5725C104.665 20.9025 104.514 21.1913 104.303 21.4425C104.092 21.6938 103.84 21.8962 103.55 22.0537C103.259 22.2112 102.894 22.3313 102.457 22.41C102.02 22.4888 101.537 22.53 101.006 22.53H95.0473V16.365H101.006C101.533 16.365 102.02 16.41 102.457 16.5038C102.894 16.5975 103.256 16.7287 103.55 16.8975C103.84 17.07 104.092 17.2725 104.303 17.5088C104.514 17.745 104.669 18.03 104.759 18.36C104.854 18.69 104.899 19.065 104.899 19.485C104.899 19.8788 104.854 20.2425 104.759 20.5725Z" fill="currentColor"/>
+<path d="M135.638 0L122.768 16.1062V0H115.977V27.8625H121.339L134.206 11.625V27.8625H141.001V0H135.638Z" fill="currentColor"/>
+<path d="M169.44 0L161.179 20.1713L152.759 0H146.164V27.8625H152.759V12.8887L159.113 27.8625H163.044L169.44 12.735V27.8625H176.031V0H169.44Z" fill="currentColor"/>
+<path d="M35.5203 20.3991L29.8785 12.9141H0L20.5208 40.5441H20.5245L35.5203 20.3991Z" fill="url(#paint0_linear_1756_3195)"/>
+<path d="M50.7038 0.00390625L35.5195 20.4002L50.7038 40.5452L79.9831 0.00390625H50.7038Z" fill="url(#paint1_linear_1756_3195)"/>
+<path d="M20.5234 40.5454H50.7035L35.5192 20.4004L20.5234 40.5454Z" fill="url(#paint2_linear_1756_3195)"/>
+<path d="M88.8062 39.281V34.0723H88.0977V40.5185H88.678L92.59 35.2985V40.5185H93.291V34.0723H92.7106L88.8062 39.281Z" fill="currentColor"/>
+<path d="M102.296 36.926H98.41V34.0723H97.6562V40.5185H98.41V37.5748H102.296V40.5185H103.049V34.0723H102.296V36.926Z" fill="currentColor"/>
+<path d="M111.563 37.4248C111.412 37.331 111.239 37.2635 111.047 37.2148C111.325 37.1173 111.552 36.9673 111.732 36.761C111.966 36.491 112.087 36.1573 112.087 35.756C112.087 35.2198 111.902 34.8035 111.537 34.511C111.171 34.2185 110.655 34.0723 109.991 34.0723H107.398V40.5185H110.101C110.553 40.5185 110.941 40.451 111.258 40.316C111.574 40.181 111.819 39.9823 111.989 39.716C112.158 39.4498 112.241 39.1273 112.241 38.741C112.241 38.441 112.185 38.1823 112.068 37.961C111.951 37.7398 111.781 37.5598 111.563 37.421V37.4248ZM108.137 34.676H109.882C110.361 34.676 110.722 34.7735 110.971 34.9648C111.22 35.156 111.344 35.441 111.344 35.8198C111.344 36.1985 111.22 36.4648 110.971 36.6598C110.722 36.8548 110.361 36.9523 109.882 36.9523H108.137V34.676ZM111.442 39.1648C111.401 39.2923 111.344 39.401 111.261 39.4948C111.182 39.5848 111.084 39.6635 110.967 39.7273C110.851 39.791 110.715 39.8398 110.56 39.8698C110.406 39.8998 110.229 39.9148 110.033 39.9148H108.141V37.556H110.033C110.229 37.556 110.406 37.571 110.56 37.601C110.715 37.631 110.854 37.676 110.967 37.7398C111.084 37.7998 111.182 37.8785 111.261 37.9723C111.341 38.066 111.401 38.1748 111.442 38.3023C111.484 38.426 111.503 38.5723 111.503 38.7373C111.503 38.9023 111.484 39.0373 111.442 39.1685V39.1648Z" fill="currentColor"/>
+<path d="M116.367 40.5185H120.456V39.8885H117.102V37.5635H120.264V36.9335H117.102V34.7023H120.456V34.0723H116.367V40.5185Z" fill="currentColor"/>
+<path d="M127.298 34.6765C127.664 34.6765 127.999 34.7365 128.305 34.8527C128.606 34.9727 128.9 35.164 129.183 35.4227L129.477 34.8115C129.221 34.5415 128.9 34.339 128.52 34.2002C128.139 34.0615 127.728 33.9902 127.28 33.9902C126.643 33.9902 126.096 34.1252 125.644 34.3915C125.192 34.6615 124.841 35.0402 124.6 35.5277C124.359 36.0152 124.238 36.604 124.238 37.2865C124.238 37.969 124.359 38.5577 124.6 39.049C124.841 39.544 125.188 39.9227 125.644 40.1927C126.096 40.4627 126.643 40.594 127.28 40.594C127.728 40.594 128.139 40.5227 128.52 40.3802C128.9 40.2377 129.217 40.0352 129.477 39.7727L129.183 39.1615C128.9 39.424 128.61 39.6152 128.305 39.7315C128.003 39.8515 127.668 39.9115 127.298 39.9115C126.571 39.9115 126.013 39.6827 125.625 39.2215C125.241 38.7602 125.045 38.1152 125.045 37.2865C125.045 36.4577 125.237 35.8127 125.625 35.359C126.01 34.9015 126.567 34.6727 127.298 34.6727V34.6765Z" fill="currentColor"/>
+<path d="M132.66 34.721H135.012V40.5185H135.773V34.721H138.125V34.0723H132.66V34.721Z" fill="currentColor"/>
+<path d="M142.416 39.281V34.0723H141.707V40.5185H142.284L146.199 35.2985V40.5185H146.897V34.0723H146.32L142.416 39.281Z" fill="currentColor"/>
+<path d="M156.61 34.0723H155.848V39.8698H152.015V34.0723H151.262V40.5185H156.839V41.9548H157.529V39.8698H156.61V34.0723Z" fill="currentColor"/>
+<path d="M161.99 39.281V34.0723H161.285V40.5185H161.862L165.777 35.2985V40.5185H166.475V34.0723H165.898L161.99 39.281Z" fill="currentColor"/>
+<path d="M175.453 34.0723L171.548 39.281V34.0723H170.84V40.5185H171.42L175.332 35.2985V40.5185H176.029V34.0723H175.453Z" fill="currentColor"/>
+</g>
+<defs>
+<linearGradient id="paint0_linear_1756_3195" x1="9.68188" y1="5.87156" x2="30.0896" y2="33.5202" gradientUnits="userSpaceOnUse">
+<stop stop-color="#73A8BA"/>
+<stop offset="1" stop-color="#52648A"/>
+</linearGradient>
+<linearGradient id="paint1_linear_1756_3195" x1="70.5273" y1="-6.86984" x2="40.955" y2="33.8156" gradientUnits="userSpaceOnUse">
+<stop stop-color="#CBDFE6"/>
+<stop offset="1" stop-color="#73A8BA"/>
+</linearGradient>
+<linearGradient id="paint2_linear_1756_3195" x1="35.6135" y1="20.4004" x2="35.6135" y2="40.5454" gradientUnits="userSpaceOnUse">
+<stop stop-color="white"/>
+<stop offset="1" stop-color="#73A8BA"/>
+</linearGradient>
+<clipPath id="vimLogoClip">
+<rect width="176" height="42" fill="white"/>
+</clipPath>
+</defs>
+</svg>
+      <div class="kicker">Аванкор Фронт-офис - проверка лимитов - обоснование для архитектора - 26.09.2026<div class="env">Код: конфигурация "Аванкор: Фронт-офис" 1.4.9.5, расширение <b>FO_LimitCheckOpt</b></div></div>
+    </div>
+    <h1>Почему сведения о порогах можно строить только для пар из плана<br><span>Ни одна проверка не теряется: пары вне плана строились, но никогда не читались</span></h1>
+    <p class="sub">Штатный код строит сведения о порогах для каждого портфеля с каждым лимитом. Расширение строит их только для пар "лимит - портфель" из плана проверки плюс пустой портфель каждого лимита. Ниже показано, откуда берется план, кто и по какому ключу читает сведения о порогах и почему множество читаемых ключей совпадает с тем, что строит расширение.</p>
+  </div>
+</header>
+
+<nav class="jump">
+  <div class="wrap">
+    <a href="#text">Обоснование словами</a>
+    <a href="#box">1. Что такое Вместилище</a>
+    <a href="#flow">2. Поток данных</a>
+    <a href="#sets">3. Какие ключи читаются</a>
+    <a href="#proof">4. Обоснование по шагам</a>
+    <a href="#edge">5. Особые случаи</a>
+    <a href="#test">6. Проверка</a>
+  </div>
+</nav>
+
+<main class="wrap">
+
+<section id="text">
+  <div class="sec-no">Кратко</div>
+  <h2>Словесное обоснование</h2>
+  <div class="card prose">
+    <p><b>Что делает штатный код.</b> При проверке лимитов по портфелям задание "Чтение сведений о порогах" для каждого структурного лимита готовит соответствие "портфель - сведения о порогах" и кладет его в регистр <code>КэшВмПороги</code>. Список пар для этого соответствия задает первый запрос пакета: он берет все портфели проверки и соединяет каждый с каждым лимитом задания, плюс пустой портфель на каждый лимит. На обычном ФО это 551 лимит на 3 857 портфелей, то есть 2,1 млн структур, которые затем сериализуются и записываются.</p>
+    <p><b>Откуда берутся портфели и лимиты.</b> Портфели, которые передаются в чтение порогов, - это не весь справочник, а портфели плана проверки текущего запуска. План строится раньше, на шаге "Действующие лимиты", по установкам лимитов (для поручения - по портфелям поручения) и записывается в регистр <code>КэшВмПланПроверки</code> с ключом Вместилище - идентификатором этого запуска. В плане каждая строка - конкретная пара "лимит - портфель" или "лимит - группа портфелей". Штатный запрос из этих же портфелей и лимитов собирает все сочетания, в том числе такие, где лимит на портфель не установлен и в плане не стоит.</p>
+    <p><b>Кто читает сведения о порогах.</b> Читатель один - задание "Обработка проверки", процедура <code>ПроверкаЛимитов.КэшВмКратко</code>. Задание берет свои строки плана из того же регистра <code>КэшВмПланПроверки</code> по тому же Вместилищу и для каждой строки обращается к соответствию порогов по ключу. Ключ - это фокус строки плана: портфель, если строка по портфелю, или пустой портфель, если строка по группе портфелей. Других обращений к сведениям о порогах в конфигурации нет.</p>
+    <p><b>Отсюда вывод.</b> Все ключи, по которым сведения о порогах когда-либо читаются, - это пары "лимит - портфель" из плана и пара "лимит - пустой портфель". Пары, которых нет в плане, штатный код строил, сериализовал и записывал, но ни одна проверка к ним не обращалась. Поэтому их можно не строить: ни одна проверка не выпадает, потому что каждая проверка - это строка плана, а ключ каждой строки плана в новом наборе есть.</p>
+    <p><b>Почему значения не меняются.</b> Порог для пары вычисляется дальше по пакету, и этот код не менялся: к паре подтягивается порог, заданный на сам портфель, и порог, заданный на лимит (пустой портфель), затем выбирается приоритет портфеля над лимитом. Все соединения идут по самой паре или по лимиту, поэтому результат по паре не зависит от того, какие еще пары есть в наборе. Портфель без собственного порога по-прежнему получает порог лимита.</p>
+    <p><b>Порядок и ключ совпадают.</b> План записывается до запуска чтения порогов, а чтение порогов и обработка проверки получают одно и то же Вместилище от распорядителя запуска. Поэтому расширение читает из <code>КэшВмПланПроверки</code> ровно те строки, по которым потом пойдет обработка проверки.</p>
+    <p style="margin-bottom:0"><b>Защита.</b> Расширение меняет только первый запрос пакета. Если плана по Вместилищу нет или штатный текст первого запроса изменился (например, после обновления конфигурации), выполняется штатный запрос без изменений. Проверка на данных подтверждает рассуждение: 0 расхождений в кратком итоге на базе разработчика, совпадение всех строк на уровне запроса, успешный регламент на Т-1 при сокращении структур с 2,1 млн до 175 тыс.</p>
+  </div>
+</section>
+
+<section id="box">
+  <div class="sec-no">Раздел 1</div>
+  <h2>Что такое Вместилище</h2>
+  <div class="grid2">
+    <div class="card">
+      <p style="margin-top:0"><b>Вместилище</b> - уникальный идентификатор одного запуска проверки (<code>Распорядитель.Идентификатор</code>). Его создает <code>Распорядители.ПроверкаИОтправка</code> в начале проверки, и дальше им помечаются все промежуточные данные этого запуска.</p>
+      <p style="margin-bottom:0">Все кэш-регистры проверки имеют измерение <code>Вместилище</code>: план, описания наборов, сведения о порогах, результаты. Поэтому данные одного запуска не смешиваются с другими - ни с параллельным предконтролем, ни с предыдущим регламентом.</p>
+    </div>
+    <div class="card">
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>Регистр (кэш запуска)</th><th>Кто пишет</th><th>Кто читает</th></tr></thead>
+          <tbody>
+            <tr><td><code>КэшВмПланПроверки</code><br><span style="color:var(--muted)">Вместилище, Лимит, Портфель, ГруппаПортфелей, Поручение</span></td><td>шаг "Действующие лимиты"</td><td>задания обработки проверки; <b>теперь и чтение порогов</b></td></tr>
+            <tr><td><code>КэшВмПороги</code><br><span style="color:var(--muted)">Вместилище, Лимит, Сведения</span></td><td>задания чтения сведений о порогах</td><td>задания обработки проверки</td></tr>
+            <tr><td><code>КэшВмКратко</code><br><span style="color:var(--muted)">Вместилище, Лимит, Фокус, Поручение</span></td><td>задания обработки проверки</td><td>результат проверки</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="flow">
+  <div class="sec-no">Раздел 2</div>
+  <h2>Поток данных одного запуска</h2>
+  <p class="sec-lead">Три шага идут строго по порядку. План записывается раньше, чем начинается чтение порогов, и оба последующих шага берут его из одного регистра по одному Вместилищу.</p>
+  <div class="card diagram">
+    <svg viewBox="0 0 980 520" role="img" aria-label="Поток данных: план, сведения о порогах, обработка проверки">
+      <defs>
+        <marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="arh"/></marker>
+      </defs>
+      <!-- lanes -->
+      <text x="20" y="28" class="lane">Шаг 1. Действующие лимиты</text>
+      <text x="20" y="208" class="lane">Шаг 2. Чтение сведений о порогах</text>
+      <text x="20" y="380" class="lane">Шаг 3. Обработка проверки</text>
+      <line x1="10" y1="180" x2="970" y2="180" class="sep"/>
+      <line x1="10" y1="360" x2="970" y2="360" class="sep"/>
+
+      <!-- step 1 -->
+      <rect x="20" y="45" width="230" height="110" rx="8" class="box"/>
+      <text x="35" y="70" class="t">План проверки</text>
+      <text x="35" y="92" class="s">установки лимитов на портфели</text>
+      <text x="35" y="110" class="s">и группы; для поручения -</text>
+      <text x="35" y="128" class="s">портфели поручения</text>
+      <text x="35" y="146" class="s">РаботаСЛимитами.ПланПроверки</text>
+
+      <rect x="330" y="45" width="260" height="110" rx="8" class="box"/>
+      <text x="345" y="70" class="t">ПланОбработкиПроверки</text>
+      <text x="345" y="92" class="s">отбор стандартных лимитов,</text>
+      <text x="345" y="110" class="s">номер исполнителя, Вместилище</text>
+      <text x="345" y="128" class="s">Кэш.Массивы.Портфели, .Лимиты</text>
+      <text x="345" y="146" class="s">= портфели и лимиты этого плана</text>
+
+      <rect x="670" y="55" width="290" height="90" rx="8" class="store"/>
+      <text x="685" y="80" class="t">КэшВмПланПроверки</text>
+      <text x="685" y="102" class="s">строки "Лимит - Портфель / Группа"</text>
+      <text x="685" y="122" class="s">с ключом Вместилище</text>
+      <text x="685" y="138" class="s">(единственный источник плана)</text>
+
+      <path d="M250,100 L330,100" class="ln" marker-end="url(#ar)"/>
+      <path d="M590,100 L670,100" class="ln" marker-end="url(#ar)"/>
+
+      <!-- step 2 -->
+      <rect x="20" y="225" width="300" height="118" rx="8" class="box old"/>
+      <text x="35" y="250" class="t">Было: ВТ_ПортфелиЛимиты</text>
+      <text x="35" y="272" class="s">каждый портфель плана</text>
+      <text x="35" y="290" class="s">x каждый лимит задания</text>
+      <text x="35" y="308" class="s">+ пустой портфель на лимит</text>
+      <text x="35" y="330" class="s">обычный ФО: 2 117 338 пар</text>
+
+      <rect x="340" y="225" width="300" height="118" rx="8" class="box new"/>
+      <text x="355" y="250" class="t">Стало: ВТ_ПортфелиЛимиты</text>
+      <text x="355" y="272" class="s">пары "Лимит - Портфель" из строк</text>
+      <text x="355" y="290" class="s">КэшВмПланПроверки по Вместилищу</text>
+      <text x="355" y="308" class="s">+ пустой портфель на лимит</text>
+      <text x="355" y="330" class="s">обычный ФО: около 175 тыс. пар</text>
+
+      <rect x="670" y="235" width="290" height="98" rx="8" class="store"/>
+      <text x="685" y="260" class="t">КэшВмПороги</text>
+      <text x="685" y="282" class="s">по лимиту: Соответствие</text>
+      <text x="685" y="300" class="s">{портфель -> сведения о порогах}</text>
+      <text x="685" y="320" class="s">ключ Вместилище, Лимит</text>
+
+      <path d="M815,145 L815,190 L490,190 L490,225" class="ln key" marker-end="url(#ar)"/>
+      <text x="500" y="205" class="k">читает план по тому же Вместилищу</text>
+      <path d="M640,284 L670,284" class="ln" marker-end="url(#ar)"/>
+
+      <!-- step 3 -->
+      <rect x="20" y="405" width="300" height="100" rx="8" class="box"/>
+      <text x="35" y="430" class="t">Задание обработки проверки</text>
+      <text x="35" y="452" class="s">ПланПроверкиИсполнителя(Вместилище, N)</text>
+      <text x="35" y="470" class="s">Фокус = Группа, если заполнена,</text>
+      <text x="35" y="488" class="s">иначе Портфель строки плана</text>
+
+      <rect x="340" y="405" width="300" height="100" rx="8" class="box"/>
+      <text x="355" y="430" class="t">ПроверкаЛимитов.КэшВмКратко</text>
+      <text x="355" y="452" class="s">Сведения = СведенияОПорогах[Фокус]</text>
+      <text x="355" y="470" class="s">для группы: [пустой портфель]</text>
+      <text x="355" y="488" class="s">только структурные лимиты</text>
+
+      <rect x="670" y="415" width="290" height="80" rx="8" class="store"/>
+      <text x="685" y="440" class="t">КэшВмКратко</text>
+      <text x="685" y="462" class="s">зона, базис, отказ, описание</text>
+      <text x="685" y="480" class="s">по паре "лимит - фокус"</text>
+
+      <path d="M940,145 L940,170 L965,170 L965,395 L260,395 L260,405" class="ln key" marker-end="url(#ar)"/>
+      <text x="600" y="390" class="k">читает те же строки плана</text>
+      <path d="M815,333 L815,350 L490,350 L490,405" class="ln" marker-end="url(#ar)"/>
+      <path d="M320,455 L340,455" class="ln" marker-end="url(#ar)"/>
+      <path d="M640,455 L670,455" class="ln" marker-end="url(#ar)"/>
+    </svg>
+  </div>
+</section>
+
+<section id="sets">
+  <div class="sec-no">Раздел 3</div>
+  <h2>Какие ключи вообще читаются</h2>
+  <div class="grid2">
+    <div class="card diagram">
+      <svg viewBox="0 0 460 300" role="img" aria-label="Множества пар">
+        <rect x="10" y="10" width="440" height="280" rx="10" class="setall"/>
+        <text x="25" y="35" class="t">Было построено: все портфели плана x все лимиты задания</text>
+        <text x="25" y="55" class="s">обычный ФО: 2 117 338 пар, из них не читались около 92%</text>
+        <rect x="40" y="80" width="300" height="190" rx="10" class="setplan"/>
+        <text x="55" y="105" class="t">Строится теперь: пары плана</text>
+        <text x="55" y="125" class="s">+ пустой портфель каждого лимита</text>
+        <rect x="70" y="145" width="240" height="105" rx="10" class="setread"/>
+        <text x="85" y="170" class="t">Читается потребителем</text>
+        <text x="85" y="190" class="s">(Лимит, Портфель) строк плана</text>
+        <text x="85" y="208" class="s">с фокусом "портфель"</text>
+        <text x="85" y="226" class="s">(Лимит, пустой) для строк</text>
+        <text x="85" y="244" class="s">с фокусом "группа"</text>
+        <text x="352" y="170" class="s mute">строилось,</text>
+        <text x="352" y="188" class="s mute">но ни разу</text>
+        <text x="352" y="206" class="s mute">не читалось</text>
+      </svg>
+    </div>
+    <div class="card">
+      <h3 style="margin-top:0">Ключевое утверждение</h3>
+      <p>Потребитель сведений о порогах один - <code>ПроверкаЛимитов.КэшВмКратко</code> в задании обработки проверки. Он обращается к соответствию только по фокусу строки плана своего лимита:</p>
+<pre>Кратко.Сведения = Параметры.СведенияОПорогах[Гр_Фокус.Фокус];
+Если ТипЗнч(Гр_Фокус.Фокус) = Тип("СправочникСсылка.ГруппыПортфелей") Тогда
+    Кратко.Сведения = Параметры.СведенияОПорогах[Справочники.Портфели.ПустаяСсылка()];
+КонецЕсли;</pre>
+      <p style="margin-bottom:0">Фокус берется из <code>КэшВмПланПроверки</code> по тому же Вместилищу. Значит, каждый ключ, который читается, - это либо пара "лимит - портфель" из плана, либо "лимит - пустой портфель". Расширение строит ровно эти ключи. Остальные пары штатный код строил, сериализовал и записывал, но к ним никто не обращался.</p>
+    </div>
+  </div>
+</section>
+
+<section id="proof">
+  <div class="sec-no">Раздел 4</div>
+  <h2>Обоснование по шагам</h2>
+  <div class="road">
+    <div class="step"><div><div class="tag">Утв.</div><div class="big">1</div></div><div><h3>Портфели в чтении порогов - это уже портфели плана</h3><p style="margin:0"><code>&amp;Портфели</code> = <code>Кэш.Массивы.Портфели</code> = <code>ПланПроверки.Портфели</code> (заполняется в <code>ПланОбработкиПроверки</code> по строкам плана). Штатный запрос не добавлял новых портфелей - он только пересекал каждый портфель плана с каждым лимитом. Лишние пары - это "портфель, для которого лимит в плане не стоит".</p></div></div>
+    <div class="step"><div><div class="tag">Утв.</div><div class="big">2</div></div><div><h3>План записан раньше и тем же ключом</h3><p style="margin:0">В <code>Распорядители.ПроверкаИОтправка</code> область "ПортфелиИГруппы" вызывает <code>ПланОбработкиПроверки(ПланПроверки, Вместилище, ...)</code>, которая пишет <code>КэшВмПланПроверки</code> с этим Вместилищем. Только потом, в области "ПорогиБазисыПростые", запускается чтение сведений о порогах. Задание чтения порогов и задание обработки проверки берут Вместилище из одного и того же <code>Распорядитель.Идентификатор</code>; задание обработки читает план по нему же (<code>ПланПроверкиИсполнителя(Вместилище, НомерИсполнителя)</code>).</p></div></div>
+    <div class="step"><div><div class="tag">Утв.</div><div class="big">3</div></div><div><h3>Значение по каждой паре не зависит от других пар</h3><p style="margin:0">Дальше по пакету к каждой паре левыми соединениями подтягиваются порог самого портфеля и порог пустого портфеля того же лимита, выбирается приоритет, затем группировка по паре. Все соединения - по паре или по лимиту. Удаление других пар не меняет значение оставшихся: порог портфеля без своей записи по-прежнему наследуется от пустого портфеля лимита.</p></div></div>
+    <div class="step"><div><div class="tag">Утв.</div><div class="big">4</div></div><div><h3>Потребитель читает только ключи плана и пустой портфель</h3><p style="margin:0">Раздел 3: фокус строки плана или пустой портфель для группы. Пустой портфель расширение оставляет для каждого лимита задания, как в штатном тексте. Других обращений к <code>СведенияОПорогах[...]</code> и к <code>КэшВмПороги</code> в конфигурации нет.</p></div></div>
+    <div class="step"><div><div class="tag">Вывод</div><div class="big">=</div></div><div><h3>Каждая проверка получает те же пороги, что и раньше</h3><p style="margin:0">Множество читаемых ключей (утв. 4) целиком входит в множество построенных (утв. 1-2), и значения по этим ключам те же (утв. 3). Значит, ни одна проверка лимита не пропадает и ни одна не получает другой порог. Меняется только объем промежуточных данных, которые никто не читал.</p></div></div>
+  </div>
+</section>
+
+<section id="edge">
+  <div class="sec-no">Раздел 5</div>
+  <h2>Особые случаи</h2>
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr><th>Случай</th><th>Что происходит</th></tr></thead>
+      <tbody>
+        <tr><td>Строка плана по группе портфелей</td><td>Потребитель берет пустой портфель лимита. Пустой портфель строится на каждый лимит всегда - вторая часть первого запроса не менялась.</td></tr>
+        <tr><td>Портфель без собственной записи порогов</td><td>Пара есть в плане - значит, есть и в новом наборе; порог наследуется от пустого портфеля лимита теми же соединениями.</td></tr>
+        <tr><td>Портфель с собственным порогом</td><td>Приоритет портфеля над лимитом выбирается дальше по пакету, код не менялся. Проверено на синтетическом пороге портфеля: результат совпал со штатным.</td></tr>
+        <tr><td>Предконтроль поручения</td><td>План поручения пишется тем же путем до чтения порогов, в строке - портфель поручения. Работает по новому запросу.</td></tr>
+        <tr><td>Внешние лимиты и лимиты другого типа</td><td>В <code>КэшВмПланПроверки</code> попадают только стандартные лимиты. Внешние обрабатываются отдельно и сведения о порогах не читают.</td></tr>
+        <tr><td>Плана по Вместилищу нет или изменился штатный текст</td><td>Расширение выполняет штатный запрос без изменений: проверяет наличие плана и совпадение первого запроса пакета.</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section id="test">
+  <div class="sec-no">Раздел 6</div>
+  <h2>Проверка на данных</h2>
+  <div class="grid2">
+    <div class="card"><h3 style="margin-top:0">Полный прогон, база разработчика</h3><p style="margin:0">Три набора до 3 100 портфелей x 89 лимитов, прогон с расширением и без. Краткий итог по каждой паре "лимит - фокус" (зона, базис, отказ, описание, зона порогов, все примененные пороги): <b>0 расхождений</b> на 177 000, 275 900 и 75 020 строках.</p></div>
+    <div class="card"><h3 style="margin-top:0">Уровень запроса</h3><p style="margin:0">Штатный и новый текст пакета на одних параметрах, плюс синтетический порог портфеля: каждая строка нового результата совпала со строкой штатного, пары нового результата - ровно пары плана и пустой портфель. Т-1 обычного ФО: регламент завершился без ошибок, 175 тыс. структур вместо 2,1 млн.</p></div>
+  </div>
+</section>
+
+</main>
+
+<footer>
+  <div class="wrap">
+    <b>Основание.</b> Код конфигурации "Аванкор: Фронт-офис" 1.4.9.5: Распорядители.ПроверкаИОтправка (области ПортфелиИГруппы, ПорогиБазисыПростые), РаботаСЛимитами.ПланОбработкиПроверки, Исполнители.ПроверкаИОтправка_ЧтениеСведенийОПорогах и ПроверкаИОтправка_ОбработкаПроверки, РегистрСведений.КэшВмПланПроверки.ПланПроверкиИсполнителя, РегистрСведений.ПорогиЛимитов.СведенияОПорогах, ПроверкаЛимитов.КэшВмКратко. Расширение FO_LimitCheckOpt меняет только первый запрос пакета ТекстЗапросаПолученияПорогов.
+  </div>
+</footer>
+
+</body>
+</html>
