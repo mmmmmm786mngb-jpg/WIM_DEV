@@ -1,0 +1,98 @@
+{
+  "title": "Сверка результатов проверки лимитов",
+  "properties": { "autoTitle": false, "width": 120 },
+  "events": { "OnCreateAtServer": "ПриСозданииНаСервере" },
+  "attributes": [
+    { "name": "Объект", "type": "ExternalDataProcessorObject.FO_LimitRegress", "main": true },
+    { "name": "Проверки", "type": "ValueTable", "columns": [
+      { "name": "Вместилище", "type": "UUID" },
+      { "name": "Дата", "type": "dateTime" },
+      { "name": "ДатаПроверки", "type": "date" },
+      { "name": "ВидПроверки", "type": "string(20)" },
+      { "name": "Строк", "type": "decimal(12,0)" },
+      { "name": "Архив", "type": "boolean" },
+      { "name": "Отказ", "type": "boolean" },
+      { "name": "Тестирование", "type": "boolean" },
+      { "name": "Описание", "type": "string" }
+    ]},
+    { "name": "КоличествоПроверок", "type": "decimal(4,0)", "title": "Показывать последних" },
+    { "name": "ПаспортСнимка", "type": "string", "title": "Последний снимок" },
+    { "name": "ФайлА", "type": "string", "title": "Было" },
+    { "name": "ФайлБ", "type": "string", "title": "Стало" },
+    { "name": "АдресА", "type": "string" },
+    { "name": "АдресБ", "type": "string" },
+    { "name": "ПаспортА", "type": "string" },
+    { "name": "ПаспортБ", "type": "string" },
+    { "name": "ИтогСверки", "type": "string", "title": "Итог" },
+    { "name": "Отчет", "type": "mxl:SpreadsheetDocument" },
+    { "name": "Замеры", "type": "ValueTable", "columns": [
+      { "name": "Операция", "type": "string(150)" },
+      { "name": "Было", "type": "decimal(15,3)" },
+      { "name": "Стало", "type": "decimal(15,3)" },
+      { "name": "Разница", "type": "decimal(15,3)" }
+    ]},
+    { "name": "ДополнительнаяОбработкаСсылка", "type": "CatalogRef.ДополнительныеОтчетыИОбработки" }
+  ],
+  "commands": [
+    { "name": "Обновить", "action": "Обновить", "title": "Обновить список" },
+    { "name": "СнятьСнимок", "action": "СнятьСнимок", "title": "Сохранить снимок в файл" },
+    { "name": "ВыбратьФайлА", "action": "ВыбратьФайлА", "title": "Выбрать файл \"было\"" },
+    { "name": "ВыбратьФайлБ", "action": "ВыбратьФайлБ", "title": "Выбрать файл \"стало\"" },
+    { "name": "Сверить", "action": "Сверить", "title": "Сверить" },
+    { "name": "СохранитьОтчет", "action": "СохранитьОтчет", "title": "Сохранить отчет в Excel" }
+  ],
+  "elements": [
+    { "pages": "Страницы", "children": [
+      { "page": "СтраницаСнимок", "title": "Снимок", "children": [
+        { "label": "ПодсказкаСнимок", "autoMaxWidth": false, "horizontalStretch": true, "title": "Выберите завершенную проверку (регламент или \"Проверить\" на блоттере) и сохраните снимок ее результата в файл. Снимок снимается по-старому и по-новому, затем файлы сверяются на закладке \"Сверка\"." },
+        { "group": "horizontalIfPossible", "name": "ГруппаКомандыСнимок", "children": [
+          { "button": "КнопкаОбновить", "command": "Обновить" },
+          { "input": "КоличествоПроверок", "path": "КоличествоПроверок", "width": 5, "spinButton": true },
+          { "button": "КнопкаСнятьСнимок", "command": "СнятьСнимок", "defaultButton": true }
+        ]},
+        { "table": "Проверки", "path": "Проверки", "readOnly": true, "commandBarLocation": "None", "height": 12,
+          "events": { "Selection": "ПроверкиВыбор" },
+          "columns": [
+            { "input": "ПроверкиДата", "path": "Проверки.Дата", "title": "Начало проверки" },
+            { "input": "ПроверкиВидПроверки", "path": "Проверки.ВидПроверки", "title": "Вид" },
+            { "input": "ПроверкиСтрок", "path": "Проверки.Строк", "title": "Строк результата" },
+            { "input": "ПроверкиДатаПроверки", "path": "Проверки.ДатаПроверки", "title": "Дата лимитов" },
+            { "check": "ПроверкиАрхив", "path": "Проверки.Архив", "title": "Архив" },
+            { "check": "ПроверкиОтказ", "path": "Проверки.Отказ", "title": "Отказ" },
+            { "check": "ПроверкиТестирование", "path": "Проверки.Тестирование", "title": "Тест" },
+            { "input": "ПроверкиОписание", "path": "Проверки.Описание", "title": "Описание" },
+            { "input": "ПроверкиВместилище", "path": "Проверки.Вместилище", "title": "Идентификатор" }
+          ]},
+        { "input": "ПаспортСнимка", "path": "ПаспортСнимка", "multiLine": true, "readOnly": true, "height": 4, "titleLocation": "top", "autoMaxWidth": false, "horizontalStretch": true }
+      ]},
+      { "page": "СтраницаСверка", "title": "Сверка", "children": [
+        { "group": "alwaysHorizontal", "name": "ГруппаФайлы", "children": [
+          { "group": "vertical", "name": "ГруппаФайлА", "children": [
+            { "input": "ФайлА", "path": "ФайлА", "readOnly": true, "choiceButton": true, "autoMaxWidth": false, "horizontalStretch": true, "events": { "StartChoice": "ФайлАНачалоВыбора" } },
+            { "input": "ПаспортА", "path": "ПаспортА", "multiLine": true, "readOnly": true, "height": 4, "titleLocation": "none", "autoMaxWidth": false, "horizontalStretch": true }
+          ]},
+          { "group": "vertical", "name": "ГруппаФайлБ", "children": [
+            { "input": "ФайлБ", "path": "ФайлБ", "readOnly": true, "choiceButton": true, "autoMaxWidth": false, "horizontalStretch": true, "events": { "StartChoice": "ФайлБНачалоВыбора" } },
+            { "input": "ПаспортБ", "path": "ПаспортБ", "multiLine": true, "readOnly": true, "height": 4, "titleLocation": "none", "autoMaxWidth": false, "horizontalStretch": true }
+          ]}
+        ]},
+        { "group": "horizontalIfPossible", "name": "ГруппаКомандыСверка", "children": [
+          { "button": "КнопкаСверить", "command": "Сверить" },
+          { "button": "КнопкаСохранитьОтчет", "command": "СохранитьОтчет" }
+        ]},
+        { "input": "ИтогСверки", "path": "ИтогСверки", "multiLine": true, "readOnly": true, "height": 3, "titleLocation": "top", "autoMaxWidth": false, "horizontalStretch": true },
+        { "spreadsheet": "Отчет", "path": "Отчет", "titleLocation": "none" }
+      ]},
+      { "page": "СтраницаСкорость", "title": "Скорость", "children": [
+        { "label": "ПодсказкаСкорость", "autoMaxWidth": false, "horizontalStretch": true, "title": "Время шагов проверки по регистру \"Замеры времени\" для двух сверенных снимков, секунд." },
+        { "table": "Замеры", "path": "Замеры", "readOnly": true, "commandBarLocation": "None",
+          "columns": [
+            { "input": "ЗамерыОперация", "path": "Замеры.Операция", "title": "Шаг" },
+            { "input": "ЗамерыБыло", "path": "Замеры.Было", "title": "Было" },
+            { "input": "ЗамерыСтало", "path": "Замеры.Стало", "title": "Стало" },
+            { "input": "ЗамерыРазница", "path": "Замеры.Разница", "title": "Разница" }
+          ]}
+      ]}
+    ]}
+  ]
+}
