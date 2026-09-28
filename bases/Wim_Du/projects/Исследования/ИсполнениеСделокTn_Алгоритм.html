@@ -1,0 +1,529 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Исполнение сделок Tn</title>
+<style>
+:root {
+  --bg: #f6f7f9;
+  --surface: #ffffff;
+  --text: #1c2430;
+  --muted: #5d6878;
+  --border: #d5dae2;
+  --line: #9aa4b2;
+  --cfg: #2f6fdb;
+  --cfg-bg: #eaf1fd;
+  --epf: #1f8a5b;
+  --epf-bg: #e6f5ee;
+  --bsp: #7a4fd0;
+  --bsp-bg: #f1ebfc;
+  --loss: #c8372d;
+  --loss-bg: #fdecea;
+  --warn: #b26a00;
+  --warn-bg: #fff4e0;
+  --code-bg: #eef1f5;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #14181e;
+    --surface: #1c222b;
+    --text: #e3e8ef;
+    --muted: #9ba6b5;
+    --border: #323b47;
+    --line: #5c6776;
+    --cfg: #7aa7f5;
+    --cfg-bg: #1b2a44;
+    --epf: #5cc794;
+    --epf-bg: #16322a;
+    --bsp: #b395f0;
+    --bsp-bg: #2a2140;
+    --loss: #f07b72;
+    --loss-bg: #3a1d1b;
+    --warn: #f0b458;
+    --warn-bg: #3a2c14;
+    --code-bg: #262e39;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #14181e;
+  --surface: #1c222b;
+  --text: #e3e8ef;
+  --muted: #9ba6b5;
+  --border: #323b47;
+  --line: #5c6776;
+  --cfg: #7aa7f5;
+  --cfg-bg: #1b2a44;
+  --epf: #5cc794;
+  --epf-bg: #16322a;
+  --bsp: #b395f0;
+  --bsp-bg: #2a2140;
+  --loss: #f07b72;
+  --loss-bg: #3a1d1b;
+  --warn: #f0b458;
+  --warn-bg: #3a2c14;
+  --code-bg: #262e39;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font: 15px/1.5 "Segoe UI", system-ui, -apple-system, sans-serif;
+}
+main { max-width: 1040px; margin: 0 auto; padding: 32px 16px 64px; }
+h1 { font-size: 26px; margin: 0 0 6px; }
+h2 { font-size: 20px; margin: 44px 0 6px; padding-top: 8px; border-top: 1px solid var(--border); }
+p.lead, p.sub { color: var(--muted); margin: 0 0 18px; }
+code, .m {
+  font-family: Consolas, "Cascadia Mono", monospace;
+  font-size: 12.5px;
+}
+code { background: var(--code-bg); padding: 1px 5px; border-radius: 4px; }
+
+nav.toc { display: flex; flex-wrap: wrap; gap: 8px; margin: 18px 0 8px; }
+nav.toc a {
+  color: var(--text); text-decoration: none; font-size: 13px;
+  border: 1px solid var(--border); background: var(--surface);
+  padding: 4px 10px; border-radius: 999px;
+}
+nav.toc a:hover { border-color: var(--cfg); }
+
+.legend { display: flex; flex-wrap: wrap; gap: 14px; margin: 14px 0 0; font-size: 13px; color: var(--muted); }
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+.sw { width: 14px; height: 14px; border-radius: 3px; border: 2px solid; display: inline-block; }
+.sw.epf { border-color: var(--epf); background: var(--epf-bg); }
+.sw.cfg { border-color: var(--cfg); background: var(--cfg-bg); }
+.sw.bsp { border-color: var(--bsp); background: var(--bsp-bg); }
+.sw.loss { border-color: var(--loss); background: var(--loss-bg); }
+
+/* Flow */
+.flow { display: flex; flex-direction: column; align-items: center; margin-top: 18px; }
+.node {
+  width: 100%; max-width: 620px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-left: 5px solid var(--line);
+  border-radius: 8px;
+  padding: 10px 14px;
+}
+.node.epf { border-left-color: var(--epf); }
+.node.cfg { border-left-color: var(--cfg); }
+.node.bsp { border-left-color: var(--bsp); }
+.node.dec { border-left-color: var(--warn); background: var(--warn-bg); }
+.node.end { border-left-color: var(--line); text-align: center; }
+.node .t { font-weight: 600; }
+.node .m { color: var(--muted); display: block; margin-top: 2px; word-break: break-word; }
+.node ul { margin: 6px 0 0; padding-left: 18px; font-size: 13.5px; }
+.node li { margin: 2px 0; }
+.tag {
+  display: inline-block; font-size: 11px; font-weight: 600; letter-spacing: .02em;
+  padding: 1px 7px; border-radius: 999px; margin-left: 6px; vertical-align: 1px;
+}
+.tag.epf { color: var(--epf); background: var(--epf-bg); }
+.tag.cfg { color: var(--cfg); background: var(--cfg-bg); }
+.tag.bsp { color: var(--bsp); background: var(--bsp-bg); }
+
+.loss {
+  margin-top: 8px; padding: 6px 10px; border-radius: 6px;
+  background: var(--loss-bg); color: var(--loss);
+  font-size: 13px; border: 1px dashed var(--loss);
+}
+.loss b { font-weight: 700; }
+.note {
+  margin-top: 8px; padding: 6px 10px; border-radius: 6px;
+  background: var(--warn-bg); color: var(--warn); font-size: 13px;
+}
+
+.arrow {
+  position: relative; width: 2px; height: 30px; background: var(--line);
+  margin: 0 auto;
+}
+.arrow::after {
+  content: ""; position: absolute; left: -5px; bottom: -1px;
+  border-left: 6px solid transparent; border-right: 6px solid transparent;
+  border-top: 8px solid var(--line);
+}
+.arrow .lbl {
+  position: absolute; left: 12px; top: 50%; transform: translateY(-50%);
+  white-space: nowrap; font-size: 12px; color: var(--muted);
+}
+
+/* Parallel branches */
+.split { width: 100%; margin: 0 auto; }
+.split .bar { height: 2px; background: var(--line); margin: 0 auto; }
+.split .cols { display: grid; gap: 12px; }
+.split .col { display: flex; flex-direction: column; align-items: center; }
+.split .col .node { max-width: none; font-size: 14px; }
+.split .col .stub { width: 2px; height: 16px; background: var(--line); }
+.cols-2 { grid-template-columns: repeat(2, 1fr); }
+.cols-3 { grid-template-columns: repeat(3, 1fr); }
+.cols-4 { grid-template-columns: repeat(4, 1fr); }
+.split.w2 .bar { width: 50%; }
+.split.w3 .bar { width: 67%; }
+.split.w4 .bar { width: 75%; }
+
+.cond { font-size: 12px; color: var(--muted); margin-bottom: 4px; text-align: center; }
+
+/* Tables */
+table { width: 100%; border-collapse: collapse; margin-top: 14px; font-size: 14px; background: var(--surface); }
+th, td { border: 1px solid var(--border); padding: 8px 10px; text-align: left; vertical-align: top; }
+th { background: var(--code-bg); font-weight: 600; }
+td .m { color: var(--muted); }
+
+@media (max-width: 720px) {
+  .cols-3, .cols-4 { grid-template-columns: 1fr 1fr; }
+  .split .bar { display: none; }
+}
+@media (max-width: 480px) {
+  .cols-2, .cols-3, .cols-4 { grid-template-columns: 1fr; }
+  .arrow .lbl { white-space: normal; width: 200px; }
+  table { font-size: 13px; }
+  .tablewrap { overflow-x: auto; }
+}
+</style>
+</head>
+<body>
+<main>
+
+<h1>Исполнение сделок Tn в ДУ</h1>
+<p class="lead">Алгоритм по коду выгрузки от 07.09.2026: запуск из менеджера выполнения процессов, многопоточное исполнение по пулам, маршрут бизнес-процесса СделкиTn, проведение перерегистрации и путь ошибки до письма.</p>
+
+<nav class="toc">
+  <a href="#d1">1. Цепочка вызовов</a>
+  <a href="#d2">2. Отбор и потоки</a>
+  <a href="#d3">3. Маршрут БП СделкиTn</a>
+  <a href="#d4">4. Исполнение задачи</a>
+  <a href="#d5">5. Путь ошибки до письма</a>
+  <a href="#t1">6. Почему не исполняется одна сделка</a>
+</nav>
+
+<div class="legend">
+  <span><i class="sw epf"></i>Внешняя обработка</span>
+  <span><i class="sw cfg"></i>Конфигурация</span>
+  <span><i class="sw bsp"></i>БСП / платформа</span>
+  <span><i class="sw loss"></i>Место потери ошибки или сделки</span>
+</div>
+
+<!-- 1 -->
+<h2 id="d1">1. Цепочка вызовов: от менеджера до письма</h2>
+<p class="sub">Менеджер выполняет этапы маршрута строго по очереди. Исполнение сделок Tn - один из этапов с признаком "внешняя обработка".</p>
+
+<div class="flow">
+  <div class="node epf">
+    <div class="t">Менеджер выполнения процессов <span class="tag epf">внМенеджерВыполненияПроцессов</span></div>
+    <span class="m">Форма: ВыполнитьПроцесс → ЗапуститьПроцесс (по ИндексПроцесса)</span>
+    <ul>
+      <li><code>ПрочитатьНастройки</code>: этапы из документа <code>ДополнительныеНастройкиЗакрытияПериода</code>, дата процесса по типу времени выполнения</li>
+      <li><code>ПодготовитьПроцессВыполнения</code>: общие, утренние, вечерние операции и этапы с внешней обработкой</li>
+    </ul>
+  </div>
+  <div class="arrow"><span class="lbl">по одному этапу, следующий после завершения</span></div>
+  <div class="node bsp">
+    <div class="t">ДлительныеОперации.ВыполнитьВФоне <span class="tag bsp">БСП</span></div>
+    <span class="m">ВыполнитьПроцедуруМодуляОбъектаОбработки, ИмяМетода = "ВыполнитьКоманду"</span>
+    <div class="note">Передаются только настройки доп. обработки (пулы, число потоков, режим, рассылка). Дата процесса, пул и договоры менеджера не передаются.</div>
+  </div>
+  <div class="arrow"></div>
+  <div class="node epf">
+    <div class="t">Исполнение сделок Т+n ДУ1 <span class="tag epf">внИсполнениеСделокТ+2_ДУ</span></div>
+    <span class="m">ВыполнитьКоманду("ФоновоеВыполнение_ПотоковоеИсполнениеСделокПул")</span>
+    <ul>
+      <li><code>ДатаИсполнения = НачалоДня(ТекущаяДата())</code> (вариант Т-1: минус сутки)</li>
+      <li><code>ВыполнитьСделкиПотоки(..., "Пул")</code></li>
+    </ul>
+  </div>
+  <div class="arrow"></div>
+  <div class="node epf">
+    <div class="t">ВыполнитьСделкиПотоки</div>
+    <ul>
+      <li><code>РассчитатьКомиссиюОбороотовВБизнесПроцессах</code> (ошибка: отдельное письмо)</li>
+      <li><code>ПересчитатьКурсКомиссийВСделкахОбратногоРЕПО</code> (ошибка: журнал регистрации)</li>
+      <li><code>СписокПулов = Пулы.ВыгрузитьКолонку("Пул")</code></li>
+      <li><code>ВыполнитьСделкиВПотоках(Истина, Отказ, КомментарийПотоки, СписокПулов)</code></li>
+    </ul>
+  </div>
+  <div class="arrow"><span class="lbl">см. диаграмму 2</span></div>
+  <div class="node epf">
+    <div class="t">ВыполнитьСделкиВПотоках</div>
+    <ul>
+      <li><code>РаспределитьЗадачиПоПотокам</code>: договоры по N потокам</li>
+      <li>на каждый поток <code>ФоновыеЗадания.Выполнить("VTB_ОбщийМодуль.ВыполнитьИсполнениеСделокПоСпискуДоговорДУ")</code></li>
+      <li>цикл ожидания, пока все задания не выйдут из состояния "Активно"</li>
+      <li>сбор сообщений заданий, <code>Отказ = есть сообщения</code></li>
+    </ul>
+  </div>
+  <div class="arrow"></div>
+  <div class="node epf">
+    <div class="t">Итог этапа</div>
+    <ul>
+      <li>письмо на <code>СписокРассылки</code>: тема <code>{OK}</code> или <code>{FAIL}</code>, тело: время, потоки, причины</li>
+      <li><code>ЗаписьЖурналаРегистрации("Фоновое исполнение сделок Т+n (потоки)")</code></li>
+      <li><code>Задача.ЗадачаИнтеграции</code> с описанием результата рассылки</li>
+    </ul>
+  </div>
+  <div class="arrow"></div>
+  <div class="node end">Менеджер запускает следующий этап маршрута</div>
+</div>
+
+<!-- 2 -->
+<h2 id="d2">2. Отбор задач и распределение по потокам</h2>
+<p class="sub">Отбор одинаковый при распределении и внутри потока, задачи одного бизнес-процесса всегда попадают в один поток.</p>
+
+<div class="flow">
+  <div class="node epf">
+    <div class="t">РаспределитьЗадачиПоПотокам(ДатаИсполнения, КоличествоПотоков, Пул)</div>
+    <span class="m">Запрос к Задача.ВнебиржеваяСделка, СГРУППИРОВАТЬ ПО БизнесПроцесс.ДоговорДУ, УПОРЯДОЧИТЬ ПО количеству задач УБЫВ</span>
+    <ul>
+      <li>не помечена на удаление, БП не помечен на удаление</li>
+      <li><code>БизнесПроцесс.АвтоматическоеВыполнениеЗадач</code></li>
+      <li><code>НЕ Выполнена</code></li>
+      <li><code>СрокИсполнения МЕЖДУ НачалоДня И КонецДня</code> даты исполнения</li>
+      <li>БП ССЫЛКА СделкиTn ИЛИ СделкиРЕПО</li>
+      <li>режим: только физлица / только юрлица / все</li>
+      <li>режим "Пул": <code>ДоговорДУ.Пул В (&amp;Пул)</code>, иначе <code>Пул = ПустаяСсылка</code></li>
+    </ul>
+    <div class="loss"><b>Потеря:</b> задача, не выполненная в свой день, в следующие запуски не отбирается (окно строго один день).</div>
+    <div class="loss"><b>Потеря:</b> БП с пустым договором или с договором, чей пул не указан в настройках, в режиме "Пул" не отбирается.</div>
+  </div>
+  <div class="arrow"><span class="lbl">самый тяжелый договор в наименее загруженный поток</span></div>
+  <div class="split w3">
+    <div class="bar"></div>
+    <div class="cols cols-3">
+      <div class="col"><div class="stub"></div><div class="node cfg"><div class="t">Поток № 0</div><span class="m">СписокДоговор: A, D, ...</span></div></div>
+      <div class="col"><div class="stub"></div><div class="node cfg"><div class="t">Поток № 1</div><span class="m">СписокДоговор: B, E, ...</span></div></div>
+      <div class="col"><div class="stub"></div><div class="node cfg"><div class="t">Поток № N-1</div><span class="m">СписокДоговор: C, ...</span></div></div>
+    </div>
+  </div>
+  <div class="arrow"><span class="lbl">каждый поток параллельно</span></div>
+  <div class="node cfg">
+    <div class="t">VTB_ОбщийМодуль.ВыполнитьИсполнениеСделокПоСпискуДоговорДУ <span class="tag cfg">фоновое задание</span></div>
+    <ul>
+      <li><code>БизнесПроцессы.СделкиTn.ИсполнениеПлановойПозиции(Дата, Отказ, ТекстОтказа, СписокДоговор)</code></li>
+      <li><code>АвтоматическиВыполнитьЗадачиПоСделкеРЕПО(Дата, Отказ, ТекстОтказа, СписокДоговор)</code></li>
+      <li>если <code>ТекстОтказа</code> заполнен: сообщение "Причина отказа: ..."</li>
+    </ul>
+    <div class="loss"><b>Потеря:</b> процедура РЕПО первой строкой делает <code>ТекстОтказа = ""</code> и стирает ошибку Tn. Сообщение "Причина отказа" не выводится.</div>
+    <div class="note">Потоки с договорами одного пула проводят документы одновременно: возможен конфликт блокировок на общих данных пула.</div>
+  </div>
+  <div class="arrow"></div>
+  <div class="node cfg">
+    <div class="t">СделкиTn.ИсполнениеПлановойПозиции <span class="tag cfg">модуль менеджера БП</span></div>
+    <ul>
+      <li><code>ПолучитьОткрытыеЗадачиПоСделкеTn</code>: тот же отбор по дню и списку договоров, только СделкиTn</li>
+      <li>сортировка: юрлица первыми, затем дата документа, затем документ</li>
+      <li>проход 1: по каждой задаче <code>СинхронизоватьПредметПоЗадаче = Истина</code>, <code>ВыполнитьЗадачу()</code> в Попытке</li>
+      <li>если в проходе 1 была точка "Открытие плановой позиции": повторный отбор и проход 2</li>
+    </ul>
+    <div class="loss"><b>Потеря:</b> в Исключении <code>ТекстОтказа = ... + ОписаниеОшибки()</code> перезаписывается, остается только последняя ошибка. Повторной попытки нет.</div>
+  </div>
+</div>
+
+<!-- 3 -->
+<h2 id="d3">3. Маршрут бизнес-процесса СделкиTn</h2>
+<p class="sub">По карте маршрута (Flowchart). Срок каждой задачи задается в обработчике <code>...ПриСозданииЗадач</code>.</p>
+
+<div class="flow">
+  <div class="node end">Старт</div>
+  <div class="arrow"></div>
+  <div class="node cfg">
+    <div class="t">Установка настроек БП</div>
+    <span class="m">задача создается и сразу выполняется в УстановкаНастроекБизнесПроцессаПриСозданииЗадач</span>
+  </div>
+  <div class="arrow"></div>
+  <div class="node cfg">
+    <div class="t">Открытие плановой позиции</div>
+    <span class="m">СрокИсполнения = Дата сделки; документ ОткрытиеПлановойПозиции (ОформитьОткрытиеПлановойПозиции)</span>
+  </div>
+  <div class="arrow"><span class="lbl">Разделение1: создаются задачи всех веток</span></div>
+  <div class="split w4">
+    <div class="bar"></div>
+    <div class="cols cols-4">
+      <div class="col"><div class="stub"></div>
+        <div class="node cfg"><div class="t">Оплата сделки</div><span class="m">Срок = ДатаОплатыСделки</span><span class="m">ОплатаСделки</span></div>
+      </div>
+      <div class="col"><div class="stub"></div>
+        <div class="node cfg"><div class="t">Закрытие плановой позиции</div><span class="m">Срок = ДатаПоставки</span><span class="m">документ Сделка (перерегистрация ц/б)</span></div>
+      </div>
+      <div class="col"><div class="stub"></div>
+        <div class="cond">КомиссияБрокера &gt; 0</div>
+        <div class="node cfg"><div class="t">Оплата комиссии брокера</div><span class="m">Срок = ДатаОплатыКомиссииБрокера</span></div>
+      </div>
+      <div class="col"><div class="stub"></div>
+        <div class="cond">КомиссияБиржи &gt; 0</div>
+        <div class="node cfg"><div class="t">Оплата комиссии биржи</div><span class="m">Срок = ДатаОплатыКомиссииБиржи</span></div>
+      </div>
+    </div>
+  </div>
+  <div class="arrow"><span class="lbl">Слияние1: ждет все ветки</span></div>
+  <div class="node end">Завершение</div>
+</div>
+<div class="flow">
+  <div class="node dec" style="max-width:760px">
+    <div class="t">Тихий отказ при создании задачи</div>
+    Если в <code>...ПриСозданииЗадач</code> оформление документа вернуло <code>Отказ</code>, обработчик делает <code>Сообщить(...)</code> и <code>Возврат</code> без исключения. Задача этой ветки не создается, бизнес-процесс не доходит до Завершения, а исполнение считается успешным.
+  </div>
+</div>
+
+<!-- 4 -->
+<h2 id="d4">4. Исполнение одной задачи и проведение перерегистрации</h2>
+<p class="sub">На примере точки "Закрытие плановой позиции". Документ <code>Сделка</code> создан заранее со статусом "записан" и лежит в <code>Задача.Предмет</code>.</p>
+
+<div class="flow">
+  <div class="node cfg">
+    <div class="t">ТекОбъект.ВыполнитьЗадачу()</div>
+    <span class="m">вызов из цикла ИсполнениеПлановойПозиции, внутри Попытки</span>
+  </div>
+  <div class="arrow"></div>
+  <div class="node dec">
+    <div class="t">ОпределятьКурсНаДатуОперации ИЛИ ОпределятьКурсАктиваНаДатуОперации?</div>
+    <span class="m">ЗакрытиеПлановойПозицииПриВыполнении (модуль объекта БП)</span>
+  </div>
+  <div class="split w2">
+    <div class="bar"></div>
+    <div class="cols cols-2">
+      <div class="col"><div class="stub"></div>
+        <div class="cond">Да</div>
+        <div class="node cfg">
+          <div class="t">ПересчитатьПоКурсуОформитьЗакрытиеПлановойПозиции</div>
+          <ul>
+            <li>курсы на дату документа: <code>КурсыВалютПоДатеПоПортфелю</code></li>
+            <li>курсы комиссий, НКД на дату</li>
+            <li><code>ПроверитьЗаполнение()</code>, иначе <code>Отказ</code></li>
+            <li><code>Записать(Проведение)</code> в Попытке</li>
+          </ul>
+          <div class="loss"><b>Потеря:</b> исключение проведения заменяется на "Не удалось записать документ по точке маршрута" без <code>ОписаниеОшибки()</code>.</div>
+        </div>
+      </div>
+      <div class="col"><div class="stub"></div>
+        <div class="cond">Нет</div>
+        <div class="node cfg">
+          <div class="t">Пересчет не выполняется</div>
+          <span class="m">документ проводится при записи задачи</span>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="arrow"><span class="lbl">Отказ = Ложь</span></div>
+  <div class="node cfg">
+    <div class="t">Запись задачи: ПередЗаписью → ПриЗаписи <span class="tag cfg">Задача.ВнебиржеваяСделка</span></div>
+    <ul>
+      <li><code>ПередЗаписью</code>: исключение, если БП остановлен; заполнение исполнителя и даты исполнения</li>
+      <li><code>ПриЗаписи</code> → <code>СинхронизироватьСтатусПредметаЗадачи(Отказ)</code></li>
+    </ul>
+  </div>
+  <div class="arrow"></div>
+  <div class="node cfg">
+    <div class="t">СинхронизироватьСтатусПредметаЗадачи</div>
+    <ul>
+      <li>если задана <code>ДатаПроведенияПредмета</code>: перенос даты в документ</li>
+      <li><code>Выполнена</code> и документ не проведен: <code>ДокументОбъект.Записать(Проведение)</code> в Попытке</li>
+      <li>ошибка: <code>Отказ = Истина</code>, <code>СообщитьОбОшибке(ОписаниеОшибки())</code></li>
+    </ul>
+    <div class="note">Это точка, где проводится перерегистрация ц/б. Отказ в ПриЗаписи откатывает запись задачи: задача остается невыполненной, документ непроведенным.</div>
+  </div>
+  <div class="arrow"><span class="lbl">исключение поднимается в ВыполнитьЗадачу</span></div>
+  <div class="node cfg">
+    <div class="t">Исключение в цикле ИсполнениеПлановойПозиции</div>
+    <span class="m">Отказ = Истина; ТекстОтказа = ОписаниеОшибки() (затем стирается процедурой РЕПО, см. диаграмму 2)</span>
+  </div>
+</div>
+
+<!-- 5 -->
+<h2 id="d5">5. Путь ошибки до письма</h2>
+<p class="sub">Какие тексты доходят до рассылки, а какие отсекаются.</p>
+
+<div class="flow">
+  <div class="split w3">
+    <div class="cols cols-3">
+      <div class="col">
+        <div class="node cfg"><div class="t">Сообщения маршрута и проведения</div><span class="m">Сообщить(...), СообщитьОбОшибке(...), сообщения документов при проведении</span></div>
+      </div>
+      <div class="col">
+        <div class="node cfg"><div class="t">ОписаниеОшибки() из цикла</div><span class="m">ТекстОтказа в ИсполнениеПлановойПозиции</span>
+          <div class="loss"><b>Стирается</b> в АвтоматическиВыполнитьЗадачиПоСделкеРЕПО</div>
+        </div>
+      </div>
+      <div class="col">
+        <div class="node cfg"><div class="t">Аварийное завершение потока</div><span class="m">ФоновоеЗадание.ИнформацияОбОшибке</span>
+          <div class="loss"><b>Не читается:</b> задание просто убирается из списка ожидания</div>
+        </div>
+      </div>
+    </div>
+    <div class="bar" style="margin-top:0"></div>
+  </div>
+  <div class="arrow"></div>
+  <div class="node epf">
+    <div class="t">Сбор сообщений в ВыполнитьСделкиВПотоках</div>
+    <span class="m">ТекущееЗадание.ПолучитьСообщенияПользователю(Истина)</span>
+    <div class="loss"><b>Фильтр:</b> берутся только тексты, содержащие "Причина отказа". Сообщения маршрута и ошибки проведения отбрасываются.</div>
+  </div>
+  <div class="arrow"><span class="lbl">Отказ = МассивСообщенийИзЗадания.Количество() &gt; 0</span></div>
+  <div class="node epf">
+    <div class="t">Письмо и журнал регистрации</div>
+    <span class="m">При потере всех текстов: тема {OK}, "Исполнение плановых позиций выполнено успешно"</span>
+  </div>
+</div>
+
+<!-- 6 -->
+<h2 id="t1">6. Почему не исполняется ровно одна сделка</h2>
+<p class="sub">Отбор не теряет одну сделку из середины списка. Пропуск возникает при сбое исполнения конкретной задачи, и код делает этот сбой тихим и постоянным.</p>
+
+<div class="tablewrap">
+<table>
+  <thead>
+    <tr><th>Что происходит</th><th>Где в коде</th><th>Почему затрагивает одну сделку</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Отказ пересчета курса и перепроведения</td>
+      <td><span class="m">СделкиTn: ЗакрытиеПлановойПозицииПриВыполнении, ОплатаСделкиПриВыполнении, ПересчитатьПоКурсу...</span></td>
+      <td>Путь идет только для сделок с флагами курса на дату операции: нет курса на дату, не прошла проверка заполнения, ошибка проведения</td>
+    </tr>
+    <tr>
+      <td>Ошибка проведения перерегистрации</td>
+      <td><span class="m">Задача.ВнебиржеваяСделка: СинхронизироватьСтатусПредметаЗадачи</span></td>
+      <td>Ошибка проведения конкретного документа Сделка: остатки, заполнение, блокировка</td>
+    </tr>
+    <tr>
+      <td>Конфликт блокировок между потоками</td>
+      <td><span class="m">параллельные фоновые задания по договорам одного пула</span></td>
+      <td>Одна транзакция становится жертвой конфликта, остальные проходят. Гипотеза, требует проверки по журналу</td>
+    </tr>
+    <tr>
+      <td>Тихий отказ при создании задачи</td>
+      <td><span class="m">СделкиTn: ...ПриСозданииЗадач, Сообщить + Возврат</span></td>
+      <td>Ветка маршрута одной сделки не создается, исключения нет</td>
+    </tr>
+    <tr>
+      <td>Задача не доисполняется на следующий день</td>
+      <td><span class="m">СрокИсполнения МЕЖДУ НачалоДня И КонецДня (оба запроса отбора)</span></td>
+      <td>Любой разовый сбой или срок, выпавший на день без запуска, превращается в постоянный пропуск</td>
+    </tr>
+    <tr>
+      <td>Сбой не виден в письме</td>
+      <td><span class="m">ТекстОтказа = "" в РЕПО; фильтр "Причина отказа"; Отказ по числу сообщений</span></td>
+      <td>Письмо приходит с {OK}, пропуск обнаруживают только пользователи</td>
+    </tr>
+  </tbody>
+</table>
+</div>
+
+<h2>Ключевые объекты</h2>
+<div class="tablewrap">
+<table>
+  <thead><tr><th>Объект</th><th>Методы</th></tr></thead>
+  <tbody>
+    <tr><td>Внешняя обработка внМенеджерВыполненияПроцессов</td><td><span class="m">ПрочитатьНастройки, ПодготовитьПроцессВыполнения, ЗапуститьПроцессПоИндексу; форма: ВыполнитьПроцесс, ОбработатьРезультатЗадания</span></td></tr>
+    <tr><td>Внешняя обработка внИсполнениеСделокТ+2_ДУ (1.20)</td><td><span class="m">ВыполнитьКоманду, ВыполнитьСделкиПотоки, ВыполнитьСделкиВПотоках, РаспределитьЗадачиПоПотокам, УстановитьПользовательскиеНастройки</span></td></tr>
+    <tr><td>Общий модуль VTB_ОбщийМодуль</td><td><span class="m">ВыполнитьИсполнениеСделокПоСпискуДоговорДУ, АвтоматическиВыполнитьЗадачиПоСделкеРЕПО</span></td></tr>
+    <tr><td>Бизнес-процесс СделкиTn, модуль менеджера</td><td><span class="m">ИсполнениеПлановойПозиции, ПолучитьОткрытыеЗадачиПоСделкеTn, ОформитьОткрытиеПлановойПозиции, ОформитьЗакрытиеПлановойПозиции, ОплатаСделки, ПересчитатьПоКурсуОформитьЗакрытиеПлановойПозиции, ПересчитатьПоКурсуОплата</span></td></tr>
+    <tr><td>Бизнес-процесс СделкиTn, модуль объекта</td><td><span class="m">...ПриСозданииЗадач по точкам, ЗакрытиеПлановойПозицииПриВыполнении, ОплатаСделкиПриВыполнении</span></td></tr>
+    <tr><td>Задача ВнебиржеваяСделка, модуль объекта</td><td><span class="m">ПередЗаписью, ПриЗаписи, СинхронизироватьСтатусПредметаЗадачи</span></td></tr>
+  </tbody>
+</table>
+</div>
+
+</main>
+</body>
+</html>
