@@ -1,0 +1,497 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Предпроверка ФО розница</title>
+<style>
+:root{
+  --bg:#f4f6f9;--paper:#ffffff;--ink:#27313f;--muted:#6b7585;--line:#e1e5ec;
+  --brand:#52648a;--brand-ink:#3b4a68;--brand-soft:#eef1f6;
+  --good:#3f7d5c;--good-soft:#edf5f0;--warn:#9a7433;--warn-soft:#f8f3e8;--bad:#a0575a;--bad-soft:#f7eded;
+  --neutral-soft:#f3f4f7;--code:#f6f7f9;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#15181e;--paper:#1c2028;--ink:#dde2ea;--muted:#9099a8;--line:#2c323d;
+    --brand:#9fb0d0;--brand-ink:#b9c6de;--brand-soft:#232a37;
+    --good:#7fbf9b;--good-soft:#1c2a23;--warn:#d0ad6c;--warn-soft:#2b261b;--bad:#d69497;--bad-soft:#2d2021;
+    --neutral-soft:#222730;--code:#191d24;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#15181e;--paper:#1c2028;--ink:#dde2ea;--muted:#9099a8;--line:#2c323d;
+  --brand:#9fb0d0;--brand-ink:#b9c6de;--brand-soft:#232a37;
+  --good:#7fbf9b;--good-soft:#1c2a23;--warn:#d0ad6c;--warn-soft:#2b261b;--bad:#d69497;--bad-soft:#2d2021;
+  --neutral-soft:#222730;--code:#191d24;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.55 "Segoe UI",Roboto,Arial,sans-serif}
+.wrap{max-width:1040px;margin:0 auto;padding:0 16px}
+h2{font-size:19px;line-height:1.3;margin:0 0 4px;color:var(--brand-ink);font-weight:650}
+h3{font-size:15px;margin:14px 0 6px;font-weight:650}
+p{margin:6px 0}
+ul{margin:6px 0;padding-left:20px}
+li{margin:3px 0}
+section{padding:28px 0 4px}
+.sec-no{display:inline-block;font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:2px}
+.sec-lead{color:var(--muted);max-width:780px;margin-bottom:12px}
+code{font-family:Consolas,"Cascadia Mono",monospace;font-size:12.5px;background:var(--code);border:1px solid var(--line);padding:0 4px;border-radius:3px}
+
+/* header */
+.hero{background:var(--paper);border-bottom:1px solid var(--line);padding:14px 0 18px}
+.brandbar{display:flex;align-items:center;justify-content:space-between;gap:12px;padding-bottom:12px;margin-bottom:14px;border-bottom:1px solid var(--line)}
+.logo{height:24px;width:auto;color:var(--brand);display:block;flex:none}
+.kicker{font-size:11.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin:0;text-align:right}
+.hero h1{font-size:21px;line-height:1.3;margin:0 0 12px;font-weight:650;color:var(--brand-ink);max-width:860px}
+.hero h1 span{color:var(--good)}
+.hero .sub{color:var(--muted);max-width:860px;margin:0 0 14px}
+.ba-hero{display:flex;align-items:stretch;gap:10px;flex-wrap:wrap;margin:0 0 14px}
+.ba-box{border-radius:8px;padding:8px 14px 9px;min-width:170px;border:1px solid var(--line);background:var(--neutral-soft)}
+.ba-box .l{font-size:11px;letter-spacing:.08em;text-transform:uppercase;font-weight:700;color:var(--muted)}
+.ba-box .v{font-size:28px;font-weight:700;line-height:1.15;white-space:nowrap;font-variant-numeric:tabular-nums;color:var(--ink)}
+.ba-box .v small{font-size:14px;font-weight:600;margin:0 6px 0 2px;color:var(--muted)}
+.ba-box .v small:last-child{margin-right:0}
+.ba-box .s{font-size:12px;color:var(--muted)}
+.ba-box.was{border-left:3px solid var(--bad)}
+.ba-box.now{border-left:3px solid var(--good);background:var(--good-soft)}
+.ba-box.now .v{color:var(--good)}
+.ba-arrow{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;color:var(--muted);padding:0 2px}
+.ba-arrow .a{font-size:22px;line-height:1}
+.ba-arrow .x{font-size:12px;font-weight:700;color:var(--good);white-space:nowrap}
+.goals{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.goal{background:var(--paper);border:1px solid var(--line);border-radius:8px;padding:10px 14px}
+.goal .g-head{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:6px}
+.goal .g-name{font-weight:650;font-size:14px;color:var(--brand-ink)}
+.pill{display:inline-block;font-size:11px;font-weight:600;padding:1px 8px;border-radius:999px;white-space:nowrap;border:1px solid}
+.pill.done{color:var(--good);border-color:var(--good);background:var(--good-soft)}
+.pill.next{color:var(--warn);border-color:var(--warn);background:var(--warn-soft)}
+.goal .g-row{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.goal .g-cell .l{font-size:11.5px;color:var(--muted)}
+.goal .g-cell .v{font-size:16px;font-weight:650;line-height:1.25}
+.goal .g-cell .v.win{color:var(--good)}
+.goal .g-note{font-size:12.5px;color:var(--muted);margin-top:6px}
+
+nav.jump{position:sticky;top:0;z-index:10;background:color-mix(in srgb,var(--paper) 94%,transparent);border-bottom:1px solid var(--line);backdrop-filter:blur(6px)}
+nav.jump .wrap{display:flex;gap:4px 16px;flex-wrap:wrap;padding-top:7px;padding-bottom:7px;font-size:12.5px}
+nav.jump a{color:var(--brand-ink);text-decoration:none}
+nav.jump a:hover{text-decoration:underline}
+
+.card{background:var(--paper);border:1px solid var(--line);border-radius:8px;padding:12px 16px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.callout{border-left:3px solid var(--brand);background:var(--brand-soft);border-radius:6px;padding:8px 12px;margin:10px 0}
+.callout.good{border-color:var(--good);background:var(--good-soft)}
+.callout.warn{border-color:var(--warn);background:var(--warn-soft)}
+
+.scope dl{display:grid;grid-template-columns:140px 1fr;gap:4px 12px;margin:0}
+.scope dt{color:var(--muted);font-size:13px}
+.scope dd{margin:0}
+
+.hyp{display:grid;gap:8px}
+.h{display:grid;grid-template-columns:34px 1fr auto;gap:12px;align-items:start;background:var(--paper);border:1px solid var(--line);border-radius:8px;padding:10px 14px}
+.h .num{width:28px;height:28px;border-radius:6px;display:grid;place-items:center;font-weight:700;font-size:13px;background:var(--neutral-soft);color:var(--muted)}
+.h.ok .num{background:var(--good-soft);color:var(--good)}
+.h.no .num{background:var(--bad-soft);color:var(--bad)}
+.h.later .num{background:var(--warn-soft);color:var(--warn)}
+.h .t{font-weight:650;font-size:14px;margin-bottom:2px}
+.h .d{color:var(--muted);font-size:13px}
+.h .d b{color:var(--ink);font-weight:600}
+.verdict{font-size:11px;font-weight:600;padding:1px 8px;border-radius:999px;white-space:nowrap;border:1px solid}
+.h.ok .verdict{color:var(--good);border-color:var(--good)}
+.h.no .verdict{color:var(--bad);border-color:var(--bad)}
+.h.later .verdict{color:var(--warn);border-color:var(--warn)}
+
+.ba{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px}
+.ba .card h3{margin-top:0;font-size:14px}
+.dots{display:flex;flex-direction:column;gap:4px;margin:8px 0}
+.dots .row{display:flex;gap:3px;align-items:center;font-size:11.5px;color:var(--muted)}
+.dots i{display:inline-block;width:11px;height:11px;border-radius:3px;background:var(--line)}
+.dots i.scan{background:var(--bad)}
+.dots i.new{background:var(--brand)}
+.dots i.hit{background:var(--good)}
+.dots .row span{margin-left:6px}
+pre{background:var(--code);border:1px solid var(--line);border-radius:6px;padding:10px 12px;overflow-x:auto;font:12px/1.5 Consolas,"Cascadia Mono",monospace;margin:6px 0}
+pre .del{color:var(--bad)}
+pre .ins{color:var(--good)}
+
+.checks{list-style:none;padding:0;margin:0;display:grid;gap:6px}
+.checks li{display:grid;grid-template-columns:20px 1fr;gap:6px;align-items:start;margin:0}
+.checks .ic{width:17px;height:17px;border-radius:50%;display:grid;place-items:center;font-size:10.5px;font-weight:700;margin-top:2px}
+.checks .ic.y{background:var(--good-soft);color:var(--good)}
+.checks .ic.n{background:var(--warn-soft);color:var(--warn)}
+
+.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:4px 0 10px}
+.kpi{background:var(--paper);border:1px solid var(--line);border-radius:8px;padding:9px 12px}
+.kpi .l{font-size:12px;color:var(--muted);min-height:32px}
+.kpi .v{font-size:20px;font-weight:650;line-height:1.15;color:var(--brand-ink);white-space:nowrap}
+.kpi .v.good{color:var(--good)}
+.kpi .s{font-size:12px;color:var(--muted);margin-top:2px}
+
+.bars{display:grid;gap:8px;margin:8px 0 4px}
+.bar{display:grid;grid-template-columns:130px 1fr 76px;gap:10px;align-items:center}
+.bar .lab{font-size:12.5px;color:var(--muted)}
+.bar .track{position:relative;height:18px;background:var(--neutral-soft);border-radius:4px;overflow:hidden}
+.bar .fill{position:absolute;left:0;top:0;bottom:0;border-radius:4px}
+.bar .fill.old{background:color-mix(in srgb,var(--bad) 70%,transparent)}
+.bar .fill.fc{background:repeating-linear-gradient(45deg,color-mix(in srgb,var(--warn) 60%,transparent) 0 5px,transparent 5px 10px)}
+.bar .fill.new{background:var(--good)}
+.bar .fill.target{background:none;border-right:2px dashed var(--brand);border-radius:0}
+.bar .val{font-weight:650;font-size:13px;text-align:right}
+.axis{display:grid;grid-template-columns:130px 1fr 76px;gap:10px;font-size:11px;color:var(--muted)}
+.axis .ticks{display:flex;justify-content:space-between}
+
+.stack{display:flex;height:26px;border-radius:6px;overflow:hidden;margin:10px 0 8px;border:1px solid var(--line)}
+.stack div{display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;color:#fff;white-space:nowrap;overflow:hidden}
+.legend{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:12px;color:var(--muted)}
+.legend span{display:inline-flex;align-items:center;gap:5px}
+.legend i{width:10px;height:10px;border-radius:2px;display:inline-block}
+.c1{background:#52648a}.c2{background:#7d8cab}.c3{background:#a3aec4}.c4{background:#c3b89e}.c5{background:#3f7d5c}.c6{background:#c9ccd3}
+
+.tbl-wrap{overflow-x:auto;border-radius:8px;border:1px solid var(--line)}
+table{border-collapse:collapse;width:100%;background:var(--paper);font-size:13px}
+th,td{padding:6px 10px;text-align:left;vertical-align:top;border-bottom:1px solid var(--line)}
+th{background:var(--brand-soft);color:var(--brand-ink);font-weight:600;font-size:12.5px}
+tr:last-child td{border-bottom:none}
+td.n{text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
+
+.road{display:grid;gap:10px}
+.step{display:grid;grid-template-columns:70px 1fr;gap:12px;background:var(--paper);border:1px solid var(--line);border-radius:8px;padding:12px 16px}
+.step .tag{font-size:10.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.step .big{font-size:22px;font-weight:700;color:var(--brand);line-height:1.1}
+.step h3{margin:0 0 4px}
+.step .eff{display:inline-block;margin-top:6px;font-size:12px;color:var(--muted);background:var(--neutral-soft);padding:1px 8px;border-radius:999px}
+.ideas{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-top:8px}
+.idea{border:1px solid var(--line);border-radius:6px;padding:8px 12px;background:var(--paper)}
+.idea b{display:block;margin-bottom:2px;font-weight:650}
+.idea .why{font-size:13px;color:var(--muted)}
+
+footer{padding:28px 0 40px;color:var(--muted);font-size:12.5px}
+
+/* screenshots */
+.shot{margin:10px 0 0;background:var(--paper);border:1px solid var(--line);border-radius:8px;padding:10px 12px}
+.shot-title{font-weight:650;font-size:13.5px;margin-bottom:8px}
+.shot-title .tag{display:inline-block;font-size:10.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--brand-ink);background:var(--brand-soft);border-radius:4px;padding:0 6px;margin-right:6px;vertical-align:1px}
+.shot-img{display:block;width:100%;padding:0;border:1px solid var(--line);border-radius:4px;background:#fff;cursor:zoom-in;overflow:hidden}
+.shot-img img{display:block;width:100%;height:auto}
+.shot-cap{font-size:12.5px;color:var(--muted);margin-top:8px}
+.shot-cap b{color:var(--ink);font-weight:600}
+.lightbox{position:fixed;inset:0;z-index:50;background:rgba(10,14,22,.85);display:none;align-items:center;justify-content:center;padding:16px;cursor:zoom-out}
+.lightbox.open{display:flex}
+.lightbox img{max-width:100%;max-height:100%;border-radius:4px;background:#fff}
+
+@media (max-width:820px){
+  .goals,.grid2,.grid3,.ba,.ideas{grid-template-columns:1fr}
+  .kpis{grid-template-columns:1fr 1fr}
+  .step{grid-template-columns:1fr}
+  .bar,.axis{grid-template-columns:90px 1fr 64px}
+  .scope dl{grid-template-columns:1fr}
+  .scope dt{margin-top:4px}
+}
+@media (max-width:520px){
+  .brandbar{flex-direction:column;align-items:flex-start}
+  .kicker{text-align:left}
+  .h{grid-template-columns:28px 1fr}
+  .h .verdict{grid-column:2;justify-self:start}
+  .ba-hero{flex-direction:column}
+  .ba-arrow{flex-direction:row;gap:8px}
+  .ba-arrow .a{transform:rotate(90deg)}
+}
+
+.kicker .env{text-transform:none;letter-spacing:0;font-size:12px;margin-top:3px;color:var(--muted)}
+.kicker .env b{color:var(--brand-ink);font-weight:600;font-family:Consolas,"Cascadia Mono",monospace;font-size:11.5px}
+.ba-box.prod{opacity:.85;border-style:dashed;margin-left:auto;min-width:0}
+.ba-box.prod .v{font-size:22px;padding-top:4px}
+.diagram svg{width:100%;height:auto;display:block;font-family:"Segoe UI",Roboto,Arial,sans-serif}
+.diagram .t{font-size:13px;font-weight:650;fill:var(--ink)}
+.diagram .s{font-size:11.5px;fill:var(--muted)}
+.diagram .v{font-size:11.5px;font-weight:600;fill:var(--ink)}
+.diagram .old{fill:var(--bad);opacity:.7}
+.diagram .new{fill:var(--good);opacity:.8}
+.diagram .grid{stroke:var(--line)}
+.tbl-wrap{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:13.5px}
+th,td{border-bottom:1px solid var(--line);padding:7px 8px;text-align:left;vertical-align:top}
+th{color:var(--muted);font-weight:600;font-size:12.5px}
+td.n{text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
+td.win{color:var(--good);font-weight:600}
+td.lose{color:var(--bad);font-weight:600}
+td.mono,.mono{font-family:Consolas,"Cascadia Mono",monospace;font-size:12px;text-align:left}
+#opt td.n,#steps td:last-child,#how td.n,#result td.n{white-space:normal;text-align:left}
+.prose p{margin:0 0 10px;line-height:1.6}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media (max-width:760px){.grid2{grid-template-columns:1fr}}
+h3{font-size:15px;margin:18px 0 8px}
+.ideas{display:grid;gap:12px}
+.idea{border:1px solid var(--line);border-left:4px solid var(--good);border-radius:8px;padding:12px 16px;background:var(--paper)}
+.idea.na{border-left-color:var(--line)}
+.idea.zero{border-left-color:#c9b27a}
+.idea-h{display:flex;align-items:center;gap:10px;flex-wrap:wrap;font-size:15px}
+.badge{font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;border-radius:10px;padding:2px 9px;white-space:nowrap}
+.badge.ok{background:var(--good-soft);color:var(--good)}
+.badge.na{background:var(--neutral-soft);color:var(--muted)}
+.badge.zero{background:#f6efdc;color:#8a6d1f}
+.idea-what{margin:6px 0 8px;color:var(--muted);font-size:13.5px;line-height:1.5}
+.idea-ba{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:0 0 8px}
+.idea-ba>div{background:var(--neutral-soft);border-radius:6px;padding:7px 10px;font-size:13.5px;line-height:1.45;font-variant-numeric:tabular-nums}
+.idea-ba .k{display:block;font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:2px}
+.idea-res{margin:0;font-size:13.5px;line-height:1.5}
+.idea.ok .idea-res{color:var(--good);font-weight:600}
+@media (max-width:640px){.idea-ba{grid-template-columns:1fr}}
+
+</style>
+</head>
+<body>
+<header class="hero">
+  <div class="wrap">
+    <div class="brandbar">
+      <svg class="logo" role="img" aria-label="ВИМ Инвестиции" viewBox="0 0 176 42" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g clip-path="url(#vimLogoClip)">
+<path d="M111.155 16.6987C110.691 15.765 110.009 14.9925 109.109 14.385C108.49 13.9688 107.786 13.6387 107.002 13.3987C108.08 12.93 108.977 12.2588 109.685 11.3813C110.624 10.2225 111.095 8.8275 111.095 7.1925C111.095 4.98 110.273 3.22875 108.634 1.935C106.99 0.645001 104.65 0 101.605 0H88.1016V27.8625H101.963C104.028 27.8625 105.796 27.5475 107.266 26.9137C108.735 26.28 109.866 25.365 110.661 24.1688C111.456 22.9688 111.852 21.5662 111.852 19.9612C111.852 18.7237 111.618 17.6363 111.159 16.7025L111.155 16.6987ZM95.0511 5.33625H100.256C101.631 5.33625 102.626 5.56875 103.233 6.02625C103.844 6.4875 104.145 7.2075 104.145 8.17875C104.145 9.15 103.84 9.8775 103.233 10.3538C102.623 10.8263 101.631 11.0663 100.256 11.0663H95.0511V5.33625ZM104.759 20.5725C104.665 20.9025 104.514 21.1913 104.303 21.4425C104.092 21.6938 103.84 21.8962 103.55 22.0537C103.259 22.2112 102.894 22.3313 102.457 22.41C102.02 22.4888 101.537 22.53 101.006 22.53H95.0473V16.365H101.006C101.533 16.365 102.02 16.41 102.457 16.5038C102.894 16.5975 103.256 16.7287 103.55 16.8975C103.84 17.07 104.092 17.2725 104.303 17.5088C104.514 17.745 104.669 18.03 104.759 18.36C104.854 18.69 104.899 19.065 104.899 19.485C104.899 19.8788 104.854 20.2425 104.759 20.5725Z" fill="currentColor"/>
+<path d="M135.638 0L122.768 16.1062V0H115.977V27.8625H121.339L134.206 11.625V27.8625H141.001V0H135.638Z" fill="currentColor"/>
+<path d="M169.44 0L161.179 20.1713L152.759 0H146.164V27.8625H152.759V12.8887L159.113 27.8625H163.044L169.44 12.735V27.8625H176.031V0H169.44Z" fill="currentColor"/>
+<path d="M35.5203 20.3991L29.8785 12.9141H0L20.5208 40.5441H20.5245L35.5203 20.3991Z" fill="url(#paint0_linear_1756_3195)"/>
+<path d="M50.7038 0.00390625L35.5195 20.4002L50.7038 40.5452L79.9831 0.00390625H50.7038Z" fill="url(#paint1_linear_1756_3195)"/>
+<path d="M20.5234 40.5454H50.7035L35.5192 20.4004L20.5234 40.5454Z" fill="url(#paint2_linear_1756_3195)"/>
+<path d="M88.8062 39.281V34.0723H88.0977V40.5185H88.678L92.59 35.2985V40.5185H93.291V34.0723H92.7106L88.8062 39.281Z" fill="currentColor"/>
+<path d="M102.296 36.926H98.41V34.0723H97.6562V40.5185H98.41V37.5748H102.296V40.5185H103.049V34.0723H102.296V36.926Z" fill="currentColor"/>
+<path d="M111.563 37.4248C111.412 37.331 111.239 37.2635 111.047 37.2148C111.325 37.1173 111.552 36.9673 111.732 36.761C111.966 36.491 112.087 36.1573 112.087 35.756C112.087 35.2198 111.902 34.8035 111.537 34.511C111.171 34.2185 110.655 34.0723 109.991 34.0723H107.398V40.5185H110.101C110.553 40.5185 110.941 40.451 111.258 40.316C111.574 40.181 111.819 39.9823 111.989 39.716C112.158 39.4498 112.241 39.1273 112.241 38.741C112.241 38.441 112.185 38.1823 112.068 37.961C111.951 37.7398 111.781 37.5598 111.563 37.421V37.4248ZM108.137 34.676H109.882C110.361 34.676 110.722 34.7735 110.971 34.9648C111.22 35.156 111.344 35.441 111.344 35.8198C111.344 36.1985 111.22 36.4648 110.971 36.6598C110.722 36.8548 110.361 36.9523 109.882 36.9523H108.137V34.676ZM111.442 39.1648C111.401 39.2923 111.344 39.401 111.261 39.4948C111.182 39.5848 111.084 39.6635 110.967 39.7273C110.851 39.791 110.715 39.8398 110.56 39.8698C110.406 39.8998 110.229 39.9148 110.033 39.9148H108.141V37.556H110.033C110.229 37.556 110.406 37.571 110.56 37.601C110.715 37.631 110.854 37.676 110.967 37.7398C111.084 37.7998 111.182 37.8785 111.261 37.9723C111.341 38.066 111.401 38.1748 111.442 38.3023C111.484 38.426 111.503 38.5723 111.503 38.7373C111.503 38.9023 111.484 39.0373 111.442 39.1685V39.1648Z" fill="currentColor"/>
+<path d="M116.367 40.5185H120.456V39.8885H117.102V37.5635H120.264V36.9335H117.102V34.7023H120.456V34.0723H116.367V40.5185Z" fill="currentColor"/>
+<path d="M127.298 34.6765C127.664 34.6765 127.999 34.7365 128.305 34.8527C128.606 34.9727 128.9 35.164 129.183 35.4227L129.477 34.8115C129.221 34.5415 128.9 34.339 128.52 34.2002C128.139 34.0615 127.728 33.9902 127.28 33.9902C126.643 33.9902 126.096 34.1252 125.644 34.3915C125.192 34.6615 124.841 35.0402 124.6 35.5277C124.359 36.0152 124.238 36.604 124.238 37.2865C124.238 37.969 124.359 38.5577 124.6 39.049C124.841 39.544 125.188 39.9227 125.644 40.1927C126.096 40.4627 126.643 40.594 127.28 40.594C127.728 40.594 128.139 40.5227 128.52 40.3802C128.9 40.2377 129.217 40.0352 129.477 39.7727L129.183 39.1615C128.9 39.424 128.61 39.6152 128.305 39.7315C128.003 39.8515 127.668 39.9115 127.298 39.9115C126.571 39.9115 126.013 39.6827 125.625 39.2215C125.241 38.7602 125.045 38.1152 125.045 37.2865C125.045 36.4577 125.237 35.8127 125.625 35.359C126.01 34.9015 126.567 34.6727 127.298 34.6727V34.6765Z" fill="currentColor"/>
+<path d="M132.66 34.721H135.012V40.5185H135.773V34.721H138.125V34.0723H132.66V34.721Z" fill="currentColor"/>
+<path d="M142.416 39.281V34.0723H141.707V40.5185H142.284L146.199 35.2985V40.5185H146.897V34.0723H146.32L142.416 39.281Z" fill="currentColor"/>
+<path d="M156.61 34.0723H155.848V39.8698H152.015V34.0723H151.262V40.5185H156.839V41.9548H157.529V39.8698H156.61V34.0723Z" fill="currentColor"/>
+<path d="M161.99 39.281V34.0723H161.285V40.5185H161.862L165.777 35.2985V40.5185H166.475V34.0723H165.898L161.99 39.281Z" fill="currentColor"/>
+<path d="M175.453 34.0723L171.548 39.281V34.0723H170.84V40.5185H171.42L175.332 35.2985V40.5185H176.029V34.0723H175.453Z" fill="currentColor"/>
+</g>
+<defs>
+<linearGradient id="paint0_linear_1756_3195" x1="9.68188" y1="5.87156" x2="30.0896" y2="33.5202" gradientUnits="userSpaceOnUse">
+<stop stop-color="#73A8BA"/>
+<stop offset="1" stop-color="#52648A"/>
+</linearGradient>
+<linearGradient id="paint1_linear_1756_3195" x1="70.5273" y1="-6.86984" x2="40.955" y2="33.8156" gradientUnits="userSpaceOnUse">
+<stop stop-color="#CBDFE6"/>
+<stop offset="1" stop-color="#73A8BA"/>
+</linearGradient>
+<linearGradient id="paint2_linear_1756_3195" x1="35.6135" y1="20.4004" x2="35.6135" y2="40.5454" gradientUnits="userSpaceOnUse">
+<stop stop-color="white"/>
+<stop offset="1" stop-color="#73A8BA"/>
+</linearGradient>
+<clipPath id="vimLogoClip">
+<rect width="176" height="42" fill="white"/>
+</clipPath>
+</defs>
+</svg>
+      <div class="kicker">Аванкор Фронт-офис - ФО розница - предпроверка поручений ("Проверить" на блоттере) - IMDEV-9512 - 29.09.2026<div class="env">Тестирование: сервер <b>SMSK02MG138U</b>, база <b>AVC_PP_Retail_FO</b> - копия ПРОД, восстановлена утром 29.09.2026; конфигурация 1.4.9.5; 2 поручения, 72 проверки в обоих прогонах; 6 заданий обработки проверки</div></div>
+    </div>
+    <h1>Предпроверка двух поручений на рознице<br><span>Как отработали идеи оптимизации на малом плане</span></h1>
+    <div class="ba-hero">
+      <div class="ba-box was"><div class="l">Без расширения</div><div class="v">40,8<small>с</small></div><div class="s">29.09.2026 06:08, 72 проверки</div></div>
+      <div class="ba-arrow"><span class="a">&#8594;</span><span class="x">-15,4 с</span></div>
+      <div class="ba-box now"><div class="l">С расширением</div><div class="v">25,5<small>с</small></div><div class="s">29.09.2026 06:21, 72 проверки</div></div>
+      <div class="ba-box prod"><div class="l">Дали идеи</div><div class="v">~5<small>с</small></div><div class="s">облегченные настройки и нарезка плана</div></div>
+    </div>
+  </div>
+</header>
+
+<nav class="jump">
+  <div class="wrap">
+    <a href="#sum">Итог</a>
+    <a href="#ideas">1. Идеи и результат</a>
+    <a href="#steps">2. Шаги</a>
+    <a href="#jobs">3. Задания</a>
+    <a href="#next">4. Выводы</a>
+  </div>
+</nav>
+
+<main class="wrap">
+
+<section id="sum">
+  <div class="sec-no">Итог</div>
+  <h2>Что получилось</h2>
+  <div class="card prose">
+    <p><b>Сравнение:</b> два прогона кнопки "Проверить" на блоттере по одним и тем же двум поручениям, на одной базе и одном сервере: сначала без расширения FO_LimitCheckOpt, затем с ним. План проверки одинаковый - 72 строки. Проверка заняла 40,8 с и 25,5 с.</p>
+    <p><b>Какие идеи сработали:</b> облегченные настройки лимитов при чтении порогов - чтение настроек 5,6 с - 0,3 с, задание порогов 6,0 с - 0,8 с; нарезка плана по правилу малого плана - таблицы наборов данных строятся 3 раза вместо 6, 7,5 с вместо 18,2 с работы заданий. Вместе они сократили проверку примерно на 5 с.</p>
+    <p><b>Какие идеи здесь не проявились - и так и должно быть:</b> индекс портфелей порции (порции из нескольких портфелей, сборка занимала тысячные доли секунды) и сведения о порогах только для пар плана (в плане двух поручений все 10 пар нужны). Их эффект - на ночном регламенте.</p>
+    <p style="margin-bottom:0"><b>Остальная разница</b> - в шаге "Чтение наборов данных" (16,3 с и 5,9 с). Код этого шага расширение не меняет, и к оптимизациям эта разница не относится.</p>
+  </div>
+</section>
+
+<section id="ideas">
+  <div class="sec-no">Раздел 1</div>
+  <h2>Идеи из обоснований и что показал прогон</h2>
+  <div class="ideas">
+    <div class="idea ok">
+      <div class="idea-h"><span class="badge ok">сработала</span><b>Облегченные настройки лимитов при чтении порогов</b></div>
+      <p class="idea-what">Задание порогов не распаковывает полные настройки каждого лимита, а берет класс лимита из облегченных настроек.</p>
+      <div class="idea-ba"><div><span class="k">Без расширения</span>чтение настроек лимитов 5,63 с; задания порогов 0,6 с и 6,0 с</div><div><span class="k">С расширением</span>чтение настроек лимитов 0,26 с; задания порогов 0,6 с и 0,8 с</div></div>
+      <p class="idea-res">Шаг "Пороги" 2,8 с - 1,6 с, ожидание порогов перед обработкой короче на 2,2 с.</p>
+    </div>
+    <div class="idea ok">
+      <div class="idea-h"><span class="badge ok">сработала</span><b>Нарезка плана по заданиям - правило 1, малый план</b></div>
+      <p class="idea-what">Если строк на задание меньше 50, наборы данных режутся на части и раскладываются по наименее загруженным заданиям, чтобы таблица набора строилась меньше раз.</p>
+      <div class="idea-ba"><div><span class="k">Без расширения</span>6 построений таблиц наборов в 5 заданиях - 18,2 с; работа 6 заданий - 48,9 с</div><div><span class="k">С расширением</span>3 построения, по одному на каждый из 3 наборов (меньше не бывает) - 7,5 с; работа 6 заданий - 25,9 с</div></div>
+      <p class="idea-res">12 строк на задание - правило применено. Самое долгое задание 10,6 с - 8,9 с, шаг "Обработка проверки" 11,4 с - 10,1 с.</p>
+    </div>
+    <div class="idea na">
+      <div class="idea-h"><span class="badge na">не применяется</span><b>Нарезка - правило 2, большой план</b></div>
+      <p class="idea-what">При 50 и более строках на задание куски режутся подряд по наборам.</p>
+      <p class="idea-res">План из 72 строк на 6 заданий - малый, работает правило 1.</p>
+    </div>
+    <div class="idea na">
+      <div class="idea-h"><span class="badge na">не применяется</span><b>Нарезка - правило 3, лимиты по алгоритму</b></div>
+      <p class="idea-what">Вызовы внешних алгоритмов лимитов раздаются заданиям по кругу.</p>
+      <div class="idea-ba"><div><span class="k">Без расширения</span>вызовов внешних алгоритмов нет</div><div><span class="k">С расширением</span>вызовов внешних алгоритмов нет</div></div>
+      <p class="idea-res">В плане розницы нет лимитов со способом настройки "по алгоритму".</p>
+    </div>
+    <div class="idea zero">
+      <div class="idea-h"><span class="badge zero">эффекта нет</span><b>Индекс портфелей порции</b></div>
+      <p class="idea-what">Портфели порции собираются через индекс, без повторного просмотра уже собранного списка.</p>
+      <div class="idea-ba"><div><span class="k">Без расширения</span>165 вызовов сборки - 0,006 с</div><div><span class="k">С расширением</span>144 обращения к индексу - 0,001 с</div></div>
+      <p class="idea-res">Порции из нескольких портфелей - собирать почти нечего. Эффект идеи - на ночном регламенте розницы: обработка проверки 6 ч 45 мин - 8 мин 46 с.</p>
+    </div>
+    <div class="idea zero">
+      <div class="idea-h"><span class="badge zero">эффекта нет</span><b>Сведения о порогах только для пар плана</b></div>
+      <p class="idea-what">Сведения о порогах строятся только для пар "лимит - портфель" из плана проверки.</p>
+      <div class="idea-ba"><div><span class="k">Без расширения</span>10 сведений о порогах</div><div><span class="k">С расширением</span>10 сведений о порогах</div></div>
+      <p class="idea-res">Все 10 пар есть в плане двух поручений - отбрасывать нечего. Эффект идеи - на регламенте обычного ФО: 2,19 млн сведений - 173 тыс.</p>
+    </div>
+  </div>
+</section>
+
+<section id="steps">
+  <div class="sec-no">Раздел 2</div>
+  <h2>Шаги проверки: было и стало</h2>
+  <div class="card diagram">
+<svg viewBox="0 0 900 404" role="img" aria-label="Время шагов было и стало">
+<text x="20" y="20" class="t">Шаги проверки, секунды: красным - без расширения, зеленым - с расширением</text>
+<text x="238" y="60" text-anchor="end" class="s">Чтение предварительное</text>
+<rect x="250" y="40" width="19.7" height="18" rx="3" class="old"/>
+<text x="275.7" y="53" class="v">1,4 с</text>
+<rect x="250" y="61" width="17.7" height="18" rx="3" class="new"/>
+<text x="273.7" y="74" class="v">1,3 с</text>
+<text x="238" y="112" text-anchor="end" class="s">Действующие лимиты</text>
+<rect x="250" y="92" width="16.2" height="18" rx="3" class="old"/>
+<text x="272.2" y="105" class="v">1,2 с</text>
+<rect x="250" y="113" width="14.2" height="18" rx="3" class="new"/>
+<text x="270.2" y="126" class="v">1,0 с</text>
+<text x="238" y="164" text-anchor="end" class="s">Чтение наборов данных</text>
+<rect x="250" y="144" width="223.9" height="18" rx="3" class="old"/>
+<text x="479.9" y="157" class="v">16,3 с</text>
+<rect x="250" y="165" width="81.0" height="18" rx="3" class="new"/>
+<text x="337.0" y="178" class="v">5,9 с</text>
+<text x="238" y="216" text-anchor="end" class="s">Пороги</text>
+<rect x="250" y="196" width="38.4" height="18" rx="3" class="old"/>
+<text x="294.4" y="209" class="v">2,8 с</text>
+<rect x="250" y="217" width="22.3" height="18" rx="3" class="new"/>
+<text x="278.3" y="230" class="v">1,6 с</text>
+<text x="238" y="268" text-anchor="end" class="s">Обработка проверки</text>
+<rect x="250" y="248" width="156.4" height="18" rx="3" class="old"/>
+<text x="412.4" y="261" class="v">11,4 с</text>
+<rect x="250" y="269" width="138.1" height="18" rx="3" class="new"/>
+<text x="394.1" y="282" class="v">10,1 с</text>
+<text x="238" y="320" text-anchor="end" class="s">Вне шагов</text>
+<rect x="250" y="300" width="104.4" height="18" rx="3" class="old"/>
+<text x="360.4" y="313" class="v">7,6 с</text>
+<rect x="250" y="321" width="75.0" height="18" rx="3" class="new"/>
+<text x="331.0" y="334" class="v">5,5 с</text>
+<text x="238" y="372" text-anchor="end" class="s">Проверка целиком</text>
+<rect x="250" y="352" width="560.0" height="18" rx="3" class="old"/>
+<text x="816.0" y="365" class="v">40,8 с</text>
+<rect x="250" y="373" width="349.0" height="18" rx="3" class="new"/>
+<text x="605.0" y="386" class="v">25,5 с</text>
+</svg>
+  </div>
+  <div class="tbl-wrap" style="margin-top:14px">
+    <table>
+      <thead><tr><th>Шаг</th><th>Без расширения</th><th>С расширением</th><th>Разница</th><th>Что повлияло</th></tr></thead>
+      <tbody>
+        <tr><td>Чтение предварительное</td><td class="n">1,44 с</td><td class="n">1,29 с</td><td class="n">-0,15 с</td><td>код не менялся</td></tr>
+        <tr><td>Действующие лимиты</td><td class="n">1,18 с</td><td class="n">1,03 с</td><td class="n">-0,15 с</td><td>раскладка плана по заданиям - доли секунды</td></tr>
+        <tr><td>Чтение наборов данных</td><td class="n">16,33 с</td><td class="n">5,91 с</td><td class="n">-10,42 с</td><td>код шага расширение не меняет; к оптимизациям разница не относится</td></tr>
+        <tr><td>Пороги</td><td class="n">2,80 с</td><td class="n">1,63 с</td><td class="n win">-1,17 с</td><td>облегченные настройки лимитов</td></tr>
+        <tr><td>Обработка проверки</td><td class="n">11,40 с</td><td class="n">10,07 с</td><td class="n win">-1,33 с</td><td>нарезка плана, правило малого плана</td></tr>
+        <tr><td>Запись результатов</td><td class="n">0,08 с</td><td class="n">0,05 с</td><td class="n">0</td><td>-</td></tr>
+        <tr><td>Вне шагов: ожидание порогов, статусы поручений</td><td class="n">7,62 с</td><td class="n">5,47 с</td><td class="n win">-2,15 с</td><td>облегченные настройки: задание порогов 6,0 с - 0,8 с</td></tr>
+        <tr><td><b>Проверка целиком</b></td><td class="n"><b>40,84 с</b></td><td class="n"><b>25,45 с</b></td><td class="n"><b>-15,39 с</b></td><td>из них около 5 с - идеи оптимизации</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section id="jobs">
+  <div class="sec-no">Раздел 3</div>
+  <h2>Задания обработки проверки</h2>
+  <div class="card diagram">
+<svg viewBox="0 0 900 350" role="img" aria-label="Задания обработки проверки было и стало">
+<text x="20" y="20" class="t">6 заданий "Обработка проверки": работа задания по замеру, секунды</text>
+<line x1="70" x2="880" y1="270.0" y2="270.0" class="grid"/>
+<text x="62" y="274.0" text-anchor="end" class="s">0</text>
+<line x1="70" x2="880" y1="230.0" y2="230.0" class="grid"/>
+<text x="62" y="234.0" text-anchor="end" class="s">2</text>
+<line x1="70" x2="880" y1="190.0" y2="190.0" class="grid"/>
+<text x="62" y="194.0" text-anchor="end" class="s">4</text>
+<line x1="70" x2="880" y1="150.0" y2="150.0" class="grid"/>
+<text x="62" y="154.0" text-anchor="end" class="s">6</text>
+<line x1="70" x2="880" y1="110.0" y2="110.0" class="grid"/>
+<text x="62" y="114.0" text-anchor="end" class="s">8</text>
+<line x1="70" x2="880" y1="70.0" y2="70.0" class="grid"/>
+<text x="62" y="74.0" text-anchor="end" class="s">10</text>
+<rect x="110" y="150.0" width="44" height="120.0" rx="2" class="old"/>
+<text x="132" y="145.0" text-anchor="middle" class="v">6,0 с</text>
+<rect x="157" y="226.0" width="44" height="44.0" rx="2" class="new"/>
+<text x="179" y="221.0" text-anchor="middle" class="v">2,2 с</text>
+<text x="154" y="286" text-anchor="middle" class="s">1</text>
+<rect x="242" y="148.0" width="44" height="122.0" rx="2" class="old"/>
+<text x="264" y="143.0" text-anchor="middle" class="v">6,1 с</text>
+<rect x="289" y="216.0" width="44" height="54.0" rx="2" class="new"/>
+<text x="311" y="211.0" text-anchor="middle" class="v">2,7 с</text>
+<text x="286" y="286" text-anchor="middle" class="s">2</text>
+<rect x="374" y="122.0" width="44" height="148.0" rx="2" class="old"/>
+<text x="396" y="117.0" text-anchor="middle" class="v">7,4 с</text>
+<rect x="421" y="190.0" width="44" height="80.0" rx="2" class="new"/>
+<text x="443" y="185.0" text-anchor="middle" class="v">4,0 с</text>
+<text x="418" y="286" text-anchor="middle" class="s">3</text>
+<rect x="506" y="96.0" width="44" height="174.0" rx="2" class="old"/>
+<text x="528" y="91.0" text-anchor="middle" class="v">8,7 с</text>
+<rect x="553" y="190.0" width="44" height="80.0" rx="2" class="new"/>
+<text x="575" y="185.0" text-anchor="middle" class="v">4,0 с</text>
+<text x="550" y="286" text-anchor="middle" class="s">4</text>
+<rect x="638" y="68.0" width="44" height="202.0" rx="2" class="old"/>
+<text x="660" y="63.0" text-anchor="middle" class="v">10,1 с</text>
+<rect x="685" y="188.0" width="44" height="82.0" rx="2" class="new"/>
+<text x="707" y="183.0" text-anchor="middle" class="v">4,1 с</text>
+<text x="682" y="286" text-anchor="middle" class="s">5</text>
+<rect x="770" y="58.0" width="44" height="212.0" rx="2" class="old"/>
+<text x="792" y="53.0" text-anchor="middle" class="v">10,6 с</text>
+<rect x="817" y="92.0" width="44" height="178.0" rx="2" class="new"/>
+<text x="839" y="87.0" text-anchor="middle" class="v">8,9 с</text>
+<text x="814" y="286" text-anchor="middle" class="s">6</text>
+<text x="20" y="314" class="s">Сумма работы 6 заданий: 48,9 с без расширения, 25,9 с с расширением. Построений таблиц наборов данных: 6 и 3.</text>
+<text x="20" y="332" class="s">Задания отсортированы по длительности; длительность шага определяет самое долгое задание: 10,6 с и 8,9 с.</text>
+</svg>
+  </div>
+  <p class="sec-lead" style="margin-top:10px">Без расширения таблицы трех наборов данных строились 6 раз в 5 заданиях (одно построение - 2,1-5,5 с); с расширением каждый набор строится один раз, в своем задании. Длительность шага определяет самое долгое задание. С расширением это задание с одним построением таблицы набора (3,6 с), запросами статики активов, рейтингов и состава портфелей и проверками по вариантам порогов своего набора. Постоянные запросы выполняет каждое задание независимо от числа строк, поэтому на плане из 72 проверок нарезка вдвое сокращает суммарную работу заданий, а длительность шага - на 1,3 с. На Т-1 обычного ФО по двум поручениям наборов больше, и то же правило дало 28 построений - 11 и шаг обработки 16,6 с - 8,9 с.</p>
+</section>
+
+<section id="next">
+  <div class="sec-no">Раздел 4</div>
+  <h2>Выводы</h2>
+  <div class="card prose">
+    <p><b>На малом плане работают две идеи</b> - облегченные настройки лимитов и нарезка плана по правилу малого плана. Их вклад - около 5 с на проверку двух поручений; обе отработали так, как описано в обоснованиях.</p>
+    <p><b>Индекс портфелей порции и пороги только для пар плана</b> на малом плане эффекта не дают и не должны: их задача - большой объем. На ночном регламенте розницы индекс сократил обработку проверки с 6 ч 45 мин до 8 мин 46 с.</p>
+    <p style="margin-bottom:0"><b>Результат проверки</b> с расширением и без совпал - описано в отдельном отчете о сверке. Следующий шаг по предпроверке - большая выборка на рознице (50-200 поручений): на таком объеме работают правило 2 нарезки и индекс портфелей.</p>
+  </div>
+</section>
+
+</main>
+
+<footer>
+  <div class="wrap">
+    <b>Основание.</b> Прогоны кнопки "Проверить" на блоттере базы AVC_PP_Retail_FO (ФО розница) 29.09.2026 по двум поручениям: в 06:08 без расширения FO_LimitCheckOpt, в 06:21 с ним; регистр "Замеры времени" обоих прогонов (ключевые операции шагов и "Проверка" с весом 72), замеры производительности всех сеансов проверки; обоснования идей оптимизации 1-4.
+  </div>
+</footer>
+
+</body>
+</html>
