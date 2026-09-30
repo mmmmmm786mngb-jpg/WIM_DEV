@@ -133,6 +133,25 @@ def wait_background(fo, timeout_s=7200):
         time.sleep(3)
 
 
+def recalc_jobs(fo, since):
+    """Фоновые задания перерасчета РСА, начатые после since: число, сумма длительностей, окно от первого старта
+    до последнего завершения (секунды, точность платформы - 1 с)."""
+    condition = fo.NewObject("Структура")
+    condition.Вставить("Начало", since)
+    jobs = fo.ФоновыеЗадания.ПолучитьФоновыеЗадания(condition)
+    items = []
+    for i in range(jobs.Количество()):
+        job = jobs.Получить(i)
+        if str(job.Наименование).startswith("Пересчет фактической позиции") and job.Конец and job.Начало:
+            items.append((job.Начало, job.Конец))
+    if not items:
+        return {"заданий": 0}
+    durations = [(end - start).total_seconds() for start, end in items]
+    window = (max(end for _, end in items) - min(start for start, _ in items)).total_seconds()
+    return {"заданий": len(items), "сумма_с": sum(durations), "среднее_с": round(sum(durations) / len(items), 1),
+            "окно_с": window}
+
+
 def read_calls(fo, since):
     rows = query(fo, """
         ВЫБРАТЬ С.Тип КАК Тип, С.Идентификатор КАК Ид, С.ИдентификаторСвязи КАК Связь, С.ВремяМС КАК Мс,
@@ -240,6 +259,8 @@ def main():
     ready = flags_ready(fo)
     print(f"Портфелей с позиция_выгружена = Истина: {ready} из {len(codes)}")
 
+    jobs = recalc_jobs(fo, since)
+    print(f"Фоновый перерасчет РСА: {jobs}")
     versioning_on = bool(fo.Константы.ИспользоватьВерсионированиеОбъектов.Получить())
     new_versions = versions_count(fo) - versions_before
     print(f"Версионирование портфелей: {'вкл' if versioning_on else 'выкл'}, новых версий (= записей флагов): {new_versions}")
@@ -253,7 +274,7 @@ def main():
     summary = summarize(calls)
     result = {"сценарий": args.scenario, "портфелей": len(codes), "потоков": args.threads,
               "без_перерасчета": args.no_recalc, "расширения_ФО": active_extensions(fo),
-              "версионирование": versioning_on, "новых_версий": new_versions,
+              "версионирование": versioning_on, "новых_версий": new_versions, "перерасчет": jobs,
               "выгрузка_всего_с": round(total_s, 1), "потоки": workers,
               "фон_после_с": background_s and round(background_s, 1), "готово_флагов": ready,
               "вызовов": len(calls), "по_видам": summary, "снимок": snapshot.summary(snap)}
