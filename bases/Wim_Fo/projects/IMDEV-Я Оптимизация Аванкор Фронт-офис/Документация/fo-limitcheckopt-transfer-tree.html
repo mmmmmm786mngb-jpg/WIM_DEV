@@ -1,0 +1,521 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>FO_LimitCheckOpt. Дерево переноса в базовую конфигурацию Аванкор</title>
+<style>
+  :root {
+    --ink: #1c1915;
+    --soft: #5c564c;
+    --line: #e4d9c8;
+    --paper: #fffdf8;
+    --bg: #f3eee6;
+    --forest: #1f4a3a;
+    --mint: #e7f4ec;
+    --peach: #fde8d0;
+    --rose: #f8e4e4;
+    --gray: #eceae6;
+    --idea: #eef3f8;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    color: var(--ink);
+    font-family: "Segoe UI", Arial, Helvetica, sans-serif;
+    font-size: 15px;
+    line-height: 1.45;
+    background:
+      radial-gradient(720px 280px at 100% 0%, #f6d9bf 0%, transparent 50%),
+      var(--bg);
+  }
+  .page { max-width: 980px; margin: 0 auto; padding: 24px 16px 48px; }
+  header {
+    background: var(--forest);
+    color: #f7f1e8;
+    border-radius: 20px;
+    padding: 22px 24px 18px;
+  }
+  header .kicker {
+    font-size: 11px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    opacity: 0.75;
+    margin-bottom: 6px;
+  }
+  header h1 {
+    font-family: Georgia, "Times New Roman", serif;
+    font-size: 26px;
+    line-height: 1.2;
+    margin: 0 0 8px;
+  }
+  header p { margin: 0 0 8px; color: #e5efe9; max-width: 860px; }
+  header code, .lead code, .foot code, .note code {
+    font-family: Consolas, "Courier New", monospace;
+    font-size: 12.5px;
+  }
+  header code { background: #2a5c4a; color: #f7f1e8; padding: 1px 5px; border-radius: 4px; }
+  .counts {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 12px;
+  }
+  .count {
+    background: rgba(255,255,255,0.1);
+    border-radius: 10px;
+    padding: 6px 10px;
+    min-width: 140px;
+  }
+  .count b { display: block; font-size: 18px; line-height: 1.1; }
+  .count span { font-size: 12px; opacity: 0.85; }
+  .legend { display: flex; flex-wrap: wrap; gap: 8px; margin: 16px 0 12px; }
+  .tag {
+    display: inline-block;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    padding: 2px 8px;
+    border-radius: 999px;
+    vertical-align: middle;
+    white-space: nowrap;
+  }
+  .add { background: var(--mint); color: #1f7a4d; }
+  .chg { background: var(--peach); color: #9a3412; }
+  .del { background: var(--rose); color: #9f1239; }
+  .idea-tag { background: var(--idea); color: #1e3a5f; }
+  .card {
+    background: var(--paper);
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    padding: 8px 18px 14px;
+    box-shadow: 0 10px 28px rgba(28, 25, 21, 0.05);
+  }
+  .tree, .tree ul { list-style: none; margin: 0; padding: 0; }
+  .tree ul {
+    margin-left: 16px;
+    padding-left: 14px;
+    border-left: 1px solid var(--line);
+  }
+  .tree > li { margin: 4px 0 10px; }
+  .tree li { margin: 6px 0; }
+  details.idea > summary, details.sub > summary {
+    cursor: pointer;
+    list-style: none;
+  }
+  details.idea > summary::-webkit-details-marker,
+  details.sub > summary::-webkit-details-marker { display: none; }
+  details.idea > summary::before,
+  details.sub > summary::before {
+    content: ">";
+    display: inline-block;
+    width: 14px;
+    color: var(--soft);
+    font-family: Consolas, "Courier New", monospace;
+  }
+  details[open].idea > summary::before,
+  details[open].sub > summary::before { content: "v"; }
+  .idea-title {
+    font-family: Georgia, "Times New Roman", serif;
+    font-size: 18px;
+    color: var(--forest);
+  }
+  .sub-title { font-weight: 650; font-size: 15px; }
+  .lead, .note { color: var(--soft); font-size: 13.5px; }
+  .lead { margin: 4px 0 8px 14px; max-width: 860px; }
+  .node {
+    font-family: Consolas, "Courier New", monospace;
+    font-size: 13px;
+  }
+  .obj { font-weight: 700; }
+  .foot {
+    margin-top: 14px;
+    padding-top: 12px;
+    border-top: 1px solid var(--line);
+    font-size: 14px;
+  }
+  .foot h2 {
+    font-family: Georgia, "Times New Roman", serif;
+    font-size: 16px;
+    margin: 16px 0 8px;
+    color: var(--forest);
+  }
+  .foot p { margin: 0 0 8px; color: var(--soft); }
+  .foot p b { color: var(--ink); }
+  .foot ol, .foot ul { margin: 0; padding-left: 20px; }
+  .foot li { margin: 4px 0; }
+  table { border-collapse: collapse; width: 100%; background: #fff; font-size: 13px; }
+  th, td { padding: 6px 8px; text-align: left; vertical-align: top; border-bottom: 1px solid var(--line); }
+  th { background: #f6f1ea; font-weight: 650; }
+  a { color: #1f4a3a; }
+  code {
+    font-family: Consolas, "Courier New", monospace;
+    font-size: 12.5px;
+    background: #efe4d4;
+    padding: 1px 5px;
+    border-radius: 4px;
+  }
+</style>
+</head>
+<body>
+<div class="page">
+  <header>
+    <div class="kicker">Аванкор, фронт-офис, перенос в базовую конфигурацию</div>
+    <h1>Дерево изменений расширения FO_LimitCheckOpt</h1>
+    <p>Базовая конфигурация "Аванкор: Фронт-офис" 1.4.9.5. Расширение <code>FO_LimitCheckOpt</code> (синоним "Оптимизация проверки лимитов", назначение Patch, префикс <code>FO_LimitCheckOpt_</code>). Новых объектов метаданных нет: три заимствованных объекта, правки только в модулях.</p>
+    <p>В типовую копировать тело правок. Аннотацию <code>&amp;ИзменениеИКонтроль</code> не копировать. Маркеры <code>#Вставка</code>, <code>#КонецВставки</code>, <code>#Удаление</code>, <code>#КонецУдаления</code> не переносить: вставленный текст оставить, удаленный текст убрать из штатной процедуры. Префикс с имен перехватчиков снять и править штатные процедуры на месте. Новые функции уже без префикса, их копировать целиком в тот же модуль.</p>
+    <div class="counts">
+      <div class="count"><b>4</b><span>идеи, у нарезки 3 подидеи</span></div>
+      <div class="count"><b>4</b><span>изменения штатных процедур</span></div>
+      <div class="count"><b>12</b><span>новых функций</span></div>
+      <div class="count"><b>3</b><span>удаления фрагментов внутри процедур</span></div>
+    </div>
+  </header>
+
+  <div class="legend">
+    <span class="tag add">добавление</span>
+    <span class="tag chg">изменение</span>
+    <span class="tag del">удаление</span>
+    <span class="tag idea-tag">обоснование</span>
+  </div>
+
+  <div class="card">
+    <ul class="tree">
+
+      <li>
+        <details class="idea" open>
+          <summary><span class="tag idea-tag">идея 1</span> <span class="idea-title">Индекс портфелей порции вместо ДополнитьМассив</span></summary>
+          <p class="lead">Задание "Обработка проверки" собирает уникальные портфели порции одним соответствием на порцию, а не вызовом <code>ДополнитьМассив(..., Истина)</code> на каждой строке. Состав и порядок массива <code>ПортфелиПорции</code> те же. Процедура БСП <code>ДополнитьМассив</code> не меняется, другие ее вызовы в модуле остаются. <a href="ОБОСНОВАНИЯ/Обоснование%20идеи%20-%20индекс%20портфелей%20порции%20вместо%20ДополнитьМассив.html">Обоснование</a></p>
+          <ul>
+            <li>
+              <span class="node obj">ОбщийМодуль.Исполнители</span>
+              <span class="note"> - заимствован, метаданные не менять</span>
+              <ul>
+                <li>
+                  <span class="node obj">Модуль</span>
+                  <ul>
+                    <li>
+                      <span class="tag chg">изменение</span>
+                      <span class="node">ПроверкаИОтправка_ОбработкаПроверки</span>
+                      <span class="note"> - в расширении имя <code>FO_LimitCheckOpt_ПроверкаИОтправка_ОбработкаПроверки</code>. В типовой править штатную функцию. Цикл по строкам порции, область портфелей и групп.</span>
+                      <ul>
+                        <li>
+                          <span class="tag add">добавление</span>
+                          <span class="note">сразу после <code>ПортфелиПорции = Новый Массив()</code>: <code>ИндексПортфелейПорции = Новый Соответствие</code></span>
+                        </li>
+                        <li>
+                          <span class="tag del">удаление</span>
+                          <span class="note">строка <code>ДополнитьМассив(ПортфелиПорции, ПортфелиГруппы, Истина)</code></span>
+                        </li>
+                        <li>
+                          <span class="tag add">добавление</span>
+                          <span class="note">на ее место цикл по <code>ПортфелиГруппы</code>: если портфеля нет в индексе, добавить в массив и в индекс</span>
+                        </li>
+                      </ul>
+                    </li>
+                  </ul>
+                </li>
+              </ul>
+            </li>
+          </ul>
+        </details>
+      </li>
+
+      <li>
+        <details class="idea" open>
+          <summary><span class="tag idea-tag">идея 2</span> <span class="idea-title">Сведения о порогах только для пар плана</span></summary>
+          <p class="lead">Первый запрос пакета <code>ТекстЗапросаПолученияПорогов</code> строит пары "лимит - портфель" из <code>КэшВмПланПроверки</code> по вместилищу плюс пустой портфель каждого лимита. Остальной пакет не меняется. Если плана нет или штатный текст первого запроса изменился, выполняется штатный запрос. <a href="ОБОСНОВАНИЯ/Обоснование%20идеи%20-%20сведения%20о%20порогах%20только%20для%20пар%20плана.html">Обоснование</a></p>
+          <ul>
+            <li>
+              <span class="node obj">РегистрСведений.ПорогиЛимитов</span>
+              <span class="note"> - заимствован, состав регистра не менять</span>
+              <ul>
+                <li>
+                  <span class="node obj">МодульМенеджера</span>
+                  <ul>
+                    <li>
+                      <span class="tag chg">изменение</span>
+                      <span class="node">СведенияОПорогах</span>
+                      <span class="note"> - в расширении <code>FO_LimitCheckOpt_СведенияОПорогах</code>. Меняется только назначение текста запроса.</span>
+                      <ul>
+                        <li>
+                          <span class="tag del">удаление</span>
+                          <span class="note"><code>Запрос.Текст = ТекстЗапросаПолученияПорогов()</code></span>
+                        </li>
+                        <li>
+                          <span class="tag add">добавление</span>
+                          <span class="note"><code>Запрос.Текст = ТекстЗапросаПолученияПороговПоПлану(Вместилище, Параметры.Лимиты)</code> и параметр <code>Вместилище</code></span>
+                        </li>
+                      </ul>
+                    </li>
+                    <li>
+                      <span class="tag add">добавление</span>
+                      <span class="node">ТекстЗапросаПолученияПороговПоПлану</span>
+                      <span class="note"> - область <code>СведенияОПорогахПоПарамПлана</code>. Подменяет первый запрос пакета либо возвращает штатный текст.</span>
+                    </li>
+                    <li>
+                      <span class="tag add">добавление</span>
+                      <span class="node">ЕстьПланПроверки</span>
+                      <span class="note"> - есть ли строки <code>КэшВмПланПроверки</code> по вместилищу и лимитам задания.</span>
+                    </li>
+                    <li>
+                      <span class="tag add">добавление</span>
+                      <span class="node">ТекстПарЛимитПортфельПоПлану</span>
+                      <span class="note"> - текст временной таблицы <code>ВТ_ПортфелиЛимиты</code>: пары плана и пустой портфель лимита.</span>
+                    </li>
+                  </ul>
+                </li>
+              </ul>
+            </li>
+          </ul>
+        </details>
+      </li>
+
+      <li>
+        <details class="idea" open>
+          <summary><span class="tag idea-tag">идея 3</span> <span class="idea-title">Нарезка плана проверки поручений по заданиям</span></summary>
+          <p class="lead">Меняется только номер задания у строки плана с поручением. Три правила ниже. Перехват и диспетчер общие, их переносить один раз. Регламент без поручений и один поток остаются на штатной нумерации. <a href="ОБОСНОВАНИЯ/Обоснование%20идеи%20-%20нарезка%20плана%20проверки%20поручений%20по%20заданиям.html">Обоснование</a></p>
+          <ul>
+            <li>
+              <details class="sub" open>
+                <summary><span class="sub-title">Общее для трех подидей</span></summary>
+                <p class="lead">Один перехват вызывает диспетчер. Диспетчер выбирает правило частей или подряд и отдельно готовит круг для лимитов по алгоритму.</p>
+                <ul>
+                  <li>
+                    <span class="node obj">ОбщийМодуль.РаботаСЛимитами</span>
+                    <span class="note"> - заимствован, метаданные не менять</span>
+                    <ul>
+                      <li>
+                        <span class="node obj">Модуль</span>
+                        <ul>
+                          <li>
+                            <span class="tag chg">изменение</span>
+                            <span class="node">ПланОбработкиПроверки</span>
+                            <span class="note"> - в расширении <code>FO_LimitCheckOpt_ПланОбработкиПроверки</code>. Три вставки, штатные строки не удаляются.</span>
+                            <ul>
+                              <li>
+                                <span class="tag add">добавление</span>
+                                <span class="note">после отбора стандартных лимитов: вызов <code>НомераИсполнителейПоНаборам</code></span>
+                              </li>
+                              <li>
+                                <span class="tag add">добавление</span>
+                                <span class="note">в цикле по строкам плана, после штатного <code>Строка.НомерИсполнителя = НомерИсполнителя</code>: если раскладка есть, подставить <code>НомерИсполнителяСтроки</code></span>
+                              </li>
+                              <li>
+                                <span class="tag add">добавление</span>
+                                <span class="note">после цикла: если раскладка есть, <code>Результат.НомераИсполнителей</code> взять из нее</span>
+                              </li>
+                            </ul>
+                          </li>
+                          <li>
+                            <span class="tag add">добавление</span>
+                            <span class="node">НомераИсполнителейПоНаборам</span>
+                            <span class="note"> - область <code>НарезкаПланаПроверкиПоЗаданиям</code>. Диспетчер: штатно, части, подряд, подготовка круга алгоритмов.</span>
+                          </li>
+                          <li>
+                            <span class="tag add">добавление</span>
+                            <span class="node">НомерИсполнителяСтроки</span>
+                            <span class="note"> - выдает номер строке: ветка круга, ветка подряд, ветка частей.</span>
+                          </li>
+                          <li>
+                            <span class="tag add">добавление</span>
+                            <span class="node">МинимумСтрокЧастиНабора</span>
+                            <span class="note"> - порог 50 строк. Ниже порога режим частей, иначе подряд.</span>
+                          </li>
+                          <li>
+                            <span class="tag add">добавление</span>
+                            <span class="node">ОтобратьЛимитыПоАлгоритму</span>
+                            <span class="note"> - лимиты со способом настройки "по алгоритму". Нужна диспетчеру и кругу.</span>
+                          </li>
+                        </ul>
+                      </li>
+                    </ul>
+                  </li>
+                </ul>
+              </details>
+            </li>
+            <li>
+              <details class="sub" open>
+                <summary><span class="tag idea-tag">подидея 3.1</span> <span class="sub-title">Малый план: части наборов</span></summary>
+                <p class="lead">Когда строк на поток меньше 50, набор режется на части не больше 50 строк. Части раздаются от крупных к мелким в наименее загруженное задание. Условие выбора - в <code>НомераИсполнителейПоНаборам</code>, ветка <code>Иначе</code>.</p>
+                <ul>
+                  <li>
+                    <span class="node obj">ОбщийМодуль.РаботаСЛимитами</span>
+                    <ul>
+                      <li>
+                        <span class="node obj">Модуль</span>
+                        <ul>
+                          <li>
+                            <span class="tag add">добавление</span>
+                            <span class="node">НомераПоЧастямНаборов</span>
+                            <span class="note"> - единственная процедура только этой подидеи. Номер строки потом берет <code>НомерИсполнителяСтроки</code> при <code>РазмерКуска = 0</code>.</span>
+                          </li>
+                        </ul>
+                      </li>
+                    </ul>
+                  </li>
+                </ul>
+              </details>
+            </li>
+            <li>
+              <details class="sub" open>
+                <summary><span class="tag idea-tag">подидея 3.2</span> <span class="sub-title">Большой план: подряд по наборам</span></summary>
+                <p class="lead">Когда строк на поток 50 и больше, строки нумеруются так, как если бы шли набор за набором, и режутся штатными кусками. Условие выбора - в <code>НомераИсполнителейПоНаборам</code>, ветка <code>ДоляПотока &gt;= МинимумСтрокЧастиНабора()</code>.</p>
+                <ul>
+                  <li>
+                    <span class="node obj">ОбщийМодуль.РаботаСЛимитами</span>
+                    <ul>
+                      <li>
+                        <span class="node obj">Модуль</span>
+                        <ul>
+                          <li>
+                            <span class="tag add">добавление</span>
+                            <span class="node">НомераПодрядПоНаборам</span>
+                            <span class="note"> - единственная процедура только этой подидеи. Номер строки берет <code>НомерИсполнителяСтроки</code> при <code>РазмерКуска &gt; 0</code>.</span>
+                          </li>
+                        </ul>
+                      </li>
+                    </ul>
+                  </li>
+                </ul>
+              </details>
+            </li>
+            <li>
+              <details class="sub" open>
+                <summary><span class="tag idea-tag">подидея 3.3</span> <span class="sub-title">Лимиты по алгоритму: по кругу</span></summary>
+                <p class="lead">Строки лимитов со способом настройки "по алгоритму" не входят в наборы и раздаются по кругу, начиная с последнего задания. Отдельной процедуры нет: это ветки уже перечисленных общих функций.</p>
+                <ul>
+                  <li>
+                    <span class="node obj">ОбщийМодуль.РаботаСЛимитами</span>
+                    <ul>
+                      <li>
+                        <span class="node obj">Модуль</span>
+                        <ul>
+                          <li>
+                            <span class="tag chg">изменение</span>
+                            <span class="node">НомераИсполнителейПоНаборам</span>
+                            <span class="note"> - внутри добавленной функции: <code>ОтобратьЛимитыПоАлгоритму</code>, строки алгоритмов убираются из наборов, <code>ИсполнителейАлгоритмов</code> и добивка номеров. Второй раз функцию не копировать.</span>
+                          </li>
+                          <li>
+                            <span class="tag chg">изменение</span>
+                            <span class="node">НомерИсполнителяСтроки</span>
+                            <span class="note"> - ветка <code>ЛимитыПоАлгоритму</code>: номер <code>ИсполнителейАлгоритмов - 1 - (ВыданоАлгоритмов % ИсполнителейАлгоритмов)</code>. Второй раз функцию не копировать.</span>
+                          </li>
+                          <li>
+                            <span class="tag add">добавление</span>
+                            <span class="node">ОтобратьЛимитыПоАлгоритму</span>
+                            <span class="note"> - запрос к <code>Справочник.Лимиты</code>, способ настройки "по алгоритму". Та же функция, что в общем перехвате.</span>
+                          </li>
+                        </ul>
+                      </li>
+                    </ul>
+                  </li>
+                </ul>
+              </details>
+            </li>
+          </ul>
+        </details>
+      </li>
+
+      <li>
+        <details class="idea" open>
+          <summary><span class="tag idea-tag">идея 4</span> <span class="idea-title">Облегченные настройки лимитов при чтении порогов</span></summary>
+          <p class="lead">Задание чтения сведений о порогах берет облегченные настройки (<code>НастройкиИзКэша(Лимиты, Истина)</code>). Полные настройки читаются только у лимитов без класса в облегченных настройках и у лимитов класса с расширенным подтверждением. <code>СведенияОПорогах</code> и <code>НовыеТаблицыНастроекПорогов</code> не меняются. <a href="ОБОСНОВАНИЯ/Обоснование%20идеи%20-%20облегченные%20настройки%20лимитов%20при%20чтении%20порогов.html">Обоснование</a></p>
+          <ul>
+            <li>
+              <span class="node obj">ОбщийМодуль.Исполнители</span>
+              <span class="note"> - тот же модуль, что в идее 1</span>
+              <ul>
+                <li>
+                  <span class="node obj">Модуль</span>
+                  <ul>
+                    <li>
+                      <span class="tag chg">изменение</span>
+                      <span class="node">ПроверкаИОтправка_ЧтениеСведенийОПорогах</span>
+                      <span class="note"> - в расширении <code>FO_LimitCheckOpt_ПроверкаИОтправка_ЧтениеСведенийОПорогах</code>. Одна замена вызова.</span>
+                      <ul>
+                        <li>
+                          <span class="tag del">удаление</span>
+                          <span class="note"><code>НастройкиИзКэша = Справочники.Лимиты.НастройкиИзКэша(Лимиты)</code></span>
+                        </li>
+                        <li>
+                          <span class="tag add">добавление</span>
+                          <span class="note"><code>НастройкиИзКэша = НастройкиЛимитовДляЧтенияПорогов(Лимиты)</code></span>
+                        </li>
+                      </ul>
+                    </li>
+                    <li>
+                      <span class="tag add">добавление</span>
+                      <span class="node">НастройкиЛимитовДляЧтенияПорогов</span>
+                      <span class="note"> - область <code>НастройкиЛимитовДляЧтенияПорогов</code>. Облегченные для всех, полные для нужных.</span>
+                    </li>
+                    <li>
+                      <span class="tag add">добавление</span>
+                      <span class="node">ЕстьКлассЛимитаВНастройках</span>
+                      <span class="note"> - в облегченных настройках есть свойство <code>КлассЛимита</code>.</span>
+                    </li>
+                    <li>
+                      <span class="tag add">добавление</span>
+                      <span class="node">КлассыРасширенногоПодтверждения</span>
+                      <span class="note"> - запрос к <code>Справочник.КлассыЛимитов</code> по признаку <code>РасширенноеПодтверждение</code>.</span>
+                    </li>
+                  </ul>
+                </li>
+              </ul>
+            </li>
+          </ul>
+        </details>
+      </li>
+
+    </ul>
+
+    <div class="foot">
+      <h2>Сводка для переноса</h2>
+      <div style="overflow-x:auto">
+      <table>
+        <thead>
+          <tr><th>Объект</th><th>Модуль</th><th>Процедура</th><th>Действие</th><th>Идея</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>ОбщийМодуль.Исполнители</td><td>Модуль</td><td>ПроверкаИОтправка_ОбработкаПроверки</td><td>изменение: 2 вставки, 1 удаление фрагмента</td><td>1. Индекс портфелей</td></tr>
+          <tr><td>РегистрСведений.ПорогиЛимитов</td><td>МодульМенеджера</td><td>СведенияОПорогах</td><td>изменение: 1 вставка, 1 удаление фрагмента</td><td>2. Пары плана</td></tr>
+          <tr><td>РегистрСведений.ПорогиЛимитов</td><td>МодульМенеджера</td><td>ТекстЗапросаПолученияПороговПоПлану</td><td>добавление</td><td>2. Пары плана</td></tr>
+          <tr><td>РегистрСведений.ПорогиЛимитов</td><td>МодульМенеджера</td><td>ЕстьПланПроверки</td><td>добавление</td><td>2. Пары плана</td></tr>
+          <tr><td>РегистрСведений.ПорогиЛимитов</td><td>МодульМенеджера</td><td>ТекстПарЛимитПортфельПоПлану</td><td>добавление</td><td>2. Пары плана</td></tr>
+          <tr><td>ОбщийМодуль.РаботаСЛимитами</td><td>Модуль</td><td>ПланОбработкиПроверки</td><td>изменение: 3 вставки, удалений нет</td><td>3. Нарезка, общее</td></tr>
+          <tr><td>ОбщийМодуль.РаботаСЛимитами</td><td>Модуль</td><td>НомераИсполнителейПоНаборам</td><td>добавление</td><td>3. Диспетчер и подидея 3.3</td></tr>
+          <tr><td>ОбщийМодуль.РаботаСЛимитами</td><td>Модуль</td><td>НомерИсполнителяСтроки</td><td>добавление</td><td>3. Все три подидеи</td></tr>
+          <tr><td>ОбщийМодуль.РаботаСЛимитами</td><td>Модуль</td><td>МинимумСтрокЧастиНабора</td><td>добавление</td><td>3. Выбор частей или подряд</td></tr>
+          <tr><td>ОбщийМодуль.РаботаСЛимитами</td><td>Модуль</td><td>ОтобратьЛимитыПоАлгоритму</td><td>добавление</td><td>3.3. По кругу</td></tr>
+          <tr><td>ОбщийМодуль.РаботаСЛимитами</td><td>Модуль</td><td>НомераПоЧастямНаборов</td><td>добавление</td><td>3.1. Части наборов</td></tr>
+          <tr><td>ОбщийМодуль.РаботаСЛимитами</td><td>Модуль</td><td>НомераПодрядПоНаборам</td><td>добавление</td><td>3.2. Подряд по наборам</td></tr>
+          <tr><td>ОбщийМодуль.Исполнители</td><td>Модуль</td><td>ПроверкаИОтправка_ЧтениеСведенийОПорогах</td><td>изменение: 1 вставка, 1 удаление фрагмента</td><td>4. Облегченные настройки</td></tr>
+          <tr><td>ОбщийМодуль.Исполнители</td><td>Модуль</td><td>НастройкиЛимитовДляЧтенияПорогов</td><td>добавление</td><td>4. Облегченные настройки</td></tr>
+          <tr><td>ОбщийМодуль.Исполнители</td><td>Модуль</td><td>ЕстьКлассЛимитаВНастройках</td><td>добавление</td><td>4. Облегченные настройки</td></tr>
+          <tr><td>ОбщийМодуль.Исполнители</td><td>Модуль</td><td>КлассыРасширенногоПодтверждения</td><td>добавление</td><td>4. Облегченные настройки</td></tr>
+        </tbody>
+      </table>
+      </div>
+
+      <h2>Не переносить</h2>
+      <ul>
+        <li>Роль <code>FO_LimitCheckOpt_ОсновнаяРоль</code> и язык <code>Русский</code>. Это оболочка расширения.</li>
+        <li>Аннотации расширения и префиксы перехватчиков.</li>
+        <li><code>ОбщегоНазначенияКлиентСервер.ДополнитьМассив</code>. Другие вызовы в <code>Исполнители</code> остаются.</li>
+        <li>Метаданные регистров <code>ПорогиЛимитов</code>, <code>КэшВмПланПроверки</code>, <code>КэшВмПороги</code>, справочников лимитов и классов лимитов.</li>
+        <li><code>Распорядители.ПроверкаИОтправка</code>, <code>ПроверкаЛимитов.КэшВмКратко</code>, <code>Справочники.Лимиты.НастройкиИзКэша</code> и <code>СохранитьНастройкиЛимита</code>. Их вызывают как есть.</li>
+      </ul>
+
+      <h2>Порядок в коде проверки</h2>
+      <ol>
+        <li>Идея 3. <code>РаботаСЛимитами.ПланОбработкиПроверки</code> пишет план с новыми номерами заданий.</li>
+        <li>Идеи 2 и 4. <code>Исполнители.ПроверкаИОтправка_ЧтениеСведенийОПорогах</code> читает настройки, затем <code>ПорогиЛимитов.СведенияОПорогах</code> строит пороги по парам плана.</li>
+        <li>Идея 1. <code>Исполнители.ПроверкаИОтправка_ОбработкаПроверки</code> собирает портфели порции через индекс.</li>
+      </ol>
+      <p>Идеи независимы по результату проверки: каждую можно перенести отдельно. Идея 2 читает план, который пишет штатный <code>ПланОбработкиПроверки</code> и с идеей 3 тоже.</p>
+    </div>
+  </div>
+</div>
+</body>
+</html>
