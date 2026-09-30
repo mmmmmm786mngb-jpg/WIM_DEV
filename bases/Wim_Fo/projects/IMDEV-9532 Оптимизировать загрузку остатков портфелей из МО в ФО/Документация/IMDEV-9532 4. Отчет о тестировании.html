@@ -1,0 +1,710 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Тестирование FO_PositionLoadOpt</title>
+<style>
+:root{
+  --bg:#f4f6f9;--paper:#ffffff;--ink:#27313f;--muted:#6b7585;--line:#e1e5ec;
+  --brand:#52648a;--brand-ink:#3b4a68;--brand-soft:#eef1f6;
+  --good:#3f7d5c;--good-soft:#edf5f0;--warn:#9a7433;--warn-soft:#f8f3e8;--bad:#a0575a;--bad-soft:#f7eded;
+  --neutral-soft:#f3f4f7;--code:#f6f7f9;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#15181e;--paper:#1c2028;--ink:#dde2ea;--muted:#9099a8;--line:#2c323d;
+    --brand:#9fb0d0;--brand-ink:#b9c6de;--brand-soft:#232a37;
+    --good:#7fbf9b;--good-soft:#1c2a23;--warn:#d0ad6c;--warn-soft:#2b261b;--bad:#d69497;--bad-soft:#2d2021;
+    --neutral-soft:#222730;--code:#191d24;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#15181e;--paper:#1c2028;--ink:#dde2ea;--muted:#9099a8;--line:#2c323d;
+  --brand:#9fb0d0;--brand-ink:#b9c6de;--brand-soft:#232a37;
+  --good:#7fbf9b;--good-soft:#1c2a23;--warn:#d0ad6c;--warn-soft:#2b261b;--bad:#d69497;--bad-soft:#2d2021;
+  --neutral-soft:#222730;--code:#191d24;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.55 "Segoe UI",Roboto,Arial,sans-serif}
+.wrap{max-width:1040px;margin:0 auto;padding:0 16px}
+h2{font-size:19px;line-height:1.3;margin:0 0 4px;color:var(--brand-ink);font-weight:650}
+h3{font-size:15px;margin:14px 0 6px;font-weight:650}
+p{margin:6px 0}
+ul{margin:6px 0;padding-left:20px}
+li{margin:3px 0}
+section{padding:28px 0 4px}
+.sec-no{display:inline-block;font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:2px}
+.sec-lead{color:var(--muted);max-width:780px;margin-bottom:12px}
+code{font-family:Consolas,"Cascadia Mono",monospace;font-size:12.5px;background:var(--code);border:1px solid var(--line);padding:0 4px;border-radius:3px}
+
+/* header */
+.hero{background:var(--paper);border-bottom:1px solid var(--line);padding:14px 0 18px}
+.brandbar{display:flex;align-items:center;justify-content:space-between;gap:12px;padding-bottom:12px;margin-bottom:14px;border-bottom:1px solid var(--line)}
+.logo{height:24px;width:auto;color:var(--brand);display:block;flex:none}
+.kicker{font-size:11.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin:0;text-align:right}
+.hero h1{font-size:21px;line-height:1.3;margin:0 0 12px;font-weight:650;color:var(--brand-ink);max-width:860px}
+.hero h1 span{color:var(--good)}
+.hero .sub{color:var(--muted);max-width:860px;margin:0 0 14px}
+.ba-hero{display:flex;align-items:stretch;gap:10px;flex-wrap:wrap;margin:0 0 14px}
+.ba-box{border-radius:8px;padding:8px 14px 9px;min-width:170px;border:1px solid var(--line);background:var(--neutral-soft)}
+.ba-box .l{font-size:11px;letter-spacing:.08em;text-transform:uppercase;font-weight:700;color:var(--muted)}
+.ba-box .v{font-size:28px;font-weight:700;line-height:1.15;white-space:nowrap;font-variant-numeric:tabular-nums;color:var(--ink)}
+.ba-box .v small{font-size:14px;font-weight:600;margin:0 6px 0 2px;color:var(--muted)}
+.ba-box .v small:last-child{margin-right:0}
+.ba-box .s{font-size:12px;color:var(--muted)}
+.ba-box.was{border-left:3px solid var(--bad)}
+.ba-box.now{border-left:3px solid var(--good);background:var(--good-soft)}
+.ba-box.now .v{color:var(--good)}
+.ba-arrow{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;color:var(--muted);padding:0 2px}
+.ba-arrow .a{font-size:22px;line-height:1}
+.ba-arrow .x{font-size:12px;font-weight:700;color:var(--good);white-space:nowrap}
+.goals{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.goal{background:var(--paper);border:1px solid var(--line);border-radius:8px;padding:10px 14px}
+.goal .g-head{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:6px}
+.goal .g-name{font-weight:650;font-size:14px;color:var(--brand-ink)}
+.pill{display:inline-block;font-size:11px;font-weight:600;padding:1px 8px;border-radius:999px;white-space:nowrap;border:1px solid}
+.pill.done{color:var(--good);border-color:var(--good);background:var(--good-soft)}
+.pill.next{color:var(--warn);border-color:var(--warn);background:var(--warn-soft)}
+.goal .g-row{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.goal .g-cell .l{font-size:11.5px;color:var(--muted)}
+.goal .g-cell .v{font-size:16px;font-weight:650;line-height:1.25}
+.goal .g-cell .v.win{color:var(--good)}
+.goal .g-note{font-size:12.5px;color:var(--muted);margin-top:6px}
+
+nav.jump{position:sticky;top:0;z-index:10;background:color-mix(in srgb,var(--paper) 94%,transparent);border-bottom:1px solid var(--line);backdrop-filter:blur(6px)}
+nav.jump .wrap{display:flex;gap:4px 16px;flex-wrap:wrap;padding-top:7px;padding-bottom:7px;font-size:12.5px}
+nav.jump a{color:var(--brand-ink);text-decoration:none}
+nav.jump a:hover{text-decoration:underline}
+
+.card{background:var(--paper);border:1px solid var(--line);border-radius:8px;padding:12px 16px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.callout{border-left:3px solid var(--brand);background:var(--brand-soft);border-radius:6px;padding:8px 12px;margin:10px 0}
+.callout.good{border-color:var(--good);background:var(--good-soft)}
+.callout.warn{border-color:var(--warn);background:var(--warn-soft)}
+
+.scope dl{display:grid;grid-template-columns:140px 1fr;gap:4px 12px;margin:0}
+.scope dt{color:var(--muted);font-size:13px}
+.scope dd{margin:0}
+
+.hyp{display:grid;gap:8px}
+.h{display:grid;grid-template-columns:34px 1fr auto;gap:12px;align-items:start;background:var(--paper);border:1px solid var(--line);border-radius:8px;padding:10px 14px}
+.h .num{width:28px;height:28px;border-radius:6px;display:grid;place-items:center;font-weight:700;font-size:13px;background:var(--neutral-soft);color:var(--muted)}
+.h.ok .num{background:var(--good-soft);color:var(--good)}
+.h.no .num{background:var(--bad-soft);color:var(--bad)}
+.h.later .num{background:var(--warn-soft);color:var(--warn)}
+.h .t{font-weight:650;font-size:14px;margin-bottom:2px}
+.h .d{color:var(--muted);font-size:13px}
+.h .d b{color:var(--ink);font-weight:600}
+.verdict{font-size:11px;font-weight:600;padding:1px 8px;border-radius:999px;white-space:nowrap;border:1px solid}
+.h.ok .verdict{color:var(--good);border-color:var(--good)}
+.h.no .verdict{color:var(--bad);border-color:var(--bad)}
+.h.later .verdict{color:var(--warn);border-color:var(--warn)}
+
+.ba{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px}
+.ba .card h3{margin-top:0;font-size:14px}
+.dots{display:flex;flex-direction:column;gap:4px;margin:8px 0}
+.dots .row{display:flex;gap:3px;align-items:center;font-size:11.5px;color:var(--muted)}
+.dots i{display:inline-block;width:11px;height:11px;border-radius:3px;background:var(--line)}
+.dots i.scan{background:var(--bad)}
+.dots i.new{background:var(--brand)}
+.dots i.hit{background:var(--good)}
+.dots .row span{margin-left:6px}
+pre{background:var(--code);border:1px solid var(--line);border-radius:6px;padding:10px 12px;overflow-x:auto;font:12px/1.5 Consolas,"Cascadia Mono",monospace;margin:6px 0}
+pre .del{color:var(--bad)}
+pre .ins{color:var(--good)}
+
+.checks{list-style:none;padding:0;margin:0;display:grid;gap:6px}
+.checks li{display:grid;grid-template-columns:20px 1fr;gap:6px;align-items:start;margin:0}
+.checks .ic{width:17px;height:17px;border-radius:50%;display:grid;place-items:center;font-size:10.5px;font-weight:700;margin-top:2px}
+.checks .ic.y{background:var(--good-soft);color:var(--good)}
+.checks .ic.n{background:var(--warn-soft);color:var(--warn)}
+
+.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:4px 0 10px}
+.kpi{background:var(--paper);border:1px solid var(--line);border-radius:8px;padding:9px 12px}
+.kpi .l{font-size:12px;color:var(--muted);min-height:32px}
+.kpi .v{font-size:20px;font-weight:650;line-height:1.15;color:var(--brand-ink);white-space:nowrap}
+.kpi .v.good{color:var(--good)}
+.kpi .s{font-size:12px;color:var(--muted);margin-top:2px}
+
+.bars{display:grid;gap:8px;margin:8px 0 4px}
+.bar{display:grid;grid-template-columns:130px 1fr 76px;gap:10px;align-items:center}
+.bar .lab{font-size:12.5px;color:var(--muted)}
+.bar .track{position:relative;height:18px;background:var(--neutral-soft);border-radius:4px;overflow:hidden}
+.bar .fill{position:absolute;left:0;top:0;bottom:0;border-radius:4px}
+.bar .fill.old{background:color-mix(in srgb,var(--bad) 70%,transparent)}
+.bar .fill.fc{background:repeating-linear-gradient(45deg,color-mix(in srgb,var(--warn) 60%,transparent) 0 5px,transparent 5px 10px)}
+.bar .fill.new{background:var(--good)}
+.bar .fill.target{background:none;border-right:2px dashed var(--brand);border-radius:0}
+.bar .val{font-weight:650;font-size:13px;text-align:right}
+.axis{display:grid;grid-template-columns:130px 1fr 76px;gap:10px;font-size:11px;color:var(--muted)}
+.axis .ticks{display:flex;justify-content:space-between}
+
+.stack{display:flex;height:26px;border-radius:6px;overflow:hidden;margin:10px 0 8px;border:1px solid var(--line)}
+.stack div{display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;color:#fff;white-space:nowrap;overflow:hidden}
+.legend{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:12px;color:var(--muted)}
+.legend span{display:inline-flex;align-items:center;gap:5px}
+.legend i{width:10px;height:10px;border-radius:2px;display:inline-block}
+.c1{background:#52648a}.c2{background:#7d8cab}.c3{background:#a3aec4}.c4{background:#c3b89e}.c5{background:#3f7d5c}.c6{background:#c9ccd3}
+
+.tbl-wrap{overflow-x:auto;border-radius:8px;border:1px solid var(--line)}
+table{border-collapse:collapse;width:100%;background:var(--paper);font-size:13px}
+th,td{padding:6px 10px;text-align:left;vertical-align:top;border-bottom:1px solid var(--line)}
+th{background:var(--brand-soft);color:var(--brand-ink);font-weight:600;font-size:12.5px}
+tr:last-child td{border-bottom:none}
+td.n{text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
+
+.road{display:grid;gap:10px}
+.step{display:grid;grid-template-columns:70px 1fr;gap:12px;background:var(--paper);border:1px solid var(--line);border-radius:8px;padding:12px 16px}
+.step .tag{font-size:10.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.step .big{font-size:22px;font-weight:700;color:var(--brand);line-height:1.1}
+.step h3{margin:0 0 4px}
+.step .eff{display:inline-block;margin-top:6px;font-size:12px;color:var(--muted);background:var(--neutral-soft);padding:1px 8px;border-radius:999px}
+.ideas{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-top:8px}
+.idea{border:1px solid var(--line);border-radius:6px;padding:8px 12px;background:var(--paper)}
+.idea b{display:block;margin-bottom:2px;font-weight:650}
+.idea .why{font-size:13px;color:var(--muted)}
+
+footer{padding:28px 0 40px;color:var(--muted);font-size:12.5px}
+
+/* screenshots */
+.shot{margin:10px 0 0;background:var(--paper);border:1px solid var(--line);border-radius:8px;padding:10px 12px}
+.shot-title{font-weight:650;font-size:13.5px;margin-bottom:8px}
+.shot-title .tag{display:inline-block;font-size:10.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--brand-ink);background:var(--brand-soft);border-radius:4px;padding:0 6px;margin-right:6px;vertical-align:1px}
+.shot-img{display:block;width:100%;padding:0;border:1px solid var(--line);border-radius:4px;background:#fff;cursor:zoom-in;overflow:hidden}
+.shot-img img{display:block;width:100%;height:auto}
+.shot-cap{font-size:12.5px;color:var(--muted);margin-top:8px}
+.shot-cap b{color:var(--ink);font-weight:600}
+.lightbox{position:fixed;inset:0;z-index:50;background:rgba(10,14,22,.85);display:none;align-items:center;justify-content:center;padding:16px;cursor:zoom-out}
+.lightbox.open{display:flex}
+.lightbox img{max-width:100%;max-height:100%;border-radius:4px;background:#fff}
+
+@media (max-width:820px){
+  .goals,.grid2,.grid3,.ba,.ideas{grid-template-columns:1fr}
+  .kpis{grid-template-columns:1fr 1fr}
+  .step{grid-template-columns:1fr}
+  .bar,.axis{grid-template-columns:90px 1fr 64px}
+  .scope dl{grid-template-columns:1fr}
+  .scope dt{margin-top:4px}
+}
+@media (max-width:520px){
+  .brandbar{flex-direction:column;align-items:flex-start}
+  .kicker{text-align:left}
+  .h{grid-template-columns:28px 1fr}
+  .h .verdict{grid-column:2;justify-self:start}
+  .ba-hero{flex-direction:column}
+  .ba-arrow{flex-direction:row;gap:8px}
+  .ba-arrow .a{transform:rotate(90deg)}
+}
+
+.kicker .env{text-transform:none;letter-spacing:0;font-size:12px;margin-top:3px;color:var(--muted)}
+.kicker .env b{color:var(--brand-ink);font-weight:600;font-family:Consolas,"Cascadia Mono",monospace;font-size:11.5px}
+.prose p{margin:0 0 10px;line-height:1.6}
+.diagram .c-new{fill:var(--brand)}
+.diagram .c-scan{fill:var(--bad);opacity:.75}
+.diagram .c-hit{fill:var(--good)}
+.diagram .t.bad{fill:var(--bad)}
+.diagram .t.good{fill:var(--good)}
+.grid2>*,.grid3>*{min-width:0}
+pre .del{color:var(--bad)}
+pre .ins{color:var(--good)}
+.diagram svg{width:100%;height:auto;display:block;font-family:"Segoe UI",Roboto,Arial,sans-serif}
+.diagram .lane{font-size:12px;font-weight:700;fill:var(--muted);letter-spacing:.04em}
+.diagram .sep{stroke:var(--line);stroke-dasharray:4 4}
+.diagram .box{fill:var(--paper);stroke:var(--line);stroke-width:1.2}
+.diagram .box.old{fill:var(--bad-soft);stroke:var(--bad)}
+.diagram .box.new{fill:var(--good-soft);stroke:var(--good)}
+.diagram .store{fill:var(--brand-soft);stroke:var(--brand);stroke-width:1.2}
+.diagram .t{font-size:13px;font-weight:650;fill:var(--ink)}
+.diagram .s{font-size:11.5px;fill:var(--muted)}
+.diagram .mute{font-style:italic}
+.diagram .k{font-size:11.5px;font-weight:600;fill:var(--good)}
+.diagram .ln{fill:none;stroke:var(--muted);stroke-width:1.4}
+.diagram .ln.key{stroke:var(--good);stroke-width:2}
+.diagram .arh{fill:var(--muted)}
+.diagram .setall{fill:var(--bad-soft);stroke:var(--bad)}
+.diagram .setplan{fill:var(--good-soft);stroke:var(--good)}
+.diagram .setread{fill:var(--paper);stroke:var(--brand);stroke-width:1.5}
+
+
+.meta{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:1px;background:var(--line);border:1px solid var(--line);border-radius:8px;overflow:hidden;margin:0 0 14px}
+.meta div{background:var(--paper);padding:7px 12px}
+.meta .l{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-weight:700}
+.meta .v{font-size:13px;font-weight:600;color:var(--ink)}
+.tldr{background:var(--paper);border:1px solid var(--line);border-left:4px solid var(--good);border-radius:8px;padding:12px 16px;margin:0}
+.tldr .l{font-size:11px;letter-spacing:.08em;text-transform:uppercase;font-weight:700;color:var(--good);margin-bottom:4px}
+.tldr p{margin:0 0 6px;max-width:900px}
+.tldr p:last-child{margin-bottom:0}
+details.code{margin:8px 0;background:var(--paper);border:1px solid var(--line);border-radius:8px}
+details.code summary{cursor:pointer;padding:8px 12px;font-weight:600;color:var(--brand-ink)}
+details.code summary:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
+details.code pre{margin:0 12px 12px}
+pre .mk{color:var(--warn);font-weight:700}
+pre .cm{color:var(--muted)}
+.chip{display:inline-block;font-size:11px;font-weight:600;padding:1px 8px;border-radius:999px;border:1px solid var(--line);background:var(--neutral-soft);color:var(--muted);white-space:nowrap}
+.chip.good{color:var(--good);border-color:var(--good);background:var(--good-soft)}
+.chip.warn{color:var(--warn);border-color:var(--warn);background:var(--warn-soft)}
+.chip.bad{color:var(--bad);border-color:var(--bad);background:var(--bad-soft)}
+td.good,span.good{color:var(--good);font-weight:650}
+td.bad,span.bad{color:var(--bad);font-weight:650}
+td.muted{color:var(--muted)}
+.flow{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px;margin:10px 0}
+.flow .st{background:var(--paper);border:1px solid var(--line);border-radius:8px;padding:9px 11px;min-width:0}
+.flow .st .n{font-size:11px;font-weight:700;letter-spacing:.06em;color:var(--muted);text-transform:uppercase}
+.flow .st .t{font-weight:650;margin:2px 0 4px;color:var(--brand-ink)}
+.flow .st .d{font-size:12.5px;color:var(--muted)}
+.flow .st.hot{border-color:var(--bad);background:var(--bad-soft)}
+.flow .st.hot .t{color:var(--bad)}
+.steps{counter-reset:s;list-style:none;padding:0;margin:8px 0;display:grid;gap:8px}
+.steps li{counter-increment:s;display:grid;grid-template-columns:28px 1fr;gap:10px;align-items:start;margin:0}
+.steps li::before{content:counter(s);width:24px;height:24px;border-radius:6px;display:grid;place-items:center;font-weight:700;font-size:12px;background:var(--brand-soft);color:var(--brand-ink)}
+.steps li>div{min-width:0}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.two>*{min-width:0}
+.note{font-size:12.5px;color:var(--muted)}
+.bar .fill.base{background:color-mix(in srgb,var(--bad) 65%,transparent)}
+.bar .fill.opt{background:var(--good)}
+.bar-group{margin:6px 0 12px}
+.bar-group h3{margin:6px 0 4px}
+@media (max-width:820px){.meta{grid-template-columns:1fr 1fr}.flow{grid-template-columns:1fr 1fr}.two{grid-template-columns:1fr}}
+@media (max-width:520px){.meta{grid-template-columns:1fr}.flow{grid-template-columns:1fr}}
+@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
+</style>
+</head>
+<body>
+<style>
+/* Графики отчета: проверенная категориальная палитра (порядок слотов проверен на различимость при дальтонизме),
+   "без расширения" - нейтральный серый, "с расширением" - слот 1. */
+:root{
+  --s1:#2a78d6;--s2:#eb6834;--s3:#1baf7a;--s4:#eda100;--s5:#e87ba4;
+  --base-mark:#898781;--grid:#e1e0d9;--axis:#c3c2b7;--tip-bg:#0b0b0b;--tip-ink:#ffffff;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --s1:#3987e5;--s2:#d95926;--s3:#199e70;--s4:#c98500;--s5:#d55181;
+    --base-mark:#898781;--grid:#2c2c2a;--axis:#383835;--tip-bg:#ffffff;--tip-ink:#0b0b0b;
+  }
+}
+:root[data-theme="dark"]{
+  --s1:#3987e5;--s2:#d95926;--s3:#199e70;--s4:#c98500;--s5:#d55181;
+  --base-mark:#898781;--grid:#2c2c2a;--axis:#383835;--tip-bg:#ffffff;--tip-ink:#0b0b0b;
+}
+.viz{background:var(--paper);border:1px solid var(--line);border-radius:8px;padding:14px 16px 12px;margin:10px 0;min-width:0}
+.viz h3{margin:0 0 2px}
+.viz .cap{font-size:12.5px;color:var(--muted);margin:0 0 10px}
+.vlegend{display:flex;flex-wrap:wrap;gap:4px 16px;font-size:12px;color:var(--muted);margin:0 0 8px}
+.vlegend span{display:inline-flex;align-items:center;gap:6px}
+.vlegend i{width:12px;height:12px;border-radius:3px;display:inline-block}
+.hb{display:grid;grid-template-columns:150px 1fr 88px;gap:10px;align-items:center;margin:5px 0}
+.hb .lab{font-size:12.5px;color:var(--ink);min-width:0}
+.hb .lab small{display:block;color:var(--muted);font-size:11px}
+.hb .track{position:relative;height:20px;border-left:1px solid var(--axis)}
+.hb .val{font-size:13px;font-weight:650;text-align:right;font-variant-numeric:tabular-nums;color:var(--ink)}
+.mark{position:absolute;top:2px;bottom:2px;left:0;border-radius:0 4px 4px 0;cursor:default}
+.mark:focus-visible{outline:2px solid var(--ink);outline-offset:1px}
+.mark.base{background:var(--base-mark)}
+.mark.new{background:var(--s1)}
+.mark.est{background:repeating-linear-gradient(45deg,var(--s1) 0 5px,color-mix(in srgb,var(--s1) 35%,transparent) 5px 10px)}
+.hb.gap{margin-top:12px}
+.xaxis{display:grid;grid-template-columns:150px 1fr 88px;gap:10px;font-size:11px;color:var(--muted);margin-top:2px}
+.xaxis .t{display:flex;justify-content:space-between;font-variant-numeric:tabular-nums}
+.gridbg{background-image:linear-gradient(to right,var(--grid) 1px,transparent 1px);background-size:25% 100%}
+.stack2{position:absolute;top:2px;bottom:2px;left:0;display:flex;gap:2px}
+.stack2 .seg{height:100%;display:flex;align-items:center;justify-content:center;font-size:10.5px;font-weight:650;color:#fff;white-space:nowrap;overflow:hidden}
+.stack2 .seg:last-child{border-radius:0 4px 4px 0}
+.stack2 .seg.c-s3,.stack2 .seg.c-s4,.stack2 .seg.c-s5{color:#0b0b0b}
+.c-s1{background:var(--s1)}.c-s2{background:var(--s2)}.c-s3{background:var(--s3)}.c-s4{background:var(--s4)}.c-s5{background:var(--s5)}
+.tl{position:relative;margin:4px 0 0}
+.tl .row{display:grid;grid-template-columns:90px 1fr;gap:10px;align-items:center;margin:4px 0}
+.tl .row .lab{font-size:12px;color:var(--muted)}
+.tl .lane{position:relative;height:16px}
+.tl .ticks{display:grid;grid-template-columns:90px 1fr;gap:10px;font-size:11px;color:var(--muted)}
+.tl .ticks .t{position:relative;height:16px}
+.tl .ticks .t span{position:absolute;transform:translateX(-50%);font-variant-numeric:tabular-nums}
+.tl .gridl{position:absolute;top:0;bottom:0;width:1px;background:var(--grid)}
+.strip{display:grid;grid-template-columns:150px 1fr 88px;gap:10px;align-items:center;margin:8px 0}
+.strip .lane{position:relative;height:26px;border-left:1px solid var(--axis)}
+.strip .dot{position:absolute;top:50%;width:9px;height:9px;margin:-4.5px 0 0 -4.5px;border-radius:50%;background:var(--s1);box-shadow:0 0 0 2px var(--paper)}
+.strip .dot.old{background:var(--base-mark)}
+.strip .med{position:absolute;top:1px;bottom:1px;width:2px;margin-left:-1px;background:var(--ink)}
+.verdicts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+#viztip{position:fixed;z-index:60;pointer-events:none;background:var(--tip-bg);color:var(--tip-ink);font-size:12px;line-height:1.4;padding:6px 9px;border-radius:6px;max-width:280px;display:none}
+@media (max-width:620px){.hb,.xaxis,.strip{grid-template-columns:96px 1fr 64px}.verdicts{grid-template-columns:1fr}.tl .row,.tl .ticks{grid-template-columns:60px 1fr}}
+</style>
+
+<header class="hero">
+  <div class="wrap">
+    <div class="brandbar">
+      <svg class="logo" role="img" aria-label="ВИМ Инвестиции" viewBox="0 0 176 42" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g clip-path="url(#vimLogoClip)">
+<path d="M111.155 16.6987C110.691 15.765 110.009 14.9925 109.109 14.385C108.49 13.9688 107.786 13.6387 107.002 13.3987C108.08 12.93 108.977 12.2588 109.685 11.3813C110.624 10.2225 111.095 8.8275 111.095 7.1925C111.095 4.98 110.273 3.22875 108.634 1.935C106.99 0.645001 104.65 0 101.605 0H88.1016V27.8625H101.963C104.028 27.8625 105.796 27.5475 107.266 26.9137C108.735 26.28 109.866 25.365 110.661 24.1688C111.456 22.9688 111.852 21.5662 111.852 19.9612C111.852 18.7237 111.618 17.6363 111.159 16.7025L111.155 16.6987ZM95.0511 5.33625H100.256C101.631 5.33625 102.626 5.56875 103.233 6.02625C103.844 6.4875 104.145 7.2075 104.145 8.17875C104.145 9.15 103.84 9.8775 103.233 10.3538C102.623 10.8263 101.631 11.0663 100.256 11.0663H95.0511V5.33625ZM104.759 20.5725C104.665 20.9025 104.514 21.1913 104.303 21.4425C104.092 21.6938 103.84 21.8962 103.55 22.0537C103.259 22.2112 102.894 22.3313 102.457 22.41C102.02 22.4888 101.537 22.53 101.006 22.53H95.0473V16.365H101.006C101.533 16.365 102.02 16.41 102.457 16.5038C102.894 16.5975 103.256 16.7287 103.55 16.8975C103.84 17.07 104.092 17.2725 104.303 17.5088C104.514 17.745 104.669 18.03 104.759 18.36C104.854 18.69 104.899 19.065 104.899 19.485C104.899 19.8788 104.854 20.2425 104.759 20.5725Z" fill="currentColor"/>
+<path d="M135.638 0L122.768 16.1062V0H115.977V27.8625H121.339L134.206 11.625V27.8625H141.001V0H135.638Z" fill="currentColor"/>
+<path d="M169.44 0L161.179 20.1713L152.759 0H146.164V27.8625H152.759V12.8887L159.113 27.8625H163.044L169.44 12.735V27.8625H176.031V0H169.44Z" fill="currentColor"/>
+<path d="M35.5203 20.3991L29.8785 12.9141H0L20.5208 40.5441H20.5245L35.5203 20.3991Z" fill="url(#paint0_linear_1756_3195)"/>
+<path d="M50.7038 0.00390625L35.5195 20.4002L50.7038 40.5452L79.9831 0.00390625H50.7038Z" fill="url(#paint1_linear_1756_3195)"/>
+<path d="M20.5234 40.5454H50.7035L35.5192 20.4004L20.5234 40.5454Z" fill="url(#paint2_linear_1756_3195)"/>
+<path d="M88.8062 39.281V34.0723H88.0977V40.5185H88.678L92.59 35.2985V40.5185H93.291V34.0723H92.7106L88.8062 39.281Z" fill="currentColor"/>
+<path d="M102.296 36.926H98.41V34.0723H97.6562V40.5185H98.41V37.5748H102.296V40.5185H103.049V34.0723H102.296V36.926Z" fill="currentColor"/>
+<path d="M111.563 37.4248C111.412 37.331 111.239 37.2635 111.047 37.2148C111.325 37.1173 111.552 36.9673 111.732 36.761C111.966 36.491 112.087 36.1573 112.087 35.756C112.087 35.2198 111.902 34.8035 111.537 34.511C111.171 34.2185 110.655 34.0723 109.991 34.0723H107.398V40.5185H110.101C110.553 40.5185 110.941 40.451 111.258 40.316C111.574 40.181 111.819 39.9823 111.989 39.716C112.158 39.4498 112.241 39.1273 112.241 38.741C112.241 38.441 112.185 38.1823 112.068 37.961C111.951 37.7398 111.781 37.5598 111.563 37.421V37.4248ZM108.137 34.676H109.882C110.361 34.676 110.722 34.7735 110.971 34.9648C111.22 35.156 111.344 35.441 111.344 35.8198C111.344 36.1985 111.22 36.4648 110.971 36.6598C110.722 36.8548 110.361 36.9523 109.882 36.9523H108.137V34.676ZM111.442 39.1648C111.401 39.2923 111.344 39.401 111.261 39.4948C111.182 39.5848 111.084 39.6635 110.967 39.7273C110.851 39.791 110.715 39.8398 110.56 39.8698C110.406 39.8998 110.229 39.9148 110.033 39.9148H108.141V37.556H110.033C110.229 37.556 110.406 37.571 110.56 37.601C110.715 37.631 110.854 37.676 110.967 37.7398C111.084 37.7998 111.182 37.8785 111.261 37.9723C111.341 38.066 111.401 38.1748 111.442 38.3023C111.484 38.426 111.503 38.5723 111.503 38.7373C111.503 38.9023 111.484 39.0373 111.442 39.1685V39.1648Z" fill="currentColor"/>
+<path d="M116.367 40.5185H120.456V39.8885H117.102V37.5635H120.264V36.9335H117.102V34.7023H120.456V34.0723H116.367V40.5185Z" fill="currentColor"/>
+<path d="M127.298 34.6765C127.664 34.6765 127.999 34.7365 128.305 34.8527C128.606 34.9727 128.9 35.164 129.183 35.4227L129.477 34.8115C129.221 34.5415 128.9 34.339 128.52 34.2002C128.139 34.0615 127.728 33.9902 127.28 33.9902C126.643 33.9902 126.096 34.1252 125.644 34.3915C125.192 34.6615 124.841 35.0402 124.6 35.5277C124.359 36.0152 124.238 36.604 124.238 37.2865C124.238 37.969 124.359 38.5577 124.6 39.049C124.841 39.544 125.188 39.9227 125.644 40.1927C126.096 40.4627 126.643 40.594 127.28 40.594C127.728 40.594 128.139 40.5227 128.52 40.3802C128.9 40.2377 129.217 40.0352 129.477 39.7727L129.183 39.1615C128.9 39.424 128.61 39.6152 128.305 39.7315C128.003 39.8515 127.668 39.9115 127.298 39.9115C126.571 39.9115 126.013 39.6827 125.625 39.2215C125.241 38.7602 125.045 38.1152 125.045 37.2865C125.045 36.4577 125.237 35.8127 125.625 35.359C126.01 34.9015 126.567 34.6727 127.298 34.6727V34.6765Z" fill="currentColor"/>
+<path d="M132.66 34.721H135.012V40.5185H135.773V34.721H138.125V34.0723H132.66V34.721Z" fill="currentColor"/>
+<path d="M142.416 39.281V34.0723H141.707V40.5185H142.284L146.199 35.2985V40.5185H146.897V34.0723H146.32L142.416 39.281Z" fill="currentColor"/>
+<path d="M156.61 34.0723H155.848V39.8698H152.015V34.0723H151.262V40.5185H156.839V41.9548H157.529V39.8698H156.61V34.0723Z" fill="currentColor"/>
+<path d="M161.99 39.281V34.0723H161.285V40.5185H161.862L165.777 35.2985V40.5185H166.475V34.0723H165.898L161.99 39.281Z" fill="currentColor"/>
+<path d="M175.453 34.0723L171.548 39.281V34.0723H170.84V40.5185H171.42L175.332 35.2985V40.5185H176.029V34.0723H175.453Z" fill="currentColor"/>
+</g>
+<defs>
+<linearGradient id="paint0_linear_1756_3195" x1="9.68188" y1="5.87156" x2="30.0896" y2="33.5202" gradientUnits="userSpaceOnUse">
+<stop stop-color="#73A8BA"/>
+<stop offset="1" stop-color="#52648A"/>
+</linearGradient>
+<linearGradient id="paint1_linear_1756_3195" x1="70.5273" y1="-6.86984" x2="40.955" y2="33.8156" gradientUnits="userSpaceOnUse">
+<stop stop-color="#CBDFE6"/>
+<stop offset="1" stop-color="#73A8BA"/>
+</linearGradient>
+<linearGradient id="paint2_linear_1756_3195" x1="35.6135" y1="20.4004" x2="35.6135" y2="40.5454" gradientUnits="userSpaceOnUse">
+<stop stop-color="white"/>
+<stop offset="1" stop-color="#73A8BA"/>
+</linearGradient>
+<clipPath id="vimLogoClip">
+<rect width="176" height="42" fill="white"/>
+</clipPath>
+</defs>
+</svg>
+      <div class="kicker">IMDEV-9532 - отчет о тестировании - 30.09.2026<div class="env">Аванкор: Фронт-офис (розничное ДУ), расширение <b>FO_PositionLoadOpt</b> 1.0.0.2</div></div>
+    </div>
+    <h1>Отчет о тестировании ускорения загрузки остатков<br><span>Тестовая копия Т-1: 55,8 минуты без расширения, 24,8 минуты с ним</span></h1>
+    <p class="sub">Сводка всех проверок: полная выгрузка на тестовой копии Т-1 с расширением и без него, замеры производительности ФО по шагам пакета, прогоны на стенде разработки со сверкой данных. Для каждого графика есть таблица с теми же числами.</p>
+    <div class="ba-hero">
+      <div class="ba-box was"><div class="l">Т-1 без расширения</div><div class="v">55,8<small>мин</small></div><div class="s">3 351 с, 23 061 портфель</div></div>
+      <div class="ba-arrow"><span class="a">&rarr;</span><span class="x">x2,25</span></div>
+      <div class="ba-box now"><div class="l">Т-1 с расширением</div><div class="v">24,8<small>мин</small></div><div class="s">1 490 с, 23 061 портфель</div></div>
+      <div class="ba-box"><div class="l">Ожидание для ПРОД</div><div class="v">~18<small>мин</small></div><div class="s">вместо 41 минуты</div></div>
+    </div>
+  </div>
+</header>
+
+<nav class="jump">
+  <div class="wrap">
+    <a href="#verdict">Итог</a>
+    <a href="#t1">1. Т-1: полная выгрузка</a>
+    <a href="#packet">2. Состав пакета</a>
+    <a href="#write">3. Цена записи флага</a>
+    <a href="#spread">4. Разброс вызовов</a>
+    <a href="#stand">5. Стенд и сверка</a>
+    <a href="#prod">6. ПРОД</a>
+    <a href="#todo">7. Что осталось</a>
+    <a href="#method">Методика</a>
+  </div>
+</nav>
+
+<main class="wrap">
+
+<section id="verdict">
+  <div class="tldr">
+    <div class="l">Итог</div>
+    <p>Расширение ускоряет утреннюю выгрузку остатков в 2,25 раза на тестовой копии Т-1: 24,8 минуты вместо 55,8 при одинаковом объеме (23 061 портфель, 5 потоков) и без ошибок. Ускорение объясняется по шагам пакета: запись флага лимитов подешевела с 0,12 до 0,02 с, а на шаге "флаги после позиции" пишется одна запись вместо трех. На стенде данные ФО после выгрузки совпали со штатной загрузкой во всех 20 парах прогонов.</p>
+    <p>До переноса на ПРОД остается сверить данные на Т-1, проверить версию при ручной правке портфеля и получить согласие владельца истории изменений.</p>
+  </div>
+  <h3>Критерии приемки</h3>
+  <div class="verdicts">
+    <div class="h ok"><div class="num">&#10003;</div><div><div class="t">Скорость на тестовой копии</div><div class="d">24,8 против 55,8 минуты, в 2,25 раза быстрее</div></div><span class="verdict">выполнено</span></div>
+    <div class="h ok"><div class="num">&#10003;</div><div><div class="t">Объем и ошибки</div><div class="d">23 061 портфель в обоих прогонах, ошибок выполнения нет</div></div><span class="verdict">выполнено</span></div>
+    <div class="h ok"><div class="num">&#10003;</div><div><div class="t">Данные на стенде</div><div class="d">20 пар прогонов, 4 регистра, 0 расхождений</div></div><span class="verdict">выполнено</span></div>
+    <div class="h ok"><div class="num">&#10003;</div><div><div class="t">Механика на тестовой копии</div><div class="d">100 из 150 записей пропущены, версии для технических флагов не пишутся</div></div><span class="verdict">выполнено</span></div>
+    <div class="h later"><div class="num">?</div><div><div class="t">Данные на тестовой копии</div><div class="d">Распределение флагов лимитов и письмо об итогах после прогона с расширением</div></div><span class="verdict">ожидает</span></div>
+    <div class="h later"><div class="num">?</div><div><div class="t">Версия при ручной правке</div><div class="d">Правка "Лимиты заведены_риски" должна создать версию портфеля</div></div><span class="verdict">ожидает</span></div>
+    <div class="h later"><div class="num">?</div><div><div class="t">Согласование истории изменений</div><div class="d">Технические флаги обмена не версионируются</div></div><span class="verdict">ожидает</span></div>
+  </div>
+</section>
+
+<section id="t1">
+  <span class="sec-no">1. Тестовая копия Т-1</span>
+  <h2>Полная выгрузка: с расширением и без него</h2>
+  <p class="sec-lead">Два прогона подряд на одной копии 30.09.2026: сначала с расширением 1.0.0.2, затем без него. Время - по замеру ключевой операции в МО и по фоновым заданиям пяти потоков.</p>
+
+  <div class="viz">
+    <h3>Время каждого потока, минуты</h3>
+    <p class="cap">Пять потоков заканчивают почти одновременно, разброс внутри прогона меньше минуты</p>
+    <div class="vlegend"><span><i style="background:var(--base-mark)"></i>без расширения</span><span><i style="background:var(--s1)"></i>с расширением 1.0.0.2</span></div>
+    <div class="hb"><span class="lab">Поток 1</span><div class="track gridbg"><div class="mark base" style="width:93.0%" tabindex="0" data-tip="Поток 1 без расширения: 55,8 мин (12:29:04 - 13:24:52)"></div></div><span class="val">55,8</span></div>
+    <div class="hb"><span class="lab"></span><div class="track gridbg"><div class="mark new" style="width:41.3%" tabindex="0" data-tip="Поток 1 с расширением: 24,8 мин (11:50:40 - 12:15:25)"></div></div><span class="val">24,8</span></div>
+    <div class="hb gap"><span class="lab">Поток 2</span><div class="track gridbg"><div class="mark base" style="width:92.4%" tabindex="0" data-tip="Поток 2 без расширения: 55,5 мин (12:29:04 - 13:24:31)"></div></div><span class="val">55,5</span></div>
+    <div class="hb"><span class="lab"></span><div class="track gridbg"><div class="mark new" style="width:41.3%" tabindex="0" data-tip="Поток 2 с расширением: 24,8 мин (11:50:40 - 12:15:26)"></div></div><span class="val">24,8</span></div>
+    <div class="hb gap"><span class="lab">Поток 3</span><div class="track gridbg"><div class="mark base" style="width:91.4%" tabindex="0" data-tip="Поток 3 без расширения: 54,9 мин (12:29:04 - 13:23:55)"></div></div><span class="val">54,9</span></div>
+    <div class="hb"><span class="lab"></span><div class="track gridbg"><div class="mark new" style="width:41.0%" tabindex="0" data-tip="Поток 3 с расширением: 24,6 мин (11:50:40 - 12:15:16)"></div></div><span class="val">24,6</span></div>
+    <div class="hb gap"><span class="lab">Поток 4</span><div class="track gridbg"><div class="mark base" style="width:91.5%" tabindex="0" data-tip="Поток 4 без расширения: 54,9 мин (12:29:04 - 13:23:58)"></div></div><span class="val">54,9</span></div>
+    <div class="hb"><span class="lab"></span><div class="track gridbg"><div class="mark new" style="width:41.0%" tabindex="0" data-tip="Поток 4 с расширением: 24,6 мин (11:50:40 - 12:15:15)"></div></div><span class="val">24,6</span></div>
+    <div class="hb gap"><span class="lab">Поток 5</span><div class="track gridbg"><div class="mark base" style="width:92.8%" tabindex="0" data-tip="Поток 5 без расширения: 55,7 мин (12:29:04 - 13:24:45)"></div></div><span class="val">55,7</span></div>
+    <div class="hb"><span class="lab"></span><div class="track gridbg"><div class="mark new" style="width:41.3%" tabindex="0" data-tip="Поток 5 с расширением: 24,8 мин (11:50:40 - 12:15:25)"></div></div><span class="val">24,8</span></div>
+    <div class="xaxis"><span></span><div class="t"><span>0</span><span>15</span><span>30</span><span>45</span><span>60 мин</span></div><span></span></div>
+  </div>
+
+  <div class="viz">
+    <h3>Хронология прогонов 30.09.2026</h3>
+    <p class="cap">Каждая полоса - поток выгрузки. Прогон с расширением закончился раньше, чем начался прогон без него</p>
+    <div class="vlegend"><span><i style="background:var(--s1)"></i>с расширением, 11:50-12:15</span><span><i style="background:var(--base-mark)"></i>без расширения, 12:29-13:25</span></div>
+    <div class="tl">
+      <div class="row"><span class="lab">Поток 1</span><div class="lane"><div class="gridl" style="left:10%"></div><div class="gridl" style="left:30%"></div><div class="gridl" style="left:50%"></div><div class="gridl" style="left:70%"></div><div class="gridl" style="left:90%"></div><div class="mark new" style="left:0.67%;width:24.75%;border-radius:4px" tabindex="0" data-tip="Поток 1 с расширением: 11:50:40 - 12:15:25"></div><div class="mark base" style="left:39.07%;width:55.8%;border-radius:4px" tabindex="0" data-tip="Поток 1 без расширения: 12:29:04 - 13:24:52"></div></div></div>
+      <div class="row"><span class="lab">Поток 2</span><div class="lane"><div class="gridl" style="left:10%"></div><div class="gridl" style="left:30%"></div><div class="gridl" style="left:50%"></div><div class="gridl" style="left:70%"></div><div class="gridl" style="left:90%"></div><div class="mark new" style="left:0.67%;width:24.77%;border-radius:4px" tabindex="0" data-tip="Поток 2 с расширением: 11:50:40 - 12:15:26"></div><div class="mark base" style="left:39.07%;width:55.45%;border-radius:4px" tabindex="0" data-tip="Поток 2 без расширения: 12:29:04 - 13:24:31"></div></div></div>
+      <div class="row"><span class="lab">Поток 3</span><div class="lane"><div class="gridl" style="left:10%"></div><div class="gridl" style="left:30%"></div><div class="gridl" style="left:50%"></div><div class="gridl" style="left:70%"></div><div class="gridl" style="left:90%"></div><div class="mark new" style="left:0.67%;width:24.6%;border-radius:4px" tabindex="0" data-tip="Поток 3 с расширением: 11:50:40 - 12:15:16"></div><div class="mark base" style="left:39.07%;width:54.85%;border-radius:4px" tabindex="0" data-tip="Поток 3 без расширения: 12:29:04 - 13:23:55"></div></div></div>
+      <div class="row"><span class="lab">Поток 4</span><div class="lane"><div class="gridl" style="left:10%"></div><div class="gridl" style="left:30%"></div><div class="gridl" style="left:50%"></div><div class="gridl" style="left:70%"></div><div class="gridl" style="left:90%"></div><div class="mark new" style="left:0.67%;width:24.58%;border-radius:4px" tabindex="0" data-tip="Поток 4 с расширением: 11:50:40 - 12:15:15"></div><div class="mark base" style="left:39.07%;width:54.9%;border-radius:4px" tabindex="0" data-tip="Поток 4 без расширения: 12:29:04 - 13:23:58"></div></div></div>
+      <div class="row"><span class="lab">Поток 5</span><div class="lane"><div class="gridl" style="left:10%"></div><div class="gridl" style="left:30%"></div><div class="gridl" style="left:50%"></div><div class="gridl" style="left:70%"></div><div class="gridl" style="left:90%"></div><div class="mark new" style="left:0.67%;width:24.75%;border-radius:4px" tabindex="0" data-tip="Поток 5 с расширением: 11:50:40 - 12:15:25"></div><div class="mark base" style="left:39.07%;width:55.68%;border-radius:4px" tabindex="0" data-tip="Поток 5 без расширения: 12:29:04 - 13:24:45"></div></div></div>
+      <div class="ticks"><span></span><div class="t"><span style="left:0%">11:50</span><span style="left:10%">12:00</span><span style="left:30%">12:20</span><span style="left:50%">12:40</span><span style="left:70%">13:00</span><span style="left:90%">13:20</span></div></div>
+    </div>
+  </div>
+
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr><th>Прогон</th><th>Окно</th><th>Замер МО</th><th>Потоки</th><th>Портфелей</th><th>Ошибки</th><th>На пакет 50 портфелей</th></tr></thead>
+      <tbody>
+        <tr><td>С расширением 1.0.0.2</td><td>11:50:38 - 12:15:29</td><td class="n good">1 490 с = 24,8 мин</td><td class="n">24,6-24,8 мин</td><td class="n">23 061</td><td>нет</td><td class="n good">16,2 с</td></tr>
+        <tr><td>Без расширения</td><td>12:29:03 - 13:24:54</td><td class="n">3 351 с = 55,8 мин</td><td class="n">54,8-55,8 мин</td><td class="n">23 061</td><td>нет</td><td class="n">36,3 с</td></tr>
+        <tr><td><b>Разница</b></td><td></td><td class="n good"><b>-31 мин, -55,5%</b></td><td></td><td class="n">0</td><td></td><td class="n good"><b>x2,25</b></td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="note">Около 92 пакетов по 50 портфелей на поток. Во время прогона с расширением был включен замер производительности ФО (он добавляет нагрузку), поэтому эффект оценен консервативно.</p>
+</section>
+
+<section id="packet">
+  <span class="sec-no">2. Состав пакета</span>
+  <h2>Из чего складываются 36 и 16 секунд на пакет</h2>
+  <p class="sec-lead">Пакет из 50 портфелей: пять обращений МО к ФО плюс подготовка данных в МО. Шаги с флагами (1 и 4) сжались сильнее всего, остальное почти не изменилось.</p>
+  <div class="viz">
+    <h3>Время одного пакета по частям, секунды</h3>
+    <p class="cap">Без расширения шаг 4 занимает почти половину пакета; с расширением крупнейшей частью становится позиция</p>
+    <div class="vlegend"><span><i class="c-s1"></i>шаг 1: флаг до позиции</span><span><i class="c-s2"></i>шаг 2: позиция</span><span><i class="c-s3"></i>шаг 4: флаги после позиции</span><span><i class="c-s4"></i>шаги 3 и 5: блокировки, запуск перерасчета</span><span><i class="c-s5"></i>сторона МО</span></div>
+    <div class="hb"><span class="lab">Без расширения<small>~36,3 с</small></span><div class="track gridbg"><div class="stack2" style="width:91%">
+      <div class="seg c-s1" style="flex:70" tabindex="0" data-tip="Шаг 1, флаг до позиции: 7,0 с (замер ФО)">7,0</div>
+      <div class="seg c-s2" style="flex:43" tabindex="0" data-tip="Шаг 2, позиция: 4,3 с (замер ФО, один поток)">4,3</div>
+      <div class="seg c-s3" style="flex:188" tabindex="0" data-tip="Шаг 4, флаги после позиции: ~18,8 с (расчет: 150 записей по 0,12 с)">18,8</div>
+      <div class="seg c-s4" style="flex:9" tabindex="0" data-tip="Шаги 3 и 5: 0,9 с (замер ФО)"></div>
+      <div class="seg c-s5" style="flex:54" tabindex="0" data-tip="Сторона МО: ~5,4 с (разность с временем пакета по замеру МО)">5,4</div>
+    </div></div><span class="val">36,3 с</span></div>
+    <div class="hb gap"><span class="lab">С расширением<small>~16,2 с</small></span><div class="track gridbg"><div class="stack2" style="width:40.7%">
+      <div class="seg c-s1" style="flex:18.4" tabindex="0" data-tip="Шаг 1, флаг до позиции: 1,8 с (медиана замера ФО, 5 потоков)"></div>
+      <div class="seg c-s2" style="flex:63" tabindex="0" data-tip="Шаг 2, позиция: 6,3 с (медиана, 5 потоков)">6,3</div>
+      <div class="seg c-s3" style="flex:18.5" tabindex="0" data-tip="Шаг 4, флаги после позиции: 1,85 с (медиана)"></div>
+      <div class="seg c-s4" style="flex:9" tabindex="0" data-tip="Шаги 3 и 5: 0,9 с"></div>
+      <div class="seg c-s5" style="flex:54" tabindex="0" data-tip="Сторона МО: ~5,4 с">5,4</div>
+    </div></div><span class="val">16,2 с</span></div>
+    <div class="xaxis"><span></span><div class="t"><span>0</span><span>10</span><span>20</span><span>30</span><span>40 с</span></div><span></span></div>
+  </div>
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr><th>Часть пакета</th><th>Без расширения</th><th>С расширением</th><th>Источник</th></tr></thead>
+      <tbody>
+        <tr><td>Шаг 1. Флаг до позиции</td><td class="n">7,0 с</td><td class="n good">1,8 с</td><td>замеры производительности ФО</td></tr>
+        <tr><td>Шаг 2. Позиция</td><td class="n">4,3 с</td><td class="n">6,3 с</td><td>замеры ФО; в 5 потоках медленнее из-за одновременной работы</td></tr>
+        <tr><td>Шаг 4. Флаги после позиции</td><td class="n">~18,8 с</td><td class="n good">1,85 с</td><td>без расширения - расчет: 150 записей по 0,12 с</td></tr>
+        <tr><td>Шаги 3 и 5</td><td class="n">0,9 с</td><td class="n">0,9 с</td><td>замеры ФО, из них 0,8 с - пауза запуска перерасчета</td></tr>
+        <tr><td>Сторона МО</td><td class="n">~5,4 с</td><td class="n">~5,4 с</td><td>разность с временем пакета по замеру МО</td></tr>
+        <tr><td><b>Пакет</b></td><td class="n"><b>36,3 с</b></td><td class="n good"><b>16,2 с</b></td><td>замер МО на Т-1</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section id="write">
+  <span class="sec-no">3. Цена записи флага</span>
+  <h2>Почему флаги стали дешевыми</h2>
+  <p class="sec-lead">Перед каждой записью флага регистр сохранял версию портфеля в истории изменений. Для четырех технических флагов обмена версия больше не пишется, запись подешевела примерно в 5 раз.</p>
+  <div class="viz">
+    <h3>Одна запись флага на тестовой копии, секунды</h3>
+    <p class="cap">Серая часть - сохранение версии портфеля, которое доработка 3 убирает для технических флагов</p>
+    <div class="vlegend"><span><i style="background:var(--base-mark)"></i>версия портфеля</span><span><i style="background:var(--s1)"></i>запись флага и подписки</span></div>
+    <div class="hb"><span class="lab">Версия 1.0.0.1<small>Тест1, 250 записей</small></span><div class="track gridbg"><div class="stack2" style="width:85.7%">
+      <div class="seg" style="flex:10;background:var(--base-mark)" tabindex="0" data-tip="Версия портфеля: ~0,10 с на запись (80% стоимости)">0,10</div>
+      <div class="seg c-s1" style="flex:2" tabindex="0" data-tip="Запись флага и подписки: ~0,02 с"></div>
+    </div></div><span class="val">0,12 с</span></div>
+    <div class="hb gap"><span class="lab">Версия 1.0.0.2<small>Тест2, ~2 000 записей</small></span><div class="track gridbg"><div class="mark new" style="width:15.7%" tabindex="0" data-tip="Запись флага без версии: ~0,022 с (типичное значение, 5 потоков)"></div></div><span class="val">0,022 с</span></div>
+    <div class="xaxis"><span></span><div class="t"><span>0</span><span>0,035</span><span>0,07</span><span>0,105</span><span>0,14 с</span></div><span></span></div>
+  </div>
+  <p class="note">Во всех вызовах Тест2 с флагами 50 из 50 записей завершали обработчик перед записью до сохранения версии; строк записи версии в замерах нет ни одной.</p>
+</section>
+
+<section id="spread">
+  <span class="sec-no">4. Разброс вызовов</span>
+  <h2>Длительность каждого вызова в замере Тест2</h2>
+  <p class="sec-lead">Каждая точка - один вызов веб-сервиса ФО по пакету из 50 портфелей, 5 потоков одновременно. Черная черта - медиана. Серые точки - те же шаги в версии 1.0.0.1 (Тест1, один поток).</p>
+  <div class="viz">
+    <h3>Вызовы по шагам пакета, секунды</h3>
+    <p class="cap">Обычный вызов с флагами - 1,5-2,5 с; отдельные точки 12-21 с - общий всплеск нагрузки на сервер, в него попали все шаги сразу</p>
+    <div class="vlegend"><span><i style="background:var(--s1);border-radius:50%"></i>1.0.0.2, Тест2</span><span><i style="background:var(--base-mark);border-radius:50%"></i>1.0.0.1, Тест1</span><span><i style="background:var(--ink);width:2px"></i>медиана Тест2</span></div>
+    <div id="strips"></div>
+    <div class="xaxis"><span></span><div class="t"><span>0</span><span>5,5</span><span>11</span><span>16,5</span><span>22 с</span></div><span></span></div>
+  </div>
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr><th>Шаг</th><th>Вызовов</th><th>Медиана</th><th>Обычный диапазон</th><th>Максимум</th><th>Тест1 (1.0.0.1), среднее</th></tr></thead>
+      <tbody>
+        <tr><td>1. Флаг до позиции</td><td class="n">23</td><td class="n good">1,84 с</td><td class="n">1,5-2,5 с</td><td class="n">13,2 с</td><td class="n">6,96 с</td></tr>
+        <tr><td>2. Позиция</td><td class="n">22</td><td class="n">6,3 с</td><td class="n">4,3-11 с</td><td class="n">20,9 с</td><td class="n">4,34 с</td></tr>
+        <tr><td>4. Флаги после позиции</td><td class="n">20</td><td class="n good">1,85 с</td><td class="n">1,5-3 с</td><td class="n">12,6 с</td><td class="n">6,45 с</td></tr>
+        <tr><td>5. Запуск перерасчета</td><td class="n">20</td><td class="n">0,84 с</td><td class="n">0,83-0,87 с</td><td class="n">0,87 с</td><td class="n">0,84 с</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section id="stand">
+  <span class="sec-no">5. Стенд и сверка данных</span>
+  <h2>Три варианта на стенде разработки</h2>
+  <p class="sec-lead">450 тестовых портфелей, 5 потоков, история изменений включена как на ПРОД. Каждый вариант прогнан дважды из одного состояния данных; после каждого прогона сверены четыре регистра ФО.</p>
+  <div class="viz">
+    <h3>Выгрузка, самый долгий поток, секунды</h3>
+    <p class="cap">Доработки 1 и 2 сокращают время на треть, доработка 3 - еще на треть</p>
+    <div class="vlegend"><span><i style="background:var(--base-mark)"></i>без расширения</span><span><i style="background:var(--s2)"></i>доработки 1 и 2 (версия 1.0.0.1)</span><span><i style="background:var(--s1)"></i>доработки 1, 2 и 3 (версия 1.0.0.2)</span></div>
+    <div class="hb"><span class="lab">Без расширения</span><div class="track gridbg"><div class="mark base" style="width:86.7%" tabindex="0" data-tip="Без расширения, прогон 1: 20,8 с"></div></div><span class="val">20,8</span></div>
+    <div class="hb"><span class="lab"></span><div class="track gridbg"><div class="mark base" style="width:77.9%" tabindex="0" data-tip="Без расширения, прогон 2: 18,7 с"></div></div><span class="val">18,7</span></div>
+    <div class="hb gap"><span class="lab">1.0.0.1</span><div class="track gridbg"><div class="mark" style="width:51.7%;background:var(--s2)" tabindex="0" data-tip="Доработки 1 и 2, прогон 1: 12,4 с"></div></div><span class="val">12,4</span></div>
+    <div class="hb"><span class="lab"></span><div class="track gridbg"><div class="mark" style="width:51.3%;background:var(--s2)" tabindex="0" data-tip="Доработки 1 и 2, прогон 2: 12,3 с"></div></div><span class="val">12,3</span></div>
+    <div class="hb gap"><span class="lab">1.0.0.2</span><div class="track gridbg"><div class="mark new" style="width:34.6%" tabindex="0" data-tip="Доработки 1, 2 и 3, прогон 1: 8,3 с"></div></div><span class="val">8,3</span></div>
+    <div class="hb"><span class="lab"></span><div class="track gridbg"><div class="mark new" style="width:32.1%" tabindex="0" data-tip="Доработки 1, 2 и 3, прогон 2: 7,7 с"></div></div><span class="val">7,7</span></div>
+    <div class="xaxis"><span></span><div class="t"><span>0</span><span>6</span><span>12</span><span>18</span><span>24 с</span></div><span></span></div>
+  </div>
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr><th>Сверка данных ФО</th><th>Пар прогонов</th><th>Регистры</th><th>Расхождений</th></tr></thead>
+      <tbody>
+        <tr><td>Доработки 1 и 2: 1 и 5 потоков, с историей и без, состояние после шага 4, повтор при тех же флагах</td><td class="n">14</td><td>ДополнительныеСведения, ФактическаяПозиция, РегистрРСА_СЧА, ДатаАктуальностиФактическойПозиции</td><td class="n good">0</td></tr>
+        <tr><td>Доработки 1 и 2 против исходного кода, 5 потоков (30.09)</td><td class="n">2</td><td>те же</td><td class="n good">0</td></tr>
+        <tr><td>Доработка 3 против доработок 1 и 2, 5 потоков</td><td class="n">2</td><td>те же</td><td class="n good">0</td></tr>
+        <tr><td>Версия 1.0.0.2 против исходного кода, 5 потоков</td><td class="n">2</td><td>те же</td><td class="n good">0</td></tr>
+        <tr><td><b>Всего</b></td><td class="n"><b>20</b></td><td></td><td class="n good"><b>0</b></td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section id="prod">
+  <span class="sec-no">6. Ожидание для ПРОД</span>
+  <h2>Что получится на ПРОД</h2>
+  <p class="sec-lead">Т-1 медленнее ПРОД: без расширения выгрузка там 55,8 минуты против 41,3 на ПРОД. На ПРОД переносится отношение прогонов (24,8 / 55,8 = 0,445), а не минуты.</p>
+  <div class="viz">
+    <h3>Утренняя выгрузка, минуты</h3>
+    <p class="cap">Штриховка - оценка, остальное - измерено</p>
+    <div class="vlegend"><span><i style="background:var(--base-mark)"></i>без расширения</span><span><i style="background:var(--s1)"></i>с расширением</span><span><i class="mark est" style="position:static;display:inline-block;width:12px;height:12px;border-radius:3px"></i>оценка</span></div>
+    <div class="hb"><span class="lab">Т-1</span><div class="track gridbg"><div class="mark base" style="width:93%" tabindex="0" data-tip="Т-1 без расширения: 55,8 мин (измерено)"></div></div><span class="val">55,8</span></div>
+    <div class="hb"><span class="lab"></span><div class="track gridbg"><div class="mark new" style="width:41.3%" tabindex="0" data-tip="Т-1 с расширением: 24,8 мин (измерено)"></div></div><span class="val">24,8</span></div>
+    <div class="hb gap"><span class="lab">ПРОД</span><div class="track gridbg"><div class="mark base" style="width:68.8%" tabindex="0" data-tip="ПРОД сейчас: 41,3 мин (29.09.2026, 23 041 портфель)"></div></div><span class="val">41,3</span></div>
+    <div class="hb"><span class="lab"></span><div class="track gridbg"><div class="mark est" style="width:30.7%" tabindex="0" data-tip="ПРОД с расширением: ~18 мин (41,3 x 0,445, оценка)"></div></div><span class="val">~18</span></div>
+    <div class="xaxis"><span></span><div class="t"><span>0</span><span>15</span><span>30</span><span>45</span><span>60 мин</span></div><span></span></div>
+  </div>
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr><th>Показатель</th><th>Сейчас</th><th>С расширением</th></tr></thead>
+      <tbody>
+        <tr><td>Утренняя выгрузка на ПРОД</td><td class="n">41,3 мин (6:00 - 6:41)</td><td class="n good">~18 мин (6:00 - ~6:18)</td></tr>
+        <tr><td>Старт пред- и постконтроля лимитов</td><td class="n">~6:41</td><td class="n good">примерно на 23 минуты раньше</td></tr>
+        <tr><td>Технических версий портфелей в истории за день</td><td class="n">~160 000</td><td class="n good">0</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section id="todo">
+  <span class="sec-no">7. Что осталось</span>
+  <h2>Проверки до переноса на ПРОД</h2>
+  <ol class="steps">
+    <li><div><b>Данные на Т-1.</b> После прогона с расширением выполнить запрос распределения флагов лимитов и сравнить с прогоном без расширения; сверить письмо об итогах (число портфелей, ошибки).</div></li>
+    <li><div><b>Версия при ручной правке.</b> Изменить у портфеля "Лимиты заведены_риски" и убедиться, что в истории изменений появилась версия.</div></li>
+    <li><div><b>Согласование.</b> Владелец истории изменений подтверждает, что четыре технических флага обмена не версионируются.</div></li>
+    <li><div><b>Фоновый перерасчет РСА.</b> В замеры Т-1 задания перерасчета не попали; при следующем прогоне зафиксировать время окончания последнего перерасчета.</div></li>
+  </ol>
+</section>
+
+<section id="method">
+  <span class="sec-no">Методика</span>
+  <h2>Откуда цифры</h2>
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr><th>Источник</th><th>Что дал</th></tr></thead>
+      <tbody>
+        <tr><td>Замер времени ключевой операции МО "Выгрузка остатков МО-ФО, 5 потоков" на Т-1 (30.09.2026)</td><td>Время выгрузки целиком и число портфелей в двух прогонах</td></tr>
+        <tr><td>Список фоновых заданий МО на Т-1</td><td>Начало и конец каждого из пяти потоков</td></tr>
+        <tr><td>Замер производительности ФО "Тест1" (версия 1.0.0.1, 32 сеанса)</td><td>Время шагов пакета, цена записи флага и доля версии портфеля</td></tr>
+        <tr><td>Замер производительности ФО "Тест2" (версия 1.0.0.2, 147 сеансов, 5 потоков)</td><td>Время шагов с расширением, отсутствие записи версий для технических флагов</td></tr>
+        <tr><td>Стенд разработки (450 тестовых портфелей)</td><td>Сравнение трех вариантов и построчная сверка четырех регистров ФО</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="note">Замеры производительности ФО снимались при включенном отладчике: абсолютные значения по шагам выше реальных, соотношения сохраняются. Цифры "без расширения" для шага 4 в разложении пакета - расчет по измеренной цене записи.</p>
+</section>
+
+</main>
+
+<div id="viztip" role="tooltip"></div>
+
+<footer>
+  <div class="wrap">IMDEV-9532. Отчет о тестировании расширения FO_PositionLoadOpt 1.0.0.2. Документ подготовлен отделом разработки 30.09.2026.</div>
+</footer>
+
+<script>
+(function () {
+  var MAX = 22;
+  var rows = [
+    {name: "1. Флаг до позиции", med: 1.84, cur: [2.24,2.40,1.67,1.69,1.67,1.57,1.56,1.58,1.52,3.12,3.20,3.41,2.48,2.49,2.45,4.87,1.54,1.56,13.22,12.36,1.65,1.84,1.48], old: [6.81,6.53,8.10,6.56,6.81]},
+    {name: "2. Позиция", med: 6.3, cur: [11.33,5.62,5.20,4.83,5.02,4.63,4.37,5.93,10.89,11.33,10.10,7.57,6.72,8.67,8.72,8.29,4.84,20.92,8.44,4.96,4.30,4.26], old: [4.73,4.30,4.47,4.07,4.15]},
+    {name: "4. Флаги после позиции", med: 1.85, cur: [1.86,1.66,1.61,1.56,4.56,3.73,3.10,3.02,2.96,2.41,4.36,1.65,1.83,1.84,12.62,11.70,1.70,1.54,1.51,1.57], old: [6.65,6.29,6.56,6.20,6.58]},
+    {name: "5. Запуск перерасчета", med: 0.84, cur: [0.87,0.84,0.83,0.84,0.84,0.85,0.85,0.84,0.85,0.86,0.84,0.84,0.84,0.84,0.84,0.84,0.84,0.84,0.84,0.84], old: [0.83,0.83,0.84,0.84,0.86]}
+  ];
+  function fmt(v) { return String(v).replace(".", ","); }
+  var host = document.getElementById("strips");
+  rows.forEach(function (r) {
+    var line = document.createElement("div");
+    line.className = "strip";
+    var lab = document.createElement("span");
+    lab.className = "lab";
+    lab.style.fontSize = "12.5px";
+    lab.textContent = r.name;
+    var lane = document.createElement("div");
+    lane.className = "lane gridbg";
+    function dot(v, cls, tip) {
+      var d = document.createElement("div");
+      d.className = "dot" + (cls ? " " + cls : "");
+      d.style.left = Math.min(v, MAX) / MAX * 100 + "%";
+      d.style.top = cls ? "28%" : "68%";
+      d.tabIndex = 0;
+      d.setAttribute("data-tip", tip);
+      lane.appendChild(d);
+    }
+    r.old.forEach(function (v) { dot(v, "old", r.name + ", версия 1.0.0.1: " + fmt(v) + " с"); });
+    r.cur.forEach(function (v) { dot(v, "", r.name + ", версия 1.0.0.2: " + fmt(v) + " с"); });
+    var med = document.createElement("div");
+    med.className = "med";
+    med.style.left = r.med / MAX * 100 + "%";
+    lane.appendChild(med);
+    var val = document.createElement("span");
+    val.className = "val";
+    val.style.cssText = "font-size:13px;font-weight:650;text-align:right";
+    val.textContent = fmt(r.med) + " с";
+    line.appendChild(lab); line.appendChild(lane); line.appendChild(val);
+    host.appendChild(line);
+  });
+
+  var tip = document.getElementById("viztip");
+  function show(e) {
+    var t = e.target.closest("[data-tip]");
+    if (!t) { return; }
+    tip.textContent = t.getAttribute("data-tip");
+    tip.style.display = "block";
+    var box = t.getBoundingClientRect();
+    var x = e.clientX || (box.left + box.width / 2);
+    var y = e.clientY || box.top;
+    tip.style.left = Math.max(8, Math.min(window.innerWidth - tip.offsetWidth - 8, x + 12)) + "px";
+    tip.style.top = Math.max(8, y - tip.offsetHeight - 10) + "px";
+  }
+  function hide() { tip.style.display = "none"; }
+  document.addEventListener("mousemove", function (e) { if (e.target.closest("[data-tip]")) { show(e); } else { hide(); } });
+  document.addEventListener("focusin", show);
+  document.addEventListener("focusout", hide);
+})();
+</script>
+
+</body>
+</html>
