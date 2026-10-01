@@ -1,0 +1,453 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>FO_PositionLoadOpt. Дерево переноса в базовую конфигурацию Аванкор</title>
+<style>
+  :root {
+    --ink: #1c1915;
+    --soft: #5c564c;
+    --line: #e4d9c8;
+    --paper: #fffdf8;
+    --bg: #f3eee6;
+    --forest: #1f4a3a;
+    --mint: #e7f4ec;
+    --peach: #fde8d0;
+    --rose: #f8e4e4;
+    --gray: #eceae6;
+    --idea: #eef3f8;
+    --meta: #efe7f7;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    color: var(--ink);
+    font-family: "Segoe UI", Arial, Helvetica, sans-serif;
+    font-size: 15px;
+    line-height: 1.45;
+    background:
+      radial-gradient(720px 280px at 100% 0%, #f6d9bf 0%, transparent 50%),
+      var(--bg);
+  }
+  .page { max-width: 980px; margin: 0 auto; padding: 24px 16px 48px; }
+  header {
+    background: var(--forest);
+    color: #f7f1e8;
+    border-radius: 20px;
+    padding: 22px 24px 18px;
+  }
+  header .kicker {
+    font-size: 11px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    opacity: 0.75;
+    margin-bottom: 6px;
+  }
+  header h1 {
+    font-family: Georgia, "Times New Roman", serif;
+    font-size: 26px;
+    line-height: 1.2;
+    margin: 0 0 8px;
+  }
+  header p { margin: 0 0 8px; color: #e5efe9; max-width: 860px; }
+  header code, .lead code, .foot code, .note code {
+    font-family: Consolas, "Courier New", monospace;
+    font-size: 12.5px;
+  }
+  header code { background: #2a5c4a; color: #f7f1e8; padding: 1px 5px; border-radius: 4px; }
+  .counts {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 12px;
+  }
+  .count {
+    background: rgba(255,255,255,0.1);
+    border-radius: 10px;
+    padding: 6px 10px;
+    min-width: 140px;
+  }
+  .count b { display: block; font-size: 18px; line-height: 1.1; }
+  .count span { font-size: 12px; opacity: 0.85; }
+  .legend { display: flex; flex-wrap: wrap; gap: 8px; margin: 16px 0 12px; }
+  .tag {
+    display: inline-block;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    padding: 2px 8px;
+    border-radius: 999px;
+    vertical-align: middle;
+    white-space: nowrap;
+  }
+  .add { background: var(--mint); color: #1f7a4d; }
+  .chg { background: var(--peach); color: #9a3412; }
+  .del { background: var(--rose); color: #9f1239; }
+  .idea-tag { background: var(--idea); color: #1e3a5f; }
+  .meta-tag { background: var(--meta); color: #5b2a86; }
+  .card {
+    background: var(--paper);
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    padding: 8px 18px 14px;
+    box-shadow: 0 10px 28px rgba(28, 25, 21, 0.05);
+  }
+  .tree, .tree ul { list-style: none; margin: 0; padding: 0; }
+  .tree ul {
+    margin-left: 16px;
+    padding-left: 14px;
+    border-left: 1px solid var(--line);
+  }
+  .tree > li { margin: 4px 0 10px; }
+  .tree li { margin: 6px 0; }
+  details.idea > summary, details.sub > summary {
+    cursor: pointer;
+    list-style: none;
+  }
+  details.idea > summary::-webkit-details-marker,
+  details.sub > summary::-webkit-details-marker { display: none; }
+  details.idea > summary::before,
+  details.sub > summary::before {
+    content: ">";
+    display: inline-block;
+    width: 14px;
+    color: var(--soft);
+    font-family: Consolas, "Courier New", monospace;
+  }
+  details[open].idea > summary::before,
+  details[open].sub > summary::before { content: "v"; }
+  .idea-title {
+    font-family: Georgia, "Times New Roman", serif;
+    font-size: 18px;
+    color: var(--forest);
+  }
+  .sub-title { font-weight: 650; font-size: 15px; }
+  .lead, .note { color: var(--soft); font-size: 13.5px; }
+  .lead { margin: 4px 0 8px 14px; max-width: 860px; }
+  .node {
+    font-family: Consolas, "Courier New", monospace;
+    font-size: 13px;
+  }
+  .obj { font-weight: 700; }
+  .meta-box {
+    margin: 4px 0 8px 14px;
+    padding: 10px 12px;
+    border: 1px solid #d9c6ea;
+    border-left: 4px solid #7c4dab;
+    border-radius: 10px;
+    background: #faf6fd;
+    font-size: 13.5px;
+  }
+  .meta-box p { margin: 0 0 6px; }
+  .meta-box p:last-child { margin-bottom: 0; }
+  .foot {
+    margin-top: 14px;
+    padding-top: 12px;
+    border-top: 1px solid var(--line);
+    font-size: 14px;
+  }
+  .foot h2 {
+    font-family: Georgia, "Times New Roman", serif;
+    font-size: 16px;
+    margin: 16px 0 8px;
+    color: var(--forest);
+  }
+  .foot p { margin: 0 0 8px; color: var(--soft); }
+  .foot p b { color: var(--ink); }
+  .foot ol, .foot ul { margin: 0; padding-left: 20px; }
+  .foot li { margin: 4px 0; }
+  table { border-collapse: collapse; width: 100%; background: #fff; font-size: 13px; }
+  th, td { padding: 6px 8px; text-align: left; vertical-align: top; border-bottom: 1px solid var(--line); }
+  th { background: #f6f1ea; font-weight: 650; }
+  a { color: #1f4a3a; }
+  code {
+    font-family: Consolas, "Courier New", monospace;
+    font-size: 12.5px;
+    background: #efe4d4;
+    padding: 1px 5px;
+    border-radius: 4px;
+  }
+</style>
+</head>
+<body>
+<div class="page">
+  <header>
+    <div class="kicker">Аванкор, фронт-офис, перенос в базовую конфигурацию, IMDEV-9532</div>
+    <h1>Дерево изменений расширения FO_PositionLoadOpt</h1>
+    <p>Базовая конфигурация "Аванкор: Фронт-офис" 1.4.9.5. Расширение <code>FO_PositionLoadOpt</code> версии 1.0.0.4 (синоним "Оптимизация загрузки остатков портфелей из МО", назначение Patch, префикс <code>FO_PositionLoadOpt_</code>). Новых объектов метаданных и ролей нет: два заимствованных объекта, правки только в модулях. Отдельно к переносу добавлен индекс реквизита документа Поручение: его нельзя сделать расширением, это изменение метаданных конфигурации.</p>
+    <p>В типовую копировать тело правок. Аннотацию <code>&amp;ИзменениеИКонтроль</code> не копировать. Маркеры <code>#Вставка</code>, <code>#КонецВставки</code>, <code>#Удаление</code>, <code>#КонецУдаления</code> не переносить: вставленный текст оставить, удаленный текст убрать из штатной процедуры. Префикс с имен перехватчиков снять и править штатные процедуры на месте. Новые функции уже без префикса, их копировать целиком в тот же модуль.</p>
+    <div class="counts">
+      <div class="count"><b>3</b><span>идеи ускорения</span></div>
+      <div class="count"><b>2</b><span>изменения штатных процедур</span></div>
+      <div class="count"><b>7</b><span>новых функций и процедур</span></div>
+      <div class="count"><b>2</b><span>удаления фрагментов внутри процедур</span></div>
+      <div class="count"><b>1</b><span>индекс реквизита (метаданные)</span></div>
+    </div>
+  </header>
+
+  <div class="legend">
+    <span class="tag add">добавление</span>
+    <span class="tag chg">изменение</span>
+    <span class="tag del">удаление</span>
+    <span class="tag meta-tag">метаданные</span>
+    <span class="tag idea-tag">обоснование</span>
+  </div>
+
+  <div class="card">
+    <ul class="tree">
+
+      <li>
+        <details class="sub" open>
+          <summary><span class="sub-title">Общее для идей 1 и 2: процедура загрузки дополнительных сведений</span></summary>
+          <p class="lead">Идеи 1 и 2 правят одну штатную процедуру. Перехват один, его переносить один раз. Три соответствия-кэша живут в пределах одного пакета обмена (одного вызова процедуры) и между пакетами не хранятся.</p>
+          <ul>
+            <li>
+              <span class="node obj">Обработка.ОбменДаннымиБэкОфис</span>
+              <span class="note"> - заимствована, метаданные не менять</span>
+              <ul>
+                <li>
+                  <span class="node obj">МодульОбъекта</span>
+                  <ul>
+                    <li>
+                      <span class="tag chg">изменение</span>
+                      <span class="node">ОбработатьДанные_ДополнительныеСведения</span>
+                      <span class="note"> - в расширении <code>FO_PositionLoadOpt_ОбработатьДанные_ДополнительныеСведения</code>. В типовой править штатную процедуру. 4 вставки, 2 удаления фрагментов.</span>
+                      <ul>
+                        <li>
+                          <span class="tag add">добавление</span>
+                          <span class="note">в начале процедуры, перед циклом <code>Для Каждого СтрокаОбъектXDTO Из СписокXDTO</code>: <code>КэшСвойств</code>, <code>КэшЗначений</code>, <code>ТекущиеЗначения</code> = <code>Новый Соответствие</code></span>
+                        </li>
+                      </ul>
+                    </li>
+                  </ul>
+                </li>
+              </ul>
+            </li>
+          </ul>
+        </details>
+      </li>
+
+      <li>
+        <details class="idea" open>
+          <summary><span class="tag idea-tag">идея 1</span> <span class="idea-title">Не перезаписывать флаг, если значение не изменилось</span></summary>
+          <p class="lead">Булев флаг, у которого в регистре уже то же значение, повторно не записывается. Текущие значения объекта читаются одним запросом на пакет и дальше обновляются после каждой записи. Небулевы значения пишутся всегда: на их запись в конфигурации есть подписки с действиями. На шаге "флаги после позиции" из трех записей на портфель обычно остается одна. <a href="IMDEV-9532%203.%20%D0%9E%D0%B1%D0%BE%D1%81%D0%BD%D0%BE%D0%B2%D0%B0%D0%BD%D0%B8%D0%B5%20%D0%B4%D0%BE%D1%80%D0%B0%D0%B1%D0%BE%D1%82%D0%BE%D0%BA%20%D1%83%D1%81%D0%BA%D0%BE%D1%80%D0%B5%D0%BD%D0%B8%D1%8F.html">Обоснование</a></p>
+          <ul>
+            <li>
+              <span class="node obj">Обработка.ОбменДаннымиБэкОфис</span>
+              <ul>
+                <li>
+                  <span class="node obj">МодульОбъекта</span>
+                  <ul>
+                    <li>
+                      <span class="tag chg">изменение</span>
+                      <span class="node">ОбработатьДанные_ДополнительныеСведения</span>
+                      <span class="note"> - та же процедура, что в общем блоке</span>
+                      <ul>
+                        <li>
+                          <span class="tag add">добавление</span>
+                          <span class="note">после получения <code>Значение</code>, перед <code>СоздатьМенеджерЗаписи()</code>: <code>Если ФлагУжеИмеетЗначение(ОбъектСсылка, Свойство, Значение, ТекущиеЗначения) Тогда Продолжить</code></span>
+                        </li>
+                        <li>
+                          <span class="tag add">добавление</span>
+                          <span class="note">сразу после <code>Запись.Записать()</code>: <code>ЗапомнитьЗаписанноеЗначение(ОбъектСсылка, Свойство, Значение, ТекущиеЗначения)</code></span>
+                        </li>
+                      </ul>
+                    </li>
+                    <li>
+                      <span class="tag add">добавление</span>
+                      <span class="node">ФлагУжеИмеетЗначение</span>
+                      <span class="note"> - область <code>ЗаписьДополнительныхСведенийПакета</code>. Истина, если значение булево и в регистре у объекта то же значение.</span>
+                    </li>
+                    <li>
+                      <span class="tag add">добавление</span>
+                      <span class="node">ТекущиеЗначенияСведенийОбъекта</span>
+                      <span class="note"> - запрос к <code>РегистрСведений.ДополнительныеСведения</code> по объекту, один раз на объект в пакете.</span>
+                    </li>
+                    <li>
+                      <span class="tag add">добавление</span>
+                      <span class="node">ЗапомнитьЗаписанноеЗначение</span>
+                      <span class="note"> - процедура: записанное значение попадает в кэш, следующие строки пакета сравниваются с ним.</span>
+                    </li>
+                  </ul>
+                </li>
+              </ul>
+            </li>
+          </ul>
+        </details>
+      </li>
+
+      <li>
+        <details class="idea" open>
+          <summary><span class="tag idea-tag">идея 2</span> <span class="idea-title">Искать справочную информацию один раз на пакет</span></summary>
+          <p class="lead">Свойство по наименованию и преобразованное значение для пары "свойство - значение из пакета" ищутся один раз на пакет, а не на каждой строке. Поиск и преобразование выполняют те же штатные функции. Ненайденное свойство тоже запоминается, ошибка обмена по каждой строке с ним пишется как раньше. Кэшируются только значения примитивных типов из пакета. <a href="IMDEV-9532%203.%20%D0%9E%D0%B1%D0%BE%D1%81%D0%BD%D0%BE%D0%B2%D0%B0%D0%BD%D0%B8%D0%B5%20%D0%B4%D0%BE%D1%80%D0%B0%D0%B1%D0%BE%D1%82%D0%BE%D0%BA%20%D1%83%D1%81%D0%BA%D0%BE%D1%80%D0%B5%D0%BD%D0%B8%D1%8F.html">Обоснование</a></p>
+          <ul>
+            <li>
+              <span class="node obj">Обработка.ОбменДаннымиБэкОфис</span>
+              <ul>
+                <li>
+                  <span class="node obj">МодульОбъекта</span>
+                  <ul>
+                    <li>
+                      <span class="tag chg">изменение</span>
+                      <span class="node">ОбработатьДанные_ДополнительныеСведения</span>
+                      <span class="note"> - та же процедура, что в общем блоке. Две замены вызова.</span>
+                      <ul>
+                        <li>
+                          <span class="tag del">удаление</span>
+                          <span class="note"><code>Свойство = ПланыВидовХарактеристик.ДополнительныеРеквизитыИСведения.НайтиПоНаименованию(СтрокаОбъектXDTO.Ключ, Истина)</code></span>
+                        </li>
+                        <li>
+                          <span class="tag add">добавление</span>
+                          <span class="note"><code>Свойство = СвойствоПоНаименованию(СтрокаОбъектXDTO.Ключ, КэшСвойств)</code></span>
+                        </li>
+                        <li>
+                          <span class="tag del">удаление</span>
+                          <span class="note"><code>Значение = ПреобразоватьЗначениеДополнительногоСведения(СтрокаОбъектXDTO.Значение, Свойство)</code></span>
+                        </li>
+                        <li>
+                          <span class="tag add">добавление</span>
+                          <span class="note"><code>Значение = ПреобразованноеЗначениеСведения(СтрокаОбъектXDTO.Значение, Свойство, КэшЗначений)</code></span>
+                        </li>
+                      </ul>
+                    </li>
+                    <li>
+                      <span class="tag add">добавление</span>
+                      <span class="node">СвойствоПоНаименованию</span>
+                      <span class="note"> - область <code>ЗаписьДополнительныхСведенийПакета</code>. Штатный <code>НайтиПоНаименованию(..., Истина)</code> один раз на наименование.</span>
+                    </li>
+                    <li>
+                      <span class="tag add">добавление</span>
+                      <span class="node">ПреобразованноеЗначениеСведения</span>
+                      <span class="note"> - штатная <code>ПреобразоватьЗначениеДополнительногоСведения</code> один раз на пару "свойство - значение", только для примитивных типов.</span>
+                    </li>
+                  </ul>
+                </li>
+              </ul>
+            </li>
+          </ul>
+        </details>
+      </li>
+
+      <li>
+        <details class="idea" open>
+          <summary><span class="tag idea-tag">идея 3</span> <span class="idea-title">Технические флаги обмена писать без версии портфеля</span></summary>
+          <p class="lead">Перед записью набора регистра дополнительных сведений версия портфеля не создается, если отбор набора установлен по свойству и это один из трех флагов лимитов, которые МО присылает в пакете: "Лимиты позиция_выгружена", "Лимиты требуется_перерасчет_РСА", "Лимиты есть_ошибки_выгрузки_позиции". Правило стоит в регистре, поэтому действует и для загрузки обмена, и для перерасчета РСА. Дата пересчета РСА и все остальные свойства версионируются как раньше, настройка истории изменений не меняется. Изменение истории изменений согласуется с ее владельцем. <a href="IMDEV-9532%205.%20%D0%A2%D1%80%D0%B8%20%D0%B8%D0%B4%D0%B5%D0%B8%20-%20%D0%BB%D0%BE%D0%B3%D0%B8%D0%BA%D0%B0%20%D1%82%D0%B0%20%D0%B6%D0%B5%2C%20%D0%B1%D1%8B%D1%81%D1%82%D1%80%D0%B5%D0%B5.html">Обоснование</a></p>
+          <ul>
+            <li>
+              <span class="node obj">РегистрСведений.ДополнительныеСведения</span>
+              <span class="note"> - заимствован, состав регистра не менять. Объект библиотеки стандартных подсистем: правку в типовой пометить принятыми у Аванкор маркерами модификации, чтобы она не потерялась при обновлении БСП.</span>
+              <ul>
+                <li>
+                  <span class="node obj">МодульНабораЗаписей</span>
+                  <ul>
+                    <li>
+                      <span class="tag chg">изменение</span>
+                      <span class="node">ПередЗаписью</span>
+                      <span class="note"> - в расширении <code>FO_PositionLoadOpt_ПередЗаписью</code>. Одна вставка, штатные строки не удаляются.</span>
+                      <ul>
+                        <li>
+                          <span class="tag add">добавление</span>
+                          <span class="note">после блока <code>Если ОбменДанными.Загрузка Тогда Возврат</code>, перед блоком версионирования: <code>Если ЭтоЗаписьТехническогоФлагаОбмена() Тогда Возврат</code></span>
+                        </li>
+                      </ul>
+                    </li>
+                    <li>
+                      <span class="tag add">добавление</span>
+                      <span class="node">ЭтоЗаписьТехническогоФлагаОбмена</span>
+                      <span class="note"> - область <code>СлужебныеПроцедурыИФункции</code> / <code>ТехническиеФлагиОбменаОстатков</code> (в штатном модуле есть только <code>ОбработчикиСобытий</code>, область добавить). Проверяет отбор набора по свойству и наименование свойства.</span>
+                    </li>
+                    <li>
+                      <span class="tag add">добавление</span>
+                      <span class="node">ТехническиеФлагиОбмена</span>
+                      <span class="note"> - список из трех наименований флагов лимитов.</span>
+                    </li>
+                  </ul>
+                </li>
+              </ul>
+            </li>
+          </ul>
+        </details>
+      </li>
+
+      <li>
+        <details class="idea" open>
+          <summary><span class="tag meta-tag">метаданные</span> <span class="idea-title">Индекс реквизита ВнешнийКод документа Поручение</span></summary>
+          <p class="lead">Не входит в расширение: индексирование заимствованного реквизита в расширении не меняется. Добавляется в конфигурации Аванкор.</p>
+          <div class="meta-box">
+            <p><b>Где тратится время.</b> Выгрузка остатков МО по каждому портфелю с блокировками отправляет в ФО пакет поручений "Вывод" (операция веб-сервиса <code>ЗагрузитьПоручения</code>). ФО ищет каждое поручение по внешнему коду: <code>ОбработатьДанные_Поручения</code> -&gt; <code>Поручение()</code> -&gt; <code>ДокументПоРеквизиту("Поручение", "ВнешнийКод", ...)</code>, запрос с отбором по <code>ВнешнийКод</code>.</p>
+            <p><b>Почему медленно.</b> Реквизит <code>ВнешнийКод</code> не индексируется, поэтому каждый поиск перебирает всю таблицу поручений. В замере обычной ФО один поиск занимал 0,5-1,9 с, это около половины времени загрузки пакета поручений. С ростом числа поручений поиск замедляется.</p>
+            <p><b>Что сделать.</b> У реквизита <code>ВнешнийКод</code> (Строка, 36) документа Поручение установить свойство "Индексировать". Логика и данные не меняются, при обновлении базы данных строится индекс по реквизиту.</p>
+          </div>
+          <ul>
+            <li>
+              <span class="node obj">Документ.Поручение</span>
+              <ul>
+                <li>
+                  <span class="node obj">Реквизиты</span>
+                  <ul>
+                    <li>
+                      <span class="tag meta-tag">метаданные</span>
+                      <span class="node">ВнешнийКод</span>
+                      <span class="note"> - свойство "Индексирование": "Не индексировать" -&gt; "Индексировать". Поиск <code>ДокументПоРеквизиту</code> по этому реквизиту выполняется для поручений при каждой загрузке.</span>
+                    </li>
+                    <li>
+                      <span class="tag meta-tag">по желанию</span>
+                      <span class="node">Идентификатор</span>
+                      <span class="note"> - тот же поиск используется, когда внешний код в пакете не заполнен. В замерах этот путь не встречался, индекс не обязателен.</span>
+                    </li>
+                  </ul>
+                </li>
+              </ul>
+            </li>
+          </ul>
+        </details>
+      </li>
+
+    </ul>
+
+    <div class="foot">
+      <h2>Сводка для переноса</h2>
+      <div style="overflow-x:auto">
+      <table>
+        <thead>
+          <tr><th>Объект</th><th>Модуль или раздел</th><th>Процедура или реквизит</th><th>Действие</th><th>Идея</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Обработка.ОбменДаннымиБэкОфис</td><td>МодульОбъекта</td><td>ОбработатьДанные_ДополнительныеСведения</td><td>изменение: 4 вставки, 2 удаления фрагментов</td><td>1 и 2</td></tr>
+          <tr><td>Обработка.ОбменДаннымиБэкОфис</td><td>МодульОбъекта</td><td>ФлагУжеИмеетЗначение</td><td>добавление</td><td>1. Без перезаписи</td></tr>
+          <tr><td>Обработка.ОбменДаннымиБэкОфис</td><td>МодульОбъекта</td><td>ТекущиеЗначенияСведенийОбъекта</td><td>добавление</td><td>1. Без перезаписи</td></tr>
+          <tr><td>Обработка.ОбменДаннымиБэкОфис</td><td>МодульОбъекта</td><td>ЗапомнитьЗаписанноеЗначение</td><td>добавление</td><td>1. Без перезаписи</td></tr>
+          <tr><td>Обработка.ОбменДаннымиБэкОфис</td><td>МодульОбъекта</td><td>СвойствоПоНаименованию</td><td>добавление</td><td>2. Кэш пакета</td></tr>
+          <tr><td>Обработка.ОбменДаннымиБэкОфис</td><td>МодульОбъекта</td><td>ПреобразованноеЗначениеСведения</td><td>добавление</td><td>2. Кэш пакета</td></tr>
+          <tr><td>РегистрСведений.ДополнительныеСведения</td><td>МодульНабораЗаписей</td><td>ПередЗаписью</td><td>изменение: 1 вставка, удалений нет</td><td>3. Без версии</td></tr>
+          <tr><td>РегистрСведений.ДополнительныеСведения</td><td>МодульНабораЗаписей</td><td>ЭтоЗаписьТехническогоФлагаОбмена</td><td>добавление</td><td>3. Без версии</td></tr>
+          <tr><td>РегистрСведений.ДополнительныеСведения</td><td>МодульНабораЗаписей</td><td>ТехническиеФлагиОбмена</td><td>добавление</td><td>3. Без версии</td></tr>
+          <tr><td>Документ.Поручение</td><td>Реквизиты</td><td>ВнешнийКод</td><td>метаданные: включить индексирование</td><td>Индекс поиска поручения</td></tr>
+        </tbody>
+      </table>
+      </div>
+
+      <h2>Не переносить</h2>
+      <ul>
+        <li>Язык <code>Русский</code> и свойства расширения. Это оболочка расширения, ролей в нем нет.</li>
+        <li>Аннотации расширения, маркеры <code>#Вставка</code> и <code>#Удаление</code>, префиксы перехватчиков.</li>
+        <li>Штатные <code>НайтиПоНаименованию</code>, <code>ПреобразоватьЗначениеДополнительногоСведения</code>, <code>ВерсионированиеОбъектов.ЗаписатьВерсиюОбъекта</code>. Их вызывают как есть.</li>
+        <li>Метаданные регистра <code>ДополнительныеСведения</code> и плана видов характеристик <code>ДополнительныеРеквизитыИСведения</code>, настройку истории изменений портфелей.</li>
+        <li>Обработки перерасчета РСА и выгрузки остатков МО, расширение ВТБ_Прод. Они не меняются.</li>
+      </ul>
+
+      <h2>Порядок в коде загрузки пакета</h2>
+      <ol>
+        <li>Идея 2. Для строки пакета свойство и значение берутся из кэша пакета.</li>
+        <li>Идея 1. Если булев флаг уже имеет это значение, строка пропускается, запись не выполняется.</li>
+        <li>Идея 3. При записи флага лимитов обработчик <code>ПередЗаписью</code> регистра не создает версию портфеля.</li>
+        <li>Индекс. Отдельно от пакета флагов: при загрузке поручений блокировок поиск поручения по внешнему коду идет по индексу.</li>
+      </ol>
+      <p>Идеи независимы по результату загрузки: каждую можно перенести отдельно. Идеи 1 и 2 вносятся в одну процедуру, общий блок с кэшами переносится один раз. Индекс не зависит от расширения и дает эффект сам по себе.</p>
+    </div>
+  </div>
+</div>
+</body>
+</html>
