@@ -1,0 +1,540 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Постконтроль лимитов розницы</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #101318;
+      --panel: rgba(16, 19, 24, 0.92);
+      --line: rgba(232, 238, 247, 0.12);
+      --text: #e7edf5;
+      --muted: #9aa6b6;
+      --amber: #e0a106;
+      --ink: #1c1403;
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body {
+      margin: 0;
+      height: 100%;
+      background: var(--bg);
+      color: var(--text);
+      font-family: "Segoe UI", system-ui, sans-serif;
+    }
+
+    #view { position: fixed; inset: 0; display: block; }
+
+    .panel {
+      position: fixed;
+      z-index: 2;
+      top: 16px;
+      left: 16px;
+      width: min(400px, calc(100vw - 32px));
+      max-height: calc(100vh - 32px);
+      overflow: auto;
+      padding: 16px;
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      backdrop-filter: blur(10px);
+    }
+
+    h1 {
+      margin: 0 0 6px;
+      font-size: 22px;
+      font-weight: 650;
+      letter-spacing: -0.02em;
+    }
+
+    .lead, .meta, .hint {
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.45;
+    }
+
+    .lead { margin: 0 0 12px; }
+
+    #status {
+      min-height: 4.4em;
+      margin: 0 0 10px;
+      font-size: 15px;
+      line-height: 1.4;
+    }
+
+    .meta { margin: 0 0 8px; }
+
+    .controls, .limits {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+
+    button {
+      font: inherit;
+      color: var(--text);
+      background: #2a3340;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 8px 12px;
+      cursor: pointer;
+    }
+
+    button.primary {
+      background: var(--amber);
+      color: var(--ink);
+      border-color: transparent;
+      font-weight: 650;
+    }
+
+    button.on {
+      background: #3a4658;
+      color: var(--text);
+      border-color: rgba(224, 161, 6, 0.7);
+    }
+
+    #chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+      margin: 8px 0 12px;
+    }
+
+    .chip {
+      padding: 4px 6px;
+      border-radius: 6px;
+      background: #243044;
+      font-size: 12px;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .chip.empty { background: #1d4f8f; }
+    .chip.warning { background: #8a5a00; color: #fff8e8; }
+    .chip.violation { background: #8d2e24; }
+    .chip.current { outline: 1px solid #f4f7fb; }
+
+    .legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px 12px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .swatch {
+      display: inline-block;
+      width: 9px;
+      height: 9px;
+      margin-right: 5px;
+      border-radius: 2px;
+      vertical-align: middle;
+    }
+
+    .hint {
+      position: fixed;
+      z-index: 2;
+      left: 50%;
+      bottom: 14px;
+      transform: translateX(-50%);
+      padding: 6px 10px;
+      border-radius: 999px;
+      background: rgba(16, 19, 24, 0.75);
+      border: 1px solid var(--line);
+      white-space: nowrap;
+    }
+
+    #boot {
+      position: fixed;
+      z-index: 3;
+      inset: 0;
+      display: grid;
+      place-items: center;
+      padding: 24px;
+      text-align: center;
+      background: var(--bg);
+    }
+
+    #boot[hidden] { display: none; }
+  </style>
+</head>
+<body>
+  <canvas id="view"></canvas>
+  <aside class="panel">
+    <h1>Постконтроль лимитов</h1>
+    <p class="lead">Розница, фронт-офис. Высота столбика - доля ОФЗ в РСА портфеля. Плоскость - порог лимита. Сумма бумаг одна и та же, у лимитов разные пороги.</p>
+    <p id="status">Собираем портфели...</p>
+    <div class="meta" id="counts"></div>
+    <div class="limits" id="limits"></div>
+    <div id="chips"></div>
+    <div class="controls">
+      <button class="primary" id="play" type="button">Старт</button>
+      <button id="step" type="button">Шаг</button>
+      <button id="restart" type="button">Сначала</button>
+    </div>
+    <p class="meta">Доля = стоимость отобранных ОФЗ / РСА портфеля. Выше красного порога зона называется "нарушение". Рядом с порогом - "предупреждение". Ниже - зона пустая. Учебный набор, не выгрузка из базы.</p>
+    <div class="legend">
+      <span><i class="swatch" style="background:#4c8dff"></i>зона пустая</span>
+      <span><i class="swatch" style="background:#e0a106"></i>предупреждение</span>
+      <span><i class="swatch" style="background:#e85d4c"></i>нарушение</span>
+    </div>
+  </aside>
+  <div class="hint">Тяните мышью, чтобы повернуть. Колесо меняет масштаб.</div>
+  <div id="boot" hidden>Не удалось загрузить трёхмерную сцену. Нужен интернет для библиотеки Three.js.</div>
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
+      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"
+    }
+  }
+  </script>
+  <script type="module">
+    import * as THREE from "three";
+    import { OrbitControls } from "three/addons/controls/OrbitControls.js";
+    import { RoundedBoxGeometry } from "three/addons/geometries/RoundedBoxGeometry.js";
+
+    const GAP = 1.32;
+    const portfolios = [
+      { code: "1042", share: 22 },
+      { code: "1108", share: 41 },
+      { code: "1188", share: 70 },
+      { code: "1215", share: 48 },
+      { code: "1304", share: 86 },
+      { code: "1360", share: 15 },
+      { code: "1422", share: 63 },
+      { code: "1501", share: 54 },
+      { code: "1588", share: 33 },
+      { code: "1640", share: 91 },
+      { code: "1712", share: 58 },
+      { code: "1804", share: 77 }
+    ];
+    const limits = [
+      { id: "50", title: "ОФЗ не выше 50%", threshold: 50 },
+      { id: "70", title: "ОФЗ не выше 70%", threshold: 70 },
+      { id: "85", title: "ОФЗ не выше 85%", threshold: 85 }
+    ];
+
+    const view = document.getElementById("view");
+    const statusEl = document.getElementById("status");
+    const countsEl = document.getElementById("counts");
+    const chipsEl = document.getElementById("chips");
+    const limitsEl = document.getElementById("limits");
+    const playBtn = document.getElementById("play");
+
+    const renderer = new THREE.WebGLRenderer({ canvas: view, antialias: true });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
+    renderer.shadowMap.enabled = true;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.05;
+
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x101318);
+    scene.fog = new THREE.Fog(0x101318, 24, 48);
+
+    const camera = new THREE.PerspectiveCamera(42, 1, 0.1, 80);
+    const controls = new OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.08;
+    controls.maxPolarAngle = Math.PI / 2.05;
+    controls.minDistance = 6;
+    controls.maxDistance = 40;
+    controls.target.set(0, 1.8, 0);
+
+    scene.add(new THREE.HemisphereLight(0xc5d4e8, 0x1a1d22, 0.72));
+    scene.add(new THREE.AmbientLight(0xffffff, 0.28));
+    const sun = new THREE.DirectionalLight(0xfff4e0, 2.35);
+    sun.position.set(7, 14, 8);
+    sun.castShadow = true;
+    sun.shadow.mapSize.set(1024, 1024);
+    scene.add(sun);
+    const fill = new THREE.DirectionalLight(0x8eb4ff, 0.5);
+    fill.position.set(-8, 6, -4);
+    scene.add(fill);
+
+    const grid = new THREE.GridHelper(30, 30, 0x2c3644, 0x1a212b);
+    scene.add(grid);
+
+    const plane = new THREE.Mesh(
+      new THREE.BoxGeometry(1, 0.045, 2.15),
+      new THREE.MeshStandardMaterial({
+        color: 0xe85d4c,
+        emissive: 0x8d2e24,
+        emissiveIntensity: 0.35,
+        transparent: true,
+        opacity: 0.38,
+        roughness: 1,
+        depthWrite: false
+      })
+    );
+    scene.add(plane);
+
+    const ring = new THREE.Mesh(
+      new THREE.TorusGeometry(0.5, 0.03, 12, 36),
+      new THREE.MeshStandardMaterial({ color: 0xf4f7fb, emissive: 0x9eb0c8, emissiveIntensity: 0.6, roughness: 0.3 })
+    );
+    ring.rotation.x = Math.PI / 2;
+    ring.position.y = 0.1;
+    scene.add(ring);
+
+    const count = portfolios.length;
+    let limitIndex = 0;
+    let cursor = 0;
+    let playing = true;
+    let playOne = false;
+    let hold = 0;
+    let planeY = 0;
+    const towers = [];
+
+    function xOf(index) {
+      return (index - (count - 1) / 2) * GAP;
+    }
+
+    function heightOf(share) {
+      return 0.45 + (share / 100) * 5.6;
+    }
+
+    function zoneOf(share, threshold) {
+      if (share > threshold) return "violation";
+      if (share > threshold - 8) return "warning";
+      return "empty";
+    }
+
+    function zoneTitle(zone) {
+      if (zone === "violation") return "нарушение";
+      if (zone === "warning") return "предупреждение";
+      return "пустая";
+    }
+
+    function paintTower(mesh, zone) {
+      if (zone === "violation") {
+        mesh.material.color.setHex(0xe85d4c);
+        mesh.material.emissive.setHex(0x6a1c14);
+      } else if (zone === "warning") {
+        mesh.material.color.setHex(0xf5b942);
+        mesh.material.emissive.setHex(0x8a5a00);
+      } else {
+        mesh.material.color.setHex(0x4c8dff);
+        mesh.material.emissive.setHex(0x102446);
+      }
+      mesh.material.emissiveIntensity = 0.45;
+    }
+
+    function makeLabel(text) {
+      const canvas = document.createElement("canvas");
+      canvas.width = 128;
+      canvas.height = 64;
+      const ctx = canvas.getContext("2d");
+      ctx.font = "600 36px Segoe UI, sans-serif";
+      ctx.fillStyle = "#f4f7fb";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText(text, 64, 34);
+      const texture = new THREE.CanvasTexture(canvas);
+      texture.colorSpace = THREE.SRGBColorSpace;
+      const material = new THREE.SpriteMaterial({ map: texture, transparent: true, depthWrite: false });
+      const sprite = new THREE.Sprite(material);
+      sprite.scale.set(1.15, 0.58, 1);
+      return sprite;
+    }
+
+    function currentLimit() {
+      return limits[limitIndex];
+    }
+
+    function describe(index) {
+      const item = portfolios[index];
+      const limit = currentLimit();
+      const zone = zoneOf(item.share, limit.threshold);
+      let reason;
+      if (zone === "violation") {
+        reason = item.share + " больше порога " + limit.threshold + ".";
+      } else if (zone === "warning") {
+        reason = item.share + " не выше порога " + limit.threshold + ", но уже рядом с ним.";
+      } else {
+        reason = item.share + " ниже порога " + limit.threshold + ". Порог не пробит.";
+      }
+      return "Портфель " + item.code + ". Доля ОФЗ " + item.share + "% от РСА. Лимит \"" + limit.title + "\". " + reason + " Зона: " + zoneTitle(zone) + ".";
+    }
+
+    function renderCounts() {
+      const threshold = currentLimit().threshold;
+      let empty = 0;
+      let warning = 0;
+      let violation = 0;
+      portfolios.forEach((item) => {
+        const zone = zoneOf(item.share, threshold);
+        if (zone === "violation") violation += 1;
+        else if (zone === "warning") warning += 1;
+        else empty += 1;
+      });
+      countsEl.textContent = "Портфелей: " + count + ". Пустая зона: " + empty + ". Предупреждение: " + warning + ". Нарушение: " + violation + ".";
+    }
+
+    function renderChips() {
+      const threshold = currentLimit().threshold;
+      chipsEl.replaceChildren();
+      portfolios.forEach((item, index) => {
+        const chip = document.createElement("button");
+        chip.type = "button";
+        chip.className = "chip " + zoneOf(item.share, threshold) + (index === cursor ? " current" : "");
+        chip.textContent = item.code + " " + item.share + "%";
+        chip.addEventListener("click", () => {
+          cursor = index;
+          playing = false;
+          playOne = false;
+          showCursor();
+        });
+        chipsEl.appendChild(chip);
+      });
+    }
+
+    function colorTowers() {
+      const threshold = currentLimit().threshold;
+      towers.forEach((tower, index) => {
+        paintTower(tower.mesh, zoneOf(portfolios[index].share, threshold));
+      });
+    }
+
+    function showCursor() {
+      statusEl.textContent = describe(cursor);
+      const tower = towers[cursor];
+      ring.position.x = tower.mesh.position.x;
+      ring.position.z = tower.mesh.position.z;
+      renderChips();
+      renderCounts();
+      playBtn.textContent = playing ? "Пауза" : "Старт";
+    }
+
+    function fitCamera() {
+      const margin = 1.05;
+      const half = ((count - 1) * GAP) / 2 + margin;
+      const width = window.innerWidth;
+      const height = window.innerHeight;
+      const panel = width < 860 ? 0 : 410;
+      const usable = Math.max(width * 0.5, width - panel);
+      camera.clearViewOffset();
+      camera.aspect = width / height;
+      const fovRad = (camera.fov * Math.PI) / 180;
+      const visibleWorld = (2 * half) * (width / usable);
+      const z = visibleWorld / (2 * Math.tan(fovRad / 2) * camera.aspect);
+      const lookX = panel === 0 ? 0 : -(panel / width) * visibleWorld * 0.5;
+      camera.position.set(lookX, Math.max(5.8, z * 0.34), z);
+      controls.target.set(lookX, 1.8, 0);
+      camera.updateProjectionMatrix();
+      controls.update();
+    }
+
+    portfolios.forEach((item, index) => {
+      const h = heightOf(item.share);
+      const mesh = new THREE.Mesh(
+        new RoundedBoxGeometry(0.74, h, 0.74, 3, 0.07),
+        new THREE.MeshStandardMaterial({ color: 0x4c8dff, roughness: 0.36, metalness: 0.16, emissive: 0x102446, emissiveIntensity: 0.45 })
+      );
+      mesh.castShadow = true;
+      mesh.position.set(xOf(index), h / 2, 0);
+      const label = makeLabel(String(item.share));
+      label.position.y = h / 2 + 0.48;
+      mesh.add(label);
+      scene.add(mesh);
+      towers.push({ mesh: mesh, h: h });
+    });
+
+    const rowWidth = (count - 1) * GAP + 1.35;
+    plane.scale.set(rowWidth, 1, 1);
+    planeY = heightOf(currentLimit().threshold);
+    plane.position.y = planeY;
+
+    limits.forEach((limit, index) => {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.textContent = limit.title;
+      button.className = index === limitIndex ? "on" : "";
+      button.addEventListener("click", () => {
+        limitIndex = index;
+        cursor = 0;
+        hold = 0;
+        limitsEl.querySelectorAll("button").forEach((node, nodeIndex) => {
+          node.className = nodeIndex === limitIndex ? "on" : "";
+        });
+        colorTowers();
+        showCursor();
+      });
+      limitsEl.appendChild(button);
+    });
+
+    playBtn.addEventListener("click", () => {
+      playing = !playing;
+      playOne = false;
+      playBtn.textContent = playing ? "Пауза" : "Старт";
+    });
+
+    document.getElementById("step").addEventListener("click", () => {
+      playing = false;
+      playOne = true;
+      playBtn.textContent = "Старт";
+    });
+
+    document.getElementById("restart").addEventListener("click", () => {
+      cursor = 0;
+      hold = 0;
+      playing = false;
+      playOne = false;
+      showCursor();
+    });
+
+    window.addEventListener("resize", () => {
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      fitCamera();
+    });
+
+    window.addEventListener("keydown", (event) => {
+      if (event.code === "Space" && event.target === document.body) {
+        event.preventDefault();
+        playBtn.click();
+      }
+    });
+
+    colorTowers();
+    showCursor();
+    fitCamera();
+    window.__wimReady = true;
+
+    const clock = new THREE.Clock();
+    function frame() {
+      requestAnimationFrame(frame);
+      const dt = Math.min(clock.getDelta(), 0.05);
+      const targetY = heightOf(currentLimit().threshold);
+      planeY += (targetY - planeY) * Math.min(1, dt * 3.2);
+      plane.position.y = planeY;
+      ring.rotation.z += dt;
+
+      if (playing || playOne) {
+        hold += dt;
+        if (hold > 1.35) {
+          hold = 0;
+          cursor = (cursor + 1) % count;
+          showCursor();
+          if (playOne) {
+            playOne = false;
+          }
+        }
+      }
+
+      controls.update();
+      renderer.render(scene, camera);
+    }
+    frame();
+  </script>
+  <script>
+    setTimeout(function () {
+      if (!window.__wimReady) document.getElementById("boot").hidden = false;
+    }, 5000);
+  </script>
+</body>
+</html>

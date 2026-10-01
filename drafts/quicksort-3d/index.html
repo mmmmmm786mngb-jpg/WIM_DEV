@@ -1,0 +1,873 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Быстрая сортировка в 3D</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #101318;
+      --panel: rgba(16, 19, 24, 0.9);
+      --line: rgba(232, 238, 247, 0.12);
+      --text: #e7edf5;
+      --muted: #9aa6b6;
+      --amber: #e0a106;
+      --amber-ink: #1c1403;
+      --blue: #4c8dff;
+      --green: #1f6b48;
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body {
+      margin: 0;
+      height: 100%;
+      background: var(--bg);
+      color: var(--text);
+      font-family: "Segoe UI", system-ui, sans-serif;
+    }
+
+    #view { position: fixed; inset: 0; display: block; }
+
+    .panel {
+      position: fixed;
+      z-index: 2;
+      top: 16px;
+      left: 16px;
+      width: min(380px, calc(100vw - 32px));
+      max-height: calc(100vh - 32px);
+      overflow: auto;
+      padding: 16px 16px 14px;
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      backdrop-filter: blur(10px);
+    }
+
+    h1 {
+      margin: 0 0 6px;
+      font-size: 22px;
+      font-weight: 650;
+      letter-spacing: -0.02em;
+    }
+
+    .lead, .hint, .meta, .stack, #code {
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.45;
+    }
+
+    .lead { margin: 0 0 12px; }
+
+    #status {
+      min-height: 3.9em;
+      margin: 0 0 10px;
+      font-size: 14.5px;
+      line-height: 1.4;
+      color: var(--text);
+    }
+
+    .meta { margin-bottom: 10px; }
+
+    .row, .controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+
+    button, select {
+      font: inherit;
+      color: var(--text);
+      background: #2a3340;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 8px 12px;
+      cursor: pointer;
+    }
+
+    button.primary {
+      background: var(--amber);
+      color: var(--amber-ink);
+      border-color: transparent;
+      font-weight: 650;
+    }
+
+    label.speed {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    input[type="range"] { width: 110px; }
+
+    #chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+      margin: 4px 0 12px;
+    }
+
+    .chip {
+      min-width: 1.7em;
+      padding: 3px 6px;
+      border-radius: 6px;
+      background: #243044;
+      text-align: center;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .chip.pivot { background: var(--amber); color: var(--amber-ink); font-weight: 700; }
+    .chip.hot { outline: 1px solid #f4f7fb; }
+    .chip.placed { background: var(--green); color: #e7fff4; }
+    .chip.dim { opacity: 0.38; }
+
+    #code div, .frame {
+      padding: 4px 8px;
+      border-radius: 6px;
+      margin: 2px 0;
+    }
+
+    #code div.on, .frame.current {
+      background: rgba(224, 161, 6, 0.16);
+      color: var(--text);
+    }
+
+    .legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px 12px;
+      margin-top: 10px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .swatch {
+      display: inline-block;
+      width: 9px;
+      height: 9px;
+      margin-right: 5px;
+      border-radius: 2px;
+      vertical-align: middle;
+    }
+
+    .hint {
+      position: fixed;
+      z-index: 2;
+      left: 50%;
+      bottom: 14px;
+      transform: translateX(-50%);
+      padding: 6px 10px;
+      border-radius: 999px;
+      background: rgba(16, 19, 24, 0.75);
+      border: 1px solid var(--line);
+      white-space: nowrap;
+    }
+
+    #boot {
+      position: fixed;
+      z-index: 3;
+      inset: 0;
+      display: grid;
+      place-items: center;
+      padding: 24px;
+      text-align: center;
+      background: var(--bg);
+    }
+
+    #boot[hidden] { display: none; }
+  </style>
+</head>
+<body>
+  <canvas id="view"></canvas>
+  <aside class="panel">
+    <h1>Быстрая сортировка</h1>
+    <p class="lead">Массив делится вокруг опорного элемента. Меньшие значения собираются слева, остальные остаются справа. Затем то же самое происходит с каждой частью.</p>
+    <p id="status">Собираем сцену...</p>
+    <div class="meta" id="progress">Шаг 0 из 0</div>
+    <div class="meta" id="stats">Сравнений: 0. Обменов: 0.</div>
+    <div id="chips"></div>
+    <div class="controls">
+      <button class="primary" id="play" type="button">Старт</button>
+      <button id="step" type="button">Шаг</button>
+      <button id="restart" type="button">Сначала</button>
+      <button id="fresh" type="button">Новый массив</button>
+    </div>
+    <div class="row">
+      <label class="speed">Длина
+        <select id="count">
+          <option value="8">8</option>
+          <option value="12" selected>12</option>
+          <option value="16">16</option>
+        </select>
+      </label>
+      <label class="speed">Скорость
+        <input id="speed" type="range" min="0.4" max="2.6" step="0.1" value="1">
+      </label>
+    </div>
+    <div id="code">
+      <div data-line="single">Если в диапазоне один элемент, он уже на месте.</div>
+      <div data-line="pivot">Иначе последний элемент диапазона берётся опорным.</div>
+      <div data-line="compare">Каждый следующий сравнивается с опорным.</div>
+      <div data-line="swap">Меньший меняется местами и переходит влево.</div>
+      <div data-line="place">Опорный встаёт между левой и правой частью.</div>
+      <div data-line="recurse">Те же шаги повторяются для обеих частей.</div>
+    </div>
+    <div class="stack" id="stack"></div>
+    <div class="legend">
+      <span><i class="swatch" style="background:#4c8dff"></i>в работе</span>
+      <span><i class="swatch" style="background:#e0a106"></i>опорный</span>
+      <span><i class="swatch" style="background:#ff7a59"></i>обмен</span>
+      <span><i class="swatch" style="background:#3dbe86"></i>на месте</span>
+    </div>
+  </aside>
+  <div class="hint">Тяните мышью, чтобы повернуть. Колесо меняет масштаб.</div>
+  <div id="boot" hidden>Не удалось загрузить трёхмерную сцену. Нужен интернет для библиотеки Three.js.</div>
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
+      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"
+    }
+  }
+  </script>
+  <script type="module">
+    import * as THREE from "three";
+    import { OrbitControls } from "three/addons/controls/OrbitControls.js";
+    import { RoundedBoxGeometry } from "three/addons/geometries/RoundedBoxGeometry.js";
+
+    const GAP = 1.28;
+    const view = document.getElementById("view");
+    const statusEl = document.getElementById("status");
+    const progressEl = document.getElementById("progress");
+    const statsEl = document.getElementById("stats");
+    const chipsEl = document.getElementById("chips");
+    const stackEl = document.getElementById("stack");
+    const codeEl = document.getElementById("code");
+    const playBtn = document.getElementById("play");
+    const countEl = document.getElementById("count");
+    const speedEl = document.getElementById("speed");
+
+    const renderer = new THREE.WebGLRenderer({ canvas: view, antialias: true });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
+    renderer.shadowMap.enabled = true;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.05;
+
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x101318);
+    scene.fog = new THREE.Fog(0x101318, 22, 46);
+
+    const camera = new THREE.PerspectiveCamera(42, window.innerWidth / window.innerHeight, 0.1, 80);
+    const controls = new OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.08;
+    controls.maxPolarAngle = Math.PI / 2.05;
+    controls.minDistance = 6;
+    controls.maxDistance = 36;
+    controls.target.set(0, 2.1, 0);
+
+    scene.add(new THREE.HemisphereLight(0xc5d4e8, 0x1a1d22, 0.7));
+    const ambient = new THREE.AmbientLight(0xffffff, 0.28);
+    scene.add(ambient);
+    const sun = new THREE.DirectionalLight(0xfff4e0, 2.4);
+    sun.position.set(7, 14, 8);
+    sun.castShadow = true;
+    sun.shadow.mapSize.set(1024, 1024);
+    sun.shadow.camera.near = 1;
+    sun.shadow.camera.far = 40;
+    sun.shadow.camera.left = -14;
+    sun.shadow.camera.right = 14;
+    sun.shadow.camera.top = 14;
+    sun.shadow.camera.bottom = -14;
+    scene.add(sun);
+    const fill = new THREE.DirectionalLight(0x8eb4ff, 0.55);
+    fill.position.set(-8, 6, -4);
+    scene.add(fill);
+
+    const grid = new THREE.GridHelper(28, 28, 0x2c3644, 0x1a212b);
+    grid.position.y = 0;
+    scene.add(grid);
+
+    const rangeMat = new THREE.MeshStandardMaterial({
+      color: 0xe0a106,
+      transparent: true,
+      opacity: 0.22,
+      roughness: 1,
+      metalness: 0,
+      depthWrite: false
+    });
+    const rangeMesh = new THREE.Mesh(new THREE.BoxGeometry(1, 0.06, 1.85), rangeMat);
+    rangeMesh.position.y = 0.04;
+    rangeMesh.visible = false;
+    scene.add(rangeMesh);
+
+    const boundary = new THREE.Mesh(
+      new THREE.BoxGeometry(0.05, 0.85, 1.55),
+      new THREE.MeshStandardMaterial({ color: 0x9ad7ff, emissive: 0x9ad7ff, emissiveIntensity: 0.25, roughness: 0.4 })
+    );
+    boundary.position.y = 0.5;
+    boundary.visible = false;
+    scene.add(boundary);
+
+    const ring = new THREE.Mesh(
+      new THREE.TorusGeometry(0.5, 0.03, 12, 40),
+      new THREE.MeshStandardMaterial({ color: 0xf5b942, emissive: 0xc4841d, emissiveIntensity: 0.9, roughness: 0.28, metalness: 0.45 })
+    );
+    ring.rotation.x = Math.PI / 2;
+    ring.position.y = 0.12;
+    ring.visible = false;
+    scene.add(ring);
+
+    const bars = new THREE.Group();
+    scene.add(bars);
+
+    let items = [];
+    let order = [];
+    let steps = [];
+    let placed = new Set();
+    let views = new Map();
+    let count = 12;
+    let stepIndex = 0;
+    let phase = null;
+    let playing = false;
+    let playOne = false;
+    let compares = 0;
+    let swaps = 0;
+
+    function shuffled(n) {
+      const values = [];
+      for (let i = 1; i <= n; i++) values.push(i);
+      for (let i = n - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        const tmp = values[i];
+        values[i] = values[j];
+        values[j] = tmp;
+      }
+      return values;
+    }
+
+    function record(source) {
+      const a = source.slice();
+      const out = [];
+      const stack = [];
+      const snap = () => stack.map((frame) => ({ lo: frame.lo, hi: frame.hi }));
+
+      function rec(lo, hi) {
+        if (lo > hi) return;
+        stack.push({ lo: lo, hi: hi });
+        if (lo === hi) {
+          out.push({
+            type: "sorted",
+            index: lo,
+            stack: snap(),
+            text: "Элемент " + a[lo] + " один в диапазоне и уже стоит на месте."
+          });
+          stack.pop();
+          return;
+        }
+
+        const pivotIndex = hi;
+        out.push({
+          type: "pivot",
+          pivot: pivotIndex,
+          stack: snap(),
+          text: "Диапазон " + (lo + 1) + "-" + (hi + 1) + ". Опорный элемент " + a[pivotIndex] + ". Меньшие собираем слева."
+        });
+
+        let i = lo;
+        for (let j = lo; j < hi; j++) {
+          const less = a[j] < a[pivotIndex];
+          const doSwap = less && i !== j;
+          let text;
+          if (doSwap) {
+            text = a[j] + " меньше опорного " + a[pivotIndex] + ". Меняем его с " + a[i] + ", чтобы меньшие стояли слева.";
+          } else if (less) {
+            text = a[j] + " меньше опорного " + a[pivotIndex] + " и уже стоит в левой части.";
+          } else {
+            text = a[j] + " не меньше опорного " + a[pivotIndex] + " и остаётся справа.";
+          }
+          out.push({
+            type: "compare",
+            i: i,
+            j: j,
+            pivot: pivotIndex,
+            swap: doSwap,
+            stack: snap(),
+            text: text
+          });
+          if (doSwap) {
+            const tmp = a[i];
+            a[i] = a[j];
+            a[j] = tmp;
+          }
+          if (less) i += 1;
+        }
+
+        if (i !== pivotIndex) {
+          out.push({
+            type: "place",
+            a: i,
+            b: pivotIndex,
+            stack: snap(),
+            text: "Ставим опорный " + a[pivotIndex] + " на место. Меняем его с " + a[i] + "."
+          });
+          const tmp = a[i];
+          a[i] = a[pivotIndex];
+          a[pivotIndex] = tmp;
+        } else {
+          out.push({
+            type: "place",
+            a: i,
+            b: i,
+            stack: snap(),
+            text: "Опорный " + a[i] + " уже стоит между левой и правой частью."
+          });
+        }
+
+        rec(lo, i - 1);
+        rec(i + 1, hi);
+        stack.pop();
+      }
+
+      rec(0, a.length - 1);
+      return out;
+    }
+
+    function swapPair(step) {
+      if (step.type === "compare" && step.swap) return [step.i, step.j];
+      if (step.type === "place" && step.a !== step.b) return [step.a, step.b];
+      return null;
+    }
+
+    function verify() {
+      const sim = order.slice();
+      for (const step of steps) {
+        const pair = swapPair(step);
+        if (!pair) continue;
+        const tmp = sim[pair[0]];
+        sim[pair[0]] = sim[pair[1]];
+        sim[pair[1]] = tmp;
+      }
+      const values = sim.map((id) => items[id].value);
+      for (let i = 1; i < values.length; i++) {
+        if (values[i] < values[i - 1]) return false;
+      }
+      return true;
+    }
+
+    function barHeight(value) {
+      return 0.55 + (value / count) * 5.3;
+    }
+
+    function xOf(index) {
+      return (index - (count - 1) / 2) * GAP;
+    }
+
+    function makeLabel(value) {
+      const canvas = document.createElement("canvas");
+      canvas.width = 128;
+      canvas.height = 64;
+      const ctx = canvas.getContext("2d");
+      ctx.font = "600 42px Segoe UI, sans-serif";
+      ctx.fillStyle = "#f4f7fb";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText(String(value), 64, 34);
+      const texture = new THREE.CanvasTexture(canvas);
+      texture.colorSpace = THREE.SRGBColorSpace;
+      const material = new THREE.SpriteMaterial({ map: texture, transparent: true, depthWrite: false });
+      const sprite = new THREE.Sprite(material);
+      sprite.scale.set(1.05, 0.52, 1);
+      return sprite;
+    }
+
+    function clearBars() {
+      for (const viewItem of views.values()) {
+        viewItem.mesh.geometry.dispose();
+        viewItem.mesh.material.dispose();
+        viewItem.label.material.map.dispose();
+        viewItem.label.material.dispose();
+        bars.remove(viewItem.mesh);
+      }
+      views = new Map();
+    }
+
+    function createMeshes() {
+      for (const item of items) {
+        const h = barHeight(item.value);
+        const geometry = new RoundedBoxGeometry(0.74, h, 0.74, 3, 0.07);
+        const material = new THREE.MeshStandardMaterial({
+          color: 0x4c8dff,
+          roughness: 0.36,
+          metalness: 0.18,
+          emissive: 0x102446,
+          emissiveIntensity: 0.4
+        });
+        const mesh = new THREE.Mesh(geometry, material);
+        mesh.castShadow = true;
+        mesh.position.y = h / 2;
+        const label = makeLabel(item.value);
+        label.position.y = h / 2 + 0.46;
+        mesh.add(label);
+        bars.add(mesh);
+        views.set(item.id, { mesh: mesh, h: h, label: label });
+      }
+    }
+
+    function fitCamera() {
+      const margin = 1.05;
+      const half = ((count - 1) * GAP) / 2 + margin;
+      const width = window.innerWidth;
+      const height = window.innerHeight;
+      const panel = width < 860 ? 0 : 410;
+      const usable = Math.max(width * 0.5, width - panel);
+      camera.clearViewOffset();
+      camera.aspect = width / height;
+      const fovRad = (camera.fov * Math.PI) / 180;
+      const visibleWorld = (2 * half) * (width / usable);
+      const z = visibleWorld / (2 * Math.tan(fovRad / 2) * camera.aspect);
+      const lookX = panel === 0 ? 0 : -(panel / width) * visibleWorld * 0.5;
+      camera.position.set(lookX, Math.max(5.8, z * 0.34), z);
+      controls.target.set(lookX, 1.8, 0);
+      camera.updateProjectionMatrix();
+      controls.update();
+    }
+
+    function duration(step) {
+      if (step.type === "pivot") return 0.85;
+      if (step.type === "compare") return step.swap ? 0.95 : 0.5;
+      if (step.type === "place") return step.a !== step.b ? 1.05 : 0.65;
+      return 0.4;
+    }
+
+    function ease(t) {
+      return t * t * (3 - 2 * t);
+    }
+
+    function swapAmount(step, p) {
+      if (!swapPair(step)) return 0;
+      if (step.type === "compare") {
+        const u = Math.max(0, (p - 0.2) / 0.8);
+        return ease(Math.min(1, u));
+      }
+      return ease(p);
+    }
+
+    function paintColor(mesh, color, emissive, intensity) {
+      mesh.material.color.setHex(color);
+      mesh.material.emissive.setHex(emissive);
+      mesh.material.emissiveIntensity = intensity;
+    }
+
+    function styleBar(id, index, step, p) {
+      const viewItem = views.get(id);
+      if (placed.has(id)) {
+        const fadingPivot = step && step.type === "place" && id === order[step.b] && p < 0.72;
+        if (!fadingPivot) {
+          paintColor(viewItem.mesh, 0x3dbe86, 0x145c3a, 0.45);
+          return;
+        }
+      }
+
+      const pivotIndex = step && (step.type === "pivot" || step.type === "compare") ? step.pivot : null;
+      const movingPivot = step && step.type === "place" && index === step.b;
+      if (index === pivotIndex || movingPivot) {
+        paintColor(viewItem.mesh, 0xf5b942, 0x8a5a00, 0.55);
+        return;
+      }
+      if (step && step.type === "compare" && step.swap && (index === step.i || index === step.j)) {
+        paintColor(viewItem.mesh, 0xff7a59, 0x6a2a18, 0.4);
+        return;
+      }
+      if (step && step.type === "compare" && index === step.j) {
+        paintColor(viewItem.mesh, 0xf4f7fb, 0x334155, 0.35);
+        return;
+      }
+      const frame = step && step.stack.length ? step.stack[step.stack.length - 1] : null;
+      if (frame && (index < frame.lo || index > frame.hi)) {
+        paintColor(viewItem.mesh, 0x3a4452, 0x000000, 0);
+        return;
+      }
+      paintColor(viewItem.mesh, 0x4c8dff, 0x102446, 0.4);
+    }
+
+    function paint(step, p) {
+      const amount = step ? swapAmount(step, p) : 0;
+      const shift = new Map();
+      const pair = step ? swapPair(step) : null;
+      if (pair && amount > 0) {
+        shift.set(order[pair[0]], { from: pair[0], to: pair[1], z: 0.5 });
+        shift.set(order[pair[1]], { from: pair[1], to: pair[0], z: -0.5 });
+      }
+
+      for (let index = 0; index < order.length; index++) {
+        const id = order[index];
+        const viewItem = views.get(id);
+        const moved = shift.get(id);
+        let x = xOf(index);
+        let hop = 0;
+        let z = 0;
+        if (moved) {
+          x = xOf(moved.from) + (xOf(moved.to) - xOf(moved.from)) * amount;
+          hop = Math.sin(Math.PI * amount) * 1.7;
+          z = moved.z * Math.sin(Math.PI * amount);
+        } else if (step && step.type === "compare" && index === step.j) {
+          hop = Math.sin(Math.PI * p) * 0.35;
+        } else if (step && step.type === "pivot" && index === step.pivot) {
+          hop = Math.sin(Math.PI * p) * 0.4;
+        } else if (step && step.type === "sorted" && index === step.index) {
+          hop = Math.sin(Math.PI * p) * 0.28;
+        }
+        viewItem.mesh.position.set(x, viewItem.h / 2 + hop, z);
+        styleBar(id, index, step, p);
+      }
+
+      const frame = step && step.stack.length ? step.stack[step.stack.length - 1] : null;
+      if (frame) {
+        const left = xOf(frame.lo);
+        const right = xOf(frame.hi);
+        rangeMesh.visible = true;
+        rangeMesh.scale.set(Math.max(1, right - left + 1.2), 1, 1);
+        rangeMesh.position.x = (left + right) / 2;
+      } else {
+        rangeMesh.visible = false;
+      }
+
+      boundary.visible = Boolean(step && step.type === "compare");
+      if (boundary.visible) boundary.position.x = xOf(step.i) - GAP * 0.5;
+
+      let pivotId = null;
+      if (step && (step.type === "pivot" || step.type === "compare")) pivotId = order[step.pivot];
+      if (step && step.type === "place") pivotId = order[step.b];
+      if (pivotId === null || placed.has(pivotId)) {
+        ring.visible = false;
+      } else {
+        const mesh = views.get(pivotId).mesh;
+        ring.visible = true;
+        ring.position.x = mesh.position.x;
+        ring.position.z = mesh.position.z;
+      }
+    }
+
+    function renderChips(step) {
+      chipsEl.replaceChildren();
+      const frame = step && step.stack.length ? step.stack[step.stack.length - 1] : null;
+      order.forEach((id, index) => {
+        const chip = document.createElement("span");
+        chip.className = "chip";
+        chip.textContent = String(items[id].value);
+        if (placed.has(id)) chip.classList.add("placed");
+        if (frame && (index < frame.lo || index > frame.hi) && !placed.has(id)) chip.classList.add("dim");
+        const pivotIndex = step && (step.type === "pivot" || step.type === "compare") ? step.pivot : null;
+        if (index === pivotIndex || (step && step.type === "place" && index === step.b && !placed.has(id))) {
+          chip.classList.add("pivot");
+        }
+        if (step && step.type === "compare" && index === step.j) chip.classList.add("hot");
+        chipsEl.appendChild(chip);
+      });
+    }
+
+    function renderStack(stack) {
+      stackEl.replaceChildren();
+      if (!stack.length) {
+        stackEl.textContent = "Рекурсивных вызовов пока нет.";
+        return;
+      }
+      stack.forEach((frame, index) => {
+        const row = document.createElement("div");
+        row.className = "frame" + (index === stack.length - 1 ? " current" : "");
+        row.textContent = "Глубина " + (index + 1) + ": позиции " + (frame.lo + 1) + "-" + (frame.hi + 1);
+        stackEl.appendChild(row);
+      });
+    }
+
+    function highlight(step) {
+      for (const line of codeEl.children) line.classList.remove("on");
+      if (!step) return;
+      const names = [];
+      if (step.type === "sorted") names.push("single");
+      if (step.type === "pivot") names.push("pivot");
+      if (step.type === "compare") names.push(step.swap ? "swap" : "compare");
+      if (step.type === "place") names.push("place");
+      if (step.stack.length > 1 && (step.type === "pivot" || step.type === "sorted")) names.push("recurse");
+      for (const name of names) {
+        const line = codeEl.querySelector('[data-line="' + name + '"]');
+        if (line) line.classList.add("on");
+      }
+    }
+
+    function updateButtons() {
+      const done = stepIndex >= steps.length && !phase;
+      playBtn.textContent = done ? "Ещё раз" : (playing ? "Пауза" : "Старт");
+    }
+
+    function showStats() {
+      statsEl.textContent = "Сравнений: " + compares + ". Обменов: " + swaps + ".";
+      progressEl.textContent = "Шаг " + stepIndex + " из " + steps.length;
+    }
+
+    function showStep(step) {
+      statusEl.textContent = step.text;
+      if (step.type === "compare") compares += 1;
+      if (swapPair(step)) swaps += 1;
+      showStats();
+      renderStack(step.stack);
+      renderChips(step);
+      highlight(step);
+      updateButtons();
+    }
+
+    function commit(step) {
+      const pair = swapPair(step);
+      if (pair) {
+        const tmp = order[pair[0]];
+        order[pair[0]] = order[pair[1]];
+        order[pair[1]] = tmp;
+      }
+      if (step.type === "place") placed.add(order[step.a]);
+      if (step.type === "sorted") placed.add(order[step.index]);
+      renderChips(null);
+    }
+
+    function resetPlayback() {
+      order = items.map((item) => item.id);
+      placed = new Set();
+      stepIndex = 0;
+      phase = null;
+      playing = false;
+      playOne = false;
+      compares = 0;
+      swaps = 0;
+      statusEl.textContent = "Нажмите Старт. Золотой столбик - опорный элемент, зелёный уже стоит на своём месте.";
+      showStats();
+      renderStack([]);
+      renderChips(null);
+      highlight(null);
+      updateButtons();
+      paint(null, 1);
+    }
+
+    function beginStep() {
+      if (stepIndex >= steps.length) return false;
+      const step = steps[stepIndex];
+      stepIndex += 1;
+      phase = { step: step, t: 0, dur: duration(step) };
+      showStep(step);
+      return true;
+    }
+
+    function build(values, refit) {
+      clearBars();
+      count = values.length;
+      items = values.map((value, id) => ({ id: id, value: value }));
+      order = items.map((item) => item.id);
+      steps = record(values);
+      if (!verify()) {
+        statusEl.textContent = "Внутренняя проверка сортировки не сошлась. Сцену лучше перезагрузить.";
+        return;
+      }
+      createMeshes();
+      if (refit) fitCamera();
+      resetPlayback();
+      playing = true;
+      updateButtons();
+    }
+
+    playBtn.addEventListener("click", () => {
+      if (stepIndex >= steps.length && !phase) resetPlayback();
+      playing = !playing;
+      playOne = false;
+      updateButtons();
+    });
+
+    document.getElementById("step").addEventListener("click", () => {
+      playing = false;
+      playOne = true;
+      if (!phase) beginStep();
+      updateButtons();
+    });
+
+    document.getElementById("restart").addEventListener("click", () => {
+      resetPlayback();
+    });
+
+    document.getElementById("fresh").addEventListener("click", () => {
+      build(shuffled(count), false);
+    });
+
+    countEl.addEventListener("change", () => {
+      build(shuffled(Number(countEl.value)), true);
+    });
+
+    window.addEventListener("resize", () => {
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      fitCamera();
+    });
+
+    window.addEventListener("keydown", (event) => {
+      if (event.target instanceof HTMLInputElement || event.target instanceof HTMLSelectElement) return;
+      if (event.code === "Space") {
+        event.preventDefault();
+        playBtn.click();
+      }
+    });
+
+    const clock = new THREE.Clock();
+
+    function frame() {
+      requestAnimationFrame(frame);
+      const dt = Math.min(clock.getDelta(), 0.05);
+      ring.rotation.z += dt * 1.1;
+      const advance = playing || playOne;
+
+      if (!phase && advance) {
+        if (!beginStep()) {
+          playing = false;
+          playOne = false;
+          statusEl.textContent = "Массив отсортирован. Сравнений: " + compares + ". Обменов: " + swaps + ".";
+          updateButtons();
+        }
+      }
+
+      if (phase && advance) {
+        phase.t += dt * Number(speedEl.value);
+        const p = Math.min(1, phase.t / phase.dur);
+        paint(phase.step, p);
+        if (p >= 1) {
+          commit(phase.step);
+          phase = null;
+          playOne = false;
+          if (stepIndex >= steps.length) {
+            playing = false;
+            statusEl.textContent = "Массив отсортирован. Сравнений: " + compares + ". Обменов: " + swaps + ".";
+          }
+          updateButtons();
+        }
+      } else if (phase) {
+        paint(phase.step, Math.min(1, phase.t / phase.dur));
+      } else {
+        paint(null, 1);
+      }
+
+      controls.update();
+      renderer.render(scene, camera);
+    }
+
+    build(shuffled(12), true);
+    window.__qsReady = true;
+    frame();
+  </script>
+  <script>
+    setTimeout(function () {
+      if (!window.__qsReady) document.getElementById("boot").hidden = false;
+    }, 5000);
+  </script>
+</body>
+</html>
