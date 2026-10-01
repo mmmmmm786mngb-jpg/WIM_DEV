@@ -1,0 +1,696 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Итоги ИТ-тестирования</title>
+<style>
+:root{
+  --bg:#f4f6f9;--paper:#ffffff;--ink:#27313f;--muted:#6b7585;--line:#e1e5ec;
+  --brand:#52648a;--brand-ink:#3b4a68;--brand-soft:#eef1f6;
+  --good:#3f7d5c;--good-soft:#edf5f0;--warn:#9a7433;--warn-soft:#f8f3e8;--bad:#a0575a;--bad-soft:#f7eded;
+  --neutral-soft:#f3f4f7;--code:#f6f7f9;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#15181e;--paper:#1c2028;--ink:#dde2ea;--muted:#9099a8;--line:#2c323d;
+    --brand:#9fb0d0;--brand-ink:#b9c6de;--brand-soft:#232a37;
+    --good:#7fbf9b;--good-soft:#1c2a23;--warn:#d0ad6c;--warn-soft:#2b261b;--bad:#d69497;--bad-soft:#2d2021;
+    --neutral-soft:#222730;--code:#191d24;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#15181e;--paper:#1c2028;--ink:#dde2ea;--muted:#9099a8;--line:#2c323d;
+  --brand:#9fb0d0;--brand-ink:#b9c6de;--brand-soft:#232a37;
+  --good:#7fbf9b;--good-soft:#1c2a23;--warn:#d0ad6c;--warn-soft:#2b261b;--bad:#d69497;--bad-soft:#2d2021;
+  --neutral-soft:#222730;--code:#191d24;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.55 "Segoe UI",Roboto,Arial,sans-serif}
+.wrap{max-width:1040px;margin:0 auto;padding:0 16px}
+h2{font-size:19px;line-height:1.3;margin:0 0 4px;color:var(--brand-ink);font-weight:650}
+h3{font-size:15px;margin:14px 0 6px;font-weight:650}
+p{margin:6px 0}
+ul{margin:6px 0;padding-left:20px}
+li{margin:3px 0}
+section{padding:28px 0 4px}
+.sec-no{display:inline-block;font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:2px}
+.sec-lead{color:var(--muted);max-width:780px;margin-bottom:12px}
+code{font-family:Consolas,"Cascadia Mono",monospace;font-size:12.5px;background:var(--code);border:1px solid var(--line);padding:0 4px;border-radius:3px}
+
+/* header */
+.hero{background:var(--paper);border-bottom:1px solid var(--line);padding:14px 0 18px}
+.brandbar{display:flex;align-items:center;justify-content:space-between;gap:12px;padding-bottom:12px;margin-bottom:14px;border-bottom:1px solid var(--line)}
+.logo{height:24px;width:auto;color:var(--brand);display:block;flex:none}
+.kicker{font-size:11.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin:0;text-align:right}
+.hero h1{font-size:21px;line-height:1.3;margin:0 0 12px;font-weight:650;color:var(--brand-ink);max-width:860px}
+.hero h1 span{color:var(--good)}
+.hero .sub{color:var(--muted);max-width:860px;margin:0 0 14px}
+.ba-hero{display:flex;align-items:stretch;gap:10px;flex-wrap:wrap;margin:0 0 14px}
+.ba-box{border-radius:8px;padding:8px 14px 9px;min-width:170px;border:1px solid var(--line);background:var(--neutral-soft)}
+.ba-box .l{font-size:11px;letter-spacing:.08em;text-transform:uppercase;font-weight:700;color:var(--muted)}
+.ba-box .v{font-size:28px;font-weight:700;line-height:1.15;white-space:nowrap;font-variant-numeric:tabular-nums;color:var(--ink)}
+.ba-box .v small{font-size:14px;font-weight:600;margin:0 6px 0 2px;color:var(--muted)}
+.ba-box .v small:last-child{margin-right:0}
+.ba-box .s{font-size:12px;color:var(--muted)}
+.ba-box.was{border-left:3px solid var(--bad)}
+.ba-box.now{border-left:3px solid var(--good);background:var(--good-soft)}
+.ba-box.now .v{color:var(--good)}
+.ba-arrow{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;color:var(--muted);padding:0 2px}
+.ba-arrow .a{font-size:22px;line-height:1}
+.ba-arrow .x{font-size:12px;font-weight:700;color:var(--good);white-space:nowrap}
+.goals{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.goal{background:var(--paper);border:1px solid var(--line);border-radius:8px;padding:10px 14px}
+.goal .g-head{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:6px}
+.goal .g-name{font-weight:650;font-size:14px;color:var(--brand-ink)}
+.pill{display:inline-block;font-size:11px;font-weight:600;padding:1px 8px;border-radius:999px;white-space:nowrap;border:1px solid}
+.pill.done{color:var(--good);border-color:var(--good);background:var(--good-soft)}
+.pill.next{color:var(--warn);border-color:var(--warn);background:var(--warn-soft)}
+.goal .g-row{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.goal .g-cell .l{font-size:11.5px;color:var(--muted)}
+.goal .g-cell .v{font-size:16px;font-weight:650;line-height:1.25}
+.goal .g-cell .v.win{color:var(--good)}
+.goal .g-note{font-size:12.5px;color:var(--muted);margin-top:6px}
+
+nav.jump{position:sticky;top:0;z-index:10;background:color-mix(in srgb,var(--paper) 94%,transparent);border-bottom:1px solid var(--line);backdrop-filter:blur(6px)}
+nav.jump .wrap{display:flex;gap:4px 16px;flex-wrap:wrap;padding-top:7px;padding-bottom:7px;font-size:12.5px}
+nav.jump a{color:var(--brand-ink);text-decoration:none}
+nav.jump a:hover{text-decoration:underline}
+
+.card{background:var(--paper);border:1px solid var(--line);border-radius:8px;padding:12px 16px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.callout{border-left:3px solid var(--brand);background:var(--brand-soft);border-radius:6px;padding:8px 12px;margin:10px 0}
+.callout.good{border-color:var(--good);background:var(--good-soft)}
+.callout.warn{border-color:var(--warn);background:var(--warn-soft)}
+
+.scope dl{display:grid;grid-template-columns:140px 1fr;gap:4px 12px;margin:0}
+.scope dt{color:var(--muted);font-size:13px}
+.scope dd{margin:0}
+
+.hyp{display:grid;gap:8px}
+.h{display:grid;grid-template-columns:34px 1fr auto;gap:12px;align-items:start;background:var(--paper);border:1px solid var(--line);border-radius:8px;padding:10px 14px}
+.h .num{width:28px;height:28px;border-radius:6px;display:grid;place-items:center;font-weight:700;font-size:13px;background:var(--neutral-soft);color:var(--muted)}
+.h.ok .num{background:var(--good-soft);color:var(--good)}
+.h.no .num{background:var(--bad-soft);color:var(--bad)}
+.h.later .num{background:var(--warn-soft);color:var(--warn)}
+.h .t{font-weight:650;font-size:14px;margin-bottom:2px}
+.h .d{color:var(--muted);font-size:13px}
+.h .d b{color:var(--ink);font-weight:600}
+.verdict{font-size:11px;font-weight:600;padding:1px 8px;border-radius:999px;white-space:nowrap;border:1px solid}
+.h.ok .verdict{color:var(--good);border-color:var(--good)}
+.h.no .verdict{color:var(--bad);border-color:var(--bad)}
+.h.later .verdict{color:var(--warn);border-color:var(--warn)}
+
+.ba{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px}
+.ba .card h3{margin-top:0;font-size:14px}
+.dots{display:flex;flex-direction:column;gap:4px;margin:8px 0}
+.dots .row{display:flex;gap:3px;align-items:center;font-size:11.5px;color:var(--muted)}
+.dots i{display:inline-block;width:11px;height:11px;border-radius:3px;background:var(--line)}
+.dots i.scan{background:var(--bad)}
+.dots i.new{background:var(--brand)}
+.dots i.hit{background:var(--good)}
+.dots .row span{margin-left:6px}
+pre{background:var(--code);border:1px solid var(--line);border-radius:6px;padding:10px 12px;overflow-x:auto;font:12px/1.5 Consolas,"Cascadia Mono",monospace;margin:6px 0}
+pre .del{color:var(--bad)}
+pre .ins{color:var(--good)}
+
+.checks{list-style:none;padding:0;margin:0;display:grid;gap:6px}
+.checks li{display:grid;grid-template-columns:20px 1fr;gap:6px;align-items:start;margin:0}
+.checks .ic{width:17px;height:17px;border-radius:50%;display:grid;place-items:center;font-size:10.5px;font-weight:700;margin-top:2px}
+.checks .ic.y{background:var(--good-soft);color:var(--good)}
+.checks .ic.n{background:var(--warn-soft);color:var(--warn)}
+
+.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:4px 0 10px}
+.kpi{background:var(--paper);border:1px solid var(--line);border-radius:8px;padding:9px 12px}
+.kpi .l{font-size:12px;color:var(--muted);min-height:32px}
+.kpi .v{font-size:20px;font-weight:650;line-height:1.15;color:var(--brand-ink);white-space:nowrap}
+.kpi .v.good{color:var(--good)}
+.kpi .s{font-size:12px;color:var(--muted);margin-top:2px}
+
+.bars{display:grid;gap:8px;margin:8px 0 4px}
+.bar{display:grid;grid-template-columns:130px 1fr 76px;gap:10px;align-items:center}
+.bar .lab{font-size:12.5px;color:var(--muted)}
+.bar .track{position:relative;height:18px;background:var(--neutral-soft);border-radius:4px;overflow:hidden}
+.bar .fill{position:absolute;left:0;top:0;bottom:0;border-radius:4px}
+.bar .fill.old{background:color-mix(in srgb,var(--bad) 70%,transparent)}
+.bar .fill.fc{background:repeating-linear-gradient(45deg,color-mix(in srgb,var(--warn) 60%,transparent) 0 5px,transparent 5px 10px)}
+.bar .fill.new{background:var(--good)}
+.bar .fill.target{background:none;border-right:2px dashed var(--brand);border-radius:0}
+.bar .val{font-weight:650;font-size:13px;text-align:right}
+.axis{display:grid;grid-template-columns:130px 1fr 76px;gap:10px;font-size:11px;color:var(--muted)}
+.axis .ticks{display:flex;justify-content:space-between}
+
+.stack{display:flex;height:26px;border-radius:6px;overflow:hidden;margin:10px 0 8px;border:1px solid var(--line)}
+.stack div{display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;color:#fff;white-space:nowrap;overflow:hidden}
+.legend{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:12px;color:var(--muted)}
+.legend span{display:inline-flex;align-items:center;gap:5px}
+.legend i{width:10px;height:10px;border-radius:2px;display:inline-block}
+.c1{background:#52648a}.c2{background:#7d8cab}.c3{background:#a3aec4}.c4{background:#c3b89e}.c5{background:#3f7d5c}.c6{background:#c9ccd3}
+
+.tbl-wrap{overflow-x:auto;border-radius:8px;border:1px solid var(--line)}
+table{border-collapse:collapse;width:100%;background:var(--paper);font-size:13px}
+th,td{padding:6px 10px;text-align:left;vertical-align:top;border-bottom:1px solid var(--line)}
+th{background:var(--brand-soft);color:var(--brand-ink);font-weight:600;font-size:12.5px}
+tr:last-child td{border-bottom:none}
+td.n{text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
+
+.road{display:grid;gap:10px}
+.step{display:grid;grid-template-columns:70px 1fr;gap:12px;background:var(--paper);border:1px solid var(--line);border-radius:8px;padding:12px 16px}
+.step .tag{font-size:10.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.step .big{font-size:22px;font-weight:700;color:var(--brand);line-height:1.1}
+.step h3{margin:0 0 4px}
+.step .eff{display:inline-block;margin-top:6px;font-size:12px;color:var(--muted);background:var(--neutral-soft);padding:1px 8px;border-radius:999px}
+.ideas{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-top:8px}
+.idea{border:1px solid var(--line);border-radius:6px;padding:8px 12px;background:var(--paper)}
+.idea b{display:block;margin-bottom:2px;font-weight:650}
+.idea .why{font-size:13px;color:var(--muted)}
+
+footer{padding:28px 0 40px;color:var(--muted);font-size:12.5px}
+
+/* screenshots */
+.shot{margin:10px 0 0;background:var(--paper);border:1px solid var(--line);border-radius:8px;padding:10px 12px}
+.shot-title{font-weight:650;font-size:13.5px;margin-bottom:8px}
+.shot-title .tag{display:inline-block;font-size:10.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--brand-ink);background:var(--brand-soft);border-radius:4px;padding:0 6px;margin-right:6px;vertical-align:1px}
+.shot-img{display:block;width:100%;padding:0;border:1px solid var(--line);border-radius:4px;background:#fff;cursor:zoom-in;overflow:hidden}
+.shot-img img{display:block;width:100%;height:auto}
+.shot-cap{font-size:12.5px;color:var(--muted);margin-top:8px}
+.shot-cap b{color:var(--ink);font-weight:600}
+.lightbox{position:fixed;inset:0;z-index:50;background:rgba(10,14,22,.85);display:none;align-items:center;justify-content:center;padding:16px;cursor:zoom-out}
+.lightbox.open{display:flex}
+.lightbox img{max-width:100%;max-height:100%;border-radius:4px;background:#fff}
+
+@media (max-width:820px){
+  .goals,.grid2,.grid3,.ba,.ideas{grid-template-columns:1fr}
+  .kpis{grid-template-columns:1fr 1fr}
+  .step{grid-template-columns:1fr}
+  .bar,.axis{grid-template-columns:90px 1fr 64px}
+  .scope dl{grid-template-columns:1fr}
+  .scope dt{margin-top:4px}
+}
+@media (max-width:520px){
+  .brandbar{flex-direction:column;align-items:flex-start}
+  .kicker{text-align:left}
+  .h{grid-template-columns:28px 1fr}
+  .h .verdict{grid-column:2;justify-self:start}
+  .ba-hero{flex-direction:column}
+  .ba-arrow{flex-direction:row;gap:8px}
+  .ba-arrow .a{transform:rotate(90deg)}
+}
+
+.kicker .env{text-transform:none;letter-spacing:0;font-size:12px;margin-top:3px;color:var(--muted)}
+.kicker .env b{color:var(--brand-ink);font-weight:600;font-family:Consolas,"Cascadia Mono",monospace;font-size:11.5px}
+.prose p{margin:0 0 10px;line-height:1.6}
+.diagram .c-new{fill:var(--brand)}
+.diagram .c-scan{fill:var(--bad);opacity:.75}
+.diagram .c-hit{fill:var(--good)}
+.diagram .t.bad{fill:var(--bad)}
+.diagram .t.good{fill:var(--good)}
+.grid2>*,.grid3>*{min-width:0}
+pre .del{color:var(--bad)}
+pre .ins{color:var(--good)}
+.diagram svg{width:100%;height:auto;display:block;font-family:"Segoe UI",Roboto,Arial,sans-serif}
+.diagram .lane{font-size:12px;font-weight:700;fill:var(--muted);letter-spacing:.04em}
+.diagram .sep{stroke:var(--line);stroke-dasharray:4 4}
+.diagram .box{fill:var(--paper);stroke:var(--line);stroke-width:1.2}
+.diagram .box.old{fill:var(--bad-soft);stroke:var(--bad)}
+.diagram .box.new{fill:var(--good-soft);stroke:var(--good)}
+.diagram .store{fill:var(--brand-soft);stroke:var(--brand);stroke-width:1.2}
+.diagram .t{font-size:13px;font-weight:650;fill:var(--ink)}
+.diagram .s{font-size:11.5px;fill:var(--muted)}
+.diagram .mute{font-style:italic}
+.diagram .k{font-size:11.5px;font-weight:600;fill:var(--good)}
+.diagram .ln{fill:none;stroke:var(--muted);stroke-width:1.4}
+.diagram .ln.key{stroke:var(--good);stroke-width:2}
+.diagram .arh{fill:var(--muted)}
+.diagram .setall{fill:var(--bad-soft);stroke:var(--bad)}
+.diagram .setplan{fill:var(--good-soft);stroke:var(--good)}
+.diagram .setread{fill:var(--paper);stroke:var(--brand);stroke-width:1.5}
+
+
+.meta{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:1px;background:var(--line);border:1px solid var(--line);border-radius:8px;overflow:hidden;margin:0 0 14px}
+.meta div{background:var(--paper);padding:7px 12px}
+.meta .l{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-weight:700}
+.meta .v{font-size:13px;font-weight:600;color:var(--ink)}
+.tldr{background:var(--paper);border:1px solid var(--line);border-left:4px solid var(--good);border-radius:8px;padding:12px 16px;margin:0}
+.tldr .l{font-size:11px;letter-spacing:.08em;text-transform:uppercase;font-weight:700;color:var(--good);margin-bottom:4px}
+.tldr p{margin:0 0 6px;max-width:900px}
+.tldr p:last-child{margin-bottom:0}
+details.code{margin:8px 0;background:var(--paper);border:1px solid var(--line);border-radius:8px}
+details.code summary{cursor:pointer;padding:8px 12px;font-weight:600;color:var(--brand-ink)}
+details.code summary:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
+details.code pre{margin:0 12px 12px}
+pre .mk{color:var(--warn);font-weight:700}
+pre .cm{color:var(--muted)}
+.chip{display:inline-block;font-size:11px;font-weight:600;padding:1px 8px;border-radius:999px;border:1px solid var(--line);background:var(--neutral-soft);color:var(--muted);white-space:nowrap}
+.chip.good{color:var(--good);border-color:var(--good);background:var(--good-soft)}
+.chip.warn{color:var(--warn);border-color:var(--warn);background:var(--warn-soft)}
+.chip.bad{color:var(--bad);border-color:var(--bad);background:var(--bad-soft)}
+td.good,span.good{color:var(--good);font-weight:650}
+td.bad,span.bad{color:var(--bad);font-weight:650}
+td.muted{color:var(--muted)}
+.flow{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px;margin:10px 0}
+.flow .st{background:var(--paper);border:1px solid var(--line);border-radius:8px;padding:9px 11px;min-width:0}
+.flow .st .n{font-size:11px;font-weight:700;letter-spacing:.06em;color:var(--muted);text-transform:uppercase}
+.flow .st .t{font-weight:650;margin:2px 0 4px;color:var(--brand-ink)}
+.flow .st .d{font-size:12.5px;color:var(--muted)}
+.flow .st.hot{border-color:var(--bad);background:var(--bad-soft)}
+.flow .st.hot .t{color:var(--bad)}
+.steps{counter-reset:s;list-style:none;padding:0;margin:8px 0;display:grid;gap:8px}
+.steps li{counter-increment:s;display:grid;grid-template-columns:28px 1fr;gap:10px;align-items:start;margin:0}
+.steps li::before{content:counter(s);width:24px;height:24px;border-radius:6px;display:grid;place-items:center;font-weight:700;font-size:12px;background:var(--brand-soft);color:var(--brand-ink)}
+.steps li>div{min-width:0}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.two>*{min-width:0}
+.note{font-size:12.5px;color:var(--muted)}
+.bar .fill.base{background:color-mix(in srgb,var(--bad) 65%,transparent)}
+.bar .fill.opt{background:var(--good)}
+.bar-group{margin:6px 0 12px}
+.bar-group h3{margin:6px 0 4px}
+@media (max-width:820px){.meta{grid-template-columns:1fr 1fr}.flow{grid-template-columns:1fr 1fr}.two{grid-template-columns:1fr}}
+@media (max-width:520px){.meta{grid-template-columns:1fr}.flow{grid-template-columns:1fr}}
+@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
+</style>
+</head>
+<body>
+<style>
+/* Графики отчета: категориальная палитра как в отчете о тестировании, "без расширения" - нейтральный серый. */
+:root{
+  --s1:#2a78d6;--s2:#eb6834;--s3:#1baf7a;--s4:#eda100;--s5:#e87ba4;
+  --base-mark:#898781;--grid:#e1e0d9;--axis:#c3c2b7;--tip-bg:#0b0b0b;--tip-ink:#ffffff;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --s1:#3987e5;--s2:#d95926;--s3:#199e70;--s4:#c98500;--s5:#d55181;
+    --base-mark:#898781;--grid:#2c2c2a;--axis:#383835;--tip-bg:#ffffff;--tip-ink:#0b0b0b;
+  }
+}
+:root[data-theme="dark"]{
+  --s1:#3987e5;--s2:#d95926;--s3:#199e70;--s4:#c98500;--s5:#d55181;
+  --base-mark:#898781;--grid:#2c2c2a;--axis:#383835;--tip-bg:#ffffff;--tip-ink:#0b0b0b;
+}
+.viz{background:var(--paper);border:1px solid var(--line);border-radius:8px;padding:14px 16px 12px;margin:10px 0;min-width:0}
+.viz h3{margin:0 0 2px}
+.viz .cap{font-size:12.5px;color:var(--muted);margin:0 0 10px}
+.vlegend{display:flex;flex-wrap:wrap;gap:4px 16px;font-size:12px;color:var(--muted);margin:0 0 8px}
+.vlegend span{display:inline-flex;align-items:center;gap:6px}
+.vlegend i{width:12px;height:12px;border-radius:3px;display:inline-block}
+.hb{display:grid;grid-template-columns:170px 1fr 88px;gap:10px;align-items:center;margin:5px 0}
+.hb .lab{font-size:12.5px;color:var(--ink);min-width:0}
+.hb .lab small{display:block;color:var(--muted);font-size:11px}
+.hb .track{position:relative;height:20px;border-left:1px solid var(--axis)}
+.hb .val{font-size:13px;font-weight:650;text-align:right;font-variant-numeric:tabular-nums;color:var(--ink)}
+.mark{position:absolute;top:2px;bottom:2px;left:0;border-radius:0 4px 4px 0;cursor:default}
+.mark:focus-visible{outline:2px solid var(--ink);outline-offset:1px}
+.mark.base{background:var(--base-mark)}
+.mark.new{background:var(--s1)}
+.hb.gap{margin-top:12px}
+.xaxis{display:grid;grid-template-columns:170px 1fr 88px;gap:10px;font-size:11px;color:var(--muted);margin-top:2px}
+.xaxis .t{display:flex;justify-content:space-between;font-variant-numeric:tabular-nums}
+.gridbg{background-image:linear-gradient(to right,var(--grid) 1px,transparent 1px);background-size:25% 100%}
+.tl{position:relative;margin:4px 0 0}
+.tl .row{display:grid;grid-template-columns:90px 1fr;gap:10px;align-items:center;margin:4px 0}
+.tl .row .lab{font-size:12px;color:var(--muted)}
+.tl .lane{position:relative;height:16px}
+.tl .ticks{display:grid;grid-template-columns:90px 1fr;gap:10px;font-size:11px;color:var(--muted)}
+.tl .ticks .t{position:relative;height:16px}
+.tl .ticks .t span{position:absolute;transform:translateX(-50%);font-variant-numeric:tabular-nums}
+.tl .gridl{position:absolute;top:0;bottom:0;width:1px;background:var(--grid)}
+.verdicts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.dir{display:inline-block;font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding:2px 10px;border-radius:999px;background:var(--brand-soft);color:var(--brand-ink);margin-bottom:4px}
+.ba-pair{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px 24px;margin:0 0 14px}
+.ba-pair .ba-hero{margin:0;flex-wrap:nowrap}
+.ba-pair .ba-box{flex:1 1 0;min-width:0}
+.iso{display:block;width:100%;max-width:760px;height:auto;margin:0 auto}
+.iso .iso-lab{font-size:11.5px;fill:var(--muted)}
+.iso .iso-val{font-size:11px;font-weight:700;fill:var(--ink);font-variant-numeric:tabular-nums}
+.iso .iso-bar:focus-visible{outline:none}
+.iso .iso-bar:focus-visible polygon,.iso .iso-bar:hover polygon{stroke:var(--ink);stroke-width:.6}
+#viztip{position:fixed;z-index:60;pointer-events:none;background:var(--tip-bg);color:var(--tip-ink);font-size:12px;line-height:1.4;padding:6px 9px;border-radius:6px;max-width:280px;display:none}
+@media (max-width:820px){.ba-pair{grid-template-columns:1fr}}
+@media (max-width:620px){.hb,.xaxis{grid-template-columns:100px 1fr 64px}.verdicts{grid-template-columns:1fr}.tl .row,.tl .ticks{grid-template-columns:60px 1fr}}
+</style>
+
+<header class="hero">
+  <div class="wrap">
+    <div class="brandbar">
+      <svg class="logo" role="img" aria-label="ВИМ Инвестиции" viewBox="0 0 176 42" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g clip-path="url(#vimLogoClip)">
+<path d="M111.155 16.6987C110.691 15.765 110.009 14.9925 109.109 14.385C108.49 13.9688 107.786 13.6387 107.002 13.3987C108.08 12.93 108.977 12.2588 109.685 11.3813C110.624 10.2225 111.095 8.8275 111.095 7.1925C111.095 4.98 110.273 3.22875 108.634 1.935C106.99 0.645001 104.65 0 101.605 0H88.1016V27.8625H101.963C104.028 27.8625 105.796 27.5475 107.266 26.9137C108.735 26.28 109.866 25.365 110.661 24.1688C111.456 22.9688 111.852 21.5662 111.852 19.9612C111.852 18.7237 111.618 17.6363 111.159 16.7025L111.155 16.6987ZM95.0511 5.33625H100.256C101.631 5.33625 102.626 5.56875 103.233 6.02625C103.844 6.4875 104.145 7.2075 104.145 8.17875C104.145 9.15 103.84 9.8775 103.233 10.3538C102.623 10.8263 101.631 11.0663 100.256 11.0663H95.0511V5.33625ZM104.759 20.5725C104.665 20.9025 104.514 21.1913 104.303 21.4425C104.092 21.6938 103.84 21.8962 103.55 22.0537C103.259 22.2112 102.894 22.3313 102.457 22.41C102.02 22.4888 101.537 22.53 101.006 22.53H95.0473V16.365H101.006C101.533 16.365 102.02 16.41 102.457 16.5038C102.894 16.5975 103.256 16.7287 103.55 16.8975C103.84 17.07 104.092 17.2725 104.303 17.5088C104.514 17.745 104.669 18.03 104.759 18.36C104.854 18.69 104.899 19.065 104.899 19.485C104.899 19.8788 104.854 20.2425 104.759 20.5725Z" fill="currentColor"/>
+<path d="M135.638 0L122.768 16.1062V0H115.977V27.8625H121.339L134.206 11.625V27.8625H141.001V0H135.638Z" fill="currentColor"/>
+<path d="M169.44 0L161.179 20.1713L152.759 0H146.164V27.8625H152.759V12.8887L159.113 27.8625H163.044L169.44 12.735V27.8625H176.031V0H169.44Z" fill="currentColor"/>
+<path d="M35.5203 20.3991L29.8785 12.9141H0L20.5208 40.5441H20.5245L35.5203 20.3991Z" fill="url(#paint0_linear_1756_3195)"/>
+<path d="M50.7038 0.00390625L35.5195 20.4002L50.7038 40.5452L79.9831 0.00390625H50.7038Z" fill="url(#paint1_linear_1756_3195)"/>
+<path d="M20.5234 40.5454H50.7035L35.5192 20.4004L20.5234 40.5454Z" fill="url(#paint2_linear_1756_3195)"/>
+<path d="M88.8062 39.281V34.0723H88.0977V40.5185H88.678L92.59 35.2985V40.5185H93.291V34.0723H92.7106L88.8062 39.281Z" fill="currentColor"/>
+<path d="M102.296 36.926H98.41V34.0723H97.6562V40.5185H98.41V37.5748H102.296V40.5185H103.049V34.0723H102.296V36.926Z" fill="currentColor"/>
+<path d="M111.563 37.4248C111.412 37.331 111.239 37.2635 111.047 37.2148C111.325 37.1173 111.552 36.9673 111.732 36.761C111.966 36.491 112.087 36.1573 112.087 35.756C112.087 35.2198 111.902 34.8035 111.537 34.511C111.171 34.2185 110.655 34.0723 109.991 34.0723H107.398V40.5185H110.101C110.553 40.5185 110.941 40.451 111.258 40.316C111.574 40.181 111.819 39.9823 111.989 39.716C112.158 39.4498 112.241 39.1273 112.241 38.741C112.241 38.441 112.185 38.1823 112.068 37.961C111.951 37.7398 111.781 37.5598 111.563 37.421V37.4248ZM108.137 34.676H109.882C110.361 34.676 110.722 34.7735 110.971 34.9648C111.22 35.156 111.344 35.441 111.344 35.8198C111.344 36.1985 111.22 36.4648 110.971 36.6598C110.722 36.8548 110.361 36.9523 109.882 36.9523H108.137V34.676ZM111.442 39.1648C111.401 39.2923 111.344 39.401 111.261 39.4948C111.182 39.5848 111.084 39.6635 110.967 39.7273C110.851 39.791 110.715 39.8398 110.56 39.8698C110.406 39.8998 110.229 39.9148 110.033 39.9148H108.141V37.556H110.033C110.229 37.556 110.406 37.571 110.56 37.601C110.715 37.631 110.854 37.676 110.967 37.7398C111.084 37.7998 111.182 37.8785 111.261 37.9723C111.341 38.066 111.401 38.1748 111.442 38.3023C111.484 38.426 111.503 38.5723 111.503 38.7373C111.503 38.9023 111.484 39.0373 111.442 39.1685V39.1648Z" fill="currentColor"/>
+<path d="M116.367 40.5185H120.456V39.8885H117.102V37.5635H120.264V36.9335H117.102V34.7023H120.456V34.0723H116.367V40.5185Z" fill="currentColor"/>
+<path d="M127.298 34.6765C127.664 34.6765 127.999 34.7365 128.305 34.8527C128.606 34.9727 128.9 35.164 129.183 35.4227L129.477 34.8115C129.221 34.5415 128.9 34.339 128.52 34.2002C128.139 34.0615 127.728 33.9902 127.28 33.9902C126.643 33.9902 126.096 34.1252 125.644 34.3915C125.192 34.6615 124.841 35.0402 124.6 35.5277C124.359 36.0152 124.238 36.604 124.238 37.2865C124.238 37.969 124.359 38.5577 124.6 39.049C124.841 39.544 125.188 39.9227 125.644 40.1927C126.096 40.4627 126.643 40.594 127.28 40.594C127.728 40.594 128.139 40.5227 128.52 40.3802C128.9 40.2377 129.217 40.0352 129.477 39.7727L129.183 39.1615C128.9 39.424 128.61 39.6152 128.305 39.7315C128.003 39.8515 127.668 39.9115 127.298 39.9115C126.571 39.9115 126.013 39.6827 125.625 39.2215C125.241 38.7602 125.045 38.1152 125.045 37.2865C125.045 36.4577 125.237 35.8127 125.625 35.359C126.01 34.9015 126.567 34.6727 127.298 34.6727V34.6765Z" fill="currentColor"/>
+<path d="M132.66 34.721H135.012V40.5185H135.773V34.721H138.125V34.0723H132.66V34.721Z" fill="currentColor"/>
+<path d="M142.416 39.281V34.0723H141.707V40.5185H142.284L146.199 35.2985V40.5185H146.897V34.0723H146.32L142.416 39.281Z" fill="currentColor"/>
+<path d="M156.61 34.0723H155.848V39.8698H152.015V34.0723H151.262V40.5185H156.839V41.9548H157.529V39.8698H156.61V34.0723Z" fill="currentColor"/>
+<path d="M161.99 39.281V34.0723H161.285V40.5185H161.862L165.777 35.2985V40.5185H166.475V34.0723H165.898L161.99 39.281Z" fill="currentColor"/>
+<path d="M175.453 34.0723L171.548 39.281V34.0723H170.84V40.5185H171.42L175.332 35.2985V40.5185H176.029V34.0723H175.453Z" fill="currentColor"/>
+</g>
+<defs>
+<linearGradient id="paint0_linear_1756_3195" x1="9.68188" y1="5.87156" x2="30.0896" y2="33.5202" gradientUnits="userSpaceOnUse">
+<stop stop-color="#73A8BA"/>
+<stop offset="1" stop-color="#52648A"/>
+</linearGradient>
+<linearGradient id="paint1_linear_1756_3195" x1="70.5273" y1="-6.86984" x2="40.955" y2="33.8156" gradientUnits="userSpaceOnUse">
+<stop stop-color="#CBDFE6"/>
+<stop offset="1" stop-color="#73A8BA"/>
+</linearGradient>
+<linearGradient id="paint2_linear_1756_3195" x1="35.6135" y1="20.4004" x2="35.6135" y2="40.5454" gradientUnits="userSpaceOnUse">
+<stop stop-color="white"/>
+<stop offset="1" stop-color="#73A8BA"/>
+</linearGradient>
+<clipPath id="vimLogoClip">
+<rect width="176" height="42" fill="white"/>
+</clipPath>
+</defs>
+</svg>
+      <div class="kicker">IMDEV-9532 - итоговый отчет об ИТ-тестировании - 01.10.2026<div class="env">Тестовые копии Т-1: розничные МО и ФО, обычные МО и ФО. Расширение <b>FO_PositionLoadOpt</b> 1.0.0.4</div></div>
+    </div>
+    <h1>Итоговый отчет об ИТ-тестировании ускорения загрузки остатков<br><span>Розничные базы: 69 &rarr; 20 мин. Обычные базы: 132 &rarr; 83 мин.</span></h1>
+    <p class="sub">Окончательные интеграционные тесты на тестовых копиях Т-1 01.10.2026. В обоих направлениях выгрузки остатков (розничные МО и ФО, обычные МО и ФО) регламент запускался дважды с одинаковыми настройками: сначала с расширением FO_PositionLoadOpt 1.0.0.4 в ФО, затем с отключенным расширением, то есть так, как работает сейчас.</p>
+    <div class="ba-pair">
+      <div>
+        <div class="dir">МО (розница) &rarr; ФО (розница)</div>
+        <div class="ba-hero">
+          <div class="ba-box was"><div class="l">Без расширения</div><div class="v">69<small>мин</small></div><div class="s">23 077 портфелей</div></div>
+          <div class="ba-arrow"><span class="a">&rarr;</span><span class="x">x3,4</span></div>
+          <div class="ba-box now"><div class="l">С расширением</div><div class="v">20<small>мин</small></div><div class="s">23 077 портфелей, без ошибок</div></div>
+        </div>
+      </div>
+      <div>
+        <div class="dir">МО &rarr; ФО обычные</div>
+        <div class="ba-hero">
+          <div class="ba-box was"><div class="l">Без расширения</div><div class="v">132<small>мин</small></div><div class="s">7 758 портфелей</div></div>
+          <div class="ba-arrow"><span class="a">&rarr;</span><span class="x">x1,6</span></div>
+          <div class="ba-box now"><div class="l">С расширением</div><div class="v">83<small>мин</small></div><div class="s">7 758 портфелей, ошибки только данных</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</header>
+
+<nav class="jump">
+  <div class="wrap">
+    <a href="#verdict">Итог</a>
+    <a href="#retail">1. МО (розница) &rarr; ФО (розница)</a>
+    <a href="#regular">2. МО &rarr; ФО обычные</a>
+    <a href="#compare">3. Сравнение направлений</a>
+    <a href="#conclusions">4. Выводы и рекомендации</a>
+    <a href="#method">Методика</a>
+  </div>
+</nav>
+
+<main class="wrap">
+
+<section id="verdict">
+  <div class="tldr">
+    <div class="l">Итог</div>
+    <p>Расширение ускоряет выгрузку остатков в обоих направлениях при том же объеме и без новых ошибок. <b>Розничные базы:</b> 20 мин вместо 69, в 3,4 раза быстрее, минус 49 мин. <b>Обычные базы:</b> 83 мин вместо 132, в 1,6 раза быстрее, минус 49 мин. Работа пяти потоков в обычных базах в сумме сократилась вдвое (x2,0), но общее время ограничивает одна пачка из пяти: она выполняется в 1,5-2,1 раза дольше остальных и с расширением, и без него.</p>
+    <p>Для ПРОД в рознице ожидаем 12-18 минут вместо 41. Для обычных баз дальнейший резерв - в долгой пачке: индекс по внешнему коду поручения (правка конфигурации Аванкор) и разбор тяжелых портфелей этой пачки.</p>
+  </div>
+  <h3>Критерии приемки</h3>
+  <div class="verdicts">
+    <div class="h ok"><div class="num">&#10003;</div><div><div class="t">Розничные базы: скорость</div><div class="d">20 против 69 мин, x3,4</div></div><span class="verdict">выполнено</span></div>
+    <div class="h ok"><div class="num">&#10003;</div><div><div class="t">Розничные базы: объем и ошибки</div><div class="d">23 077 портфелей в обоих прогонах, письмо "OK", позиций с ошибками 0</div></div><span class="verdict">выполнено</span></div>
+    <div class="h ok"><div class="num">&#10003;</div><div><div class="t">Обычные базы: скорость</div><div class="d">83 против 132 мин, x1,6, минус 37%</div></div><span class="verdict">выполнено</span></div>
+    <div class="h ok"><div class="num">&#10003;</div><div><div class="t">Обычные базы: объем и ошибки</div><div class="d">7 758 портфелей в обоих прогонах. Ошибки только данных: 2 с расширением, 3 без него</div></div><span class="verdict">выполнено</span></div>
+    <div class="h ok"><div class="num">&#10003;</div><div><div class="t">Поставляемая версия</div><div class="d">В обеих ФО установлено расширение FO_PositionLoadOpt 1.0.0.4</div></div><span class="verdict">выполнено</span></div>
+    <div class="h later"><div class="num">!</div><div><div class="t">Баланс потоков в обычных базах</div><div class="d">Пачка 5 идет 83 мин при 34-44 мин у остальных и определяет общее время</div></div><span class="verdict">резерв</span></div>
+  </div>
+</section>
+
+<section id="retail">
+  <span class="sec-no">1. МО (розница) &rarr; ФО (розница)</span>
+  <h2>Розничные базы: в 3,4 раза быстрее</h2>
+  <p class="sec-lead">Регламент "Выгрузка остатков МО ФО" розничной МО в розничную ФО: 23 077 портфелей, пакеты по 50 портфелей, 5 потоков. Первый прогон с расширением 09:25-09:46, второй без расширения 11:11-12:20.</p>
+
+  <div class="viz">
+    <h3>Время всей выгрузки, минуты</h3>
+    <p class="cap">По замеру ключевой операции МО "выгрузка остатков ФО розн, 5 потоков"</p>
+    <div class="vlegend"><span><i style="background:var(--base-mark)"></i>без расширения</span><span><i style="background:var(--s1)"></i>с расширением 1.0.0.4</span></div>
+    <div class="hb"><span class="lab">Вся выгрузка<small>23 077 портфелей</small></span><div class="track gridbg"><div class="mark base" style="width:86.7%" tabindex="0" data-tip="Без расширения: 4 162 с = 69,4 мин, 11:10:57 - 12:20:20"></div></div><span class="val">69</span></div>
+    <div class="hb"><span class="lab"></span><div class="track gridbg"><div class="mark new" style="width:25.3%" tabindex="0" data-tip="С расширением: 1 214 с = 20,2 мин, 09:25:43 - 09:45:57"></div></div><span class="val">20</span></div>
+    <div class="xaxis"><span></span><div class="t"><span>0</span><span>20</span><span>40</span><span>60</span><span>80 мин</span></div><span></span></div>
+  </div>
+
+  <div class="viz">
+    <h3>Время каждой пачки (потока), минуты</h3>
+    <p class="cap">Пять потоков заканчивают почти одновременно: разброс 6 секунд с расширением и 54 секунды без него. Каждая пачка ускорилась в 3,4 раза</p>
+    <div class="vlegend"><span><i style="background:var(--base-mark)"></i>без расширения</span><span><i style="background:var(--s1)"></i>с расширением 1.0.0.4</span></div>
+    <div class="hb"><span class="lab">Пачка 1</span><div class="track gridbg"><div class="mark base" style="width:86.2%" tabindex="0" data-tip="Пачка 1 без расширения: 4 135,5 с = 68,9 мин"></div></div><span class="val">69</span></div>
+    <div class="hb"><span class="lab"></span><div class="track gridbg"><div class="mark new" style="width:25.2%" tabindex="0" data-tip="Пачка 1 с расширением: 1 210,0 с = 20,2 мин"></div></div><span class="val">20</span></div>
+    <div class="hb gap"><span class="lab">Пачка 2</span><div class="track gridbg"><div class="mark base" style="width:85.7%" tabindex="0" data-tip="Пачка 2 без расширения: 4 115,0 с = 68,6 мин"></div></div><span class="val">69</span></div>
+    <div class="hb"><span class="lab"></span><div class="track gridbg"><div class="mark new" style="width:25.1%" tabindex="0" data-tip="Пачка 2 с расширением: 1 204,3 с = 20,1 мин"></div></div><span class="val">20</span></div>
+    <div class="hb gap"><span class="lab">Пачка 3</span><div class="track gridbg"><div class="mark base" style="width:85.5%" tabindex="0" data-tip="Пачка 3 без расширения: 4 103,9 с = 68,4 мин"></div></div><span class="val">68</span></div>
+    <div class="hb"><span class="lab"></span><div class="track gridbg"><div class="mark new" style="width:25.1%" tabindex="0" data-tip="Пачка 3 с расширением: 1 204,7 с = 20,1 мин"></div></div><span class="val">20</span></div>
+    <div class="hb gap"><span class="lab">Пачка 4</span><div class="track gridbg"><div class="mark base" style="width:85.8%" tabindex="0" data-tip="Пачка 4 без расширения: 4 119,4 с = 68,7 мин"></div></div><span class="val">69</span></div>
+    <div class="hb"><span class="lab"></span><div class="track gridbg"><div class="mark new" style="width:25.1%" tabindex="0" data-tip="Пачка 4 с расширением: 1 204,3 с = 20,1 мин"></div></div><span class="val">20</span></div>
+    <div class="hb gap"><span class="lab">Пачка 5</span><div class="track gridbg"><div class="mark base" style="width:86.6%" tabindex="0" data-tip="Пачка 5 без расширения: 4 157,8 с = 69,3 мин"></div></div><span class="val">69</span></div>
+    <div class="hb"><span class="lab"></span><div class="track gridbg"><div class="mark new" style="width:25.1%" tabindex="0" data-tip="Пачка 5 с расширением: 1 206,7 с = 20,1 мин"></div></div><span class="val">20</span></div>
+    <div class="xaxis"><span></span><div class="t"><span>0</span><span>20</span><span>40</span><span>60</span><span>80 мин</span></div><span></span></div>
+  </div>
+
+  <div class="viz">
+    <h3>Хронология прогонов 01.10.2026</h3>
+    <p class="cap">Каждая полоса - поток выгрузки. Прогон с расширением закончился задолго до начала прогона без него, прогоны не пересекались</p>
+    <div class="vlegend"><span><i style="background:var(--s1)"></i>с расширением, 09:25-09:46</span><span><i style="background:var(--base-mark)"></i>без расширения, 11:11-12:20</span></div>
+    <div class="tl">
+      <div class="row"><span class="lab">Пачка 1</span><div class="lane"><div class="gridl" style="left:5.26%"></div><div class="gridl" style="left:21.05%"></div><div class="gridl" style="left:36.84%"></div><div class="gridl" style="left:52.63%"></div><div class="gridl" style="left:68.42%"></div><div class="gridl" style="left:84.21%"></div><div class="gridl" style="left:100.00%"></div><div class="mark new" style="left:3.03%;width:10.56%;border-radius:4px" tabindex="0" data-tip="Пачка 1 с расширением: 09:25:45 - 09:45:49"></div><div class="mark base" style="left:58.42%;width:36.27%;border-radius:4px" tabindex="0" data-tip="Пачка 1 без расширения: 11:11:00 - 12:19:55"></div></div></div>
+      <div class="row"><span class="lab">Пачка 2</span><div class="lane"><div class="gridl" style="left:5.26%"></div><div class="gridl" style="left:21.05%"></div><div class="gridl" style="left:36.84%"></div><div class="gridl" style="left:52.63%"></div><div class="gridl" style="left:68.42%"></div><div class="gridl" style="left:84.21%"></div><div class="gridl" style="left:100.00%"></div><div class="mark new" style="left:3.03%;width:10.59%;border-radius:4px" tabindex="0" data-tip="Пачка 2 с расширением: 09:25:45 - 09:45:52"></div><div class="mark base" style="left:58.42%;width:36.13%;border-radius:4px" tabindex="0" data-tip="Пачка 2 без расширения: 11:11:00 - 12:19:39"></div></div></div>
+      <div class="row"><span class="lab">Пачка 3</span><div class="lane"><div class="gridl" style="left:5.26%"></div><div class="gridl" style="left:21.05%"></div><div class="gridl" style="left:36.84%"></div><div class="gridl" style="left:52.63%"></div><div class="gridl" style="left:68.42%"></div><div class="gridl" style="left:84.21%"></div><div class="gridl" style="left:100.00%"></div><div class="mark new" style="left:3.03%;width:10.56%;border-radius:4px" tabindex="0" data-tip="Пачка 3 с расширением: 09:25:45 - 09:45:49"></div><div class="mark base" style="left:58.42%;width:36.00%;border-radius:4px" tabindex="0" data-tip="Пачка 3 без расширения: 11:11:00 - 12:19:24"></div></div></div>
+      <div class="row"><span class="lab">Пачка 4</span><div class="lane"><div class="gridl" style="left:5.26%"></div><div class="gridl" style="left:21.05%"></div><div class="gridl" style="left:36.84%"></div><div class="gridl" style="left:52.63%"></div><div class="gridl" style="left:68.42%"></div><div class="gridl" style="left:84.21%"></div><div class="gridl" style="left:100.00%"></div><div class="mark new" style="left:3.03%;width:10.57%;border-radius:4px" tabindex="0" data-tip="Пачка 4 с расширением: 09:25:45 - 09:45:50"></div><div class="mark base" style="left:58.42%;width:36.10%;border-radius:4px" tabindex="0" data-tip="Пачка 4 без расширения: 11:11:00 - 12:19:35"></div></div></div>
+      <div class="row"><span class="lab">Пачка 5</span><div class="lane"><div class="gridl" style="left:5.26%"></div><div class="gridl" style="left:21.05%"></div><div class="gridl" style="left:36.84%"></div><div class="gridl" style="left:52.63%"></div><div class="gridl" style="left:68.42%"></div><div class="gridl" style="left:84.21%"></div><div class="gridl" style="left:100.00%"></div><div class="mark new" style="left:3.03%;width:10.61%;border-radius:4px" tabindex="0" data-tip="Пачка 5 с расширением: 09:25:45 - 09:45:55"></div><div class="mark base" style="left:58.42%;width:36.47%;border-radius:4px" tabindex="0" data-tip="Пачка 5 без расширения: 11:11:00 - 12:20:18"></div></div></div>
+      <div class="ticks"><span></span><div class="t"><span style="left:5.26%">09:30</span><span style="left:21.05%">10:00</span><span style="left:36.84%">10:30</span><span style="left:52.63%">11:00</span><span style="left:68.42%">11:30</span><span style="left:84.21%">12:00</span><span style="left:100.00%">12:30</span></div></div>
+    </div>
+  </div>
+
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr><th>Прогон</th><th>Окно</th><th>Замер МО</th><th>Пачки</th><th>Портфелей</th><th>Итог по письму</th></tr></thead>
+      <tbody>
+        <tr><td>С расширением 1.0.0.4</td><td>09:25:43 - 09:45:57</td><td class="n good">20 мин</td><td class="n">20 мин каждая</td><td class="n">23 077</td><td>OK: загружено 23 076, позиций с ошибками 0</td></tr>
+        <tr><td>Без расширения</td><td>11:10:57 - 12:20:20</td><td class="n">69 мин</td><td class="n">68-69 мин</td><td class="n">23 077</td><td>OK</td></tr>
+        <tr><td><b>Разница</b></td><td></td><td class="n good"><b>минус 49 мин, минус 71%</b></td><td class="n good"><b>x3,4 в каждой пачке</b></td><td class="n">0</td><td></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="viz">
+    <h3>Повторяемость: розница 30.09 и 01.10</h3>
+    <p class="cap">Время без расширения зависит от нагрузки тестового сервера (56 и 69 мин). С расширением выгрузка в обоих случаях укладывается в 20-25 минут</p>
+    <div class="vlegend"><span><i style="background:var(--base-mark)"></i>без расширения</span><span><i style="background:var(--s1)"></i>с расширением</span></div>
+    <div class="hb"><span class="lab">30.09.2026<small>версия 1.0.0.2, замер ФО включен</small></span><div class="track gridbg"><div class="mark base" style="width:69.8%" tabindex="0" data-tip="30.09 без расширения: 3 351 с = 55,8 мин"></div></div><span class="val">56</span></div>
+    <div class="hb"><span class="lab"></span><div class="track gridbg"><div class="mark new" style="width:31.0%" tabindex="0" data-tip="30.09 с расширением: 1 490 с = 24,8 мин"></div></div><span class="val">25</span></div>
+    <div class="hb gap"><span class="lab">01.10.2026<small>версия 1.0.0.4</small></span><div class="track gridbg"><div class="mark base" style="width:86.7%" tabindex="0" data-tip="01.10 без расширения: 4 162 с = 69,4 мин"></div></div><span class="val">69</span></div>
+    <div class="hb"><span class="lab"></span><div class="track gridbg"><div class="mark new" style="width:25.3%" tabindex="0" data-tip="01.10 с расширением: 1 214 с = 20,2 мин"></div></div><span class="val">20</span></div>
+    <div class="xaxis"><span></span><div class="t"><span>0</span><span>20</span><span>40</span><span>60</span><span>80 мин</span></div><span></span></div>
+  </div>
+  <p class="note">30.09 во время прогона с расширением был включен замер производительности ФО, он добавляет нагрузку. Тестовые копии работают на более медленном сервере, чем ПРОД, поэтому на ПРОД переносится отношение времен, а не минуты: 41 мин x 0,29 = 12 мин по 01.10 и 41 мин x 0,45 = 18 мин по 30.09.</p>
+</section>
+
+<section id="regular">
+  <span class="sec-no">2. МО &rarr; ФО обычные</span>
+  <h2>Обычные базы: в 1,6 раза быстрее, резерв в одной пачке</h2>
+  <p class="sec-lead">Тот же регламент выгрузки остатков из обычной МО в обычную ФО: 7 758 портфелей, пакеты по 50 портфелей, 5 потоков. Первый прогон с расширением 09:54-11:17, второй без расширения 12:23-14:36.</p>
+
+  <div class="viz">
+    <h3>Время всей выгрузки, минуты</h3>
+    <p class="cap">По замеру ключевой операции МО, 5 потоков: 1 ч 23 мин с расширением против 2 ч 12 мин без него</p>
+    <div class="vlegend"><span><i style="background:var(--base-mark)"></i>без расширения</span><span><i style="background:var(--s1)"></i>с расширением 1.0.0.4</span></div>
+    <div class="hb"><span class="lab">Вся выгрузка<small>7 758 портфелей</small></span><div class="track gridbg"><div class="mark base" style="width:94.4%" tabindex="0" data-tip="Без расширения: 7 931 с = 132,2 мин, 12:23:30 - 14:35:42"></div></div><span class="val">132</span></div>
+    <div class="hb"><span class="lab"></span><div class="track gridbg"><div class="mark new" style="width:59.5%" tabindex="0" data-tip="С расширением: 4 998 с = 83,3 мин, 09:54:08 - 11:17:27"></div></div><span class="val">83</span></div>
+    <div class="xaxis"><span></span><div class="t"><span>0</span><span>35</span><span>70</span><span>105</span><span>140 мин</span></div><span></span></div>
+  </div>
+
+  <div class="viz">
+    <h3>Время каждой пачки (потока), минуты</h3>
+    <p class="cap">Пачки 1-4 ускорились в 2,1-2,4 раза. Пачка 5 при сопоставимом числе портфелей идет дольше всех в обоих прогонах и ускорилась в 1,6 раза: она и задает общее время</p>
+    <div class="vlegend"><span><i style="background:var(--base-mark)"></i>без расширения</span><span><i style="background:var(--s1)"></i>с расширением 1.0.0.4</span></div>
+    <div class="hb"><span class="lab">Пачка 1<small>1 407 портф., x2,2</small></span><div class="track gridbg"><div class="mark base" style="width:57.6%" tabindex="0" data-tip="Пачка 1 (1 407 портфелей) без расширения: 4 837,7 с = 80,6 мин"></div></div><span class="val">81</span></div>
+    <div class="hb"><span class="lab"></span><div class="track gridbg"><div class="mark new" style="width:26.5%" tabindex="0" data-tip="Пачка 1 (1 407 портфелей) с расширением: 2 224,5 с = 37,1 мин"></div></div><span class="val">37</span></div>
+    <div class="hb gap"><span class="lab">Пачка 2<small>1 553 портф., x2,4</small></span><div class="track gridbg"><div class="mark base" style="width:58.7%" tabindex="0" data-tip="Пачка 2 (1 553 портфелей) без расширения: 4 929,3 с = 82,2 мин"></div></div><span class="val">82</span></div>
+    <div class="hb"><span class="lab"></span><div class="track gridbg"><div class="mark new" style="width:24.4%" tabindex="0" data-tip="Пачка 2 (1 553 портфелей) с расширением: 2 051,7 с = 34,2 мин"></div></div><span class="val">34</span></div>
+    <div class="hb gap"><span class="lab">Пачка 3<small>1 644 портф., x2,1</small></span><div class="track gridbg"><div class="mark base" style="width:65.1%" tabindex="0" data-tip="Пачка 3 (1 644 портфелей) без расширения: 5 469,5 с = 91,2 мин"></div></div><span class="val">91</span></div>
+    <div class="hb"><span class="lab"></span><div class="track gridbg"><div class="mark new" style="width:31.3%" tabindex="0" data-tip="Пачка 3 (1 644 портфелей) с расширением: 2 628,0 с = 43,8 мин"></div></div><span class="val">44</span></div>
+    <div class="hb gap"><span class="lab">Пачка 4<small>1 620 портф., x2,1</small></span><div class="track gridbg"><div class="mark base" style="width:65.1%" tabindex="0" data-tip="Пачка 4 (1 620 портфелей) без расширения: 5 466,5 с = 91,1 мин"></div></div><span class="val">91</span></div>
+    <div class="hb"><span class="lab"></span><div class="track gridbg"><div class="mark new" style="width:31.4%" tabindex="0" data-tip="Пачка 4 (1 620 портфелей) с расширением: 2 636,4 с = 43,9 мин"></div></div><span class="val">44</span></div>
+    <div class="hb gap"><span class="lab">Пачка 5<small>1 534 портф., x1,6</small></span><div class="track gridbg"><div class="mark base" style="width:94.4%" tabindex="0" data-tip="Пачка 5 (1 534 портфелей) без расширения: 7 926,3 с = 132,1 мин"></div></div><span class="val">132</span></div>
+    <div class="hb"><span class="lab"></span><div class="track gridbg"><div class="mark new" style="width:59.5%" tabindex="0" data-tip="Пачка 5 (1 534 портфелей) с расширением: 4 995,2 с = 83,3 мин"></div></div><span class="val">83</span></div>
+    <div class="xaxis"><span></span><div class="t"><span>0</span><span>35</span><span>70</span><span>105</span><span>140 мин</span></div><span></span></div>
+  </div>
+
+  <div class="viz">
+    <h3>Объем работы: сумма времени пяти потоков, минуты</h3>
+    <p class="cap">Сервер выполняет вдвое меньше работы: 242 мин против 477 мин, x2,0. Общее время сократилось меньше, потому что выгрузка ждет самую долгую пачку</p>
+    <div class="vlegend"><span><i style="background:var(--base-mark)"></i>без расширения</span><span><i style="background:var(--s1)"></i>с расширением 1.0.0.4</span></div>
+    <div class="hb"><span class="lab">Сумма по пачкам<small>время работы 5 потоков</small></span><div class="track gridbg"><div class="mark base" style="width:95.4%" tabindex="0" data-tip="Без расширения: 28 629 с = 477,2 мин работы потоков"></div></div><span class="val">477</span></div>
+    <div class="hb"><span class="lab"></span><div class="track gridbg"><div class="mark new" style="width:48.5%" tabindex="0" data-tip="С расширением: 14 536 с = 242,3 мин работы потоков"></div></div><span class="val">242</span></div>
+    <div class="xaxis"><span></span><div class="t"><span>0</span><span>125</span><span>250</span><span>375</span><span>500 мин</span></div><span></span></div>
+  </div>
+
+  <div class="viz">
+    <h3>Хронология прогонов 01.10.2026</h3>
+    <p class="cap">С расширением пачки 1-4 закончили к 10:38, пачка 5 работала до 11:17. Без расширения пачки 1-4 закончили к 13:55, пачка 5 до 14:36</p>
+    <div class="vlegend"><span><i style="background:var(--s1)"></i>с расширением, 09:54-11:17</span><span><i style="background:var(--base-mark)"></i>без расширения, 12:23-14:36</span></div>
+    <div class="tl">
+      <div class="row"><span class="lab">Пачка 1</span><div class="lane"><div class="gridl" style="left:3.45%"></div><div class="gridl" style="left:24.14%"></div><div class="gridl" style="left:44.83%"></div><div class="gridl" style="left:65.52%"></div><div class="gridl" style="left:86.21%"></div><div class="mark new" style="left:1.43%;width:12.79%;border-radius:4px" tabindex="0" data-tip="Пачка 1 с расширением: 09:54:09 - 10:31:14"></div><div class="mark base" style="left:52.95%;width:27.80%;border-radius:4px" tabindex="0" data-tip="Пачка 1 без расширения: 12:23:33 - 13:44:11"></div></div></div>
+      <div class="row"><span class="lab">Пачка 2</span><div class="lane"><div class="gridl" style="left:3.45%"></div><div class="gridl" style="left:24.14%"></div><div class="gridl" style="left:44.83%"></div><div class="gridl" style="left:65.52%"></div><div class="gridl" style="left:86.21%"></div><div class="mark new" style="left:1.43%;width:11.79%;border-radius:4px" tabindex="0" data-tip="Пачка 2 с расширением: 09:54:09 - 10:28:21"></div><div class="mark base" style="left:52.95%;width:28.33%;border-radius:4px" tabindex="0" data-tip="Пачка 2 без расширения: 12:23:33 - 13:45:42"></div></div></div>
+      <div class="row"><span class="lab">Пачка 3</span><div class="lane"><div class="gridl" style="left:3.45%"></div><div class="gridl" style="left:24.14%"></div><div class="gridl" style="left:44.83%"></div><div class="gridl" style="left:65.52%"></div><div class="gridl" style="left:86.21%"></div><div class="mark new" style="left:1.43%;width:15.10%;border-radius:4px" tabindex="0" data-tip="Пачка 3 с расширением: 09:54:09 - 10:37:57"></div><div class="mark base" style="left:52.95%;width:31.44%;border-radius:4px" tabindex="0" data-tip="Пачка 3 без расширения: 12:23:33 - 13:54:43"></div></div></div>
+      <div class="row"><span class="lab">Пачка 4</span><div class="lane"><div class="gridl" style="left:3.45%"></div><div class="gridl" style="left:24.14%"></div><div class="gridl" style="left:44.83%"></div><div class="gridl" style="left:65.52%"></div><div class="gridl" style="left:86.21%"></div><div class="mark new" style="left:1.43%;width:15.16%;border-radius:4px" tabindex="0" data-tip="Пачка 4 с расширением: 09:54:09 - 10:38:06"></div><div class="mark base" style="left:52.95%;width:31.42%;border-radius:4px" tabindex="0" data-tip="Пачка 4 без расширения: 12:23:33 - 13:54:40"></div></div></div>
+      <div class="row"><span class="lab">Пачка 5</span><div class="lane"><div class="gridl" style="left:3.45%"></div><div class="gridl" style="left:24.14%"></div><div class="gridl" style="left:44.83%"></div><div class="gridl" style="left:65.52%"></div><div class="gridl" style="left:86.21%"></div><div class="mark new" style="left:1.43%;width:28.71%;border-radius:4px" tabindex="0" data-tip="Пачка 5 с расширением: 09:54:09 - 11:17:24"></div><div class="mark base" style="left:52.95%;width:45.55%;border-radius:4px" tabindex="0" data-tip="Пачка 5 без расширения: 12:23:33 - 14:35:39"></div></div></div>
+      <div class="ticks"><span></span><div class="t"><span style="left:3.45%">10:00</span><span style="left:24.14%">11:00</span><span style="left:44.83%">12:00</span><span style="left:65.52%">13:00</span><span style="left:86.21%">14:00</span></div></div>
+    </div>
+  </div>
+
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr><th>Прогон</th><th>Окно</th><th>Замер МО</th><th>Пачки 1-4</th><th>Пачка 5</th><th>Портфелей</th><th>Итог по письму</th></tr></thead>
+      <tbody>
+        <tr><td>С расширением 1.0.0.4</td><td>09:54:08 - 11:17:27</td><td class="n good">83 мин</td><td class="n">34-44 мин</td><td class="n">83 мин</td><td class="n">7 758</td><td>WARN: загружено 2 762, позиций с ошибками 2</td></tr>
+        <tr><td>Без расширения</td><td>12:23:30 - 14:35:42</td><td class="n">132 мин</td><td class="n">81-91 мин</td><td class="n">132 мин</td><td class="n">7 758</td><td>WARN: загружено 2 762, позиций с ошибками 3</td></tr>
+        <tr><td><b>Разница</b></td><td></td><td class="n good"><b>минус 49 мин, минус 37%</b></td><td class="n good"><b>x2,1-2,4</b></td><td class="n"><b>x1,6</b></td><td class="n">0</td><td></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>Ошибки в письмах об итогах</h3>
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr><th>Мандат</th><th>Сообщение</th><th>С расширением</th><th>Без расширения</th><th>Причина</th></tr></thead>
+      <tbody>
+        <tr><td>APROMY</td><td>У счета мандата не заполнено место хранения, выгрузка по счету не выполнена</td><td>есть</td><td>есть</td><td>данные МО</td></tr>
+        <tr><td>PSTRUQ</td><td>У счета мандата не заполнено место хранения, выгрузка по счету не выполнена</td><td>есть</td><td>есть</td><td>данные МО</td></tr>
+        <tr><td>ALFSVD</td><td>Не найден портфель, количество 0</td><td>нет</td><td>есть</td><td>данные, возникла между прогонами</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="note">Ошибки возникают при поиске счетов и портфелей, расширение эту часть не меняет. Ошибка по ALFSVD появилась в прогоне без расширения, то есть не связана с ним. По всем трем мандатам нужна правка данных у их владельцев.</p>
+</section>
+
+<section id="compare">
+  <span class="sec-no">3. Сравнение направлений</span>
+  <h2>Почему розница ускорилась сильнее</h2>
+  <div class="viz">
+    <h3>Во сколько раз быстрее с расширением</h3>
+    <p class="cap">Во всех пачках розницы и в пачках 1-4 обычных баз ускорение больше двух раз. Общий результат обычных баз ниже из-за пачки 5</p>
+    <div class="hb"><span class="lab">Розничные, вся выгрузка</span><div class="track gridbg"><div class="mark new" style="width:85.7%" tabindex="0" data-tip="Розничные, вся выгрузка: в 3,43 раза быстрее"></div></div><span class="val">x3,4</span></div>
+    <div class="hb gap"><span class="lab">Обычные, вся выгрузка</span><div class="track gridbg"><div class="mark new" style="width:39.7%" tabindex="0" data-tip="Обычные, вся выгрузка: в 1,59 раза быстрее"></div></div><span class="val">x1,6</span></div>
+    <div class="hb gap"><span class="lab">Обычные, работа потоков</span><div class="track gridbg"><div class="mark new" style="width:49.2%" tabindex="0" data-tip="Обычные, работа потоков: в 1,97 раза быстрее"></div></div><span class="val">x2,0</span></div>
+    <div class="hb gap"><span class="lab">Обычные, пачки 1-4</span><div class="track gridbg"><div class="mark new" style="width:60.1%;opacity:.45" tabindex="0" data-tip="Обычные базы, пачки 1-4: от x2,07 до x2,40"></div><div class="mark new" style="width:51.8%" tabindex="0" data-tip="Обычные базы, пачки 1-4: от x2,07 до x2,40"></div></div><span class="val">x2,1-2,4</span></div>
+    <div class="hb gap"><span class="lab">Обычные, пачка 5</span><div class="track gridbg"><div class="mark new" style="width:39.7%" tabindex="0" data-tip="Обычные, пачка 5: в 1,59 раза быстрее"></div></div><span class="val">x1,6</span></div>
+    <div class="xaxis"><span></span><div class="t"><span>x0</span><span>x1</span><span>x2</span><span>x3</span><span>x4</span></div><span></span></div>
+  </div>
+  <div class="viz">
+    <h3>3D-обзор: время каждой пачки в обоих направлениях, минуты</h3>
+    <p class="cap">Высота столбца - минуты работы пачки (потока). Серые - без расширения, синие - с расширением 1.0.0.4. Ряды идут от самых долгих сзади к самым быстрым спереди: обычные и розничные без расширения, затем обычные и розничные с расширением. При наведении на столбец - точное значение. Высоты в 3D сравнивать на глаз сложнее, точные числа - в плоских графиках разделов 1 и 2</p>
+    <div class="vlegend"><span><i style="background:var(--base-mark)"></i>без расширения</span><span><i style="background:var(--s1)"></i>с расширением 1.0.0.4</span></div>
+<svg class="iso" viewBox="-178 -146 541 349" role="img" aria-label="3D-диаграмма времени пачек выгрузки, минуты">
+<polygon points="0.0,0.0 200.0,100.0 28.0,186.0 -172.0,86.0" fill="var(--neutral-soft)" stroke="var(--axis)" stroke-width="1"/>
+<line x1="40.0" y1="20.0" x2="-132.0" y2="106.0" stroke="var(--grid)"/>
+<line x1="80.0" y1="40.0" x2="-92.0" y2="126.0" stroke="var(--grid)"/>
+<line x1="120.0" y1="60.0" x2="-52.0" y2="146.0" stroke="var(--grid)"/>
+<line x1="160.0" y1="80.0" x2="-12.0" y2="166.0" stroke="var(--grid)"/>
+<g class="iso-bar" tabindex="0"><title>Обычные, без расширения, пачка 1: 80,6 мин (4 838 с)</title><polygon points="-26.0,21.0 -2.0,33.0 -2.0,-96.0 -26.0,-108.0" fill="var(--base-mark)" /><polygon points="-26.0,21.0 -2.0,33.0 -2.0,-96.0 -26.0,-108.0" fill="#000" fill-opacity=".12"/><polygon points="26.0,19.0 -2.0,33.0 -2.0,-96.0 26.0,-110.0" fill="var(--base-mark)" /><polygon points="26.0,19.0 -2.0,33.0 -2.0,-96.0 26.0,-110.0" fill="#000" fill-opacity=".28"/><polygon points="2.0,-122.0 26.0,-110.0 -2.0,-96.0 -26.0,-108.0" fill="var(--base-mark)" /><polygon points="2.0,-122.0 26.0,-110.0 -2.0,-96.0 -26.0,-108.0" fill="#fff" fill-opacity=".22"/><text x="0.0" y="-116.0" text-anchor="middle" class="iso-val">81</text></g>
+<g class="iso-bar" tabindex="0"><title>Обычные, без расширения, пачка 2: 82,2 мин (4 929 с)</title><polygon points="14.0,41.0 38.0,53.0 38.0,-78.4 14.0,-90.4" fill="var(--base-mark)" /><polygon points="14.0,41.0 38.0,53.0 38.0,-78.4 14.0,-90.4" fill="#000" fill-opacity=".12"/><polygon points="66.0,39.0 38.0,53.0 38.0,-78.4 66.0,-92.4" fill="var(--base-mark)" /><polygon points="66.0,39.0 38.0,53.0 38.0,-78.4 66.0,-92.4" fill="#000" fill-opacity=".28"/><polygon points="42.0,-104.4 66.0,-92.4 38.0,-78.4 14.0,-90.4" fill="var(--base-mark)" /><polygon points="42.0,-104.4 66.0,-92.4 38.0,-78.4 14.0,-90.4" fill="#fff" fill-opacity=".22"/><text x="40.0" y="-98.4" text-anchor="middle" class="iso-val">82</text></g>
+<g class="iso-bar" tabindex="0"><title>Розничные, без расширения, пачка 1: 68,9 мин (4 135 с)</title><polygon points="-70.0,43.0 -46.0,55.0 -46.0,-55.3 -70.0,-67.3" fill="var(--base-mark)" /><polygon points="-70.0,43.0 -46.0,55.0 -46.0,-55.3 -70.0,-67.3" fill="#000" fill-opacity=".12"/><polygon points="-18.0,41.0 -46.0,55.0 -46.0,-55.3 -18.0,-69.3" fill="var(--base-mark)" /><polygon points="-18.0,41.0 -46.0,55.0 -46.0,-55.3 -18.0,-69.3" fill="#000" fill-opacity=".28"/><polygon points="-42.0,-81.3 -18.0,-69.3 -46.0,-55.3 -70.0,-67.3" fill="var(--base-mark)" /><polygon points="-42.0,-81.3 -18.0,-69.3 -46.0,-55.3 -70.0,-67.3" fill="#fff" fill-opacity=".22"/><text x="-44.0" y="-75.3" text-anchor="middle" class="iso-val">69</text></g>
+<g class="iso-bar" tabindex="0"><title>Обычные, без расширения, пачка 3: 91,2 мин (5 469 с)</title><polygon points="54.0,61.0 78.0,73.0 78.0,-72.9 54.0,-84.9" fill="var(--base-mark)" /><polygon points="54.0,61.0 78.0,73.0 78.0,-72.9 54.0,-84.9" fill="#000" fill-opacity=".12"/><polygon points="106.0,59.0 78.0,73.0 78.0,-72.9 106.0,-86.9" fill="var(--base-mark)" /><polygon points="106.0,59.0 78.0,73.0 78.0,-72.9 106.0,-86.9" fill="#000" fill-opacity=".28"/><polygon points="82.0,-98.9 106.0,-86.9 78.0,-72.9 54.0,-84.9" fill="var(--base-mark)" /><polygon points="82.0,-98.9 106.0,-86.9 78.0,-72.9 54.0,-84.9" fill="#fff" fill-opacity=".22"/><text x="80.0" y="-92.9" text-anchor="middle" class="iso-val">91</text></g>
+<g class="iso-bar" tabindex="0"><title>Розничные, без расширения, пачка 2: 68,6 мин (4 115 с)</title><polygon points="-30.0,63.0 -6.0,75.0 -6.0,-34.7 -30.0,-46.7" fill="var(--base-mark)" /><polygon points="-30.0,63.0 -6.0,75.0 -6.0,-34.7 -30.0,-46.7" fill="#000" fill-opacity=".12"/><polygon points="22.0,61.0 -6.0,75.0 -6.0,-34.7 22.0,-48.7" fill="var(--base-mark)" /><polygon points="22.0,61.0 -6.0,75.0 -6.0,-34.7 22.0,-48.7" fill="#000" fill-opacity=".28"/><polygon points="-2.0,-60.7 22.0,-48.7 -6.0,-34.7 -30.0,-46.7" fill="var(--base-mark)" /><polygon points="-2.0,-60.7 22.0,-48.7 -6.0,-34.7 -30.0,-46.7" fill="#fff" fill-opacity=".22"/><text x="-4.0" y="-54.7" text-anchor="middle" class="iso-val">69</text></g>
+<g class="iso-bar" tabindex="0"><title>Обычные, с расширением, пачка 1: 37,1 мин (2 224 с)</title><polygon points="-114.0,65.0 -90.0,77.0 -90.0,17.7 -114.0,5.7" fill="var(--s1)" /><polygon points="-114.0,65.0 -90.0,77.0 -90.0,17.7 -114.0,5.7" fill="#000" fill-opacity=".12"/><polygon points="-62.0,63.0 -90.0,77.0 -90.0,17.7 -62.0,3.7" fill="var(--s1)" /><polygon points="-62.0,63.0 -90.0,77.0 -90.0,17.7 -62.0,3.7" fill="#000" fill-opacity=".28"/><polygon points="-86.0,-8.3 -62.0,3.7 -90.0,17.7 -114.0,5.7" fill="var(--s1)" /><polygon points="-86.0,-8.3 -62.0,3.7 -90.0,17.7 -114.0,5.7" fill="#fff" fill-opacity=".22"/><text x="-88.0" y="-2.3" text-anchor="middle" class="iso-val">37</text></g>
+<g class="iso-bar" tabindex="0"><title>Обычные, без расширения, пачка 4: 91,1 мин (5 466 с)</title><polygon points="94.0,81.0 118.0,93.0 118.0,-52.8 94.0,-64.8" fill="var(--base-mark)" /><polygon points="94.0,81.0 118.0,93.0 118.0,-52.8 94.0,-64.8" fill="#000" fill-opacity=".12"/><polygon points="146.0,79.0 118.0,93.0 118.0,-52.8 146.0,-66.8" fill="var(--base-mark)" /><polygon points="146.0,79.0 118.0,93.0 118.0,-52.8 146.0,-66.8" fill="#000" fill-opacity=".28"/><polygon points="122.0,-78.8 146.0,-66.8 118.0,-52.8 94.0,-64.8" fill="var(--base-mark)" /><polygon points="122.0,-78.8 146.0,-66.8 118.0,-52.8 94.0,-64.8" fill="#fff" fill-opacity=".22"/><text x="120.0" y="-72.8" text-anchor="middle" class="iso-val">91</text></g>
+<g class="iso-bar" tabindex="0"><title>Розничные, без расширения, пачка 3: 68,4 мин (4 104 с)</title><polygon points="10.0,83.0 34.0,95.0 34.0,-14.4 10.0,-26.4" fill="var(--base-mark)" /><polygon points="10.0,83.0 34.0,95.0 34.0,-14.4 10.0,-26.4" fill="#000" fill-opacity=".12"/><polygon points="62.0,81.0 34.0,95.0 34.0,-14.4 62.0,-28.4" fill="var(--base-mark)" /><polygon points="62.0,81.0 34.0,95.0 34.0,-14.4 62.0,-28.4" fill="#000" fill-opacity=".28"/><polygon points="38.0,-40.4 62.0,-28.4 34.0,-14.4 10.0,-26.4" fill="var(--base-mark)" /><polygon points="38.0,-40.4 62.0,-28.4 34.0,-14.4 10.0,-26.4" fill="#fff" fill-opacity=".22"/><text x="36.0" y="-34.4" text-anchor="middle" class="iso-val">68</text></g>
+<g class="iso-bar" tabindex="0"><title>Обычные, с расширением, пачка 2: 34,2 мин (2 052 с)</title><polygon points="-74.0,85.0 -50.0,97.0 -50.0,42.3 -74.0,30.3" fill="var(--s1)" /><polygon points="-74.0,85.0 -50.0,97.0 -50.0,42.3 -74.0,30.3" fill="#000" fill-opacity=".12"/><polygon points="-22.0,83.0 -50.0,97.0 -50.0,42.3 -22.0,28.3" fill="var(--s1)" /><polygon points="-22.0,83.0 -50.0,97.0 -50.0,42.3 -22.0,28.3" fill="#000" fill-opacity=".28"/><polygon points="-46.0,16.3 -22.0,28.3 -50.0,42.3 -74.0,30.3" fill="var(--s1)" /><polygon points="-46.0,16.3 -22.0,28.3 -50.0,42.3 -74.0,30.3" fill="#fff" fill-opacity=".22"/><text x="-48.0" y="22.3" text-anchor="middle" class="iso-val">34</text></g>
+<g class="iso-bar" tabindex="0"><title>Розничные, с расширением, пачка 1: 20,2 мин (1 210 с)</title><polygon points="-158.0,87.0 -134.0,99.0 -134.0,66.7 -158.0,54.7" fill="var(--s1)" /><polygon points="-158.0,87.0 -134.0,99.0 -134.0,66.7 -158.0,54.7" fill="#000" fill-opacity=".12"/><polygon points="-106.0,85.0 -134.0,99.0 -134.0,66.7 -106.0,52.7" fill="var(--s1)" /><polygon points="-106.0,85.0 -134.0,99.0 -134.0,66.7 -106.0,52.7" fill="#000" fill-opacity=".28"/><polygon points="-130.0,40.7 -106.0,52.7 -134.0,66.7 -158.0,54.7" fill="var(--s1)" /><polygon points="-130.0,40.7 -106.0,52.7 -134.0,66.7 -158.0,54.7" fill="#fff" fill-opacity=".22"/><text x="-132.0" y="46.7" text-anchor="middle" class="iso-val">20</text></g>
+<g class="iso-bar" tabindex="0"><title>Обычные, без расширения, пачка 5: 132,1 мин (7 926 с)</title><polygon points="134.0,101.0 158.0,113.0 158.0,-98.4 134.0,-110.4" fill="var(--base-mark)" /><polygon points="134.0,101.0 158.0,113.0 158.0,-98.4 134.0,-110.4" fill="#000" fill-opacity=".12"/><polygon points="186.0,99.0 158.0,113.0 158.0,-98.4 186.0,-112.4" fill="var(--base-mark)" /><polygon points="186.0,99.0 158.0,113.0 158.0,-98.4 186.0,-112.4" fill="#000" fill-opacity=".28"/><polygon points="162.0,-124.4 186.0,-112.4 158.0,-98.4 134.0,-110.4" fill="var(--base-mark)" /><polygon points="162.0,-124.4 186.0,-112.4 158.0,-98.4 134.0,-110.4" fill="#fff" fill-opacity=".22"/><text x="160.0" y="-118.4" text-anchor="middle" class="iso-val">132</text></g>
+<g class="iso-bar" tabindex="0"><title>Розничные, без расширения, пачка 4: 68,7 мин (4 119 с)</title><polygon points="50.0,103.0 74.0,115.0 74.0,5.2 50.0,-6.8" fill="var(--base-mark)" /><polygon points="50.0,103.0 74.0,115.0 74.0,5.2 50.0,-6.8" fill="#000" fill-opacity=".12"/><polygon points="102.0,101.0 74.0,115.0 74.0,5.2 102.0,-8.8" fill="var(--base-mark)" /><polygon points="102.0,101.0 74.0,115.0 74.0,5.2 102.0,-8.8" fill="#000" fill-opacity=".28"/><polygon points="78.0,-20.8 102.0,-8.8 74.0,5.2 50.0,-6.8" fill="var(--base-mark)" /><polygon points="78.0,-20.8 102.0,-8.8 74.0,5.2 50.0,-6.8" fill="#fff" fill-opacity=".22"/><text x="76.0" y="-14.8" text-anchor="middle" class="iso-val">69</text></g>
+<g class="iso-bar" tabindex="0"><title>Обычные, с расширением, пачка 3: 43,8 мин (2 628 с)</title><polygon points="-34.0,105.0 -10.0,117.0 -10.0,46.9 -34.0,34.9" fill="var(--s1)" /><polygon points="-34.0,105.0 -10.0,117.0 -10.0,46.9 -34.0,34.9" fill="#000" fill-opacity=".12"/><polygon points="18.0,103.0 -10.0,117.0 -10.0,46.9 18.0,32.9" fill="var(--s1)" /><polygon points="18.0,103.0 -10.0,117.0 -10.0,46.9 18.0,32.9" fill="#000" fill-opacity=".28"/><polygon points="-6.0,20.9 18.0,32.9 -10.0,46.9 -34.0,34.9" fill="var(--s1)" /><polygon points="-6.0,20.9 18.0,32.9 -10.0,46.9 -34.0,34.9" fill="#fff" fill-opacity=".22"/><text x="-8.0" y="26.9" text-anchor="middle" class="iso-val">44</text></g>
+<g class="iso-bar" tabindex="0"><title>Розничные, с расширением, пачка 2: 20,1 мин (1 204 с)</title><polygon points="-118.0,107.0 -94.0,119.0 -94.0,86.9 -118.0,74.9" fill="var(--s1)" /><polygon points="-118.0,107.0 -94.0,119.0 -94.0,86.9 -118.0,74.9" fill="#000" fill-opacity=".12"/><polygon points="-66.0,105.0 -94.0,119.0 -94.0,86.9 -66.0,72.9" fill="var(--s1)" /><polygon points="-66.0,105.0 -94.0,119.0 -94.0,86.9 -66.0,72.9" fill="#000" fill-opacity=".28"/><polygon points="-90.0,60.9 -66.0,72.9 -94.0,86.9 -118.0,74.9" fill="var(--s1)" /><polygon points="-90.0,60.9 -66.0,72.9 -94.0,86.9 -118.0,74.9" fill="#fff" fill-opacity=".22"/><text x="-92.0" y="66.9" text-anchor="middle" class="iso-val">20</text></g>
+<g class="iso-bar" tabindex="0"><title>Розничные, без расширения, пачка 5: 69,3 мин (4 158 с)</title><polygon points="90.0,123.0 114.0,135.0 114.0,24.1 90.0,12.1" fill="var(--base-mark)" /><polygon points="90.0,123.0 114.0,135.0 114.0,24.1 90.0,12.1" fill="#000" fill-opacity=".12"/><polygon points="142.0,121.0 114.0,135.0 114.0,24.1 142.0,10.1" fill="var(--base-mark)" /><polygon points="142.0,121.0 114.0,135.0 114.0,24.1 142.0,10.1" fill="#000" fill-opacity=".28"/><polygon points="118.0,-1.9 142.0,10.1 114.0,24.1 90.0,12.1" fill="var(--base-mark)" /><polygon points="118.0,-1.9 142.0,10.1 114.0,24.1 90.0,12.1" fill="#fff" fill-opacity=".22"/><text x="116.0" y="4.1" text-anchor="middle" class="iso-val">69</text></g>
+<g class="iso-bar" tabindex="0"><title>Обычные, с расширением, пачка 4: 43,9 мин (2 636 с)</title><polygon points="6.0,125.0 30.0,137.0 30.0,66.7 6.0,54.7" fill="var(--s1)" /><polygon points="6.0,125.0 30.0,137.0 30.0,66.7 6.0,54.7" fill="#000" fill-opacity=".12"/><polygon points="58.0,123.0 30.0,137.0 30.0,66.7 58.0,52.7" fill="var(--s1)" /><polygon points="58.0,123.0 30.0,137.0 30.0,66.7 58.0,52.7" fill="#000" fill-opacity=".28"/><polygon points="34.0,40.7 58.0,52.7 30.0,66.7 6.0,54.7" fill="var(--s1)" /><polygon points="34.0,40.7 58.0,52.7 30.0,66.7 6.0,54.7" fill="#fff" fill-opacity=".22"/><text x="32.0" y="46.7" text-anchor="middle" class="iso-val">44</text></g>
+<g class="iso-bar" tabindex="0"><title>Розничные, с расширением, пачка 3: 20,1 мин (1 205 с)</title><polygon points="-78.0,127.0 -54.0,139.0 -54.0,106.9 -78.0,94.9" fill="var(--s1)" /><polygon points="-78.0,127.0 -54.0,139.0 -54.0,106.9 -78.0,94.9" fill="#000" fill-opacity=".12"/><polygon points="-26.0,125.0 -54.0,139.0 -54.0,106.9 -26.0,92.9" fill="var(--s1)" /><polygon points="-26.0,125.0 -54.0,139.0 -54.0,106.9 -26.0,92.9" fill="#000" fill-opacity=".28"/><polygon points="-50.0,80.9 -26.0,92.9 -54.0,106.9 -78.0,94.9" fill="var(--s1)" /><polygon points="-50.0,80.9 -26.0,92.9 -54.0,106.9 -78.0,94.9" fill="#fff" fill-opacity=".22"/><text x="-52.0" y="86.9" text-anchor="middle" class="iso-val">20</text></g>
+<g class="iso-bar" tabindex="0"><title>Обычные, с расширением, пачка 5: 83,3 мин (4 995 с)</title><polygon points="46.0,145.0 70.0,157.0 70.0,23.8 46.0,11.8" fill="var(--s1)" /><polygon points="46.0,145.0 70.0,157.0 70.0,23.8 46.0,11.8" fill="#000" fill-opacity=".12"/><polygon points="98.0,143.0 70.0,157.0 70.0,23.8 98.0,9.8" fill="var(--s1)" /><polygon points="98.0,143.0 70.0,157.0 70.0,23.8 98.0,9.8" fill="#000" fill-opacity=".28"/><polygon points="74.0,-2.2 98.0,9.8 70.0,23.8 46.0,11.8" fill="var(--s1)" /><polygon points="74.0,-2.2 98.0,9.8 70.0,23.8 46.0,11.8" fill="#fff" fill-opacity=".22"/><text x="72.0" y="3.8" text-anchor="middle" class="iso-val">83</text></g>
+<g class="iso-bar" tabindex="0"><title>Розничные, с расширением, пачка 4: 20,1 мин (1 204 с)</title><polygon points="-38.0,147.0 -14.0,159.0 -14.0,126.9 -38.0,114.9" fill="var(--s1)" /><polygon points="-38.0,147.0 -14.0,159.0 -14.0,126.9 -38.0,114.9" fill="#000" fill-opacity=".12"/><polygon points="14.0,145.0 -14.0,159.0 -14.0,126.9 14.0,112.9" fill="var(--s1)" /><polygon points="14.0,145.0 -14.0,159.0 -14.0,126.9 14.0,112.9" fill="#000" fill-opacity=".28"/><polygon points="-10.0,100.9 14.0,112.9 -14.0,126.9 -38.0,114.9" fill="var(--s1)" /><polygon points="-10.0,100.9 14.0,112.9 -14.0,126.9 -38.0,114.9" fill="#fff" fill-opacity=".22"/><text x="-12.0" y="106.9" text-anchor="middle" class="iso-val">20</text></g>
+<g class="iso-bar" tabindex="0"><title>Розничные, с расширением, пачка 5: 20,1 мин (1 207 с)</title><polygon points="2.0,167.0 26.0,179.0 26.0,146.8 2.0,134.8" fill="var(--s1)" /><polygon points="2.0,167.0 26.0,179.0 26.0,146.8 2.0,134.8" fill="#000" fill-opacity=".12"/><polygon points="54.0,165.0 26.0,179.0 26.0,146.8 54.0,132.8" fill="var(--s1)" /><polygon points="54.0,165.0 26.0,179.0 26.0,146.8 54.0,132.8" fill="#000" fill-opacity=".28"/><polygon points="30.0,120.8 54.0,132.8 26.0,146.8 2.0,134.8" fill="var(--s1)" /><polygon points="30.0,120.8 54.0,132.8 26.0,146.8 2.0,134.8" fill="#fff" fill-opacity=".22"/><text x="28.0" y="126.8" text-anchor="middle" class="iso-val">20</text></g>
+<text x="188.0" y="118.0" text-anchor="start" class="iso-lab">Обычные, без расширения</text>
+<text x="144.0" y="140.0" text-anchor="start" class="iso-lab">Розничные, без расширения</text>
+<text x="100.0" y="162.0" text-anchor="start" class="iso-lab">Обычные, с расширением</text>
+<text x="56.0" y="184.0" text-anchor="start" class="iso-lab">Розничные, с расширением</text>
+<text x="-158.0" y="113.0" text-anchor="middle" class="iso-lab">Пачка 1</text>
+<text x="-118.0" y="133.0" text-anchor="middle" class="iso-lab">Пачка 2</text>
+<text x="-78.0" y="153.0" text-anchor="middle" class="iso-lab">Пачка 3</text>
+<text x="-38.0" y="173.0" text-anchor="middle" class="iso-lab">Пачка 4</text>
+<text x="2.0" y="193.0" text-anchor="middle" class="iso-lab">Пачка 5</text>
+</svg>
+  </div>
+  <div class="two">
+    <div class="callout good"><b>Розница.</b> Почти вся выгрузка - запись флагов лимитов, ее и ускоряет расширение. Портфели распределены по пачкам равномерно, все пять потоков заканчивают в пределах минуты, поэтому выгрузка в целом ускоряется так же, как каждая пачка: в 3,4 раза.</div>
+    <div class="callout"><b>Обычные базы.</b> Пачки 1-4 ускорились в 2,1-2,4 раза. Пачка 5 содержит 1 534 портфеля, примерно как остальные, но выполняется в 1,5-2,1 раза дольше: в ней часть работы, которую расширение не затрагивает. Одна из таких операций уже найдена в замере обычной ФО: поиск поручения блокировки по внешнему коду без индекса, 0,5-1,9 с на портфель с блокировками.</div>
+  </div>
+  <p>Оценки резерва, без новых замеров. Если бы пачка 5 ускорилась так же, как пачки 1-4, выгрузка в обычных базах шла бы около 60 минут. Если бы работа была распределена по пяти потокам поровну, около 50 минут. Насколько пачку 5 ускорит индекс по внешнему коду поручения, покажет повторный прогон после его добавления.</p>
+</section>
+
+<section id="conclusions">
+  <span class="sec-no">4. Выводы и рекомендации</span>
+  <h2>Что показали тесты и что делать дальше</h2>
+  <ol class="steps">
+    <li><div><b>Расширение готово к переносу на ПРОД.</b> В обоих направлениях выгрузка быстрее при том же объеме, новых ошибок нет. Поставляемая версия 1.0.0.4 - та же, что проверена.</div></li>
+    <li><div><b>Розничные базы:</b> на тестовой копии в 3,4 раза быстрее (минус 49 мин). Для ПРОД ожидаем 12-18 минут вместо 41, пред- и постконтроль лимитов стартуют на 23-29 минут раньше.</div></li>
+    <li><div><b>Обычные базы:</b> в 1,6 раза быстрее (минус 49 мин), работа потоков сократилась вдвое. Общее время ограничивает пачка 5.</div></li>
+    <li><div><b>Рекомендация Аванкор:</b> индекс у реквизита "Внешний код" документа Поручение. Он ускорит поиск поручений блокировок при выгрузке остатков (сейчас перебор всей таблицы поручений). Описано в документе переноса расширения в базовую конфигурацию.</div></li>
+    <li><div><b>Разбор пачки 5 в обычных базах:</b> замер производительности ФО на прогоне, в котором пачка 5 попадает в замер целиком: какие портфели и какие операции дают лишние 40 минут.</div></li>
+    <li><div><b>Данные:</b> заполнить места хранения у счетов мандатов APROMY и PSTRUQ, проверить портфель ALFSVD.</div></li>
+  </ol>
+</section>
+
+<section id="method">
+  <span class="sec-no">Методика</span>
+  <h2>Как получены числа</h2>
+  <dl class="defs">
+    <dt>Базы</dt><dd>Тестовые копии Т-1 01.10.2026: розничные МО и ФО (AVC_PP_Retail_MO, AVC_PP_RETAIL_FO), обычные МО и ФО (AVC_PP_MO, AVC_PP_FO). Обмен через веб-сервис ФО.</dd>
+    <dt>Настройки</dt><dd>Регламентное задание выгрузки остатков источника обмена, 50 портфелей в пакете, 5 потоков, запуск вручную в фоне. Настройки в прогонах с расширением и без него одинаковые.</dd>
+    <dt>Порядок</dt><dd>В каждом направлении сначала прогон с расширением FO_PositionLoadOpt 1.0.0.4 в ФО, затем расширение отключено и регламент повторен.</dd>
+    <dt>Время</dt><dd>Замеры времени ключевой операции МО: по каждой пачке (потоку) и по выгрузке целиком, вес замера - число портфелей. Начало и конец сверены со списком фоновых заданий МО.</dd>
+    <dt>Результат</dt><dd>Письма об итогах выгрузки: число портфелей с загруженными данными и позиции с ошибками.</dd>
+    <dt>Источник</dt><dd>Протокол ИТ-тестирования IMDEV-9532 со снимками экрана: настройки, фоновые задания, замеры времени, письма.</dd>
+  </dl>
+  <p class="note">Ускорение считается между прогонами на одном сервере в один день. Прогоны шли в разное время дня, нагрузка тестового сервера могла отличаться. Для розницы результат подтвержден двумя днями тестов, 30.09 и 01.10. В тексте, графиках и таблицах время округлено до минут, коэффициенты до десятых, оценки резерва до 5 минут. Точные значения в секундах - в подсказках при наведении на графики.</p>
+</section>
+
+</main>
+
+<div id="viztip" role="tooltip"></div>
+
+<footer>
+  <div class="wrap">IMDEV-9532. Итоговый отчет об ИТ-тестировании расширения FO_PositionLoadOpt 1.0.0.4 на тестовых копиях Т-1. Документ подготовлен отделом разработки 01.10.2026.</div>
+</footer>
+
+<script>
+(function () {
+  var tip = document.getElementById("viztip");
+  function show(e) {
+    var t = e.target.closest("[data-tip]");
+    if (!t) { return; }
+    tip.textContent = t.getAttribute("data-tip");
+    tip.style.display = "block";
+    var box = t.getBoundingClientRect();
+    var x = e.clientX || (box.left + box.width / 2);
+    var y = e.clientY || box.top;
+    tip.style.left = Math.max(8, Math.min(window.innerWidth - tip.offsetWidth - 8, x + 12)) + "px";
+    tip.style.top = Math.max(8, y - tip.offsetHeight - 10) + "px";
+  }
+  function hide() { tip.style.display = "none"; }
+  document.addEventListener("mousemove", function (e) { if (e.target.closest("[data-tip]")) { show(e); } else { hide(); } });
+  document.addEventListener("focusin", show);
+  document.addEventListener("focusout", hide);
+})();
+</script>
+
+</body>
+</html>
