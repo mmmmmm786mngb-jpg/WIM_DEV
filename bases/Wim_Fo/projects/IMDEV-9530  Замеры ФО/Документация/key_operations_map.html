@@ -1,0 +1,495 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>IMDEV-9530. Куда ставить замеры ключевых операций ФО</title>
+<style>
+  :root {
+    --bg: #f4f6f8;
+    --card: #ffffff;
+    --ink: #1c2430;
+    --muted: #5c6b7a;
+    --line: #d5dde6;
+    --head: #1e3a5f;
+    --est: #28a745;
+    --net: #dc3545;
+    --unk: #b8860b;
+    --rev: #17a2b8;
+    --cf: #1e3a5f;
+    --epf: #5b3a8c;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font: 14px/1.45 "Segoe UI", Arial, sans-serif;
+  }
+  header, .wrap { max-width: 1680px; margin: 0 auto; padding: 20px 24px; }
+  header { padding-bottom: 0; }
+  h1 { margin: 0 0 8px; font-size: 22px; font-weight: 650; }
+  .lead { margin: 0; color: var(--muted); max-width: 1100px; }
+  .cards { display: flex; flex-wrap: wrap; gap: 10px; margin: 16px 0 8px; }
+  .card {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 10px 14px;
+    min-width: 150px;
+  }
+  .card b { display: block; font-size: 22px; line-height: 1.1; }
+  .card span { color: var(--muted); font-size: 12px; }
+  .toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin: 8px 0 12px;
+  }
+  input, select {
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    padding: 7px 10px;
+    font: inherit;
+    background: #fff;
+  }
+  input { min-width: 280px; }
+  .table-wrap {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    overflow: auto;
+    max-height: calc(100vh - 40px);
+  }
+  table { border-collapse: collapse; width: max-content; min-width: 100%; }
+  th, td {
+    border-bottom: 1px solid var(--line);
+    border-right: 1px solid #e8eef4;
+    padding: 8px 10px;
+    vertical-align: top;
+    text-align: left;
+  }
+  th {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    background: var(--head);
+    color: #fff;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+  tr:last-child td { border-bottom: 0; }
+  td.num, td.who { text-align: center; white-space: nowrap; }
+  td.op { font-weight: 650; min-width: 180px; }
+  td.do { min-width: 280px; max-width: 420px; }
+  td.point { min-width: 260px; max-width: 380px; }
+  .badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 999px;
+    color: #fff;
+    font-size: 12px;
+    font-weight: 650;
+    white-space: nowrap;
+  }
+  .est { background: var(--est); }
+  .net { background: var(--net); }
+  .unk { background: var(--unk); }
+  .rev { background: var(--rev); }
+  .part { background: var(--unk); }
+  .cf { background: var(--cf); }
+  .epf { background: var(--epf); }
+  .none { background: #6c757d; }
+  code, .mono { font-family: Consolas, "Courier New", monospace; font-size: 12px; }
+  ul.procs { margin: 6px 0 0; padding-left: 18px; }
+  ul.procs li { margin: 1px 0; }
+  details summary { cursor: pointer; color: var(--head); }
+  .note { color: var(--muted); font-size: 12px; margin-top: 4px; }
+  footer { color: var(--muted); font-size: 12px; padding-top: 8px; }
+  tr[data-status="est"] { background: #f3fbf5; }
+  tr[data-status="unk"] { background: #fffaf0; }
+  tr[data-status="rev"] { background: #f3fbfd; }
+  tr[data-status="part"] { background: #fffaf0; }
+</style>
+</head>
+<body>
+<header>
+  <h1>IMDEV-9530. Куда ставить замеры по 16 ключевым операциям ФО</h1>
+  <p class="lead">Сводка по файлу "Ключевые операции ФО". Порядок строк - по номеру операции. В исходном файле строка 15 стоит выше строки 14, номера 16 нет. Все точки серверные: <code>ОценкаПроизводительности.НачатьЗамерВремени</code> и <code>ЗакончитьЗамерВремени</code>. Объекты конфигурации правятся расширением, внешние обработки - в модуле объекта.</p>
+  <p class="lead">На PROD должна быть включена константа <code>ВыполнятьЗамерыПроизводительности</code>, иначе не пишутся и уже существующие замеры строк 1, 2, 4 и 14. Расширение модуля обработки <code>ОбменДаннымиБэкОфис</code> (строки 6-8) работает только при подключении без безопасного режима. Замер этих строк ставить в диспетчере вокруг цикла или вызова, не внутри процедур, которые вызываются по одному элементу.</p>
+  <div class="cards">
+    <div class="card"><b>4</b><span>замер уже есть, не трогать</span></div>
+    <div class="card"><b>5</b><span>добавить в конфигурацию</span></div>
+    <div class="card"><b>7</b><span>добавить во внешнюю обработку</span></div>
+  </div>
+  <div class="toolbar">
+    <input id="q" type="search" placeholder="Поиск по операции, объекту, процедуре" oninput="applyFilter()">
+    <select id="st" onchange="applyFilter()">
+      <option value="">Все статусы</option>
+      <option value="est">Есть</option>
+      <option value="net">Нет, добавить</option>
+    </select>
+    <select id="layer" onchange="applyFilter()">
+      <option value="">Все слои</option>
+      <option value="cf">Конфигурация</option>
+      <option value="epf">Внешняя обработка</option>
+      <option value="none">Не указан</option>
+    </select>
+  </div>
+</header>
+<div class="wrap">
+<div class="table-wrap">
+<table>
+  <thead>
+    <tr>
+      <th>Номер</th>
+      <th>Группа</th>
+      <th>Ключевая операция</th>
+      <th>Когда</th>
+      <th>Замер есть</th>
+      <th>Где менять</th>
+      <th>Объект</th>
+      <th>Точка вставки</th>
+      <th>Что делать</th>
+      <th>ИТ ВИМ</th>
+      <th>Аванкор</th>
+      <th>Из постановки</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr data-status="est" data-layer="cf">
+      <td class="num">1</td>
+      <td>Лимиты</td>
+      <td class="op">Предконтроль (поручения)</td>
+      <td>На каждое поручение</td>
+      <td><span class="badge est">Есть</span></td>
+      <td><span class="badge cf">Конфигурация</span></td>
+      <td>Обработка "Блоттер", форма <code>ФормаБлоттер</code>. Документ "Поручение", формы <code>ФормаСделки</code>, <code>ФормаНеторговогоПоручения</code>, <code>ФормаРЕПО</code>.</td>
+      <td class="point">Ключ верхнего уровня задает <code>РаспорядителиВызовСервера.ПараметрыПроверки</code>: <code>Справочники.КлючевыеОперации.Проверка</code>. Этапы закрывает <code>Распорядители.ЗакончитьЗамерВремени</code>, а она вызывает <code>ОценкаПроизводительности.ЗакончитьЗамерВремени</code>. Ключи этапов: <code>ЧтениеПредварительное</code>, <code>ДействующиеЛимиты</code>, <code>ЧтениеНаборовДанныхЛимитов</code>, <code>ПорогиБазисыПростые</code>, <code>ОбработкаПроверки</code>, <code>ЗаписьРезультатов</code>.</td>
+      <td class="do">Новый замер не добавлять. Этапы уже пишутся в оценку производительности и видны в стандартном отчете. <code>Исполнители.ЗамерИсполнителя</code> - отдельный внутренний замер одного лимита, к этим этапам не относится.</td>
+      <td class="who">нет</td>
+      <td class="who">да</td>
+      <td>10 секунд на 1 поручение. Кнопки "Проверить" и "Проверить и отправить".</td>
+    </tr>
+    <tr data-status="est" data-layer="cf">
+      <td class="num">2</td>
+      <td>Лимиты</td>
+      <td class="op">Постконтроль по всем портфелям</td>
+      <td>Несколько раз в день, с 11:00</td>
+      <td><span class="badge est">Есть</span></td>
+      <td><span class="badge cf">Конфигурация</span></td>
+      <td>Регламентное задание <code>ПроверкаПоЛимитам</code>.</td>
+      <td class="point"><code>АванкорВыполнениеРегламентныхЗаданий.ПроверкаПоЛимитам</code> вызывает <code>Обработки.ПроверкаЛимитовПоПортфелям.ПроверкаПоЛимитамПоРасписанию</code>.</td>
+      <td class="do">По задаче новый замер не обязателен: постконтроль идет через ту же <code>ПроверкаИОтправка</code> и пишет тот же ключ <code>Проверка</code>. В отчете его не отделить от предконтроля. Отдельный ключ "ПостКонтроль" - рекомендация, не требование постановки.</td>
+      <td class="who">нет</td>
+      <td class="who">да</td>
+      <td>23 000 клиентов за 3 часа. Тот же ключ, что у предконтроля.</td>
+    </tr>
+    <tr data-status="net" data-layer="epf">
+      <td class="num">3</td>
+      <td>Лимиты</td>
+      <td class="op">Установка лимитов</td>
+      <td>Ежедневно</td>
+      <td><span class="badge net">Нет</span></td>
+      <td><span class="badge epf">Внешняя обработка</span></td>
+      <td><code>внРаспространениеПравилСОдногоКлиентаНаСписокКлиентов</code>. Запуск после обмена делает <code>внОперацииПослеОбмена</code>.</td>
+      <td class="point"><code>ВыполнитьРаспространениеПравилПослеОбмена</code>. Внутри: поиск новых клиентов и <code>СоздатьУстановкиЛимитов</code>.</td>
+      <td class="do">Добавить замер вокруг распространения правил на новых клиентов. Вес замера - число новых клиентов или созданных установок. Файловые обработки <code>внУстановкаЛимитов</code> и <code>внЗагрузкаПороговЛимитов</code> - другой сценарий, не ежедневная установка для новых.</td>
+      <td class="who">да</td>
+      <td class="who">да</td>
+      <td>Запуск в файле: "Загрузка правил лимитов для новых". Объект - распространение правил на новых клиентов.</td>
+    </tr>
+    <tr data-status="est" data-layer="cf">
+      <td class="num">4</td>
+      <td>Поручения</td>
+      <td class="op">Отправка поручений</td>
+      <td>Ежедневно</td>
+      <td><span class="badge est">Есть</span></td>
+      <td><span class="badge cf">Конфигурация</span></td>
+      <td>Блоттер и формы поручения, кнопка "Проверить и отправить". Фоновая очередь - регламентное задание <code>АванкорОбработатьОчередьПорученийНаОтправку</code>.</td>
+      <td class="point"><code>РаспорядителиВызовСервера.ПараметрыОтправки</code> ставит ключ <code>Справочники.КлючевыеОперации.Отправка</code>. <code>Распорядители.ПроверкаИОтправка</code> при <code>ОтправитьПослеПроверки</code> вызывает <code>Отправка()</code> отдельным вызовом. Та же цепочка у <code>ОбработатьОчередьПорученийНаОтправку</code>.</td>
+      <td class="do">Новый замер не добавлять: отправка уже пишется ключом "Отправка", отдельно от "Проверка". <code>ОбработатьПорученияФормы</code> по-прежнему не оборачивать.</td>
+      <td class="who">нет</td>
+      <td class="who">да</td>
+      <td>В файле указана общая процедура <code>ОбработатьПорученияФормы</code>. Для замера отправки она слишком широкая.</td>
+    </tr>
+    <tr data-status="net" data-layer="epf">
+      <td class="num">5</td>
+      <td>Поручения</td>
+      <td class="op">Создание торговых поручений РОСТ</td>
+      <td>Ежедневно, регламентное задание</td>
+      <td><span class="badge net">Нет</span></td>
+      <td><span class="badge epf">Внешняя обработка</span></td>
+      <td><code>внСозданиеТорговыхПорученийРОСТ</code></td>
+      <td class="point"><code>ВыполнитьКоманду</code>, идентификаторы <code>ФоновоеВыполнениеПокупка</code> и <code>ФоновоеВыполнениеПродажа</code>. Рабочие процедуры: <code>СоздатьОтправитьПорученияПокупка</code> и <code>СоздатьПорученияПродажа</code>.</td>
+      <td class="do">Добавить замер на фоновое создание покупки и продажи. Команда открытия формы <code>СоздатьПорученияОФЗРОСТ</code> - не регламентный запуск, ее не мерить.</td>
+      <td class="who">да</td>
+      <td class="who">нет</td>
+      <td>Внешняя обработка "Создание торговых поручений РОСТ".</td>
+    </tr>
+    <tr data-status="net" data-layer="cf">
+      <td class="num">6</td>
+      <td>Загрузка данных</td>
+      <td class="op">Загрузка остатков</td>
+      <td>Ежедневно, 06:00</td>
+      <td><span class="badge net">Нет</span></td>
+      <td><span class="badge cf">Конфигурация</span></td>
+      <td>Обработка <code>ОбменДаннымиБэкОфис</code>. Вход: веб-сервис <code>Avancore</code>, методы <code>DownloadPosition</code> и <code>DownloadCompressedPosition</code>.</td>
+      <td class="point"><code>ЗагрузитьПакет</code> / <code>ЗагрузитьСжатыйПакет</code> вызывают <code>ЗагрузитьДанные</code>, дальше <code>ОбработатьДанные_РегистрыСведений</code>. Один замер на вид регистра, вокруг вызова в этом диспетчере, и только если раздел непустой. Внутрь процедур замер не ставить.
+        <details>
+          <summary>27 процедур регистров</summary>
+          <ul class="procs">
+            <li><code>ОбработатьДанные_КурсыВалют</code></li>
+            <li><code>ОбработатьДанные_ДанныеИндекса</code></li>
+            <li><code>ОбработатьДанные_ДополнительныеПоказателиЦБ</code></li>
+            <li><code>ОбработатьДанные_ДополнительныеСведения</code></li>
+            <li><code>ОбработатьДанные_АктивыВРЕПО</code></li>
+            <li><code>ОбработатьДанные_ГарантийноеОбеспечение</code></li>
+            <li><code>ОбработатьДанные_СтоимостьЧистыхАктивов</code></li>
+            <li><code>ОбработатьДанные_ФинансовыеПоказателиОблигаций</code></li>
+            <li><code>ОбработатьДанные_ОбъемыВыпусковЭмитентов</code></li>
+            <li><code>ОбработатьДанные_ВеличинаЧистогоОттокаПаев</code></li>
+            <li><code>ОбработатьДанные_ФактическаяПозиция</code></li>
+            <li><code>ОбработатьДанные_ФактическаяПозицияIntraDay</code></li>
+            <li><code>ОбработатьДанные_ФинансовыеПоказателиОблигацийПоПортфелю</code></li>
+            <li><code>ОбработатьДанные_ИсторияНоминальнойСтоимостиОблигаций</code></li>
+            <li><code>ОбработатьДанные_ПроцентыПоСделкамМНО</code></li>
+            <li><code>ОбработатьДанные_ФактическиеПоказателиДляПрогнозирования</code></li>
+            <li><code>ОбработатьДанные_СвязанныеЛица</code></li>
+            <li><code>ОбработатьДанные_ДенежныеПотоки</code></li>
+            <li><code>ОбработатьДанные_ТорговыеСчетаКодыКлиентов</code></li>
+            <li><code>ОбработатьДанные_ПорогиЛимитовПоТипамАктивов</code></li>
+            <li><code>ОбработатьДанные_ПереченьЦБВысокотехнологичногоСектораЭкономики</code></li>
+            <li><code>ОбработатьДанные_РезервыПодОбесценение</code></li>
+            <li><code>ОбработатьДанные_ПоступленияДенежныхСредств</code></li>
+            <li><code>ОбработатьДанные_КатегорииОбесценения</code></li>
+            <li><code>ОбработатьДанные_ВероятностиДефолтаПоПрогнозам</code></li>
+            <li><code>ОбработатьДанные_ОбъемНаходящихсяВОбращенииОблигацийЭмитента</code></li>
+            <li><code>ОбработатьДанные_ЗафиксированныеКотировки</code></li>
+          </ul>
+        </details>
+      </td>
+      <td class="do">Диспетчер вызывает все 27 процедур на каждый пакет, даже если раздел пустой. Писать замер только для непустого раздела, иначе при сотнях пакетов отчет забьют пустые записи. Остатки клиентов - <code>ФактическаяПозиция</code> и <code>ФактическаяПозицияIntraDay</code>. <code>ОбработатьДанные_ДополнительныеСведения</code> уже перехвачена расширением оптимизации загрузки остатков, поэтому замер в диспетчере, а не в самой процедуре. <code>DownloadCompressedPosition</code> отдельной точки не требует: <code>ЗагрузитьСжатыйПакет</code> вызывает тот же <code>ЗагрузитьПакет</code>.</td>
+      <td class="who">да</td>
+      <td class="who">да</td>
+      <td>По данным МО: 23 000 клиентов за 43 минуты. Замер в разрезе каждого регистра сведений.</td>
+    </tr>
+    <tr data-status="net" data-layer="cf">
+      <td class="num">7</td>
+      <td>Загрузка данных</td>
+      <td class="op">Загрузка мандатов</td>
+      <td>Каждый час, с 09:00</td>
+      <td><span class="badge net">Нет</span></td>
+      <td><span class="badge cf">Конфигурация</span></td>
+      <td>Та же обработка <code>ОбменДаннымиБэкОфис</code>, тот же веб-сервис <code>Avancore.DownloadPosition</code>.</td>
+      <td class="point"><code>ОбработатьДанные_Справочники</code>. Один замер на вид справочника, вокруг всего цикла в диспетчере. Вес - число элементов. Внутрь процедур вроде <code>ОбработатьДанные_Портфель</code> замер не ставить: они вызываются по одному элементу и дадут тысячи записей. Виды актива и места хранения живут внутри <code>ОбработатьДанные_Актив</code> и <code>ОбработатьДанные_МестоХранения</code>, отдельно их не оборачивать.
+        <details>
+          <summary>30 процедур справочников верхнего уровня</summary>
+          <ul class="procs">
+            <li><code>ОбработатьДанные_НастройкиУстановкиКредитныхРейтингов</code></li>
+            <li><code>ОбработатьДанные_УровниКредитногоРейтинга</code></li>
+            <li><code>ОбработатьДанные_ИнформационныеПлощадки</code></li>
+            <li><code>ОбработатьДанные_ИнвестиционныеПрофили</code></li>
+            <li><code>ОбработатьДанные_ТорговыеСчета</code></li>
+            <li><code>ОбработатьДанные_КодыКлиента</code></li>
+            <li><code>ОбработатьДанные_ТипКлиента</code></li>
+            <li><code>ОбработатьДанные_ТипКупона</code></li>
+            <li><code>ОбработатьДанные_СтранаМира</code></li>
+            <li><code>ОбработатьДанные_Валюта</code></li>
+            <li><code>ОбработатьДанные_СекторЭкономики</code></li>
+            <li><code>ОбработатьДанные_ОтрасльЭкономики</code></li>
+            <li><code>ОбработатьДанные_Биржа</code></li>
+            <li><code>ОбработатьДанные_Индекс</code></li>
+            <li><code>ОбработатьДанные_Стратегия</code></li>
+            <li><code>ОбработатьДанные_СтатьиДоходовИРасходов</code></li>
+            <li><code>ОбработатьДанные_Подпортфель</code></li>
+            <li><code>ОбработатьДанные_Пул</code></li>
+            <li><code>ОбработатьДанные_Контрагент</code></li>
+            <li><code>ОбработатьДанные_АффилированныеЛица</code></li>
+            <li><code>ОбработатьДанные_Рейтинг</code></li>
+            <li><code>ОбработатьДанные_ШкалаРейтингов</code></li>
+            <li><code>ОбработатьДанные_Портфель</code></li>
+            <li><code>ОбработатьДанные_МестоХранения</code></li>
+            <li><code>ОбработатьДанные_Субпортфель</code></li>
+            <li><code>ОбработатьДанные_Актив</code></li>
+            <li><code>ОбработатьДанные_Задолженность</code></li>
+            <li><code>ОбработатьДанные_КлассификаторыКонтрагентов</code></li>
+            <li><code>ОбработатьДанные_ТипАктиваМИДЛ</code></li>
+            <li><code>ОбработатьДанные_МодельныйПортфель</code></li>
+          </ul>
+        </details>
+      </td>
+      <td class="do">Мерить весь цикл вида в диспетчере, одна запись на вид справочника за пакет. Мандаты в первую очередь: <code>Портфель</code>, <code>Субпортфель</code>, <code>МестоХранения</code>, <code>ТорговыеСчета</code>. Источник пакета - обработка МО <code>внВыгрузкаСчетовМандатов_МО_ФО</code>.</td>
+      <td class="who">да</td>
+      <td class="who">да</td>
+      <td>Замер в разрезе каждого справочника.</td>
+    </tr>
+    <tr data-status="net" data-layer="cf">
+      <td class="num">8</td>
+      <td>Загрузка данных</td>
+      <td class="op">Загрузка котировок</td>
+      <td>Ежедневно, 09:00</td>
+      <td><span class="badge net">Нет</span></td>
+      <td><span class="badge cf">Конфигурация</span></td>
+      <td>Та же обработка <code>ОбменДаннымиБэкОфис</code>, тот же веб-сервис <code>Avancore.DownloadPosition</code>.</td>
+      <td class="point"><code>ОбработатьДанные_Документы</code>. Один замер на вид документа, вокруг всего цикла в диспетчере. Вес - число элементов. Внутрь <code>ОбработатьДанные_КотировкаЦБНаБирже</code> замер не ставить: процедура вызывается по одной котировке.
+        <details>
+          <summary>12 процедур документов</summary>
+          <ul class="procs">
+            <li><code>ОбработатьДанные_УстановкиУровняКредитногоРейтинга</code></li>
+            <li><code>ОбработатьДанные_КотировкаЦБНаБирже</code></li>
+            <li><code>ОбработатьДанные_УстановкаСоставаИндекса</code></li>
+            <li><code>ОбработатьДанные_УстановкаРейтингаПоЭмитенту</code></li>
+            <li><code>ОбработатьДанные_СделкаРЕПО</code></li>
+            <li><code>ОбработатьДанные_РаскрытиеСтруктурыАктивов</code></li>
+            <li><code>ОбработатьДанные_СделкиСЦеннымиБумагами</code></li>
+            <li><code>ОбработатьДанные_РегистрацияПлановойПозиции</code></li>
+            <li><code>ОбработатьДанные_ОфертыПоОблигациям</code></li>
+            <li><code>ОбработатьДанные_КупонныеРасписания</code></li>
+            <li><code>ОбработатьДанные_КорпоративныеСобытияПоДолевомуАктиву</code></li>
+            <li><code>ОбработатьДанные_ИсполненияПоСделке</code></li>
+          </ul>
+        </details>
+      </td>
+      <td class="do">Мерить весь цикл вида в диспетчере, одна запись на вид документа за пакет. Выгрузка котировок из МО дополнительно шлет два регистра: <code>ФинансовыеПоказателиОблигаций</code> и <code>ИсторияНоминальнойСтоимостиОблигаций</code>. Их покрывает замер регистров из строки 6, второй раз не мерить.</td>
+      <td class="who">да</td>
+      <td class="who">да</td>
+      <td>Замер в разрезе каждого документа.</td>
+    </tr>
+    <tr data-status="net" data-layer="epf">
+      <td class="num">9</td>
+      <td>Загрузка данных</td>
+      <td class="op">Загрузка депозитов</td>
+      <td>Ежедневно, 05:00</td>
+      <td><span class="badge net">Нет</span></td>
+      <td><span class="badge epf">Внешняя обработка</span></td>
+      <td><code>внЗагрузкаДепозитовИзВнешнихИсточников</code>, версия 1.18. Копия <code>внЗагрузкаДепозитовИзВнешнихИсточников_109</code> - это версия 1.09, ее не мерить.</td>
+      <td class="point"><code>ВыполнитьКоманду</code>: <code>ЗаполнитьДепозиты</code> и <code>ОбновитьФактическуюПозицию</code>.</td>
+      <td class="do">Добавить замер. Вес - количество депозитов к загрузке, как просит постановка.</td>
+      <td class="who">да</td>
+      <td class="who">нет</td>
+      <td>Регламентное задание, внешняя обработка "загрузка депозитов".</td>
+    </tr>
+    <tr data-status="net" data-layer="epf">
+      <td class="num">10</td>
+      <td>Загрузка данных</td>
+      <td class="op">Загрузка котировок ММВБ</td>
+      <td>Ежедневно, 09:00</td>
+      <td><span class="badge net">Нет</span></td>
+      <td><span class="badge epf">Внешняя обработка</span></td>
+      <td><code>внЗагрузкаКотировокММВБ</code></td>
+      <td class="point"><code>ВыполнитьКоманду</code>: <code>ЗагрузитьОбъекты</code> и <code>СоздатьОбъекты</code>.</td>
+      <td class="do">Добавить замер во внешней обработке. Метод конфигурации <code>АванкорВыполнениеРегламентныхЗаданий.ЗагрузитьКотировкиММВБ</code> сразу завершается и котировки не грузит, замер туда не ставить.</td>
+      <td class="who">да</td>
+      <td class="who">нет</td>
+      <td>Дополнительная обработка "Загрузка котировок (ММВБ)". Замер не должен влиять на производительность.</td>
+    </tr>
+    <tr data-status="net" data-layer="epf">
+      <td class="num">11</td>
+      <td>Загрузка данных</td>
+      <td class="op">Загрузка индексов</td>
+      <td>Ежедневно, 08:00</td>
+      <td><span class="badge net">Нет</span></td>
+      <td><span class="badge epf">Внешняя обработка</span></td>
+      <td><code>внЗагрузкаИндексовФО</code></td>
+      <td class="point"><code>ВыполнитьКоманду</code>: <code>ЗагрузитьОбъекты</code> и <code>СоздатьОбъекты</code>.</td>
+      <td class="do">Добавить замер только во внешней обработке. На копии базы включено задание "Загрузка индексов / Загрузить индексы в фоне": ключ <code>ЗагрузкаИндексов</code>, метод <code>ДополнительныеОтчетыИОбработки.ВыполнитьОбработкуПоРегламентномуЗаданию</code>. Предопределенное "Загрузить индексы (ММВБ)" в списке есть, флажок использования пустой, то есть выключено. Точка в <code>АванкорВыполнениеРегламентныхЗаданий.ЗагрузитьИндексыММВБ</code> не нужна.</td>
+      <td class="who">да</td>
+      <td class="who">нет</td>
+      <td>Дополнительная обработка "Загрузка индексов". Замер не должен влиять на производительность.</td>
+    </tr>
+    <tr data-status="net" data-layer="epf">
+      <td class="num">12</td>
+      <td>Загрузка данных</td>
+      <td class="op">Загрузка TCRIS</td>
+      <td>Ежедневно</td>
+      <td><span class="badge net">Нет</span></td>
+      <td><span class="badge epf">Внешняя обработка</span></td>
+      <td><code>ЗагрузкаДопРеквизитаTCRIS</code></td>
+      <td class="point"><code>ВыполнитьКоманду</code> вызывает <code>ЗагрузитьTCRIS</code>.</td>
+      <td class="do">Добавить замер вокруг <code>ЗагрузитьTCRIS</code>.</td>
+      <td class="who">да</td>
+      <td class="who">нет</td>
+      <td>Дополнительная обработка "Загрузка доп. реквизита TCRIS". Замер не должен влиять на производительность.</td>
+    </tr>
+    <tr data-status="net" data-layer="epf">
+      <td class="num">13</td>
+      <td>Загрузка данных</td>
+      <td class="op">Загрузка неторговых поручений РОСТ</td>
+      <td>Каждые 10 минут, с 10:00</td>
+      <td><span class="badge net">Нет</span></td>
+      <td><span class="badge epf">Внешняя обработка</span></td>
+      <td><code>внЗагрузкаНеторговыхПорученийРОСТ</code></td>
+      <td class="point"><code>ВыполнитьКоманду</code>, команда <code>ФоновоеВыполнение</code>. Работа в <code>СоздатьПоручения</code>.</td>
+      <td class="do">Добавить замер на фоновое создание неторговых поручений.</td>
+      <td class="who">да</td>
+      <td class="who">нет</td>
+      <td>Дополнительная обработка "Загрузка неторговых поручений РОСТ". Замер не должен влиять на производительность.</td>
+    </tr>
+    <tr data-status="est" data-layer="cf">
+      <td class="num">14</td>
+      <td>Сделки</td>
+      <td class="op">Загрузка сделок</td>
+      <td>Ежедневно</td>
+      <td><span class="badge est">Есть</span></td>
+      <td><span class="badge cf">Конфигурация</span></td>
+      <td>На PROD сделки грузит один адаптер: "QUIK FIX Банк ВТБ (ПАО)", вид FIX. Обработка <code>АдаптерFIX</code>, регламентное задание <code>АванкорСинхронизацияСостояний</code>.</td>
+      <td class="point"><code>АдаптерFIX.Синхронизировать</code> вызывает <code>Адаптеры.ОбработатьПакет</code>. Ключ уже есть: "ОбработатьПакет", вес - число сообщений пакета. Адаптеры вида QUIK на PROD помечены на удаление и сделок не грузят, <code>АдаптерQUIK.СинхронизироватьСделки</code> не используется.</td>
+      <td class="do">Новый замер не нужен. Ветка QUIK без замера к этой базе не относится.</td>
+      <td class="who">не указано</td>
+      <td class="who">не указано</td>
+      <td>Система: Аванкор ФО. Больше полей нет.</td>
+    </tr>
+    <tr data-status="net" data-layer="cf">
+      <td class="num">15</td>
+      <td>Сделки</td>
+      <td class="op">Исполнение сделок</td>
+      <td>Ежедневно, 23:55</td>
+      <td><span class="badge net">Нет</span></td>
+      <td><span class="badge cf">Конфигурация</span></td>
+      <td>Регламентное задание <code>АванкорИсполнениеСделок</code>. Обработка <code>ГрупповоеИсполнениеСделок</code>.</td>
+      <td class="point"><code>АванкорВыполнениеРегламентныхЗаданий.ИсполнениеСделок</code> создает обработку и вызывает <code>СоздатьДокументыИсполнения</code>.</td>
+      <td class="do">Добавить замер в <code>СоздатьДокументыИсполнения</code>.</td>
+      <td class="who">нет</td>
+      <td class="who">да</td>
+      <td>В файле: "Добавить замеры".</td>
+    </tr>
+    <tr data-status="net" data-layer="cf">
+      <td class="num">17</td>
+      <td>Упаковка данных</td>
+      <td class="op">Проанализировать алгоритмы упаковки данных</td>
+      <td>Ежедневно</td>
+      <td><span class="badge net">Нет</span></td>
+      <td><span class="badge cf">Конфигурация</span></td>
+      <td>Регламентное задание <code>АванкорУпаковкаДанных</code>.</td>
+      <td class="point"><code>АванкорВыполнениеРегламентныхЗаданий.УпаковкаДанных</code>. Шаги: <code>РегистрыСведений.КэшВмОписания.Упаковать</code>, <code>ОчиститьСлужебныеКэши</code>, <code>Обработки.ВоркбенчУтилиты.ОчиститьДанныеНеактивныхСеансов</code>, затем <code>Сократить</code> у регистров <code>БиржевыеТранзакции</code>, <code>БиржевыеТранзакцииНеторговые</code>, <code>БиржевыеЗаявкиВнешние</code>, <code>СообщенияАдаптеров</code>, <code>СведенияОБиржевыхДисконтах</code>.</td>
+      <td class="do">Добавить отдельный замер на каждый шаг. По шагам и видно, какой занимает время. Обработка <code>УпаковкаСправокРасчетПоЛимитам</code> - другой объект.</td>
+      <td class="who">да</td>
+      <td class="who">да</td>
+      <td>Оценка в файле: 10. Объект и процедура пустые.</td>
+    </tr>
+  </tbody>
+</table>
+</div>
+<footer>
+  <p>Номера 1-13, 15, 14 и 17 - все 16 операций файла. Номера 16 в постановке нет. Колонки "ИТ ВИМ" и "Аванкор" повторяют флаги файла: "да" значит сторона отмечена ответственной.</p>
+</footer>
+</div>
+<script>
+function applyFilter() {
+  var q = document.getElementById("q").value.toLowerCase();
+  var st = document.getElementById("st").value;
+  var layer = document.getElementById("layer").value;
+  var rows = document.querySelectorAll("tbody tr");
+  for (var i = 0; i < rows.length; i++) {
+    var tr = rows[i];
+    var text = tr.textContent.toLowerCase();
+    var okQ = !q || text.indexOf(q) !== -1;
+    var okS = !st || tr.getAttribute("data-status") === st;
+    var okL = !layer || tr.getAttribute("data-layer") === layer;
+    tr.style.display = (okQ && okS && okL) ? "" : "none";
+  }
+}
+</script>
+</body>
+</html>
