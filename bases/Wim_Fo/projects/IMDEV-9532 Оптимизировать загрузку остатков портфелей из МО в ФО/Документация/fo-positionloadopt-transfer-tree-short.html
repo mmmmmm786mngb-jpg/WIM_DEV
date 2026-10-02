@@ -70,6 +70,7 @@
   .chg { background: var(--peach); color: #9a3412; }
   .del { background: var(--rose); color: #9f1239; }
   .meta-tag { background: var(--meta); color: #5b2a86; }
+  .perf-tag { background: #fff2c9; color: #8a5a00; }
   .card {
     background: var(--paper);
     border: 1px solid var(--line);
@@ -109,9 +110,9 @@
 <body>
 <div class="page">
   <header>
-    <div class="kicker">Аванкор, фронт-офис 1.4.9.5, расширение FO_PositionLoadOpt 1.0.0.4</div>
+    <div class="kicker">Аванкор, фронт-офис 1.4.9.5, расширение FO_PositionLoadOpt 1.0.0.5</div>
     <h1>Что перенести в базовую конфигурацию</h1>
-    <p>Два заимствованных объекта и один индекс. Править штатные процедуры на месте. Аннотацию <code>&amp;ИзменениеИКонтроль</code>, маркеры <code>#Вставка</code> и <code>#Удаление</code>, префикс <code>FO_PositionLoadOpt_</code> не копировать. Новые функции уже без префикса.</p>
+    <p>Два заимствованных объекта и один индекс. Править штатные процедуры на месте. Аннотацию <code>&amp;ИзменениеИКонтроль</code>, маркеры <code>#Вставка</code> и <code>#Удаление</code>, префикс <code>FO_PositionLoadOpt_</code> не копировать. Новые функции уже без префикса. Версия 1.0.0.5 = 1.0.0.4 + замер производительности загрузки регистра (4 вставки в ту же процедуру).</p>
   </header>
 
   <div class="legend">
@@ -119,6 +120,7 @@
     <span class="tag chg">изменение</span>
     <span class="tag del">удаление фрагмента</span>
     <span class="tag meta-tag">метаданные</span>
+    <span class="tag perf-tag">замер</span>
   </div>
 
   <div class="card">
@@ -133,12 +135,16 @@
                 <span class="tag chg">изменение</span>
                 <span class="node">ОбработатьДанные_ДополнительныеСведения</span>
                 <ul>
+                  <li><span class="tag perf-tag">замер</span> <span class="note">в начале: <code>НачалоЗамера = ОценкаПроизводительности.НачатьЗамерВремени()</code>, счетчики <code>ПортфелиСведений</code>, <code>ЗаписаноСтрок</code></span></li>
                   <li><span class="tag add">добавление</span> <span class="note">кэши <code>КэшСвойств</code>, <code>КэшЗначений</code>, <code>ТекущиеЗначения</code> перед циклом</span></li>
+                  <li><span class="tag perf-tag">замер</span> <span class="note">после проверки найденного объекта: портфель в <code>ПортфелиСведений</code></span></li>
                   <li><span class="tag del">удаление</span> <span class="note"><code>ДополнительныеРеквизитыИСведения.НайтиПоНаименованию(...)</code></span></li>
                   <li><span class="tag add">добавление</span> <span class="note"><code>СвойствоПоНаименованию(СтрокаОбъектXDTO.Ключ, КэшСвойств)</code></span></li>
                   <li><span class="tag del">удаление</span> <span class="note"><code>ПреобразоватьЗначениеДополнительногоСведения(...)</code></span></li>
                   <li><span class="tag add">добавление</span> <span class="note"><code>ПреобразованноеЗначениеСведения(...)</code> и пропуск строки, если <code>ФлагУжеИмеетЗначение</code></span></li>
+                  <li><span class="tag perf-tag">замер</span> <span class="note">после <code>Запись.Записать()</code>: <code>ЗаписаноСтрок = ЗаписаноСтрок + 1</code></span></li>
                   <li><span class="tag add">добавление</span> <span class="note"><code>ЗапомнитьЗаписанноеЗначение</code> после <code>Запись.Записать()</code></span></li>
+                  <li><span class="tag perf-tag">замер</span> <span class="note">после цикла: <code>ОценкаПроизводительности.ЗакончитьЗамерВремени("ОбменБэкОфис.РегистрыСведений.ДополнительныеСведения", ...)</code>, если список не пуст</span></li>
                 </ul>
               </li>
               <li><span class="tag add">добавление</span> <span class="node">СвойствоПоНаименованию</span></li>
@@ -186,7 +192,7 @@
       </li>
     </ul>
     <div class="foot">
-      <p>2 изменения штатных процедур, 7 новых функций и процедур, 2 удаления фрагментов, 1 индекс реквизита. Свойства расширения и язык не переносить.</p>
+      <p>2 изменения штатных процедур, 7 новых функций и процедур, 2 удаления фрагментов, 1 индекс реквизита, 4 вставки замера производительности (в той же процедуре, новых функций нет). Свойства расширения и язык не переносить.</p>
     </div>
   </div>
 </div>
