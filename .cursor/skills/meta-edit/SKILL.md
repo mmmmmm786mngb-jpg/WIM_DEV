@@ -33,7 +33,7 @@ powershell.exe -NoProfile -File ".cursor/skills/meta-edit/scripts/meta-edit.ps1"
 | Operation | Inline-операция (альтернатива DefinitionFile) |
 | Value | Значение для inline-операции |
 | DefinitionFile | JSON-файл с операциями (альтернатива Operation) |
-| NoValidate | Не запускать meta-validate после правки |
+| NoValidate | Не запускать валидацию после правки |
 
 ## Частые операции
 

@@ -1,4 +1,4 @@
-﻿# form-compile v1.196 — Compile 1C managed form from JSON or object metadata (гвард на группу additionalColumns без ключа columns)
+﻿# form-compile v1.199 — Compile 1C managed form from JSON or object metadata
 # Source: https://github.com/Nikolay-Shirokov/cc-1c-skills
 [CmdletBinding(PositionalBinding=$false)]
 param(
@@ -1726,17 +1726,24 @@ if ($FromObject) {
 
 # Базовая директория для @file-ссылок в query динсписка (зеркало skd-compile)
 $script:queryBaseDir = if ($JsonPath) { [System.IO.Path]::GetDirectoryName((Resolve-Path $JsonPath).Path) } else { (Get-Location).Path }
-function Resolve-QueryValue {
+function Resolve-TextFromFile {
 	param([string]$val, [string]$baseDir)
 	if (-not $val.StartsWith("@")) { return $val }
 	$filePath = $val.Substring(1)
 	if ([System.IO.Path]::IsPathRooted($filePath)) {
 		$candidates = @($filePath)
 	} else {
-		$candidates = @((Join-Path $baseDir $filePath), (Join-Path (Get-Location).Path $filePath))
+		$candidates = @(
+			(Join-Path $baseDir $filePath),
+			(Join-Path (Get-Location).Path $filePath)
+		)
 	}
-	foreach ($c in $candidates) { if (Test-Path $c) { return (Get-Content -Raw -Encoding UTF8 $c).TrimEnd() } }
-	Write-Error "Query file not found: $filePath (searched: $($candidates -join ', '))"
+	foreach ($c in $candidates) {
+		if (Test-Path $c) {
+			return (Get-Content -Raw -Encoding UTF8 $c).TrimEnd()
+		}
+	}
+	Write-Error "Файл значения не найден: $filePath (искали: $($candidates -join ', '))"
 	exit 1
 }
 
@@ -2488,6 +2495,14 @@ function Resolve-TypeStr {
 	} elseif ($typeStr.Contains('.') -and $typeStr -match '^d\d+p\d+:') {
 		$typeStr = $typeStr.Substring($typeStr.IndexOf(':') + 1)
 	}
+
+	# Хвосты, которые дописывает вывод meta-info к множествам типов: суффикс обобщённого метатипа
+	# и счётчик состава. Копипаста строки оттуда — обычный путь, поэтому хвост снимаем молча.
+	# Срезаем ТОЛЬКО эти известные формы: круглые скобки заняты параметризованными типами
+	# (Число(15,2)), слепой срез скобок сломал бы их.
+	$typeStr = ($typeStr -replace '\s*\((?:все|all)\)\s*$', '').Trim()
+	$typeStr = ($typeStr -replace '\s*[—-]\s*(?:типов|types):\s*\d+\s*$', '').Trim()
+	$typeStr = ($typeStr -replace '\s*\((?:типов|types):\s*\d+\)\s*$', '').Trim()
 
 	# Параметризованные типы: Number(15,2), Строка(100)
 	if ($typeStr -match '^([^(]+)\((.+)\)$') {
@@ -6035,7 +6050,7 @@ function Emit-Attributes {
 			$ddr = if ($st.dynamicDataRead -eq $false) { "false" } else { "true" }
 			X "$si<DynamicDataRead>$ddr</DynamicDataRead>"
 			if ($hasQuery) {
-				$qtext = Resolve-QueryValue "$($st.query)" $script:queryBaseDir
+				$qtext = Resolve-TextFromFile "$($st.query)" $script:queryBaseDir
 				X "$si<QueryText>$(Esc-XmlText $qtext)</QueryText>"
 			}
 			# Явные поля набора (редко): override title/dataPath

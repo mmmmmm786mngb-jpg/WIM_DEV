@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# meta-compile v1.112 — Compile 1C metadata object from JSON
+# meta-compile v1.116 — Compile 1C metadata object from JSON
 # Source: https://github.com/Nikolay-Shirokov/cc-1c-skills
 
 import argparse
@@ -527,7 +527,7 @@ enum_value_aliases = {
     # DefaultPresentation
     'ВВидеНаименования': 'AsDescription', 'ВВидеКода': 'AsCode',
     # FillChecking
-    'НеПроверять': 'DontCheck', 'Ошибка': 'ShowError', 'Предупреждение': 'ShowWarning',
+    'НеПроверять': 'DontCheck', 'Ошибка': 'ShowError',
     # Indexing
     'НеИндексировать': 'DontIndex', 'Индексировать': 'Index',
     'ИндексироватьСДопУпорядочиванием': 'IndexWithAdditionalOrder',
@@ -542,13 +542,17 @@ valid_enum_values = {
     'RegisterType': ['Balance', 'Turnovers'],
     'WriteMode': ['Independent', 'RecorderSubordinate'],
     'InformationRegisterPeriodicity': ['Nonperiodical', 'Second', 'Day', 'Month', 'Quarter', 'Year', 'RecorderPosition'],
-    'DependenceOnCalculationTypes': ['DontUse', 'OnActionPeriod'],
+    'DependenceOnCalculationTypes': ['DontUse', 'OnActionPeriod', 'OnRegistrationPeriod'],
     # AutomaticAndManaged — только у внешнего источника данных и его таблиц: там режим может
     # решаться на уровне таблицы, у прочих объектов такого значения нет.
     'DataLockControlMode': ['Automatic', 'Managed', 'AutomaticAndManaged'],
     'FullTextSearch': ['Use', 'DontUse'],
     'DataHistory': ['Use', 'DontUse'],
     'DefaultPresentation': ['AsDescription', 'AsCode'],
+    # Уточнение по виду объекта («Вид.Свойство») — проверяется раньше общего списка. AsNumber
+    # («в виде номера») есть только у задачи: у справочника и прочих платформа его отвергает
+    # («Неверное значение перечисления», 8.3.24 и 8.5.1).
+    'Task.DefaultPresentation': ['AsDescription', 'AsNumber'],
     'Posting': ['Allow', 'Deny'],
     'RealTimePosting': ['Allow', 'Deny'],
     'EditType': ['InDialog', 'InList', 'BothWays'],
@@ -558,10 +562,10 @@ valid_enum_values = {
     'NumberType': ['String', 'Number'],
     'NumberAllowedLength': ['Variable', 'Fixed'],
     'RegisterRecordsDeletion': ['AutoDelete', 'AutoDeleteOnUnpost', 'AutoDeleteOff'],
-    'RegisterRecordsWritingOnPost': ['WriteModified', 'WriteSelected', 'WriteAll'],
+    'RegisterRecordsWritingOnPost': ['WriteModified', 'WriteSelected'],
     'ReturnValuesReuse': ['DontUse', 'DuringRequest', 'DuringSession'],
     'ReuseSessions': ['DontUse', 'Use', 'AutoUse'],
-    'FillChecking': ['DontCheck', 'ShowError', 'ShowWarning'],
+    'FillChecking': ['DontCheck', 'ShowError'],
     'Indexing': ['DontIndex', 'Index', 'IndexWithAdditionalOrder'],
     'SubordinationUse': ['ToItems', 'ToFolders', 'ToFoldersAndItems'],
     'CodeSeries': ['WholeCatalog', 'WithinSubordination', 'WithinOwnerSubordination', 'WholeCharacteristicKind', 'WholeChartOfAccounts'],
@@ -618,8 +622,8 @@ def normalize_enum_value(prop_name, value):
     # 1. Check alias dictionary — silent auto-correct
     if value in enum_value_aliases:
         return enum_value_aliases[value]
-    # 2. Case-insensitive match against valid values — silent
-    valid = valid_enum_values.get(prop_name)
+    # 2. Case-insensitive match against valid values — silent. Список вида объекта — раньше общего.
+    valid = valid_enum_values.get(f"{obj_type}.{prop_name}") or valid_enum_values.get(prop_name)
     if valid:
         for v in valid:
             if v.lower() == value.lower():
@@ -775,6 +779,49 @@ type_synonyms = {
     'задачассылка': 'TaskRef',
     'определяемыйтип': 'DefinedType',
     'definedtype': 'DefinedType',
+    # Русские имена объектных типов, менеджеров и наборов записей — те самые метки, которые
+    # печатает meta-info. Без них раундтрип «прочитал вывод → подал на вход» рвался:
+    # `ДокументОбъект.Заказ` из источников подписки компилятор отвергал с «Неизвестный тип»,
+    # хотя сам же печатал эту форму через meta-info. Аббревиатуры (ПВХ/ПВР, РС/РН/РБ/РР) приняты
+    # наравне с полными именами: вывод навыка сокращает долгие виды, чтобы в списке на сорок
+    # реквизитов не терялось имя объекта.
+    # Состав держит гард tests/skills/check-typeset-coverage.mjs.
+    'бизнеспроцессменеджер': 'BusinessProcessManager',
+    'бизнеспроцессобъект': 'BusinessProcessObject',
+    'документменеджер': 'DocumentManager',
+    'документобъект': 'DocumentObject',
+    'журналдокументовменеджер': 'DocumentJournalManager',
+    'задачаменеджер': 'TaskManager',
+    'задачаобъект': 'TaskObject',
+    'константаменеджерзначения': 'ConstantValueManager',
+    'любаяссылка': 'AnyRef',
+    'любаяссылкаиб': 'AnyIBRef',
+    'наборзаписейперерасчета': 'RecalculationRecordSet',
+    'наборзаписейпоследовательности': 'SequenceRecordSet',
+    'наборзаписейрб': 'AccountingRegisterRecordSet',
+    'наборзаписейрн': 'AccumulationRegisterRecordSet',
+    'наборзаписейрр': 'CalculationRegisterRecordSet',
+    'наборзаписейрс': 'InformationRegisterRecordSet',
+    'обработкаменеджер': 'DataProcessorManager',
+    'отчетменеджер': 'ReportManager',
+    'пврменеджер': 'ChartOfCalculationTypesManager',
+    'пвробъект': 'ChartOfCalculationTypesObject',
+    'пврссылка': 'ChartOfCalculationTypesRef',
+    'пвхменеджер': 'ChartOfCharacteristicTypesManager',
+    'пвхобъект': 'ChartOfCharacteristicTypesObject',
+    'пвхссылка': 'ChartOfCharacteristicTypesRef',
+    'перечислениеменеджер': 'EnumManager',
+    'планобменаменеджер': 'ExchangePlanManager',
+    'планобменаобъект': 'ExchangePlanObject',
+    'плансчетовменеджер': 'ChartOfAccountsManager',
+    'плансчетовобъект': 'ChartOfAccountsObject',
+    'регистрбухгалтериименеджер': 'AccountingRegisterManager',
+    'регистрнакопленияменеджер': 'AccumulationRegisterManager',
+    'регистррасчетаменеджер': 'CalculationRegisterManager',
+    'регистрсведенийменеджер': 'InformationRegisterManager',
+    'справочникменеджер': 'CatalogManager',
+    'справочникобъект': 'CatalogObject',
+    'характеристика': 'Characteristic',
     # English lowercase ref synonyms
     'catalogref': 'CatalogRef',
     'documentref': 'DocumentRef',
@@ -826,6 +873,13 @@ def resolve_type_str(type_str):
         type_str = type_str[4:]
     elif '.' in type_str and re.match(r'^d\d+p\d+:', type_str):
         type_str = type_str[type_str.index(':') + 1:]
+    # Хвосты, которые дописывает вывод meta-info к множествам типов: суффикс обобщённого метатипа
+    # и счётчик состава. Копипаста строки оттуда — обычный путь, поэтому хвост снимаем молча.
+    # Срезаем ТОЛЬКО эти известные формы: круглые скобки заняты параметризованными типами
+    # (Число(15,2)), слепой срез скобок сломал бы их.
+    type_str = re.sub(r'\s*\((?:все|all)\)\s*$', '', type_str, flags=re.IGNORECASE).strip()
+    type_str = re.sub(r'\s*[—-]\s*(?:типов|types):\s*\d+\s*$', '', type_str, flags=re.IGNORECASE).strip()
+    type_str = re.sub(r'\s*\((?:типов|types):\s*\d+\)\s*$', '', type_str, flags=re.IGNORECASE).strip()
     # Параметризованные типы: Number(15,2), Строка(100)
     m = re.match(r'^([^(]+)\((.+)\)$', type_str)
     if m:
@@ -1041,8 +1095,37 @@ def emit_type_content(indent, type_str):
 
 def emit_value_type(indent, type_str):
     X(f'{indent}<Type>')
+    mark = len(lines)
     emit_type_content(f'{indent}\t', type_str)
+    warn_defined_type_in_composite(mark)
     X(f'{indent}</Type>')
+
+# Определяемый тип и характеристику Конфигуратор даёт выбрать только ЕДИНСТВЕННЫМ, не одним из
+# составного (характеристику — даже вместе с другой характеристикой). Загрузчик такое принимает,
+# и в типовой ERP один такой реквизит есть (Документ.НачислениеИСписаниеБонусныхБаллов.Баллы —
+# два определяемых типа подряд), поэтому предупреждение, а не отказ: иначе навык не собрал бы
+# того, что поставляет 1С. Соотношение в корпусе erp+acc — 6500 определяемых единственным против
+# 1 составного и 1741 характеристика единственным против 0 составных.
+def warn_defined_type_in_composite(from_index):
+    frag = chr(10).join(lines[from_index:])
+    # После имени тега — либо '>', либо пробел: тип из чужого пространства имён несёт локальную
+    # xmlns прямо в теге (<v8:Type xmlns:mxl="…">), и без пробела в классе он не считался членом.
+    if len(re.findall(r'<v8:(?:Type|TypeSet)[ >]', frag)) < 2:
+        return
+    dts = re.findall(r'<v8:TypeSet>cfg:((?:DefinedType|Characteristic)[.][^<]+)</v8:TypeSet>', frag)
+    if dts:
+        print("WARNING: Составной тип содержит (" + ', '.join(dts) +
+              "). Конфигуратор даёт выбрать определяемый тип и характеристику только единственным — "
+              "собрать такое руками не получится. Платформа загрузит.", file=sys.stderr)
+
+# Что из только что записанного фрагмента ушло МНОЖЕСТВОМ. Спрашиваем сам эмиттер, а не повторяем
+# его регулярки: список видов, дающих v8:TypeSet, живёт в emit_type_content, и вторая копия
+# разъехалась бы с ним молча — ровно тот класс отказа, от которого держим гарды.
+def get_emitted_type_sets(from_index):
+    out = []
+    for ln in lines[from_index:]:
+        out += re.findall(r'<v8:TypeSet>cfg:([^<]+)</v8:TypeSet>', ln)
+    return out
 
 # --- FillValue (значение заполнения реквизита) ---
 # Пара FillFromFillingValue+FillValue — единый блок «заполнения» (недоступен у реквизитов ТЧ).
@@ -1315,8 +1398,10 @@ def parse_attribute_shorthand(val):
         'comment': str(val['comment']) if val.get('comment') else '',
         # Лоуэркейз как в строковом пути (стр.809): проверки флагов регистронезависимы (зеркало PS -contains).
         'flags': [str(f).strip().lower() for f in val.get('flags', [])],
-        'fillChecking': fc,
-        'indexing': str(val['indexing']) if val.get('indexing') else '',
+        # Значения перечислений — через список допустимых, как свойства объекта: иначе значение из DSL
+        # (ShowWarning, «Ошибка») уходило в XML как есть, и конфигурация не загружалась.
+        'fillChecking': normalize_enum_value('FillChecking', fc) if fc else '',
+        'indexing': normalize_enum_value('Indexing', str(val['indexing'])) if val.get('indexing') else '',
         'multiLine': True if val.get('multiLine') is True else False,
         'choiceHistoryOnInput': str(val['choiceHistoryOnInput']) if val.get('choiceHistoryOnInput') else '',
         'fullTextSearch': str(val['fullTextSearch']) if val.get('fullTextSearch') else '',
@@ -1805,7 +1890,7 @@ def emit_standard_attributes(indent, object_type):
                 if d.get('tooltip') is not None:
                     ov['ToolTip'] = d['tooltip']   # строка ИЛИ {ru,en}
                 if d.get('fillChecking'):
-                    ov['FillChecking'] = str(d['fillChecking'])
+                    ov['FillChecking'] = normalize_enum_value('FillChecking', str(d['fillChecking']))
                 if d.get('fillFromFillingValue') is not None:
                     ov['FillFromFillingValue'] = 'true' if d['fillFromFillingValue'] else 'false'
                 if d.get('fullTextSearch'):
@@ -2552,7 +2637,8 @@ def emit_tabular_section(indent, ts_name, columns, object_type, object_name, ts_
     else:
         X(f'{indent}\t\t<Comment/>')
     emit_mltext(f'{indent}\t\t', 'ToolTip', ts_tooltip)
-    X(f'{indent}\t\t<FillChecking>{ts_fill_checking if ts_fill_checking else "DontCheck"}</FillChecking>')
+    ts_fc = normalize_enum_value('FillChecking', str(ts_fill_checking)) if ts_fill_checking else 'DontCheck'
+    X(f'{indent}\t\t<FillChecking>{ts_fc}</FillChecking>')
     # TS-блок стандартных реквизитов (LineNumber) эмитим ВСЕГДА, кроме подавления `lineNumber: ""` (дом-конвенция
     # суппресса): ~6% ТЧ исторически опускают блок (правило не выводимо — Товары all-default его имеет, соседи нет).
     if not (isinstance(ts_line_number, str) and ts_line_number == ''):
@@ -2857,11 +2943,13 @@ def emit_document_properties(indent):
     emit_standard_attributes(i, 'Document')
     emit_characteristics(i, defn.get('characteristics'))
     emit_based_on(i, defn.get('basedOn'))
-    # InputByString: override `inputByString` ЛИБО дефолт [Номер].
+    # InputByString: override `inputByString` ЛИБО дефолт [Номер при N>0].
+    # Номер — в дефолт ввода по строке только при ненулевой длине номера, как код у справочника:
+    # «Указано неверное поле для ввода по строке: Номер» (8.3.24, 8.5.1).
     if 'inputByString' in defn:
         ib_fields = [expand_data_path(str(x)) for x in (defn.get('inputByString') or [])]
     else:
-        ib_fields = [f'Document.{obj_name}.StandardAttribute.Number']
+        ib_fields = [f'Document.{obj_name}.StandardAttribute.Number'] if (defn.get('numberLength') is None or int(defn['numberLength']) > 0) else []
     emit_field_block(i, 'InputByString', ib_fields)
     X(f'{i}<CreateOnInput>{get_enum_prop("CreateOnInput", "createOnInput", "Use")}</CreateOnInput>')
     X(f'{i}<SearchStringModeOnInputByString>{get_enum_prop("SearchStringModeOnInputByString", "searchStringModeOnInputByString", "Begin")}</SearchStringModeOnInputByString>')
@@ -3082,7 +3170,19 @@ def emit_defined_type_properties(indent):
     else:
         vt = ''
     if vt:
+        # Состав определяемого типа — только конкретные типы. Тип-множество внутри платформа не
+        # принимает: загрузка падает целиком с «ОпределяемыйТип.<Имя> - Недопустимый тип» (замерено
+        # на 8.3.24.1691 для ОпределяемыйТип, Характеристика, ЛюбаяСсылка и голых ссылок).
+        # Отказываем здесь, чтобы ошибка называла причину, а не приходила из Конфигуратора.
+        mark = len(lines)
         emit_value_type(i, vt)
+        sets = get_emitted_type_sets(mark)
+        if sets:
+            print(f"Определяемый тип '{obj_name}': в составе тип-множество — " + ', '.join(sets) +
+                  ". Платформа такую конфигурацию не загрузит («Недопустимый тип»). "
+                  "Состав определяемого типа — только конкретные типы (CatalogRef.<Имя>, Number(15,2) и т.п.).",
+                  file=sys.stderr)
+            sys.exit(1)
     else:
         X(f'{i}<Type/>')
 
@@ -3649,7 +3749,19 @@ def emit_chart_of_characteristic_types_properties(indent):
         vt = ' + '.join(defn['valueTypes'])
     if vt:
         X(f'{i}<Type>')
+        mark = len(lines)
         emit_type_content(f'{i}\t', str(vt))
+        # В типе значения ПВХ Конфигуратор предлагает единственное множество — ОпределяемыйТип.
+        # Голого метатипа (СправочникСсылка/ДокументСсылка/…) и ЛюбойСсылки в дереве выбора нет
+        # вовсе, Характеристики — тоже (тип значения характеристики не может быть значением
+        # характеристики). Загрузку платформа пропускает, но ЛюбаяСсылка молча превращается в
+        # ЛюбаяСсылкуИБ на выгрузке. Предупреждаем: не ошибка, но руками так не собрать.
+        warn_defined_type_in_composite(mark)
+        for ts in get_emitted_type_sets(mark):
+            if not re.match(r'^DefinedType[.]', ts):
+                print(f"WARNING: План видов характеристик '{obj_name}': тип значения '{ts}' Конфигуратор не предлагает "
+                      "(в дереве выбора это папка без флажка). Платформа загрузит, но AnyRef вернётся как AnyIBRef. "
+                      "Обычно нужен конкретный тип или ОпределяемыйТип.<Имя>.", file=sys.stderr)
         X(f'{i}</Type>')
     else:
         X(f'{i}<Type>')
@@ -4045,7 +4157,7 @@ def emit_business_process_properties(indent):
     if 'inputByString' in defn:
         ib_fields = [expand_data_path(str(x)) for x in (defn.get('inputByString') or [])]
     else:
-        ib_fields = [f'BusinessProcess.{obj_name}.StandardAttribute.Number']
+        ib_fields = [f'BusinessProcess.{obj_name}.StandardAttribute.Number'] if (defn.get('numberLength') is None or int(defn['numberLength']) > 0) else []   # Номер — при N>0
     emit_field_block(i, 'InputByString', ib_fields)
     X(f'{i}<CreateOnInput>{get_enum_prop("CreateOnInput", "createOnInput", "DontUse")}</CreateOnInput>')
     X(f'{i}<SearchStringModeOnInputByString>{get_enum_prop("SearchStringModeOnInputByString", "searchStringModeOnInputByString", "Begin")}</SearchStringModeOnInputByString>')
@@ -4125,7 +4237,7 @@ def emit_task_properties(indent):
     if 'inputByString' in defn:
         ib_fields = [expand_data_path(str(x)) for x in (defn.get('inputByString') or [])]
     else:
-        ib_fields = [f'Task.{obj_name}.StandardAttribute.Number']
+        ib_fields = [f'Task.{obj_name}.StandardAttribute.Number'] if (defn.get('numberLength') is None or int(defn['numberLength']) > 0) else []   # Номер — при N>0
     emit_field_block(i, 'InputByString', ib_fields)
     X(f'{i}<SearchStringModeOnInputByString>{get_enum_prop("SearchStringModeOnInputByString", "searchStringModeOnInputByString", "Begin")}</SearchStringModeOnInputByString>')
     X(f'{i}<FullTextSearchOnInputByString>{get_enum_prop("FullTextSearchOnInputByString", "fullTextSearchOnInputByString", "DontUse")}</FullTextSearchOnInputByString>')

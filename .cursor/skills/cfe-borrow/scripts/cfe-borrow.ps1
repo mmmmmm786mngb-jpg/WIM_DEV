@@ -1,4 +1,4 @@
-﻿# cfe-borrow v1.37 — Borrow objects from configuration into extension (CFE)
+﻿# cfe-borrow v1.43 — Borrow objects from configuration into extension (CFE)
 # Source: https://github.com/Nikolay-Shirokov/cc-1c-skills
 [CmdletBinding(PositionalBinding=$false)]
 param(
@@ -60,73 +60,198 @@ function Strip-FormBindings {
 	return $xml
 }
 
-# Ссылки параметров выбора (<ChoiceParameterLinks>/<xr:Link>) — привязка особого рода: путь лежит
-# в <xr:DataPath> и обычным стриппингом не снимается. Текстовое имя в расширении разрешается только
-# если его корень объявлен в <Attributes> самой заимствованной формы; иначе платформа отвергает
-# загрузку — «Неверный путь к полю - X». Реквизиты формы не заимствуются никогда, поэтому ссылка на
-# них разрешима только через id: Конфигуратор подставляет id реквизита ИСХОДНОЙ формы (эталоны
-# Issue66Example4/5/6, JR2433, JR2976, JR49904 — совпадение на шести расширениях). Именно id
-# исходной, а не заимствованной: при заимствовании реквизиты перенумеровываются в 1000000+, а
-# ссылка продолжает указывать в нумерацию базовой формы.
-# Путь на основной реквизит («Объект.X») при заимствованном основном реквизите разрешается текстом
-# и остаётся читаемым; без заимствования переводится в «<id>/0:<uuid реквизита объекта>».
-# Реквизит, которого в источнике нет, недоступен и по uuid: такую связь вырезаем целиком.
-# Пути вида «Items.<Элемент>.CurrentData.<Поле>» не трогаем — их кодировка отдельная.
-function Rewrite-ChoiceParameterLinks {
-	param([string]$xml, $attrUuids, $formAttrIds, [string]$mainAttrName, [bool]$mainAttrBorrowed)
+# Сдвиг блока на уровень вглубь для <BaseForm>; $firstIndent — отступ первой строки.
+# Таб добавляется только в пробельные промежутки между тегами: строки продолжения многострочного
+# текста (<v8:content>, текст запроса) — часть значения. Со сдвигом снимок расходился с формой,
+# и Конфигуратор показывал такой текст изменённым в расширении. Пробельный промежуток между
+# открывающим и закрывающим тегом одного элемента — тоже значение, его не сдвигаем.
+function Get-BaseFormIndented {
+	param([string]$xml, [string]$firstIndent)
+	$parts = [regex]::Split($xml, '(<(?:[^>"'']|"[^"]*"|''[^'']*'')*>)')
+	for ($i = 0; $i -lt $parts.Count; $i += 2) {
+		$seg = $parts[$i]
+		if (-not $seg.Contains("`n") -or $seg.Trim()) { continue }
+		$prevTag = if ($i -gt 0) { $parts[$i - 1] } else { '' }
+		$nextTag = if ($i + 1 -lt $parts.Count) { $parts[$i + 1] } else { '' }
+		$m = [regex]::Match($prevTag, '^<([\w:.-]+)[^>]*(?<!/)>$')
+		if ($m.Success -and $nextTag -ceq "</$($m.Groups[1].Value)>") { continue }
+		$parts[$i] = $seg.Replace("`n", "`n`t")
+	}
+	return $firstIndent + ($parts -join '')
+}
 
-	if ($xml -notmatch '<ChoiceParameterLinks>') { return $xml }
+# Связи формы — параметров выбора (<ChoiceParameterLinks>/<xr:Link>) и по типу (<TypeLink>) —
+# хранят путь в <xr:DataPath>, обычным стриппингом он не снимается. Путь — внутренняя ссылка
+# платформы: в выгрузке она пишет имя, а если имя в контексте формы не разрешается — код.
+# Текстовое имя в расширении разрешается, только если его корень объявлен в <Attributes> самой
+# заимствованной формы; иначе платформа отвергает загрузку — «Неверный путь к полю - X».
+# Конфигуратор поэтому пишет текст там, где он разрешается, и код — где нет.
+# Грамматика кода (оракул «код в форму конфигурации → загрузка → выгрузка → имя», 8.3.27; эталоны
+# Конфигуратора УТ и Issue66Example4-7, JR2433, JR2976, JR49904):
+#   первый сегмент  <id>                — реквизит ИСХОДНОЙ формы (в расширении реквизиты
+#                                         перенумерованы в 1000000+, ссылка остаётся в нумерации базы);
+#                   <id>:<CurrentData>  — элемент-таблица исходной формы, её текущая строка;
+#   дальше          0:<uuid>            — реквизит/ТЧ/измерение/ресурс метаданных источника;
+#                   <id>                — колонка реквизита формы;
+#                   <id>:<AddColumn>    — колонка AdditionalColumns;
+#                   -<k>                — стандартный реквизит, код по виду объекта ($script:stdFieldCodes).
+# В расширении платформа код обратно в имя не переводит, а висячий код грузит молча — ошибка
+# кодирования не упадёт, а тихо не сработает. Поэтому кодируется только измеренное; прочее
+# вырезается с предупреждением: связь — удобство подбора, без неё форма работает, с неверной
+# текстовой — не грузится вовсе.
+$script:linkCurrentData = '02023637-7868-4a5f-8576-835a76e0c9ba'
+$script:linkAddColumn = '5bdad865-f2c5-434b-8041-ba4aad3b6687'
+# Коды стандартных реквизитов — свой порядок у каждого вида (оракул 8.3.27; в XML объекта
+# полного списка нет). Незамеренное (-1, скрытые поля, колонки ExtDimensionTypes) — не кодируем.
+$script:stdFieldCodes = @{
+	'Catalog' = @{ Code=-2; Description=-3; Parent=-4; Owner=-5; IsFolder=-6; DeletionMark=-7; Ref=-8; DataVersion=-9; Predefined=-10; PredefinedDataName=-13 }
+	'Document' = @{ Number=-2; Date=-3; DeletionMark=-4; Ref=-5; DataVersion=-6; Posted=-7; RegisterRecords=-8 }
+	'ChartOfCharacteristicTypes' = @{ Ref=-2; DataVersion=-3; DeletionMark=-4; Predefined=-5; Parent=-6; IsFolder=-7; Code=-8; Description=-9; ValueType=-11; PredefinedDataName=-14 }
+	'ChartOfAccounts' = @{ Ref=-2; DataVersion=-3; DeletionMark=-4; Predefined=-5; Parent=-6; Code=-7; Description=-8; Type=-10; OffBalance=-11; ExtDimensionTypes=-12; Order=-17; PredefinedDataName=-28 }
+	'ChartOfCalculationTypes' = @{ Code=-2; Description=-3; ActionPeriodIsBasic=-4; DeletionMark=-5; Ref=-6; DataVersion=-7; Predefined=-8; PredefinedDataName=-11; DisplacingCalculationTypes=-20; LeadingCalculationTypes=-30 }
+	'ExchangePlan' = @{ Code=-2; Description=-3; DeletionMark=-4; Ref=-6; DataVersion=-7; SentNo=-9; ReceivedNo=-10; ThisNode=-13; ExchangeDate=-14 }
+	'BusinessProcess' = @{ Number=-2; Date=-3; DeletionMark=-4; Ref=-5; DataVersion=-6; Completed=-7; HeadTask=-8; Started=-9 }
+	'Task' = @{ Number=-2; Date=-3; DeletionMark=-4; Ref=-5; DataVersion=-6; BusinessProcess=-7; RoutePoint=-8; Description=-9; Executed=-10 }
+	'InformationRegisterRecord' = @{ Period=-2; Recorder=-3; LineNumber=-4; Active=-5 }
+	'AccumulationRegisterRow' = @{ Period=-2; Recorder=-3; LineNumber=-4; Active=-5; RecordType=-9; SecondPeriod=-10; MinutePeriod=-11; HourPeriod=-12; DayPeriod=-13; WeekPeriod=-14; TenDaysPeriod=-15 }
+	'TabularSectionRow' = @{ LineNumber=-2 }
+}
+# Тип основного реквизита → вид для таблицы стандартных кодов (запись РС — сам реквизит,
+# набор записей РН — строка таблицы на нём)
+$script:mainAttrKinds = @{
+	'CatalogObject'='Catalog'; 'DocumentObject'='Document'; 'ChartOfCharacteristicTypesObject'='ChartOfCharacteristicTypes'
+	'ChartOfAccountsObject'='ChartOfAccounts'; 'ChartOfCalculationTypesObject'='ChartOfCalculationTypes'
+	'ExchangePlanObject'='ExchangePlan'; 'BusinessProcessObject'='BusinessProcess'; 'TaskObject'='Task'
+	'InformationRegisterRecordManager'='InformationRegisterRecord'; 'AccumulationRegisterRecordSet'='AccumulationRegisterRow'
+	'ConstantsSet'='ConstantsSet'
+}
 
-	$mainPat = if ($mainAttrName) { [regex]::Escape($mainAttrName) } else { $null }
-	$mainId = if ($mainAttrName -and $formAttrIds.ContainsKey($mainAttrName)) { $formAttrIds[$mainAttrName] } else { "1" }
+# Путь связи → текст (разрешается в расширении), код или $null (вырезать).
+# $ctx: MainName, MainId, MainBorrowed, MainKind, BorrowedNames (реквизиты объекта в расширении;
+# $null — все), AttrUuids (имя/«ТЧ.Реквизит» → uuid),
+# FormAttrIds, FormAttrCols («Реквизит.Колонка» → id), AddCols («<путь таблицы>.Колонка» → id),
+# Tables (имя элемента-таблицы → @{ Id; Path }).
+function Resolve-LinkDataPath {
+	param([string]$path, $ctx)
 
-	$xml = [regex]::Replace($xml, '(?s)\s*<xr:Link>.*?</xr:Link>', {
+	# Уже код (форма-источник сама из расширения, или висячая ссылка в типовой) — как есть
+	if ($path -match '^-?\d') { return $path }
+	$main = $ctx.MainName
+
+	# Текущая строка элемента-таблицы
+	$cd = [regex]::Match($path, '^Items\.([^.]+)\.CurrentData\.([^.]+)$')
+	if ($cd.Success) {
+		$tbl = $ctx.Tables[$cd.Groups[1].Value]
+		$field = $cd.Groups[2].Value
+		if (-not $tbl) { return $null }
+		$tp = $tbl.Path
+		$prefix = "$($tbl.Id):$($script:linkCurrentData)"
+		if ($main -and ($tp -ceq $main -or $tp.StartsWith("$main.", [StringComparison]::Ordinal))) {
+			# Таблица на основном реквизите: с заимствованным — текст разрешается (эталоны 7_1, УТ)
+			if ($ctx.MainBorrowed) { return $path }
+			if ($tp -ceq $main) {
+				# Строки самого основного реквизита — набор записей регистра накопления
+				if ($ctx.MainKind -ne 'AccumulationRegisterRow') { return $null }
+				if ($ctx.AttrUuids.ContainsKey($field)) { return "$prefix/0:$($ctx.AttrUuids[$field])" }
+				$code = $script:stdFieldCodes['AccumulationRegisterRow'][$field]
+				if ($code) { return "$prefix/$code" }
+				return $null
+			}
+			$ts = $tp.Substring($main.Length + 1)
+			if ($ts.Contains('.')) { return $null }
+			if ($ctx.AttrUuids.ContainsKey("$ts.$field")) { return "$prefix/0:$($ctx.AttrUuids["$ts.$field"])" }
+			if ($ctx.AddCols.ContainsKey("$tp.$field")) { return "$prefix/$($ctx.AddCols["$tp.$field"]):$($script:linkAddColumn)" }
+			$code = $script:stdFieldCodes['TabularSectionRow'][$field]
+			if ($code) { return "$prefix/$code" }
+			return $null
+		}
+		# Таблица на реквизите формы: реквизиты формы не заимствуются никогда — только код
+		# (текст платформа отвергает и с заимствованным основным реквизитом, оракул 8.3.27)
+		if ($ctx.FormAttrIds.ContainsKey($tp) -and $ctx.FormAttrCols.ContainsKey("$tp.$field")) {
+			return "$prefix/$($ctx.FormAttrCols["$tp.$field"])"
+		}
+		return $null
+	}
+
+	# Путь от основного реквизита формы
+	if ($main -and $path.StartsWith("$main.", [StringComparison]::Ordinal)) {
+		$rest = $path.Substring($main.Length + 1)
+		if ($ctx.MainBorrowed) {
+			# Заимствованный реквизит объекта разрешается текстом и остаётся читаемым. Стандартное
+			# поле («Объект.Owner», «Объект.Date») и реквизит, который в расширение не попал (в режиме
+			# Form заимствуется только используемое формой) — нет: платформа отвергает «Неверный путь
+			# к полю». Конфигуратор в обоих случаях ставит ссылку на сам основной реквизит (эталоны
+			# Issue66Example7_1 и УТ Претензии.ФормаЭлементаСамообслуживание).
+			$borrowed = $null -eq $ctx.BorrowedNames -or $ctx.BorrowedNames.ContainsKey($rest.Split('.')[0])
+			if ($borrowed -and $ctx.AttrUuids.ContainsKey($rest)) { return $path }
+			return $ctx.MainId
+		}
+		# Код пути на константу набора не измерен — такую связь вырезаем, а не кодируем наугад
+		if ($ctx.MainKind -eq 'ConstantsSet') { return $null }
+		$segs = $rest.Split('.')
+		if ($segs.Count -eq 1) {
+			if ($ctx.AttrUuids.ContainsKey($rest)) { return "$($ctx.MainId)/0:$($ctx.AttrUuids[$rest])" }
+			$codes = if ($ctx.MainKind) { $script:stdFieldCodes[$ctx.MainKind] } else { $null }
+			if ($codes -and $codes.ContainsKey($rest)) { return "$($ctx.MainId)/$($codes[$rest])" }
+			return $null
+		}
+		if ($segs.Count -eq 2 -and $ctx.AttrUuids.ContainsKey($segs[0]) -and $ctx.AttrUuids.ContainsKey($rest)) {
+			return "$($ctx.MainId)/0:$($ctx.AttrUuids[$segs[0]])/0:$($ctx.AttrUuids[$rest])"
+		}
+		return $null
+	}
+
+	# Путь от реквизита формы — только по id исходной формы, в обоих режимах
+	$segs = $path.Split('.')
+	if ($ctx.FormAttrIds.ContainsKey($segs[0])) {
+		$attrId = $ctx.FormAttrIds[$segs[0]]
+		if ($segs.Count -eq 1) { return $attrId }
+		if ($segs.Count -eq 2 -and $ctx.FormAttrCols.ContainsKey($path)) { return "$attrId/$($ctx.FormAttrCols[$path])" }
+		return $null
+	}
+
+	# Прочее: с заимствованным основным реквизитом текст может разрешиться, без него — нет
+	if ($ctx.MainBorrowed) { return $path }
+	return $null
+}
+
+# Путь в <xr:DataPath> блока связи → разрешённый; неразрешимый блок вырезается целиком
+function Rewrite-LinkBlocks {
+	param([string]$xml, [string]$blockPattern, $ctx)
+
+	return [regex]::Replace($xml, $blockPattern, {
 		param($m)
 		$link = $m.Value
 		$dp = [regex]::Match($link, '<xr:DataPath[^>]*>([^<]+)</xr:DataPath>')
 		if (-not $dp.Success) { return $link }
 		$path = $dp.Groups[1].Value
-
-		# Путь на основной реквизит формы
-		if ($mainPat -and $path -match "^${mainPat}\.(.+)$") {
-			$attrName = $Matches[1]
-			if ($mainAttrBorrowed) {
-				# Реквизит объекта разрешается текстом и остаётся читаемым. Стандартное поле
-				# («Объект.Owner», «Объект.Date») — нет: платформа отвергает «Неверный путь к данным».
-				# Конфигуратор в этом случае оставляет ссылку на сам реквизит (эталон Issue66Example7_1).
-				if ($attrUuids.ContainsKey($attrName)) { return $link }
-				return [regex]::Replace($link, '(<xr:DataPath[^>]*>)[^<]+(</xr:DataPath>)', "`${1}${mainId}`${2}")
-			}
-			if ($attrUuids.ContainsKey($attrName)) {
-				return [regex]::Replace($link, '(<xr:DataPath[^>]*>)[^<]+(</xr:DataPath>)', "`${1}${mainId}/0:$($attrUuids[$attrName])`${2}")
-			}
+		$resolved = Resolve-LinkDataPath $path $ctx
+		if ($null -eq $resolved) {
+			$script:droppedLinks += $path
 			return ''
 		}
-
-		# Односегментный путь на реквизит формы — только по id исходной формы
-		if ($path -notmatch '\.' -and $formAttrIds.ContainsKey($path)) {
-			return [regex]::Replace($link, '(<xr:DataPath[^>]*>)[^<]+(</xr:DataPath>)', "`${1}$($formAttrIds[$path])`${2}")
-		}
-
-		# Уже непрозрачный путь (форма-источник сама из расширения) — не трогаем
-		if ($path -match '^\d') { return $link }
-
-		# С заимствованным основным реквизитом текстовый путь разрешается: элементы формы на месте,
-		# а их данные доступны через основной реквизит. Конфигуратор такие пути и оставляет текстом
-		# (эталон Issue66Example7_1: «Items.Товары.CurrentData.Характеристика» перенесён как есть).
-		if ($mainAttrBorrowed) { return $link }
-
-		# Прочее текстом не разрешается: платформа отвергает загрузку «Неверный путь к полю».
-		# Сюда попадают «Items.<Элемент>.CurrentData.<Поле>» — их кодировка непрозрачна и по
-		# имеющимся эталонам не воспроизводима. Связь параметров выбора — удобство подбора, а не
-		# данные: без неё форма заимствуется и работает, с ней — не грузится вовсе.
-		$script:droppedLinks += $path
-		return ''
+		if ($resolved -ceq $path) { return $link }
+		return $link.Substring(0, $dp.Groups[1].Index) + $resolved + $link.Substring($dp.Groups[1].Index + $dp.Groups[1].Length)
 	})
+}
 
+function Rewrite-ChoiceParameterLinks {
+	param([string]$xml, $ctx)
+
+	if ($xml -notmatch '<ChoiceParameterLinks>') { return $xml }
+	$xml = Rewrite-LinkBlocks $xml '(?s)\s*<xr:Link>.*?</xr:Link>' $ctx
 	# Опустевший контейнер платформе не нужен
 	$xml = [regex]::Replace($xml, '(?s)\s*<ChoiceParameterLinks>\s*</ChoiceParameterLinks>', '')
 	return $xml
+}
+
+# Связь по типу — тот же путь и то же правило (эталоны УТ ВводОстатков.ФормаРасчетыМеждуОрганизациями:
+# без основного реквизита — код, с ним — текст)
+function Rewrite-TypeLinks {
+	param([string]$xml, $ctx)
+
+	if ($xml -notmatch '<TypeLink>') { return $xml }
+	return Rewrite-LinkBlocks $xml '(?s)\s*<TypeLink>.*?</TypeLink>' $ctx
 }
 
 # Имена ПРЯМЫХ детей собственного <ChildObjects> объекта — для дедупа при повторном
@@ -615,9 +740,9 @@ if ($BorrowMainAttribute) {
 		Write-Error "-BorrowMainAttribute accepts 'Form' or 'All' (default: Form)"
 		exit 1
 	}
-	# Validate: only with .Form. pattern
+	# Validate: only with a form — .Form. pattern or a common form
 	$hasForm = $false
-	foreach ($item in $items) { if ($item -match '\.Form\.') { $hasForm = $true; break } }
+	foreach ($item in $items) { if ($item -match '\.Form\.' -or $item -match '^(CommonForm|ОбщаяФорма)\.') { $hasForm = $true; break } }
 	if (-not $hasForm) {
 		Write-Error "-BorrowMainAttribute requires a form in -Object (e.g. 'Catalog.X.Form.Y')"
 		exit 1
@@ -669,8 +794,8 @@ function Resolve-ModuleKinds {
 }
 
 # --- 10. Helper: read source object XML ---
-# Имена реквизитов исходного объекта → uuid. Нужны для непрозрачной формы пути в ссылках
-# параметров выбора (см. Rewrite-ChoiceParameterLinks).
+# Имена реквизитов исходного объекта → uuid: реквизиты, ТЧ, измерения и ресурсы регистра, реквизиты
+# ТЧ — ключом «ТЧ.Реквизит». Нужны для кода пути в связях формы (см. Resolve-LinkDataPath).
 function Get-SourceAttributeUuids {
 	param([string]$typeName, [string]$objName)
 
@@ -692,10 +817,18 @@ function Get-SourceAttributeUuids {
 	if (-not $childObjects) { return $result }
 	foreach ($child in $childObjects.ChildNodes) {
 		if ($child.NodeType -ne 'Element') { continue }
-		if ($child.LocalName -notin @('Attribute','TabularSection')) { continue }
+		if ($child.LocalName -notin @('Attribute','TabularSection','Dimension','Resource')) { continue }
 		$uuid = $child.GetAttribute("uuid")
 		$nameNode = $child.SelectSingleNode("*[local-name()='Properties']/*[local-name()='Name']")
-		if ($uuid -and $nameNode) { $result[$nameNode.InnerText.Trim()] = $uuid }
+		if (-not ($uuid -and $nameNode)) { continue }
+		$name = $nameNode.InnerText.Trim()
+		$result[$name] = $uuid
+		if ($child.LocalName -ne 'TabularSection') { continue }
+		foreach ($tsAttr in @($child.SelectNodes("*[local-name()='ChildObjects']/*[local-name()='Attribute']"))) {
+			$tsUuid = $tsAttr.GetAttribute("uuid")
+			$tsName = $tsAttr.SelectSingleNode("*[local-name()='Properties']/*[local-name()='Name']")
+			if ($tsUuid -and $tsName) { $result["$name.$($tsName.InnerText.Trim())"] = $tsUuid }
+		}
 	}
 	return $result
 }
@@ -790,7 +923,9 @@ function Read-SourceFormUuid {
 	param([string]$typeName, [string]$objName, [string]$formName)
 
 	$dirName = $childTypeDirMap[$typeName]
-	$srcFile = Join-Path (Join-Path (Join-Path (Join-Path $cfgDir $dirName) $objName) "Forms") "${formName}.xml"
+	# Общая форма — сама объект конфигурации: её описание лежит рядом с другими, а не в Forms владельца
+	$srcFile = if ($typeName -eq 'CommonForm') { Join-Path (Join-Path $cfgDir $dirName) "${objName}.xml" }
+		else { Join-Path (Join-Path (Join-Path (Join-Path $cfgDir $dirName) $objName) "Forms") "${formName}.xml" }
 	if (-not (Test-Path $srcFile)) {
 		Write-Error "Source form not found: $srcFile"
 		exit 1
@@ -825,12 +960,31 @@ function Borrow-Form {
 	$dirName = $childTypeDirMap[$typeName]
 	$enc = New-Object System.Text.UTF8Encoding($true)
 
+	# Общая форма — сама объект конфигурации: описание CommonForms/<Имя>.xml с корнем <CommonForm>,
+	# тело CommonForms/<Имя>/Ext/Form.xml, регистрация в Configuration.xml. Форма объекта — в Forms
+	# владельца. Остальное (скелет, BaseForm, связи, оформление, картинки) одинаково (эталон УТ link).
+	$isCommonForm = $typeName -eq 'CommonForm'
+	# Уже заимствованная общая форма (в т.ч. оболочкой от прежних версий навыка) в Configuration.xml
+	# уже есть — повторно не регистрируем
+	$commonFormRegistered = $isCommonForm -and (Test-ObjectBorrowed $typeName $objName)
+	if ($isCommonForm) {
+		$srcFormDir = Join-Path (Join-Path $cfgDir $dirName) $objName
+		$formMetaFile = Join-Path (Join-Path $extDir $dirName) "${objName}.xml"
+		$extFormDir = Join-Path (Join-Path $extDir $dirName) $objName
+		$formMetaTag = 'CommonForm'
+	} else {
+		$srcFormDir = Join-Path (Join-Path (Join-Path (Join-Path $cfgDir $dirName) $objName) "Forms") $formName
+		$formMetaFile = Join-Path (Join-Path (Join-Path (Join-Path $extDir $dirName) $objName) "Forms") "${formName}.xml"
+		$extFormDir = Join-Path (Join-Path (Join-Path (Join-Path $extDir $dirName) $objName) "Forms") $formName
+		$formMetaTag = 'Form'
+	}
+
 	# 1. Read source form UUID
 	$formUuid = Read-SourceFormUuid $typeName $objName $formName
 	Info "  Source form UUID: $formUuid"
 
 	# 2. Read source Form.xml content
-	$srcFormXmlPath = Join-Path (Join-Path (Join-Path (Join-Path (Join-Path $cfgDir $dirName) $objName) "Forms") $formName) "Ext/Form.xml"
+	$srcFormXmlPath = Join-Path $srcFormDir "Ext/Form.xml"
 	if (-not (Test-Path $srcFormXmlPath)) {
 		Write-Error "Source Form.xml not found: $srcFormXmlPath"
 		exit 1
@@ -840,13 +994,12 @@ function Borrow-Form {
 	# 3. Generate form metadata XML (ФормаЭлемента.xml).
 	# If the wrapper was already borrowed, reuse its uuid so re-borrow is idempotent
 	# (regenerating it would churn the form's identity on every rerun).
-	$formMetaFileExisting = Join-Path (Join-Path (Join-Path (Join-Path $extDir $dirName) $objName) "Forms") "${formName}.xml"
 	$newFormUuid = ""
-	if (Test-Path $formMetaFileExisting) {
+	if (Test-Path $formMetaFile) {
 		try {
 			$existingDoc = New-Object System.Xml.XmlDocument
-			$existingDoc.Load($formMetaFileExisting)
-			$existingFormNode = $existingDoc.DocumentElement.SelectSingleNode("*[local-name()='Form']")
+			$existingDoc.Load($formMetaFile)
+			$existingFormNode = $existingDoc.DocumentElement.SelectSingleNode("*[local-name()='$formMetaTag']")
 			if ($existingFormNode) {
 				$existingUuid = $existingFormNode.GetAttribute("uuid")
 				if ($existingUuid) { $newFormUuid = $existingUuid }
@@ -857,7 +1010,7 @@ function Borrow-Form {
 	$formMetaSb = New-Object System.Text.StringBuilder
 	$formMetaSb.AppendLine("<?xml version=`"1.0`" encoding=`"UTF-8`"?>") | Out-Null
 	$formMetaSb.AppendLine("<MetaDataObject $($script:xmlnsDecl) version=`"$($script:formatVersion)`">") | Out-Null
-	$formMetaSb.AppendLine("`t<Form uuid=`"${newFormUuid}`">") | Out-Null
+	$formMetaSb.AppendLine("`t<$formMetaTag uuid=`"${newFormUuid}`">") | Out-Null
 	$formMetaSb.AppendLine("`t`t<InternalInfo/>") | Out-Null
 	$formMetaSb.AppendLine("`t`t<Properties>") | Out-Null
 	$formMetaSb.AppendLine("`t`t`t<ObjectBelonging>Adopted</ObjectBelonging>") | Out-Null
@@ -866,17 +1019,16 @@ function Borrow-Form {
 	$formMetaSb.AppendLine("`t`t`t<ExtendedConfigurationObject>${formUuid}</ExtendedConfigurationObject>") | Out-Null
 	$formMetaSb.AppendLine("`t`t`t<FormType>Managed</FormType>") | Out-Null
 	$formMetaSb.AppendLine("`t`t</Properties>") | Out-Null
-	$formMetaSb.AppendLine("`t</Form>") | Out-Null
+	$formMetaSb.AppendLine("`t</$formMetaTag>") | Out-Null
 	$formMetaSb.Append("</MetaDataObject>") | Out-Null
 
 	# 4. Create directories
-	$formMetaDir = Join-Path (Join-Path (Join-Path $extDir $dirName) $objName) "Forms"
+	$formMetaDir = Split-Path $formMetaFile -Parent
 	if (-not (Test-Path $formMetaDir)) {
 		New-Item -ItemType Directory -Path $formMetaDir -Force | Out-Null
 	}
 
 	# Write form metadata
-	$formMetaFile = Join-Path $formMetaDir "${formName}.xml"
 	[System.IO.File]::WriteAllText($formMetaFile, $formMetaSb.ToString(), $enc)
 	Info "  Created: $formMetaFile"
 
@@ -929,18 +1081,46 @@ function Borrow-Form {
 	$srcMainInfo = Get-MainAttributeInfo $srcFormEl $nsStripPattern
 	$srcMainAttrName = if ($srcMainInfo) { $srcMainInfo.Name } else { "" }
 	$formAttrIds = Get-FormAttributeIds $srcFormEl
+	# Условное оформление формы Конфигуратор копирует как есть в обе части, внутрь <Attributes>
+	# после реквизитов — и без основного реквизита тоже; ссылки на незаимствованные реквизиты формы
+	# платформа принимает (эталоны УТ StdPic, StdPic_WithMain, CAStyle, УНФ Номенклатура)
+	$srcCondAppearance = $srcFormEl.SelectSingleNode("*[local-name()='Attributes']/*[local-name()='ConditionalAppearance']")
+	$srcCondAppearanceXml = if ($srcCondAppearance) { [regex]::Replace($srcCondAppearance.OuterXml, $nsStripPattern, '') } else { "" }
 	$mainAttrInfo = if ($BorrowMainAttr) { $srcMainInfo } else { $null }
 	$mainAttrName = if ($mainAttrInfo) { $mainAttrInfo.Name } else { "" }
 	if ($BorrowMainAttr -and -not $mainAttrInfo) {
 		Warn "  У формы нет основного реквизита — -BorrowMainAttribute проигнорирован"
 	}
 
-	# uuid реквизитов объекта нужны ровно там, где основной реквизит НЕ попал в форму:
-	# только тогда путь «<основной>.X» переводится в непрозрачный вид
-	# Имена реквизитов объекта нужны в обоих режимах: без заимствования — чтобы построить
-	# непрозрачный путь, с заимствованием — чтобы отличить реквизит (разрешается текстом) от
-	# стандартного поля (не разрешается)
-	$srcAttrUuids = Get-SourceAttributeUuids $typeName $objName
+	# Имена реквизитов объекта нужны в обоих режимах: без заимствования — для кода пути в связях
+	# формы, с заимствованием — чтобы отличить реквизит (разрешается текстом) от стандартного поля
+	# У общей формы реквизиты берутся у владельца, выведенного из типа основного реквизита;
+	# у набора констант — ничего: код пути на константу не измерен, связь без основного реквизита
+	# вырезается с предупреждением, с ним — остаётся текстом
+	if ($isCommonForm) {
+		$cfOwner = Resolve-CommonFormOwner $srcFormEl
+		$srcAttrUuids = @{}
+		if ($cfOwner -and $cfOwner.Kind -eq 'Object') {
+			$srcAttrUuids = Get-SourceAttributeUuids $cfOwner.TypeName $cfOwner.ObjName
+		} elseif ($cfOwner -and $cfOwner.Kind -eq 'Constants') {
+			# Константы, на которые есть пути: с основным реквизитом путь на заимствованную — текстом
+			foreach ($cName in @((Collect-FormDataPaths $srcFormXmlPath $cfOwner.MainName).FirstLevel.Keys)) {
+				$cFile = Join-Path (Join-Path $cfgDir "Constants") "${cName}.xml"
+				if (-not (Test-Path $cFile)) { continue }
+				$cm = [regex]::Match([System.IO.File]::ReadAllText($cFile), '<Constant uuid="([^"]+)"')
+				if ($cm.Success) { $srcAttrUuids[$cName] = $cm.Groups[1].Value }
+			}
+		}
+	} else {
+		$srcAttrUuids = Get-SourceAttributeUuids $typeName $objName
+	}
+	# Реквизиты объекта, которые попадут в расширение: в режиме Form — только используемые формой
+	# (тот же сбор, что в Borrow-MainAttribute), в режиме All — все ($null)
+	$borrowedNames = $null
+	if ($mainAttrInfo -and $BorrowMainAttribute -eq 'Form') {
+		$borrowedNames = (Collect-FormDataPaths $srcFormXmlPath $srcMainAttrName).FirstLevel
+	}
+	$linkCtx = Get-LinkContext $srcFormEl $srcMainAttrName ([bool]$mainAttrInfo) $borrowedNames $srcAttrUuids $formAttrIds
 
 	# AutoCommandBar: keep ChildItems (buttons with CommandName→0), Autofill→false
 	$autoCmdXml = ""
@@ -955,7 +1135,21 @@ function Borrow-Form {
 		$autoCmdXml = [regex]::Replace($autoCmdXml, '\s*<CommandSet/>', '')
 		# Strip data-binding tags whose root attribute isn't borrowed
 		$autoCmdXml = Strip-FormBindings $autoCmdXml $mainAttrName
-		$autoCmdXml = Rewrite-ChoiceParameterLinks $autoCmdXml $srcAttrUuids $formAttrIds $srcMainAttrName ([bool]$mainAttrInfo)
+		$autoCmdXml = Rewrite-ChoiceParameterLinks $autoCmdXml $linkCtx
+	}
+
+	# Картинка декорации в заимствованную форму не переносится: Конфигуратор выбрасывает <Picture>
+	# у PictureDecoration из обеих частей формы при любом виде картинки (своя, общая, стандартная)
+	# и не тянет за ней ни файл, ни общую картинку. Замер 8.3.27: 10 декораций в 5 формах УТ.
+	# Картинки кнопок, таблиц и полей картинки остаются — вместе с файлами, см. копирование ниже.
+	if ($srcChildItems) {
+		foreach ($decoPic in @($srcChildItems.SelectNodes(".//*[local-name()='PictureDecoration']/*[local-name()='Picture']"))) {
+			$prevWs = $decoPic.PreviousSibling
+			if ($prevWs -and ($prevWs.NodeType -eq 'Whitespace' -or $prevWs.NodeType -eq 'SignificantWhitespace')) {
+				$decoPic.ParentNode.RemoveChild($prevWs) | Out-Null
+			}
+			$decoPic.ParentNode.RemoveChild($decoPic) | Out-Null
+		}
 	}
 
 	# ChildItems: copy full tree, clean up base-config references
@@ -968,12 +1162,27 @@ function Borrow-Form {
 		# Strip data-binding tags whose root attribute isn't borrowed
 		# (DataPath/TitleDataPath/FooterDataPath/HeaderDataPath/MultipleValue*/RowPicture*)
 		$childItemsXml = Strip-FormBindings $childItemsXml $mainAttrName
-		$childItemsXml = Rewrite-ChoiceParameterLinks $childItemsXml $srcAttrUuids $formAttrIds $srcMainAttrName ([bool]$mainAttrInfo)
-		# Вложенные CommandSet (у таблиц, полей табличного документа и т.п.) — целиком, см. выше
+		$childItemsXml = Rewrite-ChoiceParameterLinks $childItemsXml $linkCtx
+		# Вложенные CommandSet (у таблиц, полей табличного документа и т.п.) — целиком, см. выше.
+		# Исключение — набор таблицы самого основного реквизита, когда он заимствован: его команды
+		# (Find/CancelSearch динамического списка) снова разрешимы, и Конфигуратор набор оставляет
+		# (эталоны УТ CommonMain/ФайлыВТоме, StdPic_WithMain/ЖурналСкладскихАктов; без основного
+		# реквизита и у прочих элементов — выброшен во всех эталонах).
+		$keptCmdSets = [ordered]@{}
+		if ($mainAttrName) {
+			$mainTablePat = '(?s)(<Table name="[^"]+" id="\d+">(?:(?!<ChildItems>|</Table>|<CommandSet>).)*?<DataPath>' +
+				[regex]::Escape($mainAttrName) + '</DataPath>(?:(?!<ChildItems>|</Table>|<CommandSet>).)*?)(<CommandSet>.*?</CommandSet>)'
+			$childItemsXml = [regex]::Replace($childItemsXml, $mainTablePat, {
+				param($m)
+				$key = "@@KEPTCMDSET$($keptCmdSets.Count)@@"
+				$keptCmdSets[$key] = $m.Groups[2].Value
+				$m.Groups[1].Value + $key
+			})
+		}
 		$childItemsXml = [regex]::Replace($childItemsXml, '(?s)\s*<CommandSet>.*?</CommandSet>', '')
 		$childItemsXml = [regex]::Replace($childItemsXml, '\s*<CommandSet/>', '')
-		# Strip TypeLink blocks with human-readable DataPath (Items.XXX — can't convert to UUID)
-		$childItemsXml = [regex]::Replace($childItemsXml, '(?s)\s*<TypeLink>\s*<xr:DataPath>Items\.[^<]*</xr:DataPath>.*?</TypeLink>', '')
+		foreach ($key in $keptCmdSets.Keys) { $childItemsXml = $childItemsXml.Replace($key, $keptCmdSets[$key]) }
+		$childItemsXml = Rewrite-TypeLinks $childItemsXml $linkCtx
 		# Strip element-level Events (base form handlers not in extension)
 		$childItemsXml = [regex]::Replace($childItemsXml, '(?s)\s*<Events>.*?</Events>', '')
 
@@ -1029,8 +1238,8 @@ function Borrow-Form {
 				$childItemsXml = $childItemsXml.Remove($pm.Index, $pm.Length)
 			}
 		}
-		# Strip StdPicture blocks (except Print)
-		$childItemsXml = [regex]::Replace($childItemsXml, '(?s)\s*<Picture>\s*<xr:Ref>StdPicture\.(?!Print\b)\w+</xr:Ref>.*?</Picture>', '')
+		# Стандартные картинки (StdPicture.*) не вырезаются: Конфигуратор оставляет их у кнопок, подменю
+		# и страниц в обеих частях формы (эталоны 8.3.27, 26 элементов в 3 формах).
 
 		# Same Picture strip for AutoCommandBar
 		if ($autoCmdXml) {
@@ -1042,39 +1251,8 @@ function Borrow-Form {
 					$autoCmdXml = $autoCmdXml.Remove($pm.Index, $pm.Length)
 				}
 			}
-			$autoCmdXml = [regex]::Replace($autoCmdXml, '(?s)\s*<Picture>\s*<xr:Ref>StdPicture\.(?!Print\b)\w+</xr:Ref>.*?</Picture>', '')
 		}
 
-		# Auto-borrow StyleItems referenced in ChildItems
-		# Pattern 1: <Font ref="style:XXX" kind="StyleItem"/>, <TitleFont ref="style:XXX" ... kind="StyleItem"/>
-		# Pattern 2: <BackColor>style:XXX</BackColor>, <TextColor>style:XXX</TextColor>, etc.
-		$referencedStyles = @{}
-		$styleRefs1 = [regex]::Matches($childItemsXml, 'ref="style:(\w+)"[^>]*kind="StyleItem"')
-		foreach ($m in $styleRefs1) { $referencedStyles[$m.Groups[1].Value] = $true }
-		$styleRefs2 = [regex]::Matches($childItemsXml, '>style:(\w+)</\w+>')
-		foreach ($m in $styleRefs2) { $referencedStyles[$m.Groups[1].Value] = $true }
-
-		foreach ($styleName in $referencedStyles.Keys) {
-			if (-not (Test-ObjectBorrowed "StyleItem" $styleName)) {
-				$styleSrcFile = Join-Path (Join-Path $cfgDir "StyleItems") "${styleName}.xml"
-				if (Test-Path $styleSrcFile) {
-					$src = Read-SourceObject "StyleItem" $styleName
-					$borrowedXml = Build-BorrowedObjectXml "StyleItem" $styleName $src.Uuid $src.Properties
-					$targetDir = Join-Path $extDir "StyleItems"
-					if (-not (Test-Path $targetDir)) {
-						New-Item -ItemType Directory -Path $targetDir -Force | Out-Null
-					}
-					$targetFile = Join-Path $targetDir "${styleName}.xml"
-					$encBom = New-Object System.Text.UTF8Encoding($true)
-					[System.IO.File]::WriteAllText($targetFile, $borrowedXml, $encBom)
-					Add-ToChildObjects "StyleItem" $styleName
-					$script:borrowedFiles += $targetFile
-					Info "  Auto-borrowed: StyleItem.${styleName}"
-				} else {
-					Warn "  StyleItem.${styleName} not found in source config"
-				}
-			}
-		}
 		# Auto-borrow Enums + EnumValues referenced via DesignTimeRef in ChoiceParameters
 		# Collect Enum -> [EnumValue names] map
 		$dtRefs = [regex]::Matches($childItemsXml, 'xr:DesignTimeRef">Enum\.(\w+)\.EnumValue\.(\w+)')
@@ -1150,6 +1328,42 @@ function Borrow-Form {
 		}
 	}
 
+	# Вне блока ChildItems: стили нужны и оформлению формы без элементов
+	# Auto-borrow StyleItems referenced in ChildItems and in the form's conditional appearance
+	# (стиль только из оформления Конфигуратор тоже заимствует — эталон УТ CAStyle)
+	# Pattern 1: <Font ref="style:XXX" kind="StyleItem"/>, <TitleFont ref="style:XXX" ... kind="StyleItem"/>
+	# Pattern 2: <BackColor>style:XXX</BackColor>, <TextColor>style:XXX</TextColor>, etc.
+	# Порядок первого упоминания — как в Python-порте (от него зависит порядок в ChildObjects)
+	$styleScanXml = $childItemsXml + $srcCondAppearanceXml
+	$referencedStyles = [ordered]@{}
+	$styleRefs1 = [regex]::Matches($styleScanXml, 'ref="style:(\w+)"[^>]*kind="StyleItem"')
+	foreach ($m in $styleRefs1) { $referencedStyles[$m.Groups[1].Value] = $true }
+	# Закрывающий тег может быть с префиксом: в оформлении значение — <dcscor:value>style:X</dcscor:value>
+	$styleRefs2 = [regex]::Matches($styleScanXml, '>style:(\w+)</[\w:]+>')
+	foreach ($m in $styleRefs2) { $referencedStyles[$m.Groups[1].Value] = $true }
+
+	foreach ($styleName in $referencedStyles.Keys) {
+		if (-not (Test-ObjectBorrowed "StyleItem" $styleName)) {
+			$styleSrcFile = Join-Path (Join-Path $cfgDir "StyleItems") "${styleName}.xml"
+			if (Test-Path $styleSrcFile) {
+				$src = Read-SourceObject "StyleItem" $styleName
+				$borrowedXml = Build-BorrowedObjectXml "StyleItem" $styleName $src.Uuid $src.Properties
+				$targetDir = Join-Path $extDir "StyleItems"
+				if (-not (Test-Path $targetDir)) {
+					New-Item -ItemType Directory -Path $targetDir -Force | Out-Null
+				}
+				$targetFile = Join-Path $targetDir "${styleName}.xml"
+				$encBom = New-Object System.Text.UTF8Encoding($true)
+				[System.IO.File]::WriteAllText($targetFile, $borrowedXml, $encBom)
+				Add-ToChildObjects "StyleItem" $styleName
+				$script:borrowedFiles += $targetFile
+				Info "  Auto-borrowed: StyleItem.${styleName}"
+			}
+			# Файла нет — встроенный стиль платформы (ImportantColor, AccentColor…): заимствовать
+			# нечего, пропускаем молча. Пользовательский стиль, на который ссылается форма, в
+			# валидном источнике существует всегда — предупреждение было только шумом.
+		}
+	}
 	# Открывающий тег <Form ...> берём из исходной формы — ради её объявлений пространств имён,
 	# но version подставляем СВОЮ: форма обязана нести версию расширения, иначе платформа
 	# отвергает импорт (форма 2.13 внутри расширения 2.17). Раньше тег копировался целиком,
@@ -1187,52 +1401,39 @@ function Borrow-Form {
 		$formXmlSb.Append("`t$childItemsXml") | Out-Null
 		$formXmlSb.Append("`r`n") | Out-Null
 	}
-	# Attributes: empty or with MainAttribute when BorrowMainAttr
-	if ($BorrowMainAttr -and $mainAttrInfo) {
+	# Attributes: основной реквизит (с -BorrowMainAttribute) и условное оформление формы — после него
+	$withMainAttr = $BorrowMainAttr -and $mainAttrInfo
+	if ($withMainAttr -or $srcCondAppearanceXml) {
 		$formXmlSb.Append("`t<Attributes>`r`n") | Out-Null
-		$formXmlSb.Append("`t`t$($mainAttrInfo.Xml)`r`n") | Out-Null
+		if ($withMainAttr) { $formXmlSb.Append("`t`t$($mainAttrInfo.Xml)`r`n") | Out-Null }
+		if ($srcCondAppearanceXml) { $formXmlSb.Append("`t`t$srcCondAppearanceXml`r`n") | Out-Null }
 		$formXmlSb.Append("`t</Attributes>") | Out-Null
 	} else {
 		$formXmlSb.Append("`t<Attributes/>") | Out-Null
 	}
 	$formXmlSb.Append("`r`n") | Out-Null
 
-	# BaseForm: same content, indented one more level
+	# BaseForm: same content, indented one more level (многострочный текст не сдвигается)
 	$formXmlSb.Append("`t<BaseForm version=`"${formVersion}`">") | Out-Null
 	$formXmlSb.Append("`r`n") | Out-Null
 
 	foreach ($propXml in $formProps) {
 		$propXml = [regex]::Replace($propXml, $nsStripPattern, '')
-		$formXmlSb.Append("`t`t$propXml`r`n") | Out-Null
+		$formXmlSb.Append((Get-BaseFormIndented $propXml "`t`t") + "`r`n") | Out-Null
 	}
 	if ($autoCmdXml) {
-		$acLines = $autoCmdXml -split "`r?`n"
-		for ($li = 0; $li -lt $acLines.Count; $li++) {
-			if ($li -eq 0) { $formXmlSb.Append("`t`t$($acLines[$li])") | Out-Null }
-			else { $formXmlSb.Append("`t$($acLines[$li])") | Out-Null }
-			$formXmlSb.Append("`r`n") | Out-Null
-		}
+		$formXmlSb.Append((Get-BaseFormIndented $autoCmdXml "`t`t") + "`r`n") | Out-Null
 	}
 	if ($childItemsXml) {
-		# Reindent ChildItems for BaseForm (+1 tab level)
-		$ciLines = $childItemsXml -split "`r?`n"
-		for ($li = 0; $li -lt $ciLines.Count; $li++) {
-			if ($li -eq 0) { $formXmlSb.Append("`t`t$($ciLines[$li])") | Out-Null }
-			else { $formXmlSb.Append("`t$($ciLines[$li])") | Out-Null }
-			$formXmlSb.Append("`r`n") | Out-Null
-		}
+		$formXmlSb.Append((Get-BaseFormIndented $childItemsXml "`t`t") + "`r`n") | Out-Null
 	}
 
 	# BaseForm Attributes: same as main section
-	if ($BorrowMainAttr -and $mainAttrInfo) {
+	if ($withMainAttr -or $srcCondAppearanceXml) {
 		$formXmlSb.Append("`t`t<Attributes>`r`n") | Out-Null
-		# В BaseForm та же секция на уровень глубже — приём переиндентации тот же, что у ChildItems
-		$maLines = $mainAttrInfo.Xml -split "`r?`n"
-		for ($li = 0; $li -lt $maLines.Count; $li++) {
-			if ($li -eq 0) { $formXmlSb.Append("`t`t`t$($maLines[$li])") | Out-Null }
-			else { $formXmlSb.Append("`t$($maLines[$li])") | Out-Null }
-			$formXmlSb.Append("`r`n") | Out-Null
-		}
+		# В BaseForm та же секция на уровень глубже — сдвиг тот же, что у ChildItems
+		if ($withMainAttr) { $formXmlSb.Append((Get-BaseFormIndented $mainAttrInfo.Xml "`t`t`t") + "`r`n") | Out-Null }
+		if ($srcCondAppearanceXml) { $formXmlSb.Append((Get-BaseFormIndented $srcCondAppearanceXml "`t`t`t") + "`r`n") | Out-Null }
 		$formXmlSb.Append("`t`t</Attributes>") | Out-Null
 	} else {
 		$formXmlSb.Append("`t`t<Attributes/>") | Out-Null
@@ -1243,7 +1444,7 @@ function Borrow-Form {
 	$formXmlSb.Append("</Form>") | Out-Null
 
 	# Write Form.xml
-	$formXmlDir = Join-Path (Join-Path $formMetaDir $formName) "Ext"
+	$formXmlDir = Join-Path $extFormDir "Ext"
 	if (-not (Test-Path $formXmlDir)) {
 		New-Item -ItemType Directory -Path $formXmlDir -Force | Out-Null
 	}
@@ -1260,7 +1461,7 @@ function Borrow-Form {
 	Info "  Created: $formXmlFile"
 	if ($script:droppedLinks.Count -gt 0) {
 		$uniq = @($script:droppedLinks | Sort-Object -Unique)
-		Warn "  Вырезано связей параметров выбора: $($uniq.Count) — путь не разрешается в расширении: $($uniq -join ', ')"
+		Warn "  Вырезано связей формы: $($uniq.Count) — путь не разрешается в расширении: $($uniq -join ', ')"
 		$script:droppedLinks = @()
 	}
 
@@ -1278,10 +1479,59 @@ function Borrow-Form {
 		Info "  Created: $moduleBslFile"
 	}
 
-	# 7. Register form in parent object ChildObjects
-	Register-FormInObject $typeName $objName $formName
+	# 6b. Встроенные картинки элементов. Form.xml ссылается на них как <xr:Abs>Файл</xr:Abs>, а сам файл
+	# лежит в Ext/Form/Items/<Элемент>/<Файл>; без него платформа отвергает расширение («Файл не найден»).
+	# Конфигуратор копирует их байт в байт. Берём ровно то, на что ссылается скелет (картинки декораций
+	# выброшены выше). Уже лежащий файл не перезаписываем: его могли заменить в расширении.
+	$picFiles = @()
+	$srcItemsDir = Join-Path (Join-Path (Split-Path $srcFormXmlPath -Parent) "Form") "Items"
+	$picRels = New-Object System.Collections.Generic.List[string]
+	foreach ($sect in @($srcAutoCmd, $srcChildItems)) {
+		if (-not $sect) { continue }
+		foreach ($absNode in @($sect.SelectNodes(".//*[local-name()='Abs' and namespace-uri()='http://v8.1c.ru/8.3/xcf/readable']"))) {
+			$picOwner = $absNode.ParentNode.ParentNode
+			$picElName = $picOwner.GetAttribute("name")
+			$picFileName = $absNode.InnerText.Trim()
+			if (-not $picElName -or -not $picFileName) { continue }
+			# Платформа пишет сюда голое имя файла. Иное (путь, «..») — не наша выгрузка: мимо Items не ходим.
+			if ($picElName -match '[\\/]' -or $picFileName -match '[\\/]' -or
+				$picElName -match '^\.\.?$' -or $picFileName -match '^\.\.?$') {
+				Warn "  Картинка элемента пропущена — не имя файла: $picElName / $picFileName"
+				continue
+			}
+			$rel = "$picElName/$picFileName"
+			if (-not $picRels.Contains($rel)) { $picRels.Add($rel) }
+		}
+	}
+	$picRelArr = $picRels.ToArray()
+	[Array]::Sort($picRelArr, [System.StringComparer]::Ordinal)
+	foreach ($rel in $picRelArr) {
+		$picParts = $rel.Split('/')
+		$srcPic = Join-Path (Join-Path $srcItemsDir $picParts[0]) $picParts[1]
+		$dstPicDir = Join-Path (Join-Path $moduleDir "Items") $picParts[0]
+		$dstPic = Join-Path $dstPicDir $picParts[1]
+		if (Test-Path -LiteralPath $dstPic) {
+			Info "  Preserved existing: $dstPic"
+			continue
+		}
+		if (-not (Test-Path -LiteralPath $srcPic -PathType Leaf)) {
+			Warn "  Картинка элемента не найдена в источнике: $srcPic"
+			continue
+		}
+		if (-not (Test-Path -LiteralPath $dstPicDir)) { New-Item -ItemType Directory -Path $dstPicDir -Force | Out-Null }
+		Copy-Item -LiteralPath $srcPic -Destination $dstPic
+		$picFiles += $dstPic
+		Info "  Copied: $dstPic"
+	}
 
-	return @($formMetaFile, $formXmlFile, $moduleBslFile)
+	# 7. Register form: общая форма — в Configuration.xml, форма объекта — в ChildObjects владельца
+	if ($isCommonForm) {
+		if (-not $commonFormRegistered) { Add-ToChildObjects $typeName $objName }
+	} else {
+		Register-FormInObject $typeName $objName $formName
+	}
+
+	return @($formMetaFile, $formXmlFile, $moduleBslFile) + $picFiles
 }
 
 # --- 10d. Helper: register form in parent object's ChildObjects ---
@@ -1508,6 +1758,55 @@ function Get-FormAttributeIds {
 		if ($nm -and $id) { $result[$nm] = $id }
 	}
 	return $result
+}
+
+# Контекст разрешения путей в связях формы (см. Resolve-LinkDataPath) — всё по ИСХОДНОЙ форме:
+# колонки реквизитов формы, колонки AdditionalColumns, элементы-таблицы и вид основного реквизита.
+function Get-LinkContext {
+	param($formEl, [string]$mainName, [bool]$mainBorrowed, $borrowedNames, $attrUuids, $formAttrIds)
+
+	$cols = @{}; $addCols = @{}; $tables = @{}; $kind = $null
+	$attrs = $formEl.SelectSingleNode("*[local-name()='Attributes']")
+	if ($attrs) {
+		foreach ($a in $attrs.ChildNodes) {
+			if ($a.NodeType -ne 'Element' -or $a.LocalName -ne 'Attribute') { continue }
+			$nm = $a.GetAttribute("name")
+			$columns = $a.SelectSingleNode("*[local-name()='Columns']")
+			if ($columns) {
+				foreach ($c in $columns.ChildNodes) {
+					if ($c.NodeType -ne 'Element') { continue }
+					if ($c.LocalName -eq 'Column') {
+						$cols["$nm.$($c.GetAttribute('name'))"] = $c.GetAttribute('id')
+					} elseif ($c.LocalName -eq 'AdditionalColumns') {
+						$tblPath = $c.GetAttribute('table')
+						foreach ($ac in @($c.SelectNodes("*[local-name()='Column']"))) {
+							$addCols["$tblPath.$($ac.GetAttribute('name'))"] = $ac.GetAttribute('id')
+						}
+					}
+				}
+			}
+			if ($mainName -and $nm -ceq $mainName) {
+				$typeNode = $a.SelectSingleNode("*[local-name()='Type']/*[local-name()='Type']")
+				if ($typeNode) {
+					# Тип без имени объекта (cfg:ConstantsSet) — тоже вид
+					$tm = [regex]::Match($typeNode.InnerText.Trim(), '^(?:\w+:)?(\w+)(?:\.|$)')
+					if ($tm.Success -and $script:mainAttrKinds.ContainsKey($tm.Groups[1].Value)) { $kind = $script:mainAttrKinds[$tm.Groups[1].Value] }
+				}
+			}
+		}
+	}
+	$items = $formEl.SelectSingleNode("*[local-name()='ChildItems']")
+	if ($items) {
+		foreach ($t in @($items.SelectNodes(".//*[local-name()='Table']"))) {
+			$dp = $t.SelectSingleNode("*[local-name()='DataPath']")
+			if ($dp) { $tables[$t.GetAttribute('name')] = @{ Id = $t.GetAttribute('id'); Path = $dp.InnerText.Trim() } }
+		}
+	}
+	$mainId = if ($mainName -and $formAttrIds.ContainsKey($mainName)) { $formAttrIds[$mainName] } else { "1" }
+	return @{
+		MainName = $mainName; MainId = $mainId; MainBorrowed = $mainBorrowed; MainKind = $kind; BorrowedNames = $borrowedNames
+		AttrUuids = $attrUuids; FormAttrIds = $formAttrIds; FormAttrCols = $cols; AddCols = $addCols; Tables = $tables
+	}
 }
 
 function Get-MainAttributeInfo {
@@ -1799,7 +2098,8 @@ function Build-AdoptedTabularSectionXml {
 function Collect-ReferenceTypes {
 	param([string[]]$typeXmls)
 
-	$result = @{}
+	# Порядок первого упоминания: от него зависит порядок заимствования в ChildObjects
+	$result = [ordered]@{}
 	foreach ($typeXml in $typeXmls) {
 		# cfg:CatalogRef.XXX, cfg:EnumRef.XXX, cfg:DocumentRef.XXX, etc.
 		$refMatches = [regex]::Matches($typeXml, 'cfg:(\w+)Ref\.(\w+)')
@@ -1807,7 +2107,7 @@ function Collect-ReferenceTypes {
 			$refPrefix = $m.Groups[1].Value  # e.g. "Catalog", "Enum", "Document"
 			$objName = $m.Groups[2].Value
 			$key = "${refPrefix}.${objName}"
-			if (-not $result.ContainsKey($key)) {
+			if (-not $result.Contains($key)) {
 				$result[$key] = @{ TypeName = $refPrefix; ObjName = $objName }
 			}
 		}
@@ -1816,7 +2116,7 @@ function Collect-ReferenceTypes {
 		foreach ($m in $dtMatches) {
 			$dtName = $m.Groups[1].Value
 			$key = "DefinedType.${dtName}"
-			if (-not $result.ContainsKey($key)) {
+			if (-not $result.Contains($key)) {
 				$result[$key] = @{ TypeName = "DefinedType"; ObjName = $dtName }
 			}
 		}
@@ -1905,17 +2205,146 @@ function Merge-AttributesIntoObject {
 }
 
 # --- 11h. Borrow-MainAttribute orchestrator ---
+# Ссылочные типы → объекты-оболочки в расширении (кто уже заимствован — пропускается)
+function Borrow-ReferenceTypeShells {
+	param([string[]]$typeXmls)
+
+	$encBom = New-Object System.Text.UTF8Encoding($true)
+	$refTypes = Collect-ReferenceTypes $typeXmls
+	Info "  Reference types to borrow: $($refTypes.Count)"
+
+	foreach ($rt in $refTypes) {
+		if (-not $childTypeDirMap.ContainsKey($rt.TypeName)) {
+			Warn "  Unknown reference type: $($rt.TypeName).$($rt.ObjName)"
+			continue
+		}
+		if (Test-ObjectBorrowed $rt.TypeName $rt.ObjName) {
+			Info "  Already borrowed: $($rt.TypeName).$($rt.ObjName)"
+			continue
+		}
+		$rtSrcFile = Join-Path (Join-Path $cfgDir $childTypeDirMap[$rt.TypeName]) "$($rt.ObjName).xml"
+		if (-not (Test-Path $rtSrcFile)) {
+			Warn "  Source not found: $($rt.TypeName).$($rt.ObjName)"
+			continue
+		}
+		$src = Read-SourceObject $rt.TypeName $rt.ObjName
+		$borrowedXml = Build-BorrowedObjectXml $rt.TypeName $rt.ObjName $src.Uuid $src.Properties
+		$targetDir = Join-Path $extDir $childTypeDirMap[$rt.TypeName]
+		if (-not (Test-Path $targetDir)) {
+			New-Item -ItemType Directory -Path $targetDir -Force | Out-Null
+		}
+		$targetFile = Join-Path $targetDir "$($rt.ObjName).xml"
+		[System.IO.File]::WriteAllText($targetFile, $borrowedXml, $encBom)
+		Add-ToChildObjects $rt.TypeName $rt.ObjName
+		$script:borrowedFiles += $targetFile
+		Info "  Auto-borrowed: $($rt.TypeName).$($rt.ObjName)"
+	}
+}
+
+# Владелец общей формы — из ТИПА её основного реквизита (эталон УТ CommonMain):
+# <Вид>Object.Имя / <Вид>RecordManager.Имя → объект; DynamicList → объект из <MainTable>;
+# ConstantsSet → константы по путям формы. Примитив, тип без имени (ReportObject — любой отчёт),
+# список без MainTable → владельца нет: в расширение идёт только сам реквизит формы.
+$script:commonFormOwnerKinds = [ordered]@{
+	'CatalogObject'='Catalog'; 'DocumentObject'='Document'; 'DataProcessorObject'='DataProcessor'; 'ReportObject'='Report'
+	'ChartOfCharacteristicTypesObject'='ChartOfCharacteristicTypes'; 'ChartOfAccountsObject'='ChartOfAccounts'
+	'ChartOfCalculationTypesObject'='ChartOfCalculationTypes'; 'ExchangePlanObject'='ExchangePlan'
+	'BusinessProcessObject'='BusinessProcess'; 'TaskObject'='Task'
+	'InformationRegisterRecordManager'='InformationRegister'; 'InformationRegisterRecordSet'='InformationRegister'
+	'AccumulationRegisterRecordSet'='AccumulationRegister'
+}
+function Resolve-CommonFormOwner {
+	param($formEl)
+
+	$mainAttr = $formEl.SelectSingleNode("*[local-name()='Attributes']/*[local-name()='Attribute'][*[local-name()='MainAttribute']='true']")
+	if (-not $mainAttr) { return $null }
+	$typeNode = $mainAttr.SelectSingleNode("*[local-name()='Type']/*[local-name()='Type']")
+	$typeText = if ($typeNode) { $typeNode.InnerText.Trim() } else { "" }
+	if ($typeText -ceq 'cfg:ConstantsSet') { return @{ Kind = 'Constants'; MainName = $mainAttr.GetAttribute("name") } }
+	$m = [regex]::Match($typeText, '^cfg:(\w+)\.(\w+)$')
+	if ($m.Success -and $script:commonFormOwnerKinds.Contains($m.Groups[1].Value)) {
+		return @{ Kind = 'Object'; TypeName = $script:commonFormOwnerKinds[$m.Groups[1].Value]; ObjName = $m.Groups[2].Value }
+	}
+	if ($typeText -ceq 'cfg:DynamicList') {
+		$mt = $mainAttr.SelectSingleNode(".//*[local-name()='MainTable']")
+		if ($mt) {
+			$mtm = [regex]::Match($mt.InnerText.Trim(), '^(\w+)\.(\w+)$')
+			if ($mtm.Success -and $childTypeDirMap.ContainsKey($mtm.Groups[1].Value)) {
+				return @{ Kind = 'Object'; TypeName = $mtm.Groups[1].Value; ObjName = $mtm.Groups[2].Value }
+			}
+		}
+	}
+	return $null
+}
+
+# Набор констант как основной реквизит общей формы: заимствуются константы, пути на которые есть
+# в форме (<Реквизит>.<Константа>), — с типом как в источнике; их ссылочные типы — оболочками
+# (эталон УТ CommonMain: НастройкаПереводаТекста → две константы + перечисление из типа).
+function Borrow-FormConstants {
+	param([string]$srcFormXmlPath, [string]$mainName)
+
+	Info "Borrowing constants for main attribute ${mainName} (ConstantsSet)..."
+	$names = (Collect-FormDataPaths $srcFormXmlPath $mainName).FirstLevel
+	$encBom = New-Object System.Text.UTF8Encoding($true)
+	$typeXmls = @()
+	foreach ($cName in @($names.Keys)) {
+		$cSrcFile = Join-Path (Join-Path $cfgDir "Constants") "${cName}.xml"
+		if (-not (Test-Path $cSrcFile)) { continue }
+		$cDoc = New-Object System.Xml.XmlDocument
+		# С пробелами: вложенные отступы типа в источнике — ровно та же глубина, что в расширении
+		$cDoc.PreserveWhitespace = $true
+		$cDoc.Load($cSrcFile)
+		$cTypeNode = $cDoc.SelectSingleNode("//*[local-name()='Constant']/*[local-name()='Properties']/*[local-name()='Type']")
+		$cTypeXml = if ($cTypeNode) { ([regex]::Replace($cTypeNode.OuterXml, '\s+xmlns(?::\w+)?="[^"]*"', '') -replace "`r?`n", "`r`n") } else { "" }
+		if ($cTypeXml) { $typeXmls += $cTypeXml }
+		# Тип — последним свойством, после ExtendedConfigurationObject (как у Конфигуратора)
+		$addType = {
+			param([string]$xml)
+			([regex]'(?<ind>[ \t]*)<ExtendedConfigurationObject>[^<]*</ExtendedConfigurationObject>').Replace($xml, {
+				param($mm) $mm.Value + "`r`n" + $mm.Groups['ind'].Value + $cTypeXml
+			}, 1)
+		}
+		if (Test-ObjectBorrowed "Constant" $cName) {
+			# Заимствованная раньше оболочкой (-Object Constant.X) — без типа: дописываем, как при
+			# слиянии реквизитов в уже заимствованный объект
+			$extCFile = Join-Path (Join-Path $extDir "Constants") "${cName}.xml"
+			$extCText = [System.IO.File]::ReadAllText($extCFile, $encBom)
+			if ($cTypeXml -and $extCText -cnotmatch '<Type>') {
+				[System.IO.File]::WriteAllText($extCFile, (& $addType $extCText), $encBom)
+				Info "  Added type: Constant.${cName}"
+			} else {
+				Info "  Already borrowed: Constant.${cName}"
+			}
+			continue
+		}
+		$src = Read-SourceObject "Constant" $cName
+		$borrowedXml = Build-BorrowedObjectXml "Constant" $cName $src.Uuid $src.Properties
+		if ($cTypeXml) { $borrowedXml = & $addType $borrowedXml }
+		$targetDir = Join-Path $extDir "Constants"
+		if (-not (Test-Path $targetDir)) { New-Item -ItemType Directory -Path $targetDir -Force | Out-Null }
+		$targetFile = Join-Path $targetDir "${cName}.xml"
+		[System.IO.File]::WriteAllText($targetFile, $borrowedXml, $encBom)
+		Add-ToChildObjects "Constant" $cName
+		$script:borrowedFiles += $targetFile
+		Info "  Borrowed: Constant.${cName}"
+	}
+	Borrow-ReferenceTypeShells $typeXmls
+}
+
 function Borrow-MainAttribute {
-	param([string]$typeName, [string]$objName, [string]$formName, [string]$mode)
+	param([string]$typeName, [string]$objName, [string]$formName, [string]$mode, [string]$srcFormXmlPath = "")
 
 	$dirName = $childTypeDirMap[$typeName]
 	Info "Borrowing main attribute for ${typeName}.${objName} (mode: $mode)..."
+	# Путь к исходной форме: у общей формы его передают явно (владелец выведен из типа реквизита)
+	if (-not $srcFormXmlPath) {
+		$srcFormXmlPath = Join-Path (Join-Path (Join-Path (Join-Path (Join-Path $cfgDir $dirName) $objName) "Forms") $formName) "Ext/Form.xml"
+	}
 
 	# Step 1: Collect DataPaths (Form mode) or take all (All mode)
 	$firstLevelNames = $null
 	$deepPaths = @()
 	if ($mode -eq "Form") {
-		$srcFormXmlPath = Join-Path (Join-Path (Join-Path (Join-Path (Join-Path $cfgDir $dirName) $objName) "Forms") $formName) "Ext/Form.xml"
 		if (-not (Test-Path $srcFormXmlPath)) {
 			Write-Error "Source Form.xml not found: $srcFormXmlPath"
 			exit 1
@@ -2007,7 +2436,7 @@ function Borrow-MainAttribute {
 	# тип должен быть заимствован — иначе колонка ссылается на DefinedType/справочник, которого в
 	# расширении нет. Конфигуратор поступает так же (эталон: DefinedTypes/Артикул при заимствовании
 	# формы заказа поставщику).
-	$srcFormForCols = Join-Path (Join-Path (Join-Path (Join-Path (Join-Path $cfgDir $dirName) $objName) "Forms") $formName) "Ext/Form.xml"
+	$srcFormForCols = $srcFormXmlPath
 	if (Test-Path $srcFormForCols) {
 		$colsDoc = New-Object System.Xml.XmlDocument
 		$colsDoc.PreserveWhitespace = $true
@@ -2018,35 +2447,7 @@ function Borrow-MainAttribute {
 		}
 	}
 
-	$refTypes = Collect-ReferenceTypes $allTypeXmls
-	Info "  Reference types to borrow: $($refTypes.Count)"
-
-	foreach ($rt in $refTypes) {
-		if (-not $childTypeDirMap.ContainsKey($rt.TypeName)) {
-			Warn "  Unknown reference type: $($rt.TypeName).$($rt.ObjName)"
-			continue
-		}
-		if (Test-ObjectBorrowed $rt.TypeName $rt.ObjName) {
-			Info "  Already borrowed: $($rt.TypeName).$($rt.ObjName)"
-			continue
-		}
-		$rtSrcFile = Join-Path (Join-Path $cfgDir $childTypeDirMap[$rt.TypeName]) "$($rt.ObjName).xml"
-		if (-not (Test-Path $rtSrcFile)) {
-			Warn "  Source not found: $($rt.TypeName).$($rt.ObjName)"
-			continue
-		}
-		$src = Read-SourceObject $rt.TypeName $rt.ObjName
-		$borrowedXml = Build-BorrowedObjectXml $rt.TypeName $rt.ObjName $src.Uuid $src.Properties
-		$targetDir = Join-Path $extDir $childTypeDirMap[$rt.TypeName]
-		if (-not (Test-Path $targetDir)) {
-			New-Item -ItemType Directory -Path $targetDir -Force | Out-Null
-		}
-		$targetFile = Join-Path $targetDir "$($rt.ObjName).xml"
-		[System.IO.File]::WriteAllText($targetFile, $borrowedXml, $encBom)
-		Add-ToChildObjects $rt.TypeName $rt.ObjName
-		$script:borrowedFiles += $targetFile
-		Info "  Auto-borrowed: $($rt.TypeName).$($rt.ObjName)"
-	}
+	Borrow-ReferenceTypeShells $allTypeXmls
 
 	# Step 5: Handle deep paths (Form mode only)
 	if ($mode -eq "Form" -and $deepPaths.Count -gt 0) {
@@ -2429,15 +2830,25 @@ foreach ($item in $items) {
 	} else {
 		$objName = $remainder
 	}
+	# Общая форма — сама форма: «CommonForm.X» заимствуется вместе с содержимым, владельца у неё нет
+	$isCommonForm = $typeName -eq 'CommonForm'
+	if ($isCommonForm) {
+		if ($formName) {
+			Write-Error "Invalid format '${item}': общая форма задаётся как 'CommonForm.Имя'"
+			exit 1
+		}
+		$formName = $objName
+	}
 
 	$dirName = $childTypeDirMap[$typeName]
 
 	if ($formName) {
 		# --- Form borrowing ---
-		Info "Borrowing form ${typeName}.${objName}.Form.${formName}..."
+		if ($isCommonForm) { Info "Borrowing common form ${typeName}.${objName}..." }
+		else { Info "Borrowing form ${typeName}.${objName}.Form.${formName}..." }
 
 		# Auto-borrow parent object if not yet borrowed
-		if (-not (Test-ObjectBorrowed $typeName $objName)) {
+		if (-not $isCommonForm -and -not (Test-ObjectBorrowed $typeName $objName)) {
 			Info "  Parent object ${typeName}.${objName} not yet borrowed — borrowing first..."
 
 			$src = Read-SourceObject $typeName $objName
@@ -2467,7 +2878,32 @@ foreach ($item in $items) {
 		$borrowedCount++
 
 		# Borrow main attribute if requested
-		if ($hasBMA) {
+		if ($hasBMA -and $isCommonForm) {
+			# У общей формы владельца нет — он выводится из типа основного реквизита
+			$cfSrcFormXmlPath = Join-Path (Join-Path (Join-Path $cfgDir $dirName) $objName) "Ext/Form.xml"
+			$cfDoc = New-Object System.Xml.XmlDocument
+			$cfDoc.PreserveWhitespace = $true
+			$cfDoc.Load($cfSrcFormXmlPath)
+			$cfOwner = Resolve-CommonFormOwner $cfDoc.DocumentElement
+			if (-not $cfOwner) {
+				Info "  Основной реквизит общей формы не ссылается на объект — заимствуется только сам реквизит"
+			} elseif ($cfOwner.Kind -eq 'Constants') {
+				Borrow-FormConstants $cfSrcFormXmlPath $cfOwner.MainName
+			} else {
+				if (-not (Test-ObjectBorrowed $cfOwner.TypeName $cfOwner.ObjName)) {
+					$src = Read-SourceObject $cfOwner.TypeName $cfOwner.ObjName
+					$borrowedXml = Build-BorrowedObjectXml $cfOwner.TypeName $cfOwner.ObjName $src.Uuid $src.Properties
+					$ownerDir = Join-Path $extDir $childTypeDirMap[$cfOwner.TypeName]
+					if (-not (Test-Path $ownerDir)) { New-Item -ItemType Directory -Path $ownerDir -Force | Out-Null }
+					$ownerFile = Join-Path $ownerDir "$($cfOwner.ObjName).xml"
+					[System.IO.File]::WriteAllText($ownerFile, $borrowedXml, (New-Object System.Text.UTF8Encoding($true)))
+					Add-ToChildObjects $cfOwner.TypeName $cfOwner.ObjName
+					$script:borrowedFiles += $ownerFile
+					Info "  Auto-borrowed: $($cfOwner.TypeName).$($cfOwner.ObjName)"
+				}
+				Borrow-MainAttribute $cfOwner.TypeName $cfOwner.ObjName $null $BorrowMainAttribute $cfSrcFormXmlPath
+			}
+		} elseif ($hasBMA) {
 			Borrow-MainAttribute $typeName $objName $formName $BorrowMainAttribute
 		}
 	} else {
