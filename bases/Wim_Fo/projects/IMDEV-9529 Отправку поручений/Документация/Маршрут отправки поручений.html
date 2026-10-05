@@ -1,0 +1,489 @@
+<title>Маршрут "Проверить и отправить"</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Sans+Condensed:wght@600;700&display=swap">
+<style>
+/* Layout: one reading column; overview strip, then a numbered call trace with a layer rail, then the adapter fan-out */
+:root {
+  --bg: #f3f4f1;
+  --surface: #ffffff;
+  --fg: #1d2420;
+  --muted: #5d6862;
+  --line: #d5dad4;
+  --accent: #1f6b52;
+  --l-client: #2f5fb3;
+  --l-client-bg: #e7eefb;
+  --l-server: #1f6b52;
+  --l-server-bg: #e2f1ea;
+  --l-bg: #9a5b00;
+  --l-bg-bg: #fbefd9;
+  --l-ext: #b23a2e;
+  --l-ext-bg: #fbe5e1;
+  --warn: #9a5b00;
+  --code-bg: #eceee9;
+  --prop: #6a3fa0;
+  --prop-bg: #f1eafa;
+  --prop-line: #cdb8ea;
+  --f-display: "IBM Plex Sans Condensed", "Arial Narrow", Arial, sans-serif;
+  --f-body: "IBM Plex Sans", "Segoe UI", Arial, sans-serif;
+  --f-mono: "IBM Plex Mono", Consolas, "Courier New", monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #151a17; --surface: #1d2420; --fg: #e4e9e5; --muted: #9aa69f; --line: #34403a; --accent: #5fc39c;
+    --l-client: #8fb2f2; --l-client-bg: #1e2a40; --l-server: #6fd0a8; --l-server-bg: #183027;
+    --l-bg: #f0b75a; --l-bg-bg: #3a2c12; --l-ext: #f08a7d; --l-ext-bg: #3d1f1b; --warn: #f0b75a; --code-bg: #262e29; --prop: #c7a6f2; --prop-bg: #2a2138; --prop-line: #4e3d68;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #151a17; --surface: #1d2420; --fg: #e4e9e5; --muted: #9aa69f; --line: #34403a; --accent: #5fc39c;
+  --l-client: #8fb2f2; --l-client-bg: #1e2a40; --l-server: #6fd0a8; --l-server-bg: #183027;
+  --l-bg: #f0b75a; --l-bg-bg: #3a2c12; --l-ext: #f08a7d; --l-ext-bg: #3d1f1b; --warn: #f0b75a; --code-bg: #262e29; --prop: #c7a6f2; --prop-bg: #2a2138; --prop-line: #4e3d68;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--fg); font: 15px/1.55 var(--f-body); }
+.wrap { max-width: 980px; margin: 0 auto; padding-inline: 20px; padding-block: 36px 64px; display: grid; gap: 40px; }
+h1, h2 { font-family: var(--f-display); text-wrap: balance; margin: 0; letter-spacing: .005em; }
+h1 { font-size: clamp(28px, 4.4vw, 40px); line-height: 1.1; }
+h2 { font-size: 22px; }
+p { margin: 0; max-width: 68ch; }
+code, .mono { font-family: var(--f-mono); font-size: 13px; }
+code { background: var(--code-bg); padding: 1px 5px; border-radius: 3px; overflow-wrap: anywhere; }
+.eyebrow { font: 600 12px/1 var(--f-body); letter-spacing: .09em; text-transform: uppercase; color: var(--muted); }
+header { display: grid; gap: 14px; }
+.lede { font-size: 17px; color: var(--fg); }
+
+/* answer */
+.answer { background: var(--surface); border: 1px solid var(--line); border-left: 4px solid var(--accent); padding: 18px 20px; display: grid; gap: 10px; }
+.answer p { max-width: 80ch; }
+
+/* overview strip */
+.strip { display: flex; flex-wrap: wrap; align-items: stretch; gap: 8px; }
+.node { flex: 1 1 140px; min-width: 0; padding: 10px 12px; border-radius: 4px; display: grid; gap: 4px; align-content: start; }
+.node b { font: 600 14px/1.25 var(--f-body); }
+.node span { font: 12px/1.35 var(--f-mono); color: var(--muted); overflow-wrap: anywhere; }
+.arrow { align-self: center; color: var(--muted); font: 600 18px/1 var(--f-mono); }
+.c { background: var(--l-client-bg); box-shadow: inset 3px 0 0 var(--l-client); }
+.s { background: var(--l-server-bg); box-shadow: inset 3px 0 0 var(--l-server); }
+.g { background: var(--l-bg-bg); box-shadow: inset 3px 0 0 var(--l-bg); }
+.x { background: var(--l-ext-bg); box-shadow: inset 3px 0 0 var(--l-ext); }
+
+.legend { display: flex; flex-wrap: wrap; gap: 14px; font-size: 13px; color: var(--muted); }
+.legend i { display: inline-block; width: 12px; height: 12px; border-radius: 2px; vertical-align: -1px; margin-right: 6px; }
+
+/* trace */
+section { display: grid; gap: 16px; }
+.trace { list-style: none; margin: 0; padding: 0; display: grid; }
+.step { display: grid; grid-template-columns: 44px minmax(0, 1fr); column-gap: 14px; }
+.rail { position: relative; display: flex; justify-content: center; }
+.rail::before { content: ""; position: absolute; top: 0; bottom: 0; width: 2px; background: var(--line); }
+.step:first-child .rail::before { top: 18px; }
+.step:last-child .rail::before { bottom: calc(100% - 18px); }
+.dot { position: relative; margin-top: 6px; width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center;
+  font: 600 13px/1 var(--f-mono); color: var(--surface); font-variant-numeric: tabular-nums; }
+.step[data-l="c"] .dot { background: var(--l-client); }
+.step[data-l="s"] .dot { background: var(--l-server); }
+.step[data-l="g"] .dot { background: var(--l-bg); }
+.step[data-l="x"] .dot { background: var(--l-ext); }
+.card { padding-block: 6px 22px; display: grid; gap: 6px; min-width: 0; }
+.card h3 { margin: 0; font: 600 16px/1.3 var(--f-body); display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: baseline; }
+.tag { font: 600 11px/1 var(--f-body); letter-spacing: .07em; text-transform: uppercase; padding: 4px 6px; border-radius: 3px; }
+.step[data-l="c"] .tag { color: var(--l-client); background: var(--l-client-bg); }
+.step[data-l="s"] .tag { color: var(--l-server); background: var(--l-server-bg); }
+.step[data-l="g"] .tag { color: var(--l-bg); background: var(--l-bg-bg); }
+.step[data-l="x"] .tag { color: var(--l-ext); background: var(--l-ext-bg); }
+.loc { font: 12px/1.4 var(--f-mono); color: var(--muted); overflow-wrap: anywhere; }
+.card ul { margin: 0; padding-left: 18px; display: grid; gap: 3px; max-width: 80ch; }
+.branch { border-left: 2px dashed var(--line); padding: 4px 0 4px 12px; color: var(--muted); font-size: 14px; max-width: 80ch; }
+.branch b { color: var(--fg); font-weight: 600; }
+
+/* adapters */
+.scroll { overflow-x: auto; border: 1px solid var(--line); background: var(--surface); }
+table { border-collapse: collapse; width: 100%; min-width: 760px; font-size: 14px; }
+th, td { text-align: left; vertical-align: top; padding: 10px 12px; border-bottom: 1px solid var(--line); }
+th { font: 600 12px/1.2 var(--f-body); letter-spacing: .06em; text-transform: uppercase; color: var(--muted); background: var(--code-bg); }
+tr:last-child td { border-bottom: 0; }
+td:first-child { font: 600 14px/1.3 var(--f-mono); white-space: nowrap; }
+.none { color: var(--warn); font-weight: 600; }
+tr.mine td { background: var(--l-server-bg); }
+tr.mine td:first-child { box-shadow: inset 3px 0 0 var(--accent); }
+
+.notes { display: grid; gap: 12px; }
+.note { background: var(--surface); border: 1px solid var(--line); padding: 14px 16px; display: grid; gap: 6px; }
+.note h3 { margin: 0; font: 600 15px/1.3 var(--f-body); }
+.note.warn { border-left: 4px solid var(--warn); }
+footer { color: var(--muted); font-size: 13px; }
+ol.plain { margin: 0; padding-left: 20px; display: grid; gap: 4px; max-width: 80ch; }
+pre.code { margin: 0; background: var(--code-bg); padding: 10px 12px; overflow-x: auto; font: 13px/1.5 var(--f-mono); }
+
+/* proposal */
+.proposal { background: var(--prop-bg); border: 1px solid var(--prop-line); border-top: 4px solid var(--prop); padding: 20px; display: grid; gap: 16px; }
+.proposal h2, .proposal h3 { color: var(--prop); }
+.proposal h3 { margin: 0; font: 600 17px/1.3 var(--f-body); }
+.proposal .eyebrow { color: var(--prop); }
+.proposal code { background: var(--surface); }
+.proposal .scroll { background: var(--surface); border-color: var(--prop-line); }
+.proposal .variant { display: grid; gap: 10px; padding-top: 4px; border-top: 1px dashed var(--prop-line); }
+.p { background: var(--surface); box-shadow: inset 3px 0 0 var(--prop); }
+.risk { border-left: 3px solid var(--warn); padding: 4px 0 4px 12px; max-width: 80ch; }
+@media (max-width: 560px) {
+  .arrow { display: none; }
+  .node { flex-basis: 100%; }
+  .step { grid-template-columns: 34px minmax(0, 1fr); column-gap: 10px; }
+  .dot { width: 24px; height: 24px; font-size: 12px; }
+}
+</style>
+
+<div class="wrap">
+  <header>
+    <div class="eyebrow">ФО · Блоттер · кнопка "Проверить и отправить"</div>
+    <h1>Куда уходит поручение после нажатия "Проверить и отправить"</h1>
+    <p class="lede">Трасса вызовов от команды формы блоттера до сетевого вызова в адаптере торговой системы. Собрано по исходникам основной конфигурации ФО; расширения (VTB, ВТБ_Прод) эту цепочку не перехватывают.</p>
+  </header>
+
+  <div class="answer">
+    <div class="eyebrow">Короткий ответ</div>
+    <p>Сначала на сервере выполняется pre-trade проверка лимитов (<code>Распорядители.ПроверкаИОтправка</code>). Поручения, прошедшие проверку, передаются в <code>Распорядители.Отправка</code>, где группируются по адаптеру. Адаптер берется из регистра сведений <code>РасширенияПоручений</code> (поле <code>Адаптер</code>), его вид - из <code>Справочник.Адаптеры.Вид</code>. Дальше заявка уходит во внешнюю торговую систему: в терминал QUIK через COM-компоненту T2Q, либо HTTP POST в шлюз FIX / FIX-Ray / WINVESTOR. Внебиржевые поручения никуда не отправляются: по ним сразу создается документ <code>Сделка</code> или <code>СделкаРЕПО</code>.</p>
+    <p><b>В этой базе один адаптер вида FIX:</b> биржевые поручения уходят HTTP-запросом на WebSocket-прокси, а прокси пересылает FIX-сообщение в сессию с ВТБ (FORDU_PROD → FORDU_VTB24).</p>
+  </div>
+
+  <section>
+    <h2>Адаптер этой базы: (UID 1189634) QUIK FIX Банк ВТБ (ПАО)</h2>
+    <p>В справочнике <code>Адаптеры</code> одна запись, ее <b>Вид = FIX</b>. Слово QUIK в наименовании на маршрут не влияет: менеджер выбирается по реквизиту <code>Вид</code>, поэтому работает <code>Обработка.АдаптерFIX</code>, а COM-компонента T2Q не используется.</p>
+    <div class="strip" role="list">
+      <div class="node g" role="listitem"><b>1С: АдаптерFIX</b><span>ПорученияОтправить → FIX NewOrderSingle (35=D), FIX.4.2</span></div>
+      <div class="arrow" aria-hidden="true">→</div>
+      <div class="node x" role="listitem"><b>WebSocket-прокси</b><span>HTTP POST &lt;АдресHTTPСервиса&gt;/send {guid, message}</span></div>
+      <div class="arrow" aria-hidden="true">→</div>
+      <div class="node x" role="listitem"><b>FIX-сессия с ВТБ</b><span>TCP на "Адрес подключения" (ip:port); 49=FORDU_PROD, 56=FORDU_VTB24</span></div>
+    </div>
+    <div class="scroll">
+      <table>
+        <thead><tr><th>Поле формы адаптера</th><th>Как используется при отправке</th></tr></thead>
+        <tbody>
+          <tr><td>Вид = FIX</td><td>Ключ в <code>Справочники.Адаптеры.Менеджеры()</code>: выбирается <code>Обработки.АдаптерFIX</code>.</td></tr>
+          <tr><td>Адрес подключения</td><td>Адрес FIX-сервера брокера вида <code>x.x.x.x:port</code>. 1С сама к нему не подключается: адрес передается прокси в команде <code>connect?params={ip, port, guid, message=Logon}</code> (<code>ВыполнитьСоединение</code>). Хранится в безопасном хранилище, поэтому на форме отображается маской.</td></tr>
+          <tr><td>Отправитель / Получатель</td><td>SenderCompID (49) и TargetCompID (56) в заголовке каждого FIX-сообщения.</td></tr>
+          <tr><td>OutMsgSeqNo</td><td>Счетчик исходящих номеров MsgSeqNum (34), регистр <code>СообщенияАдаптеровСчетчики</code>. Перед отправкой номера захватываются на все поручения пакета, после успешной отправки сохраняется последний.</td></tr>
+          <tr><td>InMsgSeqNo</td><td>Номер последнего входящего сообщения. Ответы (ExecutionReport) забираются у прокси отдельно командой <code>get?params={guid}</code> и подтверждаются командой <code>confirm</code>.</td></tr>
+          <tr><td>Сердцебиение</td><td>Интервал Heartbeat (35=0) для FIX-сессии.</td></tr>
+          <tr><td>Идентификатор адаптера</td><td>Поле <code>guid</code> в запросах к прокси: по нему прокси определяет, в какую FIX-сессию переслать сообщение.</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p>Адрес самого прокси (<code>АдресHTTPСервиса</code>) задается не в карточке адаптера, а в общих настройках: объект <code>ВебСокетПрокси</code>, ключ <code>НастройкиВебСокетПрокси</code>. Поручение уходит только при состоянии адаптера "готов к работе" в регистре <code>СостоянияАдаптеров</code>. Это состояние обновляет <code>КонтроллерСинхронизации</code> через <code>АдаптерFIX.СоединениеДоступно</code>: он опрашивает прокси и, если сессия не в состоянии Connected, выполняет connect с Logon. Таймаут HTTP-вызова <code>/send</code> - 2 секунды.</p>
+  </section>
+
+  <section>
+    <h2>Общая схема</h2>
+    <div class="strip" role="list">
+      <div class="node c" role="listitem"><b>Форма блоттера</b><span>ФормаБлоттер.ПроверитьИОтправить</span></div>
+      <div class="arrow" aria-hidden="true">→</div>
+      <div class="node c" role="listitem"><b>Клиентский распорядитель</b><span>РаспорядителиКлиент</span></div>
+      <div class="arrow" aria-hidden="true">→</div>
+      <div class="node s" role="listitem"><b>Проверка лимитов</b><span>Распорядители.ПроверкаИОтправка</span></div>
+      <div class="arrow" aria-hidden="true">→</div>
+      <div class="node s" role="listitem"><b>Отправка</b><span>Распорядители.Отправка</span></div>
+      <div class="arrow" aria-hidden="true">→</div>
+      <div class="node g" role="listitem"><b>Исполнитель (фон)</b><span>Исполнители.Отправка_ОтправкаПоручений</span></div>
+      <div class="arrow" aria-hidden="true">→</div>
+      <div class="node x" role="listitem"><b>Адаптер → торговая система</b><span>Обработка.Адаптер&lt;Вид&gt;.ПорученияОтправить</span></div>
+    </div>
+    <div class="legend">
+      <span><i style="background:var(--l-client)"></i>Клиент</span>
+      <span><i style="background:var(--l-server)"></i>Сервер (сеанс пользователя или фоновое задание БСП)</span>
+      <span><i style="background:var(--l-bg)"></i>Фоновое задание на адаптер</span>
+      <span><i style="background:var(--l-ext)"></i>Внешний вызов</span>
+    </div>
+  </section>
+
+  <section>
+    <h2>Трасса вызовов по шагам</h2>
+    <ol class="trace">
+
+      <li class="step" data-l="c"><div class="rail"><span class="dot">1</span></div><div class="card">
+        <h3><span class="tag">Клиент</span>Команда формы блоттера</h3>
+        <div class="loc">Обработка.Блоттер.Форма.ФормаБлоттер, модуль формы:572</div>
+        <ul>
+          <li><code>ПроверитьИОтправить(Команда)</code> вызывает <code>КоПорученияКлиент.ПроверитьИОтправить(ЭтотОбъект)</code>.</li>
+          <li>Кнопка видна только при праве на отправку (<code>Элементы.ПроверитьИОтправить.Видимость = ОтправкаПоручений</code>, строка 86; роль <code>ОтправкаПоручений</code>).</li>
+        </ul>
+      </div></li>
+
+      <li class="step" data-l="c"><div class="rail"><span class="dot">2</span></div><div class="card">
+        <h3><span class="tag">Клиент</span>КоПорученияКлиент.ПроверитьИОтправить</h3>
+        <div class="loc">ОбщийМодуль.КоПорученияКлиент:11</div>
+        <ul>
+          <li>Серверный вызов <code>ТорговаяЧастьВызовСервера.КонтрольОтклоненияЦеныОтРынка()</code> - включен ли контроль отклонения цены от рынка.</li>
+          <li>Передает управление в <code>РаботаСПоручениямиКлиент.ПроверитьИОтправить</code>.</li>
+        </ul>
+      </div></li>
+
+      <li class="step" data-l="c"><div class="rail"><span class="dot">3</span></div><div class="card">
+        <h3><span class="tag">Клиент</span>РаботаСПоручениямиКлиент.ПроверитьИОтправить</h3>
+        <div class="loc">ОбщийМодуль.РаботаСПоручениямиКлиент:287</div>
+        <ul>
+          <li>Получает шаблон указаний с сервера: <code>РаспорядителиВызовСервера.ПараметрыПроверки()</code> (ОбщийМодуль.РаспорядителиВызовСервера, стр. 27). В нем:
+            <code>Метод = "Распорядители.ПроверкаИОтправка"</code> (или <code>..._ИспользоватьСогласованиеАкцептов</code>),
+            <code>МетодНаКлиенте = "РаспорядителиКлиент.ПроверкаИОтправка_Вход"</code>, <code>ИспользоватьФоновыеЗадания</code>, план проверки лимитов.</li>
+          <li>Выставляет <code>ОтправитьПослеПроверки = Истина</code>, профиль блоттера, флаг контроля цены. При контроле цены форма результата - <code>Обработка.Блоттер.Форма.ПовторнаяОтправкаПоручений</code>.</li>
+        </ul>
+      </div></li>
+
+      <li class="step" data-l="c"><div class="rail"><span class="dot">4</span></div><div class="card">
+        <h3><span class="tag">Клиент</span>Сбор поручений и динамический вызов</h3>
+        <div class="loc">РаботаСПоручениямиКлиент: ОбработатьПорученияФормы :763, ВыполнитьМетодОбработкиПоручений :923</div>
+        <ul>
+          <li>Поручения - выделенные строки <code>Элементы.Список</code>; строки группировки пропускаются. Ничего не выделено - выход без сообщения.</li>
+          <li><code>Выполнить "РаспорядителиКлиент.Вход(МассивПараметров[0], МассивПараметров[1])"</code>.</li>
+        </ul>
+        <div class="branch"><b>Веб-клиент:</b> тело <code>ВыполнитьМетодОбработкиПоручений</code> обернуто в <code>#Если Не ВебКлиент</code>, поэтому в веб-клиенте кнопка ничего не делает.</div>
+      </div></li>
+
+      <li class="step" data-l="c"><div class="rail"><span class="dot">5</span></div><div class="card">
+        <h3><span class="tag">Клиент</span>РаспорядителиКлиент.Вход → ПроверкаИОтправка_Вход</h3>
+        <div class="loc">ОбщийМодуль.РаспорядителиКлиент:6, :21</div>
+        <ul>
+          <li><code>Вход</code> выполняет <code>Параметры.МетодНаКлиенте</code> через <code>Выполнить</code>.</li>
+          <li><code>РаботаСПоручениямиВызовСервера.ПорученияНеобходимоРазделить</code> - поиск пуловых поручений.</li>
+        </ul>
+        <div class="branch"><b>Есть пуловые:</b> вопрос "необходимо разделить... Продолжить?" → <code>ПроверкаИОтправкаОтвет</code> (:82) синхронно запускает <code>Распорядители.Разделение</code>, заменяет пуловые поручения на новые и продолжает.</div>
+      </div></li>
+
+      <li class="step" data-l="c"><div class="rail"><span class="dot">6</span></div><div class="card">
+        <h3><span class="tag">Клиент</span>ПроверкаИОтправка_ВходВсп - подтверждение</h3>
+        <div class="loc">ОбщийМодуль.РаспорядителиКлиент:40</div>
+        <div class="branch"><b>Включено расширенное подтверждение сделок</b> (<code>ТорговаяЧастьВызовСервера.РасширенноеПодтверждениеСделок</code>): групповая отправка запрещена, для одного поручения открывается <code>Документ.Поручение.Форма.ПодтверждениеОтправки</code>.</div>
+        <div class="branch"><b>Иначе из блоттера:</b> вопрос по шаблону <code>Шаблоны.Отправка.Вопрос</code> с числом поручений. Из формы поручения вопрос не задается (<code>БезВопросаПодтверждения</code>).</div>
+        <ul><li>После "Да" → <code>ПроверкаИОтправка_Подтверждение</code> (:74) → <code>ОбработатьВыполнениеРаспоряжения</code> (:848).</li></ul>
+      </div></li>
+
+      <li class="step" data-l="s"><div class="rail"><span class="dot">7</span></div><div class="card">
+        <h3><span class="tag">Сервер</span>РаспорядителиВызовСервера.ВыполнитьРаспоряжение</h3>
+        <div class="loc">ОбщийМодуль.РаспорядителиВызовСервера:6</div>
+        <ul>
+          <li><code>ИспользоватьФоновыеЗадания = Ложь</code> (файловая база или настройка): <code>Выполнить("Результат = Распорядители.ПроверкаИОтправка(Параметры, АдресРезультата)")</code> в сеансе пользователя.</li>
+          <li>Иначе <code>ДлительныеОперации.ВыполнитьВФоне("Распорядители.ПроверкаИОтправка", ...)</code>; на клиенте открывается <code>ОбщаяФорма.ДлительнаяОперация</code> с прогрессом.</li>
+        </ul>
+      </div></li>
+
+      <li class="step" data-l="s"><div class="rail"><span class="dot">8</span></div><div class="card">
+        <h3><span class="tag">Сервер</span>Распорядители.ПроверкаИОтправка - pre-trade проверка</h3>
+        <div class="loc">ОбщийМодуль.Распорядители:14 (вариант с согласованием акцептов - :516)</div>
+        <ul>
+          <li>Привилегированный режим. Этапы проверки: ЧтениеПредварительное → ОбновлениеРасширений → ВалидацияОкружения → СнятиеАкцепта → ЧтениеНаборовДанных → ЧтениеЛимитов → Пороги → Проверка (вкл. внешние) → ЗаписьРезультатов (кэш <code>КэшВм*</code>).</li>
+          <li>Поручения без нарушений (или только с предупреждениями) попадают в массив <code>ПорученияНаОтправку</code>.</li>
+        </ul>
+        <div class="branch"><b>Согласование акцептов включено:</b> поручения с нарушениями получают статус "Ожидает согласования акцепта" и не отправляются; остальные проходят тот же путь.</div>
+      </div></li>
+
+      <li class="step" data-l="s"><div class="rail"><span class="dot">9</span></div><div class="card">
+        <h3><span class="tag">Сервер</span>Блок #Область Отправка</h3>
+        <div class="loc">ОбщийМодуль.Распорядители:393-417</div>
+        <ul>
+          <li>Записывает события проверки, снимает блокировку поручений.</li>
+          <li>При контроле цены исключает поручения с превышением отклонения (<code>Документы.УстановкаОтклоненийЦенПоручений.Превышения</code>).</li>
+          <li><code>РегистрыСведений.РасширенияПоручений.ПереопределитьАдаптеры</code> - подмена адаптера, если включено переопределение.</li>
+          <li><code>Указания = РаспорядителиВызовСервера.ПараметрыОтправки()</code> → <code>Распорядители.Отправка(Указания)</code>.</li>
+        </ul>
+      </div></li>
+
+      <li class="step" data-l="s"><div class="rail"><span class="dot">10</span></div><div class="card">
+        <h3><span class="tag">Сервер</span>Распорядители.Отправка - отбор и группировка по адаптеру</h3>
+        <div class="loc">ОбщийМодуль.Распорядители:601</div>
+        <ul>
+          <li><code>РаботаСТорговойЧастьюВызовСервера.ТаблицаДанныхПоручений</code> - реквизиты заявки и адаптер из <code>РС РасширенияПоручений</code>.</li>
+          <li>Блокировка поручений и отсев каждого поручения: <code>СтатусыПоручений.МожноОтправить</code>, контроль целостности (хеш, <code>РС ХешОбъектов</code>), адаптер в <code>Адаптеры.АдаптерыПорученийГотовыеКРаботе()</code>, <code>Менеджер.ПройденаВалидацияПередОтправкой</code>.</li>
+          <li>Биржевые поручения группируются по адаптеру: <code>ПланОтправкиБиржевых</code> = массив <code>{Адаптер, Поручения}</code>.</li>
+          <li><code>ИсполнитьРаспоряжение</code> (:2791) запускает <code>Исполнители.Отправка_ОтправкаПоручений</code> через <code>ФоновыеЗадания.Выполнить</code>, число потоков = число адаптеров. В режиме тестирования выполняется синхронно.</li>
+        </ul>
+        <div class="branch"><b>Внебиржевая сделка</b> (кроме перевода денег через брокера на QUIK): в торговую систему не уходит. <code>Документы.Сделка</code> / <code>СделкаРЕПО.СоздатьСделкуПоПоручению</code>, статусы "Отправлено" и "Исполнена".</div>
+        <div class="branch"><b>Открытие депозита</b> при ручном исполнении: только статус "Отправлено".</div>
+      </div></li>
+
+      <li class="step" data-l="g"><div class="rail"><span class="dot">11</span></div><div class="card">
+        <h3><span class="tag">Фон</span>Исполнители.Отправка_ОтправкаПоручений</h3>
+        <div class="loc">ОбщийМодуль.Исполнители:812</div>
+        <ul>
+          <li><code>Адаптеры.ПараметрыАдаптера(Адаптер)</code> + <code>Справочники.Адаптеры.БезопасныеНастройки</code> (адрес, ключ доступа, путь).</li>
+          <li>Менеджер выбирается в <code>Справочники.Адаптеры.Менеджеры()</code> (Справочник.Адаптеры, модуль менеджера:121) по виду адаптера.</li>
+          <li><code>Менеджер.ПорученияОтправить(Контейнер)</code>.</li>
+        </ul>
+      </div></li>
+
+      <li class="step" data-l="x"><div class="rail"><span class="dot">12</span></div><div class="card">
+        <h3><span class="tag">Внешний вызов</span>Обработка.Адаптер&lt;Вид&gt;.ПорученияОтправить</h3>
+        <ul>
+          <li>Формирует заявку в формате торговой системы и выполняет сетевой вызов (таблица ниже).</li>
+          <li>Успех: <code>Адаптеры.ЗафиксироватьОтправленоОжидается</code> (статус "Отправлено, ожидается ответ"), запись в <code>СобытияПоручений</code> и <code>СобытияПорученийТорговые</code> (текст отправленного сообщения).</li>
+          <li>Ошибка: <code>Адаптеры.ЗафиксироватьОшибкаОтправки</code>; при таймауте также <code>ЗафиксироватьОшибкаСинхронизации</code>.</li>
+        </ul>
+      </div></li>
+
+      <li class="step" data-l="c"><div class="rail"><span class="dot">13</span></div><div class="card">
+        <h3><span class="tag">Клиент</span>Возврат результата</h3>
+        <div class="loc">ОбщийМодуль.РаспорядителиКлиент:819 Распоряжение_Завершение</div>
+        <ul>
+          <li><code>Оповестить("..._ПроверкаИОтправка_Завершение")</code>, <code>ОповеститьОбИзменении</code> по поручениям, обновление блоттера.</li>
+          <li>Открывается форма результатов <code>Обработка.Блоттер.Форма.ОбработкаПоручений</code> (или <code>ПовторнаяОтправкаПоручений</code>).</li>
+        </ul>
+      </div></li>
+    </ol>
+  </section>
+
+  <section>
+    <h2>Адаптеры: куда физически уходит заявка</h2>
+    <div class="scroll">
+      <table>
+        <thead><tr><th>Вид адаптера</th><th>Транспорт и адрес</th><th>Что отправляется</th><th>Где в коде</th></tr></thead>
+        <tbody>
+          <tr>
+            <td>QUIK</td>
+            <td>COM-объект <code>T2Q</code> (обертка Trans2Quik) на сервере 1С, только Windows x64. Подключение <code>connect_test(Путь)</code> к терминалу QUIK по пути из реквизита адаптера.</td>
+            <td>Строка транзакции QUIK через <code>send_sync_transaction</code>: биржевая, внебиржевая (РПС), РЕПО, фьючерсы, валютный рынок, вывод денег.</td>
+            <td class="mono">Обработка.АдаптерQUIK, модуль менеджера:104, ОтправитьФизически :881, Подключиться :733</td>
+          </tr>
+          <tr class="mine">
+            <td>FIX (в этой базе)</td>
+            <td>HTTP POST <code>&lt;АдресHTTPСервиса&gt;/send</code> на WebSocket-прокси. Адрес хранится в общих настройках: объект <code>ВебСокетПрокси</code>, ключ <code>НастройкиВебСокетПрокси</code>. Таймаут 2 с.</td>
+            <td>JSON <code>{guid: ИдентификаторАдаптера, message: пакет FIX}</code>; пакет из NewOrderSingle (35=D) с исходящими номерами из <code>СообщенияАдаптеровСчетчики</code>.</td>
+            <td class="mono">Обработка.АдаптерFIX, модуль менеджера:278, ОтправитьПакетАдаптеру :1015, ОтправитьФизически :1750</td>
+          </tr>
+          <tr>
+            <td>FIXRAY</td>
+            <td>HTTP POST <code>&lt;АдресПодключения&gt;/api/fix/send</code>, заголовок <code>Authorization: Bearer &lt;КлючДоступа&gt;</code>. Таймаут 30 с.</td>
+            <td>Пакет FIX NewOrderSingle (обычная, адресная, РЕПО, алго TWAP/VWAP).</td>
+            <td class="mono">Обработка.АдаптерFIXRAY, модуль объекта:26, АдаптерыКлиентСервер.ОтправитьФизически_FIXRAY :669</td>
+          </tr>
+          <tr>
+            <td>WINVESTOR</td>
+            <td>HTTP POST <code>&lt;АдресПодключения&gt;/api/v1/orders/raw</code>, Bearer-токен. При таймауте один повтор.</td>
+            <td>JSON-заявка (symbol, side, ord_type, price, order_qty, account, client_id, алго-поля). Из ответа берется внешний номер заявки, без него - ошибка.</td>
+            <td class="mono">Обработка.АдаптерWINVESTOR, модуль менеджера:145, ОтправитьПоручение :411</td>
+          </tr>
+          <tr>
+            <td>WINVESTOR_ASTS</td>
+            <td>HTTP POST <code>&lt;АдресПодключения&gt;/api/v1/orders/asts_raw</code>. Цикл по поручениям общий с WINVESTOR.</td>
+            <td>Заявка РЕПО с ЦК в полях ASTS (KIND, SECBOARD, SECCODE, BUYSELL, REPORATE...).</td>
+            <td class="mono">Обработка.АдаптерWINVESTOR_ASTS, модуль менеджера:170, ОтправитьПоручение :231</td>
+          </tr>
+          <tr>
+            <td>MDE</td>
+            <td class="none">Отправка не реализована</td>
+            <td><code>ПорученияОтправить</code> содержит только <code>Возврат</code>. Это адаптер рыночных данных.</td>
+            <td class="mono">Обработка.АдаптерMDE, модуль менеджера:112</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <p>Ответ торговой системы (исполнение или отклонение заявки) в эту цепочку не входит: после отправки поручение остается в статусе "Отправлено, ожидается ответ". Ответы адаптеры получают отдельными запросами (<code>execution_reports</code> у WINVESTOR, <code>messagesLogFromLastId</code> у FIX-Ray).</p>
+  </section>
+
+  <section>
+    <h2>ИсполнитьРаспоряжение: диспетчер исполнителей</h2>
+    <p><code>Распорядители.ИсполнитьРаспоряжение</code> (стр. 2791) сама ничего не отправляет. Это общий механизм для всех этапов распорядителей: чтение, проверка лимитов, запись результатов, отправка, отмена, изменение цен. Она получает массив данных и метод исполнителя и запускает этот метод либо синхронно, либо фоновыми заданиями по частям. Отправкой вызов становится, только когда ему передан исполнитель <code>Исполнители.Отправка_ОтправкаПоручений</code>.</p>
+    <div class="scroll">
+      <table>
+        <thead><tr><th>Условие</th><th>Режим запуска</th></tr></thead>
+        <tbody>
+          <tr><td>КоличествоПотоков = 0</td><td>Синхронно в текущем сеансе: <code>Выполнить("АдресРезультата = " + Исполнитель.Метод + "(Параметры, АдресРезультата)")</code>.</td></tr>
+          <tr><td>МетодРаспределения</td><td>Нарезку делает собственный метод исполнителя. Сейчас ветка не используется: ни один исполнитель в модуле <code>Исполнители</code> не задает <code>МетодРаспределения</code>.</td></tr>
+          <tr><td>Иначе</td><td>Данные режутся на части, на каждую часть запускается <code>ФоновыеЗадания.Выполнить(Исполнитель.Метод, [Параметры, АдресРезультата])</code> без ключа. Все части выполняются одновременно, сколько позволяет сервер.</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <pre class="code">КоличествоНаЗадание = Макс(Окр(Количество / КоличествоПотоков + 0.5, 0, 0), КоличествоМинимальноеНаЗадание)
+// режим 0 (1.5 -> 1): по сути округление вверх, размер части = ceil(N / потоков), но не меньше минимума
+// фактическое число заданий = ceil(N / размер части), может быть меньше КоличествоПотоков</pre>
+    <ol class="plain">
+      <li>В каждое задание сериализуется <code>Распорядитель</code> с кэшем. Параметр <code>ТолькоНужное</code> ограничивает кэш нужными ключами; для отправки передается пустой массив, и кэш не передается.</li>
+      <li>Функция возвращает соответствие "ФоновоеЗадание → адрес временного хранилища". Ожидание выполняется отдельно, в <code>РезультатИсполненияРаспоряжений</code> (стр. 2861): цикл <code>ФоновыеЗадания.ОжидатьЗавершенияВыполнения(Активные, 1)</code>, прогресс по сообщениям с префиксом <code>[И]</code>.</li>
+      <li>Задание завершилось аварийно или отменено: ошибка пишется в журнал регистрации, вызывается исключение. Остальные задания при этом не останавливаются.</li>
+      <li><code>ОбъединенныйРезультатИсполнения</code>: таблицы дописываются строками, соответствия и массивы объединяются, числовые показатели суммируются. Если у исполнителя <code>Отказ</code>, вызывается исключение.</li>
+      <li>Результат этапов <code>ОбновлениеРасширений</code> и <code>ЗаписьРезультатовПервогоЭшелона</code> не ожидается: их задания продолжают работать после ответа распорядителя.</li>
+    </ol>
+    <div class="scroll">
+      <table>
+        <thead><tr><th>Распорядитель / этап</th><th>Потоков</th><th>Минимум на задание</th></tr></thead>
+        <tbody>
+          <tr><td>ПроверкаИОтправка, все этапы</td><td>0, если <code>ИспользоватьФоновыеЗадания = Ложь</code> (файловая база или настройка)</td><td>-</td></tr>
+          <tr><td>ЧтениеПредварительное</td><td>4</td><td>30</td></tr>
+          <tr><td>ОбновлениеРасширений</td><td>1</td><td>5</td></tr>
+          <tr><td>ЧтениеНаборовДанных / ...Поручений</td><td>3 / 4</td><td>1</td></tr>
+          <tr><td>ЧтениеЛимитов, ОбработкаПроверкиВнешние</td><td>0 (всегда синхронно)</td><td>1</td></tr>
+          <tr><td>ЧтениеСведенийОПорогах</td><td>2</td><td>1</td></tr>
+          <tr><td>ОбработкаПроверки</td><td>константа <code>ПотоковНаСеансПроверкиЛимитов</code> (параметр сеанса, по умолчанию 20, задается в общих настройках учета)</td><td>1</td></tr>
+          <tr><td>ЗаписьРезультатовПервогоЭшелона</td><td>1</td><td>5</td></tr>
+          <tr><td>Отправка / Отмена</td><td>число адаптеров в плане (0 в режиме тестирования), от <code>ИспользоватьФоновыеЗадания</code> не зависит</td><td>1</td></tr>
+          <tr><td>Изменение, ИзменениеЦен, Разделение</td><td>5</td><td>10</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="answer">
+      <div class="eyebrow">В этой базе (один адаптер FIX)</div>
+      <p>План отправки - один элемент <code>{Адаптер, все поручения}</code>: потоков 1, одно фоновое задание. В нем все поручения собираются в один пакет FIX и уходят одним HTTP POST на <code>/send</code>. Параллельно работают только два участка: внебиржевые поручения, которые родительский сеанс обрабатывает, пока идет задание, и этап <code>ОбработкаПроверки</code> в проверке лимитов. Даже при нескольких заданиях на один адаптер они бы выстроились в очередь: <code>ЗахватитьНомераИсходящие</code> ставит исключительную блокировку на <code>СообщенияАдаптеровСчетчики</code> по адаптеру, и транзакция держит ее до ответа прокси.</p>
+    </div>
+  </section>
+
+  <section class="proposal">
+    <div class="eyebrow">Предложение, не реализовано</div>
+    <h2>Как распараллелить отправку поручений</h2>
+    <p><b>Ограничение FIX.</b> В одной FIX-сессии MsgSeqNum (34) обязан строго возрастать. Сообщение с номером ниже ожидаемого приводит к разрыву сессии контрагентом, с номером выше - к ResendRequest. Поэтому параллельные POST в одну сессию с разными блоками номеров недопустимы: блоки могут прийти не по порядку. Параллелить можно либо подготовку при одном последовательном вызове, либо сами FIX-сессии.</p>
+    <p><b>Сначала замер.</b> Время отправки складывается из трех частей: цикл проверок в <code>Распорядители.Отправка</code> (статусы, хеш, валидация), сборка сообщений и запись статусов в задании, сам HTTP-вызов. Если основное время занимает HTTP, вариант A не даст выигрыша и нужен вариант B. Если время уходит на запись в регистры - выигрыш даст вариант A. Ключевая операция <code>КлючевыеОперации.Отправка</code> уже есть, ее достаточно разбить на подзамеры.</p>
+
+    <div class="variant">
+      <h3>Вариант A. Параллельная подготовка, одна последовательная отправка</h3>
+      <div class="strip" role="list">
+        <div class="node p" role="listitem"><b>N заданий: подготовка</b><span>МожноОтправить, хеш, ПройденаВалидацияПередОтправкой, структуры NewOrderSingle без номера</span></div>
+        <div class="arrow" aria-hidden="true">→</div>
+        <div class="node p" role="listitem"><b>Родитель: одна транзакция</b><span>ЗахватитьНомераИсходящие(N), Макет_NewOrderSingle по порядку, один POST /send, УстановитьНомерИсходящий</span></div>
+        <div class="arrow" aria-hidden="true">→</div>
+        <div class="node p" role="listitem"><b>N заданий: фиксация</b><span>УстановитьОтправленоОжидается, СобытияПоручений, СобытияПорученийТорговые</span></div>
+      </div>
+      <ol class="plain">
+        <li>Новые исполнители в модуле расширения, например <code>Отправка_ПодготовкаПоручений</code> и <code>Отправка_ФиксацияОтправки</code>. Запуск через тот же <code>ИсполнитьРаспоряжение</code>, число потоков - новая константа, например <code>ПотоковОтправкиПоручений</code>, минимум 20-50 поручений на задание.</li>
+        <li>Перехват <code>Распорядители.Отправка</code>: цикл проверок по поручениям заменяется распоряжением подготовки, затем последовательный блок отправки (номера, сборка, POST, счетчик), затем распоряжение фиксации с ожиданием через <code>РезультатИсполненияРаспоряжений</code>.</li>
+        <li>Исходящие номера назначаются только в родителе, по порядку сортировки поручений. Порядок MsgSeqNum сохраняется.</li>
+      </ol>
+      <p class="risk"><b>Риск:</b> сейчас статусы "Отправлено" пишутся в той же транзакции, что и отправка, и откатываются при ошибке POST. В варианте A они пишутся после успешного ответа прокси, отдельными заданиями. Если задание фиксации упадет, поручение уже на бирже, но в 1С без статуса. Нужен повтор фиксации по журналу отправленного пакета, и надо проверить, что ExecutionReport из <code>get</code> корректно обрабатывается для поручения в статусе "Проверено".</p>
+    </div>
+
+    <div class="variant">
+      <h3>Вариант B. Несколько FIX-сессий у брокера</h3>
+      <div class="strip" role="list">
+        <div class="node p" role="listitem"><b>Распределение</b><span>поручения по кругу между адаптерами FIX_1..FIX_K</span></div>
+        <div class="arrow" aria-hidden="true">→</div>
+        <div class="node p" role="listitem"><b>ИсполнитьРаспоряжение</b><span>как сейчас: K адаптеров = K фоновых заданий</span></div>
+        <div class="arrow" aria-hidden="true">→</div>
+        <div class="node p" role="listitem"><b>K параллельных POST /send</b><span>у каждой сессии свои SenderCompID и счетчик номеров</span></div>
+      </div>
+      <ol class="plain">
+        <li>У ВТБ запрашиваются дополнительные FIX-сессии (свои SenderCompID). На каждую в справочнике <code>Адаптеры</code> создается адаптер вида FIX с собственным идентификатором для прокси.</li>
+        <li>В расширении перехватывается <code>РасширенияПоручений.ПереопределитьАдаптеры</code> (или формирование <code>ТаблицаДанныхПоручений</code>): поручения распределяются между готовыми адаптерами по кругу или по нагрузке.</li>
+        <li>Механизм распараллеливания уже есть: <code>Распорядители.Отправка</code> строит план по адаптерам, и <code>ИсполнитьРаспоряжение</code> запускает по заданию на адаптер. Блокировки счетчиков независимы, MsgSeqNum в каждой сессии остается последовательным.</li>
+      </ol>
+      <p class="risk"><b>Риск:</b> отмена и изменение поручения должны уходить через ту же сессию, через которую оно было отправлено. Адаптер поручения нужно закрепить в <code>РасширенияПоручений</code> в момент отправки и не переопределять его при последующих операциях. Также нужна проверка, что прокси держит несколько сессий одновременно.</p>
+    </div>
+
+    <p><b>Рекомендация:</b> начать с замера. При одной FIX-сессии выигрыш возможен только на подготовке и записи статусов (вариант A). Реальная параллельная отправка в биржу - только через несколько сессий (вариант B), и он почти не требует нового кода. Обе доработки делаются в расширении, без изменения основной конфигурации.</p>
+  </section>
+
+  <section class="notes">
+    <h2>Что стоит учитывать</h2>
+    <div class="note warn">
+      <h3>Веб-клиент</h3>
+      <p>Динамический вызов распорядителя в <code>РаботаСПоручениямиКлиент.ВыполнитьМетодОбработкиПоручений</code> отключен директивой <code>#Если Не ВебКлиент</code>. В веб-клиенте кнопка не выдает ни ошибки, ни отправки.</p>
+    </div>
+    <div class="note">
+      <h3>Два уровня фоновых заданий</h3>
+      <p>Проверка лимитов идет в фоновом задании БСП (<code>ДлительныеОперации</code>), если база клиент-серверная и фоновые задания включены настройкой. Внутри него отправка порождает собственные фоновые задания через <code>ФоновыеЗадания.Выполнить</code>, по адаптерам.</p>
+    </div>
+    <div class="note">
+      <h3>Адаптер определяется поручением</h3>
+      <p>Адаптер не выбирается на форме: он берется из записи <code>РС РасширенияПоручений</code> поручения. Перед отправкой его может подменить <code>ПереопределитьАдаптеры</code>, если в настройках включено переопределение адаптера.</p>
+    </div>
+  </section>
+
+  <footer>Источник: код конфигурации Аванкор Фронт-офис; расширения VTB и ВТБ_Прод проверены на перехват методов цепочки - перехватов нет. Номера строк актуальны для текущей выгрузки.</footer>
+</div>
