@@ -129,12 +129,12 @@ def execution_documents(fo, series):
 
 
 def step_e(state, fo):
-    day_d, day_f = datetime.datetime(2026, 10, 5), datetime.datetime(2026, 10, 6)
+    day_d, day_f = datetime.datetime(2026, 10, 9), datetime.datetime(2026, 10, 10)
     deals.set_place_codes(fo)
     try:
         factory_packet = lambda series, day: (lambda factory: deals.build_packet(fo, factory, day, series))  # noqa: E731
-        add(state, timed(fo, send_packet, fo, factory_packet("D", day_d), "сделки D 05.10"), fo)
-        add(state, timed(fo, send_packet, fo, factory_packet("F", day_f), "сделки F 06.10"), fo)
+        add(state, timed(fo, send_packet, fo, factory_packet("I", day_d), "сделки I 09.10"), fo)
+        add(state, timed(fo, send_packet, fo, factory_packet("J", day_f), "сделки J 10.10"), fo)
     finally:
         deals.set_place_codes(fo, restore=True)
     add(state, timed(fo, stage3.test_e_execution, fo, day_d, "с_замерами"), fo)
@@ -145,11 +145,11 @@ def step_e(state, fo):
     finally:
         fo = extension(True)
     add(state, timed(fo, stage3.test_m_manual, fo), fo)
-    a, b = execution_documents(fo, "D"), execution_documents(fo, "F")
+    a, b = execution_documents(fo, "I"), execution_documents(fo, "J")
     state["сравнение_исполнения"] = {"с_замерами": a, "без_замеров": b, "совпадают": a == b,
-                                     "расхождений": len(set(a) ^ set(b))}
+                                     "расхождений": len(set(a) ^ set(b)), "наборы": "I (09.10) и J (10.10)"}
     save_state(state)
-    log("   документы D/F:", len(a), len(b), "совпадают", a == b)
+    log("   документы I/J:", len(a), len(b), "совпадают", a == b)
 
 
 def step_p(state, fo):
@@ -249,6 +249,24 @@ def main():
         step_p(state, fo)
     elif step == "U":
         step_u(state, fo)
+    elif step == "redo_A_P":
+        # повтор выгрузки с расширением (прогон со сбоем МО исключается) и постконтроля
+        state.setdefault("сбои", []).extend({k: v for k, v in x.items() if k != "вывод"} for x in state["тесты"]
+                                             if x["тест"] == "A" and x.get("метка") == "meas")
+        state["тесты"] = [x for x in state["тесты"] if not (x["тест"] == "A" and x.get("метка") == "meas") and x["тест"] != "P"]
+        save_state(state)
+        for attempt in range(1, 6):
+            entry = timed(fo, export_positions, "meas")
+            with open(os.path.join(entry["прогон_стенда"], "summary.json"), encoding="utf-8") as f:
+                summary = json.load(f)
+            errors = [t["поток"] for t in summary["потоки"] if t["есть_ошибки_МО"]]
+            log(f"   попытка {attempt}: код {entry['код']}, ошибки МО в потоках {errors}, флагов готово {summary.get('готово_флагов')}")
+            if entry["код"] == 0 and not errors:
+                add(state, entry, fo)
+                break
+            state.setdefault("сбои", []).append({k: v for k, v in entry.items() if k != "вывод"})
+            save_state(state)
+        step_p(state, fo)
     elif step == "redo_off":
         # повтор прогонов без расширения после исправления (новый сеанс после выключения) и упаковки
         state["тесты"] = [t for t in state["тесты"] if not (t["тест"] in ("E", "P", "U") and t.get("метка") == "без_замеров")

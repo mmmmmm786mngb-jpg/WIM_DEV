@@ -281,7 +281,10 @@ def remove_mailing_queue(fo, containers):
 def test_p_postcontrol(fo, variant, count=20, label=""):
     log(f"P. Постконтроль лимитов: вариант {variant}, {count} портфелей {label}")
     portfolios = test_portfolios(fo, 2 if variant == "неактивные" else count)
-    offset = -3 if variant in ("рассылка", "успех") else 0
+    # Позиция тестовых портфелей стенда загружена на 29.09.2026; календарь смещения фактической позиции на dev не
+    # задан, поэтому смещение - число календарных дней от текущей даты сеанса до 29.09.2026.
+    today = datetime.datetime.fromisoformat(now_1c(fo)).date()
+    offset = -(today - datetime.date(2026, 9, 29)).days if variant in ("рассылка", "успех") else 0
     constant = fo.Константы.НастройкиРассылкиПоЛимитам
     original = constant.Получить()
     original_value = original.Получить() if original is not None else None
