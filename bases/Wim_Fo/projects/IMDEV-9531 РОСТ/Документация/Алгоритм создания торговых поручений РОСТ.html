@@ -1,0 +1,287 @@
+<title>Торговые поручения РОСТ</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Golos+Text:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: одна колонка для чтения (~70 знаков), цепочки статусов и таблицы шире текста; два цвета зон: обработка ИТ ВИМ и механизмы конфигурации */
+:root {
+  --bg: #f4f6f7;
+  --surface: #ffffff;
+  --ink: #18252d;
+  --muted: #5a6a73;
+  --line: #d6dde1;
+  --ours: #1d5b78;
+  --ours-soft: #e3eef4;
+  --vendor: #8a5a12;
+  --vendor-soft: #f6ecdb;
+  --ok: #2f6b3f;
+  --font-body: "Golos Text", "Segoe UI", Arial, sans-serif;
+  --font-mono: "JetBrains Mono", Consolas, "Courier New", monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #11181c; --surface: #182227; --ink: #e3eaee; --muted: #9aabb4; --line: #2c3a41;
+    --ours: #7fb9d6; --ours-soft: #1b3240; --vendor: #e0b56a; --vendor-soft: #3a2d17; --ok: #8cc89a;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #11181c; --surface: #182227; --ink: #e3eaee; --muted: #9aabb4; --line: #2c3a41;
+  --ours: #7fb9d6; --ours-soft: #1b3240; --vendor: #e0b56a; --vendor-soft: #3a2d17; --ok: #8cc89a;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  background: var(--bg); color: var(--ink); font-family: var(--font-body);
+  font-size: 16px; line-height: 1.6; padding-inline: 16px; padding-block: 32px 64px;
+}
+main { max-width: 860px; margin-inline: auto; display: grid; gap: 40px; }
+.prose { max-width: 68ch; }
+h1, h2, h3 { text-wrap: balance; line-height: 1.25; margin: 0; }
+h1 { font-size: 2rem; font-weight: 700; letter-spacing: -0.01em; }
+h2 { font-size: 1.4rem; font-weight: 600; }
+h3 { font-size: 1.05rem; font-weight: 600; }
+p { margin: 0; }
+section { display: grid; gap: 14px; }
+.eyebrow { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); font-weight: 600; }
+.lead { font-size: 1.1rem; color: var(--ink); }
+.meta { color: var(--muted); font-size: 0.9rem; }
+code, .mono { font-family: var(--font-mono); font-size: 0.86em; }
+ul, ol { margin: 0; padding-left: 1.3em; display: grid; gap: 6px; }
+
+.legend { display: flex; flex-wrap: wrap; gap: 10px 20px; font-size: 0.9rem; color: var(--muted); }
+.legend span { display: inline-flex; align-items: center; gap: 8px; }
+.sw { width: 14px; height: 14px; border-radius: 3px; display: inline-block; }
+.sw.ours { background: var(--ours-soft); border: 2px solid var(--ours); }
+.sw.vendor { background: var(--vendor-soft); border: 2px solid var(--vendor); }
+
+/* цепочка статусов портфеля */
+.chain-wrap { overflow-x: auto; }
+.chain { display: flex; align-items: stretch; gap: 0; min-width: min-content; }
+.st {
+  background: var(--surface); border: 1px solid var(--line); border-radius: 6px;
+  padding: 10px 12px; min-width: 150px; max-width: 200px; display: grid; gap: 4px; align-content: start;
+}
+.st b { font-size: 0.92rem; }
+.st small { color: var(--muted); font-size: 0.8rem; line-height: 1.4; }
+.st.final { border-color: var(--ok); }
+.arr { display: grid; place-items: center; padding-inline: 6px; color: var(--muted); font-size: 0.78rem; text-align: center; min-width: 96px; }
+.arr::before { content: "\2192"; font-size: 1.3rem; line-height: 1; color: var(--ours); }
+
+/* шаги алгоритма */
+.steps { list-style: none; padding: 0; display: grid; gap: 10px; counter-reset: s; }
+.steps > li {
+  counter-increment: s; display: grid; grid-template-columns: 2.2em 1fr; gap: 12px;
+  background: var(--surface); border: 1px solid var(--line); border-left: 4px solid var(--ours);
+  border-radius: 6px; padding: 12px 14px;
+}
+.steps > li.vendor { border-left-color: var(--vendor); }
+.steps > li::before {
+  content: counter(s); font-family: var(--font-mono); font-weight: 500; color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+.steps > li > div { min-width: 0; display: grid; gap: 4px; }
+.tag { display: inline-block; font-size: 0.72rem; font-weight: 600; letter-spacing: 0.04em; border-radius: 3px; padding: 1px 6px; margin-left: 6px; vertical-align: 2px; }
+.tag.ours { background: var(--ours-soft); color: var(--ours); }
+.tag.vendor { background: var(--vendor-soft); color: var(--vendor); }
+
+.cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px; }
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 16px; display: grid; gap: 10px; align-content: start; min-width: 0; }
+
+.formula { background: var(--ours-soft); border-radius: 6px; padding: 12px 14px; font-family: var(--font-mono); font-size: 0.88rem; overflow-x: auto; white-space: pre; color: var(--ink); }
+
+.table-wrap { overflow-x: auto; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; }
+table { border-collapse: collapse; width: 100%; font-size: 0.92rem; }
+th, td { text-align: left; vertical-align: top; padding: 9px 12px; border-bottom: 1px solid var(--line); }
+th { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); font-weight: 600; }
+tr:last-child td { border-bottom: 0; }
+td.z-ours { color: var(--ours); font-weight: 600; white-space: nowrap; }
+td.z-vendor { color: var(--vendor); font-weight: 600; white-space: nowrap; }
+
+.note { border-left: 3px solid var(--line); padding-left: 12px; color: var(--muted); font-size: 0.92rem; }
+footer { color: var(--muted); font-size: 0.85rem; border-top: 1px solid var(--line); padding-top: 16px; }
+</style>
+
+<main>
+
+<header style="display:grid; gap:12px">
+  <div class="eyebrow">IMDEV-9531 · Аванкор Фронт-офис · Розничное ДУ</div>
+  <h1>Создание торговых поручений РОСТ</h1>
+  <p class="lead prose">Дополнительная обработка, которая по регламентному заданию формирует биржевые поручения для портфелей продукта РОСТ: покупку при поступлении денег клиента и продажу при расторжении договора. Созданные поручения сразу передаются на проверку лимитов и отправку на биржу.</p>
+  <p class="meta">Описание составлено по коду обработки версии 1.15 (текущая версия в базе ФО) на 05.10.2026.</p>
+  <div class="legend">
+    <span><i class="sw ours"></i>Код обработки (ИТ ВИМ)</span>
+    <span><i class="sw vendor"></i>Механизмы конфигурации Аванкор, которые обработка вызывает</span>
+  </div>
+</header>
+
+<section>
+  <div class="eyebrow">Зачем она нужна</div>
+  <h2>Продукт РОСТ: защита вложенной суммы</h2>
+  <div class="prose" style="display:grid; gap:12px">
+    <p>Деньги клиента по стратегии РОСТ делятся на три части:</p>
+    <ul>
+      <li><b>ОФЗ</b> (основной актив стратегии) дает защиту вложенной суммы к концу горизонта инвестирования (3 или 5 лет);</li>
+      <li><b>акции или фонд</b> (дополнительный актив стратегии) дают доходность сверх защиты;</li>
+      <li><b>фонд "ВИМ Ликвидность"</b> покрывает вознаграждение управляющего.</li>
+    </ul>
+    <p>Обработка рассчитывает, сколько ОФЗ купить в каждый портфель, и создает поручения на покупку всех трех частей. Количество ОФЗ подбирается так, чтобы к концу горизонта клиент получил не меньше вложенной суммы даже при заданной потере в акциях.</p>
+  </div>
+  <div class="formula">ОФЗ к концу горизонта  +  акции с учетом потерь  &ge;  сумма инвестирования
+
+ОФЗ к концу горизонта  = N &times; (купоны за горизонт после НДФЛ 15% с реинвестированием + цена продажи ОФЗ)
+акции с учетом потерь   = (сумма аллокации &minus; N &times; цена покупки ОФЗ) &times; (1 &minus; % потерь акций)
+сумма инвестирования    = сумма ввода &minus; комиссия брокера
+сумма аллокации         = сумма ввода &minus; комиссия брокера &minus; комиссия управляющего</div>
+  <p class="note prose">Цена продажи ОФЗ на дату окончания горизонта считается дисконтированием оставшихся купонов и номинала по ставке дисконта стратегии. Параметры (горизонт, ставка реинвестирования, ставка дисконта, % потерь акций, % вознаграждения управляющего, активы покупки) задаются по каждой стратегии в настройках обработки.</p>
+</section>
+
+<section>
+  <div class="eyebrow">Место в дне</div>
+  <h2>Откуда берутся портфели к обработке</h2>
+  <p class="prose">Обработка не ищет новые деньги сама. Она отбирает портфели по статусу: это дополнительное сведение портфеля "статус", которое меняют обработки РОСТ. Каждая смена статуса также пишется в историю статусов портфеля вместе с датой.</p>
+  <div class="cols">
+    <div class="panel">
+      <h3>Покупка</h3>
+      <ol>
+        <li>Клиент вносит деньги. Загрузка неторговых поручений РОСТ (каждые 10 минут с 10:00) проверяет поступление по договору ДУ, создает неторговое поручение на ввод денег и переводит портфель в статус для поиска торговой обработкой.</li>
+        <li>Торговая обработка находит портфель по этому статусу и сумме ввода за сегодня.</li>
+      </ol>
+    </div>
+    <div class="panel">
+      <h3>Продажа</h3>
+      <ol>
+        <li>По договору инициируется расторжение. Статус "Расторжение инициировано" ставится вручную из формы обработки (загрузка уведомлений о расторжении из системы документооборота) или другим процессом.</li>
+        <li>Торговая обработка находит такие портфели и продает все бумаги в позиции.</li>
+      </ol>
+    </div>
+  </div>
+  <p class="note prose">Какое значение статуса ставит загрузка неторговых поручений и какое ищет торговая обработка, задается настройками каждой обработки. По смыслу цепочки они совпадают. Значения нужно сверить в настройках на рабочей базе.</p>
+</section>
+
+<section>
+  <div class="eyebrow">Жизненный цикл портфеля</div>
+  <h2>Статусы, которые меняет обработка</h2>
+  <h3>Покупка: два прогона на портфель</h3>
+  <div class="chain-wrap">
+    <div class="chain">
+      <div class="st"><b>Деньги поступили</b><small>статус для поиска</small></div>
+      <div class="arr">прогон 1: поручение на ОФЗ</div>
+      <div class="st"><b>ОФЗ в работе</b><small>статус для перевода</small></div>
+      <div class="arr">ОФЗ в статусе Ready, прогон 2: акции и ВИМ Ликвидность</div>
+      <div class="st final"><b>Обработка окончена</b><small>статус окончания</small></div>
+    </div>
+  </div>
+  <h3>Продажа: один прогон</h3>
+  <div class="chain-wrap">
+    <div class="chain">
+      <div class="st"><b>Расторжение инициировано</b><small>позиция есть, поручений сегодня нет</small></div>
+      <div class="arr">поручение на продажу по каждой бумаге</div>
+      <div class="st final"><b>Ордера на продажу сформированы</b><small>когда поручения созданы по всем бумагам портфеля</small></div>
+    </div>
+  </div>
+  <p class="note prose">Следующие статусы ("отправлены", "исполнены", "поручения на вывод поданы и исполнены") ставят другие процессы. Торговая обработка их только читает, чтобы не взять портфель повторно.</p>
+</section>
+
+<section>
+  <div class="eyebrow">Регламентное задание</div>
+  <h2>Команда "Покупка"</h2>
+  <p class="prose">Не выполняется, если в настройках включен флаг "Выключить покупки".</p>
+  <ol class="steps">
+    <li><div><b>Отбор портфелей<span class="tag ours">обработка</span></b>
+      <span>Один запрос: портфели в статусах "деньги поступили" и "ОФЗ в работе", сумма неторговых поручений на ввод за сегодня, уже созданные сегодня поручения на ОФЗ, акции и ВИМ Ликвидность с их статусами. По каждому портфелю считаются комиссия брокера (процент из настроек) и комиссия управляющего (процент стратегии).</span></div></li>
+    <li><div><b>Расчет параметров ОФЗ<span class="tag ours">обработка</span></b>
+      <span>Один раз на каждую ОФЗ из настроек стратегий: НКД, номинал, купонное расписание, купоны за горизонт после НДФЛ с реинвестированием, цена продажи на конец горизонта.</span></div></li>
+    <li><div><b>Портфель "деньги поступили": поручение на ОФЗ<span class="tag ours">обработка</span></b>
+      <span>Создается поручение на покупку ОФЗ с ценой из стакана (см. "Создание одного поручения"). По полученной цене подбирается количество ОФЗ по формуле защиты, поручение перепроводится, портфель переходит в статус "ОФЗ в работе". Все это в одной транзакции на портфель.</span></div></li>
+    <li><div><b>Портфель "ОФЗ в работе", поручение на ОФЗ Ready: акции и ВИМ Ликвидность<span class="tag ours">обработка</span></b>
+      <span>Сумма на акции равна сумме инвестирования за вычетом ОФЗ и доли управляющего. Сумма на ВИМ Ликвидность равна доле управляющего. Создаются два поручения, портфель переходит в статус "обработка окончена". Одна транзакция на портфель.</span></div></li>
+    <li class="vendor"><div><b>Проверка и отправка всех созданных поручений<span class="tag vendor">конфигурация</span></b>
+      <span>Один вызов на весь прогон: предконтроль лимитов и отправка на биржу в фоновых заданиях. Сообщения пишутся в журнал регистрации и лог прогона.</span></div></li>
+    <li><div><b>Письмо с отчетом<span class="tag ours">обработка</span></b>
+      <span>Только если созданы поручения или были ошибки: число поручений и полный лог расчетов на адреса из настроек. При ошибках дополнительно запись в журнал регистрации.</span></div></li>
+  </ol>
+</section>
+
+<section>
+  <h2>Команда "Продажа"</h2>
+  <p class="prose">Не выполняется, если в настройках включен флаг "Выключить продажи".</p>
+  <ol class="steps">
+    <li><div><b>Отбор позиций к продаже<span class="tag ours">обработка</span></b>
+      <span>Портфели в статусе "Расторжение инициировано". Позиция по каждой бумаге (без денег) равна фактической позиции на начало дня плюс плановой позиции на конец дня. Портфели, по бумаге которых сегодня уже есть поручение, пропускаются.</span></div></li>
+    <li><div><b>Поручение на продажу по каждой бумаге<span class="tag ours">обработка</span></b>
+      <span>Количество равно всей позиции, цена из стакана. Одна транзакция на поручение.</span></div></li>
+    <li><div><b>Смена статуса портфеля<span class="tag ours">обработка</span></b>
+      <span>Если по всем бумагам портфеля поручения созданы, портфель переходит в статус "Ордера на продажу сформированы".</span></div></li>
+    <li class="vendor"><div><b>Проверка и отправка<span class="tag vendor">конфигурация</span></b>
+      <span>Как в покупке: один вызов на все созданные поручения.</span></div></li>
+    <li><div><b>Письмо с отчетом<span class="tag ours">обработка</span></b>
+      <span>Как в покупке.</span></div></li>
+  </ol>
+</section>
+
+<section>
+  <div class="eyebrow">Общий шаг обеих команд</div>
+  <h2>Создание одного поручения</h2>
+  <p class="prose">Каждое поручение проходит одну и ту же цепочку. Документ "Поручение" проводится в ней два-три раза, для ОФЗ при покупке еще раз после подбора количества.</p>
+  <ol class="steps">
+    <li><div><b>Заполнение и первое проведение<span class="tag ours">обработка</span></b>
+      <span>Вид операции "Сделка", биржа ММВБ, валюта RUB, портфель, субпортфель, стратегия, место хранения, торговый счет, ответственный из настроек. Лот берется по основному режиму торгов, количество округляется до целых лотов. Цена пока условная.</span></div></li>
+    <li class="vendor"><div><b>Запрос цены из стакана<span class="tag vendor">конфигурация</span></b>
+      <span>Механизм изменения цен поручений запрашивает торговые данные у адаптера биржи. Вызывается отдельно на каждое поручение.</span></div></li>
+    <li><div><b>Контроль цены<span class="tag ours">обработка</span></b>
+      <span>Берется вторая лучшая цена встречной стороны. Ее отклонение от лучшей цены не должно превышать 2%. Если включен "Контроль по цене закрытия", отклонение от цены закрытия ММВБ тоже не больше 2%. Поручение перепроводится с этой ценой.</span></div></li>
+    <li><div><b>Сумма поручения<span class="tag ours">обработка</span></b>
+      <span>Для акций и ВИМ Ликвидности количество пересчитывается из суммы по полученной цене, затем следует третье проведение. Если количество вышло нулевым, денег не хватает.</span></div></li>
+    <li><div><b>Неудача<span class="tag ours">обработка</span></b>
+      <span>Если цена не найдена, отклонение больше 2% или денег не хватает, поручение помечается на удаление. В лог пишется причина, портфель остается в прежнем статусе и будет взят следующим прогоном.</span></div></li>
+  </ol>
+</section>
+
+<section>
+  <div class="eyebrow">Кто за что отвечает</div>
+  <h2>Где обработка, а где конфигурация</h2>
+  <p class="prose">Логику РОСТ (отбор портфелей, расчет защиты, статусы, порядок шагов) содержит только обработка. Цены из стакана, проведение поручения, предконтроль и отправку на биржу выполняют механизмы конфигурации Аванкор. Обработка лишь решает, как часто и какими порциями их вызывать.</p>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Шаг</th><th>Зона</th><th>Сколько раз за прогон</th></tr></thead>
+      <tbody>
+        <tr><td>Отбор портфелей и позиций</td><td class="z-ours">обработка</td><td>1 запрос на команду</td></tr>
+        <tr><td>Расчет параметров ОФЗ</td><td class="z-ours">обработка</td><td>1 раз на каждую ОФЗ стратегий</td></tr>
+        <tr><td>Подбор количества ОФЗ</td><td class="z-ours">обработка</td><td>на каждый портфель с новыми деньгами</td></tr>
+        <tr><td>Запрос цены из стакана</td><td class="z-vendor">конфигурация</td><td>на каждое поручение</td></tr>
+        <tr><td>Проведение документа "Поручение"</td><td class="z-vendor">конфигурация</td><td>2-4 раза на каждое поручение</td></tr>
+        <tr><td>Смена статуса портфеля и запись истории</td><td class="z-ours">обработка</td><td>на каждый портфель</td></tr>
+        <tr><td>Предконтроль лимитов и отправка на биржу</td><td class="z-vendor">конфигурация</td><td>1 вызов на все поручения прогона</td></tr>
+        <tr><td>Письмо с отчетом</td><td class="z-ours">обработка</td><td>1 письмо, если есть поручения или ошибки</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section>
+  <div class="eyebrow">Только из формы</div>
+  <h2>Ручные режимы, которых нет в регламентном задании</h2>
+  <p class="prose">Форма обработки кроме покупки и продажи содержит режимы, которые запускаются только вручную. Регламентное задание их не выполняет.</p>
+  <ul class="prose">
+    <li><b>Расторжение.</b> Загружает уведомления о расторжении из системы документооборота (веб-сервис), находит портфели по номеру договора ДУ и ставит им статус "Расторжение инициировано".</li>
+    <li><b>Реинвестирование.</b> Подбирает портфели с купоном к выплате на заданную дату и создает поручения на докупку облигаций на сумму купона, с ограничениями по минимальному остатку денег от купона и от СЧА. Может создать неторговое поручение под прогнозную позицию. Поручения создаются пачками в фоновых заданиях.</li>
+    <li><b>Продажи под блокировки.</b> Для портфелей с заблокированными под вывод деньгами создает поручения на продажу ВИМ Ликвидности или ОФЗ на сумму блокировки плюс 0,3%.</li>
+    <li><b>Тест расчета аллокации.</b> Проверка формулы защиты на заданной сумме без создания поручений.</li>
+  </ul>
+</section>
+
+<section>
+  <div class="eyebrow">Что нужно подтвердить</div>
+  <h2>Открытые вопросы</h2>
+  <ul class="prose">
+    <li>Расписание регламентного задания: какие команды запускаются (покупка, продажа или обе) и с какой периодичностью.</li>
+    <li>Значения статусов в настройках обеих обработок РОСТ на рабочей базе.</li>
+    <li>Объем: сколько портфелей и поручений проходит за прогон в обычный и в пиковый день.</li>
+    <li>Сколько длится прогон и какая доля времени приходится на запрос цен, проведение поручений, а какая на предконтроль и отправку.</li>
+  </ul>
+</section>
+
+<footer>IMDEV-9531 "Оптимизировать операцию Создание торговых поручений РОСТ". Описание алгоритма по коду обработки, без замеров. Время выполнения и объемы будут добавлены после замеров.</footer>
+
+</main>
