@@ -1,0 +1,605 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>577-П: кнопка Заполнить без копирования объекта на форму</title>
+<style>
+  :root {
+    --ink: #1c2430;
+    --muted: #5c6b7a;
+    --line: #c5d0dc;
+    --stay: #1f4e79;
+    --stay-bg: #eef5fb;
+    --was: #8f2d2d;
+    --was-bg: #fdeeee;
+    --now: #1b6b3a;
+    --now-bg: #e8f6ee;
+    --move: #b86e00;
+    --move-bg: #fff6e8;
+    --paper: #f4f7fb;
+    --code: #15202b;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    font-family: "Segoe UI", Arial, sans-serif;
+    color: var(--ink);
+    background: var(--paper);
+  }
+
+  .page {
+    max-width: 1080px;
+    margin: 0 auto;
+    padding: 28px 20px 56px;
+  }
+
+  h1 {
+    margin: 0 0 8px;
+    font-size: 26px;
+    font-weight: 650;
+    letter-spacing: -0.02em;
+  }
+
+  h2 {
+    margin: 28px 0 10px;
+    font-size: 18px;
+  }
+
+  .lead {
+    margin: 0 0 18px;
+    color: var(--muted);
+    font-size: 15px;
+    line-height: 1.5;
+  }
+
+  .legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 18px;
+  }
+
+  .legend span {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 10px;
+    border-radius: 999px;
+    background: #fff;
+    border: 1px solid var(--line);
+    font-size: 13px;
+  }
+
+  .dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+  }
+
+  .dot.stay { background: var(--stay); }
+  .dot.was { background: var(--was); }
+  .dot.now { background: var(--now); }
+  .dot.move { background: var(--move); }
+
+  .scheme, .card {
+    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    padding: 22px 18px 18px;
+    box-shadow: 0 8px 24px rgba(28, 36, 48, 0.05);
+  }
+
+  .scheme-title {
+    margin: 0 0 16px;
+    font-size: 13px;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+
+  .flow {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .node {
+    width: min(720px, 100%);
+    border-radius: 12px;
+    padding: 12px 14px;
+    border: 1px solid transparent;
+  }
+
+  .node h3 {
+    margin: 0 0 4px;
+    font-size: 15px;
+  }
+
+  .node p, .node li {
+    margin: 0;
+    font-size: 13px;
+    line-height: 1.45;
+    color: var(--muted);
+  }
+
+  .node ul {
+    margin: 6px 0 0;
+    padding-left: 18px;
+  }
+
+  .node li + li { margin-top: 4px; }
+
+  .stay {
+    background: var(--stay-bg);
+    border-color: #b7d0e6;
+  }
+
+  .stay h3 { color: var(--stay); }
+
+  .was {
+    background: var(--was-bg);
+    border-color: #f0c2c2;
+  }
+
+  .was h3 { color: var(--was); }
+
+  .now {
+    background: var(--now-bg);
+    border-color: #b7e0c6;
+  }
+
+  .now h3 { color: var(--now); }
+
+  .badge {
+    display: inline-block;
+    margin-bottom: 6px;
+    padding: 2px 8px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+
+  .badge.stay { background: #d7e8f6; color: var(--stay); }
+  .badge.was { background: #f8d4d4; color: var(--was); }
+  .badge.now { background: #cfeedd; color: var(--now); }
+
+  .v-arrow {
+    width: 2px;
+    height: 28px;
+    background: var(--stay);
+    position: relative;
+  }
+
+  .v-arrow.move { background: var(--move); }
+
+  .v-arrow:after {
+    content: "";
+    position: absolute;
+    left: 50%;
+    bottom: -1px;
+    transform: translateX(-50%);
+    border-left: 6px solid transparent;
+    border-right: 6px solid transparent;
+    border-top: 8px solid var(--stay);
+  }
+
+  .v-arrow.move:after { border-top-color: var(--move); }
+
+  .zone {
+    width: min(720px, 100%);
+    border: 2px solid var(--move);
+    background: var(--move-bg);
+    border-radius: 16px;
+    padding: 14px;
+  }
+
+  .zone-head {
+    margin: 0 0 10px;
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--move);
+  }
+
+  .pair {
+    display: grid;
+    grid-template-columns: 1fr 36px 1fr;
+    gap: 8px;
+    align-items: stretch;
+  }
+
+  .bridge {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--move);
+    font-size: 22px;
+    font-weight: 700;
+  }
+
+  .mem {
+    display: flex;
+    gap: 8px;
+    margin-top: 8px;
+  }
+
+  .bar {
+    height: 10px;
+    border-radius: 999px;
+  }
+
+  .bar.a { width: 46%; background: #c45c5c; }
+  .bar.b { width: 46%; background: #d98989; }
+  .bar.c { width: 28%; background: #e0b15a; }
+  .bar.one { width: 46%; background: #3d9a62; }
+  .bar.read { width: 46%; background: #7dbe96; }
+
+  .note {
+    margin-top: 12px;
+    padding: 10px 12px;
+    border-radius: 10px;
+    background: #fff;
+    border: 1px dashed var(--move);
+    font-size: 13px;
+    line-height: 1.45;
+    color: var(--ink);
+  }
+
+  .cols {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+  }
+
+  .codehead {
+    display: flex;
+    justify-content: space-between;
+    gap: 8px;
+    align-items: baseline;
+    margin-bottom: 8px;
+  }
+
+  .codehead strong { font-size: 14px; }
+  .codehead span { font-size: 12px; color: var(--muted); }
+
+  pre {
+    margin: 0;
+    padding: 12px 14px;
+    overflow: auto;
+    border-radius: 12px;
+    background: var(--code);
+    color: #e7eef6;
+    font-family: Consolas, "Courier New", monospace;
+    font-size: 12.5px;
+    line-height: 1.45;
+  }
+
+  .was pre { background: #3a2224; }
+  .now pre { background: #163026; }
+
+  .mark { color: #ffb4b4; }
+  .good { color: #9be7b5; }
+  .dim { color: #8ea0b3; }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 14px;
+  }
+
+  th, td {
+    text-align: left;
+    vertical-align: top;
+    padding: 8px 10px;
+    border-bottom: 1px solid var(--line);
+  }
+
+  th { color: var(--muted); font-weight: 650; font-size: 12px; letter-spacing: 0.03em; text-transform: uppercase; }
+
+  code {
+    font-family: Consolas, "Courier New", monospace;
+    font-size: 0.92em;
+  }
+
+  .warn {
+    margin-top: 14px;
+    padding: 12px 14px;
+    border-radius: 12px;
+    background: #fff8e8;
+    border: 1px solid #efd3a0;
+    font-size: 14px;
+    line-height: 1.5;
+  }
+
+  @media (max-width: 800px) {
+    .pair, .cols { grid-template-columns: 1fr; }
+    .bridge { transform: rotate(90deg); height: 28px; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <h1>577-П: кнопка «Заполнить» без ЗначениеВРеквизитФормы</h1>
+  <p class="lead">
+    Меняется только модуль формы документа
+    <code>РО_XBRL6_1_ОтчетПоВнутреннемуУчету_577П</code>.
+    Процедура объекта <code>ЗаполнитьОтчет()</code> остается прежней.
+    Внешняя обработка не нужна: форма сама записывает документ по ссылке и затем перечитывает его, как общая форма БСП делает после заполнения 0420431.
+  </p>
+
+  <div class="legend">
+    <span><i class="dot stay"></i> Остается</span>
+    <span><i class="dot was"></i> Было: копия объекта на форму</span>
+    <span><i class="dot now"></i> Стало: запись и Прочитать()</span>
+    <span><i class="dot move"></i> Что заменить</span>
+  </div>
+
+  <section class="scheme">
+    <p class="scheme-title">Один поток: кнопка на форме документа</p>
+    <div class="flow">
+
+      <div class="node stay">
+        <span class="badge stay">Остается</span>
+        <h3>Кнопка «Заполнить» и проверка УК</h3>
+        <p>Клиентская процедура <code>Заполнить</code>. Пустая управляющая компания по-прежнему останавливает заполнение. Расчет разделов по-прежнему внутри <code>ДокументОбъект.ЗаполнитьОтчет()</code>.</p>
+      </div>
+
+      <div class="v-arrow"></div>
+
+      <div class="zone">
+        <p class="zone-head">Зона замены</p>
+        <div class="pair">
+          <div class="node was">
+            <span class="badge was">Было</span>
+            <h3>Сервер с контекстом формы</h3>
+            <ul>
+              <li><code>&amp;НаСервере</code> забирает на сервер все данные формы.</li>
+              <li><code>РеквизитФормыВЗначение</code> копирует форму в объект.</li>
+              <li><code>ЗаполнитьОтчет()</code> растит табличные части в объекте.</li>
+              <li><code>ЗначениеВРеквизитФормы</code> копирует объект обратно на форму.</li>
+              <li>Возврат на клиент везет уже заполненную форму.</li>
+            </ul>
+            <div class="mem">
+              <div class="bar a" title="Объект"></div>
+              <div class="bar b" title="Данные формы"></div>
+            </div>
+            <p style="margin-top:6px">В замере 28.09.2026 копирование на форму заняло 27,5 с. В этот момент в памяти сразу объект и данные формы. По замерам разделы доходят до 136 тыс. (раздел 7), 134 тыс. (раздел 9) и около 162 тыс. строк (раздел 4).</p>
+          </div>
+          <div class="bridge">&gt;</div>
+          <div class="node now">
+            <span class="badge now">Стало</span>
+            <h3>Сервер без контекста формы</h3>
+            <ul>
+              <li>Клиент сначала записывает шапку, если документ новый или изменен.</li>
+              <li>На сервер уходит только ссылка.</li>
+              <li><code>ПолучитьОбъект()</code>, <code>ЗаполнитьОтчет()</code>, <code>Записать()</code>.</li>
+              <li>Объект освобождается в конце серверного вызова.</li>
+              <li>Клиент вызывает <code>Прочитать()</code> и один раз получает строки из базы.</li>
+            </ul>
+            <div class="mem">
+              <div class="bar one" title="Объект на время расчета"></div>
+              <div class="bar read" title="Форма после Прочитать"></div>
+            </div>
+            <p style="margin-top:6px">Две копии не живут одновременно. <code>ЗначениеВРеквизитФормы</code> в кнопке больше нет.</p>
+          </div>
+        </div>
+        <div class="note">
+          Переход такой же, как у 431: обработка там делает <code>ПолучитьОбъект()</code> и <code>Записать()</code>, а форма владельца после команды вызывает <code>Прочитать()</code>. Здесь это делает сама кнопка документа.
+        </div>
+      </div>
+
+      <div class="v-arrow move"></div>
+
+      <div class="node now">
+        <span class="badge now">Результат на форме</span>
+        <h3>Строки видны после чтения документа</h3>
+        <p>Форма показывает табличные части записанного документа. Модуль объекта, запросы разделов и состав колонок не меняются.</p>
+      </div>
+
+    </div>
+  </section>
+
+  <h2>Где править</h2>
+  <div class="card">
+    <table>
+      <thead>
+        <tr><th>Место</th><th>Действие</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Форма документа, процедуры <code>Заполнить</code> и <code>ЗаполнитьНаСервере</code></td>
+          <td>Заменить обе процедуры кодом из колонки «Стало». <code>ЗаполнитьНаСервере</code> удаляется.</td>
+        </tr>
+        <tr>
+          <td>Модуль объекта, <code>ЗаполнитьОтчет()</code></td>
+          <td>Не менять. Сервер без контекста вызывает ее у объекта, полученного по ссылке.</td>
+        </tr>
+        <tr>
+          <td>Внешняя обработка CSV</td>
+          <td>Не участвует. Она выгружает уже записанные разделы и заполнение не вызывает.</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h2>Код кнопки</h2>
+  <div class="cols">
+    <div class="card was">
+      <div class="codehead">
+        <strong>Было</strong>
+        <span>модуль формы, строки 214-243</span>
+      </div>
+<pre><span class="dim">&amp;НаКлиенте
+Процедура Заполнить(Команда)
+
+    Отказ = Ложь;
+    Если Не ЗначениеЗаполнено(Объект.УправляющаяКомпания) Тогда
+        ТекстСообщения = НСтр("ru = 'Не заполнен реквизит Управляющая компания. Заполнение невозможно.'");
+        ОбщегоНазначенияКлиентСервер.СообщитьПользователю(
+            ТекстСообщения, , "Объект.УправляющаяКомпания", , Отказ);
+    КонецЕсли;
+    Если Отказ Тогда
+        Возврат;
+    КонецЕсли;
+
+    ЗаполнитьНаСервере();
+
+КонецПроцедуры
+
+&amp;НаСервере
+Процедура ЗаполнитьНаСервере()
+
+    ДокументОбъект = РеквизитФормыВЗначение("Объект");
+    ДокументОбъект.ЗаполнитьОтчет();</span>
+<span class="mark">    ЗначениеВРеквизитФормы(ДокументОбъект, "Объект");</span>
+<span class="dim">
+КонецПроцедуры</span></pre>
+    </div>
+    <div class="card now">
+      <div class="codehead">
+        <strong>Стало</strong>
+        <span>те же две процедуры формы</span>
+      </div>
+<pre><span class="dim">&amp;НаКлиенте
+Процедура Заполнить(Команда)
+
+    Отказ = Ложь;
+    Если Не ЗначениеЗаполнено(Объект.УправляющаяКомпания) Тогда
+        ТекстСообщения = НСтр("ru = 'Не заполнен реквизит Управляющая компания. Заполнение невозможно.'");
+        ОбщегоНазначенияКлиентСервер.СообщитьПользователю(
+            ТекстСообщения, , "Объект.УправляющаяКомпания", , Отказ);
+    КонецЕсли;
+    Если Отказ Тогда
+        Возврат;
+    КонецЕсли;
+
+</span><span class="good">    Если Объект.Ссылка.Пустая() Или Модифицированность Тогда
+        Если Не Записать() Тогда
+            Возврат;
+        КонецЕсли;
+    КонецЕсли;
+
+    ЗаполнитьДокументНаСервере(Объект.Ссылка);
+    Прочитать();</span>
+<span class="dim">
+КонецПроцедуры
+
+</span><span class="good">&amp;НаСервереБезКонтекста
+Процедура ЗаполнитьДокументНаСервере(ДокументСсылка)
+
+    ДокументОбъект = ДокументСсылка.ПолучитьОбъект();
+    ДокументОбъект.ЗаполнитьОтчет();
+    ДокументОбъект.Записать();
+
+КонецПроцедуры</span></pre>
+    </div>
+  </div>
+
+  <div class="warn">
+    <code>Записать()</code> на клиенте нужен до расчета: без ссылки <code>ПолучитьОбъект()</code> нечего читать.
+    Если на форме уже есть несохраненная шапка, ее тоже надо записать, иначе сервер возьмет старую версию из базы и перезапишет документ.
+    После <code>Прочитать()</code> форма показывает то, что лежит в базе. Несохраненные правки строк, сделанные вручную до кнопки, уходят в эту запись вместе с шапкой.
+  </div>
+
+  <h2>Почему так меньше памяти</h2>
+  <div class="card">
+    <table>
+      <thead>
+        <tr><th>Шаг</th><th>Было</th><th>Стало</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Вызов сервера</td>
+          <td><code>&amp;НаСервере</code> передает измененные данные формы, включая табличные части.</td>
+          <td><code>&amp;НаСервереБезКонтекста</code> получает одну ссылку. Данные формы на сервер не едут.</td>
+        </tr>
+        <tr>
+          <td>Расчет</td>
+          <td>Объект формы и документ-объект существуют вместе.</td>
+          <td>В вызове есть только документ-объект. В конце процедуры он уничтожается.</td>
+        </tr>
+        <tr>
+          <td>Появление строк</td>
+          <td><code>ЗначениеВРеквизитФормы</code> кладет строки в реквизит формы до возврата на клиент.</td>
+          <td><code>Записать()</code> кладет строки в базу. <code>Прочитать()</code> читает их на форму уже после того, как расчетный объект освобожден.</td>
+        </tr>
+      </tbody>
+    </table>
+    <div class="warn">
+      <code>Прочитать()</code> все равно загружает записанные строки в данные формы. Если один только набор строк месяца не помещается в память процесса, форма при открытии и после чтения по-прежнему может завершиться с нехваткой памяти.
+      Выигрыш этой замены в другом: во время расчета нет второй копии через <code>ЗначениеВРеквизитФормы</code>. В замере эта копия была отдельным шагом на 27,5 с поверх уже собранного объекта.
+    </div>
+  </div>
+
+  <h2>Второй вызов в той же форме</h2>
+  <p class="lead">
+    Кнопка «Заполнить» его не вызывает. Он срабатывает при создании формы и при обычной записи формы, и снова копирует весь объект.
+    В модуле рядом с ним уже стоит пометка «Удалить». Пока запись переполненных частей в регистр <code>ДанныеРегламентныхОтчетов</code> в <code>ПередЗаписью</code> закомментирована, регистр пуст, а копирование все равно выполняется.
+  </p>
+  <div class="card was">
+    <div class="codehead">
+      <strong>Оставить за пределами кнопки, но не вызывать после заполненного документа</strong>
+      <span>модуль формы, около строки 623</span>
+    </div>
+<pre><span class="dim">&amp;НаСервере
+Процедура ЗагрузитьДанныеТабЧастейИзРегистра(Отказ = Ложь)
+
+    Если Объект.Ссылка.Пустая() Тогда
+        Возврат;
+    КонецЕсли;
+
+    ДокументОбъект = РеквизитФормыВЗначение("Объект");
+    РегистрыСведений.ДанныеРегламентныхОтчетов.ЗагрузитьДанныеТабЧастей(ДокументОбъект, Отказ);</span>
+<span class="mark">    ЗначениеВРеквизитФормы(ДокументОбъект, "Объект");</span>
+<span class="dim">
+КонецПроцедуры</span></pre>
+    <p style="margin:10px 0 0;font-size:13px;line-height:1.45;color:var(--muted)">
+      Вызовы: <code>ПриСозданииНаСервере</code> и <code>ПослеЗаписиНаСервере</code> при режиме записи.
+      Новая кнопка пишет объект мимо формы, поэтому <code>ПослеЗаписиНаСервере</code> на заполнении не выполняется.
+      Следующая ручная запись документа с формы снова войдет в эту процедуру. Для месяца ее стоит убрать вместе с двумя вызовами, иначе экономия кнопки потеряется на обычном «Записать».
+    </p>
+  </div>
+
+  <h2>Фоновое задание для серверной базы</h2>
+  <p class="lead">
+    На клиент-серверной базе заполнение 431 БСП запускает фоновым заданием: объект со строками живет в фоне, а сеанс формы его не держит.
+    Процедура ниже имеет ту же память, что и <code>ЗаполнитьДокументНаСервере</code>.
+    У документа нет модуля менеджера, поэтому экспортную процедуру кладут в серверный общий модуль.
+    <code>ДлительныеОперации.ЗапуститьВыполнениеВФоне</code> всегда передает ей структуру параметров и адрес временного хранилища.
+    <code>Прочитать()</code> вызывают только после <code>ДлительныеОперации.ЗаданиеВыполнено</code>.
+  </p>
+  <div class="card now">
+<pre><span class="dim">// Серверный общий модуль.
+// Строка запуска: "ИмяМодуля.ЗаполнитьОтчет577П"</span>
+<span class="good">Процедура ЗаполнитьОтчет577П(Параметры, АдресРезультата) Экспорт
+
+    ДокументОбъект = Параметры.ДокументСсылка.ПолучитьОбъект();
+    ДокументОбъект.ЗаполнитьОтчет();
+    ДокументОбъект.Записать();
+
+КонецПроцедуры</span>
+
+<span class="dim">// Модуль формы, сервер без контекста.</span>
+<span class="good">&amp;НаСервереБезКонтекста
+Функция ЗапуститьЗаполнение(ДокументСсылка, ИдентификаторФормы)
+
+    ПараметрыЗаполнения = Новый Структура("ДокументСсылка", ДокументСсылка);
+    Возврат ДлительныеОперации.ЗапуститьВыполнениеВФоне(
+        ИдентификаторФормы,
+        "ИмяМодуля.ЗаполнитьОтчет577П",
+        ПараметрыЗаполнения,
+        "Заполнение отчета 577-П");
+
+КонецФункции</span></pre>
+  </div>
+
+</div>
+</body>
+</html>
