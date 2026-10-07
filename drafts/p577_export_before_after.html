@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>577-П: переход выгрузки с дерева XDTO на поток</title>
+<style>
+  :root {
+    --ink: #1c2430;
+    --muted: #5c6b7a;
+    --line: #c5d0dc;
+    --stay: #1f4e79;
+    --stay-bg: #eef5fb;
+    --was: #8f2d2d;
+    --was-bg: #fdeeee;
+    --now: #1b6b3a;
+    --now-bg: #e8f6ee;
+    --move: #b86e00;
+    --move-bg: #fff6e8;
+    --paper: #f4f7fb;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    font-family: "Segoe UI", Arial, sans-serif;
+    color: var(--ink);
+    background: var(--paper);
+  }
+
+  .page {
+    max-width: 980px;
+    margin: 0 auto;
+    padding: 28px 20px 48px;
+  }
+
+  h1 {
+    margin: 0 0 8px;
+    font-size: 26px;
+    font-weight: 650;
+    letter-spacing: -0.02em;
+  }
+
+  .lead {
+    margin: 0 0 22px;
+    color: var(--muted);
+    font-size: 15px;
+    line-height: 1.45;
+  }
+
+  .legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 18px;
+  }
+
+  .legend span {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 10px;
+    border-radius: 999px;
+    background: #fff;
+    border: 1px solid var(--line);
+    font-size: 13px;
+  }
+
+  .dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+  }
+
+  .dot.stay { background: var(--stay); }
+  .dot.was { background: var(--was); }
+  .dot.now { background: var(--now); }
+  .dot.move { background: var(--move); }
+
+  .scheme {
+    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    padding: 22px 18px 18px;
+    box-shadow: 0 8px 24px rgba(28, 36, 48, 0.05);
+  }
+
+  .scheme-title {
+    margin: 0 0 16px;
+    font-size: 13px;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+
+  .flow {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .entries {
+    display: flex;
+    gap: 12px;
+    width: min(640px, 100%);
+  }
+
+  .entries .node { flex: 1; }
+
+  .merge {
+    width: 2px;
+    height: 16px;
+    background: var(--stay);
+    position: relative;
+  }
+
+  .merge:before,
+  .merge:after {
+    content: "";
+    position: absolute;
+    top: 0;
+    width: 120px;
+    height: 2px;
+    background: var(--stay);
+  }
+
+  .merge:before { right: 0; }
+  .merge:after { left: 0; }
+
+  .node {
+    width: min(640px, 100%);
+    border-radius: 12px;
+    padding: 12px 14px;
+    border: 1px solid transparent;
+  }
+
+  .node h3 {
+    margin: 0 0 4px;
+    font-size: 15px;
+  }
+
+  .node p {
+    margin: 0;
+    font-size: 13px;
+    line-height: 1.4;
+    color: var(--muted);
+  }
+
+  .stay {
+    background: var(--stay-bg);
+    border-color: #b7d0e6;
+  }
+
+  .stay h3 { color: var(--stay); }
+
+  .badge {
+    display: inline-block;
+    margin-bottom: 6px;
+    padding: 2px 8px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+
+  .badge.stay { background: #d7e8f6; color: var(--stay); }
+  .badge.was { background: #f8d4d4; color: var(--was); }
+  .badge.now { background: #cfeedd; color: var(--now); }
+  .badge.same { background: #d7e8f6; color: var(--stay); }
+
+  .v-arrow {
+    width: 2px;
+    height: 28px;
+    background: var(--stay);
+    position: relative;
+  }
+
+  .v-arrow:after {
+    content: "";
+    position: absolute;
+    left: 50%;
+    bottom: -1px;
+    transform: translateX(-50%);
+    border-left: 6px solid transparent;
+    border-right: 6px solid transparent;
+    border-top: 8px solid var(--stay);
+  }
+
+  .zone {
+    width: min(640px, 100%);
+    border: 2px solid var(--move);
+    background: var(--move-bg);
+    border-radius: 16px;
+    padding: 14px;
+  }
+
+  .zone-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 12px;
+    margin-bottom: 12px;
+  }
+
+  .zone-head strong {
+    color: var(--move);
+    font-size: 14px;
+  }
+
+  .zone-head span {
+    color: var(--muted);
+    font-size: 12px;
+  }
+
+  .was, .now {
+    border-radius: 12px;
+    padding: 12px 14px;
+  }
+
+  .was {
+    background: var(--was-bg);
+    border: 1px solid #f0c2c2;
+  }
+
+  .now {
+    background: var(--now-bg);
+    border: 1px solid #b7e4c7;
+  }
+
+  .was h3 { margin: 0 0 8px; color: var(--was); font-size: 16px; }
+  .now h3 { margin: 0 0 8px; color: var(--now); font-size: 16px; }
+
+  ol {
+    margin: 0;
+    padding-left: 18px;
+  }
+
+  li {
+    margin: 0 0 6px;
+    font-size: 14px;
+    line-height: 1.35;
+  }
+
+  li:last-child { margin-bottom: 0; }
+
+  .jump {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin: 4px 0;
+  }
+
+  .jump-line {
+    width: 3px;
+    height: 36px;
+    background: var(--move);
+    position: relative;
+  }
+
+  .jump-line:after {
+    content: "";
+    position: absolute;
+    left: 50%;
+    bottom: -1px;
+    transform: translateX(-50%);
+    border-left: 8px solid transparent;
+    border-right: 8px solid transparent;
+    border-top: 10px solid var(--move);
+  }
+
+  .jump-label {
+    margin-top: 6px;
+    background: var(--move);
+    color: #fff;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    padding: 4px 10px;
+    border-radius: 999px;
+  }
+
+  .same-strip {
+    width: min(640px, 100%);
+    margin-top: 14px;
+    padding: 10px 12px;
+    border-radius: 10px;
+    background: var(--stay-bg);
+    border: 1px dashed #b7d0e6;
+    font-size: 13px;
+    line-height: 1.45;
+    color: var(--stay);
+  }
+
+  .bars {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-top: 16px;
+  }
+
+  .bar-card {
+    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 12px 14px;
+  }
+
+  .bar-card h3 {
+    margin: 0 0 8px;
+    font-size: 14px;
+  }
+
+  .track {
+    height: 14px;
+    border-radius: 999px;
+    background: #eef2f6;
+    overflow: hidden;
+  }
+
+  .fill {
+    height: 100%;
+    border-radius: 999px;
+  }
+
+  .fill.was { width: 100%; background: var(--was); }
+  .fill.now { width: 42%; background: var(--now); }
+
+  .bar-card p {
+    margin: 8px 0 0;
+    font-size: 13px;
+    color: var(--muted);
+    line-height: 1.4;
+  }
+
+  @media (max-width: 720px) {
+    .entries { flex-direction: column; }
+    .merge:before, .merge:after { display: none; }
+    .bars { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+  <div class="page">
+    <h1>Выгрузка 577-П: что меняется в сборке файла</h1>
+    <p class="lead">Документ РО_XBRL6_1_ОтчетПоВнутреннемуУчету_577П, функция ВыгрузитьОтчет. Схема XSD и состав файла остаются. Заменяется только участок, где отчет собирается в памяти.</p>
+
+    <div class="legend">
+      <span><i class="dot stay"></i> остается</span>
+      <span><i class="dot was"></i> было</span>
+      <span><i class="dot move"></i> переход</span>
+      <span><i class="dot now"></i> стало</span>
+    </div>
+
+    <div class="scheme">
+      <p class="scheme-title">Одна схема выгрузки</p>
+      <div class="flow">
+
+        <div class="entries">
+          <div class="node stay">
+            <div class="badge stay">вход</div>
+            <h3>Проведение</h3>
+            <p>ОбработкаПроведения вызывает ВыгрузитьОтчет и кладет файл во вложение.</p>
+          </div>
+          <div class="node stay">
+            <div class="badge stay">вход</div>
+            <h3>Кнопка Выгрузить</h3>
+            <p>Повторно вызывает ВыгрузитьОтчет, забирает двоичные данные и пишет xtdd в каталог.</p>
+          </div>
+        </div>
+
+        <div class="merge"></div>
+        <div class="v-arrow"></div>
+
+        <div class="node stay">
+          <div class="badge stay">остается</div>
+          <h3>Табличные части разделов 1-11</h3>
+          <p>Источник данных тот же. Флаги ВыгружатьРаздел по-прежнему не отсекают строки, они только попадают в сопроводительное письмо.</p>
+        </div>
+
+        <div class="v-arrow"></div>
+
+        <div class="node stay">
+          <div class="badge stay">остается</div>
+          <h3>Схема P577: ПостроительDOM и ФабрикаXDTO</h3>
+          <p>Макет около 66 КБ читается в DOM, из него строится фабрика. Этот шаг не заменяется: фабрика дальше пишет те же пространства имен и xsi:type.</p>
+        </div>
+
+        <div class="v-arrow"></div>
+
+        <div class="zone">
+          <div class="zone-head">
+            <strong>Участок замены</strong>
+            <span>стрелка на схеме и есть переход</span>
+          </div>
+
+          <div class="was">
+            <div class="badge was">было</div>
+            <h3>Все строки одним деревом XDTO</h3>
+            <ol>
+              <li>На каждую строку каждого раздела создается объект XDTO.</li>
+              <li>Разделы 1-11 и сопроводительное письмо держатся в одном корне.</li>
+              <li>Фабрика.ЗаписатьXML пишет этот корень целиком.</li>
+              <li>На каждую ячейку вызывается Свойства().Получить().</li>
+            </ol>
+          </div>
+
+          <div class="jump">
+            <div class="jump-line"></div>
+            <div class="jump-label">переход</div>
+          </div>
+
+          <div class="now">
+            <div class="badge now">стало</div>
+            <h3>Поток ЗаписьXML, по одной строке</h3>
+            <ol>
+              <li>ЗаписьXML открывается один раз: объявление, корень P577, Отчетность.</li>
+              <li>Строка превращается в один объект XDTO, пишется в открытый файл и отпускается.</li>
+              <li>Сопроводительное письмо дописывается в тот же поток.</li>
+              <li>Значения по-прежнему проходят через ПривестиЗначениеДляВыгрузки.</li>
+            </ol>
+          </div>
+        </div>
+
+        <div class="v-arrow"></div>
+
+        <div class="node stay">
+          <div class="badge same">тот же результат</div>
+          <h3>Файл xml, двоичные данные, вложение xtdd</h3>
+          <p>Те же теги, тот же порядок по схеме, тот же явный xsi:type, те же даты, числа и символ # для пустых значений.</p>
+        </div>
+
+        <div class="same-strip">
+          Не меняется: оба входа, чтение схемы через DOM, фабрика, приведение значений, имя файла и расширение xtdd.
+          Меняется: отчет больше не лежит вторым полным деревом рядом с табличными частями.
+        </div>
+      </div>
+    </div>
+
+    <div class="bars">
+      <div class="bar-card">
+        <h3>Память на пике, было</h3>
+        <div class="track"><div class="fill was"></div></div>
+        <p>Табличные части + дерево XDTO всех строк + готовый файл как двоичные данные. И так на каждом из двух вызовов.</p>
+      </div>
+      <div class="bar-card">
+        <h3>Память на пике, стало</h3>
+        <div class="track"><div class="fill now"></div></div>
+        <p>Табличные части + одна строка XDTO + двоичные данные готового файла. Дерево всех разделов больше не собирается.</p>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
