@@ -6,4 +6,5 @@
 - Постановка и план тестирования (прогон на AVC_UAT_RDU_PERFTEST): `test_plan_IMDEV-9434.html`. Картинки встроены. **Основной** отчёт по прогону.
 - Вариант итога для руководства (GO/цифры/риски, без скриншотов): `test_summary_IMDEV-9434_variant.html`. Пробный формат; рабочим остаётся `test_plan_IMDEV-9434.html`.
 - Дерево переноса в базовую CF для Аванкор: `avancor_changes_tree_im9434.html`.
+- Сверка релиза ДУ 1.5.30.3 с расширением IM9434: `vendor_cf_im9434_comparison.html`.
 - Текст для поля Description в Jira: `jira_description_IMDEV-9434.txt` (разметка Wiki Jira 8, вставлять как есть).

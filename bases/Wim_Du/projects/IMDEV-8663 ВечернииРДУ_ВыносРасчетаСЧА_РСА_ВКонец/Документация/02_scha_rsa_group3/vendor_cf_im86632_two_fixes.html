@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>IMDEV-8663.2. Две правки в релизе ДУ 1.5.30.3</title>
+<style>
+    body { font-family: "Segoe UI", Tahoma, Arial, sans-serif; font-size: 15px; line-height: 1.45;
+           color: #1a1a1a; background: #f4f5f7; margin: 0; }
+    .wrap { max-width: 1280px; margin: 0 auto; background: #fff; padding: 28px 32px 48px; }
+    h1 { font-size: 24px; margin: 0 0 6px; color: #16324f; }
+    h2 { font-size: 20px; margin: 32px 0 10px; color: #16324f; }
+    p { margin: 8px 0; }
+    .lead { color: #444; margin-bottom: 14px; }
+    .legend { display: flex; gap: 10px; flex-wrap: wrap; margin: 12px 0 18px; }
+    .legend span { padding: 6px 12px; border-radius: 6px; font-weight: 700; font-size: 14px; }
+    .lg-now { background: #f8d0d0; color: #8a1f1f; border: 1px solid #e59a9a; }
+    .lg-need { background: #c8efd4; color: #146c32; border: 1px solid #8ed4a4; }
+    .lg-same { background: #f3f4f6; color: #444; border: 1px solid #ddd; }
+    .pair { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin: 12px 0 22px; }
+    .col h3 { margin: 0; padding: 8px 12px; font-size: 14px; color: #fff; border-radius: 8px 8px 0 0; }
+    .col.now h3 { background: #c0392b; }
+    .col.need h3 { background: #1e7e34; }
+    .code { border: 1px solid #ddd; border-top: 0; border-radius: 0 0 8px 8px;
+            font-family: Consolas, "Courier New", monospace; font-size: 13px; line-height: 1.55;
+            overflow-x: auto; }
+    .ln { padding: 1px 12px; white-space: pre; }
+    .same { background: #fff; color: #333; }
+    .now { background: #f8d0d0; color: #6d1212; font-weight: 700; }
+    .need { background: #c8efd4; color: #0d5c28; font-weight: 700; }
+    .miss { background: #fff4f4; color: #a33; font-style: italic; }
+    .where { font-size: 14px; color: #333; background: #eef5fb; padding: 8px 12px; border-radius: 6px; }
+    code { font-family: Consolas, "Courier New", monospace; font-size: 13px; }
+    .small { color: #666; font-size: 13px; }
+    ol li { margin: 4px 0; }
+    @media (max-width: 900px) { .pair { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<h1>IMDEV-8663.2. Две правки в релизе ДУ 1.5.30.3</h1>
+<p class="lead">Для Аванкор. Остальной перенос IM86632 1.0.0.4 в релизе уже есть. Ниже только то, что расходится.</p>
+<p class="small">07.10.2026. Эталон: расширение IM86632 1.0.0.4. Полная сверка: <a href="vendor_cf_im86632_comparison.html">vendor_cf_im86632_comparison.html</a></p>
+
+<div class="legend">
+    <span class="lg-now">Красный: так сейчас в 1.5.30.3</span>
+    <span class="lg-need">Зеленый: так надо</span>
+    <span class="lg-same">Белый: строка уже верная, не трогать</span>
+</div>
+
+<h2>1. Форма периода. Три вызова не вставлены</h2>
+<p class="where">Справочник <code>РегламентныеПериоды</code>, форма <code>РегламентныйПериод</code>, процедура <code>ОбработатьРезультатЗадания</code>.</p>
+<p>Процедуры <code>ЗапуститьОжиданиеПорцийПослеОтмены</code> и <code>ПослеУспешногоЗавершенияГруппы</code> в модуле уже есть. Их надо вызвать. Заново не создавать.</p>
+
+<h3>1.1. Отмена пользователем. Результат = Неопределено</h3>
+<div class="pair">
+    <div class="col now">
+        <h3>Сейчас в 1.5.30.3</h3>
+        <div class="code">
+<div class="ln same">Если Результат = Неопределено Тогда</div>
+<div class="ln same">    Состояние(НСтр("ru='Задание отменено пользователем'"));</div>
+<div class="ln miss">    // вызова нет, сразу выход</div>
+<div class="ln now">    Возврат;</div>
+<div class="ln same">КонецЕсли;</div>
+        </div>
+    </div>
+    <div class="col need">
+        <h3>Как надо</h3>
+        <div class="code">
+<div class="ln same">Если Результат = Неопределено Тогда</div>
+<div class="ln same">    Состояние(НСтр("ru='Задание отменено пользователем'"));</div>
+<div class="ln need">    ЗапуститьОжиданиеПорцийПослеОтмены();</div>
+<div class="ln same">    Возврат;</div>
+<div class="ln same">КонецЕсли;</div>
+        </div>
+    </div>
+</div>
+
+<h3>1.2. Успех. Сразу после обновления формы</h3>
+<div class="pair">
+    <div class="col now">
+        <h3>Сейчас в 1.5.30.3</h3>
+        <div class="code">
+<div class="ln same">Если Данные.Успешно Тогда</div>
+<div class="ln same">    Состояние(</div>
+<div class="ln same">        НСтр("ru='Регламентные операции успешно сформированы'"),</div>
+<div class="ln same">        100, ,</div>
+<div class="ln same">        БиблиотекаКартинок.ЗапуститьОтдельныйСеансДляВыполненияРегламентныхЗаданий);</div>
+<div class="ln same">    ЗавершитьОбработкуПослеУспехаНаКлиенте();</div>
+<div class="ln miss">    // автозапуск группы 3 не вызывается</div>
+<div class="ln same">Иначе</div>
+        </div>
+    </div>
+    <div class="col need">
+        <h3>Как надо</h3>
+        <div class="code">
+<div class="ln same">Если Данные.Успешно Тогда</div>
+<div class="ln same">    Состояние(</div>
+<div class="ln same">        НСтр("ru='Регламентные операции успешно сформированы'"),</div>
+<div class="ln same">        100, ,</div>
+<div class="ln same">        БиблиотекаКартинок.ЗапуститьОтдельныйСеансДляВыполненияРегламентныхЗаданий);</div>
+<div class="ln same">    ЗавершитьОбработкуПослеУспехаНаКлиенте();</div>
+<div class="ln need">    ПослеУспешногоЗавершенияГруппы();</div>
+<div class="ln same">Иначе</div>
+        </div>
+    </div>
+</div>
+<p>Без зеленой строки флажок на форме ничего не запускает: после вечерних группа 3 сама не стартует. <code>ЗавершитьОбработкуПослеУспехаНаКлиенте</code> только обновляет дерево и чистит временное хранилище.</p>
+
+<h3>1.3. Статус «Отменено»</h3>
+<div class="pair">
+    <div class="col now">
+        <h3>Сейчас в 1.5.30.3</h3>
+        <div class="code">
+<div class="ln same">ИначеЕсли Результат.Статус = "Отменено" Тогда</div>
+<div class="ln same">    Состояние(НСтр("ru='Задание отменено'"));</div>
+<div class="ln miss">    // вызова нет</div>
+<div class="ln same">КонецЕсли;</div>
+        </div>
+    </div>
+    <div class="col need">
+        <h3>Как надо</h3>
+        <div class="code">
+<div class="ln same">ИначеЕсли Результат.Статус = "Отменено" Тогда</div>
+<div class="ln same">    Состояние(НСтр("ru='Задание отменено'"));</div>
+<div class="ln need">    ЗапуститьОжиданиеПорцийПослеОтмены();</div>
+<div class="ln same">КонецЕсли;</div>
+        </div>
+    </div>
+</div>
+<p>Зеленая строка открывает окно «Новые порции не запускаются» и ждет уже запущенные порции с ключом <code>IM8663_</code>. Ключ ожидания <code>IM86632_Wait_</code> внутри процедуры менять не нужно.</p>
+
+<h2>2. ПередЗаписью плана. Возврат стоит слишком высоко</h2>
+<p class="where">Документ <code>ПланРегламентныхОперацийДУ</code>, модуль объекта, процедура <code>ПередЗаписью</code>.</p>
+<p>В расширении это дописка <b>после</b> штатной процедуры. В релизе тот же текст стоит <b>до</b> проверки закрытого периода и пометки подчиненных. Красный <code>Возврат</code> выходит из всей процедуры, белый хвост ниже него не выполняется.</p>
+
+<div class="pair">
+    <div class="col now">
+        <h3>Сейчас в 1.5.30.3</h3>
+        <div class="code">
+<div class="ln same">Процедура ПередЗаписью(Отказ, РежимЗаписи, РежимПроведения)</div>
+<div class="ln same"></div>
+<div class="ln same">    Если ОбменДанными.Загрузка = Истина Тогда</div>
+<div class="ln same">        Возврат;</div>
+<div class="ln same">    КонецЕсли;</div>
+<div class="ln now">    Если ЗначениеЗаполнено(ПланВечернихОпераций) Тогда</div>
+<div class="ln now">        Возврат;</div>
+<div class="ln now">    КонецЕсли;</div>
+<div class="ln same"></div>
+<div class="ln same">    Отказ = Справочники.РегламентныеПериоды.ПериодЗакрыт(Дата, Истина, , ДоговорДУ);</div>
+<div class="ln same"></div>
+<div class="ln now">    ГруппаСЧА = Справочники.ВидыОперацийЗакрытияПериода.НайтиПоКоду(</div>
+<div class="ln now">        Справочники.РегламентныеПериоды.КодГруппыРасчетаСЧА_РСА());</div>
+<div class="ln now">    Если ГруппаСЧА.Пустая()</div>
+<div class="ln now">        ИЛИ ГруппаОперацийПользователя &lt;&gt; ГруппаСЧА Тогда</div>
+<div class="ln now">        Возврат;</div>
+<div class="ln now">    КонецЕсли;</div>
+<div class="ln same"></div>
+<div class="ln now">    ПланВечернихОпераций = Справочники.РегламентныеПериоды</div>
+<div class="ln now">        .НайтиПроведенныйВечернийПлан(Дата, ДоговорДУ);</div>
+<div class="ln now">    Если Не ЗначениеЗаполнено(ПланВечернихОпераций) Тогда</div>
+<div class="ln now">        ТекстСообщения = НСтр("ru='Нет проведенного плана вечерних операций...");</div>
+<div class="ln now">        ОбщегоНазначенияКлиентСервер.СообщитьПользователю(</div>
+<div class="ln now">            ТекстСообщения, , , , Отказ);</div>
+<div class="ln now">    КонецЕсли;</div>
+<div class="ln same"></div>
+<div class="ln same">    Если Отказ Тогда</div>
+<div class="ln same">        Возврат;</div>
+<div class="ln same">    КонецЕсли;</div>
+<div class="ln same"></div>
+<div class="ln same">    Если ПометкаУдаления Тогда</div>
+<div class="ln same">        ОчиститьДвиженияДокумента();</div>
+<div class="ln same">        Документы.ПланРегламентныхОперацийДУ</div>
+<div class="ln same">            .ПометитьНаУдалениеПодчиненныеДокументы(Ссылка);</div>
+<div class="ln same">    КонецЕсли;</div>
+<div class="ln same"></div>
+<div class="ln miss">    // этот хвост до поиска плана уже не доходит</div>
+<div class="ln now">    Если ОбменДанными.Загрузка Или Отказ Или ПометкаУдаления Тогда</div>
+<div class="ln now">        Возврат;</div>
+<div class="ln now">    КонецЕсли;</div>
+<div class="ln same"></div>
+<div class="ln same">КонецПроцедуры</div>
+        </div>
+    </div>
+    <div class="col need">
+        <h3>Как надо</h3>
+        <div class="code">
+<div class="ln same">Процедура ПередЗаписью(Отказ, РежимЗаписи, РежимПроведения)</div>
+<div class="ln same"></div>
+<div class="ln same">    Если ОбменДанными.Загрузка = Истина Тогда</div>
+<div class="ln same">        Возврат;</div>
+<div class="ln same">    КонецЕсли;</div>
+<div class="ln same"></div>
+<div class="ln same">    Отказ = Справочники.РегламентныеПериоды.ПериодЗакрыт(Дата, Истина, , ДоговорДУ);</div>
+<div class="ln same">    Если Отказ Тогда</div>
+<div class="ln same">        Возврат;</div>
+<div class="ln same">    КонецЕсли;</div>
+<div class="ln same"></div>
+<div class="ln same">    Если ПометкаУдаления Тогда</div>
+<div class="ln same">        ОчиститьДвиженияДокумента();</div>
+<div class="ln same">        Документы.ПланРегламентныхОперацийДУ</div>
+<div class="ln same">            .ПометитьНаУдалениеПодчиненныеДокументы(Ссылка);</div>
+<div class="ln same">    КонецЕсли;</div>
+<div class="ln same"></div>
+<div class="ln need">    Если Отказ Или ПометкаУдаления Тогда</div>
+<div class="ln need">        Возврат;</div>
+<div class="ln need">    КонецЕсли;</div>
+<div class="ln need">    Если ЗначениеЗаполнено(ПланВечернихОпераций) Тогда</div>
+<div class="ln need">        Возврат;</div>
+<div class="ln need">    КонецЕсли;</div>
+<div class="ln need"></div>
+<div class="ln need">    ГруппаСЧА = Справочники.ВидыОперацийЗакрытияПериода.НайтиПоКоду(</div>
+<div class="ln need">        Справочники.РегламентныеПериоды.КодГруппыРасчетаСЧА_РСА());</div>
+<div class="ln need">    Если ГруппаСЧА.Пустая()</div>
+<div class="ln need">        Или ГруппаОперацийПользователя &lt;&gt; ГруппаСЧА Тогда</div>
+<div class="ln need">        Возврат;</div>
+<div class="ln need">    КонецЕсли;</div>
+<div class="ln need"></div>
+<div class="ln need">    ПланВечернихОпераций = Справочники.РегламентныеПериоды</div>
+<div class="ln need">        .НайтиПроведенныйВечернийПлан(Дата, ДоговорДУ);</div>
+<div class="ln need">    Если Не ЗначениеЗаполнено(ПланВечернихОпераций) Тогда</div>
+<div class="ln need">        ТекстСообщения = НСтр("ru='Нет проведенного плана вечерних операций</div>
+<div class="ln need">            |за эту дату по договору ДУ.</div>
+<div class="ln need">            |Документ расчета СЧА/РСА не записан.'");</div>
+<div class="ln need">        ОбщегоНазначенияКлиентСервер.СообщитьПользователю(</div>
+<div class="ln need">            ТекстСообщения, , , , Отказ);</div>
+<div class="ln need">    КонецЕсли;</div>
+<div class="ln same"></div>
+<div class="ln same">КонецПроцедуры</div>
+        </div>
+    </div>
+</div>
+
+<p>Красный блок надо убрать из начала и поставить зеленым в конец, после пометки подчиненных. Тогда <code>Возврат</code> уже не пропускает штатный код.</p>
+<p>Что из-за красного <code>Возврат</code> сейчас не делается:</p>
+<ol>
+<li>План не группы 3 (вечерние и остальные): при пометке удаления подчиненные документы не помечаются.</li>
+<li>План группы 3, у которого связь уже заполнена фоновым заданием: не проверяется закрытый период.</li>
+</ol>
+<p>Поиск вечернего плана и текст отказа для ручной записи плана группы 3 уже есть. Их переносить по смыслу, не писать второй раз. Другие вызовы <code>ПометитьНаУдалениеПодчиненныеДокументы</code> (выполнение операций, пересчет) этот хвост не заменяют.</p>
+
+<p class="small">IMDEV-8663.2. Две правки к релизу ДУ 1.5.30.3. 07.10.2026.
+<a href="avancor_tree_im86632.html">Дерево для Аванкор</a>.</p>
+
+</div>
+</body>
+</html>
