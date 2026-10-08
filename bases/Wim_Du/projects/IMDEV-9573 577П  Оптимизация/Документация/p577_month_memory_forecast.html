@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>577-П: память за месяц</title>
+</head>
+<body style="margin:0; padding:16px; background:#ffffff; color:#1c2430; font-family:Calibri, 'Segoe UI', Arial, sans-serif; font-size:14px; line-height:1.45;">
+<div style="max-width:900px;">
+
+<p style="margin:0 0 12px;"><b>Тема: 577-П, заполнение за месяц: причина ошибки памяти и прогноз объема</b></p>
+
+<p style="margin:0 0 12px;">Коллеги, добрый день.</p>
+
+<p style="margin:0 0 12px;">Ниже результаты проверки заполнения документа «(XBRL6.1) Отчет по внутреннему учету 577-П» за июнь 2026 года
+на релизе ДУ 1.5.30.3: тест на UAT2 от 08.10.2026, замеры на DR-контуре (оборудование как на продуктиве) за 1 и 2 дня
+и прогноз на полный месяц.</p>
+
+<h3 style="font-size:16px; margin:20px 0 8px;">1. Тест на UAT2, 08.10.2026: где и почему произошло падение</h3>
+
+<p style="margin:0 0 8px;">Условия: период июнь 2026 года, все разделы. Кнопка «Заполнить» была изменена так, чтобы расчет выполнялся
+на сервере по ссылке на документ, без копирования данных в форму. Через 2 226 с (37 мин) расчет прервался с ошибкой:</p>
+
+<p style="margin:0 0 8px; padding:8px 12px; background:#fdeeee; border-left:4px solid #8f2d2d;">
+«Превышен максимальный расход памяти сервера за один вызов» в процедуре <code>ЗаполнитьОтчет()</code> модуля документа.</p>
+
+<p style="margin:0 0 8px;">К моменту падения в документе было накоплено:</p>
+
+<table cellpadding="5" cellspacing="0" border="1" style="border-collapse:collapse; border-color:#c5d0dc; font-size:13px; margin:0 0 10px;">
+  <tr style="background:#eaf1fb;"><th align="left">Раздел</th><th align="right">Строк</th><th align="right">Время раздела, с</th><th align="left">Комментарий</th></tr>
+  <tr><td>2</td><td align="right">1 360</td><td align="right">1</td><td></td></tr>
+  <tr><td>3</td><td align="right">143 795</td><td align="right">86</td><td></td></tr>
+  <tr><td>5</td><td align="right">478 452</td><td align="right">1 329</td><td>запрос выполняется по каждому дню, около 37 с на день</td></tr>
+  <tr><td>6</td><td align="right">701 530</td><td align="right">538</td><td>запрос по каждому дню</td></tr>
+  <tr><td>7</td><td align="right">950 249</td><td align="right">263</td><td>обработано 8 дней из 30, падение на 9-м дне</td></tr>
+  <tr style="background:#f4f7fb;"><td><b>Итого</b></td><td align="right"><b>2 275 386</b></td><td align="right"><b>2 226</b></td><td>разделы 8, 9, 1, 4, 10, 11 не начинались</td></tr>
+</table>
+
+<p style="margin:0 0 8px;"><b>Причина.</b> В релизе 1.5.30.3 разделы 5, 6, 7 и 9 считаются запросом за каждый день периода, и
+это снизило память на результаты запросов. Но строки всех дней по-прежнему накапливаются в табличных частях одного объекта
+документа в рамках одного серверного вызова. Лимит кластера на один вызов был исчерпан на 2,28 млн строк, еще до окончания
+раздела 7. Форма документа в этом тесте не участвовала: падение произошло в самом расчете.</p>
+
+<h3 style="font-size:16px; margin:20px 0 8px;">2. Замеры на DR-контуре: 1 день и 2 дня</h3>
+
+<p style="margin:0 0 8px;">Текущая кнопка «Заполнить» релиза 1.5.30.3, периоды 01.06.2026 и 01.06-02.06.2026. Оба прогона завершились без ошибок.</p>
+
+<table cellpadding="5" cellspacing="0" border="1" style="border-collapse:collapse; border-color:#c5d0dc; font-size:13px; margin:0 0 10px;">
+  <tr style="background:#eaf1fb;"><th align="left">Показатель</th><th align="right">1 день</th><th align="right">2 дня</th><th align="right">Прирост за день</th></tr>
+  <tr><td>Заполнение всего, с</td><td align="right">343</td><td align="right">556</td><td align="right">+213</td></tr>
+  <tr><td>&nbsp;&nbsp;расчет на сервере, с</td><td align="right">197</td><td align="right">316</td><td align="right">+120</td></tr>
+  <tr><td>&nbsp;&nbsp;копирование в форму, с</td><td align="right">21</td><td align="right">36</td><td align="right">+15</td></tr>
+  <tr><td>&nbsp;&nbsp;передача формы на клиент, с</td><td align="right">125</td><td align="right">203</td><td align="right">+78</td></tr>
+  <tr style="background:#f4f7fb;"><td><b>Строк всего</b></td><td align="right"><b>539 915</b></td><td align="right"><b>882 590</b></td><td align="right"><b>+342 675</b></td></tr>
+</table>
+
+<table cellpadding="5" cellspacing="0" border="1" style="border-collapse:collapse; border-color:#c5d0dc; font-size:13px; margin:0 0 10px;">
+  <tr style="background:#eaf1fb;"><th align="left">Раздел</th><th align="right">1 день</th><th align="right">2 дня</th><th align="left">Как растет</th></tr>
+  <tr><td>7</td><td align="right">133 090</td><td align="right">267 520</td><td>около 134 тыс. на каждый календарный день</td></tr>
+  <tr><td>9</td><td align="right">130 807</td><td align="right">263 073</td><td>около 132 тыс. на каждый календарный день</td></tr>
+  <tr><td>6</td><td align="right">37 655</td><td align="right">73 814</td><td>около 37 тыс. на рабочий день</td></tr>
+  <tr><td>5</td><td align="right">25 679</td><td align="right">53 400</td><td>около 27 тыс. на рабочий день</td></tr>
+  <tr><td>3</td><td align="right">7 511</td><td align="right">15 534</td><td>около 8 тыс. на рабочий день</td></tr>
+  <tr><td>8</td><td align="right">3 308</td><td align="right">7 010</td><td>около 4 тыс. на рабочий день</td></tr>
+  <tr><td>4</td><td align="right">157 932</td><td align="right">157 856</td><td>не зависит от периода</td></tr>
+  <tr><td>1 и 11</td><td align="right">43 336</td><td align="right">43 752</td><td>не зависит от периода (около 22 тыс. договоров)</td></tr>
+  <tr><td>2 и 10</td><td align="right">597</td><td align="right">631</td><td></td></tr>
+</table>
+
+<h3 style="font-size:16px; margin:20px 0 8px;">3. Прогноз на месяц (июнь 2026: 30 календарных, 21 рабочий день)</h3>
+
+<table cellpadding="5" cellspacing="0" border="1" style="border-collapse:collapse; border-color:#c5d0dc; font-size:13px; margin:0 0 10px;">
+  <tr style="background:#eaf1fb;"><th align="left">Раздел</th><th align="right">Строк за месяц</th><th align="left">Основание</th></tr>
+  <tr><td>7</td><td align="right">≈ 4,0 млн</td><td>остаток на конец каждого календарного дня (так требует Банк России)</td></tr>
+  <tr><td>9</td><td align="right">≈ 4,0 млн</td><td>позиции на каждый календарный день, как сейчас заполняет релиз</td></tr>
+  <tr><td>6</td><td align="right">≈ 0,8 млн</td><td>21 рабочий день</td></tr>
+  <tr><td>5</td><td align="right">≈ 0,6 млн</td><td>21 рабочий день</td></tr>
+  <tr><td>3, 8</td><td align="right">≈ 0,25 млн</td><td>21 рабочий день</td></tr>
+  <tr><td>1, 2, 4, 10, 11</td><td align="right">≈ 0,2 млн</td><td>не зависят от периода</td></tr>
+  <tr style="background:#f4f7fb;"><td><b>Итого</b></td><td align="right"><b>≈ 9,8 млн</b></td><td></td></tr>
+</table>
+
+<p style="margin:0 0 8px;"><b>Время.</b> При линейном росте одно заполнение за месяц заняло бы около 1,8 часа на оборудовании DR
+(343 с + 29 дней по 213 с): расчет около 1 часа, остальное занимают копирование и передача формы на клиент. Это при условии,
+что хватит памяти.</p>
+
+<p style="margin:0 0 8px;"><b>Память.</b> Разделы отличаются числом колонок (в разделе 7 их 18, в разделах 5 и 6 их 42), поэтому объем
+считался с учетом ширины разделов:</p>
+<ul style="margin:0 0 8px; padding-left:20px;">
+  <li>данные месяца примерно в <b>3,4 раза</b> больше, чем было накоплено на UAT2 к моменту падения;</li>
+  <li>значит, только для расчета лимит памяти на один вызов должен быть не менее чем в <b>3,5 раза</b> выше текущего лимита UAT2;</li>
+  <li>в абсолютных цифрах, по замеру на стенде разработки (1,5 млн строк раздела 7 занимают около 3 ГБ в объекте документа),
+    месяц потребует порядка <b>15-30 ГБ на один вызов</b> только для расчета;</li>
+  <li>запись такого документа и его открытие в форме требуют еще больше: на стенде открытие документа с 1,5 млн строк заняло
+    7 ГБ и 6,5 минуты, то есть в 2,4 раза больше памяти, чем сам объект.</li>
+</ul>
+<p style="margin:0 0 8px;">Текущее значение лимита стоит запросить у администратора кластера UAT2 и продуктива: параметр кластера
+«Безопасный расход памяти за один вызов». Но даже кратное увеличение лимита не решает задачу: документ на 10 млн строк остается
+слишком тяжелым для записи, открытия формы и выгрузки.</p>
+
+<h3 style="font-size:16px; margin:20px 0 8px;">4. Вывод</h3>
+<ul style="margin:0 0 8px; padding-left:20px;">
+  <li>Объем месяца, около 10 млн строк, задают требования к разделам 7 и 9. По разъяснению Банка России раздел 7 заполняется
+    остатками на конец каждого дня периода, поэтому сократить его нельзя.</li>
+  <li>По Порядку представления данных внутреннего учета раздел 9 описывает позицию клиента за период определения позиции:
+    входящие значения на день начала, обороты за период, исходящие на день окончания. Если допустимо давать раздел 9
+    одной строкой на позицию за период, а не за каждый день, это минус около 4 млн строк. Вопрос к вендору.</li>
+  <li>Без изменения схемы хранения месячный документ не заполнится. Нужно заполнять разделы 5, 6, 7, 9 порциями по дням
+    с сохранением каждой порции вне табличных частей документа, а выгрузку файла строить потоком из сохраненных порций,
+    без сборки всего месяца в памяти одного вызова.</li>
+</ul>
+
+<p style="margin:16px 0 0;">С уважением,</p>
+
+</div>
+</body>
+</html>
