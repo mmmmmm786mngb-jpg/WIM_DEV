@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>577-П: отчет о тестировании</title><style>
+:root{--bg:#f6f7f9;--card:#ffffff;--ink:#0b0b0b;--muted:#52514e;--line:#e2e4e8;--grid:#e9eaee;
+--s1:#2a78d6;--s2:#eb6834;--s3:#1baf7a;--s4:#eda100;--s5:#e87ba4;--s6:#008300;--s7:#4a3aa7;--s8:#e34948;
+--good:#0f7b3f;--goodbg:#e4f5ea;--warn:#8a5a00;--warnbg:#fff3d6;--accent:#2a78d6}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#131416;--card:#1a1a19;--ink:#ffffff;--muted:#c3c2b7;
+--line:#2c2e33;--grid:#2a2c30;--s1:#3987e5;--s2:#d95926;--s3:#199e70;--s4:#c98500;--s5:#d55181;--s6:#008300;--s7:#9085e9;
+--s8:#e66767;--good:#7fd6a0;--goodbg:#173323;--warn:#f2c66d;--warnbg:#3a2f17;--accent:#3987e5}}
+:root[data-theme="dark"]{--bg:#131416;--card:#1a1a19;--ink:#ffffff;--muted:#c3c2b7;--line:#2c2e33;--grid:#2a2c30;
+--s1:#3987e5;--s2:#d95926;--s3:#199e70;--s4:#c98500;--s5:#d55181;--s6:#008300;--s7:#9085e9;--s8:#e66767;
+--good:#7fd6a0;--goodbg:#173323;--warn:#f2c66d;--warnbg:#3a2f17;--accent:#3987e5}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.5 "Segoe UI",Arial,sans-serif}
+.page{max-width:1080px;margin:0 auto;padding:24px 16px 48px}
+header{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:22px 24px;margin-bottom:16px;
+border-top:6px solid var(--accent)}
+h1{margin:0 0 6px;font-size:24px}h2{font-size:18px;margin:0 0 12px}.sub{color:var(--muted)}
+.verdict{display:inline-block;margin-top:12px;padding:6px 14px;border-radius:999px;background:var(--goodbg);color:var(--good);font-weight:700}
+.meta{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:8px 18px;margin-top:14px;font-size:13px}
+.meta b{display:block;color:var(--muted);font-weight:600;font-size:12px}
+section{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:20px 22px;margin:14px 0}
+.tiles{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}@media(max-width:700px){.tiles{grid-template-columns:1fr 1fr}}
+.tile{border:1px solid var(--line);border-radius:12px;padding:12px 14px}.tv{font-size:24px;font-weight:700;color:var(--accent)}
+.tl{font-size:13px;margin-top:2px}.ts{font-size:12px;color:var(--muted)}
+.chart{width:100%;height:auto;display:block}.chart text{fill:var(--ink)}
+.grid{stroke:var(--grid);stroke-width:1}.tick{font-size:12px;fill:var(--muted)!important}.lbl{font-size:13px}
+.tot{font-size:13px;font-weight:600}.inbar{font-size:12px;fill:#fff!important;font-weight:600}
+.limit{stroke:var(--s8);stroke-width:2;stroke-dasharray:5 4}
+.s1{fill:var(--s1);background:var(--s1)}.s2{fill:var(--s2);background:var(--s2)}.s3{fill:var(--s3);background:var(--s3)}
+.s4{fill:var(--s4);background:var(--s4)}.s5{fill:var(--s5);background:var(--s5)}.s6{fill:var(--s6);background:var(--s6)}
+.s7{fill:var(--s7);background:var(--s7)}.s8{fill:var(--s8);background:var(--s8)}
+.seg{stroke:var(--card);stroke-width:2}.ln1{fill:none;stroke:var(--s1);stroke-width:2}.ln3{fill:none;stroke:var(--s3);stroke-width:2}
+.dot{stroke:var(--card);stroke-width:2}
+.legend{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:13px;margin:4px 0 10px}.sw{display:inline-block;width:11px;height:11px;border-radius:3px;margin-right:6px;vertical-align:-1px}
+.donutwrap{display:flex;flex-wrap:wrap;align-items:center;gap:18px}.donut{width:300px;max-width:100%}
+.donut .big{font-size:26px;font-weight:700;fill:var(--ink)}.donut .tick{font-size:13px}
+.mini{border-collapse:collapse;font-size:13px}.mini td{padding:4px 10px;border-bottom:1px solid var(--line)}
+.n{text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
+.tbl{overflow-x:auto}table{border-collapse:collapse;width:100%;font-size:13px}.tbl table{min-width:820px}
+th,td{border-bottom:1px solid var(--line);padding:8px 10px;text-align:left;vertical-align:top}
+th{color:var(--muted);font-weight:600;font-size:12px;text-transform:uppercase;letter-spacing:.02em}
+.id{font-weight:700;white-space:nowrap}
+.b{display:inline-block;padding:2px 10px;border-radius:999px;font-size:12px;font-weight:700;white-space:nowrap}
+.pass{background:var(--goodbg);color:var(--good)}.warn{background:var(--warnbg);color:var(--warn)}
+.grid11{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px}
+.cell{border:1px solid var(--line);border-left:4px solid var(--good);border-radius:10px;padding:8px 10px;font-size:13px}
+.cell b,.cell span,.cell em{display:block}.cell span{color:var(--muted)}.cell em{color:var(--good);font-style:normal;font-weight:600}
+.two{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:14px}
+.note{color:var(--muted);font-size:13px;margin:8px 0 0}
+ul.clean{margin:6px 0 0;padding-left:18px}ul.clean li{margin:3px 0}
+</style></head><body><div class="page">
+
+<header>
+<h1>Отчет о тестировании: кнопка «Заполнить и закрыть» для отчета 577-П</h1>
+<div class="sub">Документ «(XBRL6.1) Отчет по внутреннему учету 577-П», доработка формы и проведения расширением конфигурации</div>
+<div class="verdict">✓ Итог: доработка принята к опытной эксплуатации</div>
+<div class="meta">
+<div><b>Объект тестирования</b>Расширение «Заполнить и закрыть», версия 1.0.0.3</div>
+<div><b>Конфигурация</b>Доверительное управление 1.5.30.3, платформа 8.3.27</div>
+<div><b>Среды</b>стенд разработки, DR-контур, UAT2</div>
+<div><b>Период тестирования</b>07.10.2026 - 09.10.2026</div>
+<div><b>Данные</b>июнь 2026 (DR, UAT2), тестовые данные по 2 000 строк на раздел (стенд)</div>
+<div><b>Структура отчета</b>по ISO/IEC/IEEE 29119-3, отчет о завершении тестирования</div>
+</div>
+</header>
+
+<section><h2>1. Ключевые показатели</h2><div class="tiles"><div class="tile"><div class="tv">3 ч 22 мин</div><div class="tl">Заполнение месяца на DR</div><div class="ts">было 6 ч 41 мин: в 2 раза быстрее</div></div><div class="tile"><div class="tv">213-294 с</div><div class="tl">Один день на DR, с записью</div><div class="ts">было 343 с без записи</div></div><div class="tile"><div class="tv">11 из 11</div><div class="tl">Разделов совпадают с эталоном</div><div class="ts">плюс шапка, контрольные суммы</div></div><div class="tile"><div class="tv">&lt; 5 с</div><div class="tl">Проведение без xtdd</div><div class="ts">было 32 с, стенд, 22 тыс. строк</div></div><div class="tile"><div class="tv">7 из 7</div><div class="tl">Тест-кейсов пройдено</div><div class="ts">и 1 ограничение среды (UAT2)</div></div><div class="tile"><div class="tv">4 из 4</div><div class="tl">Дефекта исправлено</div><div class="ts">найдены в ходе тестирования</div></div></div></section>
+
+<section><h2>2. Месяц на DR-контуре: из чего складывается время</h2>
+<div class="legend"><span><i class="sw s1"></i>Расчет</span><span><i class="sw s2"></i>Запись документа</span><span><i class="sw s7"></i>Перечитывание формы</span></div><svg viewBox="0 0 860 170" class="chart" role="img">
+<line x1="250.0" y1="20" x2="250.0" y2="144" class="grid"/>
+<text x="250.0" y="160" class="tick" text-anchor="middle">0 ч</text>
+<line x1="324.8" y1="20" x2="324.8" y2="144" class="grid"/>
+<text x="324.8" y="160" class="tick" text-anchor="middle">1 ч</text>
+<line x1="399.7" y1="20" x2="399.7" y2="144" class="grid"/>
+<text x="399.7" y="160" class="tick" text-anchor="middle">2 ч</text>
+<line x1="474.5" y1="20" x2="474.5" y2="144" class="grid"/>
+<text x="474.5" y="160" class="tick" text-anchor="middle">3 ч</text>
+<line x1="549.3" y1="20" x2="549.3" y2="144" class="grid"/>
+<text x="549.3" y="160" class="tick" text-anchor="middle">4 ч</text>
+<line x1="624.2" y1="20" x2="624.2" y2="144" class="grid"/>
+<text x="624.2" y="160" class="tick" text-anchor="middle">5 ч</text>
+<line x1="699.0" y1="20" x2="699.0" y2="144" class="grid"/>
+<text x="699.0" y="160" class="tick" text-anchor="middle">6 ч</text>
+<text x="238" y="46.0" class="lbl" text-anchor="end">По ссылке + перечитывание формы</text>
+<rect x="250.0" y="28" width="124.1" height="26" rx="3" class="s1"><title>Расчет: 1 ч 41 мин</title></rect>
+<text x="313.1" y="46.0" class="inbar" text-anchor="middle">1 ч 41 мин</text>
+<rect x="376.1" y="28" width="107.5" height="26" rx="3" class="s2"><title>Запись: 1 ч 28 мин</title></rect>
+<text x="430.9" y="46.0" class="inbar" text-anchor="middle">1 ч 28 мин</text>
+<rect x="485.7" y="28" width="262.3" height="26" rx="3" class="s7"><title>Перечитывание формы: 3 ч 32 мин</title></rect>
+<text x="617.8" y="46.0" class="inbar" text-anchor="middle">3 ч 32 мин</text>
+<text x="758.0" y="46.0" class="tot">6 ч 41 мин</text>
+<text x="238" y="102.0" class="lbl" text-anchor="end">«Заполнить и закрыть»</text>
+<rect x="250.0" y="84" width="138.6" height="26" rx="3" class="s1"><title>Расчет: 1 ч 53 мин</title></rect>
+<text x="320.3" y="102.0" class="inbar" text-anchor="middle">1 ч 53 мин</text>
+<rect x="390.6" y="84" width="109.0" height="26" rx="3" class="s2"><title>Запись: 1 ч 29 мин</title></rect>
+<text x="446.1" y="102.0" class="inbar" text-anchor="middle">1 ч 29 мин</text>
+<text x="509.6" y="102.0" class="tot">3 ч 22 мин</text>
+</svg>
+<p class="note">Июнь 2026, 9 738 405 строк, оборудование DR как на продуктиве. Перечитывание формы (3 ч 32 мин) убрано полностью,
+запись и расчет остались. Разница в расчете (1 ч 41 мин и 1 ч 53 мин) задана нагрузкой на DR, код расчета не менялся.</p>
+</section>
+
+<section><h2>3. Один день, 01.06.2026</h2>
+<div class="legend"><span><i class="sw s1"></i>Расчет</span><span><i class="sw s2"></i>Запись документа</span><span><i class="sw s6"></i>Копирование в форму</span><span><i class="sw s7"></i>Передача формы на клиент</span></div><svg viewBox="0 0 860 226" class="chart" role="img">
+<line x1="250.0" y1="20" x2="250.0" y2="200" class="grid"/>
+<text x="250.0" y="216" class="tick" text-anchor="middle">0 с</text>
+<line x1="337.5" y1="20" x2="337.5" y2="200" class="grid"/>
+<text x="337.5" y="216" class="tick" text-anchor="middle">60 с</text>
+<line x1="424.9" y1="20" x2="424.9" y2="200" class="grid"/>
+<text x="424.9" y="216" class="tick" text-anchor="middle">120 с</text>
+<line x1="512.4" y1="20" x2="512.4" y2="200" class="grid"/>
+<text x="512.4" y="216" class="tick" text-anchor="middle">180 с</text>
+<line x1="599.9" y1="20" x2="599.9" y2="200" class="grid"/>
+<text x="599.9" y="216" class="tick" text-anchor="middle">240 с</text>
+<line x1="687.3" y1="20" x2="687.3" y2="200" class="grid"/>
+<text x="687.3" y="216" class="tick" text-anchor="middle">300 с</text>
+<text x="238" y="46.0" class="lbl" text-anchor="end">Типовая кнопка (без записи)</text>
+<rect x="250.0" y="28" width="285.2" height="26" rx="3" class="s1"><title>Расчет: 197 с</title></rect>
+<text x="393.6" y="46.0" class="inbar" text-anchor="middle">197 с</text>
+<rect x="537.2" y="28" width="28.6" height="26" rx="3" class="s6"><title>Копирование в форму: 21 с</title></rect>
+<rect x="567.8" y="28" width="180.2" height="26" rx="3" class="s7"><title>Передача формы на клиент: 125 с</title></rect>
+<text x="658.9" y="46.0" class="inbar" text-anchor="middle">125 с</text>
+<text x="758.0" y="46.0" class="tot">343 с</text>
+<text x="238" y="102.0" class="lbl" text-anchor="end">«Заполнить и закрыть», прогон 1</text>
+<rect x="250.0" y="84" width="223.9" height="26" rx="3" class="s1"><title>Расчет: 155 с</title></rect>
+<text x="362.9" y="102.0" class="inbar" text-anchor="middle">155 с</text>
+<rect x="475.9" y="84" width="81.8" height="26" rx="3" class="s2"><title>Запись: 57 с</title></rect>
+<text x="517.8" y="102.0" class="inbar" text-anchor="middle">57 с</text>
+<text x="567.7" y="102.0" class="tot">213 с</text>
+<text x="238" y="158.0" class="lbl" text-anchor="end">«Заполнить и закрыть», прогон 2</text>
+<rect x="250.0" y="140" width="273.1" height="26" rx="3" class="s1"><title>Расчет: 189 с</title></rect>
+<text x="387.6" y="158.0" class="inbar" text-anchor="middle">189 с</text>
+<rect x="525.1" y="140" width="149.6" height="26" rx="3" class="s2"><title>Запись: 104 с</title></rect>
+<text x="600.9" y="158.0" class="inbar" text-anchor="middle">104 с</text>
+<text x="684.7" y="158.0" class="tot">294 с</text>
+</svg>
+<p class="note">539 915 строк. У типовой кнопки запись выполняется отдельно и в 343 с не входит.</p>
+</section>
+
+<section><h2>4. Структура времени заполнения месяца с доработкой</h2>
+<div class="donutwrap"><svg viewBox="0 0 320 320" class="donut" role="img"><path d="M160.00,10.00 A150.0,150.0 0 0 1 309.21,144.60 L257.48,149.94 A98.0,98.0 0 0 0 160.00,62.00 Z" class="s1 seg"><title>Расчет: раздел 9: 47 мин, 23,4%</title></path><path d="M309.21,144.60 A150.0,150.0 0 0 1 263.50,268.57 L227.62,230.93 A98.0,98.0 0 0 0 257.48,149.94 Z" class="s3 seg"><title>Расчет: раздел 7: 29 мин, 14,5%</title></path><path d="M263.50,268.57 A150.0,150.0 0 0 1 161.65,309.99 L161.08,257.99 A98.0,98.0 0 0 0 227.62,230.93 Z" class="s4 seg"><title>Расчет: раздел 5: 24 мин, 11,9%</title></path><path d="M161.65,309.99 A150.0,150.0 0 0 1 117.66,303.90 L132.34,254.01 A98.0,98.0 0 0 0 161.08,257.99 Z" class="s5 seg"><title>Расчет: раздел 6: 10 мин, 4,7%</title></path><path d="M117.66,303.90 A150.0,150.0 0 0 1 105.86,299.89 L124.63,251.39 A98.0,98.0 0 0 0 132.34,254.01 Z" class="s6 seg"><title>Расчет: прочие разделы: 3 мин, 1,3%</title></path><path d="M105.86,299.89 A150.0,150.0 0 0 1 160.00,10.00 L160.00,62.00 A98.0,98.0 0 0 0 124.63,251.39 Z" class="s2 seg"><title>Запись документа: 1 ч 29 мин, 44,1%</title></path><text x="160.0" y="156.0" text-anchor="middle" class="big">3 ч 22 мин</text><text x="160.0" y="182.0" text-anchor="middle" class="tick">июнь 2026, DR</text></svg><table class="mini"><tr><td><i class="sw s1"></i>Расчет: раздел 9</td><td class="n">47 мин</td><td class="n">23,4%</td></tr><tr><td><i class="sw s3"></i>Расчет: раздел 7</td><td class="n">29 мин</td><td class="n">14,5%</td></tr><tr><td><i class="sw s4"></i>Расчет: раздел 5</td><td class="n">24 мин</td><td class="n">11,9%</td></tr><tr><td><i class="sw s5"></i>Расчет: раздел 6</td><td class="n">10 мин</td><td class="n">4,7%</td></tr><tr><td><i class="sw s6"></i>Расчет: прочие разделы</td><td class="n">3 мин</td><td class="n">1,3%</td></tr><tr><td><i class="sw s2"></i>Запись документа</td><td class="n">1 ч 29 мин</td><td class="n">44,1%</td></tr></table></div>
+<p class="note">Расчет 56%, запись 44%. Работа формы больше не тратит времени. Дальнейшее ускорение возможно только
+в расчете (код вендора) или в записи.</p>
+</section>
+
+<section><h2>5. Объем отчета за месяц по разделам</h2>
+<svg viewBox="0 0 860 320" class="chart" role="img">
+<text x="90" y="20" class="lbl" text-anchor="end">Раздел 7</text>
+<rect x="100" y="6" width="640.0" height="18" rx="3" class="s1"><title>Раздел 7: 4 149 705 строк</title></rect>
+<text x="748.0" y="20" class="tot">4 149 705</text>
+<text x="90" y="48" class="lbl" text-anchor="end">Раздел 9</text>
+<rect x="100" y="34" width="627.4" height="18" rx="3" class="s1"><title>Раздел 9: 4 068 253 строк</title></rect>
+<text x="735.4" y="48" class="tot">4 068 253</text>
+<text x="90" y="76" class="lbl" text-anchor="end">Раздел 6</text>
+<rect x="100" y="62" width="101.8" height="18" rx="3" class="s1"><title>Раздел 6: 659 789 строк</title></rect>
+<text x="209.8" y="76" class="tot">659 789</text>
+<text x="90" y="104" class="lbl" text-anchor="end">Раздел 5</text>
+<rect x="100" y="90" width="70.7" height="18" rx="3" class="s1"><title>Раздел 5: 458 673 строк</title></rect>
+<text x="178.7" y="104" class="tot">458 673</text>
+<text x="90" y="132" class="lbl" text-anchor="end">Раздел 4</text>
+<rect x="100" y="118" width="23.9" height="18" rx="3" class="s1"><title>Раздел 4: 154 832 строк</title></rect>
+<text x="131.9" y="132" class="tot">154 832</text>
+<text x="90" y="160" class="lbl" text-anchor="end">Раздел 3</text>
+<rect x="100" y="146" width="21.5" height="18" rx="3" class="s1"><title>Раздел 3: 139 315 строк</title></rect>
+<text x="129.5" y="160" class="tot">139 315</text>
+<text x="90" y="188" class="lbl" text-anchor="end">Раздел 8</text>
+<rect x="100" y="174" width="9.1" height="18" rx="3" class="s1"><title>Раздел 8: 58 966 строк</title></rect>
+<text x="117.1" y="188" class="tot">58 966</text>
+<text x="90" y="216" class="lbl" text-anchor="end">Раздел 1</text>
+<rect x="100" y="202" width="3.7" height="18" rx="3" class="s1"><title>Раздел 1: 23 813 строк</title></rect>
+<text x="111.7" y="216" class="tot">23 813</text>
+<text x="90" y="244" class="lbl" text-anchor="end">Раздел 11</text>
+<rect x="100" y="230" width="3.7" height="18" rx="3" class="s1"><title>Раздел 11: 23 813 строк</title></rect>
+<text x="111.7" y="244" class="tot">23 813</text>
+<text x="90" y="272" class="lbl" text-anchor="end">Раздел 2</text>
+<rect x="100" y="258" width="2.0" height="18" rx="3" class="s1"><title>Раздел 2: 677 строк</title></rect>
+<text x="110.0" y="272" class="tot">677</text>
+<text x="90" y="300" class="lbl" text-anchor="end">Раздел 10</text>
+<rect x="100" y="286" width="2.0" height="18" rx="3" class="s1"><title>Раздел 10: 569 строк</title></rect>
+<text x="110.0" y="300" class="tot">569</text>
+</svg>
+<p class="note">Разделы 7 и 9 заполняются за каждый календарный день и дают 84% строк.</p>
+</section>
+
+<section><h2>6. Стоимость строки растет с размером документа</h2>
+<div class="legend"><span><i class="sw s1"></i>Раздел 9</span><span><i class="sw s3"></i>Раздел 7</span></div><svg viewBox="0 0 860 300" class="chart" role="img">
+<line x1="70" y1="254.0" x2="710" y2="254.0" class="grid"/>
+<text x="62" y="258.0" class="tick" text-anchor="end">0</text>
+<line x1="70" y1="207.2" x2="710" y2="207.2" class="grid"/>
+<text x="62" y="211.2" class="tick" text-anchor="end">50</text>
+<line x1="70" y1="160.4" x2="710" y2="160.4" class="grid"/>
+<text x="62" y="164.4" class="tick" text-anchor="end">100</text>
+<line x1="70" y1="113.6" x2="710" y2="113.6" class="grid"/>
+<text x="62" y="117.6" class="tick" text-anchor="end">150</text>
+<line x1="70" y1="66.8" x2="710" y2="66.8" class="grid"/>
+<text x="62" y="70.8" class="tick" text-anchor="end">200</text>
+<line x1="70" y1="20.0" x2="710" y2="20.0" class="grid"/>
+<text x="62" y="24.0" class="tick" text-anchor="end">250</text>
+<text x="70.0" y="276" class="tick" text-anchor="middle">0 млн</text>
+<text x="198.0" y="276" class="tick" text-anchor="middle">2 млн</text>
+<text x="326.0" y="276" class="tick" text-anchor="middle">4 млн</text>
+<text x="454.0" y="276" class="tick" text-anchor="middle">6 млн</text>
+<text x="582.0" y="276" class="tick" text-anchor="middle">8 млн</text>
+<text x="710.0" y="276" class="tick" text-anchor="middle">10 млн</text>
+<text x="390.0" y="296" class="tick" text-anchor="middle">размер документа, строк</text>
+<text x="14" y="137.0" class="tick" text-anchor="middle" transform="rotate(-90 14 137.0)">мкс на строку</text>
+<path d="M104.6,226.6 L501.4,146.2 L693.4,84.0" class="ln3"/>
+<circle cx="104.6" cy="226.6" r="5" class="dot s3"><title>Раздел 7: 29 мкс при 0,54 млн строк</title></circle>
+<circle cx="501.4" cy="146.2" r="5" class="dot s3"><title>Раздел 7: 115 мкс при 6,74 млн строк</title></circle>
+<circle cx="693.4" cy="84.0" r="5" class="dot s3"><title>Раздел 7: 182 мкс при 9,74 млн строк</title></circle>
+<text x="703.4" y="88.0" class="lbl">Раздел 7: 182 мкс</text>
+<path d="M104.6,221.3 L501.4,114.3 L693.4,68.4" class="ln1"/>
+<circle cx="104.6" cy="221.3" r="5" class="dot s1"><title>Раздел 9: 35 мкс при 0,54 млн строк</title></circle>
+<circle cx="501.4" cy="114.3" r="5" class="dot s1"><title>Раздел 9: 149 мкс при 6,74 млн строк</title></circle>
+<circle cx="693.4" cy="68.4" r="5" class="dot s1"><title>Раздел 9: 198 мкс при 9,74 млн строк</title></circle>
+<text x="703.4" y="72.4" class="lbl">Раздел 9: 198 мкс</text>
+</svg>
+<p class="note">Время переноса одной строки результата запроса в табличную часть: на документе в 9,7 млн строк в 5-6 раз
+дороже, чем на документе за 1 день. Поэтому время месяца нельзя считать линейно по дням.</p>
+</section>
+
+<section><h2>7. Память: почему месяц не заполняется на UAT2</h2>
+<svg viewBox="0 0 860 110" class="chart" role="img">
+<text x="190" y="29" class="lbl" text-anchor="end">UAT2, момент падения</text>
+<rect x="200" y="10" width="121.5" height="28" rx="3" class="s8"><title>UAT2, момент падения: 2 275 386 строк</title></rect>
+<text x="329.5" y="29" class="tot">2,28 млн строк</text>
+<text x="190" y="75" class="lbl" text-anchor="end">Нужно на месяц</text>
+<rect x="200" y="56" width="520.0" height="28" rx="3" class="s1"><title>Нужно на месяц: 9 738 405 строк</title></rect>
+<text x="728.0" y="75" class="tot">9,74 млн строк</text>
+<line x1="321.5" y1="4" x2="321.5" y2="96" class="limit"/>
+<text x="327.5" y="104" class="tick">лимит памяти UAT2 на один вызов</text>
+</svg>
+<p class="note">Весь расчет идет одним серверным вызовом. На UAT2 лимит памяти на вызов исчерпан на 2,28 млн строк
+(9-й день раздела 7). На DR лимита нет, сеанс по счетчику консоли кластера занял 27 ГБ. Доработка этот лимит не снимает:
+для проверки месяца на UAT2 нужно увеличить память сервера и параметры кластера.</p>
+</section>
+
+<section><h2>8. Тест-кейсы</h2><div class="tbl"><table><thead><tr><th>ID</th><th>Сценарий</th><th>Среда</th><th>Ожидаемый результат</th><th>Фактический результат</th><th>Статус</th></tr></thead><tbody><tr><td class='id'>TC-01</td><td>Новый документ: «Заполнить и закрыть»</td><td>Стенд, 2000 строк на раздел</td><td>Документ заполнен и записан, форма закрыта; шапка и 11 разделов совпадают с типовым заполнением</td><td>Совпадение 11 из 11 разделов и шапки (контрольные суммы)</td><td><span class="b pass">✓ Пройден</span></td></tr><tr><td class='id'>TC-02</td><td>Проведенный документ с измененной шапкой</td><td>Стенд</td><td>Изменение шапки сохранено, документ не перепроведен, разделы совпадают с эталоном</td><td>Флаг сохранен, документ проведен, лишних вложений нет, разделы совпадают</td><td><span class="b pass">✓ Пройден</span></td></tr><tr><td class='id'>TC-03</td><td>Отказ: неподходящий договор ДУ</td><td>Стенд</td><td>Документ не меняется, форма открыта, причина показана</td><td>Сообщения о причине и «Документ не изменен», данные не изменились</td><td><span class="b pass">✓ Пройден</span></td></tr><tr><td class='id'>TC-04</td><td>Проведение без файла xtdd</td><td>Стенд</td><td>Документ проведен, вложение не создается</td><td>Вложений 0, проведение меньше 5 с (с выгрузкой было 32 с)</td><td><span class="b pass">✓ Пройден</span></td></tr><tr><td class='id'>TC-05</td><td>Окно итога в интерфейсе 8.2 и «Такси»</td><td>Стенд, DR</td><td>Итог виден до нажатия ОК, затем форма закрывается</td><td>Окно ждет ОК, форма закрывается</td><td><span class="b pass">✓ Пройден</span></td></tr><tr><td class='id'>TC-06</td><td>Заполнение за 1 день, 01.06.2026</td><td>DR-контур</td><td>539 915 строк, время меньше типовой кнопки</td><td>213 и 294 с с записью против 343 с без записи</td><td><span class="b pass">✓ Пройден</span></td></tr><tr><td class='id'>TC-07</td><td>Заполнение за месяц, июнь 2026</td><td>DR-контур</td><td>9 738 405 строк, без перечитывания формы</td><td>3 ч 22 мин против 6 ч 41 мин</td><td><span class="b pass">✓ Пройден</span></td></tr><tr><td class='id'>TC-08</td><td>Заполнение за месяц на UAT2</td><td>UAT2</td><td>Ограничение памяти на вызов</td><td>Падение по памяти на 2,28 млн строк (до доработки, расчет не менялся)</td><td><span class="b warn">! Ограничение</span></td></tr></tbody></table></div></section>
+
+<section><h2>9. Целостность данных (TC-01)</h2>
+<div class="grid11"><div class="cell"><b>Раздел 1</b><span>2 000 / 2 000</span><em>✓ совпадает</em></div><div class="cell"><b>Раздел 2</b><span>2 000 / 2 000</span><em>✓ совпадает</em></div><div class="cell"><b>Раздел 3</b><span>2 000 / 2 000</span><em>✓ совпадает</em></div><div class="cell"><b>Раздел 4</b><span>2 000 / 2 000</span><em>✓ совпадает</em></div><div class="cell"><b>Раздел 5</b><span>2 000 / 2 000</span><em>✓ совпадает</em></div><div class="cell"><b>Раздел 6</b><span>2 000 / 2 000</span><em>✓ совпадает</em></div><div class="cell"><b>Раздел 7</b><span>2 000 / 2 000</span><em>✓ совпадает</em></div><div class="cell"><b>Раздел 8</b><span>2 000 / 2 000</span><em>✓ совпадает</em></div><div class="cell"><b>Раздел 9</b><span>2 000 / 2 000</span><em>✓ совпадает</em></div><div class="cell"><b>Раздел 10</b><span>2 000 / 2 000</span><em>✓ совпадает</em></div><div class="cell"><b>Раздел 11</b><span>2 000 / 2 000</span><em>✓ совпадает</em></div><div class="cell"><b>Шапка</b><span>28 реквизитов</span><em>✓ совпадает</em></div></div>
+<p class="note">Документ, заполненный кнопкой «Заполнить и закрыть», сравнен с эталоном типового заполнения на тех же данных:
+по каждому разделу совпадают число строк и контрольная сумма всех значений, по шапке совпадают все реквизиты.</p>
+</section>
+
+<section><h2>10. Дефекты, найденные в ходе тестирования</h2><div class="tbl"><table><thead><tr><th>ID</th><th>Проявление</th><th>Причина</th><th>Исправление</th><th>Версия</th><th>Статус</th></tr></thead><tbody><tr><td class='id'>D-01</td><td>Запись измененного проведенного документа из формы перепроводила его по старым строкам</td><td>Форма перепроводит при записи и не учитывает режим «Запись»</td><td>Шапка передается на сервер и записывается вместе с результатом</td><td class='n'>1.0.0.1</td><td><span class='b pass'>✓ Исправлен</span></td></tr><tr><td class='id'>D-02</td><td>Ошибка «Тип не определен» при заполнении измененного документа</td><td>Таблица значений отборов передавалась на клиент</td><td>Отборы передаются массивами значений</td><td class='n'>1.0.0.1</td><td><span class='b pass'>✓ Исправлен</span></td></tr><tr><td class='id'>D-03</td><td>После окна итога форма не закрывалась</td><td>Неверное число параметров обработчика оповещения</td><td>Исправлена сигнатура обработчика</td><td class='n'>1.0.0.1</td><td><span class='b pass'>✓ Исправлен</span></td></tr><tr><td class='id'>D-04</td><td>Итог заполнения не виден в интерфейсе версии 8.2</td><td>В интерфейсе 8.2 нет центра оповещений, всплывающее окно исчезает</td><td>Итог в окне, ожидающем ОК</td><td class='n'>1.0.0.3</td><td><span class='b pass'>✓ Исправлен</span></td></tr></tbody></table></div></section>
+
+<section><h2>11. Ограничения и рекомендации</h2>
+<ul class="clean">
+<li><b>Память.</b> Расчет месяца в одном вызове: на UAT2 нужно увеличить память и параметры кластера до уровня DR.
+От Аванкора требуется заполнение разделов 5, 6, 7, 9 порциями с сохранением вне табличных частей документа.</li>
+<li><b>Проведение.</b> Файл xtdd больше не формируется, но проведение остается записью всего документа: для месяца
+около 1,5 часа. Если проведение не требуется, месячный документ достаточно заполнить.</li>
+<li><b>Открытие заполненного месячного документа</b> по-прежнему загружает в форму все строки и занимает много времени.</li>
+<li><b>Типовой релиз.</b> Изменения расширения нужно включить в типовую конфигурацию Аванкора, чтобы не поддерживать их отдельно.</li>
+</ul>
+</section>
+
+</div></body></html>
