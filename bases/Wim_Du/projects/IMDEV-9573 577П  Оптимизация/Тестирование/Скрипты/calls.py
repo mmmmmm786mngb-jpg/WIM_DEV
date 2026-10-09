@@ -2,13 +2,18 @@
 import csv, sys
 sys.stdout.reconfigure(encoding="utf-8")
 def calls(path, min_ms=1000):
-    r = list(csv.DictReader(open(path, encoding="utf-8")))
+    rows = list(csv.DictReader(open(path, encoding="utf-8")))
+    out = []
+    for sess in sorted({x["session"] for x in rows}, key=int):
+        out += session_calls([x for x in rows if x["session"] == sess], min_ms)
+    return sorted(out, key=lambda c: c["start"])
+def session_calls(r, min_ms):
     out = []; cur = None
     for x in r:
         d = int(x["duration_current"])
         if d > 0:
             if cur is None or d < cur["dur"]:
-                cur = {"start": x["time"], "end": x["time"], "dur": 0, "peak": 0, "cpu": 0}; out.append(cur)
+                cur = {"start": x["time"], "end": x["time"], "dur": 0, "peak": 0, "cpu": 0, "app": x["app"], "session": x["session"]}; out.append(cur)
             cur.update(end=x["time"], dur=d, cpu=int(x["cpu_current"]))
             cur["peak"] = max(cur["peak"], int(x["mem_current"]))
         else:
@@ -18,4 +23,4 @@ if __name__ == "__main__":
     for p in sys.argv[1:]:
         print("==", p)
         for c in calls(p):
-            print(f"  {c['start']}-{c['end']} dur {c['dur']/1000:.1f}s peak {c['peak']/2**20:.0f} MB cpu {c['cpu']/1000:.1f}s")
+            print(f"  {c['app']} {c['session']} {c['start']}-{c['end']} dur {c['dur']/1000:.1f}s peak {c['peak']/2**20:.0f} MB cpu {c['cpu']/1000:.1f}s")

@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>IMDEV-9458. Сверка релиза 2.8.9.3 с расширением</title>
+<style>
+  :root { --ok:#28a745; --err:#dc3545; --warn:#b78100; --info:#17a2b8; --ink:#212529;
+    --soft:#6c757d; --bg:#f5f6f8; --card:#fff; --line:#dee2e6; --head:#1f4a3a; }
+  * { box-sizing:border-box; }
+  body { margin:0; font-family:"Segoe UI", Arial, Helvetica, sans-serif; font-size:15px;
+    line-height:1.45; color:var(--ink); background:var(--bg); }
+  .wrap { max-width:980px; margin:0 auto; padding:24px 16px 56px; }
+  header.hero { background:var(--head); color:#f7f1e8; border-radius:16px; padding:22px 24px; margin-bottom:16px; }
+  header.hero .kicker { font-size:11px; letter-spacing:.1em; text-transform:uppercase; opacity:.75; margin-bottom:6px; }
+  header.hero h1 { margin:0 0 8px; font-size:26px; font-family:Georgia, "Times New Roman", serif; }
+  header.hero p { margin:0; color:#dce8e2; max-width:760px; }
+  .grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:10px; margin:0 0 16px; }
+  .stat { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:14px; }
+  .stat .v { font-size:28px; font-weight:700; line-height:1; }
+  .stat .l { font-size:12px; color:var(--soft); margin-top:6px; }
+  section { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:18px 20px; margin-bottom:14px; }
+  h2 { margin:0 0 12px; font-size:18px; }
+  p, ul { margin:0 0 10px; }
+  ul { padding-left:20px; }
+  table { width:100%; border-collapse:collapse; margin:8px 0 0; font-size:14px; }
+  th, td { border:1px solid var(--line); padding:8px 10px; text-align:left; vertical-align:top; }
+  th { background:#eef2f0; }
+  .ok { color:var(--ok); font-weight:700; }
+  .warn { color:var(--warn); font-weight:700; }
+  .skip { color:var(--soft); font-weight:700; }
+  .pill { display:inline-block; font-size:11px; font-weight:700; letter-spacing:.04em;
+    text-transform:uppercase; padding:2px 8px; border-radius:999px; white-space:nowrap; }
+  .pill-ok { background:#e8f6ec; color:#1f7a4d; }
+  .pill-warn { background:#fff8e1; color:#8a5a00; }
+  .pill-skip { background:#eceae6; color:#555; }
+  .box-green { background:#e8f6ec; border:1px solid #b7e0c2; border-radius:10px; padding:12px 14px; margin:0; }
+  .box-yellow { background:#fff8e1; border:1px solid #f0d78c; border-radius:10px; padding:12px 14px; margin:0; }
+  .box-blue { background:#e7f4fb; border:1px solid #b9d7ea; border-radius:10px; padding:12px 14px; margin:0; }
+  .muted { color:var(--soft); font-size:13px; margin:8px 0 0; }
+  code { font-family:Consolas, "Courier New", monospace; font-size:13px; background:#f4f6f5; padding:1px 5px; border-radius:4px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+<header class="hero">
+  <div class="kicker">IMDEV-9458 · сверка исходников · релиз 2.8.9.3</div>
+  <h1>Что сделали и чего не сделали в релизе вендора</h1>
+  <p>Эталон: расширение <code>IMDEV9458_EmptyTurnover</code>, версия 1.0.0.11.
+    Конфигурация «Доверительное управление, редакция 2», релиз 2.8.9.3.
+    Сравнение с типовой 2.8.8.2, куда просили влить доработку.</p>
+</header>
+
+<div class="grid">
+  <div class="stat"><div class="v ok">14</div><div class="l">пунктов сделано</div></div>
+  <div class="stat"><div class="v skip">5</div><div class="l">правильно не копировали</div></div>
+  <div class="stat"><div class="v warn">2</div><div class="l">мелочи не донесли</div></div>
+  <div class="stat"><div class="v ok">0</div><div class="l">блокеров по коду</div></div>
+</div>
+
+<section>
+  <div class="box-green">
+    <strong>Итог.</strong> Рабочий код из расширения в типовую вставлен.
+    Флажки, отбор по доходам и пулу, повтор записи при коллизии номера и снятие явного менеджера временных таблиц в <code>ОбщиеОбороты</code> есть.
+    Расчёт НДФЛ не трогали.
+  </div>
+</section>
+
+<section>
+  <h2>1. Что просили перенести</h2>
+  <ul>
+    <li>Два флажка на форме обработки «Формирование начислений НДФЛ» (оба по умолчанию выключены).</li>
+    <li>Отбор пар клиент + УК по оборотам счетов 90.01 / 91.01 / 91.03 или по доходу из сторонних систем (ПИФ).</li>
+    <li>Отбор тех же пар по пулу портфеля: «Розничное ДУ» - РДУ, пустое поле - не-РДУ.</li>
+    <li>Повтор записи документа «Начисление НДФЛ по УК» при коллизии номера.</li>
+    <li>В <code>ОбщиеОбороты</code> документа по портфелю - без явного менеджера временных таблиц.</li>
+    <li>Аннотации расширения не копировать, префикс <code>IMDEV9458_</code> снять, комментарии IMDEV-9458 оставить.</li>
+  </ul>
+</section>
+
+<section>
+  <h2>2. Сделали в 2.8.9.3</h2>
+  <table>
+    <tr><th>Что</th><th>Куда</th><th>Статус</th></tr>
+    <tr>
+      <td>Реквизит <code>НеСоздаватьНДФЛПоКлиентамБезОборотов</code>, по умолчанию Ложь. Синоним: «В заполнение включать только клиентов с доходами»</td>
+      <td>Обработка, реквизиты</td>
+      <td><span class="pill pill-ok">сделано</span></td>
+    </tr>
+    <tr>
+      <td>Реквизит <code>СчетаОборотовДляОтбораНДФЛ</code>, строка без ограничения длины. Синоним: «Счета оборотов для отбора»</td>
+      <td>Обработка, реквизиты</td>
+      <td><span class="pill pill-ok">сделано</span></td>
+    </tr>
+    <tr>
+      <td>Реквизит <code>СоздаватьНДФЛТолькоПоПулу</code>, по умолчанию Ложь. Синоним: «В заполнение включать только клиентов выбранного пула»</td>
+      <td>Обработка, реквизиты</td>
+      <td><span class="pill pill-ok">сделано</span></td>
+    </tr>
+    <tr>
+      <td>Реквизит <code>ПулДляОтбораНДФЛ</code>, ссылка на справочник «Пул». Синоним: «Пул»</td>
+      <td>Обработка, реквизиты</td>
+      <td><span class="pill pill-ok">сделано</span></td>
+    </tr>
+    <tr>
+      <td>В конец штатной <code>ЗаполнитьДатыДокументов</code>: сначала <code>ОставитьТолькоПарыСПулом()</code>, затем <code>ОставитьТолькоПарыСОборотами()</code></td>
+      <td>Модуль объекта обработки</td>
+      <td><span class="pill pill-ok">сделано</span></td>
+    </tr>
+    <tr>
+      <td>Процедуры <code>ОставитьТолькоПарыСПулом</code> и <code>ОставитьТолькоПарыСОборотами</code>. Тело совпадает с расширением после снятия префикса. Есть UNION с регистром сведений о доходах НДФЛ (ПИФ)</td>
+      <td>Модуль объекта обработки</td>
+      <td><span class="pill pill-ok">сделано</span></td>
+    </tr>
+    <tr>
+      <td><code>ЗаписатьСОбработкойКоллизииНомера</code> и <code>ЭтоОшибкаНеуникальногоЗначения</code>. Тело совпадает с расширением</td>
+      <td>Модуль объекта обработки</td>
+      <td><span class="pill pill-ok">сделано</span></td>
+    </tr>
+    <tr>
+      <td>В <code>СоздатьНачислениеНДФЛПоУК</code> оба вызова записи (проведение и запасная запись) заменены на <code>ЗаписатьСОбработкойКоллизииНомера</code></td>
+      <td>Модуль объекта обработки</td>
+      <td><span class="pill pill-ok">сделано</span></td>
+    </tr>
+    <tr>
+      <td>Группы <code>ГруппаСчетаОборотовНДФЛ</code> и <code>ГруппаПулОтбораНДФЛ</code> после флажка «без ЦБ». Заголовок флажка справа</td>
+      <td>Форма обработки</td>
+      <td><span class="pill pill-ok">сделано</span></td>
+    </tr>
+    <tr>
+      <td>Обработчики изменения двух флажков вызывают <code>УправлениеФормой</code></td>
+      <td>Модуль формы</td>
+      <td><span class="pill pill-ok">сделано</span></td>
+    </tr>
+    <tr>
+      <td>В конец <code>УправлениеФормой</code>: умолчание счетов <code>90.01, 91.01, 91.03</code>, видимость поля счетов и поля пула. Пул сам не подставляется</td>
+      <td>Модуль формы</td>
+      <td><span class="pill pill-ok">сделано</span></td>
+    </tr>
+    <tr>
+      <td>Удалена строка <code>Запрос.МенеджерВременныхТаблиц = Новый МенеджерВременныхТаблиц</code>. Повтор запроса при блокировке на месте</td>
+      <td>Документ «Начисление НДФЛ по портфелю», функция <code>ОбщиеОбороты</code></td>
+      <td><span class="pill pill-ok">сделано</span></td>
+    </tr>
+    <tr>
+      <td>Префикс <code>IMDEV9458_</code> с процедур снят</td>
+      <td>Все модули</td>
+      <td><span class="pill pill-ok">сделано</span></td>
+    </tr>
+    <tr>
+      <td>Комментарии IMDEV-9458 в обработке и на форме оставлены</td>
+      <td>Модуль объекта и модуль формы</td>
+      <td><span class="pill pill-ok">сделано</span></td>
+    </tr>
+  </table>
+</section>
+
+<section>
+  <h2>3. Правильно не копировали</h2>
+  <p>Это не пробелы, так и просили.</p>
+  <table>
+    <tr><th>Что</th><th>Статус</th></tr>
+    <tr><td>Аннотации <code>&amp;После</code> и <code>&amp;ИзменениеИКонтроль</code></td><td><span class="pill pill-skip">не копировали</span></td></tr>
+    <tr><td>Маркеры <code>#Вставка</code> / <code>#Удаление</code></td><td><span class="pill pill-skip">не копировали</span></td></tr>
+    <tr><td>Заимствованные справочники Периоды, Контрагенты, БанковскиеСчета, Пул</td><td><span class="pill pill-skip">не копировали</span></td></tr>
+    <tr><td>Модуль менеджера обработки</td><td><span class="pill pill-skip">не меняли</span></td></tr>
+    <tr><td>Расчёт НДФЛ (формулы, запросы расчёта, проведение по портфелю кроме снятия МВТ)</td><td><span class="pill pill-skip">не меняли</span></td></tr>
+  </table>
+</section>
+
+<section>
+  <h2>4. Не сделали / не донесли</h2>
+  <table>
+    <tr><th>Что</th><th>Влияние</th><th>Статус</th></tr>
+    <tr>
+      <td>Поясняющий комментарий IMDEV-9458 в функции <code>ОбщиеОбороты</code> (зачем убрали явный менеджер временных таблиц)</td>
+      <td>На работу не влияет: саму строку МВТ удалили</td>
+      <td><span class="pill pill-warn">не перенесли</span></td>
+    </tr>
+    <tr>
+      <td>Короткие комментарии <code>// IMDEV-9458</code> в клиентских обработчиках изменения флажков</td>
+      <td>На работу не влияет: обработчики есть и вызывают <code>УправлениеФормой</code></td>
+      <td><span class="pill pill-warn">не перенесли</span></td>
+    </tr>
+  </table>
+  <div class="box-yellow" style="margin-top:12px;">
+    <strong>Не проверка приёмки на данных.</strong> Сверка - по исходникам релиза 2.8.9.3.
+    Прогон обработки «Заполнить» / создание документов на этом релизе здесь не выполнялся.
+  </div>
+</section>
+
+<section>
+  <h2>5. Отличие оформления</h2>
+  <div class="box-blue">
+    В комментариях рядом с IMDEV-9458 вендор добавил свой номер <code>ASP-216270</code>.
+    Логику это не меняет.
+  </div>
+</section>
+
+<section>
+  <h2>6. Вывод</h2>
+  <p><span class="ok">Перенос в типовую по задаче выполнен.</span> Все рабочие точки из дерева изменений есть в релизе 2.8.9.3.</p>
+  <p>Не донесли только два комментария. Блокеров по коду нет.</p>
+  <p class="muted">После приёмки на данных расширение снять. Расширение в этот релиз не входит - код уже в базовой конфигурации.</p>
+</section>
+</div>
+</body>
+</html>

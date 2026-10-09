@@ -13,8 +13,8 @@
 <p style="margin:0 0 12px;">Коллеги, добрый день.</p>
 
 <p style="margin:0 0 12px;">Ниже результаты проверки заполнения документа «(XBRL6.1) Отчет по внутреннему учету 577-П» за июнь 2026 года
-на релизе ДУ 1.5.30.3: тест на UAT2 от 08.10.2026, замеры на DR-контуре (оборудование как на продуктиве) за 1 и 2 дня
-и прогноз на полный месяц.</p>
+на релизе ДУ 1.5.30.3: тест на UAT2 от 08.10.2026, замеры на DR-контуре (оборудование как на продуктиве) за 1 день,
+2 дня и 21 день, заполнение полного месяца на DR от 09.10.2026 и прогноз на месяц в сравнении с фактом.</p>
 
 <h3 style="font-size:16px; margin:20px 0 8px;">1. Тест на UAT2, 08.10.2026: где и почему произошло падение</h3>
 
@@ -41,53 +41,146 @@
 документа в рамках одного серверного вызова. Лимит кластера на один вызов был исчерпан на 2,28 млн строк, еще до окончания
 раздела 7. Форма документа в этом тесте не участвовала: падение произошло в самом расчете.</p>
 
-<h3 style="font-size:16px; margin:20px 0 8px;">2. Замеры на DR-контуре: 1 день и 2 дня</h3>
+<h3 style="font-size:16px; margin:20px 0 8px;">2. Замеры на DR-контуре: 1 день, 2 дня и 21 день</h3>
 
-<p style="margin:0 0 8px;">Текущая кнопка «Заполнить» релиза 1.5.30.3, периоды 01.06.2026 и 01.06-02.06.2026. Оба прогона завершились без ошибок.</p>
+<p style="margin:0 0 8px;">Текущая кнопка «Заполнить» релиза 1.5.30.3, периоды 01.06.2026, 01.06-02.06.2026 и 01.06-21.06.2026.
+Все три прогона завершились без ошибок. На DR-контуре не задан лимит памяти сервера на один вызов, поэтому документ
+за 21 день, который в 2,2 раза больше объема на момент падения на UAT2, заполнился до конца.</p>
 
 <table cellpadding="5" cellspacing="0" border="1" style="border-collapse:collapse; border-color:#c5d0dc; font-size:13px; margin:0 0 10px;">
-  <tr style="background:#eaf1fb;"><th align="left">Показатель</th><th align="right">1 день</th><th align="right">2 дня</th><th align="right">Прирост за день</th></tr>
-  <tr><td>Заполнение всего, с</td><td align="right">343</td><td align="right">556</td><td align="right">+213</td></tr>
-  <tr><td>&nbsp;&nbsp;расчет на сервере, с</td><td align="right">197</td><td align="right">316</td><td align="right">+120</td></tr>
-  <tr><td>&nbsp;&nbsp;копирование в форму, с</td><td align="right">21</td><td align="right">36</td><td align="right">+15</td></tr>
-  <tr><td>&nbsp;&nbsp;передача формы на клиент, с</td><td align="right">125</td><td align="right">203</td><td align="right">+78</td></tr>
-  <tr style="background:#f4f7fb;"><td><b>Строк всего</b></td><td align="right"><b>539 915</b></td><td align="right"><b>882 590</b></td><td align="right"><b>+342 675</b></td></tr>
+  <tr style="background:#eaf1fb;"><th align="left">Показатель</th><th align="right">1 день</th><th align="right">2 дня</th><th align="right">21 день</th></tr>
+  <tr><td>Заполнение всего, с</td><td align="right">343</td><td align="right">556</td><td align="right">6 207</td></tr>
+  <tr><td>&nbsp;&nbsp;расчет на сервере, с</td><td align="right">197</td><td align="right">316</td><td align="right">3 506</td></tr>
+  <tr><td>&nbsp;&nbsp;копирование в форму, с</td><td align="right">21</td><td align="right">36</td><td align="right">1 255</td></tr>
+  <tr><td>&nbsp;&nbsp;передача формы на клиент, с</td><td align="right">125</td><td align="right">203</td><td align="right">1 445</td></tr>
+  <tr style="background:#f4f7fb;"><td><b>Строк всего</b></td><td align="right"><b>539 915</b></td><td align="right"><b>882 590</b></td><td align="right"><b>6 743 024</b></td></tr>
 </table>
 
 <table cellpadding="5" cellspacing="0" border="1" style="border-collapse:collapse; border-color:#c5d0dc; font-size:13px; margin:0 0 10px;">
-  <tr style="background:#eaf1fb;"><th align="left">Раздел</th><th align="right">1 день</th><th align="right">2 дня</th><th align="left">Как растет</th></tr>
-  <tr><td>7</td><td align="right">133 090</td><td align="right">267 520</td><td>около 134 тыс. на каждый календарный день</td></tr>
-  <tr><td>9</td><td align="right">130 807</td><td align="right">263 073</td><td>около 132 тыс. на каждый календарный день</td></tr>
-  <tr><td>6</td><td align="right">37 655</td><td align="right">73 814</td><td>около 37 тыс. на рабочий день</td></tr>
-  <tr><td>5</td><td align="right">25 679</td><td align="right">53 400</td><td>около 27 тыс. на рабочий день</td></tr>
-  <tr><td>3</td><td align="right">7 511</td><td align="right">15 534</td><td>около 8 тыс. на рабочий день</td></tr>
-  <tr><td>8</td><td align="right">3 308</td><td align="right">7 010</td><td>около 4 тыс. на рабочий день</td></tr>
-  <tr><td>4</td><td align="right">157 932</td><td align="right">157 856</td><td>не зависит от периода</td></tr>
-  <tr><td>1 и 11</td><td align="right">43 336</td><td align="right">43 752</td><td>не зависит от периода (около 22 тыс. договоров)</td></tr>
-  <tr><td>2 и 10</td><td align="right">597</td><td align="right">631</td><td></td></tr>
+  <tr style="background:#eaf1fb;"><th align="left">Раздел</th><th align="right">1 день</th><th align="right">2 дня</th><th align="right">21 день</th><th align="left">Как растет (по замеру за 21 день)</th></tr>
+  <tr><td>7</td><td align="right">133 090</td><td align="right">267 520</td><td align="right">2 884 189</td><td>около 137 тыс. на каждый календарный день</td></tr>
+  <tr><td>9</td><td align="right">130 807</td><td align="right">263 073</td><td align="right">2 825 879</td><td>около 135 тыс. на каждый календарный день</td></tr>
+  <tr><td>6</td><td align="right">37 655</td><td align="right">73 814</td><td align="right">411 542</td><td>около 29 тыс. на рабочий день (14 рабочих дней)</td></tr>
+  <tr><td>5</td><td align="right">25 679</td><td align="right">53 400</td><td align="right">290 597</td><td>около 21 тыс. на рабочий день</td></tr>
+  <tr><td>3</td><td align="right">7 511</td><td align="right">15 534</td><td align="right">88 046</td><td>около 6 тыс. на рабочий день</td></tr>
+  <tr><td>8</td><td align="right">3 308</td><td align="right">7 010</td><td align="right">39 377</td><td>около 3 тыс. на рабочий день</td></tr>
+  <tr><td>4</td><td align="right">157 932</td><td align="right">157 856</td><td align="right">155 897</td><td>не зависит от периода</td></tr>
+  <tr><td>1 и 11</td><td align="right">43 336</td><td align="right">43 752</td><td align="right">46 610</td><td>почти не зависит от периода (около 23 тыс. договоров)</td></tr>
+  <tr><td>2 и 10</td><td align="right">597</td><td align="right">631</td><td align="right">887</td><td></td></tr>
 </table>
 
-<h3 style="font-size:16px; margin:20px 0 8px;">3. Прогноз на месяц (июнь 2026: 30 календарных, 21 рабочий день)</h3>
+<p style="margin:12px 0 8px;"><b>Из чего складывается время заполнения за 21 день (6 207 с, 1,7 часа):</b></p>
+
+<p style="margin:0 0 8px;"><img src="p577_dr_21days_time_pie.png" width="560" alt="Структура времени заполнения за 21 день"></p>
 
 <table cellpadding="5" cellspacing="0" border="1" style="border-collapse:collapse; border-color:#c5d0dc; font-size:13px; margin:0 0 10px;">
-  <tr style="background:#eaf1fb;"><th align="left">Раздел</th><th align="right">Строк за месяц</th><th align="left">Основание</th></tr>
-  <tr><td>7</td><td align="right">≈ 4,0 млн</td><td>остаток на конец каждого календарного дня (так требует Банк России)</td></tr>
-  <tr><td>9</td><td align="right">≈ 4,0 млн</td><td>позиции на каждый календарный день, как сейчас заполняет релиз</td></tr>
-  <tr><td>6</td><td align="right">≈ 0,8 млн</td><td>21 рабочий день</td></tr>
-  <tr><td>5</td><td align="right">≈ 0,6 млн</td><td>21 рабочий день</td></tr>
-  <tr><td>3, 8</td><td align="right">≈ 0,25 млн</td><td>21 рабочий день</td></tr>
-  <tr><td>1, 2, 4, 10, 11</td><td align="right">≈ 0,2 млн</td><td>не зависят от периода</td></tr>
-  <tr style="background:#f4f7fb;"><td><b>Итого</b></td><td align="right"><b>≈ 9,8 млн</b></td><td></td></tr>
+  <tr style="background:#eaf1fb;"><th align="left">Этап</th><th align="right">Время, мин</th><th align="right">Доля</th></tr>
+  <tr><td>Расчет: раздел 9</td><td align="right">25</td><td align="right">23,8%</td></tr>
+  <tr><td>Передача формы на клиент</td><td align="right">24</td><td align="right">23,3%</td></tr>
+  <tr><td>Копирование в форму</td><td align="right">21</td><td align="right">20,2%</td></tr>
+  <tr><td>Расчет: раздел 7</td><td align="right">15</td><td align="right">14,3%</td></tr>
+  <tr><td>Расчет: раздел 5</td><td align="right">12</td><td align="right">11,9%</td></tr>
+  <tr><td>Расчет: раздел 6</td><td align="right">5</td><td align="right">4,4%</td></tr>
+  <tr><td>Расчет: прочие разделы (3, 8, 4, 1, 11, 2, 10, сведения УК)</td><td align="right">2</td><td align="right">2,1%</td></tr>
+  <tr style="background:#f4f7fb;"><td><b>Итого: расчет 56%, работа формы 44%</b></td><td align="right"><b>103</b></td><td align="right"><b>100%</b></td></tr>
 </table>
 
-<p style="margin:0 0 8px;"><b>Время.</b> При линейном росте одно заполнение за месяц заняло бы около 1,8 часа на оборудовании DR
-(343 с + 29 дней по 213 с): расчет около 1 часа, остальное занимают копирование и передача формы на клиент. Это при условии,
-что хватит памяти.</p>
+<p style="margin:0 0 8px;"><b>Время растет быстрее числа строк.</b> По линейной оценке из замеров за 1 и 2 дня заполнение за 21 день
+должно было занять 4 603 с, фактически заняло 6 207 с, на 35% больше. Запросы по дням выполняются примерно за одинаковое
+время на каждый день (запрос раздела 5: 41 с за первый день, в среднем 31 с на день за 21 день). Дорожает работа со
+строками в памяти по мере роста документа:</p>
+<ul style="margin:0 0 8px; padding-left:20px;">
+  <li>перенос строки результата запроса в раздел 9: 35 мкс на документе за 1 день, 149 мкс на документе за 21 день;</li>
+  <li>то же для раздела 7: 29 и 115 мкс;</li>
+  <li>копирование документа в форму: 39 и 186 мкс на строку.</li>
+</ul>
+
+<h3 style="font-size:16px; margin:20px 0 8px;">3. Полный месяц на DR-контуре, 09.10.2026: заполнение по ссылке</h3>
+
+<p style="margin:0 0 8px;">Условия: июнь 2026 года целиком, кнопка «Заполнить» изменена так же, как на UAT2: расчет и запись документа
+выполняются на сервере по ссылке, затем форма перечитывает документ (<code>Прочитать()</code>). Лимита памяти на вызов на DR нет.
+Заполнение завершилось без ошибок, документ открывается, в разделе 7 4 149 705 строк с остатками по 30.06.2026.</p>
+
+<table cellpadding="5" cellspacing="0" border="1" style="border-collapse:collapse; border-color:#c5d0dc; font-size:13px; margin:0 0 10px;">
+  <tr style="background:#eaf1fb;"><th align="left">Раздел</th><th align="right">Строк</th></tr>
+  <tr><td>7</td><td align="right">4 149 705</td></tr>
+  <tr><td>9</td><td align="right">4 068 253</td></tr>
+  <tr><td>6</td><td align="right">659 789</td></tr>
+  <tr><td>5</td><td align="right">458 673</td></tr>
+  <tr><td>4</td><td align="right">154 832</td></tr>
+  <tr><td>3</td><td align="right">139 315</td></tr>
+  <tr><td>8</td><td align="right">58 966</td></tr>
+  <tr><td>1 и 11</td><td align="right">47 626</td></tr>
+  <tr><td>2 и 10</td><td align="right">1 246</td></tr>
+  <tr style="background:#f4f7fb;"><td><b>Итого</b></td><td align="right"><b>9 738 405</b></td></tr>
+</table>
+
+<table cellpadding="5" cellspacing="0" border="1" style="border-collapse:collapse; border-color:#c5d0dc; font-size:13px; margin:0 0 10px;">
+  <tr style="background:#eaf1fb;"><th align="left">Этап</th><th align="right">Время, с</th><th align="right">Время</th><th align="right">Доля</th></tr>
+  <tr><td>Расчет <code>ЗаполнитьОтчет()</code></td><td align="right">6 068</td><td align="right">1 ч 41 мин</td><td align="right">25%</td></tr>
+  <tr><td>Запись документа на сервере</td><td align="right">5 270</td><td align="right">1 ч 28 мин</td><td align="right">22%</td></tr>
+  <tr><td><code>Прочитать()</code>: загрузка документа в форму и передача на клиент</td><td align="right">12 715</td><td align="right">3 ч 32 мин</td><td align="right">53%</td></tr>
+  <tr style="background:#f4f7fb;"><td><b>Итого</b></td><td align="right"><b>24 070</b></td><td align="right"><b>6 ч 41 мин</b></td><td align="right"><b>100%</b></td></tr>
+</table>
+
+<p style="margin:0 0 8px;"><img src="p577_dr_month_time_pie.png" width="560" alt="Структура времени заполнения за месяц"></p>
+
+<ul style="margin:0 0 8px; padding-left:20px;">
+  <li>Прогноз объема подтвердился: 9,74 млн строк при прогнозе 9,6 млн.</li>
+  <li>Расчет занял 1 ч 41 мин при прогнозе около 1,5 часа. Стоимость строки продолжает расти с размером документа:
+    перенос строки в раздел 7 стоит 29, 115 и 182 мкс (документ за 1 день, 21 день, месяц), в раздел 9: 35, 149 и 198 мкс.
+    Запросы по дням не дорожают: запрос раздела 5 занимает около 30 с на день.</li>
+  <li>Больше половины времени занимает <code>Прочитать()</code>: форма заново читает весь документ из базы и передает его
+    на клиент, 1,3 мс на строку. При текущей кнопке копирование в форму и передача на клиент за 21 день стоили 0,4 мс на строку.</li>
+  <li>Память: по данным консоли кластера сеанс за время работы занял 27 ГБ (показатель «Память (всего)»). Это накопленный
+    показатель сеанса, а не пик одного вызова, но порядок совпадает с прогнозом в разделе 4.</li>
+  <li>Процессорное время сеанса 22 197 с из 24 190 с времени серверных вызовов: заполнение ограничено скоростью одного
+    потока процессора, а не ожиданием базы данных.</li>
+</ul>
+
+<p style="margin:12px 0 8px;"><b>Сравнение с текущей кнопкой на одном периоде 01-21.06.2026.</b> Заполнение по ссылке за 21 день
+отдельно не замерялось, поэтому для него дана оценка: расчет взят из замера за 21 день (код расчета в обоих вариантах один),
+запись и <code>Прочитать()</code> пересчитаны из замера за месяц пропорционально числу строк (6,74 из 9,74 млн). Это оценка
+сверху, фактически может быть на 10-20% меньше.</p>
+
+<p style="margin:0 0 8px;"><img src="p577_dr_21days_compare_pie.png" width="760" alt="Сравнение структуры времени за 21 день"></p>
+
+<table cellpadding="5" cellspacing="0" border="1" style="border-collapse:collapse; border-color:#c5d0dc; font-size:13px; margin:0 0 10px;">
+  <tr style="background:#eaf1fb;"><th align="left">Этап, 01-21.06.2026</th><th align="right">Текущая кнопка (замер)</th><th align="right">По ссылке (оценка)</th></tr>
+  <tr><td>Расчет</td><td align="right">58 мин</td><td align="right">58 мин</td></tr>
+  <tr><td>Копирование в форму</td><td align="right">21 мин</td><td align="right">нет</td></tr>
+  <tr><td>Передача формы на клиент</td><td align="right">24 мин</td><td align="right">нет</td></tr>
+  <tr><td>Запись документа</td><td align="right">не входит, выполняется отдельно кнопкой «Записать»</td><td align="right">≈ 1 ч 01 мин</td></tr>
+  <tr><td><code>Прочитать()</code></td><td align="right">нет</td><td align="right">≈ 2 ч 27 мин</td></tr>
+  <tr style="background:#f4f7fb;"><td><b>Итого</b></td><td align="right"><b>1,7 часа</b></td><td align="right"><b>≈ 4,4 часа</b></td></tr>
+</table>
+
+<p style="margin:0 0 8px;">Заполнение по ссылке само по себе не ускоряет работу пользователя: добавляется запись документа, а
+<code>Прочитать()</code> обходится дороже копирования в форму. Если таблицы разделов на форме заменить динамическими списками,
+<code>Прочитать()</code> не нужен, и остаются расчет и запись: около 2 часов за 21 день и около 3,2 часа за месяц на DR.</p>
+
+<h3 style="font-size:16px; margin:20px 0 8px;">4. Прогноз на месяц и факт (июнь 2026: 30 календарных, 21 рабочий день)</h3>
+
+<table cellpadding="5" cellspacing="0" border="1" style="border-collapse:collapse; border-color:#c5d0dc; font-size:13px; margin:0 0 10px;">
+  <tr style="background:#eaf1fb;"><th align="left">Раздел</th><th align="right">Прогноз, строк</th><th align="right">Факт DR, строк</th><th align="left">Основание прогноза (замер за 21 день)</th></tr>
+  <tr><td>7</td><td align="right">≈ 4,1 млн</td><td align="right">4,15 млн</td><td>остаток на конец каждого календарного дня (так требует Банк России), 30 дней</td></tr>
+  <tr><td>9</td><td align="right">≈ 4,0 млн</td><td align="right">4,07 млн</td><td>позиции на каждый календарный день, как сейчас заполняет релиз, 30 дней</td></tr>
+  <tr><td>6</td><td align="right">≈ 0,6 млн</td><td align="right">0,66 млн</td><td>21 рабочий день</td></tr>
+  <tr><td>5</td><td align="right">≈ 0,45 млн</td><td align="right">0,46 млн</td><td>21 рабочий день</td></tr>
+  <tr><td>3, 8</td><td align="right">≈ 0,2 млн</td><td align="right">0,2 млн</td><td>21 рабочий день</td></tr>
+  <tr><td>1, 2, 4, 10, 11</td><td align="right">≈ 0,2 млн</td><td align="right">0,2 млн</td><td>почти не зависят от периода</td></tr>
+  <tr style="background:#f4f7fb;"><td><b>Итого</b></td><td align="right"><b>≈ 9,6 млн</b></td><td align="right"><b>9,74 млн</b></td><td></td></tr>
+</table>
+
+<p style="margin:0 0 8px;"><b>Время.</b> Прогноз для текущей кнопки на месяц: около <b>2,5-3 часов</b> на оборудовании DR, из них расчет
+около 1,5 часа, копирование в форму и передача формы на клиент еще 1-1,3 часа, без последующей записи документа. Факт для
+заполнения по ссылке: <b>6 ч 41 мин</b>, из них расчет 1 ч 41 мин, запись 1 ч 28 мин, <code>Прочитать()</code> 3 ч 32 мин.</p>
 
 <p style="margin:0 0 8px;"><b>Память.</b> Разделы отличаются числом колонок (в разделе 7 их 18, в разделах 5 и 6 их 42), поэтому объем
 считался с учетом ширины разделов:</p>
 <ul style="margin:0 0 8px; padding-left:20px;">
-  <li>данные месяца примерно в <b>3,4 раза</b> больше, чем было накоплено на UAT2 к моменту падения;</li>
+  <li>данные месяца примерно в <b>3,2 раза</b> больше, чем было накоплено на UAT2 к моменту падения
+    (документ за 21 день на DR больше в 2,2 раза);</li>
   <li>значит, только для расчета лимит памяти на один вызов должен быть не менее чем в <b>3,5 раза</b> выше текущего лимита UAT2;</li>
   <li>в абсолютных цифрах, по замеру на стенде разработки (1,5 млн строк раздела 7 занимают около 3 ГБ в объекте документа),
     месяц потребует порядка <b>15-30 ГБ на один вызов</b> только для расчета;</li>
@@ -98,16 +191,20 @@
 «Безопасный расход памяти за один вызов». Но даже кратное увеличение лимита не решает задачу: документ на 10 млн строк остается
 слишком тяжелым для записи, открытия формы и выгрузки.</p>
 
-<h3 style="font-size:16px; margin:20px 0 8px;">4. Вывод</h3>
+<h3 style="font-size:16px; margin:20px 0 8px;">5. Вывод</h3>
 <ul style="margin:0 0 8px; padding-left:20px;">
-  <li>Объем месяца, около 10 млн строк, задают требования к разделам 7 и 9. По разъяснению Банка России раздел 7 заполняется
+  <li>Объем месяца, около 9,6 млн строк, задают требования к разделам 7 и 9. По разъяснению Банка России раздел 7 заполняется
     остатками на конец каждого дня периода, поэтому сократить его нельзя.</li>
   <li>По Порядку представления данных внутреннего учета раздел 9 описывает позицию клиента за период определения позиции:
     входящие значения на день начала, обороты за период, исходящие на день окончания. Если допустимо давать раздел 9
     одной строкой на позицию за период, а не за каждый день, это минус около 4 млн строк. Вопрос к вендору.</li>
-  <li>Без изменения схемы хранения месячный документ не заполнится. Нужно заполнять разделы 5, 6, 7, 9 порциями по дням
+  <li>При лимите памяти на вызов, как на UAT2, без изменения схемы хранения месячный документ не заполнится (на DR он
+    заполнился только потому, что лимита нет). Нужно заполнять разделы 5, 6, 7, 9 порциями по дням
     с сохранением каждой порции вне табличных частей документа, а выгрузку файла строить потоком из сохраненных порций,
     без сборки всего месяца в памяти одного вызова.</li>
+  <li>Снятие лимита памяти, как на DR, задачу не решает: месяц заполнился, но заполнение по ссылке заняло 6 ч 41 мин,
+    из них 3,5 часа ушло на <code>Прочитать()</code> формы. Замена таблиц разделов на форме динамическими списками убирает
+    этот этап, но и тогда расчет и запись месяца занимают около 3,2 часа.</li>
 </ul>
 
 <p style="margin:16px 0 0;">С уважением,</p>
