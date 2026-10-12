@@ -2,7 +2,7 @@
 """Память серверных вызовов сеансов веб-клиента WIM_DU по данным агента кластера.
 
 python sessmem.py <секунд> <файл.csv>
-Раз в 0,5 с пишет по каждому сеансу WebClient и BackgroundJob: MemoryCurrent (память текущего вызова),
+Раз в 0,5 с пишет по каждому сеансу WebClient, BackgroundJob и COMConnection: MemoryCurrent (память текущего вызова),
 MemoryLast5Min, MemoryAll. Пик MemoryCurrent за прогон = пик памяти вызова.
 """
 import csv
@@ -25,7 +25,7 @@ def main():
         while time.time() < end:
             t = time.strftime("%H:%M:%S")
             for s in agent.GetSessions(cluster):
-                if s.InfoBase.Name.upper() != "WIM_DU" or s.AppID not in ("WebClient", "BackgroundJob"):
+                if s.InfoBase.Name.upper() != "WIM_DU" or s.AppID not in ("WebClient", "BackgroundJob", "COMConnection"):
                     continue
                 w.writerow([t, s.SessionID, s.AppID, s.MemoryCurrent, s.MemoryLast5Min, s.MemoryAll,
                             s.CPUTimeCurrent, s.DurationCurrent])
