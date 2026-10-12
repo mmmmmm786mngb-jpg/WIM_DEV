@@ -1,0 +1,190 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Прогон отправки на Т-1</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Sans+Condensed:wght@600;700&display=swap">
+<style>
+/* Layout: one reading column; answer card, flow strip, numbered procedures with check/stop boxes */
+:root {
+  --bg: #f3f4f1; --surface: #ffffff; --fg: #1d2420; --muted: #5d6862; --line: #d5dad4;
+  --accent: #1f6b52; --accent-bg: #e2f1ea; --client: #2f5fb3; --client-bg: #e7eefb;
+  --bgjob: #9a5b00; --bgjob-bg: #fbefd9; --stop: #b23a2e; --stop-bg: #fbe5e1; --code-bg: #eceee9;
+  --f-display: "IBM Plex Sans Condensed", "Arial Narrow", Arial, sans-serif;
+  --f-body: "IBM Plex Sans", "Segoe UI", Arial, sans-serif;
+  --f-mono: "IBM Plex Mono", Consolas, "Courier New", monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #151a17; --surface: #1d2420; --fg: #e4e9e5; --muted: #9aa69f; --line: #34403a;
+    --accent: #6fd0a8; --accent-bg: #183027; --client: #8fb2f2; --client-bg: #1e2a40;
+    --bgjob: #f0b75a; --bgjob-bg: #3a2c12; --stop: #f08a7d; --stop-bg: #3d1f1b; --code-bg: #262e29;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #151a17; --surface: #1d2420; --fg: #e4e9e5; --muted: #9aa69f; --line: #34403a;
+  --accent: #6fd0a8; --accent-bg: #183027; --client: #8fb2f2; --client-bg: #1e2a40;
+  --bgjob: #f0b75a; --bgjob-bg: #3a2c12; --stop: #f08a7d; --stop-bg: #3d1f1b; --code-bg: #262e29;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--fg); font: 15px/1.55 var(--f-body); }
+.wrap { max-width: 920px; margin: 0 auto; padding-inline: 20px; padding-block: 32px 64px; display: grid; gap: 36px; }
+h1, h2 { font-family: var(--f-display); margin: 0; text-wrap: balance; }
+h1 { font-size: clamp(28px, 4.2vw, 38px); line-height: 1.1; }
+h2 { font-size: 22px; }
+h3 { margin: 0; font: 600 16px/1.3 var(--f-body); }
+p { margin: 0; max-width: 72ch; }
+code { font: 13px var(--f-mono); background: var(--code-bg); padding: 1px 5px; border-radius: 3px; overflow-wrap: anywhere; }
+.eyebrow { font: 600 12px/1 var(--f-body); letter-spacing: .09em; text-transform: uppercase; color: var(--muted); }
+header, section { display: grid; gap: 14px; }
+.answer { background: var(--surface); border: 1px solid var(--line); border-left: 4px solid var(--accent); padding: 16px 20px; display: grid; gap: 8px; }
+.strip { display: flex; flex-wrap: wrap; gap: 8px; align-items: stretch; }
+.node { flex: 1 1 150px; min-width: 0; padding: 10px 12px; border-radius: 4px; display: grid; gap: 3px; align-content: start; }
+.node b { font: 600 14px/1.25 var(--f-body); }
+.node span { font: 12px/1.35 var(--f-mono); color: var(--muted); overflow-wrap: anywhere; }
+.c { background: var(--client-bg); box-shadow: inset 3px 0 0 var(--client); }
+.g { background: var(--bgjob-bg); box-shadow: inset 3px 0 0 var(--bgjob); }
+.s { background: var(--accent-bg); box-shadow: inset 3px 0 0 var(--accent); }
+.arrow { align-self: center; color: var(--muted); font: 600 18px/1 var(--f-mono); }
+ol.steps { margin: 0; padding: 0; list-style: none; counter-reset: st; display: grid; gap: 10px; }
+ol.steps > li { counter-increment: st; display: grid; grid-template-columns: 34px minmax(0, 1fr); gap: 12px; background: var(--surface); border: 1px solid var(--line); padding: 12px 14px; }
+ol.steps > li::before { content: counter(st); width: 26px; height: 26px; border-radius: 50%; background: var(--accent); color: var(--surface); display: grid; place-items: center; font: 600 13px/1 var(--f-mono); }
+ol.steps > li > div { display: grid; gap: 6px; min-width: 0; }
+ul { margin: 0; padding-left: 18px; display: grid; gap: 3px; max-width: 76ch; }
+.ok, .stop { padding: 8px 12px; border-radius: 3px; font-size: 14px; }
+.ok { background: var(--accent-bg); }
+.stop { background: var(--stop-bg); border-left: 3px solid var(--stop); }
+.ok b { color: var(--accent); } .stop b { color: var(--stop); }
+.scroll { overflow-x: auto; border: 1px solid var(--line); background: var(--surface); }
+table { border-collapse: collapse; width: 100%; min-width: 640px; font-size: 14px; }
+th, td { text-align: left; vertical-align: top; padding: 9px 12px; border-bottom: 1px solid var(--line); }
+th { font: 600 12px/1.2 var(--f-body); letter-spacing: .06em; text-transform: uppercase; color: var(--muted); background: var(--code-bg); }
+tr:last-child td { border-bottom: 0; }
+.tag { font: 600 11px/1 var(--f-body); letter-spacing: .07em; text-transform: uppercase; padding: 4px 6px; border-radius: 3px; background: var(--accent-bg); color: var(--accent); }
+footer { color: var(--muted); font-size: 13px; }
+@media (max-width: 560px) { .arrow { display: none; } .node { flex-basis: 100%; } ol.steps > li { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <div class="eyebrow">IMDEV-9529 · расширение FO_SendFixStub 1.0.0.1 · Т-1 (AVC_PP_Retail_FO)</div>
+  <h1>Прогон отправки поручений на Т-1 с заглушкой FIX</h1>
+  <p>Порядок: установка расширения, проверка перед отправкой, первый тестовый прогон на одном поручении, затем рабочие прогоны для замеров - без отладчика и под отладчиком.</p>
+</header>
+
+<section>
+  <h2>Это регламент или обработка?</h2>
+  <div class="answer">
+    <p><b>Ни то, ни другое: это команда формы блоттера.</b> Отправку запускает пользователь кнопкой "Проверить и отправить" в форме <code>Обработка.Блоттер.ФормаБлоттер</code> (раздел "Поручения и сделки" → "Блоттер"). Регламентное задание в отправке не участвует. Сервер выполняет работу в двух фоновых заданиях, которые запускаются от вашего сеанса:</p>
+  </div>
+  <div class="strip">
+    <div class="node c"><b>Блоттер, кнопка</b><span>Проверить и отправить</span></div>
+    <div class="arrow" aria-hidden="true">→</div>
+    <div class="node g"><b>Фоновое задание 1</b><span>Распорядители.ПроверкаИОтправка (длительная операция БСП): проверка лимитов</span></div>
+    <div class="arrow" aria-hidden="true">→</div>
+    <div class="node g"><b>Фоновое задание 2</b><span>Исполнители.Отправка_ОтправкаПоручений: адаптер FIX</span></div>
+    <div class="arrow" aria-hidden="true">→</div>
+    <div class="node s"><b>Заглушка</b><span>JSON-файл + журнал регистрации вместо HTTP</span></div>
+  </div>
+  <p>Отдельно на Т-1 работает регламентное задание синхронизации адаптеров (<code>АванкорСинхронизацияСостояний</code>). К отправке оно не относится; с заглушкой его запросы к прокси тоже блокируются.</p>
+</section>
+
+<section>
+  <h2>1. Установка (каждый день прогона)</h2>
+  <ol class="steps">
+    <li><div><h3>Добавить расширение</h3>
+      <p>Администрирование → Печатные формы, отчеты и обработки → Расширения → Добавить из файла → <code>Расширения\FO_SendFixStub.cfe</code>. Или в конфигураторе: Конфигурация → Расширения конфигурации → Загрузить из файла.</p></div></li>
+    <li><div><h3>Свойства расширения</h3>
+      <ul><li><b>Активно</b> - да;</li><li><b>Безопасный режим</b> - нет (в безопасном режиме запись файлов недоступна);</li><li>защита от опасных действий - без предупреждений.</li></ul></div></li>
+    <li><div><h3>Константа РежимТестирования = Ложь</h3>
+      <p>Иначе отправка выполняется синхронно, без фонового задания адаптера, и прогон не повторяет PROD.</p></div></li>
+    <li><div><h3>Перезапустить сеанс</h3>
+      <p>Закрыть 1С и зайти заново. Фоновые задания получают набор расширений того сеанса, из которого запущены.</p></div></li>
+  </ol>
+  <div class="stop"><b>Т-1 каждую ночь заменяется копией PROD.</b> Расширение пропадает вместе с прочими изменениями, на следующий день его ставят заново.</div>
+</section>
+
+<section>
+  <h2>2. Проверка перед любой отправкой</h2>
+  <ol class="steps">
+    <li><div><h3>Имя базы</h3>
+      <p>Справка → О программе: в строке соединения должно быть <code>Ref="AVC_PP_Retail_FO"</code>. Заглушка включается только в базах <code>AVC_PP_Retail_FO</code>, <code>AVC_PP_FO</code>, <code>WIN_FO_server</code>.</p>
+      <div class="stop"><b>Стоп:</b> имя другое - не отправлять. Без включенной заглушки пойдет настоящая отправка в прокси, настройки которого скопированы с PROD. Сообщить имя - добавлю его в список и пересоберу расширение.</div></div></li>
+    <li><div><h3>Расширение применилось</h3>
+      <p>В списке расширений FO_SendFixStub активно, без безопасного режима, ошибок применения нет.</p></div></li>
+  </ol>
+</section>
+
+<section>
+  <h2>3. Первый тестовый прогон: одно поручение</h2>
+  <ol class="steps">
+    <li><div><h3>Подготовить поручение</h3>
+      <p>Блоттер → выделить одно вчерашнее биржевое поручение → <b>Скопировать...</b> (копирование выбранных). Копия создается проведенной, без биржевого номера, ее можно отправлять.</p></div></li>
+    <li><div><h3>Точка останова (рекомендуется)</h3>
+      <p>Конфигуратор/EDT, подключение к Т-1, Отладка → Подключение → Автоматическое подключение: <b>Фоновое задание</b>. Точка останова в начале функции <code>Распорядители.Отправка</code> (общий модуль <code>Распорядители</code>).</p></div></li>
+    <li><div><h3>Отправить</h3>
+      <p>Выделить копию → <b>Проверить и отправить</b> → подтвердить вопрос.</p></div></li>
+    <li><div><h3>На точке останова - вычислить выражение</h3>
+      <p><code>Адаптеры.ЗаглушкаОтправкиFIXВключена()</code> → должно быть <b>Истина</b>. До этой точки ни одна заявка не отправляется.</p>
+      <div class="stop"><b>Стоп:</b> Ложь или "метод не найден" - остановить отладку (Shift+F5), не продолжать выполнение.</div></div></li>
+    <li><div><h3>Продолжить и проверить результат</h3>
+      <ul>
+        <li>Форма результатов обработки: поручение в статусе <b>"Отправлено, ожидается подтверждение"</b>.</li>
+        <li>Журнал регистрации, отбор по событию <code>IMDEV-9529.ЗаглушкаFIX</code>: запись <code>Команда /send, заявок 35=D: 1, длина тела ..., запись файла N мс, файл ...</code>.</li>
+        <li>Файл из этой записи на сервере Т-1 (каталог временных файлов пользователя службы 1С + <code>IMDEV-9529_FIX</code>, например <code>C:\Users\USR1CV8\AppData\Local\Temp\IMDEV-9529_FIX\</code>): поле <code>orders</code> = 1, в <code>messages</code> - заявка с вашим инструментом и ценой.</li>
+      </ul>
+      <div class="ok"><b>Тест пройден:</b> статус "Отправлено", событие журнала есть, <code>orders</code> = 1. Можно переходить к рабочим прогонам.</div>
+      <div class="stop"><b>Если поручение не ушло</b> (ошибка проверки лимитов, отклонение цены, "адаптер не готов"): прислать текст из формы результатов, разберу. Записи <code>IMDEV-9529.ЗаглушкаFIX</code> при этом не будет - это нормально.</div></div></li>
+  </ol>
+</section>
+
+<section>
+  <h2>4. Рабочие прогоны</h2>
+  <p>Наборы поручений готовятся так же: выделить N вчерашних биржевых поручений (Ctrl+A по отбору) → <b>Скопировать...</b>. Отправляются только поручения, прошедшие проверку лимитов: число отправленных сверять с полем <code>orders</code> в файле, а не с размером набора.</p>
+
+  <h3><span class="tag">А</span> Без отладчика - время по ключевой операции</h3>
+  <ol class="steps">
+    <li><div><p>Отладчик не подключен. Наборы по очереди: <b>100 → 1 000 → 4 500 → 10 000</b>.</p></div></li>
+    <li><div><p>Каждый набор: выделить → Проверить и отправить → дождаться формы результатов. Зафиксировать время по часам (начало - нажатие, конец - форма результатов).</p></div></li>
+    <li><div><p>Время ключевой операции <b>"Отправка"</b>: Администрирование → Оценка производительности (или выгрузка замеров, как с PROD). Вес замера = число поручений в отправке.</p></div></li>
+    <li><div><p>Из журнала регистрации по каждому прогону - время записи файла заглушкой (его вычесть).</p></div></li>
+  </ol>
+  <p>На 10 000 проверяется, остается ли время линейным (около 54 мс на поручение на PROD; Т-1 медленнее, сравнивать прогоны Т-1 между собой).</p>
+
+  <h3><span class="tag">Б</span> Под отладчиком - где именно тратится время</h3>
+  <ol class="steps">
+    <li><div><p>Конфигуратор/EDT: Автоматическое подключение → <b>Фоновое задание</b>. Точки останова снять.</p></div></li>
+    <li><div><p>Набор <b>1 000</b> поручений выделен в блоттере.</p></div></li>
+    <li><div><p>Отладка → <b>Замер производительности</b> (включить) → Проверить и отправить → дождаться формы результатов → Замер производительности (выключить).</p></div></li>
+    <li><div><p>В результатах сортировать по чистому времени. Отдельно смотреть два фоновых задания: проверку лимитов и задание адаптера (<code>Исполнители.Отправка_ОтправкаПоручений</code>, <code>АдаптерFIX.ПорученияОтправить</code>).</p></div></li>
+    <li><div><p>Сохранить замер в файл <code>.pff</code> и положить в папку задачи - разнесу строки по блокам раздела 4 постановки.</p></div></li>
+  </ol>
+</section>
+
+<section>
+  <h2>5. Между прогонами и после</h2>
+  <div class="scroll"><table>
+    <thead><tr><th>Что</th><th>Как</th></tr></thead>
+    <tbody>
+      <tr><td>Повторить прогон на тех же поручениях</td><td>Выделить → <b>Перевести в начальное состояние</b>, затем снова Проверить и отправить. Либо взять новые копии.</td></tr>
+      <tr><td>Что прислать</td><td>Время прогонов А (набор, часы, ключевая операция), файл замера Б (.pff), выгрузку событий журнала <code>IMDEV-9529.ЗаглушкаFIX</code>.</td></tr>
+      <tr><td>После тестов</td><td>Отключить или удалить расширение; ночью Т-1 все равно будет заменен копией PROD.</td></tr>
+    </tbody>
+  </table></div>
+  <div class="stop"><b>Без расширения на Т-1 "Проверить и отправить" не нажимать.</b> Если настройки прокси скопированы с PROD, заявки уйдут в рабочий шлюз. Базовый прогон без заглушки на Т-1 не делается: для сравнения есть замеры PROD.</div>
+</section>
+
+<section>
+  <h2>Что проверено до передачи</h2>
+  <p>Разработческая база ФО, 12.10.2026, скрипт <code>Тестирование\test_stub_dev.py</code>: 6/6 OK. Модули компилируются (сервер, внешнее соединение, толстый клиент), применимость - 0 проблем. Отправка фоновым заданием записана в файл, к прокси - 0 HTTP-запросов; <code>disconnect</code> заблокирован; контроль с отключенным расширением - то же задание отправило 2 HTTP-запроса на тестовый слушатель.</p>
+</section>
+
+<footer>Файлы: <code>Расширения\FO_SendFixStub.cfe</code>, исходники <code>Расширения\FO_SendFixStub</code>, постановка <code>Документация\IMDEV-9529 Постановка и план исследования отправки.docx</code> (раздел 5).</footer>
+</div>
+</body>
+</html>
