@@ -1,0 +1,182 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--Created by TIBCO WSDL-->
+<wsdl:definitions xmlns:tns="http://xmlns.example.com/1342097196237" xmlns:wsdl="http://schemas.xmlsoap.org/wsdl/" xmlns:ns0="http://www.avancore.ru/bank_statements" xmlns:soap="http://schemas.xmlsoap.org/wsdl/soap/" name="Untitled" targetNamespace="http://xmlns.example.com/1342097196237">
+    <wsdl:types>
+        <xs:schema xmlns:tns="http://www.avancore.ru/bank_statements" xmlns:xs="http://www.w3.org/2001/XMLSchema" targetNamespace="http://www.avancore.ru/bank_statements" elementFormDefault="qualified" attributeFormDefault="qualified">
+            <xs:simpleType name="БИК">
+                <xs:restriction base="xs:string">
+                    <xs:maxLength value="15"/>
+                </xs:restriction>
+            </xs:simpleType>
+            <xs:complexType name="Банк">
+                <xs:sequence>
+                    <xs:element name="БИК" type="tns:БИК"/>
+                    <xs:element name="КорСчет" type="tns:НомерСчета" minOccurs="0"/>
+                </xs:sequence>
+            </xs:complexType>
+            <xs:complexType name="БанковскийСчет">
+                <xs:sequence>
+                    <xs:element name="НомерСчета" type="tns:НомерСчета"/>
+                    <xs:element name="Банк" type="tns:Банк"/>
+                </xs:sequence>
+            </xs:complexType>
+            <xs:simpleType name="ВидыДокументов">
+                <xs:restriction base="xs:string">
+                    <xs:maxLength value="50"/>
+                    <xs:enumeration value="Банковский ордер"/>
+                    <xs:enumeration value="Внешний валютный перевод"/>
+                    <xs:enumeration value="Входящее платежное поручение"/>
+                    <xs:enumeration value="Кассовый документ"/>
+                    <xs:enumeration value="Мемориальный ордер"/>
+                    <xs:enumeration value="Платежное поручение"/>
+                    <xs:enumeration value="Платежное требование"/>
+                    <xs:enumeration value="Платежный ордер"/>
+                    <xs:enumeration value="Внутренний перевод"/>
+                    <xs:enumeration value="Инкассовое поручение"/>
+                    <xs:enumeration value=""/>
+                </xs:restriction>
+            </xs:simpleType>
+            <xs:simpleType name="ВидыОплаты">
+                <xs:restriction base="xs:string">
+                    <xs:maxLength value="2"/>
+                    <xs:enumeration value="00"/>
+                    <xs:enumeration value="01"/>
+                    <xs:enumeration value="02"/>
+                    <xs:enumeration value="03"/>
+                    <xs:enumeration value="04"/>
+                    <xs:enumeration value="05"/>
+                    <xs:enumeration value="06"/>
+                    <xs:enumeration value="07"/>
+                    <xs:enumeration value="08"/>
+                    <xs:enumeration value="09"/>
+                    <xs:enumeration value="15"/>
+                    <xs:enumeration value="17"/>
+                    <xs:enumeration value="97"/>
+                    <xs:enumeration value="10"/>
+                    <xs:enumeration value="16"/>
+                    <xs:enumeration value=""/>
+                </xs:restriction>
+            </xs:simpleType>
+            <xs:simpleType name="ВидыПлатежа">
+                <xs:restriction base="xs:string">
+                    <xs:maxLength value="30"/>
+                    <xs:enumeration value="электронно"/>
+                    <xs:enumeration value="swift"/>
+                    <xs:enumeration value="срочно"/>
+					 <xs:enumeration value="0"/>
+                    <xs:enumeration value=""/>
+                    <xs:enumeration value=""/>
+                </xs:restriction>
+            </xs:simpleType>
+            <xs:complexType name="Выписка">
+                <xs:sequence>
+                    <xs:element name="ДатаСоздания" type="xs:date"/>
+                    <xs:element name="ВремяСоздания" type="xs:time"/>
+                    <xs:element name="ДатаНачала" type="xs:date"/>
+                    <xs:element name="ДатаКонца" type="xs:date"/>
+                    <xs:element name="БанковскийСчет" type="tns:БанковскийСчет"/>
+                    <xs:element name="НачальныйОстаток" type="tns:Число20_2"/>
+                    <xs:element name="ВсегоПоступило" type="tns:Число20_2"/>
+                    <xs:element name="ВсегоСписано" type="tns:Число20_2"/>
+                    <xs:element name="КонечныйОстаток" type="tns:Число20_2"/>
+                    <xs:element name="ПлатежныеДокументы" type="tns:ПлатежныеДокументы" minOccurs="0" maxOccurs="99999"/>
+                </xs:sequence>
+            </xs:complexType>
+            <xs:simpleType name="ИНН">
+                <xs:restriction base="xs:string">
+                    <xs:maxLength value="12"/>
+                </xs:restriction>
+            </xs:simpleType>
+            <xs:complexType name="Корень">
+                <xs:sequence>
+                    <xs:element name="Условия" type="tns:Условия" minOccurs="0"/>
+                    <xs:element name="Выписки" type="tns:Выписка" minOccurs="0" maxOccurs="99999"/>
+                </xs:sequence>
+            </xs:complexType>
+            <xs:simpleType name="НомерДокумента">
+                <xs:restriction base="xs:string">
+                    <xs:maxLength value="20"/>
+                </xs:restriction>
+            </xs:simpleType>
+            <xs:simpleType name="НомерСчета">
+                <xs:restriction base="xs:string">
+                    <xs:maxLength value="30"/>
+                </xs:restriction>
+            </xs:simpleType>
+            <xs:complexType name="ПлатежныеДокументы">
+                <xs:sequence>
+                    <xs:element name="Операция" type="tns:ВидыДокументов"/>
+                    <xs:element name="Дата" type="xs:date" minOccurs="0"/>
+                    <xs:element name="Номер" type="tns:НомерДокумента" minOccurs="0"/>
+                    <xs:element name="Сумма" type="tns:Число20_2" minOccurs="0"/>
+                    <xs:element name="ДатаПоступления" type="xs:date" minOccurs="0"/>
+                    <xs:element name="ПлательщикСчет" type="tns:БанковскийСчет" minOccurs="0"/>
+                    <xs:element name="ПлательщикБИК" type="tns:БИК" minOccurs="0"/>
+                    <xs:element name="ПолучательСчет" type="tns:БанковскийСчет" minOccurs="0"/>
+                    <xs:element name="ПолучательБИК" type="tns:БИК" minOccurs="0"/>
+                    <xs:element name="НазначениеПлатежа" type="tns:Строка210" minOccurs="0"/>
+                    <xs:element name="ПлательщикИНН" type="tns:ИНН" minOccurs="0"/>
+                    <xs:element name="Плательщик" type="tns:Строка210" minOccurs="0"/>
+                    <xs:element name="Плательщик1" type="tns:Строка210" minOccurs="0"/>
+                    <xs:element name="ПлательщикБанк" type="tns:Банк" minOccurs="0"/>
+                    <xs:element name="ПолучательИНН" type="tns:ИНН" minOccurs="0"/>
+                    <xs:element name="Получатель" type="tns:Строка210" minOccurs="0"/>
+                    <xs:element name="Получатель1" type="tns:Строка210" minOccurs="0"/>
+                    <xs:element name="ПолучательБанк" type="tns:Банк" minOccurs="0"/>
+                    <xs:element name="ВидПлатежа" type="tns:ВидыПлатежа" minOccurs="0"/>
+                    <xs:element name="ВидОплаты" type="tns:ВидыОплаты" minOccurs="0"/>
+                    <xs:element name="СтатусСоставителя" type="tns:Строка210" minOccurs="0"/>
+                    <xs:element name="ПоказательКБК" type="tns:Строка210" minOccurs="0"/>
+                    <xs:element name="ОКАТО" type="tns:Строка210" minOccurs="0"/>
+                </xs:sequence>
+            </xs:complexType>
+            <xs:simpleType name="Строка210">
+                <xs:restriction base="xs:string">
+                    <xs:maxLength value="512"/>
+                </xs:restriction>
+            </xs:simpleType>
+            <xs:complexType name="Условия">
+                <xs:sequence>
+                    <xs:element name="ДатаС" type="xs:date"/>
+                    <xs:element name="ДатаПо" type="xs:date"/>
+                    <xs:element name="ТипСчета" type="xs:string"/>
+                    <xs:element name="Счета" type="xs:string" minOccurs="0"/>
+                </xs:sequence>
+            </xs:complexType>
+            <xs:simpleType name="Число20_2">
+                <xs:restriction base="xs:decimal">
+                    <xs:totalDigits value="20"/>
+                    <xs:fractionDigits value="2"/>
+                </xs:restriction>
+            </xs:simpleType>
+            <xs:element name="Корень" type="tns:Корень"/>
+            <xs:element name="Условия" type="tns:Условия"/>
+        </xs:schema>
+    </wsdl:types>
+    <wsdl:service name="BankReportsImport_Service">
+        <wsdl:port name="PortType_StatementOfAccountEndpoint1" binding="tns:PortType_StatementOfAccountEndpoint1Binding">
+            <soap:address location="http://AMAPTIBCO:8890/BankReports/BankReportsImport_Service.serviceagent/PortType_StatementOfAccountEndpoint1"/>
+        </wsdl:port>
+    </wsdl:service>
+    <wsdl:portType name="PortType_StatementOfAccount">
+        <wsdl:operation name="GetStatementOfAccount">
+            <wsdl:input message="tns:Выписка"/>
+            <wsdl:output message="tns:Выписка"/>
+        </wsdl:operation>
+    </wsdl:portType>
+    <wsdl:binding name="PortType_StatementOfAccountEndpoint1Binding" type="tns:PortType_StatementOfAccount">
+        <soap:binding style="document" transport="http://schemas.xmlsoap.org/soap/http"/>
+        <wsdl:operation name="GetStatementOfAccount">
+            <soap:operation style="document" soapAction="/BankReportsImport_Service.serviceagent/PortType_StatementOfAccountEndpoint1/GetStatementOfAccount"/>
+            <wsdl:input>
+                <soap:body use="literal" parts="data"/>
+            </wsdl:input>
+            <wsdl:output>
+                <soap:body use="literal" parts="data"/>
+            </wsdl:output>
+        </wsdl:operation>
+    </wsdl:binding>
+    <wsdl:message name="Выписка">
+        <wsdl:part name="data" element="ns0:Корень"/>
+    </wsdl:message>
+</wsdl:definitions>
