@@ -1,0 +1,602 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Разбор выводов по модулю ДополнительныеУтвержденияV2</title>
+<style>
+  :root {
+    --ink: #1c2430;
+    --muted: #5e6a78;
+    --paper: #f3f0e8;
+    --card: #fffcf8;
+    --line: #e3d9c8;
+    --navy: #1a2736;
+    --navy-2: #24364a;
+    --gold: #8d6b32;
+    --pass: #1c6b45;
+    --pass-bg: #e7f4ec;
+    --bad: #9d2c2c;
+    --bad-bg: #fdecec;
+    --warn: #8a5610;
+    --warn-bg: #fbf3e4;
+    --gap: #1d4e89;
+    --gap-bg: #e8f0fa;
+    --info: #0f5c66;
+    --info-bg: #e5f4f6;
+    --shadow: 0 10px 30px rgba(26, 39, 54, 0.06);
+  }
+
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0;
+    color: var(--ink);
+    background:
+      radial-gradient(1200px 420px at 10% -10%, rgba(141, 107, 50, 0.08), transparent 60%),
+      var(--paper);
+    font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+    line-height: 1.55;
+  }
+
+  a { color: var(--gap); text-decoration-thickness: 1px; text-underline-offset: 3px; }
+  code, pre { font-family: Consolas, "Courier New", monospace; }
+  code {
+    font-size: 0.92em;
+    background: #f4efe6;
+    border: 1px solid #eadfce;
+    border-radius: 4px;
+    padding: 0 4px;
+  }
+
+  .wrap { width: min(1080px, calc(100% - 32px)); margin: 0 auto; }
+
+  header.mast {
+    background: linear-gradient(165deg, var(--navy) 0%, var(--navy-2) 100%);
+    color: #f7f4ee;
+    padding: 36px 0 32px;
+  }
+  .kicker {
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    font-size: 12px;
+    color: #d7c4a2;
+    margin: 0 0 10px;
+  }
+  header.mast h1 {
+    margin: 0 0 12px;
+    font-size: clamp(28px, 4vw, 40px);
+    line-height: 1.15;
+    font-weight: 650;
+    max-width: 18em;
+  }
+  header.mast p.lead {
+    margin: 0;
+    max-width: 46em;
+    color: #d5dde6;
+    font-size: 17px;
+  }
+  header.mast code,
+  .restated code {
+    background: rgba(255, 252, 248, 0.08);
+    border-color: rgba(255, 252, 248, 0.18);
+    color: #f7f4ee;
+  }
+  .meta {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+    margin-top: 26px;
+  }
+  .meta div {
+    border-top: 1px solid rgba(247, 244, 238, 0.2);
+    padding-top: 8px;
+  }
+  .meta span {
+    display: block;
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #b7c3cf;
+  }
+  .meta strong { font-weight: 600; font-size: 14px; }
+
+  nav.toc {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 14px;
+    padding: 14px 0;
+    font-size: 14px;
+  }
+
+  main { padding-bottom: 56px; }
+
+  section {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    box-shadow: var(--shadow);
+    padding: 22px 24px;
+    margin: 16px 0;
+  }
+  section h2 {
+    margin: 0 0 12px;
+    font-size: 22px;
+  }
+  section h3 {
+    margin: 18px 0 8px;
+    font-size: 17px;
+  }
+
+  .opinion {
+    display: grid;
+    grid-template-columns: 220px 1fr;
+    gap: 22px;
+    align-items: start;
+  }
+  .opinion-mark {
+    background: #f8f1e3;
+    border: 1px solid #e4d3b0;
+    border-radius: 12px;
+    padding: 14px;
+  }
+  .opinion-mark small {
+    display: block;
+    color: var(--gold);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    font-size: 11px;
+  }
+  .opinion-mark b {
+    display: block;
+    margin-top: 6px;
+    font-size: 22px;
+    line-height: 1.2;
+    color: #5c4314;
+  }
+
+  .scores {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+  }
+  .score {
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 12px 14px;
+    background: #fff;
+  }
+  .score .label { color: var(--muted); font-size: 13px; }
+  .score .value { font-size: 20px; font-weight: 700; margin-top: 4px; }
+  .score.pass .value { color: var(--pass); }
+  .score.bad .value { color: var(--bad); }
+  .score.warn .value { color: var(--warn); }
+  .score.gap .value { color: var(--gap); }
+
+  .legend { display: flex; flex-wrap: wrap; gap: 8px; margin: 8px 0 0; }
+  .pill {
+    display: inline-block;
+    border-radius: 999px;
+    padding: 2px 10px;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    white-space: nowrap;
+  }
+  .pill.pass { background: var(--pass-bg); color: var(--pass); }
+  .pill.bad { background: var(--bad-bg); color: var(--bad); }
+  .pill.warn { background: var(--warn-bg); color: var(--warn); }
+  .pill.gap { background: var(--gap-bg); color: var(--gap); }
+  .pill.info { background: var(--info-bg); color: var(--info); }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 14.5px;
+  }
+  th, td {
+    border-bottom: 1px solid var(--line);
+    text-align: left;
+    vertical-align: top;
+    padding: 10px 8px;
+  }
+  th {
+    font-size: 12px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--muted);
+    font-weight: 700;
+  }
+  tr:last-child td { border-bottom: none; }
+
+  .finding { border-left: 4px solid var(--line); padding-left: 14px; margin: 16px 0 8px; }
+  .finding.pass { border-color: var(--pass); }
+  .finding.bad { border-color: var(--bad); }
+  .finding.warn { border-color: var(--warn); }
+  .finding.gap { border-color: var(--gap); }
+  .finding header {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    align-items: baseline;
+  }
+  .finding h3 { margin: 0; }
+  .finding .id { color: var(--muted); font-size: 13px; font-weight: 700; }
+
+  .claim, .evidence, .impact {
+    margin-top: 8px;
+  }
+  .claim strong, .evidence strong, .impact strong {
+    display: block;
+    font-size: 12px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+
+  pre {
+    background: #1a2736;
+    color: #f4efe6;
+    border-radius: 10px;
+    padding: 12px 14px;
+    overflow-x: auto;
+    white-space: pre-wrap;
+    line-height: 1.45;
+    font-size: 13px;
+  }
+
+  .restated {
+    background: var(--navy);
+    color: #f7f4ee;
+    border: none;
+  }
+  .restated h2 { color: #f7f4ee; }
+  .restated p { color: #d5dde6; }
+  .restated ol { margin: 8px 0 0; padding-left: 20px; }
+  .restated li { margin: 6px 0; }
+
+  .note {
+    background: var(--info-bg);
+    border-left: 4px solid var(--info);
+    padding: 10px 12px;
+    border-radius: 8px;
+    color: #13343a;
+  }
+
+  footer.colophon {
+    color: var(--muted);
+    font-size: 13px;
+    padding: 0 0 28px;
+  }
+
+  @media (max-width: 800px) {
+    .meta, .scores, .opinion { grid-template-columns: 1fr; }
+    section { padding: 16px; }
+  }
+
+  @media print {
+    body { background: #fff; }
+    header.mast { background: #fff; color: #000; padding-top: 0; }
+    header.mast p.lead, .meta span, .kicker { color: #333; }
+    section, .score { box-shadow: none; }
+    .restated, pre { break-inside: avoid; }
+    a { color: inherit; text-decoration: none; }
+  }
+</style>
+</head>
+<body>
+<header class="mast">
+  <div class="wrap">
+    <p class="kicker">Независимый разбор выводов / CR-XBRL-DA-001</p>
+    <h1>Качество анализа модуля дополнительных утверждений XBRL</h1>
+    <p class="lead">Сверка текста стороннего разбора с исходным модулем <code>ДополнительныеУтвержденияV2</code>. Оценивается карта вызовов, диагноз дефектов и пригодность выводов для оптимизации.</p>
+    <div class="meta">
+      <div><span>Предмет</span><strong>Дополнительный этап проверки утверждений</strong></div>
+      <div><span>Дата</span><strong>14 октября 2026</strong></div>
+      <div><span>Основание</span><strong>Текст модуля V2, без ядра V1</strong></div>
+      <div><span>Метод</span><strong>Сверка утверждений с исходным текстом</strong></div>
+    </div>
+  </div>
+</header>
+
+<div class="wrap">
+  <nav class="toc">
+    <a href="#opinion">Заключение</a>
+    <a href="#scores">Оценки</a>
+    <a href="#register">Реестр</a>
+    <a href="#findings">Разбор</a>
+    <a href="#reuse">Что оставить</a>
+    <a href="#restated">Исправленная формулировка</a>
+  </nav>
+
+  <main>
+    <section id="opinion">
+      <h2>1. Заключение</h2>
+      <div class="opinion">
+        <div class="opinion-mark">
+          <small>Тип заключения</small>
+          <b>Ограниченное</b>
+        </div>
+        <div>
+          <p>Карту модуля можно принимать. Диагноз дефектов и оценку числа запросов принимать нельзя.</p>
+          <p>Сторонний разбор верно описал линейный оркестратор: один writer, один менеджер временных таблиц, два вложенных цикла, подготовка фактов до цикла и очистка внутри цикла. На этом надежность разбора заканчивается. Сравнение в <code>ЕстьУтвержденияСОтборомФактов</code> объявлено багом из-за неверного чтения итогов запроса. Обход уже выполненной выборки объявлен N+1. Нижняя граница "2N запросов" из текста модуля не следует.</p>
+          <p>Практический вывод: схемой якорей пользоваться можно. Пункты про баг отбора фактов и про курсор СУБД нужно вычеркнуть до любого решения об оптимизации.</p>
+        </div>
+      </div>
+    </section>
+
+    <section id="scores">
+      <h2>2. Оценки по назначению текста</h2>
+      <div class="scores">
+        <article class="score pass">
+          <div class="label">Карта модуля</div>
+          <div class="value">Пригодна</div>
+        </article>
+        <article class="score bad">
+          <div class="label">Диагноз дефектов</div>
+          <div class="value">Не пригоден</div>
+        </article>
+        <article class="score warn">
+          <div class="label">Оценка стоимости</div>
+          <div class="value">Завышена</div>
+        </article>
+        <article class="score gap">
+          <div class="label">Следующий шаг</div>
+          <div class="value">Верный</div>
+        </article>
+      </div>
+      <div class="legend" aria-label="Классы замечаний">
+        <span class="pill pass">Подтверждено</span>
+        <span class="pill bad">Опровергнуто</span>
+        <span class="pill warn">Завышено</span>
+        <span class="pill gap">Пропуск</span>
+      </div>
+    </section>
+
+    <section id="register">
+      <h2>3. Реестр утверждений</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Утверждение разбора</th>
+            <th>Класс</th>
+            <th>Решение</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>F-01</td>
+            <td>Пайплайн линейный: один поток, один writer, один менеджер временных таблиц</td>
+            <td><span class="pill pass">Подтверждено</span></td>
+            <td>Принять</td>
+          </tr>
+          <tr>
+            <td>F-02</td>
+            <td>До цикла два запроса, внутри цикла ядро V1 и УНИЧТОЖИТЬ</td>
+            <td><span class="pill pass">Подтверждено</span></td>
+            <td>Принять</td>
+          </tr>
+          <tr>
+            <td>F-03</td>
+            <td>Прогресс рисуется один раз, в начале</td>
+            <td><span class="pill pass">Подтверждено</span></td>
+            <td>Принять факт, отклонить причину</td>
+          </tr>
+          <tr>
+            <td>F-04</td>
+            <td><code>Ссылка &lt;&gt; УтверждениеБезОтбора</code> почти всегда истинно, общие таблицы готовятся зря</td>
+            <td><span class="pill bad">Опровергнуто</span></td>
+            <td>Отклонить</td>
+          </tr>
+          <tr>
+            <td>F-05</td>
+            <td>Обход группировок - неявный курсор СУБД и риск N+1</td>
+            <td><span class="pill bad">Опровергнуто</span></td>
+            <td>Отклонить</td>
+          </tr>
+          <tr>
+            <td>F-06</td>
+            <td>Минимум 2N запросов на N утверждений</td>
+            <td><span class="pill bad">Опровергнуто</span></td>
+            <td>Сузить</td>
+          </tr>
+          <tr>
+            <td>F-07</td>
+            <td>Стоимость разделителя пакета и отдельной компиляции УНИЧТОЖИТЬ</td>
+            <td><span class="pill warn">Завышено</span></td>
+            <td>Не считать горячей точкой</td>
+          </tr>
+          <tr>
+            <td>F-08</td>
+            <td>Удержание фактов в менеджере временных таблиц - минус архитектуры</td>
+            <td><span class="pill warn">Завышено</span></td>
+            <td>Оставить как свойство, не как дефект</td>
+          </tr>
+          <tr>
+            <td>F-09</td>
+            <td>Внутри V1 ищутся построчные формулы, регекспы и РезультатыВалидации</td>
+            <td><span class="pill warn">Завышено</span></td>
+            <td>Убрать из карты V2</td>
+          </tr>
+          <tr>
+            <td>F-10</td>
+            <td>Имя <code>ФоновыеЗадания.ВыполнитьВФоне</code> и <code>Асинх.Выполнить</code> как отсутствующий параллелизм</td>
+            <td><span class="pill bad">Опровергнуто</span></td>
+            <td>Заменить имена методов</td>
+          </tr>
+          <tr>
+            <td>F-11</td>
+            <td>Сброс курсора, порядок выборки, смысл <code>Ложь</code>, семантика "Не вычислено", замер шагов, модель Java</td>
+            <td><span class="pill gap">Пропуск</span></td>
+            <td>Дополнить</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section id="findings">
+      <h2>4. Разбор по пунктам</h2>
+
+      <article class="finding pass" id="f01">
+        <header>
+          <h3>Линейный оркестратор описан верно</h3>
+          <span class="id">F-01, F-02</span>
+        </header>
+        <div class="claim"><strong>Утверждение</strong> Весь функционал идет в одном потоке. Параллельного пула нет. Якоря: группировка, подготовка фактов, <code>ВыполнитьУтверждение</code>, пакет <code>УНИЧТОЖИТЬ</code>.</div>
+        <div class="evidence"><strong>Основание</strong> <code>ПайплайнДопУтверждений</code> создает один writer и один контекст временных таблиц. Дальше два цикла <code>Пока Следующий()</code>. В тексте нет запуска фоновых заданий и нет второго менеджера. Подготовка фактов стоит до цикла. Очистка стоит внутри цикла по утверждениям. <code>АгрегироватьСтатистикуV1</code> обходит уже собранные разделы.</div>
+        <div class="impact"><strong>Следствие</strong> Эту часть можно цитировать как карту модуля. Узкое место оркестратора действительно последовательный вызов ядра V1 на общем менеджере временных таблиц.</div>
+      </article>
+
+      <article class="finding pass" id="f03">
+        <header>
+          <h3>Факт про прогресс верный, причинная связь нет</h3>
+          <span class="id">F-03</span>
+        </header>
+        <div class="claim"><strong>Утверждение</strong> <code>ДлительныеОперации.СообщитьПрогресс</code> вызывается только в начале, и это следствие линейной архитектуры.</div>
+        <div class="evidence"><strong>Основание</strong> Вызов в начале пайплайна в тексте есть, внутри циклов его нет. Тот же линейный цикл может сообщать прогресс на каждом утверждении. Отсутствие промежуточного прогресса - пропуск вызова, а не свойство однопоточности.</div>
+        <div class="impact"><strong>Следствие</strong> Факт оставить. Фразу "следствие линейной архитектуры" убрать.</div>
+      </article>
+
+      <article class="finding bad" id="f04">
+        <header>
+          <h3>Баг сравнения отбора фактов не подтверждается</h3>
+          <span class="id">F-04</span>
+        </header>
+        <div class="claim"><strong>Утверждение</strong> <code>Ссылка</code> - ссылка на утверждение, <code>УтверждениеБезОтбора</code> - флаг 0 или 1, поэтому сравнение почти всегда истинно и общие временные таблицы готовятся всегда.</div>
+        <div class="evidence"><strong>Основание</strong> Функция обходит выборку <code>ПоГруппировкам</code> и не вызывает вложенный <code>Выбрать()</code>. На записи группировки поля из <code>ИТОГИ</code> содержат агрегаты, а не исходные значения детальной строки.</div>
+        <pre>ИТОГИ
+    СУММА(УтверждениеБезОтбора),
+    КОЛИЧЕСТВО(Ссылка)
+ПО
+    Ракурс</pre>
+        <p><code>Ссылка</code> на группировке - количество утверждений ракурса. <code>УтверждениеБезОтбора</code> - сумма флага "без отбора": 0, если отбор фактов есть, и 1, если его нет. Равенство означает, что в ракурсе нет ни одного утверждения с отбором. Неравенство означает, что такое утверждение есть. Функция на первом таком ракурсе возвращает <code>Истина</code>.</p>
+        <div class="impact"><strong>Следствие</strong> Это сжатая запись условия "есть хотя бы один отбор фактов", а не сравнение ссылки с числом. Пункт как дефект отклоняется. Отдельно верно другое: если отбор стоит хотя бы у одного утверждения, тяжелый набор строится один раз на весь запуск.</div>
+      </article>
+
+      <article class="finding bad" id="f05">
+        <header>
+          <h3>N+1 на выборке группировок нет</h3>
+          <span class="id">F-05</span>
+        </header>
+        <div class="claim"><strong>Утверждение</strong> Каждый <code>Следующий()</code> внешнего цикла - неявный курсор по СУБД. Вложенный <code>Выбрать()</code> на больших объемах дает N+1, особенно пока занят менеджер временных таблиц.</div>
+        <div class="evidence"><strong>Основание</strong> Запрос выполняется один раз, в <code>ДополнительныеУтвержденияПоРакурсамV2</code>. <code>Выбрать(ОбходРезультатаЗапроса.ПоГруппировкам)</code> читает уже полученный результат платформы. Повторных обращений к СУБД этот обход не создает. Занятость менеджера временных таблиц на чтение этой выборки не влияет: выборка и менеджер - разные объекты.</div>
+        <div class="impact"><strong>Следствие</strong> Пункт отклоняется целиком. Единственный запрос списка остается дешевым и вне горячего цикла.</div>
+      </article>
+
+      <article class="finding bad" id="f06">
+        <header>
+          <h3>Нижняя граница 2N не следует из модуля</h3>
+          <span class="id">F-06</span>
+        </header>
+        <div class="claim"><strong>Утверждение</strong> На каждое утверждение минимум один round-trip вычисления и один round-trip очистки. При N утверждениях минимум 2N запросов.</div>
+        <div class="evidence"><strong>Основание</strong> Очистка сразу выходит, если текст <code>УНИЧТОЖИТЬ</code> пуст. Это утверждения, которые не создали таблиц поверх базового набора. Число запросов внутри <code>ВыполнитьУтверждение</code> в модуле V2 не видно: ядро может выполнить один пакет или несколько. Поэтому пол "2N" не доказан. Потолок тоже не "2N": ядро может быть тяжелее одного запроса.</div>
+        <div class="impact"><strong>Следствие</strong> Формулировку заменить. Для этого модуля видно N синхронных вызовов ядра и до N очисток. Плюс один запрос списка и ноль или один запрос подготовки фактов.</div>
+      </article>
+
+      <article class="finding warn" id="f07">
+        <header>
+          <h3>Мелкие стоимости очистки раздуты</h3>
+          <span class="id">F-07, F-08</span>
+        </header>
+        <div class="claim"><strong>Утверждение</strong> Вызов <code>ОбщегоНазначения.РазделительПакетаЗапросов()</code> в сборке строки и новый <code>Запрос</code> на каждой итерации - заметная компиляция. Удержание всех подготовленных фактов в памяти СУБД на время обхода - минус.</div>
+        <div class="evidence"><strong>Основание</strong> Разделитель пакета возвращает границу пакета запросов. Это не обращение к СУБД. Короткий <code>УНИЧТОЖИТЬ</code> имеет свою стоимость, но без замера она не сопоставима с запросом самого утверждения. Общий набор фактов как раз для того и держится, чтобы не строить его заново на каждой итерации. Это уже сделанная оптимизация V2, а не дефект.</div>
+        <div class="impact"><strong>Следствие</strong> Очистку оставить в карте как условный round-trip. Не ставить ее в один ряд с ядром, пока нет пошагового времени. Удержание базовых таблиц описать как расчетное свойство пайплайна.</div>
+      </article>
+
+      <article class="finding warn" id="f09">
+        <header>
+          <h3>В карту V2 попало содержимое другого файла</h3>
+          <span class="id">F-09</span>
+        </header>
+        <div class="claim"><strong>Утверждение</strong> В ядре нужно искать построчные формулы <code>{expr}</code>, обход <code>РезультатыВалидации</code> и <code>ЗаменитьВыраженияПлейсхолдерами</code> с регекспами на каждой строке.</div>
+        <div class="evidence"><strong>Основание</strong> В модуле V2 этих имен нет. Есть один вызов <code>ДополнительныеУтвержденияXBRL.ВыполнитьУтверждение</code>. Все, что внутри него, для этого разбора остается гипотезой. Верно только место вызова и то, что ядро получает общий менеджер, а после возврата рабочие таблицы уничтожаются.</div>
+        <div class="impact"><strong>Следствие</strong> Поиск этих конструкций допустим как план чтения V1. В доказанную карту V2 его не включать.</div>
+      </article>
+
+      <article class="finding bad" id="f10">
+        <header>
+          <h3>Имена механизмов параллелизма указаны неверно</h3>
+          <span class="id">F-10</span>
+        </header>
+        <div class="claim"><strong>Утверждение</strong> Параллелизма нет ни через <code>ФоновыеЗадания</code>, ни через <code>Асинх.Выполнить</code>, ни через пул. Для нарезки предложен <code>ФоновыеЗадания.ВыполнитьВФоне</code>.</div>
+        <div class="evidence"><strong>Основание</strong> Отсутствие пула в этом модуле подтверждается. Имена методов нет. У платформы запуск фонового задания - <code>ФоновыеЗадания.Выполнить</code>. Длительная операция БСП запускается через <code>ДлительныеОперации.ВыполнитьВФоне</code>. Серверный <code>Асинх</code> не создает второй поток исполнения запросов. Сам пайплайн уже может идти внутри одного длительного задания: на это указывает <code>СообщитьПрогресс</code>, но задание стартует снаружи модуля.</div>
+        <div class="impact"><strong>Следствие</strong> Вывод "этот модуль сам работу не распараллеливает" оставить. Рекомендацию по запуску переписать на существующие методы. Ограничение про несериализуемый менеджер временных таблиц верное: воркеру нужна своя копия либо заранее записанная таблица фактов.</div>
+      </article>
+
+      <article class="finding gap" id="f11">
+        <header>
+          <h3>Что в разборе не разобрано</h3>
+          <span class="id">F-11</span>
+        </header>
+        <div class="claim"><strong>Пропуски</strong> Ниже факты того же модуля, без которых вывод об оптимизации неполный.</div>
+        <div class="evidence"><strong>Основание</strong>
+          <ul>
+            <li>После проверки отбора фактов выборка уже пройдена. Перед основным циклом стоит <code>Сбросить()</code>. Без него повторный обход пуст. Это штатная связка.</li>
+            <li>В запросе группировки нет <code>УПОРЯДОЧИТЬ ПО</code>. Порядок разделов и профиль времени зависят от плана. Итог проверки от порядка не зависит.</li>
+            <li>В вызов ядра передаются пустая строка, повторно версия отчета и <code>Ложь</code>. По месту вызова <code>Ложь</code> означает, что общий набор фактов уже подготовлен и заново его строить не нужно.</li>
+            <li><code>НеВычислено</code> прибавляется к числу успешных утверждений и не прибавляется к числу успешных результатов. На скорость не влияет, колонку "ОК" раздувает.</li>
+            <li>В журнал пишется только длительность всего пайплайна. Долю подготовки, ядра и очистки из этого модуля не вывести.</li>
+            <li>Исключение закрывает раздел и прерывает весь этап: оставшиеся утверждения не считаются.</li>
+            <li>Java-валидатор считает формулы по уже загруженному набору фактов. Здесь каждое утверждение заново строит рабочие таблицы поверх одной общей заготовки. Разница не сводится к наличию цикла.</li>
+          </ul>
+        </div>
+      </article>
+
+      <div class="note">
+        Предел проверки: ядро <code>ДополнительныеУтвержденияXBRL.ВыполнитьУтверждение</code> и текст <code>СхемаЗапросаПодготовленныхФактов</code> в основание не входили. Любая оценка формул, регекспов и числа запросов внутри одного утверждения остается вне заключения.
+      </div>
+    </section>
+
+    <section id="reuse">
+      <h2>5. Что из разбора можно оставить</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>Блок</th>
+            <th>Как использовать</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Схема двух циклов и четырех точек SQL</td>
+            <td>Рабочая карта для следующего чтения кода</td>
+          </tr>
+          <tr>
+            <td>Один writer и один менеджер на весь запуск</td>
+            <td>Ограничение, из-за которого утверждения нельзя просто разложить по сеансам</td>
+          </tr>
+          <tr>
+            <td>Подготовка фактов один раз</td>
+            <td>Уже сделанная оптимизация. Повторно предлагать ее не нужно</td>
+          </tr>
+          <tr>
+            <td>Материализация фактов либо свой менеджер на воркер</td>
+            <td>Единственный реалистичный путь к нескольким сеансам</td>
+          </tr>
+          <tr>
+            <td>Следующий файл - <code>ВыполнитьУтверждение</code></td>
+            <td>Верный следующий шаг. До него оптимизацию оркестратора не проектировать</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section class="restated" id="restated">
+      <h2>6. Исправленная формулировка</h2>
+      <p>Дополнительный этап в <code>ДополнительныеУтвержденияV2</code> выполняется последовательно в одном вызове. Общие факты, если они нужны, строятся одним запросом. Затем по каждому утверждению синхронно вызывается ядро V1, и при появлении своих временных таблиц выполняется отдельный пакет <code>УНИЧТОЖИТЬ</code>.</p>
+      <ol>
+        <li>Запрос списка по ракурсам один. Его обход не порождает новых запросов.</li>
+        <li>Проверка отбора фактов читает агрегаты группировки. Общие таблицы готовятся, когда хотя бы у одного утверждения включен отбор актуальных фактов.</li>
+        <li>Число запросов ядра по этому модулю неизвестно. Очистка есть не на каждом утверждении, а только там, где появились лишние временные таблицы.</li>
+        <li>Параллелить этот цикл на том же менеджере временных таблиц нельзя. Сначала нужен текст <code>ВыполнитьУтверждение</code> и замер трех шагов: подготовка фактов, ядро, очистка.</li>
+      </ol>
+    </section>
+  </main>
+
+  <footer class="colophon">
+    CR-XBRL-DA-001. Заключение ограничено текстом оркестратора V2. Замеры СУБД и модуль V1 в объем проверки не входили.
+  </footer>
+</div>
+</body>
+</html>
