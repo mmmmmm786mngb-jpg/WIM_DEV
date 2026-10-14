@@ -59,6 +59,11 @@ class Listener(BaseHTTPRequestHandler):
         pass
 
 
+def same_ref(fo, left, right):
+    """Сравнение ссылок 1С одного типа: COM-объекты Python сравнивает по идентичности прокси, поэтому сравнивается УИД."""
+    return fo.String(left.УникальныйИдентификатор()) == fo.String(right.УникальныйИдентификатор())
+
+
 def check(name, ok, details=""):
     results.append((name, ok))
     print(f"[{'OK' if ok else 'FAIL'}] {name}" + (f" - {details}" if details else ""))
@@ -166,7 +171,7 @@ def cleanup(fo, adapter):
     used = fo.РегистрыСведений.ИспользуемыеАдаптеры.СоздатьНаборЗаписей()
     used.Прочитать()
     for i in reversed(range(used.Количество())):
-        if used.Получить(i).Адаптер == adapter:
+        if same_ref(fo, used.Получить(i).Адаптер, adapter):
             used.Удалить(i)
     used.Записать()
     obj = adapter.ПолучитьОбъект()
