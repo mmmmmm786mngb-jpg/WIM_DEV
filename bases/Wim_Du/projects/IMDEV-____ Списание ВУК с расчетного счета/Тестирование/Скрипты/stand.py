@@ -23,7 +23,7 @@ EPF_DIR = os.path.join(TASK, "Обработки")
 EPF_118 = os.path.join(EPF_DIR, "внПоступленияНаРасчетныйСчет_РозничноеДУ_1_18.epf")
 EPF_609 = os.path.join(EPF_DIR, "внЗагрузкаВыписокДУ_6_09.epf")
 RES = os.path.join(TASK, "Тестирование", "Результаты")
-# T8856_VARIANT=fix - тестовые копии с правками из CR (Тестирование\Обработки), иначе исходные 6.09 и 1.18
+# T8856_VARIANT: orig - 1.18 и 6.09; fix - копии с правками CR; new - 1.19 и 6.10; v20 - 1.20 и 6.11
 VARIANT = os.environ.get("T8856_VARIANT", "orig")
 if VARIANT == "fix":
     EPF_118 = os.path.join(TASK, "Тестирование", "Обработки", "T8856_Поступления_1_18_fix.epf")
@@ -31,6 +31,9 @@ if VARIANT == "fix":
 elif VARIANT == "new":
     EPF_118 = os.path.join(EPF_DIR, "внПоступленияНаРасчетныйСчет_РозничноеДУ_1_19.epf")
     EPF_609 = os.path.join(EPF_DIR, "внЗагрузкаВыписокДУ_6_10.epf")
+elif VARIANT == "v20":
+    EPF_118 = os.path.join(EPF_DIR, "внПоступленияНаРасчетныйСчет_РозничноеДУ_1_20.epf")
+    EPF_609 = os.path.join(EPF_DIR, "внЗагрузкаВыписокДУ_6_11.epf")
 
 TAG = "T8856"
 ACC_ERS = "40701810000030000413"
@@ -273,8 +276,12 @@ def main():
         c.Константы.ВыполнятьЗамерыПроизводительности.Установить(sys.argv[2] == "1")
         print("ВыполнятьЗамерыПроизводительности =", c.Константы.ВыполнятьЗамерыПроизводительности.Получить())
     elif cmd == "variant":
-        register_epf(c, CARD_118, "ПоступленияНаРасчетныйСчет_РозничноеДУ", EPF_118, "1.18")
-        print("карточка 1.18 ->", EPF_118)
+        versions = {"v20": ("1.20", "6.11"), "new": ("1.19", "6.10")}
+        ver_in, ver_st = versions.get(VARIANT, ("1.18", "6.09"))
+        register_epf(c, CARD_118, "ПоступленияНаРасчетныйСчет_РозничноеДУ", EPF_118, ver_in)
+        register_epf(c, CARD_609, "ЗагрузкаВыписок", EPF_609, ver_st)
+        print("карточка поступлений", ver_in, "->", EPF_118)
+        print("карточка выписки", ver_st, "->", EPF_609)
     elif cmd == "info":
         cmd_info(c)
     elif cmd == "cleanup":

@@ -1,0 +1,25 @@
+---
+description: Искать по исходникам 1С через MCP code-index, а не ripgrep по XML
+alwaysApply: true
+---
+
+# Индекс исходников 1С (MCP code-index)
+
+Поиск по выгрузкам конфигураций и расширений в `WORK` делать через MCP `user-code-index`. Сначала `GetDynamicTools` по этому namespace, затем `CallDynamicTool`. В каждый вызов передавать `repo` — алиас дерева.
+
+Алиасы: `wim_fo`, `wim_fo_cfe_vtb`, `wim_fo_cfe_vtb_prod`, `wim_mo`, `wim_du`, `wim_du_cfe_imtools`, `wim_du_cfe_vtb_devops`, `wim_pif`, `wim_pif_cfe_imtools`, `wim_pif_cfe_vtb_devops`, `wim_pif_cfe_vtb_ndfl`, `wim_pif_cfe_vtb_over_trans`, `wim_pif_cfe_vtb`, `wim_pif_cfe_uko`, `wim_fin`, `wim_fin_cfe_tm2_kua`, `wim_fin_cfe_vtb_devops`, `wim_fin_cfe_du20_inhouse`, `wim_fin_cfe_exchange_du`, `wim_fin_cfe_ndfl_exchange`, `wim_do`, `sbb_broker`, `sbb_depo`, `nrb_depo`, `ut`.
+
+| Задача | Инструмент |
+|---|---|
+| Где реализована процедура или термин | `search_terms`, затем `search_function` |
+| Точное имя процедуры, модуля, объекта | `find_symbol` |
+| Состав объекта метаданных | `get_object_structure` |
+| Обработчики формы | `get_form_handlers` |
+| Подписки на события | `get_event_subscriptions` |
+| Кто вызывает / цепочка вызовов | `find_path_bsl` |
+| Движения, измерения, кто пишет регистр | `get_data_links`, `find_data_path`, `get_register_writers` |
+| Строка в тексте модуля или XML | `search_text`, `grep_text` |
+
+`Grep` и чтение файлов — для репозитория `WIM_DEV` (проекты, документация, скрипты) и когда индекс отвечает `daemon_offline` или сервер не поднят. Эталон УТ искать в `repo=ut`, не обходом каталога.
+
+Сигнатуры платформы по-прежнему сверять через `user-1c-platform`, не через индекс.

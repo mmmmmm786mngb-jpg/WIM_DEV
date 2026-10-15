@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# cfe-validate v1.18 — Validate 1C configuration extension XML structure (CFE)
+# cfe-validate v1.19 — Validate 1C configuration extension XML structure (CFE)
 # Source: https://github.com/Nikolay-Shirokov/cc-1c-skills
 """Validates extension Configuration.xml: root, InternalInfo, extension properties, ChildObjects, borrowed objects."""
 import sys, os, argparse, re
@@ -1096,6 +1096,18 @@ def main():
     elif check13_ok:
         r.ok('13. TypeLink: clean')
 
+    # Каталог конфигурации-источника из -ConfigPath (каталог или путь к Configuration.xml). Общий для
+    # проверок 14 и 18; есть ли там Configuration.xml, каждая проверка решает и сообщает сама.
+    def source_config_root():
+        root = config_path_arg
+        if not os.path.isabs(root):
+            root = os.path.join(os.getcwd(), root)
+        if os.path.exists(root) and not os.path.isdir(root):
+            root = os.path.dirname(root)
+        return root
+
+    src_root_warned = False
+
     # --- Check 14: пути Объект.* заимствованных форм против конфигурации-источника ---
     # Требует -ConfigPath: отличить живой путь от висячего можно только по исходному объекту.
     # «Объект.Партнер» валиден и без заимствования реквизита (наследуется от базы), а «Объект.Товары.Артикул»
@@ -1105,14 +1117,11 @@ def main():
         if not config_path_arg:
             r.out('[INFO]  14. Пути Объект.* против конфигурации-источника не проверялись: не задан -ConfigPath')
         else:
-            cfg_root = config_path_arg
-            if not os.path.isabs(cfg_root):
-                cfg_root = os.path.join(os.getcwd(), cfg_root)
-            if os.path.exists(cfg_root) and not os.path.isdir(cfg_root):
-                cfg_root = os.path.dirname(cfg_root)
+            cfg_root = source_config_root()
 
             if not os.path.isfile(os.path.join(cfg_root, 'Configuration.xml')):
                 r.warn(f"14. -ConfigPath '{config_path_arg}': Configuration.xml не найден — проверка путей пропущена")
+                src_root_warned = True
             else:
                 check14_ok = True
                 path_check_count = 0
@@ -1407,6 +1416,162 @@ def main():
                    'but the dump is no longer uniform (typical after merging branches dumped by different platforms)')
         elif ver_errors == 0 and ver_bodies_ok > 0:
             r.ok(f'17. Format version: {ver_bodies_ok} stamped part(s) agree with their descriptors and the extension')
+
+    # --- Check 18: заимствованные объекты и основной язык против конфигурации-источника ---
+    # ОбъектРасширяемойКонфигурации контролируется у самого объекта и у каждого заимствованного
+    # подобъекта (реквизит, ТЧ, колонка ТЧ, форма — замер 8.3.24), ОсновнойЯзык — у расширения.
+    # Расхождение платформа принимает при загрузке, а применять расширение отказывается, и по
+    # сообщению не видно, откуда взялся чужой UUID. Нулевой UUID (cfe-init без -ConfigPath) не
+    # совпадёт ни с чем — его видно и без источника.
+
+    # UUID, по которому подобъект связан с основной конфигурацией: в расширении —
+    # ExtendedConfigurationObject (у собственных подобъектов его нет), в источнике — атрибут uuid.
+    def md_id_value(el, from_extension):
+        if from_extension:
+            n = el.xpath("*[local-name()='Properties']/*[local-name()='ExtendedConfigurationObject']")
+            return (n[0].text or '').strip() if n else None
+        return el.get('uuid') or None
+
+    # Подобъекты, у которых в ChildObjects владельца только имя, а описание — в отдельном файле
+    # <каталог владельца>/<Имя владельца>/<Каталог>/<Имя>.xml.
+    nested_file_dirs = {'Form': 'Forms', 'Template': 'Templates', 'Subsystem': 'Subsystems', 'Recalculation': 'Recalculations'}
+
+    # Объект или подобъект из отдельного файла: сам файл и всё, что под ним. False — файла нет или он
+    # не читается.
+    def add_md_id_file(idx, obj_file, key, from_extension):
+        if not os.path.isfile(obj_file):
+            return False
+        try:
+            doc_root = etree.parse(obj_file).getroot()
+        except Exception:
+            return False
+        obj_el = None
+        for c in doc_root:
+            if isinstance(c.tag, str):
+                obj_el = c
+                break
+        if obj_el is None:
+            return False
+        v = md_id_value(obj_el, from_extension)
+        if v:
+            idx[key] = v
+        own_dir = os.path.join(os.path.dirname(obj_file), os.path.splitext(os.path.basename(obj_file))[0])
+        add_md_id_entries(idx, obj_el, key, from_extension, own_dir)
+        return True
+
+    # Подобъекты с собственными свойствами (реквизиты, ТЧ и их колонки, значения перечисления, команды
+    # и т.п.) лежат в ChildObjects целиком — обходим их рекурсивно. Формы, макеты, вложенные подсистемы
+    # и перерасчёты там — только имя: их UUID в отдельном файле под каталогом владельца.
+    def add_md_id_entries(idx, el, prefix, from_extension, own_dir):
+        co = el.xpath("*[local-name()='ChildObjects']")
+        if not co:
+            return
+        for sub in co[0]:
+            if not isinstance(sub.tag, str):
+                continue
+            sub_type = etree.QName(sub.tag).localname
+            name_node = sub.xpath("*[local-name()='Properties']/*[local-name()='Name']")
+            if name_node:
+                key = f'{prefix}.{sub_type}.{(name_node[0].text or "").strip()}'
+                v = md_id_value(sub, from_extension)
+                if v:
+                    idx[key] = v
+                add_md_id_entries(idx, sub, key, from_extension, '')
+            elif own_dir and sub_type in nested_file_dirs and (sub.text or '').strip():
+                sub_name = sub.text.strip()
+                sub_file = os.path.join(own_dir, nested_file_dirs[sub_type], f'{sub_name}.xml')
+                add_md_id_file(idx, sub_file, f'{prefix}.{sub_type}.{sub_name}', from_extension)
+
+    # Индекс «путь подобъекта → UUID связи» по файлу объекта; None — файла нет или он не читается.
+    # Ключи сравниваются с учётом регистра: имя заимствованного подобъекта платформа сверяет точно
+    # (контролируемое свойство «Имя», замер 8.3.24), хотя в коде 1С имена регистронезависимы.
+    def md_id_index(type_dir, type_name, obj_name, from_extension):
+        idx = {}
+        if not add_md_id_file(idx, os.path.join(type_dir, f'{obj_name}.xml'), f'{type_name}.{obj_name}', from_extension):
+            return None
+        return idx
+
+    if not r.stopped and child_obj_node is not None:
+        zero_guid = '00000000-0000-0000-0000-000000000000'
+        src_root = None
+        src_cfg_root = None
+        if config_path_arg:
+            src_root = source_config_root()
+            src_cfg_file = os.path.join(src_root, 'Configuration.xml')
+            if not os.path.isfile(src_cfg_file):
+                # Проверка 14 об этом уже сказала — второй раз не повторяем.
+                if not src_root_warned:
+                    r.warn(f"18. -ConfigPath '{config_path_arg}': Configuration.xml не найден — сверка с конфигурацией-источником пропущена")
+                src_root = None
+            else:
+                try:
+                    src_cfg_root = etree.parse(src_cfg_file).getroot()
+                except Exception:
+                    r.warn(f"18. -ConfigPath '{config_path_arg}': Configuration.xml не читается — сверка с конфигурацией-источником пропущена")
+                    src_root = None
+
+        check18_ok = True
+        check18_count = 0
+
+        if src_root:
+            src_def_lang_node = src_cfg_root.xpath("//*[local-name()='Configuration']/*[local-name()='Properties']/*[local-name()='DefaultLanguage']")
+            src_def_lang = (src_def_lang_node[0].text or '').strip() if src_def_lang_node else ''
+            ext_def_lang = (def_lang or '').strip()
+            if ext_def_lang and src_def_lang:
+                check18_count += 1
+                if ext_def_lang != src_def_lang:
+                    r.error(f'18. DefaultLanguage расширения "{def_lang}", а у конфигурации-источника "{src_def_lang}" — платформа загрузит расширение, но не применит («ОсновнойЯзык не совпадает»)')
+                    check18_ok = False
+
+        for child in child_obj_node:
+            if r.stopped:
+                break
+            if not isinstance(child.tag, str):
+                continue
+            type_name = etree.QName(child.tag).localname
+            if type_name not in CHILD_TYPE_DIR_MAP:
+                continue
+            obj_name18 = (child.text or '').strip()
+            if not obj_name18:
+                continue
+            dir_name = CHILD_TYPE_DIR_MAP[type_name]
+            ext_idx = md_id_index(os.path.join(config_dir, dir_name), type_name, obj_name18, True)
+            if not ext_idx:
+                continue
+
+            if not src_root:
+                for key, ext_id in ext_idx.items():
+                    check18_count += 1
+                    if ext_id == zero_guid:
+                        r.warn(f'18. {key}: ExtendedConfigurationObject нулевой — платформа загрузит расширение, но не применит. Создайте расширение и заимствуйте объекты с -ConfigPath')
+                continue
+
+            src_idx = md_id_index(os.path.join(src_root, dir_name), type_name, obj_name18, False)
+            if src_idx is None:
+                r.error(f'18. {type_name}.{obj_name18}: заимствованного объекта нет в конфигурации-источнике ({dir_name}/{obj_name18}.xml)')
+                check18_ok = False
+                continue
+            for key, ext_id in ext_idx.items():
+                check18_count += 1
+                src_id = src_idx.get(key)
+                if src_id is None:
+                    case_twin = next((sk for sk in src_idx if sk.upper() == key.upper()), None)
+                    if case_twin:
+                        r.error(f'18. {key}: в конфигурации-источнике имя в другом регистре ({case_twin}) — платформа загрузит расширение, но не применит («контролируемое свойство Имя не совпадает»)')
+                    else:
+                        r.error(f'18. {key}: заимствованного подобъекта нет в конфигурации-источнике')
+                    check18_ok = False
+                elif ext_id.lower() != src_id.lower():
+                    what = 'нулевой' if ext_id == zero_guid else ext_id
+                    r.error(f'18. {key}: ExtendedConfigurationObject {what}, а UUID в конфигурации-источнике {src_id} — платформа загрузит расширение, но не применит («ОбъектРасширяемойКонфигурации не совпадает»)')
+                    check18_ok = False
+                if r.stopped:
+                    break
+
+        if not config_path_arg:
+            r.out('[INFO]  18. Заимствованные объекты и основной язык против конфигурации-источника не сверялись: не задан -ConfigPath')
+        elif src_root and check18_ok and check18_count > 0:
+            r.ok(f'18. Source config: {check18_count} link(s) agree (DefaultLanguage, ExtendedConfigurationObject)')
 
     # --- Breadcrumb: controlled methods (&ИзменениеИКонтроль) drift is not checked here ---
     ctrl_kw = bsl_keywords()
