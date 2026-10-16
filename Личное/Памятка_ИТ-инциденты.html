@@ -1,0 +1,423 @@
+<title>Памятка по ИТ-инцидентам</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Golos+Text:wght@400;500;600;700&family=Unbounded:wght@500;700&family=JetBrains+Mono:wght@500;700&display=swap">
+<style>
+/* Layout: one reading column, sticky toolbar (search + self-test), reference blocks first, then Q&A cards with severity-style answer marks */
+:root {
+  --bg: #f3f5f9;
+  --surface: #ffffff;
+  --fg: #18203a;
+  --muted: #5b6480;
+  --line: #d9deea;
+  --accent: #2f4a8a;
+  --accent-soft: #e4e9f6;
+  --ok: #1f7a4d;
+  --ok-soft: #e1f3e9;
+  --sev1: #d62f3a;
+  --sev2: #ee8f2f;
+  --sev3: #9fcf6a;
+  --sev4: #5fb34a;
+  --sev-ink: #18203a;
+  --font-display: "Unbounded", "Golos Text", system-ui, sans-serif;
+  --font-body: "Golos Text", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #11152a; --surface: #1a2038; --fg: #e6e9f4; --muted: #9aa3c0; --line: #2c3456;
+    --accent: #8fa8ec; --accent-soft: #232c4d; --ok: #6fd39c; --ok-soft: #173a2a;
+    --sev1: #e8545d; --sev2: #f0a14f; --sev3: #a9d77a; --sev4: #74c45f; --sev-ink: #11152a;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #11152a; --surface: #1a2038; --fg: #e6e9f4; --muted: #9aa3c0; --line: #2c3456;
+  --accent: #8fa8ec; --accent-soft: #232c4d; --ok: #6fd39c; --ok-soft: #173a2a;
+  --sev1: #e8545d; --sev2: #f0a14f; --sev3: #a9d77a; --sev4: #74c45f; --sev-ink: #11152a;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--fg); font-family: var(--font-body); font-size: 16px; line-height: 1.55; }
+.wrap { max-width: 880px; margin: 0 auto; padding-block: 32px 64px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); display: grid; gap: 40px; }
+h1, h2, h3 { text-wrap: balance; margin: 0; }
+h1 { font-family: var(--font-display); font-weight: 700; font-size: clamp(1.6rem, 4vw, 2.2rem); line-height: 1.2; letter-spacing: -0.01em; }
+h2 { font-family: var(--font-display); font-weight: 500; font-size: 1.25rem; }
+h3 { font-size: 1.05rem; font-weight: 600; }
+p { margin: 0; }
+.eyebrow { font-family: var(--font-mono); font-size: 0.75rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+header { display: grid; gap: 10px; }
+header p { color: var(--muted); max-width: 62ch; }
+section { display: grid; gap: 16px; }
+.section-head { display: grid; gap: 4px; }
+.section-head p { color: var(--muted); font-size: 0.95rem; }
+
+/* toolbar */
+.toolbar { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; background: var(--bg); padding-block: 10px; display: flex; flex-wrap: wrap; gap: 10px; align-items: center; border-bottom: 1px solid var(--line); }
+.toolbar input[type="search"] { flex: 1 1 240px; min-width: 0; font: inherit; padding: 10px 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); color: var(--fg); }
+.toolbar input:focus-visible, button:focus-visible, .qa:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.toggle { display: inline-flex; align-items: center; gap: 8px; font: inherit; font-weight: 500; padding: 10px 14px; border-radius: 8px; border: 1px solid var(--accent); background: var(--surface); color: var(--accent); cursor: pointer; }
+.toggle[aria-pressed="true"] { background: var(--accent); color: var(--surface); }
+.count { font-family: var(--font-mono); font-size: 0.8rem; color: var(--muted); }
+
+/* key numbers */
+.nums { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 10px; }
+.num { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 14px; display: grid; gap: 4px; align-content: start; }
+.num b { font-family: var(--font-mono); font-size: 1.5rem; font-weight: 700; color: var(--accent); font-variant-numeric: tabular-nums; line-height: 1.1; }
+.num span { font-size: 0.9rem; color: var(--muted); }
+
+/* tables */
+.tbl { overflow-x: auto; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; }
+table { border-collapse: collapse; width: 100%; font-size: 0.93rem; }
+th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
+tr:last-child td { border-bottom: 0; }
+th { font-weight: 600; color: var(--muted); font-size: 0.8rem; letter-spacing: 0.04em; text-transform: uppercase; }
+.sev { display: inline-flex; align-items: center; justify-content: center; min-width: 2em; padding: 2px 8px; border-radius: 6px; font-family: var(--font-mono); font-weight: 700; color: var(--sev-ink); font-variant-numeric: tabular-nums; }
+.s1 { background: var(--sev1); color: #fff; } .s2 { background: var(--sev2); } .s3 { background: var(--sev3); } .s4 { background: var(--sev4); }
+.matrix td, .matrix th { text-align: center; }
+.matrix th:first-child, .matrix td:first-child { text-align: left; }
+.note { font-size: 0.9rem; color: var(--muted); }
+
+/* lifecycle */
+.steps { list-style: none; padding: 0; margin: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 8px; counter-reset: st; }
+.steps li { counter-increment: st; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; display: flex; gap: 10px; align-items: baseline; }
+.steps li::before { content: counter(st); font-family: var(--font-mono); font-weight: 700; color: var(--accent); }
+
+/* level-1 timeline */
+.timeline { display: grid; gap: 8px; }
+.tl-row { display: grid; grid-template-columns: 112px 1fr; gap: 12px; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 12px; }
+.tl-row .t { font-family: var(--font-mono); font-weight: 700; color: var(--accent); font-variant-numeric: tabular-nums; }
+.tl-row div { min-width: 0; display: grid; gap: 4px; }
+.tl-row ul, .qa ul, .qa ol { margin: 4px 0 0; padding-left: 1.2em; }
+@media (max-width: 520px) { .tl-row { grid-template-columns: 1fr; gap: 4px; } }
+
+/* Q&A cards */
+.qa-list { display: grid; gap: 12px; }
+.qa { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 16px; display: grid; gap: 10px; }
+.qa-top { display: flex; gap: 10px; align-items: baseline; justify-content: space-between; flex-wrap: wrap; }
+.qa-top h3 { flex: 1 1 300px; min-width: 0; }
+.src { font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); background: var(--accent-soft); border-radius: 5px; padding: 2px 7px; white-space: nowrap; }
+.opts { list-style: none; padding: 0; margin: 0; display: grid; gap: 6px; }
+.opts li { display: grid; grid-template-columns: 1.6em 1fr; gap: 6px; padding: 8px 10px; border-radius: 8px; border: 1px solid var(--line); }
+.opts li .n { font-family: var(--font-mono); color: var(--muted); }
+.opts li.right { border-color: var(--ok); background: var(--ok-soft); }
+.opts li.right .n { color: var(--ok); font-weight: 700; }
+.answer { display: grid; gap: 6px; border-left: 3px solid var(--ok); padding-left: 12px; }
+.answer .lbl { font-size: 0.75rem; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--ok); }
+.caveat { font-size: 0.9rem; color: var(--muted); }
+.reveal-hint { display: none; font-size: 0.85rem; color: var(--accent); font-weight: 500; }
+
+/* self-test mode: answers hidden until the card is opened */
+.quiz .qa:not(.open) .answer { display: none; }
+.quiz .qa:not(.open) .opts li.right { border-color: var(--line); background: transparent; }
+.quiz .qa:not(.open) .opts li.right .n { color: var(--muted); font-weight: 400; }
+.quiz .qa:not(.open) .reveal-hint { display: block; }
+.quiz .qa { cursor: pointer; }
+.quiz .qa.open { cursor: default; }
+.empty { color: var(--muted); }
+@media (prefers-reduced-motion: no-preference) { .toggle { transition: background 0.15s, color 0.15s; } }
+</style>
+
+<div class="wrap" id="app">
+  <header>
+    <div class="eyebrow">Подготовка к экзамену</div>
+    <h1>Управление ИТ-инцидентами</h1>
+    <p>Памятка составлена по слайдам «Управление ИТ-инцидентами» (октябрь 2026). У каждого ответа указана страница презентации, на которой он подтверждается.</p>
+  </header>
+
+  <div class="toolbar">
+    <input type="search" id="q" placeholder="Поиск по вопросам: владелец, 30 минут, SCSM..." aria-label="Поиск по вопросам">
+    <button class="toggle" id="quiz" type="button" aria-pressed="false">Режим самопроверки</button>
+    <span class="count" id="count"></span>
+  </div>
+
+  <section id="numbers">
+    <div class="section-head">
+      <h2>Цифры, которые спрашивают</h2>
+      <p>Сроки и интервалы из презентации.</p>
+    </div>
+    <div class="nums">
+      <div class="num"><b>10 мин</b><span>за это время после регистрации критического инцидента его владелец собирает рабочую группу</span></div>
+      <div class="num"><b>15 мин</b><span>отводится на регистрацию инцидента и назначение владельца (схема для уровня 1)</span></div>
+      <div class="num"><b>120 мин</b><span>отводится на разрешение критического инцидента уровня 1</span></div>
+      <div class="num"><b>30 мин</b><span>интервал обновления статуса инцидента уровня 1 (раньше, если появились новые детали)</span></div>
+      <div class="num"><b>60 дней</b><span>календарных, на поиск и устранение первопричины</span></div>
+      <div class="num"><b>3 раб. дня</b><span>не позднее этого срока с момента возникновения инцидента собирается комиссия по расследованию</span></div>
+      <div class="num"><b>1 час</b><span>за это время раскрывается информация на сайте Компании, если затронута система ПУРЦБ</span></div>
+      <div class="num"><b>IRXXXXX</b><span>маска номера инцидента в MS SCSM, где XXXXX - порядковый номер</span></div>
+    </div>
+  </section>
+
+  <section id="levels">
+    <div class="section-head">
+      <h2>Уровни критичности и сроки</h2>
+      <p>Уровни 1 и 2 считаются критическими, уровни 3 и 4 стандартными.</p>
+    </div>
+    <div class="tbl">
+      <table>
+        <thead><tr><th>Уровень</th><th>Целевое время решения</th><th>Что означает</th></tr></thead>
+        <tbody>
+          <tr><td><span class="sev s1">1</span> Критический</td><td>2 часа</td><td>Ключевые ИС, внутренние и внешние клиентские ИТ-сервисы недоступны, затронуто большое количество пользователей. Значительное влияние на бизнес (финансовое, репутационное) или на выполнение регуляторных требований.</td></tr>
+          <tr><td><span class="sev s2">2</span> Высокий</td><td>4 часа</td><td>Работа ключевых ИС и ИТ-сервисов ограничена, но не заблокирована полностью, либо влияние небольшое. Восстановление должно быть выполнено в течение 4 часов.</td></tr>
+          <tr><td><span class="sev s3">3</span> Значительный</td><td>2 рабочих дня</td><td>Нет непосредственного влияния на ключевые ИС, срочное восстановление не требуется. На слайде этот уровень назван «Существенный»; точное число часов на слайде обрезано.</td></tr>
+          <tr><td><span class="sev s4">4</span> Незначительный</td><td>1 неделя</td><td>Не влияет на доступность ИТ-сервиса, может быть разрешен без срочного вмешательства.</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="note">Если инцидент подходит под несколько критериев, ему присваивают наиболее высокий уровень. Стр. 5, 6, 8.</p>
+  </section>
+
+  <section id="algo">
+    <div class="section-head">
+      <h2>Алгоритм определения критичности</h2>
+      <p>Шаги идут по порядку. Алгоритм завершается на первом шаге, где ответ «да».</p>
+    </div>
+    <div class="tbl">
+      <table>
+        <thead><tr><th>Шаг</th><th>Вопрос</th><th>Да</th><th>Нет</th></tr></thead>
+        <tbody>
+          <tr><td>1</td><td>Есть нарушение регуляторных требований?</td><td><span class="sev s1">1</span></td><td>шаг 2</td></tr>
+          <tr><td>2</td><td>Нарушено предоставление дистанционного клиентского сервиса или недоступен веб-сайт Компании Группы?</td><td>шаг 2а</td><td>шаг 3</td></tr>
+          <tr><td>2а</td><td>ИС полностью недоступна у нескольких клиентов, или сбой затронул критичные для клиента функции у нескольких клиентов?</td><td><span class="sev s1">1</span></td><td><span class="sev s2">2</span></td></tr>
+          <tr><td>3</td><td>Сбой во внутренних пользовательских сервисах (без регуляторного и клиентского влияния)</td><td colspan="2">уровень определяется по матрице ниже</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="tbl">
+      <table class="matrix">
+        <thead><tr><th>Срочность \ Влияние</th><th>Компания Группы</th><th>Департамент</th><th>Несколько пользователей</th><th>Пользователь</th></tr></thead>
+        <tbody>
+          <tr><td>Очень высокая</td><td><span class="sev s1">1</span></td><td><span class="sev s1">1</span></td><td><span class="sev s2">2</span></td><td><span class="sev s2">2</span></td></tr>
+          <tr><td>Высокая</td><td><span class="sev s1">1</span></td><td><span class="sev s2">2</span></td><td><span class="sev s2">2</span></td><td><span class="sev s3">3</span></td></tr>
+          <tr><td>Средняя</td><td><span class="sev s2">2</span></td><td><span class="sev s2">2</span></td><td><span class="sev s3">3</span></td><td><span class="sev s3">3</span></td></tr>
+          <tr><td>Небольшая</td><td><span class="sev s2">2</span></td><td><span class="sev s3">3</span></td><td><span class="sev s3">3</span></td><td><span class="sev s4">4</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="note">Матрица применяется к внутренним пользовательским инцидентам без регуляторного и прямого клиентского влияния. Стр. 5.</p>
+  </section>
+
+  <section id="lifecycle">
+    <div class="section-head">
+      <h2>Жизненный цикл ИТ-инцидента</h2>
+      <p>Восемь этапов по порядку. Стр. 7.</p>
+    </div>
+    <ol class="steps">
+      <li>Обнаружение и регистрация</li>
+      <li>Категоризация</li>
+      <li>Определение критичности</li>
+      <li>Первичная диагностика</li>
+      <li>Эскалация</li>
+      <li>Изучение и диагностика</li>
+      <li>Разрешение и восстановление</li>
+      <li>Закрытие</li>
+    </ol>
+  </section>
+
+  <section id="level1">
+    <div class="section-head">
+      <h2>Разрешение критического инцидента уровня 1</h2>
+      <p>Порядок этапов по схеме на стр. 11. Статус обновляется каждые 30 минут на протяжении всего разрешения.</p>
+    </div>
+    <div class="timeline">
+      <div class="tl-row"><span class="t">15 мин</span><div><h3>Регистрация и назначение владельца</h3><p>Выполняет работник ДИТ, первым обнаруживший инцидент: регистрирует инцидент и уведомляет ИТ-владельцев затронутых ИС. Владельцем инцидента становится ИТ-владелец затронутой ИС. Если затронуто несколько ИС, владельца выбирают совместно; спорный случай решает Руководитель ДИТ.</p></div></div>
+      <div class="tl-row"><span class="t">10 мин</span><div><h3>Созыв рабочей группы и разработка плана</h3><p>Выполняет владелец инцидента:</p><ul><li>собирает рабочую группу;</li><li>подтверждает критичность;</li><li>разрабатывает план восстановления работы ИС или ИТ-сервиса, включая уведомление внутренних и внешних пользователей;</li><li>разрабатывает план устранения последствий.</li></ul></div></div>
+      <div class="tl-row"><span class="t">до 120 мин</span><div><h3>Выполнение плана и подтверждение восстановления</h3><p>Выполняет владелец инцидента или ответственный за ИС подразделения:</p><ul><li>выполняет действия по плану;</li><li>проверяет восстановление внутри ДИТ;</li><li>получает подтверждение восстановления от затронутых пользователей;</li><li>уведомляет внутренних и внешних пользователей о восстановлении.</li></ul></div></div>
+      <div class="tl-row"><span class="t">Закрытие</span><div><h3>Эскалация и комиссия</h3><p>Если разрешение выходит за целевой срок, инцидент эскалируют Руководителю ДИТ. Комиссия по расследованию собирается не позднее 3 рабочих дней с момента возникновения инцидента.</p></div></div>
+    </div>
+  </section>
+
+  <section id="exam">
+    <div class="section-head">
+      <h2>Вопросы, уже разобранные</h2>
+      <p>Варианты ответов приведены в формулировках экзамена, правильный выделен.</p>
+    </div>
+    <div class="qa-list" data-list>
+      <article class="qa" tabindex="0">
+        <div class="qa-top"><h3>Что должен сделать владелец критического ИТ-инцидента в течение 10 минут с момента его регистрации?</h3><span class="src">стр. 10, 11</span></div>
+        <ol class="opts"><li><span class="n">1</span><span>Закрыть</span></li><li><span class="n">2</span><span>Запросить статус у каждой затронутой группы и начать координацию</span></li><li class="right"><span class="n">3</span><span>Собрать рабочую группу</span></li></ol>
+        <p class="reveal-hint">Нажмите, чтобы показать ответ</p>
+        <div class="answer"><span class="lbl">Почему</span><p>В течение 10 минут после регистрации владелец собирает рабочую группу. Группа составляет план восстановления, включая уведомление клиентов и пользователей, и назначает ответственных за пункты плана. На схеме этот этап обозначен «Созыв рабочей группы - 10 минут».</p></div>
+      </article>
+      <article class="qa" tabindex="0">
+        <div class="qa-top"><h3>Кто выступает в роли Владельца Критического ИТ-инцидента?</h3><span class="src">стр. 9</span></div>
+        <ol class="opts"><li><span class="n">1</span><span>ИТ-Сервис Деск</span></li><li class="right"><span class="n">2</span><span>ИТ-владелец ИС, затронутой ИТ-инцидентом</span></li><li><span class="n">3</span><span>Руководитель ДИТ</span></li></ol>
+        <p class="reveal-hint">Нажмите, чтобы показать ответ</p>
+        <div class="answer"><span class="lbl">Почему</span><p>Владельцем становится ИТ-владелец затронутой ИС или его представитель. Руководитель ДИТ только назначает владельца в спорных случаях. Если у ИС нет ИТ-владельца, роль выполняет Руководитель подразделения, ответственного за ИС.</p></div>
+      </article>
+      <article class="qa" tabindex="0">
+        <div class="qa-top"><h3>Критический ИТ-инцидент затрагивает несколько ИС. Как определяется его владелец?</h3><span class="src">стр. 9, 11</span></div>
+        <ol class="opts"><li class="right"><span class="n">1</span><span>Решить совместно с ИТ-владельцами других затронутых ИС; если не договорились, эскалировать Руководителю ДИТ</span></li><li><span class="n">2</span><span>Владельцем становится тот, кто первым обнаружил инцидент</span></li><li><span class="n">3</span><span>Владелец всегда ИТ-Сервис Деск</span></li></ol>
+        <p class="reveal-hint">Нажмите, чтобы показать ответ</p>
+        <div class="answer"><span class="lbl">Почему</span><p>ИТ-владельцы затронутых ИС совместно выбирают, кто примет роль владельца. Если определить владельца невозможно, Руководитель ДИТ назначает его сам. Работник, первым обнаруживший инцидент, только регистрирует его.</p></div>
+      </article>
+      <article class="qa" tabindex="0">
+        <div class="qa-top"><h3>Я обнаружил критический ИТ-инцидент и завел его через форму. Что делать дальше?</h3><span class="src">стр. 9, 11</span></div>
+        <ol class="opts"><li class="right"><span class="n">1</span><span>Уведомить ИТ-владельцев ИС, затронутых инцидентом</span></li><li><span class="n">2</span><span>Дождаться, пока ИТ-Сервис Деск назначит ответственного, и действовать по его указаниям</span></li><li><span class="n">3</span><span>От меня больше ничего не требуется</span></li></ol>
+        <p class="reveal-hint">Нажмите, чтобы показать ответ</p>
+        <div class="answer"><span class="lbl">Почему</span><p>У того, кто первым обнаружил инцидент, две обязанности: зарегистрировать инцидент и уведомить ИТ-владельцев затронутых ИС.</p></div>
+      </article>
+      <article class="qa" tabindex="0">
+        <div class="qa-top"><h3>Критический ИТ-инцидент разрешен, но первопричина неизвестна. Мои действия?</h3><span class="src">стр. 8, 10</span></div>
+        <ol class="opts"><li><span class="n">1</span><span>Оставить в работе, завести отдельную задачу на поиск первопричины и ждать ее выполнения</span></li><li><span class="n">2</span><span>Назначить инцидент на ИТ-Сервис Деск</span></li><li class="right"><span class="n">3</span><span>Закрыть инцидент, оставив поле «Первопричина» в значении TBD</span></li></ol>
+        <p class="reveal-hint">Нажмите, чтобы показать ответ</p>
+        <div class="answer"><span class="lbl">Почему</span><p>Разрешить инцидент значит восстановить работоспособность ИТ-сервиса; устранять корневую причину для этого не обязательно. На поиск и устранение первопричины отводится 60 календарных дней.</p><p class="caveat">Поле «Первопричина» и значение TBD в презентации не упоминаются. Ответ выведен из этих двух положений.</p></div>
+      </article>
+      <article class="qa" tabindex="0">
+        <div class="qa-top"><h3>Что такое ИТ-инцидент?</h3><span class="src">стр. 3</span></div>
+        <ol class="opts"><li class="right"><span class="n">1</span><span>Незапланированное прерывание или ухудшение качества ИТ-сервиса (-ов), включая риски потенциальных сбоев, которые еще не успели повлиять на работу ИТ-сервисов</span></li><li><span class="n">2</span><span>Формализованное обращение пользователя за стандартной ИТ-услугой из каталога, доступом, оборудованием, ПО или консультацией</span></li><li><span class="n">3</span><span>Модификация в промышленной ИТ-среде для расширения функционала, устранения неисправности или улучшения ИС</span></li></ol>
+        <p class="reveal-hint">Нажмите, чтобы показать ответ</p>
+        <div class="answer"><span class="lbl">Почему</span><p>Вариант 1 дословно совпадает с определением в презентации. Вариант 2 описывает запрос на обслуживание, вариант 3 - ИТ-изменение.</p></div>
+      </article>
+      <article class="qa" tabindex="0">
+        <div class="qa-top"><h3>Как определить критичность ИТ-инцидента?</h3><span class="src">стр. 5</span></div>
+        <ol class="opts"><li><span class="n">1</span><span>Ориентироваться на статус пользователя (VIP или нет), который сообщил об инциденте</span></li><li><span class="n">2</span><span>Выбрать наименьшее значение из доступных на форме</span></li><li class="right"><span class="n">3</span><span>Использовать алгоритм и матрицу определения критичности</span></li></ol>
+        <p class="reveal-hint">Нажмите, чтобы показать ответ</p>
+        <div class="answer"><span class="lbl">Почему</span><p>Критичность определяется по матрице: учитывается влияние инцидента (регуляторное, клиентское, внутреннее пользовательское) и требуемая срочность решения. Если инцидент подходит под несколько критериев, ему присваивают наиболее высокий уровень.</p></div>
+      </article>
+    </div>
+  </section>
+
+  <section id="more">
+    <div class="section-head">
+      <h2>Другие вопросы по презентации</h2>
+      <p>На экзамене их еще не задавали, но ответы на них есть в слайдах.</p>
+    </div>
+    <div class="qa-list" data-list>
+      <article class="qa" tabindex="0">
+        <div class="qa-top"><h3>Что такое Критический ИТ-инцидент?</h3><span class="src">стр. 3</span></div>
+        <p class="reveal-hint">Нажмите, чтобы показать ответ</p>
+        <div class="answer"><p>ИТ-инцидент, который имеет существенное влияние (или срочность) и требует реагирования за рамками стандартного процесса управления ИТ-инцидентами.</p></div>
+      </article>
+      <article class="qa" tabindex="0">
+        <div class="qa-top"><h3>Кто такой Владелец Критического ИТ-инцидента (определение)?</h3><span class="src">стр. 3</span></div>
+        <p class="reveal-hint">Нажмите, чтобы показать ответ</p>
+        <div class="answer"><p>Работник, ответственный за полное сопровождение критического инцидента на всех этапах жизненного цикла: своевременное разрешение и восстановление нормальной работы ИТ-сервисов с минимальным воздействием на бизнес.</p></div>
+      </article>
+      <article class="qa" tabindex="0">
+        <div class="qa-top"><h3>Откуда ДИТ узнает о потенциальном ИТ-инциденте?</h3><span class="src">стр. 4</span></div>
+        <p class="reveal-hint">Нажмите, чтобы показать ответ</p>
+        <div class="answer"><ul><li>От пользователей сервиса: они обращаются в техническую поддержку с жалобой.</li><li>Из событий систем мониторинга: команда сервиса настраивает сенсоры и пороги, при превышении которых приходит уведомление. Чем точнее заданы критерии, тем больше шансов предотвратить или уменьшить влияние на систему и пользователей.</li></ul></div>
+      </article>
+      <article class="qa" tabindex="0">
+        <div class="qa-top"><h3>Какие бывают ИТ-инциденты?</h3><span class="src">стр. 4</span></div>
+        <p class="reveal-hint">Нажмите, чтобы показать ответ</p>
+        <div class="answer"><p>По источнику - пользовательские и системные. По степени влияния - критические (уровни 1 и 2) и стандартные (уровни 3 и 4). Все инциденты должны быть зарегистрированы в системе управления ИТ-инцидентами, откуда бы ни поступило сообщение.</p></div>
+      </article>
+      <article class="qa" tabindex="0">
+        <div class="qa-top"><h3>В какой системе регистрируются ИТ-инциденты и как выглядит номер?</h3><span class="src">стр. 8</span></div>
+        <p class="reveal-hint">Нажмите, чтобы показать ответ</p>
+        <div class="answer"><p>В системе регистрации запросов MS SCSM. Номер имеет вид IRXXXXX, где XXXXX - порядковый номер инцидента.</p></div>
+      </article>
+      <article class="qa" tabindex="0">
+        <div class="qa-top"><h3>Кто и как регистрирует инциденты разных уровней?</h3><span class="src">стр. 8</span></div>
+        <p class="reveal-hint">Нажмите, чтобы показать ответ</p>
+        <div class="answer"><ul><li>Уровни 1 и 2 - сотрудники ИТ-команд, обнаружившие инцидент, через специальную форму на ИТ-портале.</li><li>Пользовательские инциденты уровней 3 и 4 - сотрудники 1 линии поддержки при обращении пользователя в ДИТ.</li><li>Системные инциденты уровней 3 и 4 - группа ДИТ, отвечающая за работу системы, через специальную форму на ИТ-портале.</li></ul></div>
+      </article>
+      <article class="qa" tabindex="0">
+        <div class="qa-top"><h3>Кто регистрирует критический ИТ-инцидент и как?</h3><span class="src">стр. 9</span></div>
+        <p class="reveal-hint">Нажмите, чтобы показать ответ</p>
+        <div class="answer"><p>Регистрирует работник ДИТ, первым обнаруживший инцидент. Регистрация выполняется через специализированную форму на ИТ-портале. Инструкция по заполнению лежит на интранет-портале в разделе SCSM.</p></div>
+      </article>
+      <article class="qa" tabindex="0">
+        <div class="qa-top"><h3>Что означает разрешение ИТ-инцидента?</h3><span class="src">стр. 8, 10</span></div>
+        <p class="reveal-hint">Нажмите, чтобы показать ответ</p>
+        <div class="answer"><p>Восстановление работоспособности ИТ-сервиса. Устранять корневую причину для этого не обязательно.</p></div>
+      </article>
+      <article class="qa" tabindex="0">
+        <div class="qa-top"><h3>Что нужно занести в карточку ИТ-инцидента?</h3><span class="src">стр. 8</span></div>
+        <p class="reveal-hint">Нажмите, чтобы показать ответ</p>
+        <div class="answer"><p>Сведения обо всех предпринятых действиях, включая попытки решить или воспроизвести инцидент:</p><ul><li>что пошло не так с точки зрения затронутых пользователей;</li><li>хронологию действий, диагностики и попыток разрешения;</li><li>подтверждение негативного влияния, включая количество затронутых пользователей и внешних клиентов;</li><li>предполагаемые причины (недавние ИТ-изменения, действия пользователей и т.п.);</li><li>результаты изучения базы знаний (внутренней и поставщиков) на предмет аналогичных инцидентов.</li></ul></div>
+      </article>
+      <article class="qa" tabindex="0">
+        <div class="qa-top"><h3>Кто получает уведомления об открытии, обновлении и разрешении критического инцидента?</h3><span class="src">стр. 9</span></div>
+        <p class="reveal-hint">Нажмите, чтобы показать ответ</p>
+        <div class="answer"><p>Список рассылки включает Руководителей ДИТ и Руководство Компании.</p></div>
+      </article>
+      <article class="qa" tabindex="0">
+        <div class="qa-top"><h3>Модерируется ли информация, которую вносят в форму критического инцидента?</h3><span class="src">стр. 9</span></div>
+        <p class="reveal-hint">Нажмите, чтобы показать ответ</p>
+        <div class="answer"><p>Нет. Вся информация из формы отправляется в первоначальном виде, без модерации.</p></div>
+      </article>
+      <article class="qa" tabindex="0">
+        <div class="qa-top"><h3>Как часто обновлять статус критического инцидента?</h3><span class="src">стр. 10, 11</span></div>
+        <p class="reveal-hint">Нажмите, чтобы показать ответ</p>
+        <div class="answer"><ul><li>Уровень 1 - каждые 30 минут, а если новые детали появились раньше, то сразу после их появления.</li><li>Уровень 2 - после появления новых деталей.</li></ul></div>
+      </article>
+      <article class="qa" tabindex="0">
+        <div class="qa-top"><h3>Восстановление занимает больше целевого времени. Что делать?</h3><span class="src">стр. 10, 11</span></div>
+        <p class="reveal-hint">Нажмите, чтобы показать ответ</p>
+        <div class="answer"><p>Эскалировать Руководителю ИТ-подразделения и Руководителю ДИТ.</p></div>
+      </article>
+      <article class="qa" tabindex="0">
+        <div class="qa-top"><h3>Сколько времени дается на поиск первопричины?</h3><span class="src">стр. 10</span></div>
+        <p class="reveal-hint">Нажмите, чтобы показать ответ</p>
+        <div class="answer"><p>60 календарных дней на поиск и устранение первопричины.</p></div>
+      </article>
+      <article class="qa" tabindex="0">
+        <div class="qa-top"><h3>Кто разрабатывает и поддерживает Реестр критичности ИТ-инцидентов?</h3><span class="src">стр. 5</span></div>
+        <p class="reveal-hint">Нажмите, чтобы показать ответ</p>
+        <div class="answer"><p>Подразделения ДИТ, ответственные за ИС, по тем ИС, которые они поддерживают.</p></div>
+      </article>
+      <article class="qa" tabindex="0">
+        <div class="qa-top"><h3>Какие смежные процессы запускаются при критическом инциденте?</h3><span class="src">стр. 11</span></div>
+        <p class="reveal-hint">Нажмите, чтобы показать ответ</p>
+        <div class="answer"><ol><li>Если система относится к деятельности ПУРЦБ - не позднее 1 часа с момента выявления и разрешения инцидента информацию раскрывают на сайте Компании по Порядку раскрытия информации о технических сбоях.</li><li>Сбой нескольких ключевых ИС или ИТ-сервисов - определяют, ИТ-кризис это или глобальный кризис, по Порядку аварийного восстановления ИТ-систем.</li><li>Если для устранения нужно ИТ-изменение - регистрируют и выполняют Экстренное ИТ-изменение по Регламенту управления ИТ-изменениями.</li><li>Потенциальный инцидент операционной надежности (ИОН) передается на уровень УИР.</li></ol></div>
+      </article>
+      <article class="qa" tabindex="0">
+        <div class="qa-top"><h3>Где найти Регламент по управлению ИТ-инцидентами?</h3><span class="src">стр. 12</span></div>
+        <p class="reveal-hint">Нажмите, чтобы показать ответ</p>
+        <div class="answer"><p>На интранет-портале, в базе общих внутренних нормативных документов ДИТ Группы компаний. Примеры инцидентов по уровням критичности также приведены в Регламенте.</p></div>
+      </article>
+    </div>
+  </section>
+  <p class="empty" id="empty" hidden>По этому запросу ничего не найдено. Попробуйте другое слово, например «владелец» или «срок».</p>
+</div>
+
+<script>
+(function () {
+  var cards = Array.prototype.slice.call(document.querySelectorAll('.qa'));
+  var input = document.getElementById('q');
+  var count = document.getElementById('count');
+  var empty = document.getElementById('empty');
+  var btn = document.getElementById('quiz');
+  var app = document.getElementById('app');
+
+  function norm(s) { return s.toLowerCase().replace(/\u0451/g, '\u0435'); }
+  cards.forEach(function (c) { c.dataset.text = norm(c.textContent); });
+
+  function filter() {
+    var q = norm(input.value.trim());
+    var shown = 0;
+    cards.forEach(function (c) {
+      var hit = !q || c.dataset.text.indexOf(q) !== -1;
+      c.hidden = !hit;
+      if (hit) shown++;
+    });
+    count.textContent = shown + ' из ' + cards.length + ' вопросов';
+    empty.hidden = shown !== 0;
+  }
+  input.addEventListener('input', filter);
+
+  function setQuiz(on) {
+    app.classList.toggle('quiz', on);
+    btn.setAttribute('aria-pressed', on ? 'true' : 'false');
+    btn.textContent = on ? 'Показать все ответы' : 'Режим самопроверки';
+    cards.forEach(function (c) { c.classList.remove('open'); });
+    try { localStorage.setItem('itinc-quiz', on ? '1' : '0'); } catch (e) {}
+  }
+  btn.addEventListener('click', function () { setQuiz(!app.classList.contains('quiz')); });
+
+  function open(c) { if (app.classList.contains('quiz')) c.classList.add('open'); }
+  cards.forEach(function (c) {
+    c.addEventListener('click', function () { open(c); });
+    c.addEventListener('keydown', function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); open(c); } });
+  });
+
+  var saved = null;
+  try { saved = localStorage.getItem('itinc-quiz'); } catch (e) {}
+  if (saved === '1') setQuiz(true);
+  filter();
+})();
+</script>
