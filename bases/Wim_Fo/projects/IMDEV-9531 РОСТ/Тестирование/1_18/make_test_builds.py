@@ -1,0 +1,93 @@
+# -*- coding: utf-8 -*-
+"""Тестовые сборки IMDEV-9531 для сравнения 1.16 и 1.18 на dev ФО.
+
+Копирует исходники ОРИГИНАЛ_1_16 и УСКОРЕНО_1_18 в Тестирование/1_18/сборки/<версия>-тест и добавляет только
+имитацию стакана в тестовом режиме: перед чтением котировки (место, где на ПРОД идет запрос к адаптеру) - HTTP-запрос
+к stakan_mock.py, который отвечает через ЗадержкаСтакана секунд. Задержку включает тестовая обработка
+T9530_ТестРОСТ 1.7 вызовом УстановитьЗадержкуСтакана. В 1.18 вызов стоит внутри ветки промаха кеша, поэтому
+повторная бумага ожидания не делает - как на ПРОД.
+
+Боевые исходники не меняются. Версия тестовой сборки - "<версия>-тест".
+"""
+import os
+import shutil
+
+HERE = os.path.dirname(os.path.abspath(__file__))
+TASK = os.path.dirname(os.path.dirname(HERE))
+MODULE = os.path.join("внСозданиеТорговыхПорученийРОСТ_epf", "внСозданиеТорговыхПорученийРОСТ", "Ext", "ObjectModule.bsl")
+BUILDS = {"1.16": "ОРИГИНАЛ_1_16", "1.18": "УСКОРЕНО_1_18"}
+PORT = 18541
+
+VARIABLE = (
+    "// IMDEV-9531 ТЕСТОВАЯ СБОРКА: секунды имитации ответа стакана, Неопределено - без имитации.\n"
+    "Перем ЗадержкаСтакана;\n"
+)
+
+PROCEDURES = """// IMDEV-9531 ТЕСТОВАЯ СБОРКА: включает имитацию ответа адаптера в тестовом режиме.
+//
+// Параметры:
+//  Секунды - Число - время ответа стакана; 0 выключает имитацию
+//
+Процедура УстановитьЗадержкуСтакана(Секунды) Экспорт
+
+	ЗадержкаСтакана = Секунды;
+
+КонецПроцедуры
+
+// IMDEV-9531 ТЕСТОВАЯ СБОРКА: ждет ответа заглушки адаптера stakan_mock.py ЗадержкаСтакана секунд.
+// Ожидание сетевое, как ответ прокси адаптера на ПРОД, процессор не занимает.
+//
+Процедура ИмитироватьОжиданиеСтакана()
+
+	Если Не ЗначениеЗаполнено(ЗадержкаСтакана) Тогда
+		Возврат;
+	КонецЕсли;
+
+	Соединение = Новый HTTPСоединение("127.0.0.1", %PORT%, , , , 60);
+	Соединение.Получить(Новый HTTPЗапрос("/wait?ms=" + Формат(ЗадержкаСтакана * 1000, "ЧГ=0")));
+
+КонецПроцедуры
+
+""".replace("%PORT%", str(PORT))
+
+CALL = "// IMDEV-9531 ТЕСТОВАЯ СБОРКА: место запроса к адаптеру на ПРОД\n{indent}ИмитироватьОжиданиеСтакана();\n{indent}"
+
+
+def patch(text, version):
+    text = text.replace("\r\n", "\n")
+    old_version = '\tПараметрыРегистрации.Версия = "%s";' % version
+    assert text.count(old_version) == 1, "версия"
+    text = text.replace(old_version, '\tПараметрыРегистрации.Версия = "%s-тест";' % version)
+
+    anchor = "Перем ОписаниеЗамераПоручений;\n"
+    assert text.count(anchor) == 1, "переменная"
+    text = text.replace(anchor, anchor + VARIABLE)
+
+    start = text.index("Функция ИзменитьЦенуПорученияТест(")
+    text = text[:start] + PROCEDURES + text[start:]
+
+    start = text.index("Функция ИзменитьЦенуПорученияТест(")
+    query = text.index("Запрос = новый запрос;", start)
+    line_start = text.rindex("\n", 0, query) + 1
+    indent = text[line_start:query]
+    text = text[:query] + CALL.format(indent=indent) + text[query:]
+    return text.replace("\n", "\r\n")
+
+
+def main():
+    for version, folder in BUILDS.items():
+        src = os.path.join(TASK, folder)
+        dst = os.path.join(HERE, "сборки", version + "-тест")
+        if os.path.exists(dst):
+            shutil.rmtree(dst)
+        shutil.copytree(src, dst, ignore=shutil.ignore_patterns("*.epf"))
+        path = os.path.join(dst, MODULE)
+        with open(path, "r", encoding="utf-8-sig") as handle:
+            text = handle.read()
+        with open(path, "w", encoding="utf-8-sig", newline="") as handle:
+            handle.write(patch(text, version))
+        print("ok", dst)
+
+
+if __name__ == "__main__":
+    main()
