@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Обмен ДУ-Финансы 3.0: схема многопоточной выгрузки</title>
+<style>
+* { box-sizing: border-box; }
+body {
+    font-family: "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    line-height: 1.55;
+    color: #212529;
+    background: #f4f6f8;
+    margin: 0;
+    padding: 24px;
+}
+.container { max-width: 980px; margin: 0 auto; }
+.hero {
+    background: #1a5276;
+    color: #fff;
+    border-radius: 12px;
+    padding: 28px 32px;
+    margin-bottom: 24px;
+}
+.hero h1 { margin: 0 0 8px 0; font-size: 1.7rem; font-weight: 700; }
+.hero p { margin: 0; max-width: 760px; }
+.meta-row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
+.badge {
+    display: inline-block;
+    background: rgba(255,255,255,0.16);
+    border: 1px solid rgba(255,255,255,0.35);
+    border-radius: 20px;
+    padding: 4px 12px;
+    font-size: 0.82rem;
+}
+h2 {
+    color: #1a5276;
+    margin: 28px 0 12px;
+    font-size: 1.25rem;
+    border-bottom: 2px solid #d5dde5;
+    padding-bottom: 6px;
+}
+.card {
+    background: #fff;
+    border-radius: 10px;
+    padding: 20px 24px;
+    margin: 16px 0;
+    border: 1px solid #e3e8ee;
+}
+.note {
+    background: #e8f4f8;
+    border-left: 4px solid #17a2b8;
+    padding: 12px 16px;
+    border-radius: 4px;
+    margin: 12px 0;
+}
+.warn {
+    background: #fff8e6;
+    border-left: 4px solid #e0a800;
+    padding: 12px 16px;
+    border-radius: 4px;
+    margin: 12px 0;
+}
+.legend { display: flex; flex-wrap: wrap; gap: 16px; margin: 0 0 16px; font-size: 0.92rem; }
+.swatch {
+    display: inline-block;
+    width: 14px;
+    height: 14px;
+    border-radius: 3px;
+    margin-right: 6px;
+    vertical-align: -2px;
+    border: 1px solid rgba(0,0,0,0.12);
+}
+.swatch-blue { background: #d6eaf8; }
+.swatch-cyan { background: #d1f2eb; }
+.swatch-neutral { background: #fff; }
+.flow { display: flex; flex-direction: column; align-items: center; }
+.step {
+    width: min(100%, 520px);
+    background: #fff;
+    border: 1px solid #cfd8e3;
+    border-radius: 10px;
+    padding: 12px 16px;
+}
+.step strong { display: block; margin-bottom: 2px; }
+.step span { color: #5c6770; font-size: 0.92rem; }
+.step-blue { background: #eaf4fb; border-color: #7fb3d5; }
+.step-cyan { background: #e8f8f5; border-color: #76d7c4; }
+.link {
+    width: 2px;
+    height: 16px;
+    background: #7f8c9b;
+}
+.branch {
+    width: min(100%, 720px);
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+}
+table { width: 100%; border-collapse: collapse; font-size: 0.95rem; }
+th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid #e3e8ee; vertical-align: top; }
+th { background: #f0f4f8; color: #1a5276; }
+code { font-family: Consolas, "Courier New", monospace; font-size: 0.9em; background: #f0f4f8; padding: 1px 4px; border-radius: 3px; }
+ol { margin: 8px 0 0; padding-left: 20px; }
+li { margin: 6px 0; }
+@media (max-width: 700px) {
+    body { padding: 12px; }
+    .hero { padding: 20px; }
+    .branch { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+<div class="container">
+
+<div class="hero">
+    <h1>Обмен ДУ-Финансы 3.0, многопоточная выгрузка</h1>
+    <p>Внешняя обработка базы ДУ <code style="background:rgba(255,255,255,0.15);color:#fff;">внОбменДУ-Финансы3.0(потоки)</code>, версия 3.37. Забирает зарегистрированные изменения узла обмена и параллельными потоками передает их в базу ФИН.</p>
+    <div class="meta-row">
+        <span class="badge">Источник: база ДУ</span>
+        <span class="badge">Приемник: база ФИН, веб-сервис NDFL</span>
+        <span class="badge">Метод: upload_data</span>
+    </div>
+</div>
+
+<h2>Схема запуска</h2>
+<div class="card">
+    <div class="legend">
+        <span><i class="swatch swatch-neutral"></i>Общие шаги</span>
+        <span><i class="swatch swatch-blue"></i>Общий поток</span>
+        <span><i class="swatch swatch-cyan"></i>Пулы СделкиTn</span>
+    </div>
+    <div class="flow">
+        <div class="step">
+            <strong>1. Старт в базе ДУ</strong>
+            <span>Форма обработки или регламентная команда</span>
+        </div>
+        <div class="link"></div>
+        <div class="step">
+            <strong>2. Защита запуска</strong>
+            <span>Повторный запуск не стартует, пока есть задание с тем же именем. Затем ожидание блокирующих регламентов</span>
+        </div>
+        <div class="link"></div>
+        <div class="branch">
+            <div class="step step-blue">
+                <strong>3а. Общий поток</strong>
+                <span>Справочники, документы и прочие бизнес-процессы. Правило СделкиTn выключено. Документ Сделка идет здесь</span>
+            </div>
+            <div class="step step-cyan">
+                <strong>3б. Пулы СделкиTn</strong>
+                <span>Сделки узла группируются по портфелю и раскладываются в пулы так, чтобы число сделок было близким</span>
+            </div>
+        </div>
+        <div class="link"></div>
+        <div class="step">
+            <strong>4. Фоновые задания</strong>
+            <span>Метод VTB_ОбщийМодуль.ВыполнитьОбменДУ_Финансы. Одновременно не больше 10, опрос 5 секунд, ожидание до 12 часов</span>
+        </div>
+        <div class="link"></div>
+        <div class="step">
+            <strong>5. Закрытие запуска</strong>
+            <span>Снятие регистрации загруженных объектов, письмо и задача интеграции</span>
+        </div>
+    </div>
+</div>
+
+<h2>Как попадает в работу</h2>
+<div class="card">
+    <p>Обработка зарегистрирована как дополнительная, наименование «Обмен ДУ-Финансы 3.0 многопоточно».</p>
+    <table>
+        <thead>
+            <tr><th>Вход</th><th>Что делает</th></tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>Форма, команда обмена</td>
+                <td>Проверяет активные задания «Выгрузка в базу Финансы» и вызывает оркестратор. Раз в минуту смотрит, завершились ли задания.</td>
+            </tr>
+            <tr>
+                <td>Регламент, обычный обмен</td>
+                <td>Команда «ФоновоеВыполнение». Создает задачу интеграции и после всех потоков отправляет письмо по списку рассылки обработки.</td>
+            </tr>
+            <tr>
+                <td>Регламент, обмен РГС</td>
+                <td>Команда «ФоновоеВыполнениеРГС». Тот же маршрут, но узел УзелОбменаРГС, отдельный веб-сервис и список договоров.</td>
+            </tr>
+        </tbody>
+    </table>
+    <div class="note">Если задание с тем же именем метода уже активно, новый запуск сразу завершается и письмо об ошибке не формируется.</div>
+</div>
+
+<h2>Как режутся изменения</h2>
+<div class="card">
+    <ol>
+        <li>Оркестратор выбирает узел: <code>УзелОбмена</code> для обычного обмена и <code>УзелОбменаРГС</code> для РГС.</li>
+        <li>Если в настройке заданы блокирующие регламенты, обработка ждет их окончания. Опрос каждые 5 секунд, не дольше заданного лимита.</li>
+        <li>Запрос собирает зарегистрированные на узле <code>СделкиTn</code> и группирует их по портфелю, реквизит <code>ДоговорДУ</code>. Для РГС в выгрузку входят только договоры из списка, остальные сделки снимаются с регистрации узла.</li>
+        <li>Отдельно проверяется, есть ли изменения по справочникам, документам и бизнес-процессам, кроме <code>СделкиTn</code>. Если есть, под общий поток резервируется один слот из настройки числа потоков.</li>
+        <li>Портфели сортируются по убыванию числа сделок. Каждый следующий портфель кладется в самый легкий пул. Число пулов равно оставшимся потокам и не меньше одного, поэтому пустой пул тоже может получить свое задание.</li>
+        <li>На общий пакет и на каждый пул стартует фоновое задание. У всех потоков одного запуска общий идентификатор обмена. Последнему пулу, а если сделок нет, то единственному общему пакету, ставятся флаги рассылки и операций после обмена.</li>
+    </ol>
+    <div class="warn">Документ <code>Сделка</code> в отдельные пулы не выделяется. Он выгружается общим потоком вместе со справочниками и остальными документами.</div>
+</div>
+
+<h2>Один фоновый поток</h2>
+<div class="card">
+    <div class="flow">
+        <div class="step">
+            <strong>1. Макет правил</strong>
+            <span>Текст макета МакетПравил загружается в УниверсальныйОбменДаннымиXML, режим «Выгрузка»</span>
+        </div>
+        <div class="link"></div>
+        <div class="branch">
+            <div class="step step-cyan">
+                <strong>2а. Пакет сделок</strong>
+                <span>Все правила выключены. Включено только СделкиTn, отбор по ссылкам пула</span>
+            </div>
+            <div class="step step-blue">
+                <strong>2б. Общий пакет</strong>
+                <span>Правило СделкиTn выключено. Остальные объекты узла остаются в выгрузке</span>
+            </div>
+        </div>
+        <div class="link"></div>
+        <div class="step">
+            <strong>3. Файл XML</strong>
+            <span>Выгрузка по правилам конвертации. Ошибка протокола пишется в журнал и прерывает поток</span>
+        </div>
+        <div class="link"></div>
+        <div class="step">
+            <strong>4. Веб-сервис базы ФИН</strong>
+            <span>NDFL.upload_data. Для РГС адрес и учетная запись берутся из настроек РГС</span>
+        </div>
+        <div class="link"></div>
+        <div class="step">
+            <strong>5. Ответ в базу ДУ</strong>
+            <span>По списку загруженных объектов снимается регистрация изменений на узле</span>
+        </div>
+    </div>
+</div>
+
+<h2>Что делает база ФИН</h2>
+<div class="card">
+    <ol>
+        <li>Метод <code>upload_data</code> принимает параметры потока и загружает XML обработкой универсального обмена.</li>
+        <li>Состояние потока записывается в регистр <code>ExchDU_ПотокиОбмена</code>: сначала «Новый», после загрузки «Загружен».</li>
+        <li>Письмо с логом из ФИН уходит, когда все потоки этого идентификатора обмена находятся в состоянии «Загружен».</li>
+        <li>Флаг запуска операций после обмена передается в параметрах последнего потока. Текущий метод веб-сервиса читает флаг и процедуру постобработки по нему не вызывает.</li>
+    </ol>
+</div>
+
+<h2>Что происходит после успешной загрузки</h2>
+<div class="card">
+    <p>База ДУ снимает регистрацию и у загруженных объектов, и у объектов, которые правила пометили как не подлежащие загрузке. Типы из ответа ФИН сопоставляются с объектами ДУ:</p>
+    <table>
+        <thead>
+            <tr><th>Тип в ответе ФИН</th><th>Объект в базе ДУ</th></tr>
+        </thead>
+        <tbody>
+            <tr><td>Портфели</td><td>Справочник ДоговорДУ</td></tr>
+            <tr><td>СчетаБрокера</td><td>Справочник ТорговыеКоды</td></tr>
+            <tr><td>ДепозитарныеРасписки, КлиринговыеСертификатыУчастия</td><td>Справочник Акции</td></tr>
+            <tr><td>СделкиНаСрочномРынке</td><td>Документ СделкаНаСрочномРынке</td></tr>
+        </tbody>
+    </table>
+    <p>Затем в базе-приемнике помечаются удаленные объекты этой базы, временные файлы удаляются. Ошибки потоков попадают в описание задачи интеграции. Письмо регламентного запуска формируется в базе ДУ по итогу всех потоков и отдельно от письма лога, которое собирает база ФИН.</p>
+</div>
+
+</div>
+</body>
+</html>
