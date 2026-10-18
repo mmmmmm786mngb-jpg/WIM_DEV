@@ -1,4 +1,4 @@
-﻿# skd-compile v1.128 — Compile 1C DCS from JSON
+﻿# skd-compile v1.136 — Compile 1C DCS from JSON
 # Source: https://github.com/Nikolay-Shirokov/cc-1c-skills
 [CmdletBinding(PositionalBinding=$false)]
 param(
@@ -745,7 +745,10 @@ function Split-ValueListCsv {
 	for ($i = 0; $i -lt $s.Length; $i++) {
 		$ch = $s[$i]
 		if ($inQuote) { [void]$buf.Append($ch); if ($ch -eq $inQuote) { $inQuote = $null } }
-		elseif ($ch -eq "'" -or $ch -eq '"') { $inQuote = $ch; [void]$buf.Append($ch) }
+		elseif (($ch -eq "'" -or $ch -eq '"') -and $buf.ToString().Trim() -eq '') {
+			# Кавычка открывает значение только в начале элемента: апостроф внутри слова (O'Brien) — просто символ
+			$inQuote = $ch; [void]$buf.Append($ch)
+		}
 		elseif ($ch -eq ',') { $items += $buf.ToString(); [void]$buf.Clear() }
 		else { [void]$buf.Append($ch) }
 	}
@@ -864,6 +867,86 @@ function Parse-CalcShorthand {
 }
 
 # --- 8b. DataParameter shorthand parser ---
+# Варианты стандартного периода: краткая запись значения читает их как период, а не строку.
+# Копия в skd-compile, skd-edit и skd-decompile — держит check-inline-drift.
+function Get-StandardPeriodVariants {
+	return @("Custom","Today","ThisWeek","ThisTenDays","ThisMonth","ThisQuarter","ThisHalfYear","ThisYear","FromBeginningOfThisWeek","FromBeginningOfThisTenDays","FromBeginningOfThisMonth","FromBeginningOfThisQuarter","FromBeginningOfThisHalfYear","FromBeginningOfThisYear","Yesterday","LastWeek","LastTenDays","LastMonth","LastQuarter","LastHalfYear","LastYear","LastWeekTillSameWeekDay","LastTenDaysTillSameDayNumber","LastMonthTillSameDate","LastQuarterTillSameDate","LastHalfYearTillSameDate","LastYearTillSameDate","Tomorrow","NextWeek","NextTenDays","NextMonth","NextQuarter","NextHalfYear","NextYear","NextWeekTillSameWeekDay","NextTenDaysTillSameDayNumber","NextMonthTillSameDate","NextQuarterTillSameDate","NextHalfYearTillSameDate","NextYearTillSameDate","TillEndOfThisWeek","TillEndOfThisTenDays","TillEndOfThisMonth","TillEndOfThisQuarter","TillEndOfThisHalfYear","TillEndOfThisYear","Last7Days","Next7Days","Month")
+}
+
+# Вариант периода в любом регистре → написание платформы; не вариант — $null.
+# Копия в skd-compile и skd-edit — держит check-inline-drift.
+function Resolve-StandardPeriodVariant([string]$s) {
+	foreach ($v in Get-StandardPeriodVariants) {
+		if ($v -ieq $s) { return $v }
+	}
+	return $null
+}
+
+# Значение-ссылка в краткой записи (Справочник.X.Y, Catalog.X.Y) — пишется как DesignTimeValue.
+# Копия в skd-compile, skd-edit и skd-decompile — держит check-inline-drift.
+function Test-RefValueLiteral([string]$s) {
+	return $s -match '^(Справочник|Перечисление|ПланСчетов|Документ|ПланВидовХарактеристик|ПланВидовРасчета|БизнесПроцесс|Задача|РегистрСведений|ПланОбмена|Catalog|Enum|ChartOfAccounts|Document|ChartOfCharacteristicTypes|ChartOfCalculationTypes|BusinessProcess|Task|InformationRegister|ExchangePlan)\.'
+}
+
+# valueType из decompile в форме {uri, name} — тип из пространства имён, которого нет в корне
+# схемы (d8p1:AccountType). Возвращает @{ uri; name } или $null для строки и пустого.
+function Get-CustomValueType($vtSrc) {
+	$uri = $null; $tName = $null
+	if ($vtSrc -is [PSCustomObject]) {
+		if ($vtSrc.PSObject.Properties['uri']) { $uri = "$($vtSrc.uri)" }
+		if ($vtSrc.PSObject.Properties['name']) { $tName = "$($vtSrc.name)" }
+	} elseif ($vtSrc -is [System.Collections.IDictionary]) {
+		if ($vtSrc.Contains('uri')) { $uri = "$($vtSrc['uri'])" }
+		if ($vtSrc.Contains('name')) { $tName = "$($vtSrc['name'])" }
+	}
+	if ($uri -and $tName) { return @{ uri = $uri; name = $tName } }
+	return $null
+}
+
+# Значение-объект с variant — Standard{Period,BeginningDate}; что именно — по форме:
+#  {variant, date}               → SBD
+#  {variant, startDate, endDate} → SP с датами
+#  {variant} only                → по имени (BeginningOf* → SBD, иначе SP)
+# Даты пишутся ТОЛЬКО для variant=Custom (как у платформы). Общий для параметра данных и отбора.
+$script:standardBeginningDateVariants = @("Custom","BeginningOfThisDay","BeginningOfThisWeek","BeginningOfThisTenDays","BeginningOfThisMonth","BeginningOfThisQuarter","BeginningOfThisHalfYear","BeginningOfThisYear","BeginningOfLastDay","BeginningOfLastWeek","BeginningOfLastTenDays","BeginningOfLastMonth","BeginningOfLastQuarter","BeginningOfLastHalfYear","BeginningOfLastYear","BeginningOfNextDay","BeginningOfNextWeek","BeginningOfNextTenDays","BeginningOfNextMonth","BeginningOfNextQuarter","BeginningOfNextHalfYear","BeginningOfNextYear")
+function Test-StandardPeriodValue($val) {
+	return ($val -is [PSCustomObject] -or $val -is [System.Collections.IDictionary]) -and [bool]$val.variant
+}
+function Emit-StandardPeriodValue($val, [string]$tag, [string]$indent) {
+	$get = {
+		param($k)
+		if ($val -is [PSCustomObject]) { if ($val.PSObject.Properties[$k]) { return "$($val.$k)" } }
+		elseif ($val.Contains($k)) { return "$($val[$k])" }
+		return $null
+	}
+	$variantStr = & $get 'variant'
+	$d = & $get 'date'
+	$sd = & $get 'startDate'
+	$ed = & $get 'endDate'
+	$isSBD = ($null -ne $d) -or ($null -eq $sd -and $variantStr -like 'BeginningOf*')
+	# Вариант в любом регистре → написание платформы (свой список у каждого из двух типов)
+	$known = if ($isSBD) { $script:standardBeginningDateVariants } else { Get-StandardPeriodVariants }
+	foreach ($v in $known) { if ($v -ieq $variantStr) { $variantStr = $v; break } }
+	if ($isSBD) {
+		X "$indent<$tag xsi:type=`"v8:StandardBeginningDate`">"
+		X "$indent`t<v8:variant xsi:type=`"v8:StandardBeginningDateVariant`">$(Esc-XmlText $variantStr)</v8:variant>"
+		if ($variantStr -eq 'Custom') {
+			if (-not $d) { $d = '0001-01-01T00:00:00' }
+			X "$indent`t<v8:date>$(Esc-XmlText $d)</v8:date>"
+		}
+	} else {
+		X "$indent<$tag xsi:type=`"v8:StandardPeriod`">"
+		X "$indent`t<v8:variant xsi:type=`"v8:StandardPeriodVariant`">$(Esc-XmlText $variantStr)</v8:variant>"
+		if ($variantStr -eq 'Custom') {
+			if (-not $sd) { $sd = '0001-01-01T00:00:00' }
+			if (-not $ed) { $ed = '0001-01-01T00:00:00' }
+			X "$indent`t<v8:startDate>$(Esc-XmlText $sd)</v8:startDate>"
+			X "$indent`t<v8:endDate>$(Esc-XmlText $ed)</v8:endDate>"
+		}
+	}
+	X "$indent</$tag>"
+}
+
 # Formats: "Период = LastMonth @user", "Организация @off @user", "Период @user"
 function Parse-DataParamShorthand {
 	param([string]$s)
@@ -894,12 +977,18 @@ function Parse-DataParamShorthand {
 	if ($s -match '^([^=]+)=\s*(.+)$') {
 		$result.parameter = $Matches[1].Trim()
 		$valStr = $Matches[2].Trim()
+		# Список значений через запятую — как у параметра схемы; запятая внутри значения — в кавычках.
+		$items = Split-ValueListCsv $valStr
+		if ($items.Count -eq 1) { $valStr = $items[0] }
+		$result.text = $valStr   # как написано — если слово окажется не периодом, а строкой
 
 		# Detect StandardPeriod variants
-		$periodVariants = @("Custom","Today","ThisWeek","ThisTenDays","ThisMonth","ThisQuarter","ThisHalfYear","ThisYear","FromBeginningOfThisWeek","FromBeginningOfThisTenDays","FromBeginningOfThisMonth","FromBeginningOfThisQuarter","FromBeginningOfThisHalfYear","FromBeginningOfThisYear","LastWeek","LastTenDays","LastMonth","LastQuarter","LastHalfYear","LastYear","NextDay","NextWeek","NextTenDays","NextMonth","NextQuarter","NextHalfYear","NextYear","TillEndOfThisWeek","TillEndOfThisTenDays","TillEndOfThisMonth","TillEndOfThisQuarter","TillEndOfThisHalfYear","TillEndOfThisYear")
-		if ($periodVariants -contains $valStr) {
-			$result.value = @{ variant = $valStr }
-		} elseif ($valStr -match '^\d{4}-\d{2}-\d{2}T') {
+		$periodVariant = Resolve-StandardPeriodVariant $valStr
+		if ($items.Count -ge 2) {
+			$result.value = $items
+		} elseif ($periodVariant) {
+			$result.value = @{ variant = $periodVariant }
+		} elseif ($valStr -cmatch '^\d{4}-\d{2}-\d{2}T') {
 			$result.value = $valStr
 		} elseif ($valStr -eq "true" -or $valStr -eq "false") {
 			$result.value = [bool]($valStr -eq "true")
@@ -974,13 +1063,13 @@ function Parse-FilterShorthand {
 			if ($valPart -eq "true" -or $valPart -eq "false") {
 				$result.value = [bool]($valPart -eq "true")
 				$result["valueType"] = "xs:boolean"
-			} elseif ($valPart -match '^\d{4}-\d{2}-\d{2}T') {
+			} elseif ($valPart -cmatch '^\d{4}-\d{2}-\d{2}T') {
 				$result.value = $valPart
 				$result["valueType"] = "xs:dateTime"
-			} elseif ($valPart -match '^\d+(\.\d+)?$') {
+			} elseif ($valPart -match '^-?\d+(\.\d+)?$') {
 				$result.value = $valPart
 				$result["valueType"] = "xs:decimal"
-			} elseif ($valPart -match '^(Перечисление|Справочник|ПланСчетов|Документ|ПланВидовХарактеристик|ПланВидовРасчета)\.') {
+			} elseif (Test-RefValueLiteral $valPart) {
 				$result.value = $valPart
 				$result["valueType"] = "dcscor:DesignTimeValue"
 			} else {
@@ -1104,23 +1193,21 @@ function Emit-InputParameters {
 				}
 				X "$indent`t`t</dcscor:value>"
 			}
+		} elseif (Has-JsonProp $item 'typeLink') {
+			# Связь по типу: {field, linkItem} — поле, от значения которого зависит тип, и номер элемента связи
+			# (оба необязательны по XSD — пишем, что задано)
+			$tl = $item.typeLink
+			if ($tl -is [string]) { $tl = @{ field = $tl } }
+			X "$indent`t`t<dcscor:value xsi:type=`"dcscor:TypeLink`">"
+			if ($null -ne $tl.field -and "$($tl.field)" -ne '') { X "$indent`t`t`t<dcscor:field>$(Esc-XmlText "$($tl.field)")</dcscor:field>" }
+			if ($null -ne $tl.linkItem -and "$($tl.linkItem)" -ne '') { X "$indent`t`t`t<dcscor:linkItem>$(Esc-XmlText "$($tl.linkItem)")</dcscor:linkItem>" }
+			X "$indent`t`t</dcscor:value>"
 		} elseif (Has-JsonProp $item 'value') {
 			# Simple typed value — определяем xsi:type из JSON-типа
 			$val = $item.value
 			# Явный кастомный type из decompile: {uri, name} → <value xmlns:dN="uri" xsi:type="dN:name">
 			$customType = $null
-			if (Has-JsonProp $item 'valueType') {
-				$vtSrc = $item.valueType
-				$uri = $null; $tName = $null
-				if ($vtSrc -is [PSCustomObject]) {
-					if ($vtSrc.PSObject.Properties['uri']) { $uri = "$($vtSrc.uri)" }
-					if ($vtSrc.PSObject.Properties['name']) { $tName = "$($vtSrc.name)" }
-				} elseif ($vtSrc -is [System.Collections.IDictionary]) {
-					if ($vtSrc.Contains('uri')) { $uri = "$($vtSrc['uri'])" }
-					if ($vtSrc.Contains('name')) { $tName = "$($vtSrc['name'])" }
-				}
-				if ($uri -and $tName) { $customType = @{ uri = $uri; name = $tName } }
-			}
+			if (Has-JsonProp $item 'valueType') { $customType = Get-CustomValueType $item.valueType }
 			if ($customType) {
 				X "$indent`t`t<dcscor:value xmlns:dN=`"$($customType.uri)`" xsi:type=`"dN:$($customType.name)`">$(Esc-XmlText "$val")</dcscor:value>"
 			} elseif ($val -is [bool]) {
@@ -1217,6 +1304,47 @@ function Get-RestrictFlagNames($restrict) {
 function Test-HasRestrict($restrict) {
 	$names = Get-RestrictFlagNames $restrict
 	return @($names | Where-Object { $_ -in @('field', 'condition', 'group', 'order') }).Count -gt 0
+}
+
+# Элемент <availableValue> поля набора, вычисляемого поля или параметра: value null → xsi:nil;
+# valueType — строкой (xs:string) или {uri, name}, без него тип выводится из значения.
+# У параметра ($isParam) пустое значение — пустое значение его типа, дата не угадывается.
+function Emit-AvailableValue {
+	param($av, [string]$indent, $paramType = $null, [bool]$isParam = $false)
+	X "$indent<availableValue>"
+	$v = $av.value
+	$vtSrc = $av.valueType
+	if ($null -eq $v) {
+		X "$indent`t<value xsi:nil=`"true`"/>"
+	} elseif (Test-StandardPeriodValue $v) {
+		Emit-StandardPeriodValue $v "value" "$indent`t"
+	} elseif ($isParam -and -not $vtSrc -and (Test-EmptyValue $v)) {
+		Emit-EmptyValue -type $paramType -indent "$indent`t" -tagPrefix "" -valueListAllowed $false
+	} else {
+		$text = if ($v -is [bool]) { "$v".ToLower() } else { Esc-XmlText "$v" }
+		$customType = Get-CustomValueType $vtSrc
+		if ($customType) {
+			$typeAttr = "xmlns:dN=`"$($customType.uri)`" xsi:type=`"dN:$($customType.name)`""
+		} else {
+			$avType = if ($vtSrc) { "$vtSrc" } else { '' }
+			if (-not $avType) {
+				if ($v -is [bool]) { $avType = 'xs:boolean' }
+				elseif ($v -is [int] -or $v -is [long] -or $v -is [double] -or $v -is [decimal]) { $avType = 'xs:decimal' }
+				elseif (Test-RefValueLiteral "$v") { $avType = 'dcscor:DesignTimeValue' }
+				elseif (-not $isParam -and "$v" -cmatch '^\d{4}-\d{2}-\d{2}T') { $avType = 'xs:dateTime' }
+				else { $avType = 'xs:string' }
+			}
+			$typeAttr = "xsi:type=`"$avType`""
+		}
+		# Пустая строка — самозакрывающимся тегом, как у платформы
+		if ($text -eq '') { X "$indent`t<value $typeAttr/>" } else { X "$indent`t<value $typeAttr>$text</value>" }
+	}
+	# `title` — синоним `presentation`
+	$avPres = if ($av.presentation) { $av.presentation } elseif ($av.title) { $av.title } else { "" }
+	if ($avPres) {
+		Emit-MLText -tag "presentation" -text $avPres -indent "$indent`t"
+	}
+	X "$indent</availableValue>"
 }
 
 function Emit-Field {
@@ -1388,21 +1516,7 @@ function Emit-Field {
 	# AvailableValues — после appearance (порядок XSD); список значений с необязательным представлением
 	if ($f["availableValues"]) {
 		foreach ($av in $f["availableValues"]) {
-			X "$indent`t<availableValue>"
-			$avVal = $av.value
-			$avType = if ($av.valueType) { "$($av.valueType)" } else { '' }
-			if (-not $avType) {
-				if ($avVal -is [bool]) { $avType = 'xs:boolean' }
-				elseif ($avVal -is [int] -or $avVal -is [long] -or $avVal -is [double]) { $avType = 'xs:decimal' }
-				elseif ("$avVal" -match '^\d{4}-\d{2}-\d{2}T') { $avType = 'xs:dateTime' }
-				else { $avType = 'xs:string' }
-			}
-			$avStr = if ($avVal -is [bool]) { "$avVal".ToLower() } else { Esc-XmlText "$avVal" }
-			X "$indent`t`t<value xsi:type=`"$avType`">$avStr</value>"
-			if ($av.presentation) {
-				Emit-MLText -tag "presentation" -text $av.presentation -indent "$indent`t`t"
-			}
-			X "$indent`t</availableValue>"
+			Emit-AvailableValue -av $av -indent "$indent`t"
 		}
 	}
 
@@ -1552,7 +1666,12 @@ function Emit-CalcFields {
 			}
 			X "`t`t</appearance>"
 		}
-		# valueType — последним: после useRestriction и appearance (порядок XSD CalculatedField)
+		if ($cf -isnot [string] -and $cf.availableValues) {
+			foreach ($av in $cf.availableValues) {
+				Emit-AvailableValue -av $av -indent "`t`t"
+			}
+		}
+		# valueType — последним: после useRestriction, appearance и availableValue (порядок XSD CalculatedField)
 		if ($typeStr) {
 			X "`t`t<valueType>"
 			Emit-ValueType -typeStr $typeStr -indent "`t`t`t"
@@ -1635,7 +1754,12 @@ function Emit-SingleParam {
 		if (-not $vla) { X "`t`t<value xsi:nil=`"true`"/>" }
 	} elseif ($valIsArray) {
 		foreach ($v in @($parsed.value)) {
-			Emit-ParamValue -type $parsed.type -val $v -indent "`t`t" -valueListAllowed $false
+			if ($null -eq $v) {
+				# null в списке — пустой элемент
+				X "`t`t<value xsi:nil=`"true`"/>"
+			} else {
+				Emit-ParamValue -type $parsed.type -val $v -indent "`t`t" -valueListAllowed $false
+			}
 		}
 	} else {
 		Emit-ParamValue -type $parsed.type -val $parsed.value -indent "`t`t" -valueListAllowed $vla
@@ -1671,31 +1795,7 @@ function Emit-SingleParam {
 	# AvailableValues
 	if ($p -isnot [string] -and $p.availableValues) {
 		foreach ($av in $p.availableValues) {
-			X "`t`t<availableValue>"
-			if (Test-EmptyValue $av.value) {
-				Emit-EmptyValue -type $parsed.type -indent "`t`t`t" -tagPrefix "" -valueListAllowed $false
-			} else {
-				$av_v = $av.value
-				if ($av_v -is [bool]) {
-					$bv = "$av_v".ToLower()
-					X "`t`t`t<value xsi:type=`"xs:boolean`">$bv</value>"
-				} elseif ($av_v -is [int] -or $av_v -is [long] -or $av_v -is [double]) {
-					X "`t`t`t<value xsi:type=`"xs:decimal`">$av_v</value>"
-				} else {
-					$avVal = "$av_v"
-					$avType = "xs:string"
-					if ($avVal -match '^(Перечисление|Справочник|ПланСчетов|Документ|ПланВидовХарактеристик|ПланВидовРасчета)\.') {
-						$avType = "dcscor:DesignTimeValue"
-					}
-					X "`t`t`t<value xsi:type=`"$avType`">$(Esc-XmlText $avVal)</value>"
-				}
-			}
-			# `title` accepted as synonym of `presentation` — both map to the same UI label.
-			$avPres = if ($av.presentation) { $av.presentation } elseif ($av.title) { $av.title } else { "" }
-			if ($avPres) {
-				Emit-MLText -tag "presentation" -text $avPres -indent "`t`t`t"
-			}
-			X "`t`t</availableValue>"
+			Emit-AvailableValue -av $av -indent "`t`t" -paramType $parsed.type -isParam $true
 		}
 	}
 
@@ -1801,6 +1901,12 @@ function Test-EmptyValue {
 	return $false
 }
 
+# Список из двух и более элементов — не пустое значение, даже если все элементы пустые
+function Test-DataParamList {
+	param($v)
+	return (($v -is [array]) -or ($v -is [System.Collections.IList] -and $v -isnot [string])) -and @($v).Count -gt 1
+}
+
 function Emit-EmptyValue {
 	param([string]$type, [string]$indent, [string]$tagPrefix = "", [bool]$valueListAllowed = $false)
 
@@ -1862,6 +1968,8 @@ function Emit-ParamValue {
 	if ($type -eq "StandardPeriod") {
 		# Platform-pattern: startDate/endDate эмитятся ТОЛЬКО для variant=Custom.
 		# Для всех остальных вариантов (ThisMonth, LastYear, Today, ...) — без дат.
+		$pv = Resolve-StandardPeriodVariant $valStr
+		if ($pv) { $valStr = $pv }
 		X "$indent<value xsi:type=`"v8:StandardPeriod`">"
 		X "$indent`t<v8:variant xsi:type=`"v8:StandardPeriodVariant`">$(Esc-XmlText $valStr)</v8:variant>"
 		if ($valStr -eq 'Custom') {
@@ -1883,11 +1991,11 @@ function Emit-ParamValue {
 		X "$indent<value xsi:type=`"dcscor:DesignTimeValue`">$(Esc-XmlText $valStr)</value>"
 	} else {
 		# Guess from value
-		if ($valStr -match '^\d{4}-\d{2}-\d{2}T') {
+		if ($valStr -cmatch '^\d{4}-\d{2}-\d{2}T') {
 			X "$indent<value xsi:type=`"xs:dateTime`">$(Esc-XmlText $valStr)</value>"
 		} elseif ($valStr -eq "true" -or $valStr -eq "false") {
 			X "$indent<value xsi:type=`"xs:boolean`">$(Esc-XmlText $valStr.ToLower())</value>"
-		} elseif ($valStr -match '^(ПланСчетов|Справочник|Перечисление|Документ|ПланВидовХарактеристик|ПланВидовРасчета|БизнесПроцесс|Задача|РегистрСведений|ПланОбмена)\.' -or $valStr -match '^(ChartOfAccounts|Catalog|Enum|Document|ChartOfCharacteristicTypes|ChartOfCalculationTypes|BusinessProcess|Task|InformationRegister|ExchangePlan)\.') {
+		} elseif (Test-RefValueLiteral $valStr) {
 			X "$indent<value xsi:type=`"dcscor:DesignTimeValue`">$(Esc-XmlText $valStr)</value>"
 		} else {
 			X "$indent<value xsi:type=`"xs:string`">$(Esc-XmlText $valStr)</value>"
@@ -2513,6 +2621,9 @@ function Emit-FilterItem {
 	X "$indent`t<dcsset:comparisonType>$(Esc-XmlText $compType)</dcsset:comparisonType>"
 
 	# Right value: один, несколько (InList) или ValueListType (пустой list-placeholder)
+	# Тип из чужого пространства имён ({uri, name}) — xmlns объявляется на самом <right>
+	$customType = Get-CustomValueType $item.valueType
+	$typeAttr = if ($customType) { "xmlns:dN=`"$($customType.uri)`" xsi:type=`"dN:$($customType.name)`"" } else { $null }
 	$valIsArray = ($item.value -is [array]) -or ($item.value -is [System.Collections.IList] -and $item.value -isnot [string])
 	if ($valIsArray) {
 		# Пустой массив → пустой ValueListType placeholder
@@ -2524,39 +2635,44 @@ function Emit-FilterItem {
 		} else {
 			# Несколько <right> подряд (multi-value InList)
 			foreach ($v in $item.value) {
-				$vt = if ($item.valueType) { "$($item.valueType)" } else { "" }
-				if (-not $vt) {
+				if (Test-StandardPeriodValue $v) { Emit-StandardPeriodValue $v "dcsset:right" "$indent`t"; continue }
+				$vt = if ($item.valueType -and -not $customType) { "$($item.valueType)" } else { "" }
+				if (-not $vt -and -not $customType) {
 					if ($v -is [bool]) { $vt = 'xs:boolean' }
 					elseif ($v -is [int] -or $v -is [long] -or $v -is [double]) { $vt = 'xs:decimal' }
-					elseif ("$v" -match '^\d{4}-\d{2}-\d{2}T') { $vt = 'xs:dateTime' }
+					elseif ("$v" -cmatch '^\d{4}-\d{2}-\d{2}T') { $vt = 'xs:dateTime' }
 					elseif ("$v" -match '^-?\d+(\.\d+)?$') { $vt = 'xs:decimal' }
-					elseif ("$v" -match '^(Перечисление|Справочник|ПланСчетов|Документ|ПланВидовХарактеристик|ПланВидовРасчета|БизнесПроцесс|Задача|РегистрСведений|ПланОбмена|Catalog|Enum|Document|ChartOfAccounts|ChartOfCharacteristicTypes|ChartOfCalculationTypes|BusinessProcess|Task|InformationRegister|ExchangePlan)\.') { $vt = 'dcscor:DesignTimeValue' }
+					elseif (Test-RefValueLiteral "$v") { $vt = 'dcscor:DesignTimeValue' }
 					else { $vt = 'xs:string' }
 				}
 				$vStr = if ($v -is [bool]) { "$v".ToLower() } else { Esc-XmlText "$v" }
-				X "$indent`t<dcsset:right xsi:type=`"$vt`">$vStr</dcsset:right>"
+				$attr = if ($typeAttr) { $typeAttr } else { "xsi:type=`"$vt`"" }
+				X "$indent`t<dcsset:right $attr>$vStr</dcsset:right>"
 			}
 		}
+	} elseif (Test-StandardPeriodValue $item.value) {
+		Emit-StandardPeriodValue $item.value "dcsset:right" "$indent`t"
 	} elseif ($null -ne $item.value) {
-		$vt = if ($item.valueType) { "$($item.valueType)" } else { "" }
-		if (-not $vt) {
+		$vt = if ($item.valueType -and -not $customType) { "$($item.valueType)" } else { "" }
+		if (-not $vt -and -not $customType) {
 			$v = $item.value
 			if ($v -is [bool]) {
 				$vt = "xs:boolean"
 			} elseif ($v -is [int] -or $v -is [long] -or $v -is [double]) {
 				$vt = "xs:decimal"
-			} elseif ("$v" -match '^\d{4}-\d{2}-\d{2}T') {
+			} elseif ("$v" -cmatch '^\d{4}-\d{2}-\d{2}T') {
 				$vt = "xs:dateTime"
 			} elseif ("$v" -match '^-?\d+(\.\d+)?$') {
 				$vt = "xs:decimal"
-			} elseif ("$v" -match '^(Перечисление|Справочник|ПланСчетов|Документ|ПланВидовХарактеристик|ПланВидовРасчета|БизнесПроцесс|Задача|РегистрСведений|ПланОбмена|Catalog|Enum|Document|ChartOfAccounts|ChartOfCharacteristicTypes|ChartOfCalculationTypes|BusinessProcess|Task|InformationRegister|ExchangePlan)\.') {
+			} elseif (Test-RefValueLiteral "$v") {
 				$vt = "dcscor:DesignTimeValue"
 			} else {
 				$vt = "xs:string"
 			}
 		}
 		$vStr = if ($item.value -is [bool]) { "$($item.value)".ToLower() } else { Esc-XmlText "$($item.value)" }
-		X "$indent`t<dcsset:right xsi:type=`"$vt`">$vStr</dcsset:right>"
+		$attr = if ($typeAttr) { $typeAttr } else { "xsi:type=`"$vt`"" }
+		X "$indent`t<dcsset:right $attr>$vStr</dcsset:right>"
 	}
 
 	if ($item.presentation) {
@@ -3075,6 +3191,12 @@ function Emit-DataParameters {
 		# Support string shorthand
 		if ($dp -is [string]) {
 			$parsed = Parse-DataParamShorthand $dp
+			# Слово-вариант периода у параметра, объявленного строкой/числом/булевым, — это строка
+			# (как true/false у строкового параметра). Дату не трогаем: период у даты — штатно.
+			if ((Test-StandardPeriodValue $parsed.value)) {
+				$decl = $script:allParams | Where-Object { $_.name -eq "$($parsed.parameter)" } | Select-Object -First 1
+				if ($decl -and "$($decl.type)" -match '^(string|decimal|boolean)') { $parsed.value = $parsed.text }
+			}
 			$dpObj = New-Object PSObject
 			$dpObj | Add-Member -NotePropertyName "parameter" -NotePropertyValue $parsed.parameter
 			if ($null -ne $parsed.value) {
@@ -3103,73 +3225,50 @@ function Emit-DataParameters {
 		# Value
 		if ($dp.nilValue -eq $true) {
 			X "$indent`t`t<dcscor:value xsi:nil=`"true`"/>"
-		} elseif (Test-EmptyValue $dp.value) {
+		} elseif (-not (Test-DataParamList $dp.value) -and (Test-EmptyValue $dp.value)) {
 			Emit-EmptyValue -type "$($dp.valueType)" -indent "$indent`t`t" -tagPrefix "dcscor:" -valueListAllowed $false
 		} elseif ($null -ne $dp.value) {
-			$vtype = "$($dp.valueType)"
-			if (($dp.value -is [PSCustomObject] -or $dp.value -is [hashtable]) -and ($dp.value.variant)) {
-				# Standard{Period,BeginningDate} — различаем по форме value:
-				#  {variant, date}         → SBD
-				#  {variant, startDate, endDate} → SP с датами
-				#  {variant} only          → инференс по имени (BeginningOf* → SBD, иначе SP)
-				$_hasDate = $false; $_hasSD = $false
-				if ($dp.value -is [PSCustomObject]) {
-					$_hasDate = [bool]$dp.value.PSObject.Properties['date']
-					$_hasSD   = [bool]$dp.value.PSObject.Properties['startDate']
-				} else {
-					$_hasDate = $dp.value.Contains('date')
-					$_hasSD   = $dp.value.Contains('startDate')
-				}
-				$_variantStr = "$($dp.value.variant)"
-				$_isSBD = $_hasDate -or (-not $_hasSD -and $_variantStr -like 'BeginningOf*')
-				if ($_isSBD) {
-					$_d = $null
-					if ($dp.value -is [PSCustomObject] -and $dp.value.PSObject.Properties['date']) { $_d = "$($dp.value.date)" }
-					elseif ($dp.value -is [System.Collections.IDictionary] -and $dp.value.Contains('date')) { $_d = "$($dp.value['date'])" }
-					X "$indent`t`t<dcscor:value xsi:type=`"v8:StandardBeginningDate`">"
-					X "$indent`t`t`t<v8:variant xsi:type=`"v8:StandardBeginningDateVariant`">$(Esc-XmlText $_variantStr)</v8:variant>"
-					if ($_variantStr -eq 'Custom') {
-						if (-not $_d) { $_d = '0001-01-01T00:00:00' }
-						X "$indent`t`t`t<v8:date>$(Esc-XmlText $_d)</v8:date>"
-					}
-					X "$indent`t`t</dcscor:value>"
-				} else {
-					# StandardPeriod — platform-pattern: startDate/endDate ТОЛЬКО для variant=Custom.
-					$_sd = $null; $_ed = $null
-					if ($dp.value -is [PSCustomObject]) {
-						if ($dp.value.PSObject.Properties['startDate']) { $_sd = "$($dp.value.startDate)" }
-						if ($dp.value.PSObject.Properties['endDate'])   { $_ed = "$($dp.value.endDate)" }
-					} else {
-						if ($dp.value.Contains('startDate')) { $_sd = "$($dp.value['startDate'])" }
-						if ($dp.value.Contains('endDate'))   { $_ed = "$($dp.value['endDate'])" }
-					}
-					X "$indent`t`t<dcscor:value xsi:type=`"v8:StandardPeriod`">"
-					X "$indent`t`t`t<v8:variant xsi:type=`"v8:StandardPeriodVariant`">$(Esc-XmlText $_variantStr)</v8:variant>"
-					if ($_variantStr -eq 'Custom') {
-						if (-not $_sd) { $_sd = '0001-01-01T00:00:00' }
-						if (-not $_ed) { $_ed = '0001-01-01T00:00:00' }
-						X "$indent`t`t`t<v8:startDate>$(Esc-XmlText $_sd)</v8:startDate>"
-						X "$indent`t`t`t<v8:endDate>$(Esc-XmlText $_ed)</v8:endDate>"
-					}
-					X "$indent`t`t</dcscor:value>"
-				}
-			} elseif ($vtype -match '^[a-zA-Z]+:') {
-				# Полный xsi:type из decompile (например "xs:boolean", "dcscor:DesignTimeValue").
-				$vStr = if ($dp.value -is [bool]) { "$($dp.value)".ToLower() } else { "$($dp.value)" }
-				X "$indent`t`t<dcscor:value xsi:type=`"$vtype`">$(Esc-XmlText $vStr)</dcscor:value>"
-			} elseif ($vtype -eq 'boolean' -or $dp.value -is [bool]) {
-				$bv = "$($dp.value)".ToLower()
-				X "$indent`t`t<dcscor:value xsi:type=`"xs:boolean`">$(Esc-XmlText $bv)</dcscor:value>"
-			} elseif ($vtype -match '^date' -or "$($dp.value)" -match '^\d{4}-\d{2}-\d{2}T') {
-				X "$indent`t`t<dcscor:value xsi:type=`"xs:dateTime`">$(Esc-XmlText "$($dp.value)")</dcscor:value>"
-			} elseif ($vtype -match '^decimal') {
-				X "$indent`t`t<dcscor:value xsi:type=`"xs:decimal`">$(Esc-XmlText "$($dp.value)")</dcscor:value>"
-			} elseif ($vtype -match '^string') {
-				X "$indent`t`t<dcscor:value xsi:type=`"xs:string`">$(Esc-XmlText "$($dp.value)")</dcscor:value>"
-			} elseif ("$($dp.value)" -match '^(ПланСчетов|Справочник|Перечисление|Документ|ПланВидовХарактеристик|ПланВидовРасчета|БизнесПроцесс|Задача|РегистрСведений|ПланОбмена)\.' -or "$($dp.value)" -match '^(ChartOfAccounts|Catalog|Enum|Document|ChartOfCharacteristicTypes|ChartOfCalculationTypes|BusinessProcess|Task|InformationRegister|ExchangePlan)\.') {
-				X "$indent`t`t<dcscor:value xsi:type=`"dcscor:DesignTimeValue`">$(Esc-XmlText "$($dp.value)")</dcscor:value>"
+			# Тип из чужого пространства имён ({uri, name}) — xmlns объявляется на самом <value>
+			$customType = Get-CustomValueType $dp.valueType
+			$vtype = if ($customType) { "" } else { "$($dp.valueType)" }
+			if (-not $vtype -and -not $customType) {
+				# Тип не задан — объявленный у параметра схемы, как в «auto» (составной не подставляем)
+				$decl = $script:allParams | Where-Object { $_.name -eq "$($dp.parameter)" } | Select-Object -First 1
+				if ($decl -and $decl.type -and $decl.type -notmatch '\s') { $vtype = $decl.type }
+			}
+			if (Test-StandardPeriodValue $dp.value) {
+				Emit-StandardPeriodValue $dp.value "dcscor:value" "$indent`t`t"
 			} else {
-				X "$indent`t`t<dcscor:value xsi:type=`"xs:string`">$(Esc-XmlText "$($dp.value)")</dcscor:value>"
+				# Список значений (valueListAllowed) — каждый элемент отдельным <dcscor:value>, как пишет платформа.
+				# Примитивный тип (заданный или объявленный) главнее формы значения
+				$vPrim = $vtype -match '^(boolean|date|decimal|string)'
+				foreach ($dpv in @($dp.value)) {
+					if ($null -eq $dpv) {
+						# null в списке — пустой элемент
+						X "$indent`t`t<dcscor:value xsi:nil=`"true`"/>"
+					} elseif ($customType) {
+						X "$indent`t`t<dcscor:value xmlns:dN=`"$($customType.uri)`" xsi:type=`"dN:$($customType.name)`">$(Esc-XmlText "$dpv")</dcscor:value>"
+					} elseif ($vtype -match '^[a-zA-Z]+:') {
+						# Полный xsi:type из decompile (например "xs:boolean", "dcscor:DesignTimeValue").
+						$vStr = if ($dpv -is [bool]) { "$dpv".ToLower() } else { "$dpv" }
+						X "$indent`t`t<dcscor:value xsi:type=`"$vtype`">$(Esc-XmlText $vStr)</dcscor:value>"
+					} elseif ($vtype -eq 'boolean' -or (-not $vPrim -and $dpv -is [bool])) {
+						$bv = "$dpv".ToLower()
+						X "$indent`t`t<dcscor:value xsi:type=`"xs:boolean`">$(Esc-XmlText $bv)</dcscor:value>"
+					} elseif ($vtype -match '^date' -or (-not $vPrim -and "$dpv" -cmatch '^\d{4}-\d{2}-\d{2}T')) {
+						X "$indent`t`t<dcscor:value xsi:type=`"xs:dateTime`">$(Esc-XmlText "$dpv")</dcscor:value>"
+					} elseif ($vtype -match '^decimal') {
+						X "$indent`t`t<dcscor:value xsi:type=`"xs:decimal`">$(Esc-XmlText "$dpv")</dcscor:value>"
+					} elseif ($vtype -match '^string') {
+						# Краткая запись уже превратила true/false (в любом регистре) в булево — вернуть текстом, строчными
+						$sv = if ($dpv -is [bool]) { "$dpv".ToLower() } else { "$dpv" }
+						X "$indent`t`t<dcscor:value xsi:type=`"xs:string`">$(Esc-XmlText $sv)</dcscor:value>"
+					} elseif (Test-RefValueLiteral "$dpv") {
+						X "$indent`t`t<dcscor:value xsi:type=`"dcscor:DesignTimeValue`">$(Esc-XmlText "$dpv")</dcscor:value>"
+					} else {
+						X "$indent`t`t<dcscor:value xsi:type=`"xs:string`">$(Esc-XmlText "$dpv")</dcscor:value>"
+					}
+				}
 			}
 		}
 
@@ -3227,8 +3326,8 @@ function Emit-GroupItems {
 			# Auto-detect: ISO date → xs:dateTime, иначе → dcscor:Field (path).
 			$pab = if ($field.periodAdditionBegin) { "$($field.periodAdditionBegin)" } else { '0001-01-01T00:00:00' }
 			$pae = if ($field.periodAdditionEnd)   { "$($field.periodAdditionEnd)"   } else { '0001-01-01T00:00:00' }
-			$pabT = if ($pab -match '^\d{4}-\d{2}-\d{2}T') { 'xs:dateTime' } else { 'dcscor:Field' }
-			$paeT = if ($pae -match '^\d{4}-\d{2}-\d{2}T') { 'xs:dateTime' } else { 'dcscor:Field' }
+			$pabT = if ($pab -cmatch '^\d{4}-\d{2}-\d{2}T') { 'xs:dateTime' } else { 'dcscor:Field' }
+			$paeT = if ($pae -cmatch '^\d{4}-\d{2}-\d{2}T') { 'xs:dateTime' } else { 'dcscor:Field' }
 			X "$indent`t`t<dcsset:periodAdditionBegin xsi:type=`"$pabT`">$(Esc-XmlText $pab)</dcsset:periodAdditionBegin>"
 			X "$indent`t`t<dcsset:periodAdditionEnd xsi:type=`"$paeT`">$(Esc-XmlText $pae)</dcsset:periodAdditionEnd>"
 			X "$indent`t</dcsset:item>"
