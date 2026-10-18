@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Крестики-нолики</title>
+    <style>
+        :root {
+            --paper: #f4efe6;
+            --ink: #1c1915;
+            --line: #2a241c;
+            --x: #9a3412;
+            --o: #1e4d6b;
+            --win: #c4a35a;
+            --muted: #6b6258;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background:
+                radial-gradient(circle at 20% 10%, #fffaf2 0%, transparent 40%),
+                var(--paper);
+            color: var(--ink);
+            font-family: Georgia, "Times New Roman", serif;
+        }
+
+        .game {
+            width: min(420px, calc(100vw - 32px));
+            text-align: center;
+        }
+
+        h1 {
+            margin: 0 0 4px;
+            font-weight: 500;
+            letter-spacing: 0.04em;
+            font-size: 32px;
+        }
+
+        .hint {
+            margin: 0 0 10px;
+            color: var(--muted);
+            font-size: 15px;
+        }
+
+        .status {
+            min-height: 28px;
+            margin: 0 0 18px;
+            color: var(--muted);
+            font-size: 18px;
+        }
+
+        .status.win {
+            color: var(--ink);
+            font-weight: 700;
+        }
+
+        .board {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            width: min(360px, 100%);
+            margin: 0 auto;
+            aspect-ratio: 1;
+            background: var(--line);
+            border: 4px solid var(--line);
+            gap: 4px;
+        }
+
+        .cell {
+            appearance: none;
+            border: 0;
+            margin: 0;
+            padding: 0;
+            background: var(--paper);
+            color: var(--ink);
+            font: 700 72px/1 Georgia, "Times New Roman", serif;
+            cursor: pointer;
+        }
+
+        .cell:hover:not(:disabled) {
+            background: #fffdf8;
+        }
+
+        .cell:disabled {
+            cursor: default;
+        }
+
+        .cell.x {
+            color: var(--x);
+        }
+
+        .cell.o {
+            color: var(--o);
+        }
+
+        .cell.win {
+            background: #f3e2b8;
+        }
+
+        .score {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 8px;
+            margin: 18px auto 0;
+            width: min(360px, 100%);
+        }
+
+        .score div {
+            padding: 10px 6px;
+            border-top: 1px solid #d8d0c4;
+        }
+
+        .score span {
+            display: block;
+            color: var(--muted);
+            font-size: 13px;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+        }
+
+        .score strong {
+            display: block;
+            margin-top: 4px;
+            font-family: "Segoe UI", Arial, sans-serif;
+            font-size: 24px;
+            font-weight: 600;
+            font-variant-numeric: tabular-nums;
+        }
+
+        .actions {
+            margin-top: 16px;
+        }
+
+        button.reset {
+            appearance: none;
+            border: 1px solid var(--line);
+            background: transparent;
+            color: var(--ink);
+            font: 16px Georgia, "Times New Roman", serif;
+            padding: 8px 18px;
+            cursor: pointer;
+        }
+
+        button.reset:hover {
+            background: var(--ink);
+            color: var(--paper);
+        }
+    </style>
+</head>
+<body>
+    <main class="game">
+        <h1>Крестики-нолики</h1>
+        <p class="hint">Вы играете крестиками, компьютер - ноликами</p>
+        <p id="status" class="status">Ваш ход</p>
+        <div id="board" class="board" aria-label="Поле 3 на 3"></div>
+        <div class="score">
+            <div><span>Вы</span><strong id="score-x">0</strong></div>
+            <div><span>Ничьи</span><strong id="score-draw">0</strong></div>
+            <div><span>Компьютер</span><strong id="score-o">0</strong></div>
+        </div>
+        <div class="actions">
+            <button id="reset" class="reset" type="button">Новая партия</button>
+        </div>
+    </main>
+    <script>
+        (function () {
+            var LINES = [
+                [0, 1, 2],
+                [3, 4, 5],
+                [6, 7, 8],
+                [0, 3, 6],
+                [1, 4, 7],
+                [2, 5, 8],
+                [0, 4, 8],
+                [2, 4, 6]
+            ];
+
+            var boardEl = document.getElementById("board");
+            var statusEl = document.getElementById("status");
+            var scoreXEl = document.getElementById("score-x");
+            var scoreOEl = document.getElementById("score-o");
+            var scoreDrawEl = document.getElementById("score-draw");
+            var cells = [];
+            var board = [];
+            var turn = "X";
+            var finished = false;
+            var thinking = false;
+            var computerTimer = null;
+            var score = { X: 0, O: 0, draw: 0 };
+
+            function outcomeText(mark) {
+                return mark === "X" ? "Вы победили" : "Победил компьютер";
+            }
+
+            function setStatus(text, isWin) {
+                statusEl.textContent = text;
+                statusEl.className = isWin ? "status win" : "status";
+            }
+
+            function winnerOn(state) {
+                var i;
+                var line;
+                var a;
+                var b;
+                var c;
+                for (i = 0; i < LINES.length; i += 1) {
+                    line = LINES[i];
+                    a = state[line[0]];
+                    b = state[line[1]];
+                    c = state[line[2]];
+                    if (a && a === b && b === c) {
+                        return { mark: a, line: line };
+                    }
+                }
+                return null;
+            }
+
+            function emptyCells(state) {
+                var result = [];
+                var i;
+                for (i = 0; i < state.length; i += 1) {
+                    if (!state[i]) {
+                        result.push(i);
+                    }
+                }
+                return result;
+            }
+
+            function isDrawState(state) {
+                return emptyCells(state).length === 0 && !winnerOn(state);
+            }
+
+            function minimax(state, mark) {
+                var winner = winnerOn(state);
+                var empties;
+                var bestScore;
+                var bestIndex;
+                var i;
+                var index;
+                var nextMark;
+                var result;
+                if (winner) {
+                    return { score: winner.mark === "O" ? 1 : -1, index: -1 };
+                }
+                empties = emptyCells(state);
+                if (empties.length === 0) {
+                    return { score: 0, index: -1 };
+                }
+                bestScore = mark === "O" ? -2 : 2;
+                bestIndex = empties[0];
+                nextMark = mark === "O" ? "X" : "O";
+                for (i = 0; i < empties.length; i += 1) {
+                    index = empties[i];
+                    state[index] = mark;
+                    result = minimax(state, nextMark);
+                    state[index] = "";
+                    if (mark === "O" && result.score > bestScore) {
+                        bestScore = result.score;
+                        bestIndex = index;
+                    }
+                    if (mark === "X" && result.score < bestScore) {
+                        bestScore = result.score;
+                        bestIndex = index;
+                    }
+                }
+                return { score: bestScore, index: bestIndex };
+            }
+
+            function paint() {
+                var i;
+                for (i = 0; i < cells.length; i += 1) {
+                    cells[i].textContent = board[i];
+                    cells[i].className = "cell";
+                    if (board[i] === "X") {
+                        cells[i].className = "cell x";
+                    } else if (board[i] === "O") {
+                        cells[i].className = "cell o";
+                    }
+                    cells[i].disabled = finished || thinking || turn !== "X" || Boolean(board[i]);
+                }
+            }
+
+            function highlight(line) {
+                var i;
+                for (i = 0; i < line.length; i += 1) {
+                    cells[line[i]].className += " win";
+                }
+            }
+
+            function finish(winner) {
+                finished = true;
+                thinking = false;
+                score[winner.mark] += 1;
+                paint();
+                highlight(winner.line);
+                setStatus(outcomeText(winner.mark), true);
+                updateScore();
+            }
+
+            function finishDraw() {
+                finished = true;
+                thinking = false;
+                score.draw += 1;
+                paint();
+                setStatus("Ничья", false);
+                updateScore();
+            }
+
+            function place(index) {
+                var winner;
+                if (finished || board[index]) {
+                    return false;
+                }
+                board[index] = turn;
+                winner = winnerOn(board);
+                if (winner) {
+                    finish(winner);
+                    return false;
+                }
+                if (isDrawState(board)) {
+                    finishDraw();
+                    return false;
+                }
+                turn = turn === "X" ? "O" : "X";
+                paint();
+                setStatus(turn === "X" ? "Ваш ход" : "Ход компьютера", false);
+                return true;
+            }
+
+            function computerMove() {
+                var choice;
+                thinking = false;
+                computerTimer = null;
+                if (finished || turn !== "O") {
+                    return;
+                }
+                choice = minimax(board.slice(), "O");
+                place(choice.index);
+            }
+
+            function scheduleComputer() {
+                thinking = true;
+                paint();
+                setStatus("Ход компьютера", false);
+                computerTimer = setTimeout(computerMove, 280);
+            }
+
+            function playHuman(index) {
+                if (finished || thinking || turn !== "X" || board[index]) {
+                    return;
+                }
+                if (place(index)) {
+                    scheduleComputer();
+                }
+            }
+
+            function updateScore() {
+                scoreXEl.textContent = String(score.X);
+                scoreOEl.textContent = String(score.O);
+                scoreDrawEl.textContent = String(score.draw);
+            }
+
+            function newGame() {
+                if (computerTimer) {
+                    clearTimeout(computerTimer);
+                    computerTimer = null;
+                }
+                board = ["", "", "", "", "", "", "", "", ""];
+                turn = "X";
+                finished = false;
+                thinking = false;
+                paint();
+                setStatus("Ваш ход", false);
+                cells[0].focus();
+            }
+
+            function build() {
+                var i;
+                var button;
+                for (i = 0; i < 9; i += 1) {
+                    button = document.createElement("button");
+                    button.type = "button";
+                    button.className = "cell";
+                    button.setAttribute("aria-label", "Клетка " + (i + 1));
+                    button.dataset.index = String(i);
+                    button.addEventListener("click", function (event) {
+                        playHuman(Number(event.currentTarget.dataset.index));
+                    });
+                    boardEl.appendChild(button);
+                    cells.push(button);
+                }
+                document.getElementById("reset").addEventListener("click", newGame);
+                newGame();
+            }
+
+            build();
+        }());
+    </script>
+</body>
+</html>
