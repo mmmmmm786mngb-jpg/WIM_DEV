@@ -1,0 +1,880 @@
+﻿<?xml version="1.0" encoding="UTF-8"?>
+<Form xmlns="http://v8.1c.ru/8.3/xcf/logform" xmlns:app="http://v8.1c.ru/8.2/managed-application/core" xmlns:cfg="http://v8.1c.ru/8.1/data/enterprise/current-config" xmlns:dcscor="http://v8.1c.ru/8.1/data-composition-system/core" xmlns:dcssch="http://v8.1c.ru/8.1/data-composition-system/schema" xmlns:dcsset="http://v8.1c.ru/8.1/data-composition-system/settings" xmlns:ent="http://v8.1c.ru/8.1/data/enterprise" xmlns:lf="http://v8.1c.ru/8.2/managed-application/logform" xmlns:style="http://v8.1c.ru/8.1/data/ui/style" xmlns:sys="http://v8.1c.ru/8.1/data/ui/fonts/system" xmlns:v8="http://v8.1c.ru/8.1/data/core" xmlns:v8ui="http://v8.1c.ru/8.1/data/ui" xmlns:web="http://v8.1c.ru/8.1/data/ui/colors/web" xmlns:win="http://v8.1c.ru/8.1/data/ui/colors/windows" xmlns:xr="http://v8.1c.ru/8.3/xcf/readable" xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" version="2.20">
+	<Title>
+		<v8:item>
+			<v8:lang>ru</v8:lang>
+			<v8:content>Проверка цен покупки РОСТ</v8:content>
+		</v8:item>
+	</Title>
+	<Width>120</Width>
+	<AutoTitle>false</AutoTitle>
+	<AutoCommandBar name="ФормаКоманднаяПанель" id="-1">
+		<ChildItems>
+			<Button name="Сформировать" id="1">
+				<Type>CommandBarButton</Type>
+				<DefaultButton>true</DefaultButton>
+				<CommandName>Form.Command.Сформировать</CommandName>
+				<ExtendedTooltip name="СформироватьРасширеннаяПодсказка" id="2"/>
+			</Button>
+			<Button name="СохранитьЛог" id="3">
+				<Type>CommandBarButton</Type>
+				<CommandName>Form.Command.СохранитьЛог</CommandName>
+				<Title>
+					<v8:item>
+						<v8:lang>ru</v8:lang>
+						<v8:content>Сохранить подробный лог JSON</v8:content>
+					</v8:item>
+				</Title>
+				<ExtendedTooltip name="СохранитьЛогРасширеннаяПодсказка" id="4"/>
+			</Button>
+		</ChildItems>
+	</AutoCommandBar>
+	<Events>
+		<Event name="OnCreateAtServer">ПриСозданииНаСервере</Event>
+	</Events>
+	<ChildItems>
+		<UsualGroup name="ГруппаПараметры" id="5">
+			<Group>AlwaysHorizontal</Group>
+			<ExtendedTooltip name="ГруппаПараметрыРасширеннаяПодсказка" id="6"/>
+			<ChildItems>
+				<InputField name="Период" id="7">
+					<DataPath>Период</DataPath>
+					<Title>
+						<v8:item>
+							<v8:lang>ru</v8:lang>
+							<v8:content>Период</v8:content>
+						</v8:item>
+					</Title>
+					<ContextMenu name="ПериодКонтекстноеМеню" id="8"/>
+					<ExtendedTooltip name="ПериодРасширеннаяПодсказка" id="9"/>
+				</InputField>
+				<InputField name="Ответственный" id="10">
+					<DataPath>Ответственный</DataPath>
+					<Title>
+						<v8:item>
+							<v8:lang>ru</v8:lang>
+							<v8:content>Ответственный</v8:content>
+						</v8:item>
+					</Title>
+					<ClearButton>true</ClearButton>
+					<ContextMenu name="ОтветственныйКонтекстноеМеню" id="11"/>
+					<ExtendedTooltip name="ОтветственныйРасширеннаяПодсказка" id="12"/>
+				</InputField>
+				<InputField name="РазрывЗапускаСекунд" id="13">
+					<DataPath>РазрывЗапускаСекунд</DataPath>
+					<Title>
+						<v8:item>
+							<v8:lang>ru</v8:lang>
+							<v8:content>Разрыв запуска, сек</v8:content>
+						</v8:item>
+					</Title>
+					<ContextMenu name="РазрывЗапускаСекундКонтекстноеМеню" id="14"/>
+					<ExtendedTooltip name="РазрывЗапускаСекундРасширеннаяПодсказка" id="15"/>
+				</InputField>
+			</ChildItems>
+		</UsualGroup>
+		<LabelDecoration name="Пояснение" id="16">
+			<Title formatted="false">
+				<v8:item>
+					<v8:lang>ru</v8:lang>
+					<v8:content>Один запуск регламента - пачка поручений, между которыми меньше указанного разрыва. Сравнивается котировка одной бумаги внутри запуска. Помеченные на удаление в сравнение не входят: у них остается цена-заглушка.</v8:content>
+				</v8:item>
+			</Title>
+			<ContextMenu name="ПояснениеКонтекстноеМеню" id="17"/>
+			<ExtendedTooltip name="ПояснениеРасширеннаяПодсказка" id="18"/>
+		</LabelDecoration>
+		<Table name="Итоги" id="19">
+			<ReadOnly>true</ReadOnly>
+			<ChangeRowSet>false</ChangeRowSet>
+			<ChangeRowOrder>false</ChangeRowOrder>
+			<HeightInTableRows>8</HeightInTableRows>
+			<DataPath>Итоги</DataPath>
+			<Title>
+				<v8:item>
+					<v8:lang>ru</v8:lang>
+					<v8:content>По бумагам внутри запуска</v8:content>
+				</v8:item>
+			</Title>
+			<SearchStringLocation>Top</SearchStringLocation>
+			<ContextMenu name="ИтогиКонтекстноеМеню" id="20"/>
+			<AutoCommandBar name="ИтогиКоманднаяПанель" id="21"/>
+			<ExtendedTooltip name="ИтогиРасширеннаяПодсказка" id="22"/>
+			<SearchStringAddition name="ИтогиСтрокаПоиска" id="23">
+				<AdditionSource>
+					<Item>Итоги</Item>
+					<Type>SearchStringRepresentation</Type>
+				</AdditionSource>
+				<ContextMenu name="ИтогиСтрокаПоискаКонтекстноеМеню" id="24"/>
+				<ExtendedTooltip name="ИтогиСтрокаПоискаРасширеннаяПодсказка" id="25"/>
+			</SearchStringAddition>
+			<ViewStatusAddition name="ИтогиСостояниеПросмотра" id="26">
+				<AdditionSource>
+					<Item>Итоги</Item>
+					<Type>ViewStatusRepresentation</Type>
+				</AdditionSource>
+				<ContextMenu name="ИтогиСостояниеПросмотраКонтекстноеМеню" id="27"/>
+				<ExtendedTooltip name="ИтогиСостояниеПросмотраРасширеннаяПодсказка" id="28"/>
+			</ViewStatusAddition>
+			<SearchControlAddition name="ИтогиУправлениеПоиском" id="29">
+				<AdditionSource>
+					<Item>Итоги</Item>
+					<Type>SearchControl</Type>
+				</AdditionSource>
+				<ContextMenu name="ИтогиУправлениеПоискомКонтекстноеМеню" id="30"/>
+				<ExtendedTooltip name="ИтогиУправлениеПоискомРасширеннаяПодсказка" id="31"/>
+			</SearchControlAddition>
+			<ChildItems>
+				<LabelField name="ИтогиНомерЗапуска" id="32">
+					<DataPath>Итоги.НомерЗапуска</DataPath>
+					<Title>
+						<v8:item>
+							<v8:lang>ru</v8:lang>
+							<v8:content>Запуск</v8:content>
+						</v8:item>
+					</Title>
+					<ContextMenu name="ИтогиНомерЗапускаКонтекстноеМеню" id="33"/>
+					<ExtendedTooltip name="ИтогиНомерЗапускаРасширеннаяПодсказка" id="34"/>
+				</LabelField>
+				<LabelField name="ИтогиНачало" id="35">
+					<DataPath>Итоги.Начало</DataPath>
+					<Title>
+						<v8:item>
+							<v8:lang>ru</v8:lang>
+							<v8:content>Начало</v8:content>
+						</v8:item>
+					</Title>
+					<ContextMenu name="ИтогиНачалоКонтекстноеМеню" id="36"/>
+					<ExtendedTooltip name="ИтогиНачалоРасширеннаяПодсказка" id="37"/>
+				</LabelField>
+				<LabelField name="ИтогиОкончание" id="38">
+					<DataPath>Итоги.Окончание</DataPath>
+					<Title>
+						<v8:item>
+							<v8:lang>ru</v8:lang>
+							<v8:content>Окончание</v8:content>
+						</v8:item>
+					</Title>
+					<ContextMenu name="ИтогиОкончаниеКонтекстноеМеню" id="39"/>
+					<ExtendedTooltip name="ИтогиОкончаниеРасширеннаяПодсказка" id="40"/>
+				</LabelField>
+				<LabelField name="ИтогиАктив" id="41">
+					<DataPath>Итоги.Актив</DataPath>
+					<Title>
+						<v8:item>
+							<v8:lang>ru</v8:lang>
+							<v8:content>Бумага</v8:content>
+						</v8:item>
+					</Title>
+					<ContextMenu name="ИтогиАктивКонтекстноеМеню" id="42"/>
+					<ExtendedTooltip name="ИтогиАктивРасширеннаяПодсказка" id="43"/>
+				</LabelField>
+				<LabelField name="ИтогиПоручений" id="44">
+					<DataPath>Итоги.Поручений</DataPath>
+					<Title>
+						<v8:item>
+							<v8:lang>ru</v8:lang>
+							<v8:content>Поручений</v8:content>
+						</v8:item>
+					</Title>
+					<ContextMenu name="ИтогиПорученийКонтекстноеМеню" id="45"/>
+					<ExtendedTooltip name="ИтогиПорученийРасширеннаяПодсказка" id="46"/>
+				</LabelField>
+				<LabelField name="ИтогиКотировкаМин" id="47">
+					<DataPath>Итоги.КотировкаМин</DataPath>
+					<Title>
+						<v8:item>
+							<v8:lang>ru</v8:lang>
+							<v8:content>Котировка мин</v8:content>
+						</v8:item>
+					</Title>
+					<ContextMenu name="ИтогиКотировкаМинКонтекстноеМеню" id="48"/>
+					<ExtendedTooltip name="ИтогиКотировкаМинРасширеннаяПодсказка" id="49"/>
+				</LabelField>
+				<LabelField name="ИтогиКотировкаМакс" id="50">
+					<DataPath>Итоги.КотировкаМакс</DataPath>
+					<Title>
+						<v8:item>
+							<v8:lang>ru</v8:lang>
+							<v8:content>Котировка макс</v8:content>
+						</v8:item>
+					</Title>
+					<ContextMenu name="ИтогиКотировкаМаксКонтекстноеМеню" id="51"/>
+					<ExtendedTooltip name="ИтогиКотировкаМаксРасширеннаяПодсказка" id="52"/>
+				</LabelField>
+				<LabelField name="ИтогиРазныхЦен" id="53">
+					<DataPath>Итоги.РазныхЦен</DataPath>
+					<Title>
+						<v8:item>
+							<v8:lang>ru</v8:lang>
+							<v8:content>Разных цен</v8:content>
+						</v8:item>
+					</Title>
+					<ContextMenu name="ИтогиРазныхЦенКонтекстноеМеню" id="54"/>
+					<ExtendedTooltip name="ИтогиРазныхЦенРасширеннаяПодсказка" id="55"/>
+				</LabelField>
+				<LabelField name="ИтогиТекстИтога" id="56">
+					<DataPath>Итоги.ТекстИтога</DataPath>
+					<Title>
+						<v8:item>
+							<v8:lang>ru</v8:lang>
+							<v8:content>Итог</v8:content>
+						</v8:item>
+					</Title>
+					<ContextMenu name="ИтогиТекстИтогаКонтекстноеМеню" id="57"/>
+					<ExtendedTooltip name="ИтогиТекстИтогаРасширеннаяПодсказка" id="58"/>
+				</LabelField>
+			</ChildItems>
+		</Table>
+		<Table name="Поручения" id="59">
+			<ReadOnly>true</ReadOnly>
+			<ChangeRowSet>false</ChangeRowSet>
+			<ChangeRowOrder>false</ChangeRowOrder>
+			<HeightInTableRows>12</HeightInTableRows>
+			<DataPath>Поручения</DataPath>
+			<Title>
+				<v8:item>
+					<v8:lang>ru</v8:lang>
+					<v8:content>Поручения запуска</v8:content>
+				</v8:item>
+			</Title>
+			<SearchStringLocation>Top</SearchStringLocation>
+			<ContextMenu name="ПорученияКонтекстноеМеню" id="60"/>
+			<AutoCommandBar name="ПорученияКоманднаяПанель" id="61"/>
+			<ExtendedTooltip name="ПорученияРасширеннаяПодсказка" id="62"/>
+			<SearchStringAddition name="ПорученияСтрокаПоиска" id="63">
+				<AdditionSource>
+					<Item>Поручения</Item>
+					<Type>SearchStringRepresentation</Type>
+				</AdditionSource>
+				<ContextMenu name="ПорученияСтрокаПоискаКонтекстноеМеню" id="64"/>
+				<ExtendedTooltip name="ПорученияСтрокаПоискаРасширеннаяПодсказка" id="65"/>
+			</SearchStringAddition>
+			<ViewStatusAddition name="ПорученияСостояниеПросмотра" id="66">
+				<AdditionSource>
+					<Item>Поручения</Item>
+					<Type>ViewStatusRepresentation</Type>
+				</AdditionSource>
+				<ContextMenu name="ПорученияСостояниеПросмотраКонтекстноеМеню" id="67"/>
+				<ExtendedTooltip name="ПорученияСостояниеПросмотраРасширеннаяПодсказка" id="68"/>
+			</ViewStatusAddition>
+			<SearchControlAddition name="ПорученияУправлениеПоиском" id="69">
+				<AdditionSource>
+					<Item>Поручения</Item>
+					<Type>SearchControl</Type>
+				</AdditionSource>
+				<ContextMenu name="ПорученияУправлениеПоискомКонтекстноеМеню" id="70"/>
+				<ExtendedTooltip name="ПорученияУправлениеПоискомРасширеннаяПодсказка" id="71"/>
+			</SearchControlAddition>
+			<ChildItems>
+				<LabelField name="ПорученияНомерЗапуска" id="72">
+					<DataPath>Поручения.НомерЗапуска</DataPath>
+					<Title>
+						<v8:item>
+							<v8:lang>ru</v8:lang>
+							<v8:content>Запуск</v8:content>
+						</v8:item>
+					</Title>
+					<ContextMenu name="ПорученияНомерЗапускаКонтекстноеМеню" id="73"/>
+					<ExtendedTooltip name="ПорученияНомерЗапускаРасширеннаяПодсказка" id="74"/>
+				</LabelField>
+				<LabelField name="ПорученияДата" id="75">
+					<DataPath>Поручения.Дата</DataPath>
+					<Title>
+						<v8:item>
+							<v8:lang>ru</v8:lang>
+							<v8:content>Дата</v8:content>
+						</v8:item>
+					</Title>
+					<ContextMenu name="ПорученияДатаКонтекстноеМеню" id="76"/>
+					<ExtendedTooltip name="ПорученияДатаРасширеннаяПодсказка" id="77"/>
+				</LabelField>
+				<LabelField name="ПорученияНомер" id="78">
+					<DataPath>Поручения.Номер</DataPath>
+					<Title>
+						<v8:item>
+							<v8:lang>ru</v8:lang>
+							<v8:content>Номер</v8:content>
+						</v8:item>
+					</Title>
+					<ContextMenu name="ПорученияНомерКонтекстноеМеню" id="79"/>
+					<ExtendedTooltip name="ПорученияНомерРасширеннаяПодсказка" id="80"/>
+				</LabelField>
+				<LabelField name="ПорученияПортфель" id="81">
+					<DataPath>Поручения.Портфель</DataPath>
+					<Title>
+						<v8:item>
+							<v8:lang>ru</v8:lang>
+							<v8:content>Портфель</v8:content>
+						</v8:item>
+					</Title>
+					<ContextMenu name="ПорученияПортфельКонтекстноеМеню" id="82"/>
+					<ExtendedTooltip name="ПорученияПортфельРасширеннаяПодсказка" id="83"/>
+				</LabelField>
+				<LabelField name="ПорученияАктив" id="84">
+					<DataPath>Поручения.Актив</DataPath>
+					<Title>
+						<v8:item>
+							<v8:lang>ru</v8:lang>
+							<v8:content>Бумага</v8:content>
+						</v8:item>
+					</Title>
+					<ContextMenu name="ПорученияАктивКонтекстноеМеню" id="85"/>
+					<ExtendedTooltip name="ПорученияАктивРасширеннаяПодсказка" id="86"/>
+				</LabelField>
+				<LabelField name="ПорученияКотировка" id="87">
+					<DataPath>Поручения.Котировка</DataPath>
+					<Title>
+						<v8:item>
+							<v8:lang>ru</v8:lang>
+							<v8:content>Котировка</v8:content>
+						</v8:item>
+					</Title>
+					<ContextMenu name="ПорученияКотировкаКонтекстноеМеню" id="88"/>
+					<ExtendedTooltip name="ПорученияКотировкаРасширеннаяПодсказка" id="89"/>
+				</LabelField>
+				<LabelField name="ПорученияЦена" id="90">
+					<DataPath>Поручения.Цена</DataPath>
+					<Title>
+						<v8:item>
+							<v8:lang>ru</v8:lang>
+							<v8:content>Цена</v8:content>
+						</v8:item>
+					</Title>
+					<ContextMenu name="ПорученияЦенаКонтекстноеМеню" id="91"/>
+					<ExtendedTooltip name="ПорученияЦенаРасширеннаяПодсказка" id="92"/>
+				</LabelField>
+				<LabelField name="ПорученияКоличество" id="93">
+					<DataPath>Поручения.Количество</DataPath>
+					<Title>
+						<v8:item>
+							<v8:lang>ru</v8:lang>
+							<v8:content>Количество</v8:content>
+						</v8:item>
+					</Title>
+					<ContextMenu name="ПорученияКоличествоКонтекстноеМеню" id="94"/>
+					<ExtendedTooltip name="ПорученияКоличествоРасширеннаяПодсказка" id="95"/>
+				</LabelField>
+				<LabelField name="ПорученияСумма" id="96">
+					<DataPath>Поручения.Сумма</DataPath>
+					<Title>
+						<v8:item>
+							<v8:lang>ru</v8:lang>
+							<v8:content>Сумма</v8:content>
+						</v8:item>
+					</Title>
+					<ContextMenu name="ПорученияСуммаКонтекстноеМеню" id="97"/>
+					<ExtendedTooltip name="ПорученияСуммаРасширеннаяПодсказка" id="98"/>
+				</LabelField>
+				<LabelField name="ПорученияВСравнении" id="99">
+					<DataPath>Поручения.ВСравнении</DataPath>
+					<Title>
+						<v8:item>
+							<v8:lang>ru</v8:lang>
+							<v8:content>В сравнении</v8:content>
+						</v8:item>
+					</Title>
+					<ContextMenu name="ПорученияВСравненииКонтекстноеМеню" id="100"/>
+					<ExtendedTooltip name="ПорученияВСравненииРасширеннаяПодсказка" id="101"/>
+				</LabelField>
+				<LabelField name="ПорученияПримечание" id="102">
+					<DataPath>Поручения.Примечание</DataPath>
+					<Title>
+						<v8:item>
+							<v8:lang>ru</v8:lang>
+							<v8:content>Примечание</v8:content>
+						</v8:item>
+					</Title>
+					<ContextMenu name="ПорученияПримечаниеКонтекстноеМеню" id="103"/>
+					<ExtendedTooltip name="ПорученияПримечаниеРасширеннаяПодсказка" id="104"/>
+				</LabelField>
+			</ChildItems>
+		</Table>
+	</ChildItems>
+	<Attributes>
+		<Attribute name="Период" id="105">
+			<Title>
+				<v8:item>
+					<v8:lang>ru</v8:lang>
+					<v8:content>Период</v8:content>
+				</v8:item>
+			</Title>
+			<Type>
+				<v8:Type>v8:StandardPeriod</v8:Type>
+			</Type>
+		</Attribute>
+		<Attribute name="Ответственный" id="106">
+			<Title>
+				<v8:item>
+					<v8:lang>ru</v8:lang>
+					<v8:content>Ответственный</v8:content>
+				</v8:item>
+			</Title>
+			<Type>
+				<v8:Type>cfg:CatalogRef.Пользователи</v8:Type>
+			</Type>
+		</Attribute>
+		<Attribute name="РазрывЗапускаСекунд" id="107">
+			<Title>
+				<v8:item>
+					<v8:lang>ru</v8:lang>
+					<v8:content>Разрыв запуска, сек</v8:content>
+				</v8:item>
+			</Title>
+			<Type>
+				<v8:Type>xs:decimal</v8:Type>
+				<v8:NumberQualifiers>
+					<v8:Digits>6</v8:Digits>
+					<v8:FractionDigits>0</v8:FractionDigits>
+					<v8:AllowedSign>Nonnegative</v8:AllowedSign>
+				</v8:NumberQualifiers>
+			</Type>
+		</Attribute>
+		<Attribute name="Итоги" id="108">
+			<Title>
+				<v8:item>
+					<v8:lang>ru</v8:lang>
+					<v8:content>Итоги</v8:content>
+				</v8:item>
+			</Title>
+			<Type>
+				<v8:Type>v8:ValueTable</v8:Type>
+			</Type>
+			<Columns>
+				<Column name="НомерЗапуска" id="109">
+					<Title>
+						<v8:item>
+							<v8:lang>ru</v8:lang>
+							<v8:content>Запуск</v8:content>
+						</v8:item>
+					</Title>
+					<Type>
+						<v8:Type>xs:decimal</v8:Type>
+						<v8:NumberQualifiers>
+							<v8:Digits>6</v8:Digits>
+							<v8:FractionDigits>0</v8:FractionDigits>
+							<v8:AllowedSign>Any</v8:AllowedSign>
+						</v8:NumberQualifiers>
+					</Type>
+				</Column>
+				<Column name="Начало" id="110">
+					<Title>
+						<v8:item>
+							<v8:lang>ru</v8:lang>
+							<v8:content>Начало</v8:content>
+						</v8:item>
+					</Title>
+					<Type>
+						<v8:Type>xs:dateTime</v8:Type>
+						<v8:DateQualifiers>
+							<v8:DateFractions>DateTime</v8:DateFractions>
+						</v8:DateQualifiers>
+					</Type>
+				</Column>
+				<Column name="Окончание" id="111">
+					<Title>
+						<v8:item>
+							<v8:lang>ru</v8:lang>
+							<v8:content>Окончание</v8:content>
+						</v8:item>
+					</Title>
+					<Type>
+						<v8:Type>xs:dateTime</v8:Type>
+						<v8:DateQualifiers>
+							<v8:DateFractions>DateTime</v8:DateFractions>
+						</v8:DateQualifiers>
+					</Type>
+				</Column>
+				<Column name="Актив" id="112">
+					<Title>
+						<v8:item>
+							<v8:lang>ru</v8:lang>
+							<v8:content>Бумага</v8:content>
+						</v8:item>
+					</Title>
+					<Type>
+						<v8:Type>cfg:CatalogRef.Активы</v8:Type>
+					</Type>
+				</Column>
+				<Column name="Поручений" id="113">
+					<Title>
+						<v8:item>
+							<v8:lang>ru</v8:lang>
+							<v8:content>Поручений</v8:content>
+						</v8:item>
+					</Title>
+					<Type>
+						<v8:Type>xs:decimal</v8:Type>
+						<v8:NumberQualifiers>
+							<v8:Digits>6</v8:Digits>
+							<v8:FractionDigits>0</v8:FractionDigits>
+							<v8:AllowedSign>Any</v8:AllowedSign>
+						</v8:NumberQualifiers>
+					</Type>
+				</Column>
+				<Column name="КотировкаМин" id="114">
+					<Title>
+						<v8:item>
+							<v8:lang>ru</v8:lang>
+							<v8:content>Котировка мин</v8:content>
+						</v8:item>
+					</Title>
+					<Type>
+						<v8:Type>xs:decimal</v8:Type>
+						<v8:NumberQualifiers>
+							<v8:Digits>18</v8:Digits>
+							<v8:FractionDigits>6</v8:FractionDigits>
+							<v8:AllowedSign>Any</v8:AllowedSign>
+						</v8:NumberQualifiers>
+					</Type>
+				</Column>
+				<Column name="КотировкаМакс" id="115">
+					<Title>
+						<v8:item>
+							<v8:lang>ru</v8:lang>
+							<v8:content>Котировка макс</v8:content>
+						</v8:item>
+					</Title>
+					<Type>
+						<v8:Type>xs:decimal</v8:Type>
+						<v8:NumberQualifiers>
+							<v8:Digits>18</v8:Digits>
+							<v8:FractionDigits>6</v8:FractionDigits>
+							<v8:AllowedSign>Any</v8:AllowedSign>
+						</v8:NumberQualifiers>
+					</Type>
+				</Column>
+				<Column name="РазныхЦен" id="116">
+					<Title>
+						<v8:item>
+							<v8:lang>ru</v8:lang>
+							<v8:content>Разных цен</v8:content>
+						</v8:item>
+					</Title>
+					<Type>
+						<v8:Type>xs:decimal</v8:Type>
+						<v8:NumberQualifiers>
+							<v8:Digits>6</v8:Digits>
+							<v8:FractionDigits>0</v8:FractionDigits>
+							<v8:AllowedSign>Any</v8:AllowedSign>
+						</v8:NumberQualifiers>
+					</Type>
+				</Column>
+				<Column name="ТекстИтога" id="117">
+					<Title>
+						<v8:item>
+							<v8:lang>ru</v8:lang>
+							<v8:content>Итог</v8:content>
+						</v8:item>
+					</Title>
+					<Type>
+						<v8:Type>xs:string</v8:Type>
+						<v8:StringQualifiers>
+							<v8:Length>40</v8:Length>
+							<v8:AllowedLength>Variable</v8:AllowedLength>
+						</v8:StringQualifiers>
+					</Type>
+				</Column>
+			</Columns>
+		</Attribute>
+		<Attribute name="Поручения" id="118">
+			<Title>
+				<v8:item>
+					<v8:lang>ru</v8:lang>
+					<v8:content>Поручения</v8:content>
+				</v8:item>
+			</Title>
+			<Type>
+				<v8:Type>v8:ValueTable</v8:Type>
+			</Type>
+			<Columns>
+				<Column name="НомерЗапуска" id="119">
+					<Title>
+						<v8:item>
+							<v8:lang>ru</v8:lang>
+							<v8:content>Запуск</v8:content>
+						</v8:item>
+					</Title>
+					<Type>
+						<v8:Type>xs:decimal</v8:Type>
+						<v8:NumberQualifiers>
+							<v8:Digits>6</v8:Digits>
+							<v8:FractionDigits>0</v8:FractionDigits>
+							<v8:AllowedSign>Any</v8:AllowedSign>
+						</v8:NumberQualifiers>
+					</Type>
+				</Column>
+				<Column name="Дата" id="120">
+					<Title>
+						<v8:item>
+							<v8:lang>ru</v8:lang>
+							<v8:content>Дата</v8:content>
+						</v8:item>
+					</Title>
+					<Type>
+						<v8:Type>xs:dateTime</v8:Type>
+						<v8:DateQualifiers>
+							<v8:DateFractions>DateTime</v8:DateFractions>
+						</v8:DateQualifiers>
+					</Type>
+				</Column>
+				<Column name="Номер" id="121">
+					<Title>
+						<v8:item>
+							<v8:lang>ru</v8:lang>
+							<v8:content>Номер</v8:content>
+						</v8:item>
+					</Title>
+					<Type>
+						<v8:Type>xs:string</v8:Type>
+						<v8:StringQualifiers>
+							<v8:Length>20</v8:Length>
+							<v8:AllowedLength>Variable</v8:AllowedLength>
+						</v8:StringQualifiers>
+					</Type>
+				</Column>
+				<Column name="Поручение" id="122">
+					<Title>
+						<v8:item>
+							<v8:lang>ru</v8:lang>
+							<v8:content>Поручение</v8:content>
+						</v8:item>
+					</Title>
+					<Type>
+						<v8:Type>cfg:DocumentRef.Поручение</v8:Type>
+					</Type>
+				</Column>
+				<Column name="Портфель" id="123">
+					<Title>
+						<v8:item>
+							<v8:lang>ru</v8:lang>
+							<v8:content>Портфель</v8:content>
+						</v8:item>
+					</Title>
+					<Type>
+						<v8:Type>cfg:CatalogRef.Портфели</v8:Type>
+					</Type>
+				</Column>
+				<Column name="КодПортфеля" id="124">
+					<Title>
+						<v8:item>
+							<v8:lang>ru</v8:lang>
+							<v8:content>Код портфеля</v8:content>
+						</v8:item>
+					</Title>
+					<Type>
+						<v8:Type>xs:string</v8:Type>
+						<v8:StringQualifiers>
+							<v8:Length>50</v8:Length>
+							<v8:AllowedLength>Variable</v8:AllowedLength>
+						</v8:StringQualifiers>
+					</Type>
+				</Column>
+				<Column name="Актив" id="125">
+					<Title>
+						<v8:item>
+							<v8:lang>ru</v8:lang>
+							<v8:content>Бумага</v8:content>
+						</v8:item>
+					</Title>
+					<Type>
+						<v8:Type>cfg:CatalogRef.Активы</v8:Type>
+					</Type>
+				</Column>
+				<Column name="КодАктива" id="126">
+					<Title>
+						<v8:item>
+							<v8:lang>ru</v8:lang>
+							<v8:content>Код бумаги</v8:content>
+						</v8:item>
+					</Title>
+					<Type>
+						<v8:Type>xs:string</v8:Type>
+						<v8:StringQualifiers>
+							<v8:Length>50</v8:Length>
+							<v8:AllowedLength>Variable</v8:AllowedLength>
+						</v8:StringQualifiers>
+					</Type>
+				</Column>
+				<Column name="Котировка" id="127">
+					<Title>
+						<v8:item>
+							<v8:lang>ru</v8:lang>
+							<v8:content>Котировка</v8:content>
+						</v8:item>
+					</Title>
+					<Type>
+						<v8:Type>xs:decimal</v8:Type>
+						<v8:NumberQualifiers>
+							<v8:Digits>18</v8:Digits>
+							<v8:FractionDigits>6</v8:FractionDigits>
+							<v8:AllowedSign>Any</v8:AllowedSign>
+						</v8:NumberQualifiers>
+					</Type>
+				</Column>
+				<Column name="Цена" id="128">
+					<Title>
+						<v8:item>
+							<v8:lang>ru</v8:lang>
+							<v8:content>Цена</v8:content>
+						</v8:item>
+					</Title>
+					<Type>
+						<v8:Type>xs:decimal</v8:Type>
+						<v8:NumberQualifiers>
+							<v8:Digits>18</v8:Digits>
+							<v8:FractionDigits>6</v8:FractionDigits>
+							<v8:AllowedSign>Any</v8:AllowedSign>
+						</v8:NumberQualifiers>
+					</Type>
+				</Column>
+				<Column name="Количество" id="129">
+					<Title>
+						<v8:item>
+							<v8:lang>ru</v8:lang>
+							<v8:content>Количество</v8:content>
+						</v8:item>
+					</Title>
+					<Type>
+						<v8:Type>xs:decimal</v8:Type>
+						<v8:NumberQualifiers>
+							<v8:Digits>18</v8:Digits>
+							<v8:FractionDigits>4</v8:FractionDigits>
+							<v8:AllowedSign>Any</v8:AllowedSign>
+						</v8:NumberQualifiers>
+					</Type>
+				</Column>
+				<Column name="Сумма" id="130">
+					<Title>
+						<v8:item>
+							<v8:lang>ru</v8:lang>
+							<v8:content>Сумма</v8:content>
+						</v8:item>
+					</Title>
+					<Type>
+						<v8:Type>xs:decimal</v8:Type>
+						<v8:NumberQualifiers>
+							<v8:Digits>18</v8:Digits>
+							<v8:FractionDigits>2</v8:FractionDigits>
+							<v8:AllowedSign>Any</v8:AllowedSign>
+						</v8:NumberQualifiers>
+					</Type>
+				</Column>
+				<Column name="Проведен" id="131">
+					<Title>
+						<v8:item>
+							<v8:lang>ru</v8:lang>
+							<v8:content>Проведен</v8:content>
+						</v8:item>
+					</Title>
+					<Type>
+						<v8:Type>xs:boolean</v8:Type>
+					</Type>
+				</Column>
+				<Column name="ПометкаУдаления" id="132">
+					<Title>
+						<v8:item>
+							<v8:lang>ru</v8:lang>
+							<v8:content>Пометка удаления</v8:content>
+						</v8:item>
+					</Title>
+					<Type>
+						<v8:Type>xs:boolean</v8:Type>
+					</Type>
+				</Column>
+				<Column name="ВСравнении" id="133">
+					<Title>
+						<v8:item>
+							<v8:lang>ru</v8:lang>
+							<v8:content>В сравнении</v8:content>
+						</v8:item>
+					</Title>
+					<Type>
+						<v8:Type>xs:boolean</v8:Type>
+					</Type>
+				</Column>
+				<Column name="Примечание" id="134">
+					<Title>
+						<v8:item>
+							<v8:lang>ru</v8:lang>
+							<v8:content>Примечание</v8:content>
+						</v8:item>
+					</Title>
+					<Type>
+						<v8:Type>xs:string</v8:Type>
+						<v8:StringQualifiers>
+							<v8:Length>120</v8:Length>
+							<v8:AllowedLength>Variable</v8:AllowedLength>
+						</v8:StringQualifiers>
+					</Type>
+				</Column>
+				<Column name="Ответственный" id="135">
+					<Title>
+						<v8:item>
+							<v8:lang>ru</v8:lang>
+							<v8:content>Ответственный</v8:content>
+						</v8:item>
+					</Title>
+					<Type>
+						<v8:Type>xs:string</v8:Type>
+						<v8:StringQualifiers>
+							<v8:Length>150</v8:Length>
+							<v8:AllowedLength>Variable</v8:AllowedLength>
+						</v8:StringQualifiers>
+					</Type>
+				</Column>
+			</Columns>
+		</Attribute>
+		<ConditionalAppearance>
+			<dcsset:item>
+				<dcsset:selection>
+					<dcsset:item>
+						<dcsset:field>ИтогиТекстИтога</dcsset:field>
+					</dcsset:item>
+					<dcsset:item>
+						<dcsset:field>ИтогиКотировкаМин</dcsset:field>
+					</dcsset:item>
+					<dcsset:item>
+						<dcsset:field>ИтогиКотировкаМакс</dcsset:field>
+					</dcsset:item>
+					<dcsset:item>
+						<dcsset:field>ИтогиРазныхЦен</dcsset:field>
+					</dcsset:item>
+				</dcsset:selection>
+				<dcsset:filter>
+					<dcsset:item xsi:type="dcsset:FilterItemComparison">
+						<dcsset:left xsi:type="dcscor:Field">Итоги.РазныхЦен</dcsset:left>
+						<dcsset:comparisonType>Greater</dcsset:comparisonType>
+						<dcsset:right xsi:type="xs:decimal">1</dcsset:right>
+					</dcsset:item>
+				</dcsset:filter>
+				<dcsset:appearance>
+					<dcscor:item xsi:type="dcsset:SettingsParameterValue">
+						<dcscor:parameter>ЦветТекста</dcscor:parameter>
+						<dcscor:value xsi:type="v8ui:Color">web:FireBrick</dcscor:value>
+					</dcscor:item>
+				</dcsset:appearance>
+				<dcsset:presentation xsi:type="xs:string">Разные цены одной бумаги</dcsset:presentation>
+			</dcsset:item>
+		</ConditionalAppearance>
+	</Attributes>
+	<Commands>
+		<Command name="Сформировать" id="136">
+			<Title>
+				<v8:item>
+					<v8:lang>ru</v8:lang>
+					<v8:content>Сформировать</v8:content>
+				</v8:item>
+			</Title>
+			<Action>Сформировать</Action>
+		</Command>
+		<Command name="СохранитьЛог" id="137">
+			<Title>
+				<v8:item>
+					<v8:lang>ru</v8:lang>
+					<v8:content>Сохранить подробный лог JSON</v8:content>
+				</v8:item>
+			</Title>
+			<Action>СохранитьЛог</Action>
+		</Command>
+	</Commands>
+</Form>

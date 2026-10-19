@@ -1,0 +1,128 @@
+{
+  "title": "Проверка цен покупки РОСТ",
+  "properties": { "autoTitle": false, "width": 120 },
+  "events": { "OnCreateAtServer": "ПриСозданииНаСервере" },
+  "elements": [
+    {
+      "group": "alwaysHorizontal",
+      "name": "ГруппаПараметры",
+      "children": [
+        { "input": "Период", "path": "Период", "title": "Период" },
+        { "input": "Ответственный", "path": "Ответственный", "title": "Ответственный", "clearButton": true },
+        { "input": "РазрывЗапускаСекунд", "path": "РазрывЗапускаСекунд", "title": "Разрыв запуска, сек" }
+      ]
+    },
+    {
+      "label": "Пояснение",
+      "title": "Один запуск регламента - пачка поручений, между которыми меньше указанного разрыва. Сравнивается котировка одной бумаги внутри запуска. Помеченные на удаление в сравнение не входят: у них остается цена-заглушка."
+    },
+    {
+      "autoCmdBar": "ФормаКоманднаяПанель",
+      "children": [
+        { "button": "Сформировать", "command": "Сформировать", "defaultButton": true },
+        { "button": "СохранитьЛог", "command": "СохранитьЛог", "title": "Сохранить подробный лог JSON" }
+      ]
+    },
+    {
+      "table": "Итоги",
+      "path": "Итоги",
+      "title": "По бумагам внутри запуска",
+      "readOnly": true,
+      "changeRowSet": false,
+      "changeRowOrder": false,
+      "heightInTableRows": 8,
+      "searchStringLocation": "Top",
+      "columns": [
+        { "labelField": "ИтогиНомерЗапуска", "path": "Итоги.НомерЗапуска", "title": "Запуск" },
+        { "labelField": "ИтогиНачало", "path": "Итоги.Начало", "title": "Начало" },
+        { "labelField": "ИтогиОкончание", "path": "Итоги.Окончание", "title": "Окончание" },
+        { "labelField": "ИтогиАктив", "path": "Итоги.Актив", "title": "Бумага" },
+        { "labelField": "ИтогиПоручений", "path": "Итоги.Поручений", "title": "Поручений" },
+        { "labelField": "ИтогиКотировкаМин", "path": "Итоги.КотировкаМин", "title": "Котировка мин" },
+        { "labelField": "ИтогиКотировкаМакс", "path": "Итоги.КотировкаМакс", "title": "Котировка макс" },
+        { "labelField": "ИтогиРазныхЦен", "path": "Итоги.РазныхЦен", "title": "Разных цен" },
+        { "labelField": "ИтогиТекстИтога", "path": "Итоги.ТекстИтога", "title": "Итог" }
+      ]
+    },
+    {
+      "table": "Поручения",
+      "path": "Поручения",
+      "title": "Поручения запуска",
+      "readOnly": true,
+      "changeRowSet": false,
+      "changeRowOrder": false,
+      "heightInTableRows": 12,
+      "searchStringLocation": "Top",
+      "columns": [
+        { "labelField": "ПорученияНомерЗапуска", "path": "Поручения.НомерЗапуска", "title": "Запуск" },
+        { "labelField": "ПорученияДата", "path": "Поручения.Дата", "title": "Дата" },
+        { "labelField": "ПорученияНомер", "path": "Поручения.Номер", "title": "Номер" },
+        { "labelField": "ПорученияПортфель", "path": "Поручения.Портфель", "title": "Портфель" },
+        { "labelField": "ПорученияАктив", "path": "Поручения.Актив", "title": "Бумага" },
+        { "labelField": "ПорученияКотировка", "path": "Поручения.Котировка", "title": "Котировка" },
+        { "labelField": "ПорученияЦена", "path": "Поручения.Цена", "title": "Цена" },
+        { "labelField": "ПорученияКоличество", "path": "Поручения.Количество", "title": "Количество" },
+        { "labelField": "ПорученияСумма", "path": "Поручения.Сумма", "title": "Сумма" },
+        { "labelField": "ПорученияВСравнении", "path": "Поручения.ВСравнении", "title": "В сравнении" },
+        { "labelField": "ПорученияПримечание", "path": "Поручения.Примечание", "title": "Примечание" }
+      ]
+    }
+  ],
+  "attributes": [
+    { "name": "Период", "type": "StandardPeriod", "title": "Период" },
+    { "name": "Ответственный", "type": "CatalogRef.Пользователи", "title": "Ответственный" },
+    { "name": "РазрывЗапускаСекунд", "type": "decimal(6,0,nonneg)", "title": "Разрыв запуска, сек" },
+    {
+      "name": "Итоги",
+      "type": "ValueTable",
+      "title": "Итоги",
+      "columns": [
+        { "name": "НомерЗапуска", "type": "decimal(6,0)", "title": "Запуск" },
+        { "name": "Начало", "type": "dateTime", "title": "Начало" },
+        { "name": "Окончание", "type": "dateTime", "title": "Окончание" },
+        { "name": "Актив", "type": "CatalogRef.Активы", "title": "Бумага" },
+        { "name": "Поручений", "type": "decimal(6,0)", "title": "Поручений" },
+        { "name": "КотировкаМин", "type": "decimal(18,6)", "title": "Котировка мин" },
+        { "name": "КотировкаМакс", "type": "decimal(18,6)", "title": "Котировка макс" },
+        { "name": "РазныхЦен", "type": "decimal(6,0)", "title": "Разных цен" },
+        { "name": "ТекстИтога", "type": "string(40)", "title": "Итог" }
+      ]
+    },
+    {
+      "name": "Поручения",
+      "type": "ValueTable",
+      "title": "Поручения",
+      "columns": [
+        { "name": "НомерЗапуска", "type": "decimal(6,0)", "title": "Запуск" },
+        { "name": "Дата", "type": "dateTime", "title": "Дата" },
+        { "name": "Номер", "type": "string(20)", "title": "Номер" },
+        { "name": "Поручение", "type": "DocumentRef.Поручение", "title": "Поручение" },
+        { "name": "Портфель", "type": "CatalogRef.Портфели", "title": "Портфель" },
+        { "name": "КодПортфеля", "type": "string(50)", "title": "Код портфеля" },
+        { "name": "Актив", "type": "CatalogRef.Активы", "title": "Бумага" },
+        { "name": "КодАктива", "type": "string(50)", "title": "Код бумаги" },
+        { "name": "Котировка", "type": "decimal(18,6)", "title": "Котировка" },
+        { "name": "Цена", "type": "decimal(18,6)", "title": "Цена" },
+        { "name": "Количество", "type": "decimal(18,4)", "title": "Количество" },
+        { "name": "Сумма", "type": "decimal(18,2)", "title": "Сумма" },
+        { "name": "Проведен", "type": "boolean", "title": "Проведен" },
+        { "name": "ПометкаУдаления", "type": "boolean", "title": "Пометка удаления" },
+        { "name": "ВСравнении", "type": "boolean", "title": "В сравнении" },
+        { "name": "Примечание", "type": "string(120)", "title": "Примечание" },
+        { "name": "Ответственный", "type": "string(150)", "title": "Ответственный" }
+      ]
+    }
+  ],
+  "commands": [
+    { "name": "Сформировать", "action": "Сформировать", "title": "Сформировать" },
+    { "name": "СохранитьЛог", "action": "СохранитьЛог", "title": "Сохранить подробный лог JSON" }
+  ],
+  "conditionalAppearance": [
+    {
+      "selection": ["ИтогиТекстИтога", "ИтогиКотировкаМин", "ИтогиКотировкаМакс", "ИтогиРазныхЦен"],
+      "filter": ["Итоги.РазныхЦен > 1"],
+      "appearance": { "ЦветТекста": "web:FireBrick" },
+      "presentation": "Разные цены одной бумаги"
+    }
+  ]
+}
