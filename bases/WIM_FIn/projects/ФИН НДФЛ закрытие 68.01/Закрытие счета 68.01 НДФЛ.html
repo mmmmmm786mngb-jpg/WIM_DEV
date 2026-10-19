@@ -1,0 +1,421 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Закрытие счета 68.01 НДФЛ</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Golos+Text:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: одна колонка справочного документа; Т-счет 68.01 как центральная схема, далее таблица проводок и маршруты закрытия */
+:root {
+  --bg: #f4f6f9;
+  --surface: #ffffff;
+  --ink: #18212d;
+  --muted: #5a6575;
+  --line: #d8dee7;
+  --accent: #1f5ea8;
+  --dt: #2457a0;
+  --kt: #2b7756;
+  --warn: #9a4f17;
+  --warn-bg: #fbf1e8;
+  --code-bg: #eef2f7;
+  --font-body: "Golos Text", "Segoe UI", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", Consolas, "Courier New", monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #11151b; --surface: #19202a; --ink: #e2e8f0; --muted: #9ba6b5; --line: #2c3542;
+    --accent: #80b2ef; --dt: #88aff0; --kt: #72c9a0; --warn: #e8a06a; --warn-bg: #2a2018; --code-bg: #212a36;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #11151b; --surface: #19202a; --ink: #e2e8f0; --muted: #9ba6b5; --line: #2c3542;
+  --accent: #80b2ef; --dt: #88aff0; --kt: #72c9a0; --warn: #e8a06a; --warn-bg: #2a2018; --code-bg: #212a36;
+  color-scheme: dark;
+}
+
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: 15.5px;
+  line-height: 1.6;
+}
+.wrap {
+  max-width: 960px;
+  margin: 0 auto;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 40px 64px;
+  display: grid;
+  gap: 44px;
+}
+h1, h2, h3 { text-wrap: balance; line-height: 1.25; margin: 0; }
+h1 { font-size: clamp(1.7rem, 4vw, 2.3rem); font-weight: 700; letter-spacing: -0.01em; }
+h2 { font-size: 1.3rem; font-weight: 600; }
+h3 { font-size: 1.02rem; font-weight: 600; }
+p { margin: 0; max-width: 68ch; }
+section { display: grid; gap: 16px; min-width: 0; }
+.eyebrow {
+  font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.08em;
+  color: var(--muted); font-weight: 600;
+}
+code, .mono { font-family: var(--font-mono); font-size: 0.86em; }
+code { background: var(--code-bg); padding: 0.08em 0.35em; border-radius: 4px; overflow-wrap: anywhere; }
+.acc { font-family: var(--font-mono); font-weight: 600; white-space: nowrap; }
+.dt { color: var(--dt); }
+.kt { color: var(--kt); }
+
+header { display: grid; gap: 14px; }
+.meta { color: var(--muted); font-size: 0.9rem; }
+.lead { font-size: 1.08rem; max-width: 70ch; }
+
+/* Т-счет */
+.taccount {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  overflow: hidden;
+}
+.taccount-head {
+  padding: 14px 18px;
+  border-bottom: 2px solid var(--ink);
+  display: flex; flex-wrap: wrap; gap: 6px 16px; align-items: baseline; justify-content: space-between;
+}
+.taccount-head .acc { font-size: 1.25rem; }
+.taccount-head .sub { color: var(--muted); font-size: 0.88rem; }
+.tgrid { display: grid; grid-template-columns: 1fr 1fr; }
+.tside { padding: 14px 18px 18px; display: grid; gap: 12px; align-content: start; min-width: 0; }
+.tside + .tside { border-left: 2px solid var(--ink); }
+.tside-title { font-weight: 700; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.08em; }
+.tentry { display: grid; gap: 2px; }
+.tentry .corr { font-family: var(--font-mono); font-weight: 600; }
+.tentry .doc { color: var(--muted); font-size: 0.88rem; overflow-wrap: anywhere; }
+.tfoot {
+  border-top: 1px solid var(--line);
+  padding: 12px 18px;
+  font-size: 0.92rem;
+  display: grid; gap: 4px;
+}
+@media (max-width: 620px) {
+  .tgrid { grid-template-columns: 1fr; }
+  .tside + .tside { border-left: 0; border-top: 2px solid var(--ink); }
+}
+
+/* Аналитика */
+.dims { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; }
+.dim {
+  border: 1px solid var(--line); border-radius: 8px; padding: 12px 14px;
+  background: var(--surface); display: grid; gap: 4px; align-content: start; min-width: 0;
+}
+.dim .k { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.07em; color: var(--muted); font-weight: 600; }
+.dim .v { font-weight: 600; overflow-wrap: anywhere; }
+.dim .n { font-size: 0.9rem; color: var(--muted); }
+
+/* Таблица */
+.table-scroll { overflow-x: auto; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); }
+table { border-collapse: collapse; width: 100%; min-width: 760px; font-size: 0.92rem; }
+th, td { text-align: left; vertical-align: top; padding: 10px 12px; border-bottom: 1px solid var(--line); }
+th { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); font-weight: 600; background: var(--code-bg); }
+tr:last-child td { border-bottom: 0; }
+td.num { font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+/* Шаги процесса */
+ol.steps { list-style: none; counter-reset: s; margin: 0; padding: 0; display: grid; gap: 0; }
+ol.steps > li {
+  counter-increment: s;
+  display: grid; grid-template-columns: 36px 1fr; gap: 0 14px;
+  padding-block: 14px; border-top: 1px solid var(--line);
+}
+ol.steps > li:first-child { border-top: 0; }
+ol.steps > li::before {
+  content: counter(s);
+  width: 28px; height: 28px; border-radius: 50%;
+  border: 1.5px solid var(--accent); color: var(--accent);
+  display: grid; place-items: center; font-weight: 700; font-size: 0.85rem;
+  font-variant-numeric: tabular-nums;
+}
+.step-body { display: grid; gap: 6px; min-width: 0; }
+.entry-chip {
+  display: inline-flex; flex-wrap: wrap; gap: 6px; align-items: center;
+  font-family: var(--font-mono); font-size: 0.82rem; font-weight: 600;
+  padding: 2px 8px; border: 1px solid var(--line); border-radius: 4px; width: fit-content;
+  background: var(--code-bg);
+}
+
+ul.plain { margin: 0; padding-left: 1.2em; display: grid; gap: 8px; max-width: 72ch; }
+ul.plain li { padding-left: 2px; }
+
+.note {
+  border: 1px solid var(--warn); background: var(--warn-bg);
+  border-radius: 8px; padding: 14px 16px; display: grid; gap: 8px;
+}
+.note h3 { color: var(--warn); }
+
+.objects { columns: 2 280px; column-gap: 28px; margin: 0; padding: 0; list-style: none; }
+.objects li { break-inside: avoid; padding: 6px 0; border-bottom: 1px solid var(--line); font-size: 0.9rem; }
+.objects li .mono { font-weight: 600; overflow-wrap: anywhere; }
+.objects li span.d { color: var(--muted); display: block; }
+
+a { color: var(--accent); }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+</style>
+</head>
+<body>
+
+
+<div class="wrap">
+
+<header>
+  <div class="eyebrow">ФИН · Управление доверительным управлением, ред. 2, версия 2.8.9.3 · план счетов Хозрасчетный</div>
+  <h1>Закрытие счета 68.01 «НДФЛ» по физическим лицам</h1>
+  <p class="lead">
+    НДФЛ клиента-физлица учитывается на счете <span class="acc">68.01</span> в разрезе портфеля.
+    Кредит счета формируется при удержании налога из средств клиента в ДУ (<span class="acc">79.01</span>).
+    Сальдо закрывается перечислением в бюджет с расчетного счета портфеля (Дт <span class="acc">68.01</span> Кт <span class="acc">51.01</span>).
+    Отдельного документа «удержание» нет, отдельной регламентной операции закрытия счета тоже нет.
+  </p>
+  <p class="meta">Схема составлена по коду базовой конфигурации, на данных базы не проверялась.</p>
+</header>
+
+<section aria-labelledby="t-acc">
+  <h2 id="t-acc">Движения по счету 68.01</h2>
+  <div class="taccount">
+    <div class="taccount-head">
+      <span class="acc">68.01 НДФЛ</span>
+      <span class="sub">Активно-пассивный · не валютный · без налогового учета</span>
+    </div>
+    <div class="tgrid">
+      <div class="tside">
+        <div class="tside-title dt">Дебет: долг перед бюджетом уменьшается</div>
+        <div class="tentry">
+          <span class="corr">Кт 51.01 Расчетные счета</span>
+          <span class="doc">Перечисление в бюджет · <code>СписаниеСРасчетногоСчета</code>, вид операции <code>ПеречислениеНалога</code></span>
+        </div>
+        <div class="tentry">
+          <span class="corr">Кт 79.01, сумма со знаком минус</span>
+          <span class="doc">Возврат излишне удержанного налога клиенту · <code>ВозвратНДФЛ</code> (см. открытый вопрос ниже)</span>
+        </div>
+        <div class="tentry">
+          <span class="corr">Любой корреспондирующий счет</span>
+          <span class="doc">Ручная операция · <code>ОперацияБух</code></span>
+        </div>
+      </div>
+      <div class="tside">
+        <div class="tside-title kt">Кредит: налог удержан</div>
+        <div class="tentry">
+          <span class="corr">Дт 79.01 Ввод/вывод активов в/из ДУ</span>
+          <span class="doc">Удержание у клиента · <code>НачислениеНДФЛПоУправляющейКомпании</code>, либо отложенно <code>ФормированиеДвиженийНДФЛ</code></span>
+        </div>
+        <div class="tentry">
+          <span class="corr">Дт 79.01 (налоговые периоды до 2021)</span>
+          <span class="doc"><code>НачислениеНДФЛ</code>, <code>НачислениеНДФЛПоПортфелю</code></span>
+        </div>
+      </div>
+    </div>
+    <div class="tfoot">
+      <div><strong>Кредитовое сальдо</strong> - налог удержан, но не перечислен в бюджет.</div>
+      <div>Счет закрыт, когда сальдо равно нулю в каждом разрезе «Портфель × Субконто1 × Субконто2».</div>
+    </div>
+  </div>
+</section>
+
+<section aria-labelledby="dims">
+  <h2 id="dims">Аналитика, в которой закрывается сальдо</h2>
+  <div class="dims">
+    <div class="dim">
+      <span class="k">Измерение регистра</span>
+      <span class="v">Портфель</span>
+      <span class="n">У каждого портфеля клиента свое сальдо. Начисление по УК разносит удержание по портфелям (табличная часть <code>Удержания</code>).</span>
+    </div>
+    <div class="dim">
+      <span class="k">Субконто 1 · НДФЛСтавки</span>
+      <span class="v">Ставка (до 2021) или тип дохода (с 2021)</span>
+      <span class="n">При записи проводок регистр приводит значение к виду, нужному для налогового периода: <code>ТипыДоходаНДФЛ.СтавкаИлиТипДоходаПоНалоговомуПериоду</code>.</span>
+    </div>
+    <div class="dim">
+      <span class="k">Субконто 2</span>
+      <span class="v">Налоговый период</span>
+      <span class="n">Элемент справочника <code>Периоды</code>, равный году. Расчеты НДФЛ отбирают обороты по <code>ДатаНачала</code> периода.</span>
+    </div>
+  </div>
+</section>
+
+<section aria-labelledby="entries">
+  <h2 id="entries">Проводки</h2>
+  <div class="table-scroll">
+    <table>
+      <thead>
+        <tr><th>Операция</th><th>Документ</th><th>Дт</th><th>Кт</th><th>Сумма</th><th>Аналитика 68.01</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Удержание налога у клиента</td>
+          <td><code>НачислениеНДФЛПоУправляющейКомпании</code>, метод менеджера <code>ХозрасчетныйСформироватьДвижения</code></td>
+          <td class="acc dt">79.01</td><td class="acc kt">68.01</td>
+          <td><code>Удержания.СуммаКУдержанию</code> по строке портфеля</td>
+          <td>Тип дохода (с 2021) или ставка; налоговый период документа</td>
+        </tr>
+        <tr>
+          <td>То же, отложенно</td>
+          <td><code>ФормированиеДвиженийНДФЛ</code> на дату <code>ДатаФормированияДвиженийНДФЛ</code></td>
+          <td class="acc dt">79.01</td><td class="acc kt">68.01</td>
+          <td>как в документе-основании</td>
+          <td>как в документе-основании</td>
+        </tr>
+        <tr>
+          <td>Перечисление в бюджет</td>
+          <td><code>СписаниеСРасчетногоСчета</code>, вид <code>ПеречислениеНалога</code>; счет расчетов подставляется автоматически</td>
+          <td class="acc dt">68.01</td><td class="acc kt">51.01</td>
+          <td><code>СуммаДокумента</code></td>
+          <td><code>СубконтоДт1</code>, <code>СубконтоДт2</code> документа</td>
+        </tr>
+        <tr>
+          <td>Возврат излишне удержанного</td>
+          <td><code>ВозвратНДФЛ</code> (меню «Закрытие периода» → «Бухгалтерский учет»)</td>
+          <td class="acc dt">68.01</td><td class="acc kt">79.01</td>
+          <td class="num">− Сумма</td>
+          <td><code>НалоговаяСтавка</code>, <code>НалоговыйПериод</code></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="meta">Портфели сторонних систем по 68.01 не проводятся: их удержание и оплата хранятся в регистрах сведений <code>НДФЛСтороннихСистем</code> и <code>ОплатыНДФЛСтороннихСистем</code>.</p>
+</section>
+
+<section aria-labelledby="bp">
+  <h2 id="bp">Основной маршрут: вывод активов из портфеля</h2>
+  <p>При выводе активов налог удерживается и перечисляется точками бизнес-процесса <code>ВыводАктивовИзПортфеля</code>. Здесь закрытие 68.01 выполняется автоматически: оплата строится по проводкам конкретного документа начисления.</p>
+  <ol class="steps">
+    <li>
+      <div class="step-body">
+        <h3>Начисление и удержание</h3>
+        <p><code>ОформитьНачислениеНДФЛ</code> создает и проводит <code>НачислениеНДФЛПоУправляющейКомпании</code>. Дата документа: при частичном выводе это конец дня бизнес-процесса, при полном выводе (расторжение) это дата последнего предмета плюс 1 секунда. Сумма к удержанию равна исчисленному налогу минус ранее удержанный. Если вывод за день меньше налога, удерживается налог с суммы вывода (<code>СкорректироватьСуммуУдержанияПоСуммеВыводов</code>).</p>
+        <span class="entry-chip"><span class="dt">Дт 79.01</span><span class="kt">Кт 68.01</span></span>
+        <p>При частичном выводе сумма удержания резервируется в регистре накопления <code>БлокировкаДСДляВывода</code>.</p>
+      </div>
+    </li>
+    <li>
+      <div class="step-body">
+        <h3>Деньги под налог на расчетном счете</h3>
+        <p>При частичном выводе точки <code>ПереводМеждуРазделамиБрокерскогоСчетаНДФЛ</code> и <code>ПереводСБрокерскогоНаРасчетныйСчетНДФЛ</code> переводят на расчетный счет портфеля сумму <code>СуммаУдержания</code> документа начисления. Условие <code>ЕстьОстатокНаРСсНДФЛ</code> проверяет: остаток на счете минус налог минус блокировки не меньше нуля.</p>
+      </div>
+    </li>
+    <li>
+      <div class="step-body">
+        <h3>Списание с расчетного счета</h3>
+        <p><code>ОформитьВыплатыНДФЛП</code> читает обороты Кт 68.01 документа начисления. По каждой паре «Субконто1 + налоговый период» создается и проводится <code>СписаниеСРасчетногоСчета</code>:</p>
+        <ul class="plain">
+          <li>вид операции <code>ПеречислениеНалога</code>, дата - дата начисления плюс 1 секунда;</li>
+          <li>получатель и его счет берутся из реквизитов процесса <code>ИФНС</code> и <code>БанковскийСчетИФНС</code>;</li>
+          <li><code>СубконтоДт1</code> и <code>СубконтоДт2</code> копируются из проводки начисления, документ-основание - начисление;</li>
+          <li>статья ДДС <code>УплатаНалоговИСборовКромеНалогаНаПрибыль</code>, очередность платежа 6;</li>
+          <li>назначение для начислений с 2023 года: «Единый налоговый платеж. Без НДС.».</li>
+        </ul>
+        <span class="entry-chip"><span class="dt">Дт 68.01</span><span class="kt">Кт 51.01</span></span>
+        <p>При повторном выполнении точки ранее созданные списания перезаполняются, лишние помечаются на удаление.</p>
+      </div>
+    </li>
+    <li>
+      <div class="step-body">
+        <h3>Платежное поручение</h3>
+        <p><code>ОформитьПлатежноеПоручениеВыплатаНДФЛ</code> создает <code>ПлатежноеПоручение</code> на основании каждого списания. Поручение только записывается: по 68.01 оно движений не делает.</p>
+      </div>
+    </li>
+  </ol>
+</section>
+
+<section aria-labelledby="year">
+  <h2 id="year">Годовое начисление и пуловая оплата</h2>
+  <p>Налог, исчисленный по итогам периода без вывода средств, начисляется обработкой <code>ФормированиеНачисленийНДФЛ</code>. Оплату она создает только при всех трех условиях:</p>
+  <ul class="plain">
+    <li>выбран вариант заполнения «По всем клиентам на конец периода»;</li>
+    <li>установлен флаг <code>СоздаватьОплатуНДФЛ</code>;</li>
+    <li>включена константа <code>ВестиПуловойУчет</code>. Без нее обработка выводит сообщение «В системе не ведется пуловый учет. Оплата не будет создана.», и 68.01 остается открытым до ручной оплаты.</li>
+  </ul>
+  <p>На каждый тип дохода создается одно пуловое <code>СписаниеСРасчетногоСчета</code>:</p>
+  <ul class="plain">
+    <li>дата - день окончания периода, 20:00:01;</li>
+    <li><code>СубконтоДт2</code> - годовой налоговый период;</li>
+    <li>табличная часть <code>Портфели</code> содержит суммы по каждому начислению.</li>
+  </ul>
+  <p>Пуловый документ записывается без проведения и сам проводок не делает. По портфелям сумму разносят подчиненные списания (<code>СписаниеСРасчетногоСчета.СоздатьДокументы</code>, реквизит <code>ПуловаяОперация</code>). Каждое из них проводит Дт 68.01 Кт 51.01 по своему портфелю.</p>
+</section>
+
+<section aria-labelledby="other">
+  <h2 id="other">Другие способы оформить оплату</h2>
+  <ul class="plain">
+    <li>Ввод на основании из формы <code>НачислениеНДФЛПоУправляющейКомпании</code>: заполняются вид <code>ПеречислениеНалога</code>, портфель и документ-основание.</li>
+    <li>Загрузка выписки <code>КлиентБанк</code>: строка списания, в которой есть «НДФЛ», получает вид операции <code>ПеречислениеНалога</code>.</li>
+    <li>Ручной ввод списания или <code>ОперацияБух</code>. В этом случае аналитику Субконто1 и Субконто2 нужно указать так же, как в начислении, иначе сальдо по разрезам не закроется.</li>
+  </ul>
+</section>
+
+<section aria-labelledby="reads">
+  <h2 id="reads">Где используются остатки и обороты 68.01</h2>
+  <div class="table-scroll">
+    <table>
+      <thead><tr><th>Место</th><th>Что читает</th><th>Для чего</th></tr></thead>
+      <tbody>
+        <tr><td><code>НачислениеНДФЛПоУправляющейКомпании.РанееУдержанныйНДФЛ</code></td><td>Обороты Кт 68.01 за налоговый период, кроме текущего документа, плюс <code>НДФЛСтороннихСистем</code></td><td>Уменьшает сумму к удержанию в следующем начислении</td></tr>
+        <tr><td><code>НачислениеНДФЛПоУправляющейКомпании.РанееУплаченныйНДФЛ</code></td><td>Обороты Дт 68.01 Кт 51.01 плюс <code>ОплатыНДФЛСтороннихСистем</code></td><td>Сумма, уже перечисленная в бюджет</td></tr>
+        <tr><td><code>ВыводАктивовИзПортфеля.ОстатокДенежныхСредствЗаВычетомНДФЛ</code></td><td>Остаток 51.01 минус сальдо 68.01 по портфелю</td><td>При полном выводе клиенту не выводятся деньги под неперечисленный налог</td></tr>
+        <tr><td><code>Форма6НДФЛ</code>, <code>Справка2НДФЛ</code>, <code>УчетНДФЛ</code></td><td>Удержано: Дт 79.01 Кт 68.01. Перечислено: Дт 68.01 Кт 51.01. Возвращено: оборот Дт 68.01 Кт 79.01 с обратным знаком</td><td>Регламентированная отчетность</td></tr>
+        <tr><td><code>ФормированиеНачисленийНДФЛ</code>, <code>ЗаявкаНаВводВыводАктивов</code></td><td>Обороты 68.01 по портфелям</td><td>Отбор портфелей с движениями по НДФЛ; учет налога в заявке на вывод</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section aria-labelledby="rules">
+  <h2 id="rules">Что важно для архитектуры</h2>
+  <ul class="plain">
+    <li><strong>Закрытие идет по факту оплаты.</strong> В коде нет регламентной операции и шага закрытия периода, которые обнуляют 68.01. Сальдо уменьшается только перечислением, возвратом или ручной проводкой.</li>
+    <li><strong>Связь оплаты с начислением.</strong> Автоматическая оплата копирует аналитику из проводки Кт 68.01 и ставит начисление документом-основанием. Сальдо по портфелю и аналитике закрывается, если суммы совпадают.</li>
+    <li><strong>Любой Кт 68.01 считается удержанием.</strong> Расчет НДФЛ берет все кредитовые обороты за период. Доработка, которая делает проводку Кт 68.01, автоматически уменьшит последующее удержание. Чтобы такую проводку можно было оплатить и показать в отчетах, она должна быть сделана с Дт 79.01 и полной аналитикой.</li>
+    <li><strong>Режим отложенных проводок.</strong> Когда включена константа <code>ПроводкиПоНачислениюНДФЛСоздаватьВДокументеФормированиеДвиженийНДФЛ</code>, Кт 68.01 появляется на дату документа <code>ФормированиеДвиженийНДФЛ</code>, а не на дату начисления. Отмена проведения начисления отменяет и этот документ.</li>
+    <li><strong>Граница 2021 года.</strong> С 2021 года проводки по счетам делает только <code>НачислениеНДФЛПоУправляющейКомпании</code>, Субконто1 содержит тип дохода. <code>НачислениеНДФЛПоПортфелю</code> с 2021 года пишет только регистры НДФЛ.</li>
+    <li><strong>План счетов ЕПС.</strong> Документы начисления в ЕПС не проводятся. Списание проводится в ЕПС, корреспондирующий счет берется из реквизита <code>СчетУчетаЕПС</code> статьи ДДС.</li>
+  </ul>
+</section>
+
+<section aria-labelledby="open">
+  <h2 id="open">Открытые вопросы</h2>
+  <div class="note">
+    <h3>Знак проводки возврата НДФЛ</h3>
+    <p><code>ВозвратНДФЛ</code> делает проводку Дт 68.01 Кт 79.01 на сумму <code>−Сумма</code>. Сценарный тест вводит положительную сумму, а <code>Форма6НДФЛ</code> берет этот оборот с обратным знаком как «сумму налога, возвращенную налоговым агентом».</p>
+    <p>По влиянию на сальдо такая проводка равна Дт 79.01 Кт 68.01: кредитовое сальдо 68.01 растет, средства клиента уменьшаются. Это противоположно экономике возврата. Нужно проверить на данных, как в базе вводят сумму возврата и как после него закрывается 68.01.</p>
+  </div>
+  <div class="note">
+    <h3>Пуловая оплата</h3>
+    <p>Пуловое списание создается записанным, но не проведенным. 68.01 закрывается только после того, как созданы и проведены подчиненные списания по портфелям. Стоит уточнить, кто и в какой момент выполняет этот шаг в регламенте.</p>
+  </div>
+</section>
+
+<section aria-labelledby="objs">
+  <h2 id="objs">Объекты конфигурации</h2>
+  <ul class="objects">
+    <li><span class="mono">ПланСчетов.Хозрасчетный.НДФЛ</span><span class="d">Счет 68.01, субконто НДФЛСтавки и НалоговыйПериод</span></li>
+    <li><span class="mono">ПланСчетов.Хозрасчетный.ВводВыводАктивовВИзДУ</span><span class="d">Счет 79.01, средства клиента в ДУ</span></li>
+    <li><span class="mono">ПланСчетов.Хозрасчетный.РасчетныеСчета</span><span class="d">Счет 51.01</span></li>
+    <li><span class="mono">РегистрБухгалтерии.Хозрасчетный</span><span class="d">Модуль набора: нормализация Субконто1 счета 68.01</span></li>
+    <li><span class="mono">Документ.НачислениеНДФЛПоУправляющейКомпании</span><span class="d">Расчет, удержание, проводка Кт 68.01</span></li>
+    <li><span class="mono">Документ.ФормированиеДвиженийНДФЛ</span><span class="d">Отложенная проводка удержания</span></li>
+    <li><span class="mono">Документ.СписаниеСРасчетногоСчета</span><span class="d">Перечисление в бюджет, Дт 68.01; пуловый режим</span></li>
+    <li><span class="mono">Документ.ПлатежноеПоручение</span><span class="d">Банковский документ без проводок по 68.01</span></li>
+    <li><span class="mono">Документ.ВозвратНДФЛ</span><span class="d">Возврат излишне удержанного налога</span></li>
+    <li><span class="mono">БизнесПроцесс.ВыводАктивовИзПортфеля</span><span class="d">Маршрут удержания и оплаты при выводе</span></li>
+    <li><span class="mono">Обработка.ФормированиеНачисленийНДФЛ</span><span class="d">Массовое начисление, пуловая оплата</span></li>
+    <li><span class="mono">Константа.ПроводкиПоНачислениюНДФЛСоздаватьВДокументеФормированиеДвиженийНДФЛ</span><span class="d">Режим отложенных проводок</span></li>
+    <li><span class="mono">Константа.ВестиПуловойУчет</span><span class="d">Разрешает пуловую оплату из обработки</span></li>
+  </ul>
+</section>
+
+</div>
+
+</body>
+</html>
