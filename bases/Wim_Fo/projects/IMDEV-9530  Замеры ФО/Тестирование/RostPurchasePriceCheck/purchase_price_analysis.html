@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>Цены покупки РОСТ: одинаковая котировка внутри запуска</title>
+<style>
+body { margin: 0; background: #f4f6f8; color: #1c2430; font: 16px/1.5 "Segoe UI", sans-serif; }
+main { max-width: 1180px; margin: 0 auto; padding: 32px 20px 64px; }
+h1 { font-size: 32px; line-height: 1.2; margin: 0 0 8px; }
+h2 { font-size: 22px; margin: 36px 0 12px; }
+h3 { font-size: 18px; margin: 24px 0 8px; }
+p { margin: 8px 0; }
+.lead { color: #4b5565; max-width: 860px; }
+.cards { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin: 20px 0; }
+.card { background: #fff; border: 1px solid #e3e8ee; border-radius: 12px; padding: 16px; }
+.card .k { color: #667085; font-size: 13px; }
+.card .v { font-size: 28px; font-weight: 650; margin-top: 4px; }
+.card .s { color: #667085; font-size: 13px; }
+.bad { color: #b42318; }
+.good { color: #067647; }
+.panel { background: #fff; border: 1px solid #e3e8ee; border-radius: 12px; padding: 18px 20px; margin: 14px 0; }
+.conclusion { background: #eef6ff; border: 1px solid #c9def8; }
+.warn { background: #fff7ed; border: 1px solid #fed7aa; }
+table { width: 100%; border-collapse: collapse; background: #fff; }
+th, td { border-bottom: 1px solid #e6ebf1; padding: 8px 10px; text-align: left; vertical-align: top; }
+th { background: #f8fafc; font-size: 13px; color: #475467; }
+td.num, th.num { text-align: right; white-space: nowrap; }
+.muted { color: #667085; font-size: 12px; }
+.bar-row { display: grid; grid-template-columns: 52px 1fr 36px; gap: 8px; align-items: center; margin: 3px 0; }
+.bar-label, .bar-value { font-size: 12px; color: #475467; }
+.bar-track { background: #eef2f6; height: 10px; border-radius: 6px; }
+.bar-fill { background: #b42318; height: 10px; border-radius: 6px; }
+.chart svg { width: 100%; height: auto; display: block; }
+.chart .axis { fill: #667085; font-size: 12px; }
+.chart .bar-num { fill: #1c2430; font-size: 12px; font-weight: 650; }
+.legend-row { display: flex; flex-wrap: wrap; gap: 14px; margin-top: 8px; }
+.legend { display: inline-flex; align-items: center; gap: 6px; color: #475467; font-size: 13px; }
+.legend i { width: 12px; height: 12px; border-radius: 3px; display: inline-block; }
+tr.proposed td { background: #eef6ff; }
+.wrap { overflow-x: auto; border: 1px solid #e3e8ee; border-radius: 12px; }
+ul { margin: 8px 0 8px 20px; }
+@media (max-width: 900px) { .cards { grid-template-columns: 1fr 1fr; } }
+</style>
+</head>
+<body>
+<main>
+<h1>Одинаковая ли цена у одной бумаги внутри запуска покупки РОСТ</h1>
+<p class="lead">Сравнивается котировка, которую обработка записала в поручение. Один запуск - пачка поручений с паузой не больше 180 секунд. В сравнение входят только проведенные поручения без пометки удаления. Период месяца: 17.09.2026 - 16.10.2026. День 16.10 разобран отдельно и входит в этот месяц.</p>
+
+<div class="panel conclusion">
+<h2 style="margin-top:0">Вывод</h2>
+<p>Внутри одного запуска цена одной бумаги чаще всего одна и та же. За месяц из 799 сравнений, где заявок было две и больше, разошлись 191, это 23,9%. 16 октября таких случаев 10 из 61.</p>
+<p>Общая медиана отклонения 0,0655%, но она смешана из разных бумаг. У ОФЗ, когда цены расходятся, это шаг стакана: типично 0,02-0,08%, максимум по выпускам около 0,3%. У ПИФ акций типичное отклонение 0,43%, 90-й перцентиль по всем бумагам 0,5441%. Больше 2% случилось один раз: 22.09, ПИФ акций, котировки 44,85 и 46,20, отклонение 3,0100%. Порог 2% в обработке сравнивает два уровня одного снимка стакана, а не котировки соседних поручений, поэтому такой сдвиг между заявками он не останавливает.</p>
+<p>Из 191 расхождений в 147 было ровно две разные котировки, в 157 цена шла в одну сторону от первой заявки к последней. Это движение стакана за те секунды, пока обработка по очереди создает поручения.</p>
+<p>Между соседними запусками одного дня, если в обоих у бумаги была одна котировка, она изменилась в 390 парах из 777 (50,2%). Медиана этого сдвига 0,0802%. Цену нельзя запомнить на все 10 минут до следующего регламента: примерно в половине следующих запусков она уже другая. Внутри текущего запуска повторный запрос чаще дает ту же цену, а если нет, то у ОФЗ расхождение на сотые доли процента.</p>
+</div>
+
+<div class="cards">
+<div class="card"><div class="k">Запусков за месяц</div><div class="v">686</div><div class="s">22 торговых дней, медиана паузы 10,0 мин</div></div>
+<div class="card"><div class="k">Поручений в сравнении</div><div class="v">15 555</div><div class="s">всего документов 15 713, удаленных 158</div></div>
+<div class="card"><div class="k">Бумаг с одной ценой</div><div class="v good">608</div><div class="s">из 799 сравнений двух и более заявок</div></div>
+<div class="card"><div class="k">Бумаг с разными ценами</div><div class="v bad">191</div><div class="s">максимум отклонения 3,0100%</div></div>
+</div>
+
+<h2>Как устроены запуски</h2>
+<div class="panel">
+<p>Медианная длительность пачки поручений 5 секунд. Ответственный в поручениях: Степанян Никита Игоревич. Удаленные и непроведенные документы в вердикт не входят: удаленных 158, непроведенных 158.</p>
+<p>Одна заявка на бумагу внутри запуска не считается ни совпадением, ни расхождением: так было 815 раз. Сравнивать в этом случае не с чем.</p>
+</div>
+
+<h2>16 октября</h2>
+<div class="cards">
+<div class="card"><div class="k">Запусков</div><div class="v">43</div><div class="s">16.10.2026</div></div>
+<div class="card"><div class="k">Поручений в сравнении</div><div class="v">333</div><div class="s">всего 333</div></div>
+<div class="card"><div class="k">Одинаковая цена</div><div class="v good">51</div><div class="s">две и более заявки</div></div>
+<div class="card"><div class="k">Разные цены</div><div class="v bad">10</div><div class="s">максимум 0,9278%</div></div>
+</div>
+<p>Все расхождения этого дня. Процент считается как (максимальная котировка - минимальная) / минимальная. Колонка «Без подмены, с» - самый длинный срок кеша, при котором в этом запуске у бумаги не меняется ни одна цена. Срок кеша без единой подмены есть в 3 запусках из 10: от 5 до 249 с, медиана 7 с. В остальных 7 другая цена стоит уже в ту же секунду, и такого срока нет.</p>
+<div class="wrap"><table>
+<thead><tr><th>Начало запуска</th><th>Бумага</th><th class="num">Заявок</th><th class="num">Цен</th><th class="num">Мин</th><th class="num">Макс</th><th class="num">Отклонение</th><th class="num">Без подмены, с</th><th>Состав котировок</th></tr></thead>
+<tbody>
+<tr><td>16.10.2026 13:55:01</td><td>ПИФ Акции<div class='muted'>RU000A0JR282</div></td><td class='num'>3</td><td class='num'>2</td><td class='num'>48,5</td><td class='num'>48,95</td><td class='num bad'>0,9278%</td><td class='num'>7</td><td>48,5 x 2, 48,95 x 1<div class='muted'>цена шла в одну сторону</div></td></tr>
+<tr><td>16.10.2026 10:25:02</td><td>ПИФ Акции<div class='muted'>RU000A0JR282</div></td><td class='num'>16</td><td class='num'>2</td><td class='num'>48,1</td><td class='num'>48,25</td><td class='num bad'>0,3119%</td><td class='num'>нет</td><td>48,1 x 3, 48,25 x 13<div class='muted'>цена шла в одну сторону</div></td></tr>
+<tr><td>16.10.2026 16:59:26</td><td>ПИФ Акции<div class='muted'>RU000A0JR282</div></td><td class='num'>23</td><td class='num'>2</td><td class='num'>48,35</td><td class='num'>48,4</td><td class='num bad'>0,1034%</td><td class='num'>5</td><td>48,35 x 8, 48,4 x 15<div class='muted'>цена шла в одну сторону</div></td></tr>
+<tr><td>16.10.2026 17:54:29</td><td>ОФЗ 26242<div class='muted'>RU000A105RV3</div></td><td class='num'>2</td><td class='num'>2</td><td class='num'>87,475</td><td class='num'>87,555</td><td class='num bad'>0,0915%</td><td class='num'>нет</td><td>87,475 x 1, 87,555 x 1<div class='muted'>цена шла в одну сторону</div></td></tr>
+<tr><td>16.10.2026 10:15:01</td><td>ОФЗ 26218<div class='muted'>RU000A0JVW48</div></td><td class='num'>5</td><td class='num'>3</td><td class='num'>77,298</td><td class='num'>77,348</td><td class='num bad'>0,0647%</td><td class='num'>нет</td><td>77,298 x 1, 77,299 x 1, 77,348 x 3<div class='muted'>цена колебалась</div></td></tr>
+<tr><td>16.10.2026 16:59:26</td><td>ОФЗ 26242<div class='muted'>RU000A105RV3</div></td><td class='num'>15</td><td class='num'>2</td><td class='num'>87,465</td><td class='num'>87,503</td><td class='num bad'>0,0434%</td><td class='num'>нет</td><td>87,465 x 1, 87,503 x 14<div class='muted'>цена шла в одну сторону</div></td></tr>
+<tr><td>16.10.2026 18:04:40</td><td>ОФЗ 26218<div class='muted'>RU000A0JVW48</div></td><td class='num'>2</td><td class='num'>2</td><td class='num'>77,45</td><td class='num'>77,465</td><td class='num bad'>0,0194%</td><td class='num'>нет</td><td>77,45 x 1, 77,465 x 1<div class='muted'>цена шла в одну сторону</div></td></tr>
+<tr><td>16.10.2026 16:59:26</td><td>ОФЗ 26218<div class='muted'>RU000A0JVW48</div></td><td class='num'>2</td><td class='num'>2</td><td class='num'>77,3</td><td class='num'>77,311</td><td class='num bad'>0,0142%</td><td class='num'>нет</td><td>77,3 x 1, 77,311 x 1<div class='muted'>цена шла в одну сторону</div></td></tr>
+<tr><td>16.10.2026 14:40:54</td><td>LQDT ETF<div class='muted'>RU000A1014L8</div></td><td class='num'>9</td><td class='num'>2</td><td class='num'>2,1116</td><td class='num'>2,1118</td><td class='num bad'>0,0095%</td><td class='num'>249</td><td>2,1116 x 6, 2,1118 x 3<div class='muted'>цена шла в одну сторону</div></td></tr>
+<tr><td>16.10.2026 16:59:26</td><td>ОФЗ 26228<div class='muted'>RU000A100A82</div></td><td class='num'>9</td><td class='num'>3</td><td class='num'>80,89</td><td class='num'>80,894</td><td class='num bad'>0,0049%</td><td class='num'>нет</td><td>80,89 x 4, 80,893 x 4, 80,894 x 1<div class='muted'>цена шла в одну сторону</div></td></tr>
+</tbody></table></div>
+
+<h2>Месяц 17.09 - 16.10</h2>
+<p>18.09 выделяется объемом: 7 659 поручений за день. В остальные дни поручений от 100 до 1 500. На долю расхождений этот день не влияет: разных цен там 5 из 41 сравнений.</p>
+<h3>Сколько расхождений по дням</h3>
+<p>Высота полосы - число бумаг, у которых внутри запуска оказалось больше одной котировки.</p>
+<div class="panel"><div class='bar-row'><div class='bar-label'>17.09</div><div class='bar-track'><div class='bar-fill' style='width:56%'></div></div><div class='bar-value'>10</div></div>
+<div class='bar-row'><div class='bar-label'>18.09</div><div class='bar-track'><div class='bar-fill' style='width:28%'></div></div><div class='bar-value'>5</div></div>
+<div class='bar-row'><div class='bar-label'>21.09</div><div class='bar-track'><div class='bar-fill' style='width:28%'></div></div><div class='bar-value'>5</div></div>
+<div class='bar-row'><div class='bar-label'>22.09</div><div class='bar-track'><div class='bar-fill' style='width:44%'></div></div><div class='bar-value'>8</div></div>
+<div class='bar-row'><div class='bar-label'>23.09</div><div class='bar-track'><div class='bar-fill' style='width:11%'></div></div><div class='bar-value'>2</div></div>
+<div class='bar-row'><div class='bar-label'>24.09</div><div class='bar-track'><div class='bar-fill' style='width:28%'></div></div><div class='bar-value'>5</div></div>
+<div class='bar-row'><div class='bar-label'>25.09</div><div class='bar-track'><div class='bar-fill' style='width:28%'></div></div><div class='bar-value'>5</div></div>
+<div class='bar-row'><div class='bar-label'>28.09</div><div class='bar-track'><div class='bar-fill' style='width:33%'></div></div><div class='bar-value'>6</div></div>
+<div class='bar-row'><div class='bar-label'>29.09</div><div class='bar-track'><div class='bar-fill' style='width:94%'></div></div><div class='bar-value'>17</div></div>
+<div class='bar-row'><div class='bar-label'>30.09</div><div class='bar-track'><div class='bar-fill' style='width:33%'></div></div><div class='bar-value'>6</div></div>
+<div class='bar-row'><div class='bar-label'>01.10</div><div class='bar-track'><div class='bar-fill' style='width:44%'></div></div><div class='bar-value'>8</div></div>
+<div class='bar-row'><div class='bar-label'>02.10</div><div class='bar-track'><div class='bar-fill' style='width:28%'></div></div><div class='bar-value'>5</div></div>
+<div class='bar-row'><div class='bar-label'>05.10</div><div class='bar-track'><div class='bar-fill' style='width:83%'></div></div><div class='bar-value'>15</div></div>
+<div class='bar-row'><div class='bar-label'>06.10</div><div class='bar-track'><div class='bar-fill' style='width:67%'></div></div><div class='bar-value'>12</div></div>
+<div class='bar-row'><div class='bar-label'>07.10</div><div class='bar-track'><div class='bar-fill' style='width:100%'></div></div><div class='bar-value'>18</div></div>
+<div class='bar-row'><div class='bar-label'>08.10</div><div class='bar-track'><div class='bar-fill' style='width:67%'></div></div><div class='bar-value'>12</div></div>
+<div class='bar-row'><div class='bar-label'>09.10</div><div class='bar-track'><div class='bar-fill' style='width:28%'></div></div><div class='bar-value'>5</div></div>
+<div class='bar-row'><div class='bar-label'>12.10</div><div class='bar-track'><div class='bar-fill' style='width:56%'></div></div><div class='bar-value'>10</div></div>
+<div class='bar-row'><div class='bar-label'>13.10</div><div class='bar-track'><div class='bar-fill' style='width:44%'></div></div><div class='bar-value'>8</div></div>
+<div class='bar-row'><div class='bar-label'>14.10</div><div class='bar-track'><div class='bar-fill' style='width:22%'></div></div><div class='bar-value'>4</div></div>
+<div class='bar-row'><div class='bar-label'>15.10</div><div class='bar-track'><div class='bar-fill' style='width:83%'></div></div><div class='bar-value'>15</div></div>
+<div class='bar-row'><div class='bar-label'>16.10</div><div class='bar-track'><div class='bar-fill' style='width:56%'></div></div><div class='bar-value'>10</div></div></div>
+<div class="wrap"><table>
+<thead><tr><th>День</th><th class="num">Запусков</th><th class="num">Поручений</th><th class="num">Сравнений</th><th class="num">Одинаковая</th><th class="num">Разные</th><th class="num">Доля разных</th><th class="num">Макс. отклонение</th></tr></thead>
+<tbody>
+<tr><td>17.09.2026</td><td class='num'>24</td><td class='num'>147</td><td class='num'>18</td><td class='num'>8</td><td class='num'>10</td><td class='num'>55,6%</td><td class='num'>0,5568%</td></tr>
+<tr><td>18.09.2026</td><td class='num'>33</td><td class='num'>7 659</td><td class='num'>41</td><td class='num'>36</td><td class='num'>5</td><td class='num'>12,2%</td><td class='num'>0,1105%</td></tr>
+<tr><td>21.09.2026</td><td class='num'>16</td><td class='num'>165</td><td class='num'>18</td><td class='num'>13</td><td class='num'>5</td><td class='num'>27,8%</td><td class='num'>0,3151%</td></tr>
+<tr><td>22.09.2026</td><td class='num'>38</td><td class='num'>165</td><td class='num'>30</td><td class='num'>22</td><td class='num'>8</td><td class='num'>26,7%</td><td class='num'>3,0100%</td></tr>
+<tr><td>23.09.2026</td><td class='num'>29</td><td class='num'>111</td><td class='num'>25</td><td class='num'>23</td><td class='num'>2</td><td class='num'>8,0%</td><td class='num'>0,4376%</td></tr>
+<tr><td>24.09.2026</td><td class='num'>26</td><td class='num'>2 771</td><td class='num'>29</td><td class='num'>24</td><td class='num'>5</td><td class='num'>17,2%</td><td class='num'>0,9804%</td></tr>
+<tr><td>25.09.2026</td><td class='num'>8</td><td class='num'>150</td><td class='num'>14</td><td class='num'>9</td><td class='num'>5</td><td class='num'>35,7%</td><td class='num'>0,3286%</td></tr>
+<tr><td>28.09.2026</td><td class='num'>28</td><td class='num'>190</td><td class='num'>26</td><td class='num'>20</td><td class='num'>6</td><td class='num'>23,1%</td><td class='num'>0,5543%</td></tr>
+<tr><td>29.09.2026</td><td class='num'>38</td><td class='num'>200</td><td class='num'>41</td><td class='num'>24</td><td class='num'>17</td><td class='num'>41,5%</td><td class='num'>1,4541%</td></tr>
+<tr><td>30.09.2026</td><td class='num'>32</td><td class='num'>123</td><td class='num'>18</td><td class='num'>12</td><td class='num'>6</td><td class='num'>33,3%</td><td class='num'>0,6652%</td></tr>
+<tr><td>01.10.2026</td><td class='num'>29</td><td class='num'>147</td><td class='num'>26</td><td class='num'>18</td><td class='num'>8</td><td class='num'>30,8%</td><td class='num'>0,5476%</td></tr>
+<tr><td>02.10.2026</td><td class='num'>30</td><td class='num'>154</td><td class='num'>30</td><td class='num'>25</td><td class='num'>5</td><td class='num'>16,7%</td><td class='num'>0,3293%</td></tr>
+<tr><td>05.10.2026</td><td class='num'>32</td><td class='num'>237</td><td class='num'>40</td><td class='num'>25</td><td class='num'>15</td><td class='num'>37,5%</td><td class='num'>0,6501%</td></tr>
+<tr><td>06.10.2026</td><td class='num'>36</td><td class='num'>178</td><td class='num'>42</td><td class='num'>30</td><td class='num'>12</td><td class='num'>28,6%</td><td class='num'>0,8630%</td></tr>
+<tr><td>07.10.2026</td><td class='num'>36</td><td class='num'>211</td><td class='num'>41</td><td class='num'>23</td><td class='num'>18</td><td class='num'>43,9%</td><td class='num'>0,9646%</td></tr>
+<tr><td>08.10.2026</td><td class='num'>36</td><td class='num'>206</td><td class='num'>50</td><td class='num'>38</td><td class='num'>12</td><td class='num'>24,0%</td><td class='num'>0,5441%</td></tr>
+<tr><td>09.10.2026</td><td class='num'>35</td><td class='num'>203</td><td class='num'>47</td><td class='num'>42</td><td class='num'>5</td><td class='num'>10,6%</td><td class='num'>1,1957%</td></tr>
+<tr><td>12.10.2026</td><td class='num'>40</td><td class='num'>368</td><td class='num'>49</td><td class='num'>39</td><td class='num'>10</td><td class='num'>20,4%</td><td class='num'>0,7384%</td></tr>
+<tr><td>13.10.2026</td><td class='num'>44</td><td class='num'>359</td><td class='num'>67</td><td class='num'>59</td><td class='num'>8</td><td class='num'>11,9%</td><td class='num'>1,9792%</td></tr>
+<tr><td>14.10.2026</td><td class='num'>9</td><td class='num'>145</td><td class='num'>18</td><td class='num'>14</td><td class='num'>4</td><td class='num'>22,2%</td><td class='num'>0,4065%</td></tr>
+<tr><td>15.10.2026</td><td class='num'>44</td><td class='num'>1 491</td><td class='num'>68</td><td class='num'>53</td><td class='num'>15</td><td class='num'>22,1%</td><td class='num'>0,1235%</td></tr>
+<tr><td>16.10.2026</td><td class='num'>43</td><td class='num'>333</td><td class='num'>61</td><td class='num'>51</td><td class='num'>10</td><td class='num'>16,4%</td><td class='num'>0,9278%</td></tr>
+</tbody></table></div>
+
+<h3>По бумагам</h3>
+<p>Доля считается только по запускам, где заявок на бумагу было две или больше. Типичное отклонение - медиана по тем запускам, где цены разошлись.</p>
+<div class="wrap"><table>
+<thead><tr><th>Бумага</th><th class="num">Одинаковая</th><th class="num">Разные</th><th class="num">Одна заявка</th><th class="num">Доля разных</th><th class="num">Типичное</th><th class="num">Максимум</th></tr></thead>
+<tbody>
+<tr><td>ПИФ Акции<div class='muted'>ОПИФРФИ &quot;Акции&quot;</div></td><td class='num'>193</td><td class='num'>64</td><td class='num'>215</td><td class='num'>24,9%</td><td class='num'>0,4324%</td><td class='num'>3,0100%</td></tr>
+<tr><td>ОФЗ 26228<div class='muted'>Минфин России, 28, 26228RMFS</div></td><td class='num'>123</td><td class='num'>42</td><td class='num'>216</td><td class='num'>25,5%</td><td class='num'>0,0277%</td><td class='num'>0,1906%</td></tr>
+<tr><td>ОФЗ 26242<div class='muted'>Минфин России, 242, 26242RMFS</div></td><td class='num'>31</td><td class='num'>25</td><td class='num'>33</td><td class='num'>44,6%</td><td class='num'>0,0195%</td><td class='num'>0,2027%</td></tr>
+<tr><td>LQDT ETF<div class='muted'>БПИФРФИ Ликвидность RU000A1014L8</div></td><td class='num'>226</td><td class='num'>25</td><td class='num'>224</td><td class='num'>10,0%</td><td class='num'>0,0143%</td><td class='num'>0,0144%</td></tr>
+<tr><td>ОФЗ 26237<div class='muted'>Минфин России, 237, 26237RMFS</div></td><td class='num'>15</td><td class='num'>16</td><td class='num'>31</td><td class='num'>51,6%</td><td class='num'>0,0503%</td><td class='num'>0,1944%</td></tr>
+<tr><td>ОФЗ 26218<div class='muted'>Минфин России, 218, 26218RMFS</div></td><td class='num'>19</td><td class='num'>13</td><td class='num'>85</td><td class='num'>40,6%</td><td class='num'>0,0194%</td><td class='num'>0,2018%</td></tr>
+<tr><td>ОФЗ 26235<div class='muted'>Минфин России, 235, 26235RMFS</div></td><td class='num'>1</td><td class='num'>6</td><td class='num'>11</td><td class='num'>85,7%</td><td class='num'>0,0792%</td><td class='num'>0,3151%</td></tr>
+</tbody></table></div>
+
+<h3>Самые большие отклонения за месяц</h3>
+<p>Срок кеша без единой подмены есть в 97 запусках из 191: от 0 до 599 с, медиана 22 с. В остальных 94 другая цена стоит уже в ту же секунду, и такого срока нет. Колонка «Без подмены, с» показывает этот срок по каждому запуску. На секунду дольше кеш уже пишет чужую цену.</p>
+<div class="wrap"><table>
+<thead><tr><th>Начало запуска</th><th>Бумага</th><th class="num">Заявок</th><th class="num">Цен</th><th class="num">Мин</th><th class="num">Макс</th><th class="num">Отклонение</th><th class="num">Без подмены, с</th><th>Состав котировок</th></tr></thead>
+<tbody>
+<tr><td>22.09.2026 17:42:39</td><td>ПИФ Акции<div class='muted'>RU000A0JR282</div></td><td class='num'>3</td><td class='num'>2</td><td class='num'>44,85</td><td class='num'>46,2</td><td class='num bad'>3,0100%</td><td class='num'>нет</td><td>44,85 x 1, 46,2 x 2<div class='muted'>цена шла в одну сторону</div></td></tr>
+<tr><td>13.10.2026 10:25:02</td><td>ПИФ Акции<div class='muted'>RU000A0JR282</div></td><td class='num'>8</td><td class='num'>2</td><td class='num'>48</td><td class='num'>48,95</td><td class='num bad'>1,9792%</td><td class='num'>4</td><td>48 x 7, 48,95 x 1<div class='muted'>цена шла в одну сторону</div></td></tr>
+<tr><td>29.09.2026 13:05:01</td><td>ПИФ Акции<div class='muted'>RU000A0JR282</div></td><td class='num'>2</td><td class='num'>2</td><td class='num'>44,7</td><td class='num'>45,35</td><td class='num bad'>1,4541%</td><td class='num'>нет</td><td>44,7 x 1, 45,35 x 1<div class='muted'>цена шла в одну сторону</div></td></tr>
+<tr><td>13.10.2026 10:35:01</td><td>ПИФ Акции<div class='muted'>RU000A0JR282</div></td><td class='num'>28</td><td class='num'>3</td><td class='num'>48,25</td><td class='num'>48,95</td><td class='num bad'>1,4508%</td><td class='num'>4</td><td>48,25 x 23, 48,35 x 2, 48,95 x 3<div class='muted'>цена колебалась</div></td></tr>
+<tr><td>09.10.2026 17:24:51</td><td>ПИФ Акции<div class='muted'>RU000A0JR282</div></td><td class='num'>3</td><td class='num'>2</td><td class='num'>46</td><td class='num'>46,55</td><td class='num bad'>1,1957%</td><td class='num'>нет</td><td>46 x 2, 46,55 x 1<div class='muted'>цена шла в одну сторону</div></td></tr>
+<tr><td>24.09.2026 11:45:01</td><td>ПИФ Акции<div class='muted'>RU000A0JR282</div></td><td class='num'>4</td><td class='num'>3</td><td class='num'>45,9</td><td class='num'>46,35</td><td class='num bad'>0,9804%</td><td class='num'>нет</td><td>45,9 x 1, 46,2 x 1, 46,35 x 2<div class='muted'>цена колебалась</div></td></tr>
+<tr><td>07.10.2026 12:15:01</td><td>ПИФ Акции<div class='muted'>RU000A0JR282</div></td><td class='num'>5</td><td class='num'>3</td><td class='num'>46,65</td><td class='num'>47,1</td><td class='num bad'>0,9646%</td><td class='num'>нет</td><td>46,65 x 1, 46,8 x 1, 47,1 x 3<div class='muted'>цена колебалась</div></td></tr>
+<tr><td>16.10.2026 13:55:01</td><td>ПИФ Акции<div class='muted'>RU000A0JR282</div></td><td class='num'>3</td><td class='num'>2</td><td class='num'>48,5</td><td class='num'>48,95</td><td class='num bad'>0,9278%</td><td class='num'>7</td><td>48,5 x 2, 48,95 x 1<div class='muted'>цена шла в одну сторону</div></td></tr>
+<tr><td>06.10.2026 11:45:01</td><td>ПИФ Акции<div class='muted'>RU000A0JR282</div></td><td class='num'>12</td><td class='num'>3</td><td class='num'>46,35</td><td class='num'>46,75</td><td class='num bad'>0,8630%</td><td class='num'>нет</td><td>46,35 x 2, 46,6 x 9, 46,75 x 1<div class='muted'>цена шла в одну сторону</div></td></tr>
+<tr><td>07.10.2026 17:35:57</td><td>ПИФ Акции<div class='muted'>RU000A0JR282</div></td><td class='num'>3</td><td class='num'>2</td><td class='num'>46,5</td><td class='num'>46,9</td><td class='num bad'>0,8602%</td><td class='num'>52</td><td>46,5 x 1, 46,9 x 2<div class='muted'>цена шла в одну сторону</div></td></tr>
+<tr><td>07.10.2026 11:25:01</td><td>ПИФ Акции<div class='muted'>RU000A0JR282</div></td><td class='num'>16</td><td class='num'>4</td><td class='num'>46,8</td><td class='num'>47,2</td><td class='num bad'>0,8547%</td><td class='num'>нет</td><td>46,8 x 8, 46,85 x 3, 47,05 x 4, 47,2 x 1<div class='muted'>цена колебалась</div></td></tr>
+<tr><td>22.09.2026 13:15:01</td><td>ПИФ Акции<div class='muted'>RU000A0JR282</div></td><td class='num'>4</td><td class='num'>2</td><td class='num'>45,9</td><td class='num'>46,25</td><td class='num bad'>0,7625%</td><td class='num'>63</td><td>45,9 x 3, 46,25 x 1<div class='muted'>цена шла в одну сторону</div></td></tr>
+<tr><td>12.10.2026 12:25:01</td><td>ПИФ Акции<div class='muted'>RU000A0JR282</div></td><td class='num'>27</td><td class='num'>2</td><td class='num'>47,4</td><td class='num'>47,75</td><td class='num bad'>0,7384%</td><td class='num'>69</td><td>47,4 x 23, 47,75 x 4<div class='muted'>цена шла в одну сторону</div></td></tr>
+<tr><td>30.09.2026 12:55:01</td><td>ПИФ Акции<div class='muted'>RU000A0JR282</div></td><td class='num'>8</td><td class='num'>4</td><td class='num'>45,1</td><td class='num'>45,4</td><td class='num bad'>0,6652%</td><td class='num'>2</td><td>45,1 x 1, 45,15 x 4, 45,2 x 1, 45,4 x 2<div class='muted'>цена колебалась</div></td></tr>
+<tr><td>05.10.2026 15:55:01</td><td>ПИФ Акции<div class='muted'>RU000A0JR282</div></td><td class='num'>7</td><td class='num'>4</td><td class='num'>46,15</td><td class='num'>46,45</td><td class='num bad'>0,6501%</td><td class='num'>нет</td><td>46,15 x 3, 46,2 x 1, 46,25 x 2, 46,45 x 1<div class='muted'>цена колебалась</div></td></tr>
+<tr><td>17.09.2026 16:44:07</td><td>ПИФ Акции<div class='muted'>RU000A0JR282</div></td><td class='num'>12</td><td class='num'>3</td><td class='num'>44,9</td><td class='num'>45,15</td><td class='num bad'>0,5568%</td><td class='num'>нет</td><td>44,9 x 10, 45 x 1, 45,15 x 1<div class='muted'>цена шла в одну сторону</div></td></tr>
+<tr><td>28.09.2026 12:03:09</td><td>ПИФ Акции<div class='muted'>RU000A0JR282</div></td><td class='num'>5</td><td class='num'>2</td><td class='num'>45,1</td><td class='num'>45,35</td><td class='num bad'>0,5543%</td><td class='num'>108</td><td>45,1 x 1, 45,35 x 4<div class='muted'>цена шла в одну сторону</div></td></tr>
+<tr><td>01.10.2026 15:05:01</td><td>ПИФ Акции<div class='muted'>RU000A0JR282</div></td><td class='num'>8</td><td class='num'>2</td><td class='num'>45,65</td><td class='num'>45,9</td><td class='num bad'>0,5476%</td><td class='num'>64</td><td>45,65 x 4, 45,9 x 4<div class='muted'>цена шла в одну сторону</div></td></tr>
+<tr><td>24.09.2026 10:45:01</td><td>ПИФ Акции<div class='muted'>RU000A0JR282</div></td><td class='num'>8</td><td class='num'>2</td><td class='num'>45,95</td><td class='num'>46,2</td><td class='num bad'>0,5441%</td><td class='num'>нет</td><td>45,95 x 6, 46,2 x 2<div class='muted'>цена шла в одну сторону</div></td></tr>
+<tr><td>08.10.2026 17:05:12</td><td>ПИФ Акции<div class='muted'>RU000A0JR282</div></td><td class='num'>3</td><td class='num'>2</td><td class='num'>45,95</td><td class='num'>46,2</td><td class='num bad'>0,5441%</td><td class='num'>128</td><td>45,95 x 2, 46,2 x 1<div class='muted'>цена шла в одну сторону</div></td></tr>
+<tr><td>29.09.2026 12:13:26</td><td>ПИФ Акции<div class='muted'>RU000A0JR282</div></td><td class='num'>5</td><td class='num'>2</td><td class='num'>44,75</td><td class='num'>44,95</td><td class='num bad'>0,4469%</td><td class='num'>92</td><td>44,75 x 2, 44,95 x 3<div class='muted'>цена шла в одну сторону</div></td></tr>
+<tr><td>29.09.2026 12:35:01</td><td>ПИФ Акции<div class='muted'>RU000A0JR282</div></td><td class='num'>6</td><td class='num'>2</td><td class='num'>44,75</td><td class='num'>44,95</td><td class='num bad'>0,4469%</td><td class='num'>126</td><td>44,75 x 3, 44,95 x 3<div class='muted'>цена шла в одну сторону</div></td></tr>
+<tr><td>29.09.2026 15:45:01</td><td>ПИФ Акции<div class='muted'>RU000A0JR282</div></td><td class='num'>3</td><td class='num'>2</td><td class='num'>44,95</td><td class='num'>45,15</td><td class='num bad'>0,4449%</td><td class='num'>46</td><td>44,95 x 2, 45,15 x 1<div class='muted'>цена шла в одну сторону</div></td></tr>
+<tr><td>29.09.2026 15:35:01</td><td>ПИФ Акции<div class='muted'>RU000A0JR282</div></td><td class='num'>3</td><td class='num'>2</td><td class='num'>45</td><td class='num'>45,2</td><td class='num bad'>0,4444%</td><td class='num'>46</td><td>45 x 1, 45,2 x 2<div class='muted'>цена шла в одну сторону</div></td></tr>
+<tr><td>29.09.2026 15:03:12</td><td>ПИФ Акции<div class='muted'>RU000A0JR282</div></td><td class='num'>9</td><td class='num'>2</td><td class='num'>45,1</td><td class='num'>45,3</td><td class='num bad'>0,4435%</td><td class='num'>106</td><td>45,1 x 8, 45,3 x 1<div class='muted'>цена шла в одну сторону</div></td></tr>
+</tbody></table></div>
+
+<h3>В какое время идут запуски</h3>
+<p>Число пачек поручений по десятиминутным отметкам. Регламент виден как повторяющиеся слоты, а не как случайные сделки в течение дня.</p>
+<div class="wrap"><table>
+<thead><tr><th>Время</th><th class="num">Запусков за месяц</th></tr></thead>
+<tbody>
+<tr><td>00:00</td><td class='num'>1</td></tr>
+<tr><td>09:50</td><td class='num'>1</td></tr>
+<tr><td>10:00</td><td class='num'>1</td></tr>
+<tr><td>10:10</td><td class='num'>21</td></tr>
+<tr><td>10:20</td><td class='num'>21</td></tr>
+<tr><td>10:30</td><td class='num'>18</td></tr>
+<tr><td>10:40</td><td class='num'>14</td></tr>
+<tr><td>10:50</td><td class='num'>14</td></tr>
+<tr><td>11:00</td><td class='num'>16</td></tr>
+<tr><td>11:10</td><td class='num'>16</td></tr>
+<tr><td>11:20</td><td class='num'>15</td></tr>
+<tr><td>11:30</td><td class='num'>13</td></tr>
+<tr><td>11:40</td><td class='num'>15</td></tr>
+<tr><td>11:50</td><td class='num'>17</td></tr>
+<tr><td>12:00</td><td class='num'>14</td></tr>
+<tr><td>12:10</td><td class='num'>16</td></tr>
+<tr><td>12:20</td><td class='num'>17</td></tr>
+<tr><td>12:30</td><td class='num'>16</td></tr>
+<tr><td>12:40</td><td class='num'>17</td></tr>
+<tr><td>12:50</td><td class='num'>17</td></tr>
+<tr><td>13:00</td><td class='num'>18</td></tr>
+<tr><td>13:10</td><td class='num'>16</td></tr>
+<tr><td>13:20</td><td class='num'>16</td></tr>
+<tr><td>13:30</td><td class='num'>11</td></tr>
+<tr><td>13:40</td><td class='num'>15</td></tr>
+<tr><td>13:50</td><td class='num'>12</td></tr>
+<tr><td>14:00</td><td class='num'>12</td></tr>
+<tr><td>14:10</td><td class='num'>10</td></tr>
+<tr><td>14:20</td><td class='num'>14</td></tr>
+<tr><td>14:30</td><td class='num'>14</td></tr>
+<tr><td>14:40</td><td class='num'>17</td></tr>
+<tr><td>14:50</td><td class='num'>19</td></tr>
+<tr><td>15:00</td><td class='num'>14</td></tr>
+<tr><td>15:10</td><td class='num'>15</td></tr>
+<tr><td>15:20</td><td class='num'>15</td></tr>
+<tr><td>15:30</td><td class='num'>13</td></tr>
+<tr><td>15:40</td><td class='num'>16</td></tr>
+<tr><td>15:50</td><td class='num'>13</td></tr>
+<tr><td>16:00</td><td class='num'>18</td></tr>
+<tr><td>16:10</td><td class='num'>15</td></tr>
+<tr><td>16:20</td><td class='num'>13</td></tr>
+<tr><td>16:30</td><td class='num'>15</td></tr>
+<tr><td>16:40</td><td class='num'>18</td></tr>
+<tr><td>16:50</td><td class='num'>13</td></tr>
+<tr><td>17:00</td><td class='num'>14</td></tr>
+<tr><td>17:10</td><td class='num'>12</td></tr>
+<tr><td>17:20</td><td class='num'>12</td></tr>
+<tr><td>17:30</td><td class='num'>5</td></tr>
+<tr><td>17:40</td><td class='num'>4</td></tr>
+<tr><td>17:50</td><td class='num'>3</td></tr>
+<tr><td>18:00</td><td class='num'>3</td></tr>
+<tr><td>18:10</td><td class='num'>1</td></tr>
+</tbody></table></div>
+
+<h2>Какую цену записал бы кеш</h2>
+<div class="panel">
+<p>Кеш версии 1.18 хранит цену с момента проверки стакана. Пока с этой проверки не прошло больше срока, следующее поручение той же бумаги получает сохраненную цену и в стакан не ходит. Когда срок вышел, строка удаляется: поручение снова спрашивает стакан и кладет в кеш уже новую цену. В начале каждого запуска кеш пустой.</p>
+<p>Ниже для сроков 20, 30, 40, 50 и 60 секунд посчитано, скольким поручениям кеш записал бы другую котировку, чем стакан дал в их момент. Время берется из даты документа, точность до секунды: разница ровно в срок еще берется из кеша, на секунду больше идет новый запрос. Подмена считается как (большая котировка - меньшая) / меньшая. Пачка та же, что в остальном отчете: пауза между поручениями не больше 180 секунд.</p>
+<p>При сроке 60 секунд, как сейчас в 1.18, за месяц кеш подменил бы цену в 1 133 поручениях, это 158 запусков из 191 с разной ценой. Медиана подмены 0,0062%, 90-й перцентиль 0,2167%, максимум 3,0100%. Из этих поручений 806 отличаются от стакана не больше чем на 0,05%. Основной объем дают длинные пачки ОФЗ: 919 поручений. У ПИФ акций таких поручений 200. Самая большая, 3,0100% у ПИФ Акции, возникает через 6 с после проверки и попадает во все пять сроков.</p>
+<p>Срок 20 секунд оставляет 622 поручений, из них ПИФ акций 111. Максимум тот же, 3,0100%: он случается раньше 20 секунд. 16 октября при 60 секундах: 33 поручений в 9 запусках, максимум 0,9278%. Число запусков по срокам растет не строго, потому что более длинный срок сдвигает момент, когда кеш сбрасывается и берет новую цену.</p>
+<p>Срок кеша без единой подмены есть в 97 запусках из 191: от 0 до 599 с, медиана 22 с. В остальных 94 другая цена стоит уже в ту же секунду, и такого срока нет. Общего срока на все запуски нет.</p>
+</div>
+<h3>Месяц, подмена по сроку кеша</h3>
+<p>Высота столбца - число поручений, которым записали бы цену кеша вместо цены стакана. Цвет - размер этой подмены.</p>
+<div class="panel chart"><svg viewBox='0 0 760 280' role='img' aria-label='Подмена цены кешем по сроку'>
+<line x1='48' y1='244.0' x2='744' y2='244.0' stroke='#e6ebf1'/>
+<text x='40' y='248.0' text-anchor='end' class='axis'>0</text>
+<line x1='48' y1='190.0' x2='744' y2='190.0' stroke='#e6ebf1'/>
+<text x='40' y='194.0' text-anchor='end' class='axis'>283</text>
+<line x1='48' y1='136.0' x2='744' y2='136.0' stroke='#e6ebf1'/>
+<text x='40' y='140.0' text-anchor='end' class='axis'>566</text>
+<line x1='48' y1='82.0' x2='744' y2='82.0' stroke='#e6ebf1'/>
+<text x='40' y='86.0' text-anchor='end' class='axis'>850</text>
+<line x1='48' y1='28.0' x2='744' y2='28.0' stroke='#e6ebf1'/>
+<text x='40' y='32.0' text-anchor='end' class='axis'>1 133</text>
+<rect x='81.6' y='164.7' width='72.0' height='79.3' fill='#067647'/>
+<rect x='81.6' y='140.1' width='72.0' height='24.6' fill='#ca8a04'/>
+<rect x='81.6' y='130.0' width='72.0' height='10.1' fill='#ea580c'/>
+<rect x='81.6' y='125.6' width='72.0' height='4.4' fill='#dc2626'/>
+<rect x='81.6' y='125.4' width='72.0' height='0.2' fill='#7f1d1d'/>
+<text x='117.6' y='119.4' text-anchor='middle' class='bar-num'>622</text>
+<text x='117.6' y='268' text-anchor='middle' class='axis'>20 с</text>
+<rect x='220.8' y='136.3' width='72.0' height='107.7' fill='#067647'/>
+<rect x='220.8' y='106.4' width='72.0' height='29.9' fill='#ca8a04'/>
+<rect x='220.8' y='93.8' width='72.0' height='12.6' fill='#ea580c'/>
+<rect x='220.8' y='87.7' width='72.0' height='6.1' fill='#dc2626'/>
+<rect x='220.8' y='87.5' width='72.0' height='0.2' fill='#7f1d1d'/>
+<text x='256.8' y='81.5' text-anchor='middle' class='bar-num'>821</text>
+<text x='256.8' y='268' text-anchor='middle' class='axis'>30 с</text>
+<rect x='360.0' y='131.5' width='72.0' height='112.5' fill='#067647'/>
+<rect x='360.0' y='100.3' width='72.0' height='31.3' fill='#ca8a04'/>
+<rect x='360.0' y='87.1' width='72.0' height='13.2' fill='#ea580c'/>
+<rect x='360.0' y='79.9' width='72.0' height='7.2' fill='#dc2626'/>
+<rect x='360.0' y='79.7' width='72.0' height='0.2' fill='#7f1d1d'/>
+<text x='396.0' y='73.7' text-anchor='middle' class='bar-num'>862</text>
+<text x='396.0' y='268' text-anchor='middle' class='axis'>40 с</text>
+<rect x='499.2' y='115.5' width='72.0' height='128.5' fill='#067647'/>
+<rect x='499.2' y='82.0' width='72.0' height='33.6' fill='#ca8a04'/>
+<rect x='499.2' y='68.0' width='72.0' height='13.9' fill='#ea580c'/>
+<rect x='499.2' y='59.6' width='72.0' height='8.4' fill='#dc2626'/>
+<rect x='499.2' y='59.5' width='72.0' height='0.2' fill='#7f1d1d'/>
+<text x='535.2' y='53.5' text-anchor='middle' class='bar-num'>968</text>
+<text x='535.2' y='268' text-anchor='middle' class='axis'>50 с</text>
+<rect x='638.4' y='90.3' width='72.0' height='153.7' fill='#067647'/>
+<rect x='638.4' y='54.1' width='72.0' height='36.2' fill='#ca8a04'/>
+<rect x='638.4' y='37.9' width='72.0' height='16.2' fill='#ea580c'/>
+<rect x='638.4' y='28.2' width='72.0' height='9.7' fill='#dc2626'/>
+<rect x='638.4' y='28.0' width='72.0' height='0.2' fill='#7f1d1d'/>
+<text x='674.4' y='22.0' text-anchor='middle' class='bar-num'>1 133</text>
+<text x='674.4' y='268' text-anchor='middle' class='axis'>60 с</text>
+</svg>
+<div class="legend-row"><span class='legend'><i style='background:#067647'></i>до 0,05%</span>
+<span class='legend'><i style='background:#ca8a04'></i>0,05-0,2%</span>
+<span class='legend'><i style='background:#ea580c'></i>0,2-0,5%</span>
+<span class='legend'><i style='background:#dc2626'></i>0,5-2%</span>
+<span class='legend'><i style='background:#7f1d1d'></i>больше 2%</span></div>
+</div>
+<div class="wrap"><table>
+<thead><tr>
+<th>Срок</th>
+<th class="num">Поручений</th>
+<th class="num">Запусков</th>
+<th class="num">Медиана</th>
+<th class="num">90%</th>
+<th class="num">Максимум</th>
+<th class="num">ОФЗ, шт</th>
+<th class="num">ОФЗ, макс</th>
+<th class="num">ПИФ, шт</th>
+<th class="num">ПИФ, макс</th>
+<th class="num">ETF, шт</th>
+<th class="num">ETF, макс</th>
+<th class="num">Сдвиг после срока</th>
+</tr></thead>
+<tbody>
+<tr><td>20 с<div class='muted'></div></td><td class='num'>622</td><td class='num'>139</td><td class='num'>0,0080%</td><td class='num'>0,2141%</td><td class='num bad'>3,0100%</td><td class='num'>504</td><td class='num'>0,3151%</td><td class='num'>111</td><td class='num'>3,0100%</td><td class='num'>7</td><td class='num'>0,0143%</td><td class='num'>52</td></tr>
+<tr><td>30 с<div class='muted'></div></td><td class='num'>821</td><td class='num'>144</td><td class='num'>0,0062%</td><td class='num'>0,2141%</td><td class='num bad'>3,0100%</td><td class='num'>676</td><td class='num'>0,3151%</td><td class='num'>142</td><td class='num'>3,0100%</td><td class='num'>3</td><td class='num'>0,0143%</td><td class='num'>47</td></tr>
+<tr><td>40 с<div class='muted'></div></td><td class='num'>862</td><td class='num'>143</td><td class='num'>0,0123%</td><td class='num'>0,2167%</td><td class='num bad'>3,0100%</td><td class='num'>702</td><td class='num'>0,3151%</td><td class='num'>157</td><td class='num'>3,0100%</td><td class='num'>3</td><td class='num'>0,0143%</td><td class='num'>48</td></tr>
+<tr><td>50 с<div class='muted'></div></td><td class='num'>968</td><td class='num'>148</td><td class='num'>0,0062%</td><td class='num'>0,2167%</td><td class='num bad'>3,0100%</td><td class='num'>774</td><td class='num'>0,3151%</td><td class='num'>175</td><td class='num'>3,0100%</td><td class='num'>19</td><td class='num'>0,0143%</td><td class='num'>43</td></tr>
+<tr class='proposed'><td>60 с<div class='muted'>сейчас в 1.18</div></td><td class='num'>1 133</td><td class='num'>158</td><td class='num'>0,0062%</td><td class='num'>0,2167%</td><td class='num bad'>3,0100%</td><td class='num'>919</td><td class='num'>0,3151%</td><td class='num'>200</td><td class='num'>3,0100%</td><td class='num'>14</td><td class='num'>0,0143%</td><td class='num'>33</td></tr>
+</tbody></table></div>
+<p class="muted">Столбец «Сдвиг после срока» - запуски, где котировки бумаги разошлись, но уже после истечения кеша. Там обработка сходила бы в стакан заново и записала новую цену. Строка 60 секунд выделена: такой срок стоит в версии 1.18.</p>
+
+<h3>16 октября, тот же расчет</h3>
+<div class="panel chart"><svg viewBox='0 0 760 280' role='img' aria-label='Подмена цены кешем по сроку'>
+<line x1='48' y1='244.0' x2='744' y2='244.0' stroke='#e6ebf1'/>
+<text x='40' y='248.0' text-anchor='end' class='axis'>0</text>
+<line x1='48' y1='190.0' x2='744' y2='190.0' stroke='#e6ebf1'/>
+<text x='40' y='194.0' text-anchor='end' class='axis'>8</text>
+<line x1='48' y1='136.0' x2='744' y2='136.0' stroke='#e6ebf1'/>
+<text x='40' y='140.0' text-anchor='end' class='axis'>16</text>
+<line x1='48' y1='82.0' x2='744' y2='82.0' stroke='#e6ebf1'/>
+<text x='40' y='86.0' text-anchor='end' class='axis'>25</text>
+<line x1='48' y1='28.0' x2='744' y2='28.0' stroke='#e6ebf1'/>
+<text x='40' y='32.0' text-anchor='end' class='axis'>33</text>
+<rect x='81.6' y='185.1' width='72.0' height='58.9' fill='#067647'/>
+<rect x='81.6' y='152.4' width='72.0' height='32.7' fill='#ca8a04'/>
+<rect x='81.6' y='132.7' width='72.0' height='19.6' fill='#ea580c'/>
+<rect x='81.6' y='126.2' width='72.0' height='6.5' fill='#dc2626'/>
+<rect x='81.6' y='126.2' width='72.0' height='0.0' fill='#7f1d1d'/>
+<text x='117.6' y='120.2' text-anchor='middle' class='bar-num'>18</text>
+<text x='117.6' y='268' text-anchor='middle' class='axis'>20 с</text>
+<rect x='220.8' y='172.0' width='72.0' height='72.0' fill='#067647'/>
+<rect x='220.8' y='126.2' width='72.0' height='45.8' fill='#ca8a04'/>
+<rect x='220.8' y='86.9' width='72.0' height='39.3' fill='#ea580c'/>
+<rect x='220.8' y='80.4' width='72.0' height='6.5' fill='#dc2626'/>
+<rect x='220.8' y='80.4' width='72.0' height='0.0' fill='#7f1d1d'/>
+<text x='256.8' y='74.4' text-anchor='middle' class='bar-num'>25</text>
+<text x='256.8' y='268' text-anchor='middle' class='axis'>30 с</text>
+<rect x='360.0' y='165.5' width='72.0' height='78.5' fill='#067647'/>
+<rect x='360.0' y='139.3' width='72.0' height='26.2' fill='#ca8a04'/>
+<rect x='360.0' y='86.9' width='72.0' height='52.4' fill='#ea580c'/>
+<rect x='360.0' y='80.4' width='72.0' height='6.5' fill='#dc2626'/>
+<rect x='360.0' y='80.4' width='72.0' height='0.0' fill='#7f1d1d'/>
+<text x='396.0' y='74.4' text-anchor='middle' class='bar-num'>25</text>
+<text x='396.0' y='268' text-anchor='middle' class='axis'>40 с</text>
+<rect x='499.2' y='165.5' width='72.0' height='78.5' fill='#067647'/>
+<rect x='499.2' y='132.7' width='72.0' height='32.7' fill='#ca8a04'/>
+<rect x='499.2' y='60.7' width='72.0' height='72.0' fill='#ea580c'/>
+<rect x='499.2' y='54.2' width='72.0' height='6.5' fill='#dc2626'/>
+<rect x='499.2' y='54.2' width='72.0' height='0.0' fill='#7f1d1d'/>
+<text x='535.2' y='48.2' text-anchor='middle' class='bar-num'>29</text>
+<text x='535.2' y='268' text-anchor='middle' class='axis'>50 с</text>
+<rect x='638.4' y='165.5' width='72.0' height='78.5' fill='#067647'/>
+<rect x='638.4' y='119.6' width='72.0' height='45.8' fill='#ca8a04'/>
+<rect x='638.4' y='34.5' width='72.0' height='85.1' fill='#ea580c'/>
+<rect x='638.4' y='28.0' width='72.0' height='6.5' fill='#dc2626'/>
+<rect x='638.4' y='28.0' width='72.0' height='0.0' fill='#7f1d1d'/>
+<text x='674.4' y='22.0' text-anchor='middle' class='bar-num'>33</text>
+<text x='674.4' y='268' text-anchor='middle' class='axis'>60 с</text>
+</svg>
+<div class="legend-row"><span class='legend'><i style='background:#067647'></i>до 0,05%</span>
+<span class='legend'><i style='background:#ca8a04'></i>0,05-0,2%</span>
+<span class='legend'><i style='background:#ea580c'></i>0,2-0,5%</span>
+<span class='legend'><i style='background:#dc2626'></i>0,5-2%</span>
+<span class='legend'><i style='background:#7f1d1d'></i>больше 2%</span></div>
+</div>
+<div class="wrap"><table>
+<thead><tr>
+<th>Срок</th>
+<th class="num">Поручений</th>
+<th class="num">Запусков</th>
+<th class="num">Медиана</th>
+<th class="num">90%</th>
+<th class="num">Максимум</th>
+<th class="num">ОФЗ, шт</th>
+<th class="num">ОФЗ, макс</th>
+<th class="num">ПИФ, шт</th>
+<th class="num">ПИФ, макс</th>
+<th class="num">ETF, шт</th>
+<th class="num">ETF, макс</th>
+<th class="num">Сдвиг после срока</th>
+</tr></thead>
+<tbody>
+<tr><td>20 с<div class='muted'></div></td><td class='num'>18</td><td class='num'>9</td><td class='num'>0,0541%</td><td class='num'>0,3119%</td><td class='num bad'>0,9278%</td><td class='num'>13</td><td class='num'>0,0915%</td><td class='num'>5</td><td class='num'>0,9278%</td><td class='num'>-</td><td class='num'>-</td><td class='num'>1</td></tr>
+<tr><td>30 с<div class='muted'></div></td><td class='num'>25</td><td class='num'>9</td><td class='num'>0,0647%</td><td class='num'>0,3119%</td><td class='num bad'>0,9278%</td><td class='num'>15</td><td class='num'>0,0915%</td><td class='num'>10</td><td class='num'>0,9278%</td><td class='num'>-</td><td class='num'>-</td><td class='num'>1</td></tr>
+<tr><td>40 с<div class='muted'></div></td><td class='num'>25</td><td class='num'>8</td><td class='num'>0,0647%</td><td class='num'>0,3119%</td><td class='num bad'>0,9278%</td><td class='num'>16</td><td class='num'>0,0915%</td><td class='num'>9</td><td class='num'>0,9278%</td><td class='num'>-</td><td class='num'>-</td><td class='num'>2</td></tr>
+<tr><td>50 с<div class='muted'></div></td><td class='num'>29</td><td class='num'>9</td><td class='num'>0,0647%</td><td class='num'>0,3119%</td><td class='num bad'>0,9278%</td><td class='num'>16</td><td class='num'>0,0915%</td><td class='num'>13</td><td class='num'>0,9278%</td><td class='num'>-</td><td class='num'>-</td><td class='num'>1</td></tr>
+<tr class='proposed'><td>60 с<div class='muted'>сейчас в 1.18</div></td><td class='num'>33</td><td class='num'>9</td><td class='num'>0,1034%</td><td class='num'>0,3119%</td><td class='num bad'>0,9278%</td><td class='num'>16</td><td class='num'>0,0915%</td><td class='num'>17</td><td class='num'>0,9278%</td><td class='num'>-</td><td class='num'>-</td><td class='num'>1</td></tr>
+</tbody></table></div>
+
+<h3>Крупнейшие подмены при сроке 60 секунд</h3>
+<p>Берется самая большая подмена внутри запуска. «Секунд» - сколько прошло с проверки, цену которой кеш еще держит. «Без подмены, с» - самый длинный срок кеша, при котором в этом запуске у бумаги не меняется ни одна цена: на секунду дольше кеш уже пишет чужую. «Нет» значит, что другая котировка стоит в ту же секунду, и такого срока нет. Колонка «С какого срока» показывает, с какого из пяти сроков эта подмена уже случается.</p>
+<div class="wrap"><table>
+<thead><tr><th>Начало запуска</th><th>Бумага</th><th class="num">Поручений</th><th class="num">Цена кеша</th><th class="num">Цена стакана</th><th class="num">Секунд</th><th class="num">Подмена</th><th class="num">Без подмены, с</th><th>С какого срока</th></tr></thead>
+<tbody>
+<tr><td>22.09.2026 17:42:39</td><td>ПИФ Акции<div class='muted'>RU000A0JR282</div></td><td class='num'>1</td><td class='num'>46,2</td><td class='num'>44,85</td><td class='num'>6</td><td class='num bad'>3,0100%</td><td class='num'>нет</td><td>при любом из этих сроков</td></tr>
+<tr><td>13.10.2026 10:25:02</td><td>ПИФ Акции<div class='muted'>RU000A0JR282</div></td><td class='num'>1</td><td class='num'>48</td><td class='num'>48,95</td><td class='num'>29</td><td class='num bad'>1,9792%</td><td class='num'>4</td><td>от 30 с</td></tr>
+<tr><td>29.09.2026 13:05:01</td><td>ПИФ Акции<div class='muted'>RU000A0JR282</div></td><td class='num'>1</td><td class='num'>44,7</td><td class='num'>45,35</td><td class='num'>0</td><td class='num bad'>1,4541%</td><td class='num'>нет</td><td>при любом из этих сроков</td></tr>
+<tr><td>13.10.2026 10:35:01</td><td>ПИФ Акции<div class='muted'>RU000A0JR282</div></td><td class='num'>17</td><td class='num'>48,95</td><td class='num'>48,25</td><td class='num'>5</td><td class='num bad'>1,4508%</td><td class='num'>4</td><td>при любом из этих сроков</td></tr>
+<tr><td>09.10.2026 17:24:51</td><td>ПИФ Акции<div class='muted'>RU000A0JR282</div></td><td class='num'>2</td><td class='num'>46,55</td><td class='num'>46</td><td class='num'>0</td><td class='num bad'>1,1957%</td><td class='num'>нет</td><td>при любом из этих сроков</td></tr>
+<tr><td>16.10.2026 13:55:01</td><td>ПИФ Акции<div class='muted'>RU000A0JR282</div></td><td class='num'>1</td><td class='num'>48,5</td><td class='num'>48,95</td><td class='num'>8</td><td class='num bad'>0,9278%</td><td class='num'>7</td><td>при любом из этих сроков</td></tr>
+<tr><td>07.10.2026 17:35:57</td><td>ПИФ Акции<div class='muted'>RU000A0JR282</div></td><td class='num'>2</td><td class='num'>46,5</td><td class='num'>46,9</td><td class='num'>53</td><td class='num bad'>0,8602%</td><td class='num'>52</td><td>от 60 с</td></tr>
+<tr><td>24.09.2026 11:45:01</td><td>ПИФ Акции<div class='muted'>RU000A0JR282</div></td><td class='num'>3</td><td class='num'>46,2</td><td class='num'>45,9</td><td class='num'>6</td><td class='num bad'>0,6536%</td><td class='num'>нет</td><td>при любом из этих сроков</td></tr>
+<tr><td>07.10.2026 12:15:01</td><td>ПИФ Акции<div class='muted'>RU000A0JR282</div></td><td class='num'>4</td><td class='num'>46,8</td><td class='num'>47,1</td><td class='num'>0</td><td class='num bad'>0,6410%</td><td class='num'>нет</td><td>при любом из этих сроков</td></tr>
+<tr><td>17.09.2026 16:44:07</td><td>ПИФ Акции<div class='muted'>RU000A0JR282</div></td><td class='num'>11</td><td class='num'>45,15</td><td class='num'>44,9</td><td class='num'>0</td><td class='num bad'>0,5568%</td><td class='num'>нет</td><td>при любом из этих сроков</td></tr>
+<tr><td>24.09.2026 10:45:01</td><td>ПИФ Акции<div class='muted'>RU000A0JR282</div></td><td class='num'>6</td><td class='num'>46,2</td><td class='num'>45,95</td><td class='num'>6</td><td class='num bad'>0,5441%</td><td class='num'>нет</td><td>при любом из этих сроков</td></tr>
+<tr><td>06.10.2026 11:45:01</td><td>ПИФ Акции<div class='muted'>RU000A0JR282</div></td><td class='num'>2</td><td class='num'>46,6</td><td class='num'>46,35</td><td class='num'>47</td><td class='num bad'>0,5394%</td><td class='num'>нет</td><td>от 50 с</td></tr>
+<tr><td>07.10.2026 11:25:01</td><td>ПИФ Акции<div class='muted'>RU000A0JR282</div></td><td class='num'>10</td><td class='num'>47,05</td><td class='num'>46,8</td><td class='num'>26</td><td class='num bad'>0,5342%</td><td class='num'>нет</td><td>от 30 с</td></tr>
+<tr><td>29.09.2026 15:45:01</td><td>ПИФ Акции<div class='muted'>RU000A0JR282</div></td><td class='num'>2</td><td class='num'>45,15</td><td class='num'>44,95</td><td class='num'>47</td><td class='num bad'>0,4449%</td><td class='num'>46</td><td>от 50 с</td></tr>
+<tr><td>29.09.2026 15:35:01</td><td>ПИФ Акции<div class='muted'>RU000A0JR282</div></td><td class='num'>1</td><td class='num'>45,2</td><td class='num'>45</td><td class='num'>47</td><td class='num bad'>0,4444%</td><td class='num'>46</td><td>от 50 с</td></tr>
+</tbody></table></div>
+
+<h2>Что из этого следует</h2>
+<div class="panel warn">
+<ul>
+<li>Повторно запрашивать стакан на ту же бумагу внутри одного запуска почти не на что: цена совпадает в 76,1% сравнений.</li>
+<li>У ОФЗ расхождение, когда оно есть, не больше нескольких десятых процента. Заметный ход дает ПИФ акций: типично 0,43%, один раз 22.09 на 3,0100%.</li>
+<li>К следующему запуску котировка той же бумаги меняется в 50,2% пар, медиана сдвига 0,0802%. Общий кэш цены на интервал регламента закроет заявки по предыдущему стакану примерно в половине случаев.</li>
+<li>16 октября не выделяется на фоне месяца: 10 расхождений из 61 сравнений, максимум 0,9278%.</li>
+<li>Срок кеша 60 секунд за месяц подменил бы стакан в 1 133 поручениях (158 запусков). Медиана этой подмены 0,0062%, у 806 поручений она не больше 0,05%. Максимум 3,0100% возникает через несколько секунд, поэтому срок 20 секунд оставляет его и снижает число поручений до 622.</li>
+</ul>
+</div>
+</main>
+</body>
+</html>
