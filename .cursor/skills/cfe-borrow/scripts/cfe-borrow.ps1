@@ -1,4 +1,4 @@
-﻿# cfe-borrow v1.47 — Borrow objects from configuration into extension (CFE)
+﻿# cfe-borrow v1.50 — Borrow objects from configuration into extension (CFE)
 # Source: https://github.com/Nikolay-Shirokov/cc-1c-skills
 [CmdletBinding(PositionalBinding=$false)]
 param(
@@ -32,7 +32,7 @@ $script:droppedLinks = @()
 $script:mainAttrId = "1000001"
 
 # Виды дочерних объектов, которые заимствуются в оболочку поимённо (табличные части — отдельно)
-$script:childObjectKinds = @('Attribute','Dimension','Resource','AddressingAttribute')
+$script:childObjectKinds = @('Attribute','Dimension','Resource','AddressingAttribute','AccountingFlag','ExtDimensionAccountingFlag')
 
 # Прямые дети <Form>, которые в заимствованную форму не переносятся.
 # Структурные секции: AutoCommandBar и ChildItems забираются отдельно, остальные выбрасываются целиком.
@@ -1113,7 +1113,8 @@ function Borrow-Form {
 			}
 		}
 	} else {
-		$srcAttrUuids = Get-SourceAttributeUuids $typeName $objName
+		$maObj = Resolve-MainAttributeObject $srcFormEl $typeName $objName
+		$srcAttrUuids = Get-SourceAttributeUuids $maObj.TypeName $maObj.ObjName
 	}
 	# Реквизиты объекта, которые попадут в расширение: в режиме Form — только используемые формой
 	# (тот же сбор, что в Borrow-MainAttribute), в режиме All — все ($null)
@@ -2290,6 +2291,10 @@ function Resolve-SourceAttributes {
 
 	$attrs = @()
 	$tabSections = @()
+	# Стандартная ТЧ видов субконто плана счетов: нужна форме (или режим All) — переносятся свойства
+	# ExtDimensionTypes/MaxExtDimensionCount и признаки учёта субконто
+	$wantExtDim = $typeName -eq 'ChartOfAccounts' -and ($null -eq $flKeys -or $flKeys.ContainsKey((Get-QueryKey 'ExtDimensionTypes')) -or
+		$flKeys.ContainsKey((Get-QueryKey 'ВидыСубконто')))
 
 	foreach ($child in $childObjs.ChildNodes) {
 		if ($child.NodeType -ne 'Element') { continue }
@@ -2302,7 +2307,11 @@ function Resolve-SourceAttributes {
 			$nameNode = $child.SelectSingleNode("md:Properties/md:Name", $srcNs)
 			if (-not $nameNode) { continue }
 			$attrName = $nameNode.InnerText
-			if ($null -ne $flKeys -and -not $flKeys.ContainsKey((Get-QueryKey $attrName))) { continue }
+			# Признак учёта субконто — колонка стандартной ТЧ видов субконто (Объект.ВидыСубконто.<Признак>):
+			# идёт вместе с ней, а не по первому сегменту пути
+			if ($child.LocalName -eq 'ExtDimensionAccountingFlag') {
+				if (-not $wantExtDim) { continue }
+			} elseif ($null -ne $flKeys -and -not $flKeys.ContainsKey((Get-QueryKey $attrName))) { continue }
 
 			$uuid = $child.GetAttribute("uuid")
 			$typeNode = $child.SelectSingleNode("md:Properties/md:Type", $srcNs)
@@ -2373,6 +2382,22 @@ function Resolve-SourceAttributes {
 		foreach ($pName in $propsToExtract) {
 			$pNode = $propsNode.SelectSingleNode("md:${pName}", $srcNs)
 			if ($pNode) { $extraProps[$pName] = $pNode.InnerText }
+		}
+		# Стандартная ТЧ видов субконто плана счетов видна форме расширения, только если в оболочке есть
+		# ExtDimensionTypes и MaxExtDimensionCount, а ПВХ видов субконто заимствован (замер 8.3.24, 8.3.27).
+		# ПВХ нет в источнике — свойства не переносим: ссылка на незаимствованный объект не загрузится.
+		$edtNode = $propsNode.SelectSingleNode("md:ExtDimensionTypes", $srcNs)
+		$maxNode = $propsNode.SelectSingleNode("md:MaxExtDimensionCount", $srcNs)
+		if ($wantExtDim -and $edtNode -and $maxNode -and $edtNode.InnerText.Trim()) {
+			$edm = [regex]::Match($edtNode.InnerText.Trim(), '^(\w+)\.(.+)$')
+			$edFound = $edm.Success -and $childTypeDirMap.ContainsKey($edm.Groups[1].Value) -and
+				(Test-Path (Join-Path (Join-Path $cfgDir $childTypeDirMap[$edm.Groups[1].Value]) "$($edm.Groups[2].Value).xml"))
+			if ($edFound) {
+				$extraProps["ExtDimensionTypes"] = $edtNode.InnerText.Trim()
+				$extraProps["MaxExtDimensionCount"] = $maxNode.InnerText.Trim()
+			} else {
+				Warn "  ${typeName}.${objName}: виды субконто $($edtNode.InnerText.Trim()) не найдены в конфигурации-источнике — ТЧ видов субконто форме расширения не будет видна"
+			}
 		}
 	}
 
@@ -2618,7 +2643,7 @@ function Resolve-CommonFormOwner {
 	if ($typeText -ceq 'cfg:ConstantsSet') { return @{ Kind = 'Constants'; MainName = $mainAttr.GetAttribute("name") } }
 	$m = [regex]::Match($typeText, '^cfg:(\w+)\.(\w+)$')
 	if ($m.Success -and $script:commonFormOwnerKinds.Contains($m.Groups[1].Value)) {
-		return @{ Kind = 'Object'; TypeName = $script:commonFormOwnerKinds[$m.Groups[1].Value]; ObjName = $m.Groups[2].Value }
+		return @{ Kind = 'Object'; TypeName = $script:commonFormOwnerKinds[$m.Groups[1].Value]; ObjName = $m.Groups[2].Value; ByType = $true }
 	}
 	if ($typeText -ceq 'cfg:DynamicList') {
 		$mt = $mainAttr.SelectSingleNode(".//*[local-name()='MainTable']")
@@ -2630,6 +2655,17 @@ function Resolve-CommonFormOwner {
 		}
 	}
 	return $null
+}
+
+# Объект, по которому разрешаются пути формы объекта: тип основного реквизита <Вид>Object.Имя и т.п.,
+# а не владелец формы — форма обработки с основным реквизитом DocumentObject.X видит реквизиты X (замер
+# 8.3.24, #120). Список (DynamicList) и прочие типы — владелец формы, как раньше.
+function Resolve-MainAttributeObject {
+	param($formEl, [string]$typeName, [string]$objName)
+
+	$o = Resolve-CommonFormOwner $formEl
+	if ($o -and $o.Kind -eq 'Object' -and $o.ByType) { return @{ TypeName = $o.TypeName; ObjName = $o.ObjName } }
+	return @{ TypeName = $typeName; ObjName = $objName }
 }
 
 # Набор констант как основной реквизит общей формы: заимствуются константы, пути на которые есть
@@ -2745,7 +2781,9 @@ function Borrow-MainAttribute {
 
 	# Generate full object XML with attributes and TS
 	$contentSb = New-Object System.Text.StringBuilder
-	foreach ($attr in $insertAttrs) {
+	# Порядок как у платформы: реквизиты (измерения, ресурсы), ТЧ, затем признаки учёта плана счетов
+	$flagKinds = @('AccountingFlag','ExtDimensionAccountingFlag')
+	foreach ($attr in @($insertAttrs | Where-Object { $_.Kind -notin $flagKinds })) {
 		$attrKind = if ($attr.Kind) { $attr.Kind } else { "Attribute" }
 		$attrXml = Build-AdoptedAttributeXml $attr.Name $attr.Uuid $attr.TypeXml "`t`t`t" $attrKind
 		$contentSb.AppendLine($attrXml) | Out-Null
@@ -2753,6 +2791,11 @@ function Borrow-MainAttribute {
 	foreach ($ts in $insertTS) {
 		$tsXml = Build-AdoptedTabularSectionXml $ts.Name $ts.Uuid $ts.GeneratedTypes $ts.Attributes "`t`t`t"
 		$contentSb.AppendLine($tsXml) | Out-Null
+	}
+	foreach ($fk in $flagKinds) {
+		foreach ($attr in @($insertAttrs | Where-Object { $_.Kind -eq $fk })) {
+			$contentSb.AppendLine((Build-AdoptedAttributeXml $attr.Name $attr.Uuid $attr.TypeXml "`t`t`t" $fk)) | Out-Null
+		}
 	}
 	$adoptedContent = $contentSb.ToString().TrimEnd()
 
@@ -2803,6 +2846,12 @@ function Borrow-MainAttribute {
 	}
 
 	Borrow-ReferenceTypeShells $allTypeXmls
+	# ПВХ видов субконто, на который ссылается перенесённое свойство ExtDimensionTypes, — оболочкой:
+	# иначе «Неизвестный объект метаданных» при загрузке
+	if ($extraProps.Contains('ExtDimensionTypes')) {
+		$edm = [regex]::Match($extraProps['ExtDimensionTypes'], '^(\w+)\.(.+)$')
+		if ($edm.Success) { Borrow-ObjectShell $edm.Groups[1].Value $edm.Groups[2].Value }
+	}
 
 	# Step 5: Handle deep paths (Form mode only)
 	if ($mode -eq "Form" -and $deepPaths.Count -gt 0) {
@@ -3161,23 +3210,16 @@ $script:borrowedFiles = @()
 $script:dynListForms = @()
 $borrowedCount = 0
 
-foreach ($item in $items) {
+# Элемент -Object: тип (синоним → английское имя), объект, форма и путь к её Form.xml в источнике.
+# Error — текст отказа для неверного элемента.
+function Split-BorrowItem([string]$item) {
 	$dotIdx = $item.IndexOf(".")
-	if ($dotIdx -lt 1) {
-		Write-Error "Invalid format '${item}', expected 'Type.Name' or 'Type.Name.Form.FormName'"
-		exit 1
-	}
+	if ($dotIdx -lt 1) { return @{ Error = "Invalid format '${item}', expected 'Type.Name' or 'Type.Name.Form.FormName'" } }
 	$typeName = $item.Substring(0, $dotIdx)
 	$remainder = $item.Substring($dotIdx + 1)
-
 	# Resolve Russian synonym to English type name
 	if ($synonymMap.ContainsKey($typeName)) { $typeName = $synonymMap[$typeName] }
-
-	if (-not $childTypeDirMap.ContainsKey($typeName)) {
-		Write-Error "Unknown type '${typeName}'"
-		exit 1
-	}
-
+	if (-not $childTypeDirMap.ContainsKey($typeName)) { return @{ Error = "Unknown type '${typeName}'" } }
 	# Check for .Form. pattern: Type.ObjName.Form.FormName
 	$formName = $null
 	$formIdx = $remainder.IndexOf(".Form.")
@@ -3190,13 +3232,49 @@ foreach ($item in $items) {
 	# Общая форма — сама форма: «CommonForm.X» заимствуется вместе с содержимым, владельца у неё нет
 	$isCommonForm = $typeName -eq 'CommonForm'
 	if ($isCommonForm) {
-		if ($formName) {
-			Write-Error "Invalid format '${item}': общая форма задаётся как 'CommonForm.Имя'"
-			exit 1
-		}
+		if ($formName) { return @{ Error = "Invalid format '${item}': общая форма задаётся как 'CommonForm.Имя'" } }
 		$formName = $objName
 	}
+	$dirName = $childTypeDirMap[$typeName]
+	$srcFormXml = $null
+	if ($isCommonForm) { $srcFormXml = Join-Path (Join-Path (Join-Path $cfgDir $dirName) $objName) "Ext/Form.xml" }
+	elseif ($formName) { $srcFormXml = Join-Path (Join-Path (Join-Path (Join-Path (Join-Path $cfgDir $dirName) $objName) "Forms") $formName) "Ext/Form.xml" }
+	return @{ TypeName = $typeName; ObjName = $objName; FormName = $formName; IsCommonForm = $isCommonForm; DirName = $dirName; SrcFormXml = $srcFormXml }
+}
 
+# С -BorrowMainAttribute реквизиты берутся у объекта из типа основного реквизита формы. Если это не
+# владелец формы и его нет в конфигурации-источнике, форма в расширении не загрузится — отказываем
+# до записи, расширение не трогаем.
+if ($BorrowMainAttribute) {
+	foreach ($item in $items) {
+		$pi = Split-BorrowItem $item
+		# Неверный элемент и нет самой формы — об этом скажет основной цикл
+		if ($pi.Error -or -not $pi.SrcFormXml -or -not (Test-Path $pi.SrcFormXml)) { continue }
+		$pDoc = New-Object System.Xml.XmlDocument
+		$pDoc.Load($pi.SrcFormXml)
+		if ($pi.IsCommonForm) {
+			$pOwner = Resolve-CommonFormOwner $pDoc.DocumentElement
+			if (-not $pOwner -or $pOwner.Kind -ne 'Object') { continue }
+		} else {
+			$pOwner = Resolve-MainAttributeObject $pDoc.DocumentElement $pi.TypeName $pi.ObjName
+			if ($pOwner.TypeName -eq $pi.TypeName -and $pOwner.ObjName -eq $pi.ObjName) { continue }
+		}
+		$pFound = $childTypeDirMap.ContainsKey($pOwner.TypeName) -and
+			(Test-Path (Join-Path (Join-Path $cfgDir $childTypeDirMap[$pOwner.TypeName]) "$($pOwner.ObjName).xml"))
+		if (-not $pFound) {
+			Write-Error "Основной реквизит формы ${item} ссылается на $($pOwner.TypeName).$($pOwner.ObjName), а его нет в конфигурации-источнике — форма в расширении не загрузится. Расширение не изменено"
+			exit 1
+		}
+	}
+}
+
+foreach ($item in $items) {
+	$pi = Split-BorrowItem $item
+	if ($pi.Error) {
+		Write-Error $pi.Error
+		exit 1
+	}
+	$typeName = $pi.TypeName; $objName = $pi.ObjName; $formName = $pi.FormName; $isCommonForm = $pi.IsCommonForm
 	$dirName = $childTypeDirMap[$typeName]
 
 	if ($formName) {
@@ -3237,7 +3315,7 @@ foreach ($item in $items) {
 		# Borrow main attribute if requested
 		if ($hasBMA -and $isCommonForm) {
 			# У общей формы владельца нет — он выводится из типа основного реквизита
-			$cfSrcFormXmlPath = Join-Path (Join-Path (Join-Path $cfgDir $dirName) $objName) "Ext/Form.xml"
+			$cfSrcFormXmlPath = $pi.SrcFormXml
 			$cfDoc = New-Object System.Xml.XmlDocument
 			$cfDoc.PreserveWhitespace = $true
 			$cfDoc.Load($cfSrcFormXmlPath)
@@ -3247,21 +3325,31 @@ foreach ($item in $items) {
 			} elseif ($cfOwner.Kind -eq 'Constants') {
 				Borrow-FormConstants $cfSrcFormXmlPath $cfOwner.MainName
 			} else {
-				if (-not (Test-ObjectBorrowed $cfOwner.TypeName $cfOwner.ObjName)) {
-					$src = Read-SourceObject $cfOwner.TypeName $cfOwner.ObjName
-					$borrowedXml = Build-BorrowedObjectXml $cfOwner.TypeName $cfOwner.ObjName $src.Uuid $src.Properties
-					$ownerDir = Join-Path $extDir $childTypeDirMap[$cfOwner.TypeName]
-					if (-not (Test-Path $ownerDir)) { New-Item -ItemType Directory -Path $ownerDir -Force | Out-Null }
-					$ownerFile = Join-Path $ownerDir "$($cfOwner.ObjName).xml"
-					[System.IO.File]::WriteAllText($ownerFile, $borrowedXml, (New-Object System.Text.UTF8Encoding($true)))
-					Add-ToChildObjects $cfOwner.TypeName $cfOwner.ObjName
-					$script:borrowedFiles += $ownerFile
-					Info "  Auto-borrowed: $($cfOwner.TypeName).$($cfOwner.ObjName)"
+				Borrow-ObjectShell $cfOwner.TypeName $cfOwner.ObjName
+				if (Test-ObjectBorrowed $cfOwner.TypeName $cfOwner.ObjName) {
+					Borrow-MainAttribute $cfOwner.TypeName $cfOwner.ObjName $null $BorrowMainAttribute $cfSrcFormXmlPath
 				}
-				Borrow-MainAttribute $cfOwner.TypeName $cfOwner.ObjName $null $BorrowMainAttribute $cfSrcFormXmlPath
 			}
 		} elseif ($hasBMA) {
-			Borrow-MainAttribute $typeName $objName $formName $BorrowMainAttribute
+			# Реквизиты заимствуются у объекта из типа основного реквизита: у формы обработки с
+			# DocumentObject.X это X, и его нужно заимствовать — иначе форма не загрузится
+			$srcFormXmlPath = $pi.SrcFormXml
+			$maObj = @{ TypeName = $typeName; ObjName = $objName }
+			if (Test-Path $srcFormXmlPath) {
+				$maDoc = New-Object System.Xml.XmlDocument
+				$maDoc.PreserveWhitespace = $true
+				$maDoc.Load($srcFormXmlPath)
+				$maObj = Resolve-MainAttributeObject $maDoc.DocumentElement $typeName $objName
+			}
+			if ($maObj.TypeName -eq $typeName -and $maObj.ObjName -eq $objName) {
+				Borrow-MainAttribute $typeName $objName $formName $BorrowMainAttribute
+			} else {
+				Info "  Основной реквизит формы — $($maObj.TypeName).$($maObj.ObjName): реквизиты заимствуются у него"
+				Borrow-ObjectShell $maObj.TypeName $maObj.ObjName
+				if (Test-ObjectBorrowed $maObj.TypeName $maObj.ObjName) {
+					Borrow-MainAttribute $maObj.TypeName $maObj.ObjName $null $BorrowMainAttribute $srcFormXmlPath
+				}
+			}
 		}
 	} else {
 		# --- Object borrowing (existing logic) ---

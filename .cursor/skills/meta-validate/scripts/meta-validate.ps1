@@ -1,4 +1,4 @@
-﻿# meta-validate v1.36 — Validate 1C metadata object structure
+﻿# meta-validate v1.38 — Validate 1C metadata object structure
 # Source: https://github.com/Nikolay-Shirokov/cc-1c-skills
 [CmdletBinding(PositionalBinding=$false)]
 param(
@@ -1059,6 +1059,27 @@ $reservedEnRu = @{
 }
 
 $stdForType = $standardAttributesByType[$mdType]
+
+# Колонка ТЧ — стандартные реквизиты строки: «ТабличнаяЧасть.X - Недопустимое имя реквизита -
+# НомерСтроки» (замер 8.3.24). НомерСтроки — у любого объекта, Ссылка — только у ссылочного (у обработки
+# колонка Ссылка законна — замер и ERP); Номер — можно.
+$check7bColOk = $true
+if ($childObjNode) {
+	$tsRowReserved = @{ "linenumber" = $true; "номерстроки" = $true }
+	if ($stdForType -contains "Ref") { $tsRowReserved["ref"] = $true; $tsRowReserved["ссылка"] = $true }
+	foreach ($tsNode in $childObjNode.SelectNodes("md:TabularSection", $ns)) {
+		$tsNameNode = $tsNode.SelectSingleNode("md:Properties/md:Name", $ns)
+		$tsLabel = if ($tsNameNode) { $tsNameNode.InnerText } else { "?" }
+		foreach ($colNode in $tsNode.SelectNodes("md:ChildObjects/md:Attribute", $ns)) {
+			$colName = $colNode.SelectSingleNode("md:Properties/md:Name", $ns)
+			if ($colName -and $tsRowReserved.ContainsKey($colName.InnerText.ToLower())) {
+				Report-Error "7b. TabularSection.${tsLabel}: column '$($colName.InnerText)' conflicts with a standard attribute of a tabular section row"
+				$check7bColOk = $false
+			}
+		}
+	}
+}
+
 if ($childObjNode -and $stdForType) {
 	# Множество зарезервированных имён (EN + RU) в нижнем регистре.
 	$reservedSet = @{}
@@ -1068,7 +1089,9 @@ if ($childObjNode -and $stdForType) {
 		if ($ru) { $reservedSet[$ru.ToLower()] = $true }
 	}
 	$check7bOk = $true
-	$attrNodes = $childObjNode.SelectNodes("md:Attribute", $ns)
+	# Измерение и ресурс регистра — те же зарезервированные имена, что у реквизита («Недопустимое имя
+	# измерения - Период», замер 8.3.24)
+	$attrNodes = $childObjNode.SelectNodes("md:Attribute | md:Dimension | md:Resource", $ns)
 	foreach ($attrNode in $attrNodes) {
 		$attrProps = $attrNode.SelectSingleNode("md:Properties", $ns)
 		if ($attrProps) {
@@ -1076,16 +1099,16 @@ if ($childObjNode -and $stdForType) {
 			if ($attrNameNode -and $attrNameNode.InnerText) {
 				$an = $attrNameNode.InnerText
 				if ($reservedSet.ContainsKey($an.ToLower())) {
-					Report-Error "7b. Attribute '$an' conflicts with a standard attribute of $mdType"
+					Report-Error "7b. $($attrNode.LocalName) '$an' conflicts with a standard attribute of $mdType"
 					$check7bOk = $false
 				}
 			}
 		}
 	}
-	if ($check7bOk) {
+	if ($check7bOk -and $check7bColOk) {
 		Report-OK "7b. Reserved attribute names: no conflicts"
 	}
-} elseif ($childObjNode) {
+} elseif ($childObjNode -and $check7bColOk) {
 	Report-OK "7b. Reserved attribute names: no conflicts (no standard set for $mdType)"
 }
 
@@ -1169,6 +1192,24 @@ if ($childObjNode) {
 	$ops = $childObjNode.SelectNodes("md:Operation", $ns)
 	if ($ops.Count -gt 0) {
 		if (-not (Check-Uniqueness -nodes $ops -kind "Operation")) { $check8Ok = $false }
+	}
+
+	# Реквизит, ТЧ, измерение, ресурс, реквизит адресации и признак учёта объекта — одно пространство имён
+	# без учёта регистра: платформа отвергает загрузку («Задано одинаковое имя для реквизита и табличной
+	# части / измерения / ресурса / реквизита адресации», замер 8.3.24). Колонке ТЧ имя реквизита объекта
+	# не мешает, признаку учёта субконто — тоже (он колонка ТЧ видов субконто).
+	$crossSeen = @{}
+	foreach ($cn in $childObjNode.ChildNodes) {
+		if ($cn.NodeType -ne 'Element' -or $cn.LocalName -notin @('Attribute','TabularSection','Dimension','Resource','AddressingAttribute','AccountingFlag')) { continue }
+		$cnName = $cn.SelectSingleNode("md:Properties/md:Name", $ns)
+		if (-not $cnName -or -not $cnName.InnerText) { continue }
+		$nm = $cnName.InnerText
+		if ($crossSeen.ContainsKey($nm) -and $crossSeen[$nm] -cne $cn.LocalName) {
+			Report-Error "8. Name '$nm' is used by both $($crossSeen[$nm]) and $($cn.LocalName)"
+			$check8Ok = $false
+		} elseif (-not $crossSeen.ContainsKey($nm)) {
+			$crossSeen[$nm] = $cn.LocalName
+		}
 	}
 
 	if ($check8Ok) {
