@@ -1,0 +1,182 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Таблица цен в работе</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Golos+Text:wght@400;500;600;700&display=swap">
+<style>
+:root {
+  --bg: #f4f6f7; --surface: #ffffff; --ink: #18252d; --muted: #5a6a73; --line: #d6dde1;
+  --accent: #1d5b78; --accent-soft: #e3eef4; --ok: #2f6b3f; --ok-soft: #e4f2e7; --warn: #8a5a12; --warn-soft: #f6ecdb;
+  --form-head: #ecefe9; --form-row: #d9efe3;
+  --font-body: "Golos Text", "Segoe UI", Arial, sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #11181c; --surface: #182227; --ink: #e3eaee; --muted: #9aabb4; --line: #2c3a41;
+    --accent: #7fb9d6; --accent-soft: #1b3240; --ok: #8cc89a; --ok-soft: #17301f; --warn: #e0b56a; --warn-soft: #3a2d17;
+    --form-head: #232d32; --form-row: #1d3a2c;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #11181c; --surface: #182227; --ink: #e3eaee; --muted: #9aabb4; --line: #2c3a41;
+  --accent: #7fb9d6; --accent-soft: #1b3240; --ok: #8cc89a; --ok-soft: #17301f; --warn: #e0b56a; --warn-soft: #3a2d17;
+  --form-head: #232d32; --form-row: #1d3a2c;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--ink); font-family: var(--font-body); font-size: 16px; line-height: 1.6;
+  padding-inline: 16px; padding-block: 32px 64px; }
+main { max-width: 860px; margin-inline: auto; display: grid; gap: 36px; }
+h1, h2, h3 { margin: 0; line-height: 1.25; text-wrap: balance; }
+h1 { font-size: 1.9rem; font-weight: 700; }
+h2 { font-size: 1.35rem; font-weight: 600; }
+h3 { font-size: 1.05rem; font-weight: 600; }
+p { margin: 0; max-width: 70ch; }
+section { display: grid; gap: 12px; }
+ul, ol { margin: 0; padding-left: 1.3em; display: grid; gap: 6px; max-width: 70ch; }
+.eyebrow { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); font-weight: 600; }
+.lead { font-size: 1.1rem; }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 16px 18px; display: grid; gap: 10px; }
+.note { background: var(--accent-soft); border-left: 4px solid var(--accent); border-radius: 6px; padding: 12px 14px; }
+.warn { background: var(--warn-soft); border-left: 4px solid var(--warn); border-radius: 6px; padding: 12px 14px; }
+.btn { display: inline-block; border: 1px solid var(--line); background: var(--surface); border-radius: 4px; padding: 0 8px;
+  font-size: 0.92em; white-space: nowrap; }
+.tw { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; font-size: 0.92rem; }
+th, td { border-bottom: 1px solid var(--line); padding: 7px 10px; text-align: left; vertical-align: top; }
+th { color: var(--muted); font-weight: 600; }
+td.n { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+/* макет группы "Цены в работе" на форме */
+.form { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 12px 14px; display: grid; gap: 8px; }
+.form-title { color: var(--ok); font-weight: 600; }
+.form-stage { font-size: 0.9rem; }
+.form-stage b { font-weight: 500; }
+.form table th { background: var(--form-head); color: var(--ink); font-weight: 500; font-size: 0.85rem; }
+.form table td { font-size: 0.88rem; }
+.form tr.cur td { background: var(--form-row); }
+.stages { display: grid; gap: 8px; }
+.stage { display: grid; grid-template-columns: minmax(0, 22ch) minmax(0, 1fr); gap: 4px 16px; padding: 10px 12px;
+  border: 1px solid var(--line); border-radius: 8px; background: var(--surface); }
+.stage .s { font-weight: 600; }
+@media (max-width: 640px) { .stage { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<main>
+
+<header style="display:grid; gap:10px">
+  <div class="eyebrow">Создание торговых поручений РОСТ</div>
+  <h1>Таблица «Цены в работе»</h1>
+  <p class="lead">Во время запуска с формы обработки внизу видно, по какой цене сейчас создаются поручения, откуда
+  взята цена и когда она получена из стакана.</p>
+</header>
+
+<section>
+  <h2>Как выглядит</h2>
+  <div class="form" aria-label="Пример группы Цены в работе">
+    <div class="form-title">Цены в работе</div>
+    <div class="form-stage">Ход запуска: <b>Создание поручений. Поручений создано: 46</b></div>
+    <div class="tw">
+      <table>
+        <thead><tr><th>Бумага</th><th>Направление</th><th>Цена</th><th>Откуда</th><th>Цена получена</th>
+          <th>Возраст цены, с</th><th>Поручений по цене</th><th>Поручений всего</th></tr></thead>
+        <tbody>
+          <tr class="cur"><td>ПИФ Акции</td><td>Продажа</td><td class="n">48,750000</td><td>кеш</td><td class="n">11:17:04</td>
+            <td class="n">10</td><td class="n">23</td><td class="n">23</td></tr>
+          <tr><td>ОФЗ 26242</td><td>Продажа</td><td class="n">87,650000</td><td>кеш</td><td class="n">11:17:05</td>
+            <td class="n">9</td><td class="n">23</td><td class="n">23</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+  <p>Строка таблицы - бумага и направление (покупка или продажа). Таблица обновляется сама, пока идет запуск;
+  после завершения последние цены остаются на форме до следующего запуска.</p>
+</section>
+
+<section>
+  <h2>Колонки</h2>
+  <div class="tw">
+    <table>
+      <thead><tr><th>Колонка</th><th>Что показывает</th></tr></thead>
+      <tbody>
+        <tr><td>Цена</td><td>Цена, с которой создано последнее поручение по бумаге</td></tr>
+        <tr><td>Откуда</td><td><b>биржа</b> - цена только что запрошена в стакане; <b>кеш</b> - взята из запомненной
+          цены без нового запроса (цена бумаги запоминается на срок, заданный в настройках обработки, сейчас 60 с)</td></tr>
+        <tr><td>Цена получена</td><td>Время ответа стакана. У цены из кеша - время того запроса к бирже, по которому
+          цена запомнена</td></tr>
+        <tr><td>Возраст цены, с</td><td>Сколько секунд назад цена получена из стакана; растет каждую секунду и
+          сбрасывается, когда цена запрошена заново</td></tr>
+        <tr><td>Поручений по цене</td><td>Сколько поручений создано по этой цене после ее запроса</td></tr>
+        <tr><td>Поручений всего</td><td>Сколько поручений по бумаге создано в запуске</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="note">У реинвестирования и продаж под блокировки поручения создают 10 потоков параллельно, и у
+  каждого потока своя запомненная цена. В таблице показана самая свежая цена среди потоков, ее время и число
+  поручений по ней, а «Поручений всего» - сумма по всем потокам.</div>
+</section>
+
+<section>
+  <h2>Какие кнопки заполняют таблицу</h2>
+  <ul>
+    <li>Закладка «Инвестирование»: <span class="btn">Создать отправить поручения покупка</span></li>
+    <li>Закладка «Расторжение»: <span class="btn">Создать поручения (продажа)</span></li>
+    <li>Закладка «Реинвестирование»: <span class="btn">Создать поручения в потоке</span></li>
+    <li>Закладка «Продажи под блокировки»: <span class="btn">Блокировки продажи отправить пачку поручений</span></li>
+  </ul>
+  <p>Регламентная покупка раз в 10 минут работает без формы и таблицу не заполняет.</p>
+</section>
+
+<section>
+  <h2>Строка «Ход запуска»</h2>
+  <div class="stages">
+    <div class="stage"><div class="s">Запуск</div><div>Кнопка нажата, задание запускается.</div></div>
+    <div class="stage"><div class="s">Создание поручений. Поручений создано: N</div><div>Покупка или продажа:
+      поручения создаются, N растет.</div></div>
+    <div class="stage"><div class="s">Создание поручений в потоках: завершили K из 10</div><div>Реинвестирование
+      или продажи под блокировки: сколько потоков уже закончили создание поручений.</div></div>
+    <div class="stage"><div class="s">Проверка лимитов и отправка: N поручений</div><div>Поручения созданы и
+      проверяются по лимитам перед отправкой на биржу. У реинвестирования и продаж под блокировки форма на это время
+      не обновляется, это нормально.</div></div>
+    <div class="stage"><div class="s">Поручения отправлены</div><div>Запуск завершен без ошибок.</div></div>
+    <div class="stage"><div class="s">Завершено с ошибками, см. лог</div><div>Часть поручений не создана или
+      поток завершился с ошибкой. Подробности - на закладке «Лог» и в сообщениях внизу формы.</div></div>
+  </div>
+</section>
+
+<section>
+  <h2>Почему кнопки недоступны</h2>
+  <p>Пока идет любой запуск с формы, недоступны все четыре кнопки запуска. Это касается и запуска другого трейдера:
+  если коллега запустил, например, продажи под блокировки, кнопки будут недоступны и у вас, пока запуск не
+  закончится. Так проверка лимитов не идет одновременно по одним и тем же портфелям.</p>
+  <ul>
+    <li>Кнопки включаются сами, когда запуск закончится. Обычно это от 30 секунд до 2-3 минут.</li>
+    <li>Если форму закрыть во время запуска и открыть снова, кнопки останутся недоступными до конца запуска и
+      включатся сами.</li>
+    <li>Если кнопку все же нажать во время запуска, появится сообщение «Дождитесь завершения текущего запуска»,
+      и новый запуск не начнется.</li>
+  </ul>
+</section>
+
+<section>
+  <h2>Если что-то пошло не так</h2>
+  <div class="warn">
+    <ul>
+      <li>Итог «Завершено с ошибками» - откройте закладку «Лог», найдите строки с пометкой [err]: по ним видно, по
+        какому портфелю и почему поручение не создано. Повторный запуск возьмет только портфели без поручений.</li>
+      <li>Кнопки долго недоступны (больше 5 минут) - уточните у коллег, не идет ли у кого-то большой запуск; если
+        нет, сообщите в поддержку.</li>
+      <li>Цена в таблице заметно отличается от стакана в торговом терминале - сравните время в колонке «Цена
+        получена» со временем в терминале: допустимое отклонение цены поручения - до 2%.</li>
+    </ul>
+  </div>
+</section>
+
+</main>
+</body>
+</html>
