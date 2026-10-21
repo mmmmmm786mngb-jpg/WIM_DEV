@@ -1,0 +1,143 @@
+{
+  "title": "Перенос запросов к данным",
+  "properties": { "autoTitle": false, "width": 110, "height": 40 },
+  "events": { "OnCreateAtServer": "ПриСозданииНаСервере" },
+  "elements": [
+    {
+      "pages": "СтраницыРежимов",
+      "pagesRepresentation": "TabsOnTop",
+      "children": [
+        {
+          "page": "СтраницаВыгрузки",
+          "title": "Выгрузка в JSON",
+          "group": "vertical",
+          "children": [
+            {
+              "input": "ЗапросКДанным",
+              "path": "ЗапросКДанным",
+              "title": "Запрос к данным",
+              "choiceButton": true,
+              "clearButton": true,
+              "autoMaxWidth": false,
+              "horizontalStretch": true,
+              "inputHint": "Выберите элемент — он будет отмечен в списке ниже",
+              "events": { "OnChange": "ЗапросКДаннымПриИзменении" }
+            },
+            {
+              "table": "ТаблицаЭлементовВыгрузки",
+              "path": "ЭлементыВыгрузки",
+              "title": "Элементы справочника",
+              "height": 12,
+              "searchStringLocation": "Top",
+              "commandBarLocation": "None",
+              "columns": [
+                { "check": "ВыгрузкаПометка", "path": "ЭлементыВыгрузки.Пометка", "title": "Выгружать" },
+                { "input": "ВыгрузкаНаименование", "path": "ЭлементыВыгрузки.Наименование", "title": "Наименование", "readOnly": true },
+                { "input": "ВыгрузкаКодЗапроса", "path": "ЭлементыВыгрузки.КодЗапроса", "title": "Код запроса", "readOnly": true },
+                { "input": "ВыгрузкаПараметров", "path": "ЭлементыВыгрузки.Параметров", "title": "Параметров", "readOnly": true }
+              ]
+            },
+            {
+              "group": "alwaysHorizontal",
+              "name": "ГруппаКомандВыгрузки",
+              "children": [
+                { "button": "КнопкаОбновитьСписок", "command": "ОбновитьСписок", "title": "Обновить список" },
+                { "button": "КнопкаОтметитьВсе", "command": "ОтметитьВсе", "title": "Отметить все" },
+                { "button": "КнопкаСнятьОтметки", "command": "СнятьОтметки", "title": "Снять отметки" },
+                { "button": "КнопкаВыгрузитьВФайл", "command": "ВыгрузитьВФайл", "title": "Выгрузить в JSON", "defaultButton": true }
+              ]
+            }
+          ]
+        },
+        {
+          "page": "СтраницаЗагрузки",
+          "title": "Загрузка из JSON",
+          "group": "vertical",
+          "children": [
+            {
+              "input": "ИмяФайлаЗагрузки",
+              "path": "ИмяФайлаЗагрузки",
+              "title": "Файл",
+              "choiceButton": true,
+              "autoMaxWidth": false,
+              "horizontalStretch": true,
+              "inputHint": "Выберите файл выгрузки *.json",
+              "events": { "StartChoice": "ИмяФайлаЗагрузкиНачалоВыбора" }
+            },
+            {
+              "table": "ТаблицаПредпросмотра",
+              "path": "ТаблицаИзменений",
+              "title": "Изменения, которые будут внесены",
+              "height": 12,
+              "readOnly": true,
+              "commandBarLocation": "None",
+              "columns": [
+                { "input": "ИзмененияЭлемент", "path": "ТаблицаИзменений.Элемент", "title": "Элемент", "readOnly": true },
+                { "input": "ИзмененияДействие", "path": "ТаблицаИзменений.Действие", "title": "Действие", "readOnly": true },
+                { "input": "ИзмененияПоле", "path": "ТаблицаИзменений.Поле", "title": "Поле", "readOnly": true },
+                { "input": "ИзмененияЗначениеВБазе", "path": "ТаблицаИзменений.ЗначениеВБазе", "title": "В базе", "readOnly": true },
+                { "input": "ИзмененияЗначениеВФайле", "path": "ТаблицаИзменений.ЗначениеВФайле", "title": "В файле", "readOnly": true }
+              ]
+            },
+            {
+              "group": "alwaysHorizontal",
+              "name": "ГруппаКомандЗагрузки",
+              "children": [
+                { "button": "КнопкаПрочитатьФайл", "command": "ПрочитатьФайл", "title": "Прочитать файл" },
+                { "button": "КнопкаЗаписатьИзменения", "command": "ЗаписатьИзменения", "title": "Записать изменения" }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "input": "Протокол",
+      "path": "Протокол",
+      "title": "Протокол",
+      "multiLine": true,
+      "height": 7,
+      "readOnly": true,
+      "autoMaxWidth": false,
+      "horizontalStretch": true,
+      "titleLocation": "top"
+    }
+  ],
+  "attributes": [
+    { "name": "Объект", "type": "ExternalDataProcessorObject.внПереносЗапросовКДанным", "main": true },
+    { "name": "ЗапросКДанным", "type": "CatalogRef.ЗапросыКДанным" },
+    { "name": "ИмяФайлаЗагрузки", "type": "string" },
+    { "name": "АдресДанныхЗагрузки", "type": "string" },
+    { "name": "Протокол", "type": "string" },
+    {
+      "name": "ЭлементыВыгрузки",
+      "type": "ValueTable",
+      "columns": [
+        { "name": "Пометка", "type": "boolean" },
+        { "name": "Ссылка", "type": "CatalogRef.ЗапросыКДанным" },
+        { "name": "Наименование", "type": "string(150)" },
+        { "name": "КодЗапроса", "type": "string(36)" },
+        { "name": "Параметров", "type": "decimal(5,0)" }
+      ]
+    },
+    {
+      "name": "ТаблицаИзменений",
+      "type": "ValueTable",
+      "columns": [
+        { "name": "Элемент", "type": "string(150)" },
+        { "name": "Действие", "type": "string(50)" },
+        { "name": "Поле", "type": "string(100)" },
+        { "name": "ЗначениеВБазе", "type": "string(210)" },
+        { "name": "ЗначениеВФайле", "type": "string(210)" }
+      ]
+    }
+  ],
+  "commands": [
+    { "name": "ОбновитьСписок", "action": "ОбновитьСписокКоманда" },
+    { "name": "ОтметитьВсе", "action": "ОтметитьВсеКоманда" },
+    { "name": "СнятьОтметки", "action": "СнятьОтметкиКоманда" },
+    { "name": "ВыгрузитьВФайл", "action": "ВыгрузитьВФайлКоманда" },
+    { "name": "ПрочитатьФайл", "action": "ПрочитатьФайлКоманда" },
+    { "name": "ЗаписатьИзменения", "action": "ЗаписатьИзмененияКоманда" }
+  ]
+}

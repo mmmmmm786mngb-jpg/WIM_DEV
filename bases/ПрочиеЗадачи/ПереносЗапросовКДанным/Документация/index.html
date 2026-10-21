@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Перенос запросов к данным — документация</title>
+<style>
+    :root {
+        --accent: #17a2b8;
+        --ok: #28a745;
+        --err: #dc3545;
+        --warn: #d39e00;
+        --ink: #24292f;
+        --muted: #5a6570;
+        --line: #dfe3e8;
+        --bg-soft: #f6f8fa;
+    }
+    * { box-sizing: border-box; }
+    body {
+        margin: 0;
+        padding: 0 24px 64px;
+        font-family: "Segoe UI", Roboto, Arial, sans-serif;
+        font-size: 15px;
+        line-height: 1.6;
+        color: var(--ink);
+        background: #fff;
+    }
+    .wrap { max-width: 940px; margin: 0 auto; }
+    header.page {
+        margin: 0 -24px 32px;
+        padding: 40px 24px 32px;
+        background: linear-gradient(135deg, #1b6b7a 0%, #17a2b8 100%);
+        color: #fff;
+    }
+    header.page .inner { max-width: 940px; margin: 0 auto; }
+    header.page h1 { margin: 0 0 8px; font-size: 28px; font-weight: 600; }
+    header.page p { margin: 0; opacity: .9; }
+    h2 {
+        margin: 40px 0 14px;
+        padding-bottom: 8px;
+        border-bottom: 2px solid var(--line);
+        font-size: 21px;
+        font-weight: 600;
+    }
+    table { width: 100%; border-collapse: collapse; margin: 18px 0; font-size: 14px; }
+    th, td { padding: 9px 12px; border: 1px solid var(--line); text-align: left; vertical-align: top; }
+    th { background: var(--bg-soft); font-weight: 600; }
+    code {
+        padding: 1px 5px;
+        border-radius: 3px;
+        background: var(--bg-soft);
+        font-family: Consolas, "Courier New", monospace;
+        font-size: 13px;
+    }
+    .cards { display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); margin: 24px 0; }
+    .card {
+        display: block;
+        padding: 18px 20px;
+        border: 1px solid var(--line);
+        border-left: 4px solid var(--accent);
+        border-radius: 5px;
+        background: #fff;
+        color: inherit;
+        text-decoration: none;
+        transition: box-shadow .15s, transform .15s;
+    }
+    .card:hover { box-shadow: 0 3px 14px rgba(0,0,0,.09); transform: translateY(-1px); }
+    .card h3 { margin: 0 0 6px; font-size: 16px; color: #10707f; }
+    .card p { margin: 0; font-size: 14px; color: var(--muted); }
+    .stats { display: grid; gap: 14px; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); margin: 24px 0; }
+    .stat { padding: 16px 18px; border: 1px solid var(--line); border-radius: 5px; background: var(--bg-soft); }
+    .stat .value { font-size: 26px; font-weight: 600; color: #10707f; }
+    .stat .label { font-size: 13px; color: var(--muted); }
+    .note {
+        margin: 20px 0;
+        padding: 14px 18px;
+        border-left: 4px solid var(--accent);
+        border-radius: 4px;
+        background: #e8f6f8;
+    }
+    .note.warn { border-left-color: var(--warn); background: #fff8e1; }
+    .note strong { display: block; margin-bottom: 4px; }
+    ul.plain { padding-left: 22px; }
+    footer.page { margin-top: 48px; padding-top: 16px; border-top: 1px solid var(--line); font-size: 13px; color: var(--muted); }
+</style>
+</head>
+<body>
+
+<header class="page">
+    <div class="inner">
+        <h1>Перенос запросов к данным</h1>
+        <p>Выгрузка и загрузка элементов справочника «Запросы к данным» в формате JSON</p>
+    </div>
+</header>
+
+<div class="wrap">
+
+<h2>О чём эта обработка</h2>
+
+<p>
+    Справочник «Запросы к данным» хранит именованные тексты запросов с набором параметров. По коду
+    запроса элемент справочника находит обработка обмена с бэк-офисом, выполняет запрос с подстановкой
+    параметров и отдаёт результат во внешнюю систему. Настройка таких запросов ведётся вручную, и до
+    сих пор перенести готовый запрос из одной базы в другую можно было только повторным ручным вводом.
+</p>
+
+<p>
+    Обработка «Перенос запросов к данным» решает эту задачу: выгружает выбранные элементы справочника
+    в один файл JSON и загружает их обратно в другую базу — с предварительным показом того, что
+    именно изменится. Подключается через «Дополнительные отчёты и обработки», конфигурация при этом
+    не меняется.
+</p>
+
+<div class="stats">
+    <div class="stat"><div class="value">JSON</div><div class="label">формат файла обмена</div></div>
+    <div class="stat"><div class="value">1.0</div><div class="label">версия обработки</div></div>
+    <div class="stat"><div class="value">44</div><div class="label">автоматических проверки пройдено</div></div>
+    <div class="stat"><div class="value">Да</div><div class="label">работа в безопасном режиме</div></div>
+</div>
+
+<h2>Документы</h2>
+
+<div class="cards">
+    <a class="card" href="user_guide.html">
+        <h3>Руководство пользователя</h3>
+        <p>Подключение обработки, выгрузка, загрузка, разбор протокола и типовых сообщений</p>
+    </a>
+    <a class="card" href="data_transfer_format.html">
+        <h3>Формат файла обмена</h3>
+        <p>Состав файла JSON, описание каждого поля, примеры и границы применимости</p>
+    </a>
+    <a class="card" href="feasibility_and_requirements.html">
+        <h3>Анализ и постановка</h3>
+        <p>Что переносится, особенности хранения значений параметров, принятые решения</p>
+    </a>
+</div>
+
+<h2>Что важно знать сразу</h2>
+
+<div class="note">
+    <strong>Перенос рассчитан на базы с одинаковой конфигурацией</strong>
+    Тест, препрод и пром одного релиза. Значения параметров хранятся во внутреннем формате платформы,
+    в котором зашит внутренний идентификатор типа метаданных, поэтому в базу с другой конфигурацией
+    они не перенесутся. Текст запроса и состав параметров перенесутся в любом случае.
+</div>
+
+<div class="note">
+    <strong>Повторная загрузка одного файла не создаёт дублей</strong>
+    Новый элемент создаётся с тем же уникальным идентификатором, что записан в файле. Повторная
+    загрузка находит этот элемент и обновляет его.
+</div>
+
+<div class="note warn">
+    <strong>Ссылки на отсутствующие объекты не блокируют загрузку</strong>
+    Если параметр ссылается на объект, которого в базе-приёмнике нет, платформа не выдаст ошибку —
+    значение будет выглядеть заполненным. Обработка проверяет это сама и выводит предупреждение
+    по каждому такому параметру в протокол.
+</div>
+
+<footer class="page">
+    Документация обработки «Перенос запросов к данным», версия 1.0. Конфигурация «Аванкор: Фронт-офис».
+</footer>
+
+</div>
+</body>
+</html>

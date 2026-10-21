@@ -1,0 +1,123 @@
+{
+  "title": "Демонстрация кнопок и таблиц формы",
+  "properties": { "autoTitle": false, "width": 110 },
+  "events": { "OnCreateAtServer": "ПриСозданииНаСервере" },
+  "elements": [
+    { "autoCmdBar": "ФормаКоманднаяПанель", "autofill": false, "children": [
+      { "button": "ФормаЗаполнитьПример", "command": "ЗаполнитьПример", "defaultButton": true },
+      { "button": "ФормаОчистить", "command": "Очистить", "representation": "PictureAndText" },
+      { "popup": "ФормаСортировка", "title": "Сортировка", "children": [
+        { "button": "ФормаСортироватьПоСумме", "command": "СортироватьПоСумме" },
+        { "button": "ФормаСортироватьПоНаименованию", "command": "СортироватьПоНаименованию" }
+      ]},
+      { "button": "ФормаСправка", "command": "ЧтоУмеетФорма", "locationInCommandBar": "InAdditionalSubmenu" },
+      { "button": "ФормаЗакрыть", "stdCommand": "Close" }
+    ]},
+
+    { "group": "horizontalIfPossible", "name": "ГруппаДействия", "title": "Действия с таблицей", "showTitle": true, "representation": "weak", "children": [
+      { "input": "ПроцентИзменения", "path": "ПроцентИзменения", "title": "Процент", "width": 6, "spinButton": true },
+      { "button": "ИзменитьЦены", "command": "ИзменитьЦены", "title": "Изменить цены на %" },
+      { "button": "ПересчитатьНаСервере", "command": "ПересчитатьНаСервере" },
+      { "button": "ПоказатьТекущуюСтроку", "command": "ПоказатьТекущуюСтроку" },
+      { "button": "ИтогВСообщение", "command": "ИтогВСообщение" },
+      { "check": "ТолькоОтмеченные", "path": "ТолькоОтмеченные", "title": "Только отмеченные", "titleLocation": "right",
+        "events": { "OnChange": "ТолькоОтмеченныеПриИзменении" } }
+    ]},
+
+    { "pages": "Страницы", "pagesRepresentation": "TabsOnTop", "children": [
+      { "page": "СтраницаТовары", "title": "Товары", "group": "vertical", "children": [
+        { "table": "Товары", "path": "Товары", "changeRowSet": true, "changeRowOrder": true, "height": 8, "footer": true,
+          "commandBarLocation": "Top",
+          "events": { "OnChange": "ТоварыПриИзменении", "OnActivateRow": "ТоварыПриАктивизацииСтроки",
+                      "BeforeDeleteRow": "ТоварыПередУдалением", "AfterDeleteRow": "ТоварыПослеУдаления" },
+          "columns": [
+            { "check": "ТоварыОтметка", "path": "Товары.Отметка", "title": "", "titleLocation": "none",
+              "events": { "OnChange": "ТоварыОтметкаПриИзменении" } },
+            { "input": "ТоварыНаименование", "path": "Товары.Наименование", "title": "Наименование", "footerText": "Итого:" },
+            { "input": "ТоварыКатегория", "path": "Товары.Категория", "title": "Категория", "dropListButton": true },
+            { "input": "ТоварыКоличество", "path": "Товары.Количество", "title": "Количество",
+              "showInFooter": true, "footerDataPath": "ИтогКоличество", "footerHorizontalAlign": "Right",
+              "events": { "OnChange": "ТоварыКоличествоПриИзменении" } },
+            { "input": "ТоварыЦена", "path": "Товары.Цена", "title": "Цена",
+              "events": { "OnChange": "ТоварыЦенаПриИзменении" } },
+            { "input": "ТоварыСумма", "path": "Товары.Сумма", "title": "Сумма", "readOnly": true,
+              "showInFooter": true, "footerDataPath": "ИтогСумма", "footerHorizontalAlign": "Right" }
+          ]
+        },
+        { "cmdBar": "ПанельОтметок", "children": [
+          { "button": "ОтметитьВсе", "command": "ОтметитьВсе" },
+          { "button": "СнятьОтметки", "command": "СнятьОтметки" },
+          { "button": "УдалитьОтмеченные", "command": "УдалитьОтмеченные" },
+          { "button": "СброситьОтбор", "command": "СброситьОтбор" }
+        ]}
+      ]},
+      { "page": "СтраницаИтоги", "title": "Итоги по категориям", "group": "vertical", "children": [
+        { "label": "ПодсказкаИтоги", "title": "Двойной щелчок по категории - показать ее строки на вкладке \"Товары\"." },
+        { "table": "ИтогиПоКатегориям", "path": "ИтогиПоКатегориям", "readOnly": true, "height": 6, "commandBarLocation": "None",
+          "events": { "Selection": "ИтогиПоКатегориямВыбор" },
+          "columns": [
+            { "input": "ИтогиКатегория", "path": "ИтогиПоКатегориям.Категория", "title": "Категория" },
+            { "input": "ИтогиСтрок", "path": "ИтогиПоКатегориям.Строк", "title": "Строк" },
+            { "input": "ИтогиКоличество", "path": "ИтогиПоКатегориям.Количество", "title": "Количество" },
+            { "input": "ИтогиСумма", "path": "ИтогиПоКатегориям.Сумма", "title": "Сумма" }
+          ]
+        }
+      ]}
+    ]},
+
+    { "group": "horizontal", "name": "ГруппаСостояние", "children": [
+      { "labelField": "ТекущаяСтрока", "path": "ТекущаяСтрока", "title": "Текущая строка", "horizontalStretch": true },
+      { "button": "ОчиститьЖурнал", "command": "ОчиститьЖурнал", "type": "hyperlink" }
+    ]},
+    { "table": "Журнал", "path": "Журнал", "readOnly": true, "height": 5, "commandBarLocation": "None", "title": "Журнал нажатий",
+      "columns": [
+        { "input": "ЖурналВремя", "path": "Журнал.Время", "title": "Время", "width": 8 },
+        { "input": "ЖурналДействие", "path": "Журнал.Действие", "title": "Действие", "width": 25 },
+        { "input": "ЖурналПодробности", "path": "Журнал.Подробности", "title": "Подробности" }
+      ]
+    }
+  ],
+  "attributes": [
+    { "name": "Объект", "type": "ExternalDataProcessorObject.FO_ButtonsTablesDemo", "main": true },
+    { "name": "Товары", "type": "ValueTable", "columns": [
+      { "name": "Отметка", "type": "boolean" },
+      { "name": "Наименование", "type": "string(100)" },
+      { "name": "Категория", "type": "string(50)" },
+      { "name": "Количество", "type": "decimal(15,3)" },
+      { "name": "Цена", "type": "decimal(15,2)" },
+      { "name": "Сумма", "type": "decimal(15,2)" }
+    ]},
+    { "name": "ИтогиПоКатегориям", "type": "ValueTable", "columns": [
+      { "name": "Категория", "type": "string(50)" },
+      { "name": "Строк", "type": "decimal(10,0)" },
+      { "name": "Количество", "type": "decimal(15,3)" },
+      { "name": "Сумма", "type": "decimal(15,2)" }
+    ]},
+    { "name": "Журнал", "type": "ValueTable", "columns": [
+      { "name": "Время", "type": "time" },
+      { "name": "Действие", "type": "string(100)" },
+      { "name": "Подробности", "type": "string" }
+    ]},
+    { "name": "ПроцентИзменения", "type": "decimal(5,1)" },
+    { "name": "ТолькоОтмеченные", "type": "boolean" },
+    { "name": "ТекущаяСтрока", "type": "string" },
+    { "name": "ИтогКоличество", "type": "decimal(15,3)" },
+    { "name": "ИтогСумма", "type": "decimal(15,2)" }
+  ],
+  "commands": [
+    { "name": "ЗаполнитьПример", "title": "Заполнить пример", "action": "ЗаполнитьПример" },
+    { "name": "Очистить", "title": "Очистить", "action": "Очистить", "picture": "StdPicture.InputFieldClear" },
+    { "name": "СортироватьПоСумме", "title": "По сумме (убывание)", "action": "СортироватьПоСумме" },
+    { "name": "СортироватьПоНаименованию", "title": "По наименованию", "action": "СортироватьПоНаименованию" },
+    { "name": "ЧтоУмеетФорма", "title": "Что умеет форма", "action": "ЧтоУмеетФорма" },
+    { "name": "ИзменитьЦены", "title": "Изменить цены на %", "action": "ИзменитьЦены" },
+    { "name": "ПересчитатьНаСервере", "title": "Пересчитать на сервере", "action": "ПересчитатьНаСервере" },
+    { "name": "ПоказатьТекущуюСтроку", "title": "Показать текущую строку", "action": "ПоказатьТекущуюСтроку" },
+    { "name": "ИтогВСообщение", "title": "Итог в сообщение", "action": "ИтогВСообщение" },
+    { "name": "ОтметитьВсе", "title": "Отметить все", "action": "ОтметитьВсе", "picture": "StdPicture.CheckAll" },
+    { "name": "СнятьОтметки", "title": "Снять отметки", "action": "СнятьОтметки", "picture": "StdPicture.UncheckAll" },
+    { "name": "УдалитьОтмеченные", "title": "Удалить отмеченные", "action": "УдалитьОтмеченные" },
+    { "name": "СброситьОтбор", "title": "Показать все строки", "action": "СброситьОтбор" },
+    { "name": "ОчиститьЖурнал", "title": "Очистить журнал", "action": "ОчиститьЖурнал" }
+  ]
+}

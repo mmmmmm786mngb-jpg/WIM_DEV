@@ -1,0 +1,41 @@
+{
+  "title": "Сведения о сервере 1С",
+  "events": { "OnCreateAtServer": "ПриСозданииНаСервере" },
+  "elements": [
+    { "autoCmdBar": "ФормаКоманднаяПанель", "children": [
+      { "button": "Сформировать", "command": "Сформировать", "defaultButton": true }
+    ]},
+    { "group": "vertical", "name": "ГруппаНастройки", "title": "Настройки", "showTitle": true,
+      "behavior": "collapsible", "children": [
+      { "group": "horizontalIfPossible", "name": "ГруппаРазделы", "children": [
+        { "check": "СобиратьОССервера", "path": "СобиратьОССервера", "title": "ОС сервера (WMI / команды Linux)" },
+        { "check": "СобиратьЖурналРегистрации", "path": "СобиратьЖурналРегистрации", "title": "Ошибки журнала регистрации за сутки" },
+        { "check": "РассчитатьРазмерБД", "path": "РассчитатьРазмерБД", "title": "Размер базы данных (может выполняться долго)" }
+      ]},
+      { "check": "СобиратьКластер", "path": "СобиратьКластер", "title": "Кластер серверов через COM (V83.COMConnector на сервере 1С)",
+        "events": { "OnChange": "СобиратьКластерПриИзменении" } },
+      { "group": "horizontalIfPossible", "name": "ГруппаКластер", "children": [
+        { "input": "АдресАгента", "path": "АдресАгента", "title": "Агент кластера", "inputHint": "tcp://server:1540", "width": 25 },
+        { "input": "АдминистраторКластера", "path": "АдминистраторКластера", "title": "Администратор кластера", "width": 15 },
+        { "input": "ПарольАдминистратораКластера", "path": "ПарольАдминистратораКластера", "title": "Пароль", "passwordMode": true, "width": 12 }
+      ]}
+    ]},
+    { "spreadsheet": "Результат", "path": "Результат", "titleLocation": "none",
+      "output": "Enable", "protection": false, "edit": false, "showGrid": false, "showHeaders": false,
+      "horizontalStretch": true, "verticalStretch": true }
+  ],
+  "attributes": [
+    { "name": "Объект", "type": "ExternalDataProcessorObject.СведенияОСервере1С", "main": true },
+    { "name": "Результат", "type": "mxl:SpreadsheetDocument" },
+    { "name": "СобиратьОССервера", "type": "boolean" },
+    { "name": "СобиратьЖурналРегистрации", "type": "boolean" },
+    { "name": "РассчитатьРазмерБД", "type": "boolean" },
+    { "name": "СобиратьКластер", "type": "boolean" },
+    { "name": "АдресАгента", "type": "string(200)" },
+    { "name": "АдминистраторКластера", "type": "string(100)" },
+    { "name": "ПарольАдминистратораКластера", "type": "string(100)" }
+  ],
+  "commands": [
+    { "name": "Сформировать", "action": "СформироватьОбработка", "title": "Сформировать", "shortcut": "Ctrl+Enter", "picture": "StdPicture.GenerateReport" }
+  ]
+}
