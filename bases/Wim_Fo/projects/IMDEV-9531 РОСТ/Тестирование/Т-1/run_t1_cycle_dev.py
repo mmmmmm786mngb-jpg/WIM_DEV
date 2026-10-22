@@ -25,7 +25,7 @@ import run_1_18_tests as base  # noqa: E402
 stage4 = base.stage4
 T1 = os.path.join(TASK, "Т-1")
 SERVICE = os.path.join(T1, "T9531_ДанныеТ1.epf")
-BUILDS = {"1.16": os.path.join(T1, "РОСТ_1.16-т1.epf"), "1.21": os.path.join(T1, "РОСТ_1.21-т1.epf"),
+BUILDS = {"1.16": os.path.join(T1, "РОСТ_1.16-т1.epf"), "1.21": os.path.join(T1, "РОСТ_1.21-т1.epf"), "1.22": os.path.join(T1, "РОСТ_1.22-т1.epf"),
           "1.21-тест": os.path.join(TESTS, "1_18", "сборки", "1.21-тест", "внСозданиеТорговыхПорученийРОСТ.epf")}
 
 
