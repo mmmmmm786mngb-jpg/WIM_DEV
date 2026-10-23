@@ -21,7 +21,8 @@ import time
 
 import win32com.client
 
-CONN_STR = 'Srvr="localhost";Ref="WIM_DU";Usr="";Pwd="";'
+# Аутентификация Windows (пользователь ИБ admin сопоставлен с учетной записью Windows), без Usr и Pwd.
+CONN_STR = 'Srvr="localhost";Ref="WIM_DU";'
 UK_NAME = "T9573 УК тест"
 DOC = "РО_XBRL6_1_ОтчетПоВнутреннемуУчету_577П"
 RES = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "Результаты")
