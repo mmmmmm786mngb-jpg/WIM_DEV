@@ -8,8 +8,8 @@ import uuid
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.normpath(os.path.join(HERE, "..", ".."))
-SRC_XML = os.path.join(ROOT, "src", "СформироватьВыгрузкуCSVПоток.xml")
-SRC_BSL = os.path.join(ROOT, "src", "СформироватьВыгрузкуCSVПоток", "Ext", "ObjectModule.bsl")
+SRC_XML = os.path.join(ROOT, "csv_РабочийКод", "src", "СформироватьВыгрузкуCSVПоток.xml")
+SRC_BSL = os.path.join(ROOT, "csv_РабочийКод", "src", "СформироватьВыгрузкуCSVПоток", "Ext", "ObjectModule.bsl")
 OUT = os.path.join(ROOT, "Тестирование", "Обработки")
 NAME = "T9573_ЗамерCSV"
 

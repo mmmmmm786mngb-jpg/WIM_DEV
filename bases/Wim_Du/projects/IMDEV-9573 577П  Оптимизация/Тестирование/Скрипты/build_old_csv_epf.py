@@ -10,7 +10,7 @@ import uuid
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.normpath(os.path.join(HERE, "..", ".."))
-SRC = os.path.join(ROOT, "src", "СформироватьВыгрузкуCSV", "Forms", "ФормаДляФормированияCSV", "Ext", "Form", "Module.bsl")
+SRC = os.path.join(ROOT, "OLD", "исходная_1.02", "src", "СформироватьВыгрузкуCSV", "Forms", "ФормаДляФормированияCSV", "Ext", "Form", "Module.bsl")
 OUT = os.path.join(ROOT, "Тестирование", "Обработки")
 NAME = "T9573_СтараяВыгрузкаCSV"
 
@@ -97,7 +97,7 @@ def main():
     with open(os.path.join(ext, "ObjectModule.bsl"), "w", encoding="utf-8-sig", newline="\r\n") as f:
         f.write(module)
 
-    tpl = open(os.path.join(ROOT, "src", "СформироватьВыгрузкуCSVПоток.xml"), encoding="utf-8-sig").read()
+    tpl = open(os.path.join(ROOT, "csv_РабочийКод", "src", "СформироватьВыгрузкуCSVПоток.xml"), encoding="utf-8-sig").read()
     tpl = re.sub(r"\s*<Attribute uuid.*?</Attribute>", "", tpl, flags=re.S)
     tpl = re.sub(r"\s*<Form>.*?</Form>", "", tpl)
     tpl = tpl.replace("<ChildObjects>\n\t\t</ChildObjects>", "<ChildObjects/>")

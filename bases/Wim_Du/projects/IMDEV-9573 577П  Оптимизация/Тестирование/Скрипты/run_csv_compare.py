@@ -14,7 +14,7 @@ import stand
 HERE = os.path.dirname(os.path.abspath(__file__))
 TASK = os.path.normpath(os.path.join(HERE, "..", ".."))
 OLD_EPF = os.path.join(TASK, "Тестирование", "Обработки", "T9573_СтараяВыгрузкаCSV.epf")
-NEW_EPF = os.path.join(TASK, "СформироватьВыгрузкуCSVПоток.epf")
+NEW_EPF = os.path.join(TASK, "csv_РабочийКод", "СформироватьВыгрузкуCSVПоток.epf")
 
 
 def processing(conn, path):

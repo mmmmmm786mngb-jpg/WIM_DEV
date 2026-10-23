@@ -12,7 +12,7 @@ import stand
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 TASK = os.path.normpath(os.path.join(HERE, "..", ".."))
-NEW_EPF = os.path.join(TASK, "СформироватьВыгрузкуCSVПоток.epf")
+NEW_EPF = os.path.join(TASK, "csv_РабочийКод", "СформироватьВыгрузкуCSVПоток.epf")
 
 
 def main():
