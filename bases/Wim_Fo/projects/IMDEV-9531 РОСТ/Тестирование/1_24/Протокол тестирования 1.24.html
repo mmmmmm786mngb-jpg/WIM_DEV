@@ -1,0 +1,692 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>IMDEV-9531. Отчет о тестировании РОСТ 1.24</title>
+<meta name="description" content="Отчет о завершении тестирования версии 1.24 обработки создания торговых поручений РОСТ. Регресс против 1.16 на стенде Т-1, 23.10.2026.">
+<style>
+:root {
+  --bg: #eef2f1;
+  --card: #ffffff;
+  --ink: #1a2422;
+  --ink2: #3d4a46;
+  --muted: #6d7874;
+  --line: #d5deda;
+  --head: #0e3b34;
+  --brand: #0e3b34;
+  --brand-2: #146154;
+  --old: #8b97a0;
+  --old-ink: #3e4a52;
+  --new: #0e7c66;
+  --new-soft: #e5f5f0;
+  --ok: #17693a;
+  --ok-bg: #e5f6eb;
+  --warn: #8a5a12;
+  --warn-bg: #fbf3df;
+  --bad: #9d2c2c;
+  --bad-bg: #fdecec;
+  --soft: #f3f6f5;
+  --shadow: 0 1px 2px rgba(16, 40, 34, .06), 0 8px 24px rgba(16, 40, 34, .04);
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font: 15px/1.55 "Segoe UI", system-ui, sans-serif;
+}
+.hero {
+  background: linear-gradient(160deg, #0c2e29 0%, #14584c 58%, #1c6b58 100%);
+  color: #f4faf8;
+  padding: 36px 20px 28px;
+}
+.hero-in, .wrap { max-width: 1120px; margin: 0 auto; }
+.kicker { letter-spacing: .14em; text-transform: uppercase; font-size: 12px; color: #b7ddd2; margin: 0 0 8px; }
+h1 { margin: 0 0 8px; font-size: 32px; line-height: 1.2; font-weight: 650; max-width: 18em; }
+.hero p { margin: 0; max-width: 62em; color: #e4f3ee; }
+.seal {
+  display: inline-flex; align-items: center; gap: 10px;
+  margin-top: 18px; background: #e7f8ee; color: #0f5c32;
+  border-radius: 999px; padding: 8px 16px 8px 8px; font-weight: 700;
+}
+.seal i {
+  width: 28px; height: 28px; border-radius: 50%; background: #17693a; color: white;
+  display: grid; place-items: center; font-style: normal; font-size: 14px;
+}
+nav.toc {
+  position: sticky; top: 0; z-index: 5;
+  background: rgba(255,255,255,.94); border-bottom: 1px solid var(--line);
+  backdrop-filter: blur(8px);
+}
+nav.toc .wrap { display: flex; gap: 14px; overflow-x: auto; padding: 10px 0; }
+nav.toc a { color: var(--head); text-decoration: none; font-size: 13px; white-space: nowrap; }
+nav.toc a:hover { text-decoration: underline; }
+.wrap { padding: 22px 20px 64px; display: grid; gap: 16px; }
+section {
+  background: var(--card); border: 1px solid var(--line); border-radius: 14px;
+  padding: 18px 20px 16px; box-shadow: var(--shadow);
+}
+h2 { margin: 0 0 12px; font-size: 20px; color: var(--head); }
+h3 { margin: 16px 0 8px; font-size: 16px; color: var(--head); }
+p { margin: 0 0 10px; }
+.lead { font-size: 16px; }
+.muted { color: var(--muted); }
+.meta, .kpis, .split, .donuts, .two { display: grid; gap: 12px; }
+.meta { grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
+.meta div { background: var(--soft); border-radius: 10px; padding: 10px 12px; }
+.meta span, .kpi span { display: block; color: var(--muted); font-size: 12px; letter-spacing: .04em; text-transform: uppercase; }
+.kpis { grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); }
+.kpi { border-radius: 12px; padding: 14px; background: var(--soft); }
+.kpi b { display: block; font-size: 28px; line-height: 1.15; font-variant-numeric: tabular-nums; color: var(--head); }
+.kpi.ok { background: var(--ok-bg); }
+.kpi.ok b { color: var(--ok); }
+.kpi.new { background: var(--new-soft); }
+.kpi.new b { color: var(--new); }
+.tw { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; font-size: 13.5px; }
+th, td { border-bottom: 1px solid var(--line); padding: 7px 8px; text-align: left; vertical-align: top; }
+th { background: var(--soft); color: var(--ink2); font-weight: 650; }
+td.n, th.n { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+td.mono { font-family: Consolas, "Courier New", monospace; font-size: 12.5px; }
+.st { display: inline-block; padding: 1px 8px; border-radius: 999px; font-size: 12px; font-weight: 700; }
+.st.ok { background: var(--ok-bg); color: var(--ok); }
+.st.warn { background: var(--warn-bg); color: var(--warn); }
+ul, ol { margin: 0 0 8px; padding-left: 20px; }
+li { margin: 3px 0; }
+.legend { display: flex; gap: 16px; flex-wrap: wrap; font-size: 13px; color: var(--ink2); margin: 0 0 8px; }
+.sw { width: 12px; height: 12px; border-radius: 3px; display: inline-block; margin-right: 6px; vertical-align: -1px; }
+.sw.old { background: var(--old); } .sw.new { background: var(--new); }
+.sw.cache { background: var(--new); } .sw.book { background: #c5ced6; }
+.cmp { display: grid; gap: 14px; }
+.cmp-row { display: grid; grid-template-columns: 210px 1fr; gap: 8px 12px; align-items: center; }
+.cmp-name { font-size: 13px; color: var(--ink2); }
+.tracks { display: grid; gap: 4px; }
+.track { display: grid; grid-template-columns: 52px 1fr 92px; gap: 8px; align-items: center; font-size: 12px; color: var(--muted); }
+.rail { background: #e7eeeb; border-radius: 6px; height: 16px; overflow: hidden; }
+.rail > i { display: block; height: 100%; border-radius: 6px; }
+.rail > i.old { background: var(--old); }
+.rail > i.new { background: var(--new); }
+.val { font-variant-numeric: tabular-nums; color: var(--ink); font-weight: 650; text-align: right; }
+.stack-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; }
+.stack-card { background: var(--soft); border-radius: 12px; padding: 12px; }
+.stack-card h3 { margin-top: 0; }
+.stack { display: flex; height: 28px; border-radius: 7px; overflow: hidden; background: #e7eeeb; margin: 6px 0; }
+.stack .make { background: #245f86; }
+.stack .check { background: #d08a2d; }
+.stack-legend { font-size: 12px; color: var(--ink2); }
+.note { background: var(--warn-bg); border-radius: 10px; padding: 10px 12px; color: #5c4316; }
+.okbox { background: var(--ok-bg); border-radius: 10px; padding: 10px 12px; }
+pre {
+  margin: 0; white-space: pre-wrap; word-break: break-word;
+  background: #12211e; color: #e7f6f1; border-radius: 10px; padding: 12px 14px;
+  font: 12.5px/1.45 Consolas, "Courier New", monospace;
+}
+.threads { display: grid; gap: 5px; }
+.th { display: grid; grid-template-columns: 28px 1fr; gap: 8px; align-items: center; }
+.th b { font-size: 12px; color: var(--muted); font-weight: 650; text-align: right; }
+.pair { display: grid; gap: 3px; }
+.pair i { display: block; height: 9px; border-radius: 4px; }
+.pair i.old { background: var(--old); } .pair i.new { background: var(--new); }
+.donuts { grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); }
+.donut-card { display: grid; grid-template-columns: 132px 1fr; gap: 12px; align-items: center; background: var(--soft); border-radius: 12px; padding: 12px; }
+.ring {
+  width: 120px; height: 120px; border-radius: 50%;
+  display: grid; place-items: center;
+}
+.ring span {
+  width: 74px; height: 74px; border-radius: 50%; background: var(--soft);
+  display: grid; place-items: center; text-align: center; font-weight: 750; color: var(--head); font-size: 14px; line-height: 1.15;
+}
+.steps { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px; }
+.step { background: var(--soft); border-radius: 10px; padding: 10px; min-height: 92px; }
+.step em { display: block; font-style: normal; font-size: 12px; color: var(--new); font-weight: 750; }
+figure { margin: 0; }
+figure img { width: 100%; height: auto; border: 1px solid var(--line); border-radius: 10px; display: block; }
+figcaption { margin-top: 8px; color: var(--ink2); font-size: 13px; }
+.verdict { border-left: 5px solid var(--new); }
+@media print {
+  body { background: white; }
+  nav.toc, .noprint { display: none; }
+  .hero { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  section { break-inside: avoid; box-shadow: none; }
+}
+</style>
+</head>
+<body>
+
+<header class="hero">
+  <div class="hero-in">
+    <p class="kicker">IMDEV-9531-TCR-1.24 &nbsp;|&nbsp; ISO/IEC/IEEE 29119-3 &nbsp;|&nbsp; 23.10.2026</p>
+    <h1>Отчет о тестировании: создание торговых поручений РОСТ, версия 1.24</h1>
+    <p>Парный прогон на стенде Т-1 против эталона 1.16. Реинвестирование и продажи под блокировки. Регресс состава поручений пройден, время обеих операций меньше, чем у эталона.</p>
+    <div class="seal"><i>OK</i> Результат: пройдено. 699 из 699 поручений совпали, расхождений 0.</div>
+  </div>
+</header>
+
+<nav class="toc" aria-label="Содержание">
+  <div class="wrap" style="display:flex;padding-top:10px;padding-bottom:10px">
+    <a href="#summary">Итог</a>
+    <a href="#control">Паспорт</a>
+    <a href="#scope">Область</a>
+    <a href="#env">Среда</a>
+    <a href="#regression">Регресс</a>
+    <a href="#defect">Отказ проведения</a>
+    <a href="#time">Замеры</a>
+    <a href="#price">Цена и кеш</a>
+    <a href="#cases">Тест-кейсы</a>
+    <a href="#screens">Экраны</a>
+    <a href="#notes">Замечания</a>
+    <a href="#end">Заключение</a>
+    <a href="#dev">База разработки</a>
+  </div>
+</nav>
+
+<div class="wrap">
+
+<section id="summary">
+  <h2>1. Краткий итог</h2>
+  <p class="lead">23.10.2026 на стенде Т-1 версии 1.16 и 1.24 отработали один и тот же день, одни и те же списки портфелей. Сравнение проведенных поручений: реинвестирование 199 из 199, продажи под блокировки 500 из 500. Количество, сумма и проведение совпали. Лишних и пропавших поручений нет.</p>
+  <div class="kpis">
+    <div class="kpi ok"><b>699 / 699</b><span>Поручений совпало</span></div>
+    <div class="kpi ok"><b>0</b><span>Расхождений</span></div>
+    <div class="kpi new"><b>1,20 раза</b><span>Реинвестирование быстрее</span></div>
+    <div class="kpi new"><b>1,88 раза</b><span>Блокировки быстрее</span></div>
+    <div class="kpi new"><b>95,9%</b><span>Меньше запросов цены</span></div>
+    <div class="kpi"><b>143 с</b><span>Сэкономлено на двух операциях</span></div>
+  </div>
+  <p style="margin-top:12px">Суммы проведенных поручений совпали до копейки: реинвестирование 1 075 331,38, продажи под блокировки 2 512 929,17. Все 10 потоков каждой операции дошли до финиша. Ошибок потоков, кроме известного отказа контроля по одному портфелю реинвестирования, нет.</p>
+</section>
+
+<section id="control">
+  <h2>2. Паспорт отчета</h2>
+  <div class="meta">
+    <div><span>Идентификатор</span>IMDEV-9531-TCR-1.24</div>
+    <div><span>Вид документа</span>Отчет о завершении тестирования</div>
+    <div><span>Ориентир</span>ISO/IEC/IEEE 29119-3, отчет о завершении тестирования</div>
+    <div><span>Задача</span>IMDEV-9531, оптимизация создания торговых поручений РОСТ</div>
+    <div><span>Объект</span>Внешняя обработка "Создание торговых поручений РОСТ"</div>
+    <div><span>Сборки прогона</span>1.16-т1 и 1.24-т1, тестовый режим</div>
+    <div><span>Эталон</span>Версия 1.16, прогон с меткой "1.16"</div>
+    <div><span>Проверяемая версия</span>1.24, прогон с меткой "1.24"</div>
+    <div><span>Дата прогона</span>23.10.2026</div>
+    <div><span>Фиксация 1.16</span>08:08:21</div>
+    <div><span>Фиксация 1.24</span>09:00:04</div>
+    <div><span>Статус отчета</span>Итоговый, по завершенному парному прогону</div>
+  </div>
+</section>
+
+<section id="scope">
+  <h2>3. Область, критерии, ход проверки</h2>
+  <p>Версия 1.24 собрана от 1.23. Обычный путь записи и проведения не менялся. Две правки по прогону 1.23 на Т-1: повтор проведения только при реальной конкуренции блокировок и такой же отказ в тестовом режиме, как в боевой установке цены. Поручение с отказом помечается на удаление и не попадает в сравнение и в отправку.</p>
+  <div class="steps" aria-label="Ход парного прогона">
+    <div class="step"><em>1. Подготовка</em>Сброс поручений текущего дня, чтобы оба прогона стартовали с чистого списка.</div>
+    <div class="step"><em>2. Эталон 1.16</em>Реинвестирование, пакет 200. Затем продажи под блокировки, пакет 500. Фиксация.</div>
+    <div class="step"><em>3. Сброс</em>Повторная очистка поручений дня перед второй версией.</div>
+    <div class="step"><em>4. Версия 1.24</em>Те же закладки и те же размеры пакетов. Срок кеша цены 60 секунд. Фиксация.</div>
+    <div class="step"><em>5. Сравнение</em>Попарно: портфель, количество, цена, сумма, проведение. Отдельно время и запросы цены.</div>
+  </div>
+  <h3>Что входит</h3>
+  <ul>
+    <li>Регресс проведенных поручений реинвестирования и продаж под блокировки против 1.16.</li>
+    <li>Полнота потоков: 10 стартов и 10 финишей на операцию, итог формы "Выполнено".</li>
+    <li>Кеш цены стакана на 60 секунд: число запросов цены и число цен из кеша.</li>
+    <li>Отказ контроля конфигурации по одному портфелю: без повторов проведения, с пометкой удаления.</li>
+    <li>Время операции по замерам и длительность каждого потока по журналу.</li>
+  </ul>
+  <h3>Что не входит</h3>
+  <ul>
+    <li>Боевой стакан и отправка на биржу. В тестовых сборках вместо ответа стакана пауза 1 секунда, проверка лимитов без отправки.</li>
+    <li>Покупка, продажа при расторжении и регламентное задание. Их регресс закрыт на предыдущих версиях и в этом прогоне не повторялся.</li>
+    <li>Нагрузочный профиль продуктивного дня целиком. Стенд - копия, пакеты ограничены 200 и 500 поручениями.</li>
+  </ul>
+  <h3>Критерии приемки этого прогона</h3>
+  <ul>
+    <li>Проведенные поручения 1.24 совпадают с 1.16 по составу и сумме.</li>
+    <li>Все потоки завершаются, посторонних ошибок потоков нет.</li>
+    <li>Отказ проведения не вызывает серию повторов и не оставляет лишнее проведенное поручение.</li>
+    <li>При сроке кеша 60 секунд запросов цены существенно меньше, чем поручений.</li>
+    <li>Стендовое время 1.24 не хуже 1.16 на тех же пакетах.</li>
+  </ul>
+</section>
+
+<section id="env">
+  <h2>4. Среда и методика замера</h2>
+  <div class="meta">
+    <div><span>Стенд</span>Т-1, копия продуктивной базы фронт-офиса</div>
+    <div><span>Платформа</span>1С:Предприятие 8.3.27, тонкий клиент</div>
+    <div><span>Конфигурация</span>Аванкор: Фронт-офис</div>
+    <div><span>Клиент</span>Один сеанс, пользователь Admin</div>
+    <div><span>Дата купона</span>16.09.2026</div>
+    <div><span>Пакеты</span>Реинвестирование 200, блокировки 500, 10 потоков</div>
+    <div><span>Кеш 1.16</span>Настройки кеша нет, каждый поручение запрашивает цену</div>
+    <div><span>Кеш 1.24</span>60 секунд, задан в настройках перед прогоном</div>
+    <div><span>Цена</span>Тестовый режим, пауза 1 с вместо стакана</div>
+    <div><span>Порядок списков</span>Реинвестирование по сумме убыванию, блокировки по портфелю</div>
+  </div>
+  <p style="margin-top:12px">Время операции взято из замера обработки: от старта потоков до конца проверки лимитов. Длительность потока - из строки финиша журнала, это время самого потока, без ожидания соседних и без проверки пачки. Суммарные секунды шагов - сумма по всем вызовам всех потоков, это не часы на стене. Журнал пачек и замер сходятся в пределах 0,4 секунды.</p>
+</section>
+
+<section id="regression">
+  <h2>5. Регресс поручений</h2>
+  <p>Сравнивались проведенные поручения двух фиксаций. Поручение, которое контроль не провел, в оба набора не вошло: в 1.16 оно не создалось, в 1.24 помечено на удаление. Поэтому в сравнении 199, а не 200.</p>
+  <div class="tw"><table>
+    <thead>
+      <tr>
+        <th>Операция</th>
+        <th class="n">В обоих</th>
+        <th class="n">Совпали</th>
+        <th class="n">Расхождения</th>
+        <th class="n">Только 1.16</th>
+        <th class="n">Только 1.24</th>
+        <th class="n">Сумма, оба прогона</th>
+        <th>Проведение</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Реинвестирование</td>
+        <td class="n">199</td><td class="n">199</td><td class="n">0</td><td class="n">0</td><td class="n">0</td>
+        <td class="n">1 075 331,38</td><td>199 из 199</td>
+      </tr>
+      <tr>
+        <td>Продажи под блокировки</td>
+        <td class="n">500</td><td class="n">500</td><td class="n">0</td><td class="n">0</td><td class="n">0</td>
+        <td class="n">2 512 929,17</td><td>500 из 500</td>
+      </tr>
+      <tr>
+        <td>Вместе</td>
+        <td class="n">699</td><td class="n">699</td><td class="n">0</td><td class="n">0</td><td class="n">0</td>
+        <td class="n">3 588 260,55</td><td>699 из 699</td>
+      </tr>
+    </tbody>
+  </table></div>
+
+  <h3>Доля совпавших поручений</h3>
+  <div class="legend"><span><i class="sw new"></i>Совпали</span><span><i class="sw" style="background:#9d2c2c"></i>Расхождения, лишние, пропавшие</span></div>
+  <div class="cmp">
+    <div class="cmp-row">
+      <div class="cmp-name">Реинвестирование, 199</div>
+      <div class="tracks">
+        <div class="track"><span>совпало</span><div class="rail"><i class="new" style="width:100%"></i></div><span class="val">100%</span></div>
+      </div>
+    </div>
+    <div class="cmp-row">
+      <div class="cmp-name">Блокировки, 500</div>
+      <div class="tracks">
+        <div class="track"><span>совпало</span><div class="rail"><i class="new" style="width:100%"></i></div><span class="val">100%</span></div>
+      </div>
+    </div>
+    <div class="cmp-row">
+      <div class="cmp-name">Расхождения по всем 699</div>
+      <div class="tracks">
+        <div class="track"><span>разница</span><div class="rail"></div><span class="val">0</span></div>
+      </div>
+    </div>
+  </div>
+
+  <h3>Потоки</h3>
+  <div class="tw"><table>
+    <thead>
+      <tr><th>Прогон</th><th>Операция</th><th class="n">Стартов</th><th class="n">Финишей</th><th class="n">Создано по потокам</th><th>Итог формы</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>1.16</td><td>Реинвестирование</td><td class="n">10</td><td class="n">10</td><td>9 потоков по 20, поток 7 - 19</td><td>Выполнено</td></tr>
+      <tr><td>1.24</td><td>Реинвестирование</td><td class="n">10</td><td class="n">10</td><td>9 потоков по 20, поток 7 - 19</td><td>Выполнено</td></tr>
+      <tr><td>1.16</td><td>Блокировки</td><td class="n">10</td><td class="n">10</td><td>10 потоков по 50</td><td>Выполнено</td></tr>
+      <tr><td>1.24</td><td>Блокировки</td><td class="n">10</td><td class="n">10</td><td>10 потоков по 50</td><td>Выполнено</td></tr>
+    </tbody>
+  </table></div>
+  <p class="muted">Строк "не хватает денежных средств" в обоих журналах: 0. Удалений из-за нехватки денег у 1.16 нет. У 1.24 одно реинвестиционное поручение помечено на удаление - это отказ проведения, разобранный в следующем разделе.</p>
+</section>
+
+<section id="defect">
+  <h2>6. Отказ проведения, который уже был в 1.16</h2>
+  <p>Контроль конфигурации не проводит одно поручение реинвестирования. В обоих прогонах это поток 7: на десятке портфелей создано 8, на финише потока создано 19 из 20. Сумма остальных 199 поручений совпала. Повторов проведения в журнале 1.24 нет: нет пауз 1+2+3+4 секунды и нет серии одинаковых отказов.</p>
+  <div class="two" style="grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));">
+    <div>
+      <h3>1.16, поток 7</h3>
+      <pre>[err] Ошибка создания поручения:
+{ВнешняяОбработка.СозданиеТорговыхПорученийРОСТ.МодульОбъекта(2377)}:
+Ошибка при вызове метода контекста (Записать):
+Не удалось провести: "Поручение"!</pre>
+      <p class="muted" style="margin-top:8px">Поручение не создано. В сравнении его нет. Пометки удаления нет.</p>
+    </div>
+    <div>
+      <h3>1.24, поток 7, одна пара строк</h3>
+      <pre>[err] Ошибка установки цены:
+{ВнешняяОбработка.СозданиеТорговыхПорученийРОСТ.МодульОбъекта(3694)}:
+Ошибка при вызове метода контекста (Записать):
+Не удалось провести "Поручение 00000212611 от 23.10.2026 8:54:36"!
+[err] Ошибка при попытки получить цену актива</pre>
+      <p class="muted" style="margin-top:8px">Поручение 00000212611 помечено на удаление и в сравнение не попало. Вторая строка - сопутствующее сообщение того же отказа, не повтор проведения.</p>
+    </div>
+  </div>
+  <p style="margin-top:12px" class="okbox">Ожидаемое поведение 1.24 на этом отказе выполнено: одна фиксация ошибки, без повторов, без лишнего проведенного поручения. Код портфеля журнал в текст ошибки не пишет. Номер поручения и номер потока совпадают с тем местом списка, где 1.16 тоже остановилась на 19 поручениях.</p>
+</section>
+
+<section id="time">
+  <h2>7. Замеры времени</h2>
+  <p>Общий масштаб всех полос ниже - 365,4 секунды, полное время эталона на двух операциях. Короткая полоса реинвестирования - это не ошибка масштаба: блокировки занимают большую часть стендового времени.</p>
+  <div class="legend"><span><i class="sw old"></i>1.16</span><span><i class="sw new"></i>1.24</span></div>
+  <div class="cmp">
+    <div class="cmp-row">
+      <div class="cmp-name">Реинвестирование, 199 поручений</div>
+      <div class="tracks">
+        <div class="track"><span>1.16</span><div class="rail"><i class="old" style="width:24.7%"></i></div><span class="val">90,1 с</span></div>
+        <div class="track"><span>1.24</span><div class="rail"><i class="new" style="width:20.6%"></i></div><span class="val">75,3 с</span></div>
+      </div>
+    </div>
+    <div class="cmp-row">
+      <div class="cmp-name">Продажи под блокировки, 500</div>
+      <div class="tracks">
+        <div class="track"><span>1.16</span><div class="rail"><i class="old" style="width:75.3%"></i></div><span class="val">275,3 с</span></div>
+        <div class="track"><span>1.24</span><div class="rail"><i class="new" style="width:40.1%"></i></div><span class="val">146,7 с</span></div>
+      </div>
+    </div>
+    <div class="cmp-row">
+      <div class="cmp-name">Обе операции</div>
+      <div class="tracks">
+        <div class="track"><span>1.16</span><div class="rail"><i class="old" style="width:100%"></i></div><span class="val">365,4 с</span></div>
+        <div class="track"><span>1.24</span><div class="rail"><i class="new" style="width:60.8%"></i></div><span class="val">222,0 с</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="tw" style="margin-top:14px"><table>
+    <thead>
+      <tr>
+        <th>Операция</th>
+        <th class="n">1.16, с</th>
+        <th class="n">1.24, с</th>
+        <th class="n">Разница</th>
+        <th class="n">Во сколько раз</th>
+        <th class="n">На одно поручение 1.16</th>
+        <th class="n">На одно поручение 1.24</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr><td>Реинвестирование</td><td class="n">90,1</td><td class="n">75,3</td><td class="n">-14,8 с, -16,4%</td><td class="n">1,20</td><td class="n">0,453 с</td><td class="n">0,378 с</td></tr>
+      <tr><td>Продажи под блокировки</td><td class="n">275,3</td><td class="n">146,7</td><td class="n">-128,6 с, -46,7%</td><td class="n">1,88</td><td class="n">0,551 с</td><td class="n">0,293 с</td></tr>
+      <tr><td>Обе операции</td><td class="n">365,4</td><td class="n">222,0</td><td class="n">-143,4 с, -39,2%</td><td class="n">1,65</td><td class="n">0,523 с</td><td class="n">0,318 с</td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>Из чего сложилось время</h3>
+  <p>Синяя доля полосы - создание поручений в потоках, включая разведение десяти потоков. Оранжевая доля - проверка лимитов и отправка пачки. Цифры долей взяты из замера: проверка лимитов отдельно, создание - остаток общего времени.</p>
+  <div class="legend">
+    <span><i class="sw" style="background:#245f86"></i>Создание в потоках</span>
+    <span><i class="sw" style="background:#d08a2d"></i>Проверка лимитов</span>
+  </div>
+  <div class="stack-grid">
+    <div class="stack-card">
+      <h3>Реинвестирование 1.16, 90,1 с</h3>
+      <div class="stack" aria-hidden="true"><div class="make" style="width:63.2%"></div><div class="check" style="width:36.8%"></div></div>
+      <div class="stack-legend">Создание 56,9 с. Проверка 33,2 с, одна пачка на 199 поручений, по журналу 33,2 с.</div>
+    </div>
+    <div class="stack-card">
+      <h3>Реинвестирование 1.24, 75,3 с</h3>
+      <div class="stack" aria-hidden="true"><div class="make" style="width:51.1%"></div><div class="check" style="width:48.9%"></div></div>
+      <div class="stack-legend">Создание 38,5 с. Проверка 36,8 с, одна пачка на 199 поручений, по журналу 36,7 с.</div>
+    </div>
+    <div class="stack-card">
+      <h3>Блокировки 1.16, 275,3 с</h3>
+      <div class="stack" aria-hidden="true"><div class="make" style="width:51.2%"></div><div class="check" style="width:48.8%"></div></div>
+      <div class="stack-legend">Создание 140,9 с. Проверка 134,4 с: две пачки, 63,8 с на 450 поручений и 70,3 с на 500.</div>
+    </div>
+    <div class="stack-card">
+      <h3>Блокировки 1.24, 146,7 с</h3>
+      <div class="stack" aria-hidden="true"><div class="make" style="width:54.7%"></div><div class="check" style="width:45.3%"></div></div>
+      <div class="stack-legend">Создание 80,2 с. Проверка 66,5 с: одна пачка на 500 поручений, по журналу 66,4 с.</div>
+    </div>
+  </div>
+  <p style="margin-top:10px">Выигрыш блокировок делится почти поровну. Создание короче на 60,7 с за счет кеша цены. Проверка лимитов короче на 67,9 с, потому что 1.24 отправила пачку один раз, а 1.16 - два. Состав 500 поручений при этом совпал. У реинвестирования проверка чуть дольше: 36,8 с против 33,2 с. Создание короче на 18,4 с, общий итог все равно быстрее.</p>
+
+  <h3>Длительность потоков реинвестирования</h3>
+  <p class="muted">Ширина полосы: 50 секунд = вся шкала. Верхняя полоса пары - 1.16, нижняя - 1.24. Это время потока, не часы всей операции.</p>
+  <div class="threads" aria-label="Потоки реинвестирования">
+    <div class="th"><b>1</b><div class="pair"><i class="old" style="width:83.6%"></i><i class="new" style="width:51.6%"></i></div></div>
+    <div class="th"><b>2</b><div class="pair"><i class="old" style="width:83.0%"></i><i class="new" style="width:49.8%"></i></div></div>
+    <div class="th"><b>3</b><div class="pair"><i class="old" style="width:84.0%"></i><i class="new" style="width:49.6%"></i></div></div>
+    <div class="th"><b>4</b><div class="pair"><i class="old" style="width:83.2%"></i><i class="new" style="width:51.4%"></i></div></div>
+    <div class="th"><b>5</b><div class="pair"><i class="old" style="width:83.8%"></i><i class="new" style="width:50.4%"></i></div></div>
+    <div class="th"><b>6</b><div class="pair"><i class="old" style="width:83.8%"></i><i class="new" style="width:50.4%"></i></div></div>
+    <div class="th"><b>7</b><div class="pair"><i class="old" style="width:80.8%"></i><i class="new" style="width:52.4%"></i></div></div>
+    <div class="th"><b>8</b><div class="pair"><i class="old" style="width:83.6%"></i><i class="new" style="width:51.0%"></i></div></div>
+    <div class="th"><b>9</b><div class="pair"><i class="old" style="width:82.2%"></i><i class="new" style="width:47.6%"></i></div></div>
+    <div class="th"><b>10</b><div class="pair"><i class="old" style="width:82.6%"></i><i class="new" style="width:50.2%"></i></div></div>
+  </div>
+  <p class="muted">1.16: 41,8 / 41,5 / 42,0 / 41,6 / 41,9 / 41,9 / 40,4 / 41,8 / 41,1 / 41,3 с. Среднее 41,5 с. 1.24: 25,8 / 24,9 / 24,8 / 25,7 / 25,2 / 25,2 / 26,2 / 25,5 / 23,8 / 25,1 с. Среднее 25,2 с, в 1,65 раза короче. Поток 7 в обоих прогонах создал 19 поручений.</p>
+
+  <h3>Длительность потоков продаж под блокировки</h3>
+  <p class="muted">Ширина полосы: 130 секунд = вся шкала. Разброс внутри версии меньше 4 секунд: потоки идут ровно, длинного хвоста нет.</p>
+  <div class="threads" aria-label="Потоки блокировок">
+    <div class="th"><b>1</b><div class="pair"><i class="old" style="width:85.0%"></i><i class="new" style="width:46.2%"></i></div></div>
+    <div class="th"><b>2</b><div class="pair"><i class="old" style="width:84.6%"></i><i class="new" style="width:46.5%"></i></div></div>
+    <div class="th"><b>3</b><div class="pair"><i class="old" style="width:84.4%"></i><i class="new" style="width:46.5%"></i></div></div>
+    <div class="th"><b>4</b><div class="pair"><i class="old" style="width:83.2%"></i><i class="new" style="width:46.5%"></i></div></div>
+    <div class="th"><b>5</b><div class="pair"><i class="old" style="width:83.8%"></i><i class="new" style="width:46.5%"></i></div></div>
+    <div class="th"><b>6</b><div class="pair"><i class="old" style="width:84.1%"></i><i class="new" style="width:45.5%"></i></div></div>
+    <div class="th"><b>7</b><div class="pair"><i class="old" style="width:83.5%"></i><i class="new" style="width:46.4%"></i></div></div>
+    <div class="th"><b>8</b><div class="pair"><i class="old" style="width:84.1%"></i><i class="new" style="width:45.8%"></i></div></div>
+    <div class="th"><b>9</b><div class="pair"><i class="old" style="width:83.0%"></i><i class="new" style="width:45.8%"></i></div></div>
+    <div class="th"><b>10</b><div class="pair"><i class="old" style="width:82.6%"></i><i class="new" style="width:45.4%"></i></div></div>
+  </div>
+  <p class="muted">1.16: 110,5 / 110,0 / 109,7 / 108,1 / 109,0 / 109,3 / 108,5 / 109,3 / 107,9 / 107,4 с. Среднее 109,1 с. 1.24: 60,0 / 60,5 / 60,4 / 60,5 / 60,4 / 59,1 / 60,3 / 59,5 / 59,5 / 59,0 с. Среднее 59,9 с, в 1,82 раза короче.</p>
+</section>
+
+<section id="price">
+  <h2>8. Цена: запросы стакана и кеш</h2>
+  <p>В тестовом режиме каждый запрос цены ждет 1 секунду. Кеш на 60 секунд оставляет один запрос на бумагу в потоке, остальные поручения берут цену из кеша. Среднее время одного запроса стакана не изменилось: около 1,03 с и там, и там. Сократилось число запросов.</p>
+  <div class="legend"><span><i class="sw old"></i>1.16, запросы</span><span><i class="sw new"></i>1.24, запросы</span></div>
+  <div class="cmp">
+    <div class="cmp-row">
+      <div class="cmp-name">Реинвестирование</div>
+      <div class="tracks">
+        <div class="track"><span>1.16</span><div class="rail"><i class="old" style="width:39.8%"></i></div><span class="val">199</span></div>
+        <div class="track"><span>1.24</span><div class="rail"><i class="new" style="width:3.8%"></i></div><span class="val">19</span></div>
+      </div>
+    </div>
+    <div class="cmp-row">
+      <div class="cmp-name">Блокировки</div>
+      <div class="tracks">
+        <div class="track"><span>1.16</span><div class="rail"><i class="old" style="width:100%"></i></div><span class="val">500</span></div>
+        <div class="track"><span>1.24</span><div class="rail"><i class="new" style="width:2%"></i></div><span class="val">10</span></div>
+      </div>
+    </div>
+  </div>
+  <p class="muted">Шкала запросов: 500 = вся ширина. Реинвестирование: минус 180 запросов, на 90,5% меньше. Блокировки: минус 490 запросов, на 98% меньше. Вместе 699 запросов против 29, на 95,9% меньше.</p>
+
+  <h3>Откуда взялась цена в 1.24</h3>
+  <div class="donuts">
+    <div class="donut-card">
+      <div class="ring" style="background:conic-gradient(#0e7c66 0 90.5%, #c5ced6 90.5% 100%)"><span>90,5%<br>кеш</span></div>
+      <div>
+        <strong>Реинвестирование</strong>
+        <p>181 цена из кеша, 19 запросов стакана. Вместе 200 обращений к цене: 199 проведенных поручений и одно, которое затем удалено.</p>
+      </div>
+    </div>
+    <div class="donut-card">
+      <div class="ring" style="background:conic-gradient(#0e7c66 0 98%, #c5ced6 98% 100%)"><span>98%<br>кеш</span></div>
+      <div>
+        <strong>Продажи под блокировки</strong>
+        <p>490 цен из кеша, 10 запросов стакана. 10 потоков, в каждом свой первый запрос. У 1.16 кеша нет: 0 из 500.</p>
+      </div>
+    </div>
+  </div>
+
+  <h3>Сумма времени шага по всем потокам</h3>
+  <p>Это не длительность операции. Десять потоков копят секунды параллельно. График показывает, какой шаг перестал ждать паузу стакана. Шкала - 512 секунд, сумма шага "цена из стакана" у блокировок 1.16.</p>
+  <div class="cmp">
+    <div class="cmp-row">
+      <div class="cmp-name">Реинвест, цена из стакана</div>
+      <div class="tracks">
+        <div class="track"><span>1.16</span><div class="rail"><i class="old" style="width:39.7%"></i></div><span class="val">203,5 с</span></div>
+        <div class="track"><span>1.24</span><div class="rail"><i class="new" style="width:3.8%"></i></div><span class="val">19,5 с</span></div>
+      </div>
+    </div>
+    <div class="cmp-row">
+      <div class="cmp-name">Блокировки, цена из стакана</div>
+      <div class="tracks">
+        <div class="track"><span>1.16</span><div class="rail"><i class="old" style="width:100%"></i></div><span class="val">511,9 с</span></div>
+        <div class="track"><span>1.24</span><div class="rail"><i class="new" style="width:2.0%"></i></div><span class="val">10,3 с</span></div>
+      </div>
+    </div>
+    <div class="cmp-row">
+      <div class="cmp-name">Цена из кеша, только 1.24</div>
+      <div class="tracks">
+        <div class="track"><span>реинв.</span><div class="rail"><i class="new" style="width:0.1%"></i></div><span class="val">0,5 с</span></div>
+        <div class="track"><span>блок.</span><div class="rail"><i class="new" style="width:0.3%"></i></div><span class="val">1,5 с</span></div>
+      </div>
+    </div>
+  </div>
+
+  <h3>Среднее на один вызов, секунды</h3>
+  <div class="tw"><table>
+    <thead>
+      <tr>
+        <th>Шаг</th>
+        <th class="n">1.16 реинвест</th>
+        <th class="n">1.24 реинвест</th>
+        <th class="n">1.16 блокировки</th>
+        <th class="n">1.24 блокировки</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr><td>Статус портфеля</td><td class="n">0,234 (199)</td><td class="n">0,245 (199)</td><td class="n">0,247 (500)</td><td class="n">0,251 (500)</td></tr>
+      <tr><td>Запись поручения</td><td class="n">0,440 (199)</td><td class="n">0,497 (200)</td><td class="n">0,525 (500)</td><td class="n">0,531 (500)</td></tr>
+      <tr><td>Проведение с ценой</td><td class="n">0,353 (199)</td><td class="n">0,377 (200)</td><td class="n">0,374 (500)</td><td class="n">0,384 (500)</td></tr>
+      <tr><td>Проведение суммы</td><td class="n">0,375 (19)</td><td class="n">0,406 (19)</td><td class="n">0,422 (10)</td><td class="n">0,423 (10)</td></tr>
+      <tr><td>Цена из стакана</td><td class="n">1,023 (199)</td><td class="n">1,029 (19)</td><td class="n">1,024 (500)</td><td class="n">1,026 (10)</td></tr>
+      <tr><td>Цена из кеша</td><td class="n">нет</td><td class="n">0,003 (181)</td><td class="n">нет</td><td class="n">0,003 (490)</td></tr>
+    </tbody>
+  </table></div>
+  <p>Запись и проведение на одно поручение остались того же порядка: разница среднего 0,02-0,06 с. У реинвестирования 1.24 на один вызов записи и проведения больше, это поручение, которое затем помечено на удаление. Пауза тестовой цены, когда запрос все-таки идет в стакан, не изменилась.</p>
+</section>
+
+<section id="cases">
+  <h2>9. Тест-кейсы</h2>
+  <div class="kpis">
+    <div class="kpi"><b>10</b><span>Проверок прогона</span></div>
+    <div class="kpi ok"><b>10</b><span>Пройдено</span></div>
+    <div class="kpi"><b>0</b><span>Не пройдено</span></div>
+  </div>
+  <div class="tw" style="margin-top:12px"><table>
+    <thead>
+      <tr><th>ID</th><th>Проверка</th><th>Ожидание</th><th>Факт</th><th>Статус</th></tr>
+    </thead>
+    <tbody>
+      <tr><td class="mono">TC-01</td><td>Состав реинвестирования</td><td>Совпадает с 1.16</td><td>199 из 199, расхождений 0</td><td><span class="st ok">Пройден</span></td></tr>
+      <tr><td class="mono">TC-02</td><td>Состав блокировок</td><td>Совпадает с 1.16</td><td>500 из 500, расхождений 0</td><td><span class="st ok">Пройден</span></td></tr>
+      <tr><td class="mono">TC-03</td><td>Суммы</td><td>Равны до копейки</td><td>1 075 331,38 и 2 512 929,17 в обоих прогонах</td><td><span class="st ok">Пройден</span></td></tr>
+      <tr><td class="mono">TC-04</td><td>Проведение</td><td>Все поручения сравнения проведены</td><td>199 и 500 проведены в каждой версии</td><td><span class="st ok">Пройден</span></td></tr>
+      <tr><td class="mono">TC-05</td><td>Потоки</td><td>10 стартов и 10 финишей, итог формы выполнен</td><td>Так по обеим операциям и обеим версиям, ошибок потоков сверх известного отказа нет</td><td><span class="st ok">Пройден</span></td></tr>
+      <tr><td class="mono">TC-06</td><td>Кеш 60 с</td><td>Запросов цены меньше числа поручений</td><td>19 из 200 и 10 из 500, остальные из кеша</td><td><span class="st ok">Пройден</span></td></tr>
+      <tr><td class="mono">TC-07</td><td>Отказ проведения</td><td>Одна ошибка, без повторов, поручение не в сравнении</td><td>Поток 7, поручение 00000212611, пометка удаления, в сравнении 199 без лишних</td><td><span class="st ok">Пройден</span></td></tr>
+      <tr><td class="mono">TC-08</td><td>Нехватка денег</td><td>Нет массового удаления "не хватает ДС"</td><td>0 строк в обоих журналах</td><td><span class="st ok">Пройден</span></td></tr>
+      <tr><td class="mono">TC-09</td><td>Время реинвестирования</td><td>Не хуже 1.16</td><td>75,3 с против 90,1 с</td><td><span class="st ok">Пройден</span></td></tr>
+      <tr><td class="mono">TC-10</td><td>Время блокировок</td><td>Не хуже 1.16</td><td>146,7 с против 275,3 с</td><td><span class="st ok">Пройден</span></td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section id="screens">
+  <h2>10. Экран прогона</h2>
+  <p>Снимок тонкого клиента на стенде Т-1: обработка "Создание торговых поручений РОСТ", закладка "Реинвестирование". В отборе дата купона 16.09.2026, в пакете 200 поручений. На экране список портфелей до запуска потоков: статусы и даты статуса относятся к предыдущим дням, это исходный список, а не результат создания.</p>
+  <figure>
+    <img src="screen_reinvest_list.png" alt="Закладка Реинвестирование на стенде Т-1: дата купона 16.09.2026, пакет 200, список портфелей">
+    <figcaption>Рис. 1. Список портфелей реинвестирования на Т-1. Пакет 200, дата купона 16.09.2026. Заголовок окна - копия продуктивной базы, платформа 8.3.27, пользователь Admin.</figcaption>
+  </figure>
+  <p style="margin-top:10px">Отдельного снимка сообщения о завершении и снимка сравнения в этом комплекте нет. Завершение подтверждено журналом: 20 строк "Выполнено", 10 финишей на операцию, пачки 199 и 500 поручений. Сравнение подтверждено файлом фиксации двух прогонов от 23.10.2026.</p>
+</section>
+
+<section id="notes">
+  <h2>11. Замечания и остаточный риск</h2>
+  <div class="tw"><table>
+    <thead><tr><th>ID</th><th>Наблюдение</th><th>Влияние на приемку</th><th>Статус</th></tr></thead>
+    <tbody>
+      <tr>
+        <td class="mono">З-01</td>
+        <td>В фиксации прогона с меткой "1.24" атрибут версии карточки дополнительной обработки записан как "1.16", без суффикса "-т1". Поведение при этом от 1.24: в логе строка "Кеш цены стакана: 60 с", в замерах есть шаг "Цена из кеша", отказ записан как "Ошибка установки цены", поручение помечено на удаление. У эталона 1.16 версии карточки "1.16-т1", шага кеша нет, отказ записан как "Ошибка создания поручения".</td>
+        <td>На состав поручений и время не влияет. Перед установкой на продуктив стоит увидеть в карточке строку версии 1.24, чтобы в базе не осталась подпись 1.16.</td>
+        <td><span class="st warn">К сведению</span></td>
+      </tr>
+      <tr>
+        <td class="mono">З-02</td>
+        <td>Проверка лимитов реинвестирования у 1.24 на 3,6 с дольше: 36,8 с против 33,2 с. Создание при этом короче на 18,4 с, операция в целом быстрее.</td>
+        <td>Критерий "не хуже эталона" выполнен по полному времени операции.</td>
+        <td><span class="st warn">К сведению</span></td>
+      </tr>
+      <tr>
+        <td class="mono">З-03</td>
+        <td>1.16 проверила лимиты блокировок дважды (450, затем 500 поручений, 63,8 с и 70,3 с). 1.24 - один раз (500 поручений, 66,4 с). Для 1.16 повторное сообщение о завершении на этом стенде ожидаемо.</td>
+        <td>Около половины выигрыша по блокировкам - одна проверка вместо двух. Вторая половина - кеш. Состав поручений совпал.</td>
+        <td><span class="st ok">Учтено в разборе</span></td>
+      </tr>
+      <tr>
+        <td class="mono">З-04</td>
+        <td>Пауза 1 с вместо боевого стакана одинакова в обеих сборках. На продуктивном адаптере абсолютные секунды будут другими, соотношение числа запросов (199 к 19 и 500 к 10) от паузы не зависит.</td>
+        <td>Вывод о регрессе состава поручений на это не опирается. Вывод о числе запросов переносится на продуктив. Вывод о секундах - качественный: меньше ожиданий стакана.</td>
+        <td><span class="st warn">Граница стенда</span></td>
+      </tr>
+    </tbody>
+  </table></div>
+  <h3>Не проверялось в этом прогоне</h3>
+  <ul>
+    <li>Боевой адаптер биржи и реальная отправка поручений.</li>
+    <li>Покупка, продажа при расторжении, регламентное задание, два пользователя одновременно.</li>
+    <li>Срок кеша 0 на Т-1. Прогон 1.24 шел со сроком 60 секунд, как в настройке для поставки.</li>
+  </ul>
+</section>
+
+<section class="verdict" id="end">
+  <h2>12. Заключение</h2>
+  <p>Версия 1.24 на стенде Т-1 прошла парный регресс против 1.16. 10 из 10 проверок этого прогона пройдены. 699 проведенных поручений совпали, суммы совпали до копейки, лишних поручений нет. Отказ контроля по одному портфелю обработан без повторов и без проведенного хвоста.</p>
+  <p>Полное время двух операций 222,0 с против 365,4 с у эталона: меньше на 143,4 с, в 1,65 раза. Реинвестирование 75,3 с против 90,1 с. Продажи под блокировки 146,7 с против 275,3 с. Запросов цены 29 против 699.</p>
+  <p>Версию 1.24 можно передавать на установку со сроком кеша 60 секунд. Перед регистрацией на продуктивной базе проверить, что в карточке дополнительной обработки указана версия 1.24, а не оставшаяся подпись 1.16.</p>
+  <div class="meta" style="margin-top:8px">
+    <div><span>Подготовил по материалам прогона</span>Чмыхалов А., 23.10.2026</div>
+    <div><span>Проверил</span>_______________________ &nbsp; дата __________</div>
+    <div><span>Решение</span>Принято к поставке, со сроком кеша 60 с</div>
+  </div>
+</section>
+
+<section id="dev">
+  <h2>Приложение A. Та же версия на базе разработки, 23.10.2026 утром</h2>
+  <p>До прогона на Т-1 сборки 1.16-т1 и 1.24-т1 сравнивались на базе разработки. Это другой контур: другие суммы, другое время, в графики Т-1 эти цифры не входят. Регресс там тоже пройден. В карточке на базе разработки версия записана как "1.24-т1".</p>
+  <div class="tw"><table>
+    <thead>
+      <tr>
+        <th>Операция</th>
+        <th class="n">Совпало</th>
+        <th class="n">Сумма</th>
+        <th class="n">1.16, с</th>
+        <th class="n">1.24, с</th>
+        <th class="n">Запросы цены</th>
+        <th class="n">Из кеша в 1.24</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr><td>Реинвестирование</td><td class="n">200 / 200</td><td class="n">3 405 236</td><td class="n">40,7</td><td class="n">30,0</td><td class="n">200 / 10</td><td class="n">190</td></tr>
+      <tr><td>Продажи под блокировки</td><td class="n">500 / 500</td><td class="n">150 221 900</td><td class="n">90,3</td><td class="n">81,0</td><td class="n">500 / 20</td><td class="n">480</td></tr>
+    </tbody>
+  </table></div>
+  <p class="muted">Фиксация эталона 08:32:28, метка "1.16-3", версия карточки "1.16-т1". Фиксация 1.24 - 08:42:30, версия карточки "1.24-т1". Расхождений 0, лишних 0, пропавших 0. Отдельно на базе разработки проверялся повтор проведения при конфликте блокировок: проведение доходило со второй попытки, поручения оставались проведенными. На Т-1 такого конфликта в журнале не было.</p>
+</section>
+
+<section>
+  <h2>Приложение B. Из чего собран отчет</h2>
+  <ul>
+    <li>Фиксация парного прогона Т-1 от 23.10.2026: метки "1.16" (08:08:21) и "1.24" (09:00:04), сравнение поручений и блок времени.</li>
+    <li>Журнал потоков внутри этой фиксации: старты, финиши, пачки, ошибки потоков.</li>
+    <li>Лог закладки обработки за прогон 1.24: кеш 60 с, котировки тестового режима, ошибка по поручению 00000212611.</li>
+    <li>Снимок экрана списка реинвестирования, рис. 1.</li>
+    <li>Утренняя фиксация на базе разработки, приложение A. В основные графики не включена.</li>
+  </ul>
+  <p class="muted">Время в отчете - секунды замера и журнала сеанса. Проценты округлены до 0,1. "Во сколько раз" - частное времени 1.16 и времени 1.24, округление до 0,01.</p>
+</section>
+
+</div>
+</body>
+</html>
