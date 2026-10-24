@@ -1,0 +1,388 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>РОСТ 1.25: регресс и замеры</title>
+<style>
+:root {
+  color-scheme: light;
+  --surface-0: #f4f4f2;
+  --surface-1: #fcfcfb;
+  --border: #e2e1dd;
+  --grid: #ebeae6;
+  --text-primary: #0b0b0b;
+  --text-secondary: #52514e;
+  --text-muted: #7a7974;
+  --series-old: #eb6834;
+  --series-new: #2a78d6;
+  --badge-new-bg: #dbe8f8;
+  --badge-new-fg: #1c5cab;
+  --badge-old-bg: #fbe3d8;
+  --badge-old-fg: #a5401a;
+  --ok: #1a7f37;
+  --ok-bg: #e3f3e7;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --surface-0: #121211;
+    --surface-1: #1a1a19;
+    --border: #33322f;
+    --grid: #2a2a28;
+    --text-primary: #f0efec;
+    --text-secondary: #c3c2b7;
+    --text-muted: #8f8e86;
+    --series-old: #d95926;
+    --series-new: #3987e5;
+    --badge-new-bg: #1b3350;
+    --badge-new-fg: #9ec5f4;
+    --badge-old-bg: #4a2414;
+    --badge-old-fg: #f2a785;
+    --ok: #57c27a;
+    --ok-bg: #173322;
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --surface-0: #121211;
+  --surface-1: #1a1a19;
+  --border: #33322f;
+  --grid: #2a2a28;
+  --text-primary: #f0efec;
+  --text-secondary: #c3c2b7;
+  --text-muted: #8f8e86;
+  --series-old: #d95926;
+  --series-new: #3987e5;
+  --badge-new-bg: #1b3350;
+  --badge-new-fg: #9ec5f4;
+  --badge-old-bg: #4a2414;
+  --badge-old-fg: #f2a785;
+  --ok: #57c27a;
+  --ok-bg: #173322;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--surface-0); color: var(--text-primary);
+  font: 14px/1.45 "Segoe UI", system-ui, -apple-system, sans-serif; }
+main { max-width: 1080px; margin: 0 auto; padding: 20px 16px 40px; }
+header h1 { font-size: 22px; margin: 0 0 4px; }
+header p { margin: 0; color: var(--text-secondary); }
+.card { background: var(--surface-1); border: 1px solid var(--border); border-radius: 10px; padding: 16px; margin-top: 14px; }
+.card h2 { font-size: 16px; margin: 0 0 4px; }
+.card .sub { color: var(--text-secondary); font-size: 13px; margin: 0 0 12px; }
+.kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin-top: 14px; }
+.kpi { background: var(--surface-1); border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px; }
+.kpi b { display: block; font-size: 24px; font-variant-numeric: tabular-nums; }
+.kpi span { color: var(--text-secondary); font-size: 12px; }
+.kpi.ok b { color: var(--ok); }
+.legend { display: flex; gap: 16px; flex-wrap: wrap; font-size: 12px; color: var(--text-secondary); margin-bottom: 8px; }
+.legend i { display: inline-block; width: 12px; height: 12px; border-radius: 3px; vertical-align: -2px; margin-right: 6px; }
+table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--grid); font-size: 13px; }
+th { color: var(--text-secondary); font-weight: 600; }
+td.n, th.n { text-align: right; }
+.pill { display: inline-block; padding: 1px 8px; border-radius: 10px; font-size: 12px; background: var(--ok-bg); color: var(--ok); font-weight: 600; }
+.tw { overflow-x: auto; }
+svg text { fill: var(--text-secondary); font-size: 12px; }
+svg .val { fill: var(--text-primary); font-size: 12px; }
+svg .muted { fill: var(--text-muted); font-size: 11px; }
+.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+@media (max-width: 760px) { .grid2 { grid-template-columns: 1fr; } }
+#tip { position: fixed; pointer-events: none; background: var(--surface-1); color: var(--text-primary);
+  border: 1px solid var(--border); border-radius: 6px; padding: 6px 9px; font-size: 12px; box-shadow: 0 4px 14px rgba(0,0,0,.18);
+  opacity: 0; transition: opacity .08s; z-index: 10; max-width: 280px; }
+.hit { cursor: default; }
+.tree, .tree ul { list-style: none; margin: 0; padding-left: 18px; }
+.tree { padding-left: 2px; }
+.tree li { position: relative; padding: 2px 0 2px 14px; }
+.tree li::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; border-left: 1px solid var(--border); }
+.tree li::after { content: ""; position: absolute; left: 0; top: 13px; width: 10px; border-top: 1px solid var(--border); }
+.tree li:last-child::before { bottom: auto; height: 13px; }
+.tree code { font-family: Consolas, "Cascadia Mono", monospace; font-size: 12.5px; }
+.b { display: inline-block; font-size: 11px; padding: 0 6px; border-radius: 8px; margin-left: 6px; font-weight: 600; vertical-align: 1px; }
+.b.n { background: var(--badge-new-bg); color: var(--badge-new-fg); }
+.b.o { background: var(--badge-old-bg); color: var(--badge-old-fg); }
+.note { color: var(--text-muted); font-size: 12px; margin-top: 8px; }
+details summary { cursor: pointer; color: var(--text-secondary); font-size: 13px; margin-top: 8px; }
+.flow { display: flex; align-items: stretch; gap: 8px; flex-wrap: wrap; }
+.node { border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; background: var(--surface-0); min-width: 150px; flex: 1; }
+.node b { display: block; font-size: 13px; }
+.node span { color: var(--text-secondary); font-size: 12px; }
+.arrow { align-self: center; color: var(--text-muted); font-size: 18px; }
+</style>
+</head>
+<body>
+<main>
+<header>
+  <h1>Создание торговых поручений РОСТ 1.25: регресс и замеры</h1>
+  <p>База разработки, 24.10.2026. Эталон - релиз 1.18 (установлен на ПРОД). Обе версии - сборки Т-1 (тестовый режим, пауза 1 с вместо стакана, без отправки на биржу), одни и те же данные, прогоны подряд.</p>
+</header>
+
+<section class="kpis" aria-label="Итог">
+  <div class="kpi ok"><b>940 / 940</b><span>поручений совпало (6 сценариев)</span></div>
+  <div class="kpi ok"><b>0</b><span>расхождений по количеству, цене, сумме, проведению</span></div>
+  <div class="kpi"><b>в 1,8 раза</b><span>реинвестирование и блокировки быстрее</span></div>
+  <div class="kpi"><b>в 2,2-4,7 раза</b><span>покупка и продажа быстрее</span></div>
+  <div class="kpi"><b>700 → 20</b><span>запросов цены стакана в потоках</span></div>
+</section>
+
+<section class="card">
+  <h2>Регресс поручений</h2>
+  <p class="sub">Сравнивались проведенные поручения одного сценария: портфель, бумага, направление, количество, цена, сумма, проведение.</p>
+  <div class="tw"><table>
+    <thead><tr><th>Сценарий</th><th class="n">В обоих</th><th class="n">Совпали</th><th class="n">Только 1.18</th><th class="n">Только 1.25</th><th class="n">Сумма, руб.</th><th>Итог</th></tr></thead>
+    <tbody>
+      <tr><td>Реинвестирование, потоки, пакет 200</td><td class="n">200</td><td class="n">200</td><td class="n">0</td><td class="n">0</td><td class="n">3 405 984</td><td><span class="pill">совпало</span></td></tr>
+      <tr><td>Продажи под блокировки, потоки, пакет 500</td><td class="n">500</td><td class="n">500</td><td class="n">0</td><td class="n">0</td><td class="n">150 250 400</td><td><span class="pill">совпало</span></td></tr>
+      <tr><td>Покупка, команда задания</td><td class="n">20</td><td class="n">20</td><td class="n">0</td><td class="n">0</td><td class="n">14 956 276,80</td><td><span class="pill">совпало</span></td></tr>
+      <tr><td>Продажа, команда задания</td><td class="n">100</td><td class="n">100</td><td class="n">0</td><td class="n">0</td><td class="n">1 755 000</td><td><span class="pill">совпало</span></td></tr>
+      <tr><td>Покупка, кнопка формы</td><td class="n">20</td><td class="n">20</td><td class="n">0</td><td class="n">0</td><td class="n">14 956 276,80</td><td><span class="pill">совпало</span></td></tr>
+      <tr><td>Продажа, кнопка формы</td><td class="n">100</td><td class="n">100</td><td class="n">0</td><td class="n">0</td><td class="n">1 755 000</td><td><span class="pill">совпало</span></td></tr>
+    </tbody>
+  </table></div>
+  <p class="note">Статусы портфелей покупки ("Перевод в ОФЗ", 20) и продажи ("Ордера на продажу сформированы", 50) совпали. Повторный запуск продажи новых поручений не создал ни в 1.18, ни в 1.25. Ошибок потоков нет.</p>
+</section>
+
+<section class="card">
+  <h2>Время операции</h2>
+  <p class="sub">Секунды от старта до конца операции. Потоки - от старта первого потока до конца проверки лимитов; покупка и продажа - длительность фонового задания.</p>
+  <div class="legend"><span><i style="background:var(--series-old)"></i>1.18 (эталон)</span><span><i style="background:var(--series-new)"></i>1.25</span></div>
+  <div id="chartTime"></div>
+  <details><summary>Таблица</summary><div class="tw"><table id="tblTime"></table></div></details>
+</section>
+
+<div class="grid2">
+  <section class="card">
+    <h2>Из чего сложилось время потоков</h2>
+    <p class="sub">Создание поручений в потоках и проверка лимитов с отправкой пачки, секунды.</p>
+    <div class="legend"><span><i style="background:var(--series-new)"></i>создание в потоках</span><span><i style="background:var(--text-muted)"></i>проверка лимитов и отправка</span></div>
+    <div id="chartSplit"></div>
+    <p class="note">Проверка лимитов короче в 2 раза: 1.18 отправляет пачку дважды (реинвестирование 180 + 200, блокировки 450 + 500), 1.25 - один раз.</p>
+  </section>
+  <section class="card">
+    <h2>Длительность каждого потока</h2>
+    <p class="sub">10 потоков на операцию, секунды. Точка - один поток.</p>
+    <div class="legend"><span><i style="background:var(--series-old)"></i>1.18</span><span><i style="background:var(--series-new)"></i>1.25</span></div>
+    <div id="chartThreads"></div>
+  </section>
+</div>
+
+<section class="card">
+  <h2>Куда ушло время шагов в потоках</h2>
+  <p class="sub">Сумма по всем 10 потокам (не время на часах), секунды. Пауза стакана почти исчезла; запись и проведение стали тяжелее - потоки без паузы чаще встречаются на блокировке нумератора поручений.</p>
+  <div class="legend"><span><i style="background:var(--series-old)"></i>1.18</span><span><i style="background:var(--series-new)"></i>1.25</span></div>
+  <div id="chartSteps"></div>
+  <details><summary>Таблица</summary><div class="tw"><table id="tblSteps"></table></div></details>
+</section>
+
+<section class="card">
+  <h2>Алгоритм: реинвестирование и продажи под блокировки (кнопка формы)</h2>
+  <p class="sub">Метки: <span class="b n">1.25</span> - изменения IMDEV-9531, <span class="b o">1.18</span> - изменения релиза.</p>
+  <ul class="tree">
+    <li><code>РеинвестСоздатьПорученияВПотоке</code> / <code>БлокировкиПродажиОтправитьПачкуПоручений</code>
+      <ul>
+        <li><code>МожноНачатьЗапуск</code> - один запуск с формы на всю базу<span class="b n">1.25</span></li>
+        <li><code>НачатьЗапускСФормы</code>, <code>НачатьПоказЦенВРаботе</code> - кнопки недоступны, таблица "Цены в работе"<span class="b n">1.25</span></li>
+        <li>блокировки: в поток передается <code>НовыйСтатус</code> (LQDT - под комиссию, иначе - под НДФЛ)<span class="b o">1.18</span></li>
+        <li>10 фоновых заданий: <code>РеинвестСоздатьОрдера</code> / <code>БлокировкиПродажиСоздатьОрдера</code>
+          <ul>
+            <li>кеш цен стакана сбрасывается на поток<span class="b n">1.25</span></li>
+            <li>для каждого портфеля - в <code>Попытка</code>: ошибка портфеля не обрывает поток<span class="b n">1.25</span>
+              <ul>
+                <li><code>ЗаписатьПоручение</code>
+                  <ul>
+                    <li><code>ЗаписатьНовоеПоручение</code> - короткая запись: номер документа и Идентификатор под блокировкой нумератора<span class="b n">1.25</span></li>
+                    <li><code>ПровестиПоручение</code> - проведение, повтор до 5 раз при конфликте блокировок<span class="b n">1.25</span></li>
+                    <li><code>ИзменитьЦенуПоручения</code>
+                      <ul>
+                        <li>цена из кеша запуска, срок 60 с<span class="b n">1.25</span> - иначе запрос стакана (1 с)</li>
+                        <li><code>ПровестиПоручение</code> с ценой<span class="b n">1.25</span>, <code>ОтметитьЦенуВРаботе</code><span class="b n">1.25</span></li>
+                      </ul>
+                    </li>
+                    <li>первая бумага потока: проведение с суммой (<code>ПровестиПоручение</code>)<span class="b n">1.25</span></li>
+                  </ul>
+                </li>
+                <li>реинвестирование: статус портфеля; блокировки: смена статуса закомментирована<span class="b o">1.18</span></li>
+              </ul>
+            </li>
+          </ul>
+        </li>
+        <li>завершение потока: <code>ОтметитьЗавершениеПотока</code> по номеру потока<span class="b n">1.25</span></li>
+        <li>все потоки завершены → одна проверка и отправка пачки <code>ПроверкаИОтправка</code><span class="b n">1.25</span> (в 1.18 - повторные отправки)</li>
+        <li><code>ЗакончитьЗапускСФормы</code>; закрытие формы во время запуска - вопрос с ответом по умолчанию "Нет"<span class="b n">1.25</span></li>
+      </ul>
+    </li>
+  </ul>
+</section>
+
+<div class="grid2">
+  <section class="card">
+    <h2>Алгоритм: покупка и продажа</h2>
+    <p class="sub">Команда регламентного задания или кнопка формы.</p>
+    <ul class="tree">
+      <li><code>ВыполнитьКоманду</code> (задание) или кнопка формы
+        <ul>
+          <li>кнопка: фоновое задание <code>ПокупкаИзФормы</code> / <code>ПродажаИзФормы</code><span class="b n">1.25</span></li>
+          <li>кеш цен стакана сбрасывается на запуск<span class="b n">1.25</span></li>
+          <li>для каждого портфеля: <code>НачатьТранзакцию</code>
+            <ul>
+              <li><code>ЗаписатьПоручение</code> - одной записью с проведением (в транзакции короткой записи и повтора нет)</li>
+              <li><code>ИзменитьЦенуПоручения</code> - кеш<span class="b n">1.25</span> или стакан</li>
+              <li>статус портфеля, <code>ЗафиксироватьТранзакцию</code></li>
+            </ul>
+          </li>
+          <li>продажа при расторжении: защищенные и инвестируемые портфели не переводятся в "Расторжение инициировано"<span class="b o">1.18</span></li>
+          <li><code>ПроверкаИОтправка</code> пачки</li>
+        </ul>
+      </li>
+    </ul>
+  </section>
+  <section class="card">
+    <h2>Как собрана 1.25</h2>
+    <p class="sub">Трехстороннее слияние, сверка по процедурам: 0 расхождений.</p>
+    <div class="flow">
+      <div class="node"><b>1.16</b><span>общая база</span></div>
+      <div class="arrow">→</div>
+      <div class="node"><b>1.18</b><span>релиз: 2 статуса в настройках, блокировки без смены статуса, отбор на расторжение</span></div>
+    </div>
+    <div class="flow" style="margin-top:8px">
+      <div class="node"><b>1.16</b><span>общая база</span></div>
+      <div class="arrow">→</div>
+      <div class="node"><b>1.24</b><span>IMDEV-9531: кеш, цены в работе, одна пачка, короткая запись, повтор, защита потока</span></div>
+    </div>
+    <div class="flow" style="margin-top:8px">
+      <div class="node" style="border-color:var(--series-new)"><b>1.25 = 1.18 + 1.24</b><span>процедур объекта 73: 26 только наши, 2 только релиз, 5 обе стороны; формы - 35 наших</span></div>
+    </div>
+    <p class="note">Обе стороны меняли: номер версии, поток блокировок, две процедуры настроек, две процедуры запуска потоков в форме. Форма настроек: форма 1.18 + поле срока кеша.</p>
+  </section>
+</div>
+
+<p class="note">Источник: фиксации прогонов служебной обработки (метки 1.18 и 1.25) и прогон покупки и продажи от 24.10.2026, база разработки. Абсолютные секунды на ПРОД будут другими: стакан там - реальный адаптер, данные - другие.</p>
+</main>
+<div id="tip" role="tooltip"></div>
+<script>
+const NS = "http://www.w3.org/2000/svg";
+const fmt = v => v.toLocaleString("ru-RU", { maximumFractionDigits: 1 });
+const tip = document.getElementById("tip");
+function showTip(e, html) { tip.innerHTML = html; tip.style.opacity = 1; moveTip(e); }
+function moveTip(e) { const w = tip.offsetWidth; let x = e.clientX + 14; if (x + w > innerWidth - 8) x = e.clientX - w - 14; tip.style.left = x + "px"; tip.style.top = (e.clientY + 14) + "px"; }
+function hideTip() { tip.style.opacity = 0; }
+function el(tag, attrs, parent) { const n = document.createElementNS(NS, tag); for (const k in attrs) n.setAttribute(k, attrs[k]); if (parent) parent.appendChild(n); return n; }
+function txt(parent, x, y, s, cls, anchor) { const t = el("text", { x, y, class: cls || "", "text-anchor": anchor || "start" }, parent); t.textContent = s; return t; }
+function hit(node, html) { node.classList.add("hit"); node.addEventListener("mouseenter", e => showTip(e, html)); node.addEventListener("mousemove", moveTip); node.addEventListener("mouseleave", hideTip); }
+function bar(g, x, y, w, h, fill) { // 4px rounded data end, flat at baseline
+  const r = Math.min(4, w / 2, h / 2);
+  return el("path", { d: `M${x},${y} H${x + w - r} Q${x + w},${y} ${x + w},${y + r} V${y + h - r} Q${x + w},${y + h} ${x + w - r},${y + h} H${x} Z`, fill }, g);
+}
+function axis(svg, x0, x1, y0, y1, max, step) {
+  for (let v = 0; v <= max; v += step) {
+    const x = x0 + (x1 - x0) * v / max;
+    el("line", { x1: x, x2: x, y1: y0, y2: y1, stroke: "var(--grid)" }, svg);
+    txt(svg, x, y1 + 14, fmt(v), "muted", "middle");
+  }
+}
+function width(id) { return Math.max(320, document.getElementById(id).clientWidth); }
+
+// Время операции
+const ops = [
+  ["Реинвестирование 200", 80.0, 43.2], ["Продажи под блокировки 500", 141.6, 79.3],
+  ["Покупка, команда", 33.1, 11.0], ["Покупка, форма", 38.1, 17.1],
+  ["Продажа, команда", 133.3, 28.1], ["Продажа, форма", 155.5, 50.2]];
+function drawTime() {
+  const box = document.getElementById("chartTime"); box.innerHTML = "";
+  const W = width("chartTime"), narrow = W < 620, L = narrow ? 8 : 190, R = narrow ? 8 : 170, bh = 12, gap = 2, row = narrow ? 64 : 44;
+  const H = ops.length * row + 24, max = 160;
+  const svg = el("svg", { width: W, height: H, viewBox: `0 0 ${W} ${H}`, role: "img", "aria-label": "Время операций 1.18 и 1.25" }, box);
+  const x0 = L, x1 = W - R; axis(svg, x0, x1, 0, H - 22, max, 20);
+  ops.forEach(([name, a, b], i) => {
+    const top = i * row + (narrow ? 20 : 8);
+    if (narrow) txt(svg, 0, top - 6, name, "val"); else txt(svg, 0, top + bh + 4, name, "val");
+    const g = el("g", {}, svg);
+    [[a, "var(--series-old)", "1.18"], [b, "var(--series-new)", "1.25"]].forEach(([v, c, lab], k) => {
+      const y = top + k * (bh + gap), w = (x1 - x0) * v / max;
+      bar(g, x0, y, w, bh, c);
+      const h = el("rect", { x: x0, y: y - 1, width: Math.max(w, 30), height: bh + 2, fill: "transparent" }, g);
+      hit(h, `<b>${name}</b><br>${lab}: ${fmt(v)} с`);
+    });
+    const label = `${fmt(a)} → ${fmt(b)} с · в ${(a / b).toLocaleString("ru-RU", { maximumFractionDigits: 2 })} раза`;
+    if (narrow) txt(svg, W - 4, top - 6, label, "muted", "end"); else txt(svg, W - R + 10, top + bh + 4, label, "muted");
+  });
+  const t = document.getElementById("tblTime");
+  t.innerHTML = "<tr><th>Операция</th><th class='n'>1.18, с</th><th class='n'>1.25, с</th><th class='n'>Во сколько раз</th></tr>" +
+    ops.map(([n, a, b]) => `<tr><td>${n}</td><td class='n'>${fmt(a)}</td><td class='n'>${fmt(b)}</td><td class='n'>${(a / b).toLocaleString("ru-RU", { maximumFractionDigits: 2 })}</td></tr>`).join("");
+}
+
+// Создание и проверка
+const split = [["Реинвестирование 1.18", 54.3, 25.7], ["Реинвестирование 1.25", 33.2, 10.0], ["Блокировки 1.18", 99.3, 42.3], ["Блокировки 1.25", 57.3, 22.0]];
+function drawSplit() {
+  const box = document.getElementById("chartSplit"); box.innerHTML = "";
+  const W = width("chartSplit"), L = 150, R = 44, bh = 16, row = 30, H = split.length * row + 26, max = 150;
+  const svg = el("svg", { width: W, height: H, viewBox: `0 0 ${W} ${H}`, role: "img", "aria-label": "Создание и проверка лимитов" }, box);
+  axis(svg, L, W - R, 0, H - 22, max, 50);
+  split.forEach(([name, c, p], i) => {
+    const y = i * row + 6, s = (W - R - L) / max, wc = c * s, wp = p * s;
+    txt(svg, 0, y + bh - 3, name, "val");
+    const g = el("g", {}, svg);
+    el("rect", { x: L, y, width: Math.max(wc - 1, 0), height: bh, fill: "var(--series-new)" }, g);
+    bar(g, L + wc + 1, y, Math.max(wp - 1, 0), bh, "var(--text-muted)");
+    txt(svg, L + wc + wp + 6, y + bh - 3, fmt(c + p), "muted");
+    const h = el("rect", { x: L, y: y - 2, width: wc + wp, height: bh + 4, fill: "transparent" }, g);
+    hit(h, `<b>${name}</b><br>создание: ${fmt(c)} с<br>проверка и отправка: ${fmt(p)} с<br>всего: ${fmt(c + p)} с`);
+  });
+}
+
+// Потоки
+const threads = {
+  "Реинвест. 1.18": [32.3, 32.5, 32.5, 32.3, 32.4, 32.5, 32.3, 32.3, 32.4, 32.2],
+  "Реинвест. 1.25": [16.0, 17.5, 18.0, 18.6, 19.8, 19.1, 19.4, 18.3, 17.3, 16.9],
+  "Блокировки 1.18": [81.6, 81.6, 81.7, 82.0, 82.1, 82.1, 81.6, 82.0, 81.6, 80.9],
+  "Блокировки 1.25": [40.8, 44.1, 45.0, 46.1, 47.0, 47.0, 45.7, 45.3, 44.0, 43.3]};
+function drawThreads() {
+  const box = document.getElementById("chartThreads"); box.innerHTML = "";
+  const W = width("chartThreads"), L = 120, R = 86, row = 30, names = Object.keys(threads), H = names.length * row + 26, max = 90;
+  const svg = el("svg", { width: W, height: H, viewBox: `0 0 ${W} ${H}`, role: "img", "aria-label": "Длительность потоков" }, box);
+  axis(svg, L, W - R, 0, H - 22, max, 15);
+  names.forEach((n, i) => {
+    const y = i * row + 14, c = n.includes("1.25") ? "var(--series-new)" : "var(--series-old)";
+    txt(svg, 0, y + 4, n, "val");
+    txt(svg, W - R + 8, y + 4, `${fmt(Math.min(...threads[n]))}-${fmt(Math.max(...threads[n]))} с`, "muted");
+    threads[n].forEach((v, k) => {
+      const x = L + (W - R - L) * v / max;
+      const dot = el("circle", { cx: x, cy: y, r: 4.5, fill: c, stroke: "var(--surface-1)", "stroke-width": 2 }, svg);
+      const h = el("circle", { cx: x, cy: y, r: 9, fill: "transparent" }, svg);
+      hit(h, `<b>${n}</b><br>поток ${k + 1}: ${fmt(v)} с`);
+    });
+  });
+}
+
+// Шаги
+const steps = [
+  ["Цена из стакана, реинвест.", 204.0, 10.3], ["Запись поручения, реинвест.", 48.5, 70.3], ["Проведение с ценой, реинвест.", 46.1, 66.2], ["Статус портфеля, реинвест.", 22.3, 30.2],
+  ["Цена из стакана, блокировки", 510.7, 10.2], ["Запись поручения, блокировки", 173.9, 278.0], ["Проведение с ценой, блокировки", 129.2, 154.3]];
+function drawSteps() {
+  const box = document.getElementById("chartSteps"); box.innerHTML = "";
+  const W = width("chartSteps"), narrow = W < 620, L = narrow ? 8 : 230, R = 60, bh = 10, gap = 2, row = narrow ? 50 : 34, H = steps.length * row + 26, max = 550;
+  const svg = el("svg", { width: W, height: H, viewBox: `0 0 ${W} ${H}`, role: "img", "aria-label": "Сумма шагов по потокам" }, box);
+  axis(svg, L, W - R, 0, H - 22, max, 100);
+  steps.forEach(([name, a, b], i) => {
+    const top = i * row + (narrow ? 18 : 6);
+    if (narrow) txt(svg, 0, top - 5, name, "val"); else txt(svg, 0, top + bh + 3, name, "val");
+    const g = el("g", {}, svg);
+    [[a, "var(--series-old)", "1.18"], [b, "var(--series-new)", "1.25"]].forEach(([v, c, lab], k) => {
+      const y = top + k * (bh + gap), w = (W - R - L) * v / max;
+      bar(g, L, y, w, bh, c);
+      txt(svg, L + w + 6, y + bh - 1, fmt(v), "muted");
+      const h = el("rect", { x: L, y: y - 1, width: Math.max(w, 30), height: bh + 2, fill: "transparent" }, g);
+      hit(h, `<b>${name}</b><br>${lab}: ${fmt(v)} с (сумма по потокам)`);
+    });
+  });
+  document.getElementById("tblSteps").innerHTML = "<tr><th>Шаг</th><th class='n'>1.18, с</th><th class='n'>1.25, с</th></tr>" +
+    steps.map(([n, a, b]) => `<tr><td>${n}</td><td class='n'>${fmt(a)}</td><td class='n'>${fmt(b)}</td></tr>`).join("");
+}
+
+function drawAll() { drawTime(); drawSplit(); drawThreads(); drawSteps(); }
+drawAll();
+let rt; addEventListener("resize", () => { clearTimeout(rt); rt = setTimeout(drawAll, 120); });
+</script>
+</body>
+</html>
