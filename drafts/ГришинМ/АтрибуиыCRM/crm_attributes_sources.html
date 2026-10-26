@@ -1,0 +1,836 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Атрибуты CRM: откуда брать данные в 1С</title>
+<style>
+:root {
+  --ink: #1c2430;
+  --muted: #5c6b7a;
+  --line: #e3e8ee;
+  --bg: #f4f6f8;
+  --card: #ffffff;
+  --pif: #5b3a8c;
+  --pif-bg: #f4eefb;
+  --du: #1d4e89;
+  --du-bg: #e8f1fb;
+  --fin: #0e6b4f;
+  --fin-bg: #e7f6f0;
+  --do: #8a4b08;
+  --do-bg: #fbf3e6;
+  --calc: #1a5276;
+  --calc-bg: #e8f4f8;
+  --gap: #8b2e2e;
+  --gap-bg: #fdeeee;
+  --ok: #1e7a46;
+  --part: #8a5a00;
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  margin: 0;
+  color: var(--ink);
+  background: var(--bg);
+  font: 16px/1.5 "Segoe UI", Calibri, sans-serif;
+}
+a { color: var(--du); }
+.wrap { max-width: 1180px; margin: 0 auto; padding: 28px 20px 64px; }
+header.top {
+  background: #16324f;
+  color: #fff;
+  padding: 36px 20px 28px;
+}
+header.top .wrap { padding-top: 0; padding-bottom: 0; }
+header.top h1 { margin: 0 0 8px; font-size: 30px; font-weight: 650; letter-spacing: -0.02em; }
+header.top p { margin: 0; max-width: 820px; color: #d5e2ef; }
+.legend { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 18px; }
+.tag {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 650;
+  letter-spacing: 0.01em;
+}
+.tag.pif { background: var(--pif-bg); color: var(--pif); }
+.tag.du { background: var(--du-bg); color: var(--du); }
+.tag.fin { background: var(--fin-bg); color: var(--fin); }
+.tag.do { background: var(--do-bg); color: var(--do); }
+.tag.calc { background: var(--calc-bg); color: var(--calc); }
+.tag.gap { background: var(--gap-bg); color: var(--gap); }
+header.top .tag { background: rgba(255,255,255,.12); color: #fff; }
+.toolbar {
+  position: sticky; top: 0; z-index: 5;
+  background: rgba(244,246,248,.95);
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid var(--line);
+  padding: 12px 20px;
+}
+.toolbar .row { max-width: 1180px; margin: 0 auto; display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+input[type="search"] {
+  flex: 1 1 240px;
+  border: 1px solid #c9d3de;
+  border-radius: 8px;
+  padding: 8px 12px;
+  font: inherit;
+  background: #fff;
+}
+.chips { display: flex; gap: 6px; flex-wrap: wrap; }
+.chips button {
+  border: 1px solid #c9d3de;
+  background: #fff;
+  border-radius: 999px;
+  padding: 6px 12px;
+  font: inherit;
+  cursor: pointer;
+  color: var(--ink);
+}
+.chips button.on { background: #16324f; color: #fff; border-color: #16324f; }
+nav.toc { display: flex; gap: 14px; flex-wrap: wrap; margin: 18px 0 8px; font-size: 14px; }
+nav.toc a { text-decoration: none; }
+.stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin: 18px 0 8px; }
+.stat {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 14px 16px;
+}
+.stat b { display: block; font-size: 26px; line-height: 1.1; }
+.stat span { color: var(--muted); font-size: 13px; }
+.note, .rule {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-left: 4px solid #16324f;
+  border-radius: 10px;
+  padding: 14px 16px;
+  margin: 14px 0;
+}
+.rule strong { display: block; margin-bottom: 4px; }
+h2 { margin: 34px 0 8px; font-size: 24px; }
+h2 .count { color: var(--muted); font-weight: 500; font-size: 16px; }
+.lead { color: var(--muted); margin: 0 0 14px; }
+.grid { display: grid; gap: 12px; }
+article.field {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 14px 16px 12px;
+}
+article.field header { display: flex; gap: 10px; align-items: baseline; flex-wrap: wrap; }
+article.field h3 { margin: 0; font-size: 18px; flex: 1 1 auto; }
+.num {
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+  min-width: 1.6em;
+}
+.example { margin: 8px 0; color: #334; font-size: 14px; }
+.example b { color: var(--muted); font-weight: 650; }
+.src { margin-top: 8px; padding-top: 8px; border-top: 1px dashed var(--line); }
+.src p { margin: 4px 0; }
+.why { color: #243140; }
+.obj {
+  font-family: Consolas, "Courier New", monospace;
+  font-size: 13px;
+  background: #f6f8fa;
+  padding: 1px 6px;
+  border-radius: 4px;
+}
+.more { color: var(--muted); font-size: 14px; }
+.mark {
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-right: 6px;
+}
+.mark.ok { color: var(--ok); }
+.mark.part { color: var(--part); }
+.mark.no { color: var(--gap); }
+footer.colophon { margin-top: 36px; color: var(--muted); font-size: 13px; }
+@media (max-width: 800px) {
+  .stats { grid-template-columns: 1fr 1fr; }
+  header.top h1 { font-size: 24px; }
+}
+@media print {
+  .toolbar { display: none; }
+  article.field { break-inside: avoid; }
+}
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="wrap">
+    <h1>Атрибуты CRM: откуда брать данные</h1>
+    <p>Разбор полей из перечня для CRM. Для каждого поля указана база 1С, объект и почему это поле закрывает запрос бизнеса. ДУ и ФИН - две редакции доверительного управления: один договор читается только из той базы, где он ведется.</p>
+    <div class="legend">
+      <span class="tag">ПИФ - учет фондов и паев</span>
+      <span class="tag">ДУ - доверительное управление, редакция 1.5</span>
+      <span class="tag">ФИН - доверительное управление, редакция 2</span>
+      <span class="tag">ДО - документооборот, файлы и юридические карточки</span>
+    </div>
+  </div>
+</header>
+
+<div class="toolbar">
+  <div class="row">
+    <input id="q" type="search" placeholder="Поиск по полю, примеру или объекту" autocomplete="off">
+    <div class="chips" id="chips">
+      <button type="button" class="on" data-f="all">Все</button>
+      <button type="button" data-f="pif">ПИФ</button>
+      <button type="button" data-f="du">ДУ</button>
+      <button type="button" data-f="fin">ФИН</button>
+      <button type="button" data-f="do">ДО</button>
+      <button type="button" data-f="gap">Нет готового поля</button>
+    </div>
+  </div>
+</div>
+
+<div class="wrap">
+  <div class="stats" id="stats"></div>
+
+  <div class="rule">
+    <strong>Как выбирать базу</strong>
+    Карточка фонда, расчетная цена пая, параметры формирования и лицевой счет пайщика живут в ПИФ. Договор доверительного управления, стратегия, портфель, стоимость активов и доходность в процентах живут в ДУ либо в ФИН. Скан договора, приложения и юридические даты действия живут в ДО. Одинаковые по смыслу реквизиты есть в нескольких базах: ниже у каждого поля отмечен основной источник и запасной.
+  </div>
+
+  <nav class="toc">
+    <a href="#products">Продукты ПИФ</a>
+    <a href="#clients">Клиент, юрлицо</a>
+    <a href="#inst">Продукты институциональных</a>
+    <a href="#contracts">Договоры</a>
+    <a href="#struct">Структурные фонды</a>
+    <a href="#gaps">Чего в 1С нет</a>
+  </nav>
+
+  <h2 id="products">Продукты <span class="count">информация по ПИФ, общий список</span></h2>
+  <p class="lead">В исходном перечне источник этой группы уже назван: Аванкор ПИФ. В конфигурации это справочник фондов и периодические параметры фонда. ДУ, ФИН и ДО карточку фонда не ведут.</p>
+  <div class="grid">
+
+    <article class="field" data-src="pif" data-kind="ok">
+      <header><span class="num">1</span><h3>Наименование</h3><span class="tag pif">ПИФ</span></header>
+      <p class="example"><b>Пример.</b> ОПИФРФИ «ВИМ - Умный капитал»</p>
+      <div class="src">
+        <p><span class="mark ok">Есть поле</span> Справочник <span class="obj">ПИФ</span> («Фонды»), стандартный реквизит «Наименование».</p>
+        <p class="why">Это короткое имя фонда на карточке. Длина наименования 90 символов, его и видит пользователь в списке фондов. Рядом есть параметр фонда «Краткое наименование фонда»: его имеет смысл сверять, если в CRM нужно имя без организационно-правовой формы.</p>
+      </div>
+    </article>
+
+    <article class="field" data-src="pif" data-kind="ok">
+      <header><span class="num">2</span><h3>Полное наименование</h3><span class="tag pif">ПИФ</span></header>
+      <p class="example"><b>Пример.</b> Открытый паевой инвестиционный фонд рыночных финансовых инструментов «ВИМ - Умный капитал»</p>
+      <div class="src">
+        <p><span class="mark ok">Есть поле</span> Регистр сведений <span class="obj">ПараметрыПИФ</span>, параметр <span class="obj">ПолноеНаименованиеФонда</span> («Полное наименование фонда»).</p>
+        <p class="why">Полное имя не лежит в реквизите справочника. Оно хранится как значение параметра фонда на дату. Для CRM берется запись на текущую дату. На карточке фонда отдельно есть «Наименование на английском» и «Наименование для выгрузки» - это другие имена, в полное русское наименование их подставлять не нужно.</p>
+      </div>
+    </article>
+
+    <article class="field" data-src="pif" data-kind="ok">
+      <header><span class="num">3</span><h3>Тип фонда</h3><span class="tag pif">ПИФ</span></header>
+      <p class="example"><b>Пример.</b> Открытый паевой инвестиционный фонд</p>
+      <div class="src">
+        <p><span class="mark ok">Есть поле</span> Регистр <span class="obj">ПараметрыПИФ</span>, параметр <span class="obj">ТипФонда</span>. Значение - перечисление «Типы фонда»: открытый, интервальный, закрытый, биржевой, ипотечное покрытие, личный фонд.</p>
+        <p class="why">Подпись значения «Открытый» в интерфейсе - «Открытый паевой инвестиционный фонд». Она совпадает с примером в перечне. Категория фонда (акции, облигации, рыночные инструменты) - отдельный параметр, ее в тип подставлять не нужно.</p>
+      </div>
+    </article>
+
+    <article class="field" data-src="pif" data-kind="ok">
+      <header><span class="num">4</span><h3>Специализированный депозитарий</h3><span class="tag pif">ПИФ</span></header>
+      <p class="example"><b>Пример.</b> ООО «ЦДФ»</p>
+      <div class="src">
+        <p><span class="mark ok">Есть поле</span> Регистр <span class="obj">ПараметрыПИФ</span>, параметр <span class="obj">СпецДепозитарий</span> («Специализированный депозитарий»). Тип значения - ссылка на контрагента.</p>
+        <p class="why">В перечень нужно наименование этого контрагента. Лицензия спецдепозитария лежит отдельным параметром «Лицензия специализированного депозитария» и в это поле не входит. В ФИН спецдепозитарий есть на документе «Настройки вознаграждения», но это настройка портфеля, а не карточка фонда.</p>
+      </div>
+    </article>
+
+    <article class="field" data-src="pif" data-kind="ok">
+      <header><span class="num">5</span><h3>Дата формирования</h3><span class="tag pif">ПИФ</span></header>
+      <p class="example"><b>Пример.</b> 20.06.2026. В перечне источник назван «Дата начала формирования».</p>
+      <div class="src">
+        <p><span class="mark ok">Есть поле</span> Регистр <span class="obj">ПараметрыПИФ</span>, параметр <span class="obj">ДатаНачалаФормирования</span>.</p>
+        <p class="why">В перечне поле называется «Дата формирования», а колонка источника прямо указывает на дату начала формирования. Берется она. У контрагента в ДУ есть реквизит «Дата формирования», но это не дата фонда из ПИФ.</p>
+      </div>
+    </article>
+
+    <article class="field" data-src="pif" data-kind="ok">
+      <header><span class="num">6</span><h3>Дата окончания формирования</h3><span class="tag pif">ПИФ</span></header>
+      <p class="example"><b>Пример.</b> 30.06.2026</p>
+      <div class="src">
+        <p><span class="mark ok">Есть поле</span> Регистр <span class="obj">ПараметрыПИФ</span>, параметр <span class="obj">ДатаОкончанияФормирования</span>.</p>
+        <p class="why">Это отдельный параметр от даты начала. В ДУ и ФИН такой даты на договоре нет: там дата окончания - это окончание договора, а не окончания формирования фонда.</p>
+      </div>
+    </article>
+
+    <article class="field" data-src="pif fin" data-kind="ok">
+      <header><span class="num">7</span><h3>Расчетная цена пая</h3><span class="tag pif">ПИФ</span><span class="tag fin">ФИН</span></header>
+      <p class="example"><b>Пример.</b> 1026.27. В перечне источник не заполнен.</p>
+      <div class="src">
+        <p><span class="mark ok">Есть поле</span> Основной источник - ПИФ, регистр сведений <span class="obj">СтоимостьЧистыхАктивов</span>, ресурс «Стоимость пая». Период регистра - день, измерение - фонд.</p>
+        <p class="why">Расчетная цена пая считается при закрытии дня фонда и пишется в этот регистр вместе со СЧА. Для CRM берется последняя запись на нужную дату. Если тот же фонд ведется как портфель в ФИН, та же величина есть в регистре <span class="obj">РегистрРСА_СЧА</span>, ресурс «Стоимость пая». ДУ расчетную цену пая фонда не хранит.</p>
+      </div>
+    </article>
+
+    <article class="field" data-src="pif" data-kind="part">
+      <header><span class="num">8</span><h3>Активность</h3><span class="tag pif">ПИФ</span></header>
+      <p class="example"><b>Пример.</b> Активен. В перечне источник не заполнен.</p>
+      <div class="src">
+        <p><span class="mark part">Ближайшее поле</span> Справочник <span class="obj">ПИФ</span>, реквизит <span class="obj">Используется</span> (да/нет).</p>
+        <p class="why">Отдельного статуса «Активен / Не активен» нет. Признак «Используется» - рабочий переключатель карточки фонда. Для CRM: Истина - «Активен», Ложь - не показывать как действующий продукт. Пометка удаления справочника сюда не подходит: это техническое удаление, а не бизнес-статус.</p>
+      </div>
+    </article>
+
+    <article class="field" data-src="pif" data-kind="ok">
+      <header><span class="num">9</span><h3>Минимальная сумма входа</h3><span class="tag pif">ПИФ</span></header>
+      <p class="example"><b>Пример.</b> 1000. Источник в перечне: «Мин. сумма покупки паев после формирования фонда».</p>
+      <div class="src">
+        <p><span class="mark ok">Есть поле</span> Регистр <span class="obj">ПараметрыПИФ</span>, параметр <span class="obj">МинСуммаПокупкиПаевПослеФормирования</span>.</p>
+        <p class="why">Подпись параметра совпадает с колонкой источника в перечне. Рядом лежат две другие суммы, их не смешивать: «при формировании фонда» и «после формирования - вторично». Та же сумма продублирована на договоре контрагента в ПИФ, но мастер - параметр фонда.</p>
+      </div>
+    </article>
+
+    <article class="field" data-src="pif gap" data-kind="gap">
+      <header><span class="num">10</span><h3>Описание</h3><span class="tag gap">Нет готового поля</span></header>
+      <p class="example"><b>Пример.</b> В перечне стоит прочерк, источник не указан.</p>
+      <div class="src">
+        <p><span class="mark no">Маркетингового описания нет</span> Ближе всего комментарий и «Доп. информация» на справочнике <span class="obj">ПИФ</span>.</p>
+        <p class="why">Это служебные заметки учетной карточки, а не текст для клиента. Среди параметров фонда отдельного «Описания» нет. Текст для CRM нужно заводить в самой CRM либо договориться, что в это поле пишется комментарий фонда.</p>
+      </div>
+    </article>
+  </div>
+
+  <h2 id="clients">Клиент <span class="count">юридическое лицо</span></h2>
+  <p class="lead">Мастер клиентских реквизитов - справочник «Контрагенты». Он есть в ДУ, в ФИН и в ДО. Для институционального клиента основной источник - та база, где ведется его договор: ДУ или ФИН. ДО хранит свою карточку контрагента для документов, она может расходиться с учетом.</p>
+  <div class="grid">
+
+    <article class="field" data-src="du fin do" data-kind="part">
+      <header><span class="num">0</span><h3>ID</h3><span class="tag du">ДУ</span><span class="tag fin">ФИН</span></header>
+      <p class="example"><b>Пример.</b> В перечне пусто. Нужен устойчивый идентификатор компании.</p>
+      <div class="src">
+        <p><span class="mark part">Несколько ключей</span> Справочник <span class="obj">Контрагенты</span>: уникальный идентификатор ссылки, код элемента, реквизит «Внешний код». В ФИН дополнительно SUN ID.</p>
+        <p class="why">Отдельного «CRM ID» в 1С нет. Для связи систем надежнее всего уникальный идентификатор ссылки контрагента в той базе, которая выбрана мастером. Для человека и для сверки дублей ключ - ИНН. Код и внешний код менять могут, ссылку - нет. Карточка ДО - другой справочник, ее идентификатор с ДУ и ФИН не совпадает.</p>
+      </div>
+    </article>
+
+    <article class="field" data-src="du fin do" data-kind="ok">
+      <header><span class="num">1</span><h3>Название компании</h3><span class="tag du">ДУ</span><span class="tag fin">ФИН</span><span class="tag do">ДО</span></header>
+      <p class="example"><b>Пример.</b> В перечне пусто.</p>
+      <div class="src">
+        <p><span class="mark ok">Есть поле</span> <span class="obj">Контрагенты.Наименование</span> и <span class="obj">НаименованиеПолное</span> в ДУ и ФИН. В ДО полное имя - «Полное наименование».</p>
+        <p class="why">В список CRM логично класть полное наименование, а если оно пустое - краткое. ДУ и ФИН заполняют его по учетной карточке клиента. ДО может содержать то же юридическое лицо, но карточка заводится для документов и не обязана совпадать с учетом.</p>
+      </div>
+    </article>
+
+    <article class="field" data-src="du fin do" data-kind="ok">
+      <header><span class="num">2</span><h3>Реквизиты: ИНН</h3><span class="tag du">ДУ</span><span class="tag fin">ФИН</span><span class="tag do">ДО</span></header>
+      <p class="example"><b>Пример.</b> ИНН компании.</p>
+      <div class="src">
+        <p><span class="mark ok">Есть поле</span> <span class="obj">Контрагенты.ИНН</span> во всех трех базах. Рядом в ДУ и ФИН есть КПП и ОГРН, в ДО - КПП и «ОГРН, ОГРНИП, рег. номер».</p>
+        <p class="why">Перечень в этом пункте называет именно ИНН. Его и передавать. КПП и ОГРН имеет смысл отдать отдельными реквизитами, если CRM сможет их принять: в карточке они уже есть, но в перечень одним полем «Реквизиты» не разложены.</p>
+      </div>
+    </article>
+
+    <article class="field" data-src="du fin gap" data-kind="gap">
+      <header><span class="num">3</span><h3>Статус клиента</h3><span class="tag gap">Нет готового поля</span></header>
+      <p class="example"><b>Пример.</b> Действующий или Потенциальный.</p>
+      <div class="src">
+        <p><span class="mark no">Статуса нет</span> Признак <span class="obj">КлиентДУ</span> на контрагенте и даты договора только подсказывают, что отношения уже есть.</p>
+        <p class="why">Учетные базы заводят контрагента, когда с ним работают, и не хранят воронку «потенциальный». «Действующий» можно вычислить: признак «Клиент ДУ» включен и есть договор или портфель без даты окончания в прошлом. «Потенциальный» из 1С не берется - такого клиента в ДУ, ФИН и ДО нет, пока не появилась карточка. Это поле CRM.</p>
+      </div>
+    </article>
+
+    <article class="field" data-src="du fin pif gap" data-kind="part">
+      <header><span class="num">4</span><h3>Тип клиента</h3><span class="tag du">ДУ</span><span class="tag fin">ФИН</span><span class="tag pif">ПИФ</span></header>
+      <p class="example"><b>Пример.</b> Корпоративный или Структурные фонды.</p>
+      <div class="src">
+        <p><span class="mark part">Другой классификатор</span> На договоре ДУ и на портфеле ФИН есть <span class="obj">ТипКлиентаДУ</span>: юрлица, НПФ, страховые, собственные средства, ИИС и другие. В ПИФ тип фонда - открытый, закрытый и так далее.</p>
+        <p class="why">Пары «Корпоративный / Структурные фонды» в 1С нет. «Структурные фонды» - это продуктовая линейка закрытых фондов, а не тип контрагента. Для CRM тип можно собрать правилом: есть действующий договор ДУ юрлица - корпоративный; есть лицевой счет или владение закрытым фондом нужной категории - структурные фонды. Один клиент может попасть в оба типа.</p>
+      </div>
+    </article>
+
+    <article class="field" data-src="gap" data-kind="gap">
+      <header><span class="num">5</span><h3>Глобальный бренд</h3><span class="tag gap">Нет готового поля</span></header>
+      <p class="example"><b>Пример.</b> В перечне прочерк.</p>
+      <div class="src">
+        <p><span class="mark no">Поля нет</span> Ближайшее в ДУ и ФИН - <span class="obj">ГоловнаяОрганизация</span> контрагента.</p>
+        <p class="why">Головная организация - это другое юрлицо группы, а не маркетинговый бренд. Ни в ДУ, ни в ФИН, ни в ДО справочника брендов нет. Поле остается в CRM.</p>
+      </div>
+    </article>
+
+    <article class="field" data-src="du fin do" data-kind="ok">
+      <header><span class="num">6</span><h3>Адрес</h3><span class="tag du">ДУ</span><span class="tag fin">ФИН</span><span class="tag do">ДО</span></header>
+      <p class="example"><b>Пример.</b> Адрес регистрации юридического лица.</p>
+      <div class="src">
+        <p><span class="mark ok">Есть поле</span> Не на договоре. Табличная часть <span class="obj">Контрагенты.КонтактнаяИнформация</span>, вид «Юридический адрес» (<span class="obj">ЮрАдресКонтрагента</span> в ДУ и ФИН). Текст - в «Представлении». Договор только указывает клиента: <span class="obj">ДоговорДУ.Клиент</span> или <span class="obj">Портфели.Клиент</span>.</p>
+        <p class="why">У справочников «Договоры ДУ», «Портфели» и «Договоры контрагентов» нет реквизита адреса и нет своей контактной информации. На внутреннем документе в ДО есть строка «Адрес УК» - это адрес управляющей компании, не адрес регистрации клиента. Юридический адрес один на контрагента, даже если договоров несколько. Фактический и почтовый адреса - другие виды, в это поле их не подставлять.</p>
+      </div>
+    </article>
+
+    <article class="field" data-src="du fin do" data-kind="ok">
+      <header><span class="num">7</span><h3>Телефон</h3><span class="tag du">ДУ</span><span class="tag fin">ФИН</span><span class="tag do">ДО</span></header>
+      <p class="example"><b>Пример.</b> Контактный телефон компании.</p>
+      <div class="src">
+        <p><span class="mark ok">Есть поле</span> Та же табличная часть, колонка <span class="obj">НомерТелефона</span> у строки с типом «Телефон».</p>
+        <p class="why">Телефонов может быть несколько (общий, бухгалтерия, факс). В CRM как телефон компании берется строка с видом «телефон» / «телефон организации». Телефон контактного лица - это уже поле «Связанные контакты», его сюда не подмешивать.</p>
+      </div>
+    </article>
+
+    <article class="field" data-src="du fin do" data-kind="ok">
+      <header><span class="num">8</span><h3>Email</h3><span class="tag du">ДУ</span><span class="tag fin">ФИН</span><span class="tag do">ДО</span></header>
+      <p class="example"><b>Пример.</b> Официальный email компании.</p>
+      <div class="src">
+        <p><span class="mark ok">Есть поле</span> Табличная часть контактной информации, колонка <span class="obj">АдресЭП</span>.</p>
+        <p class="why">Официальный адрес - строка с видом электронной почты организации. Адреса сотрудников лежат на контактных лицах. Если вид не заполнен, отличить официальный ящик от личного по одному реквизиту нельзя.</p>
+      </div>
+    </article>
+
+    <article class="field" data-src="du fin do" data-kind="part">
+      <header><span class="num">9</span><h3>Сайт</h3><span class="tag du">ДУ</span><span class="tag fin">ФИН</span><span class="tag do">ДО</span></header>
+      <p class="example"><b>Пример.</b> Сайт компании.</p>
+      <div class="src">
+        <p><span class="mark part">Та же контактная информация</span> Строка контактной информации с видом для сайта. Текст - в «Представлении».</p>
+        <p class="why">Отдельного реквизита «Сайт» на контрагенте нет. Сайт хранится, только если в базе заведен соответствующий вид контактной информации и его заполнили. Пустая строка означает, что сайт в 1С не вели, а не то, что его нет у компании.</p>
+      </div>
+    </article>
+
+    <article class="field" data-src="du fin do" data-kind="ok">
+      <header><span class="num">10</span><h3>Связанные контакты</h3><span class="tag du">ДУ</span><span class="tag fin">ФИН</span><span class="tag do">ДО</span></header>
+      <p class="example"><b>Пример.</b> ФИО, телефон, почта.</p>
+      <div class="src">
+        <p><span class="mark ok">Есть поле</span> Справочник <span class="obj">КонтактныеЛица</span>, подчинен контрагенту. ФИО - фамилия, имя, отчество. Телефон и почта - табличная часть «Контактная информация» самого контактного лица.</p>
+        <p class="why">Это люди компании, а не сама компания. В ДО контактные лица тоже есть и привязаны к внутренним документам как «контактное лицо» и «подписал от контрагента». Табличная часть «Представители» на контрагенте ДУ - про полномочия и долю владения, для телефона и почты она не подходит.</p>
+      </div>
+    </article>
+  </div>
+
+  <h2 id="inst">Продукты клиента <span class="count">институциональные</span></h2>
+  <p class="lead">В одном списке CRM смешаны два продукта. Договор ДУ со стратегией и портфелем читается из ДУ или из ФИН. Пай, лицевой счет и цена пая читаются из ПИФ. Ниже у поля написано, к какому продукту оно относится.</p>
+  <div class="grid">
+
+    <article class="field" data-src="du fin pif" data-kind="ok">
+      <header><span class="num">1</span><h3>Название</h3><span class="tag du">ДУ</span><span class="tag fin">ФИН</span><span class="tag pif">ПИФ</span></header>
+      <div class="src">
+        <p><span class="mark ok">Есть поле</span> Для договора: наименование справочника <span class="obj">ДоговорДУ</span> либо <span class="obj">Портфели</span>. Для фонда: наименование справочника <span class="obj">ПИФ</span>.</p>
+        <p class="why">В ДУ на договоре есть еще строка «Наименование портфеля», в ФИН - такой же реквизит портфеля и «Полное наименование». В название продукта CRM кладется то имя, под которым договор или фонд узнают в учете. Смешивать имя стратегии и имя договора не стоит: стратегия - отдельное поле.</p>
+      </div>
+    </article>
+
+    <article class="field" data-src="du fin pif" data-kind="part">
+      <header><span class="num">2</span><h3>Категория продукта</h3><span class="tag pif">ПИФ</span><span class="tag du">ДУ</span><span class="tag fin">ФИН</span></header>
+      <div class="src">
+        <p><span class="mark part">Собирается из типа</span> Фонд: параметры <span class="obj">ТипФонда</span> и <span class="obj">КатегорияФонда</span> (акции, облигации, рыночные инструменты, недвижимость и другие). Договор ДУ: <span class="obj">ТипКлиентаДУ</span> и «Вид услуг по договору».</p>
+        <p class="why">Готовой подписи «институциональный продукт» нет. Для паевого продукта категория берется из категории фонда. Для договора ДУ категория - это тип клиента и вид услуг. Правило, какая пара дает именно «институциональный», нужно зафиксировать с бизнесом: сам классификатор 1С шире.</p>
+      </div>
+    </article>
+
+    <article class="field" data-src="pif du fin" data-kind="ok">
+      <header><span class="num">3</span><h3>Краткое наименование</h3><span class="tag pif">ПИФ</span><span class="tag du">ДУ</span><span class="tag fin">ФИН</span></header>
+      <div class="src">
+        <p><span class="mark ok">Есть поле</span> ПИФ: параметр <span class="obj">КраткоеНаименованиеФонда</span>. ДУ и ФИН: наименование договора или портфеля, если полное имя лежит в «Полном наименовании».</p>
+        <p class="why">У фонда краткое имя заведено отдельным параметром, его и брать. У договора отдельного «краткого» реквизита нет: короткое имя - это наименование карточки, длинное - реквизит «Полное наименование».</p>
+      </div>
+    </article>
+
+    <article class="field" data-src="du fin pif" data-kind="ok">
+      <header><span class="num">4</span><h3>Номер договора ДУ</h3><span class="tag du">ДУ</span><span class="tag fin">ФИН</span></header>
+      <div class="src">
+        <p><span class="mark ok">Есть поле</span> Код справочника <span class="obj">ДоговорДУ</span> (ДУ) или код справочника <span class="obj">Портфели</span> (ФИН). На лицевом счете в ПИФ номер продублирован строкой <span class="obj">НомерДоговораДУ</span>.</p>
+        <p class="why">Отдельного реквизита «Номер» на карточке договора ДУ нет: номер элемента - это его код. В ФИН учетный аналог договора - портфель, номер - его код. Строка на лицевом счете в ПИФ удобна, чтобы связать пай с договором, но мастер номера - карточка в ДУ или ФИН. Регистрационный номер в ДО может отличаться: это номер учета документов, а не номер договора ДУ.</p>
+      </div>
+    </article>
+
+    <article class="field" data-src="du fin" data-kind="ok">
+      <header><span class="num">5</span><h3>Название стратегии</h3><span class="tag du">ДУ</span><span class="tag fin">ФИН</span></header>
+      <div class="src">
+        <p><span class="mark ok">Есть поле</span> Регистр <span class="obj">ИнвестиционныеПрофили</span>, ресурс «Стратегия». Пишет его документ «Инвестиционный профиль».</p>
+        <p class="why">Пул стратегией не является. В коде наименование пула «Розничное ДУ» отличает розничный договор. Название стратегии берется из среза регистра инвестиционных профилей по портфелю (ФИН) или по договору ДУ. Реквизит стратегии на самом пуле для CRM не используется.</p>
+      </div>
+    </article>
+
+    <article class="field" data-src="du fin" data-kind="part">
+      <header><span class="num">6</span><h3>Дата приобретения</h3><span class="tag du">ДУ</span><span class="tag fin">ФИН</span></header>
+      <div class="src">
+        <p><span class="mark part">Ближайшее поле</span> <span class="obj">ДатаВводаСредствВДУ</span> («Дата ввода средств в ДУ») на договоре ДУ и на портфеле ФИН.</p>
+        <p class="why">Это дата, когда средства клиента впервые попали в управление, а не дата подписания договора. Если реквизит пуст, дату можно взять из первого документа ввода денег или ценных бумаг по этому договору. Дату заключения в это поле ставить не стоит: она вынесена в карточку договора отдельно.</p>
+      </div>
+    </article>
+
+    <article class="field" data-src="pif" data-kind="ok">
+      <header><span class="num">7</span><h3>Номер лицевого счета</h3><span class="tag pif">ПИФ</span></header>
+      <div class="src">
+        <p><span class="mark ok">Есть поле</span> Справочник <span class="obj">ЛицевыеСчетаПайщиков</span>, подчинен фонду. Номер - код счета. Пайщик - контрагент. Рядом дата открытия и дата закрытия.</p>
+        <p class="why">Реестр лицевых счетов ведется в ПИФ. В ФИН на портфеле есть «Код для лицевого счета» - это числовой код учетной карточки, а не номер счета у регистратора. Для поля CRM нужен код лицевого счета из ПИФ. Закрытый счет (заполнена дата закрытия) в действующие не отдавать.</p>
+      </div>
+    </article>
+
+    <article class="field" data-src="du fin do" data-kind="part">
+      <header><span class="num">8</span><h3>Дата начала действия</h3><span class="tag do">ДО</span><span class="tag du">ДУ</span><span class="tag fin">ФИН</span></header>
+      <div class="src">
+        <p><span class="mark part">Две разные даты</span> В ДО у внутреннего документа есть <span class="obj">ДатаНачалаДействия</span>. В ДУ и ФИН отдельного поля нет: <span class="obj">ДатаНачала</span> подписана как «Дата заключения».</p>
+        <p class="why">Если бизнес хочет юридическое начало действия, источник - ДО. Если готов принять дату заключения договора как старт, источник - ДУ или ФИН. Это разные события, их лучше не склеивать молча.</p>
+      </div>
+    </article>
+
+    <article class="field" data-src="du fin" data-kind="ok">
+      <header><span class="num">9</span><h3>Срок действия</h3><span class="tag du">ДУ</span><span class="tag fin">ФИН</span></header>
+      <div class="src">
+        <p><span class="mark ok">Есть поле</span> <span class="obj">СрокДействия</span> - число лет. Рядом дата <span class="obj">ДействуетДо</span> в ДУ и <span class="obj">ДатаОкончания</span> / «Плановая дата окончания» в ФИН.</p>
+        <p class="why">В перечень срок попал отдельной строкой от даты окончания. Готовое число лет лежит в «Сроке действия». Если в CRM ждут дату, а не число лет, ее дает «Действует до» или дата окончания. Пролонгация в ДУ - отдельный флажок, срок из-за нее сам не пересчитывается.</p>
+      </div>
+    </article>
+
+    <article class="field" data-src="pif fin" data-kind="ok">
+      <header><span class="num">10</span><h3>Дата расчета цены пая</h3><span class="tag pif">ПИФ</span><span class="tag fin">ФИН</span></header>
+      <div class="src">
+        <p><span class="mark ok">Есть поле</span> Период последней записи регистра <span class="obj">СтоимостьЧистыхАктивов</span> (ПИФ) или <span class="obj">РегистрРСА_СЧА</span> (ФИН).</p>
+        <p class="why">Отдельного реквизита «дата расчета» нет: дата - это день, на который записаны стоимость пая и СЧА. В CRM отдается период той же записи, из которой взята цена. В ПИФ у записи есть еще «Дата время согласования» - это момент согласования, а не расчетная дата.</p>
+      </div>
+    </article>
+
+    <article class="field" data-src="du fin pif" data-kind="ok">
+      <header><span class="num">11</span><h3>Комиссия MF, %</h3><span class="tag du">ДУ</span><span class="tag fin">ФИН</span><span class="tag pif">ПИФ</span></header>
+      <div class="src">
+        <p><span class="mark ok">Есть поле</span> Документ <span class="obj">НастройкиВознаграждения</span> по договору (ДУ) или по портфелю (ФИН). В табличной части «Вознаграждения» строка по виду вознаграждения УК, колонка «Величина вознаграждения». Для фонда в ПИФ - параметр <span class="obj">ВеличинаВознагражденияУК</span>.</p>
+        <p class="why">Management fee в учете называется вознаграждением управляющей компании, отдельной подписи MF нет. Брать нужно ставку из действующей настройки, а не начисленную сумму. Способ начисления в той же строке показывает, это процент или другая величина: перед выводом в CRM это стоит проверить.</p>
+      </div>
+    </article>
+
+    <article class="field" data-src="du fin pif" data-kind="ok">
+      <header><span class="num">12</span><h3>Комиссия SF, %</h3><span class="tag du">ДУ</span><span class="tag fin">ФИН</span><span class="tag pif">ПИФ</span></header>
+      <div class="src">
+        <p><span class="mark ok">Есть поле</span> Тот же документ «Настройки вознаграждения», реквизит шапки <span class="obj">ВеличинаВознагражденияЗаУспех</span>. Для фонда в ПИФ - параметр «Величина вознаграждения за успех».</p>
+        <p class="why">Success fee в учете - вознаграждение за успех. Ставка лежит в шапке настройки, а не в строке обычного вознаграждения УК. Рядом есть ставка порогового уровня доходности: это hurdle, в процент SF ее не подставлять. Начисленная сумма за успех считается отдельно и в это поле не идет.</p>
+      </div>
+    </article>
+
+    <article class="field" data-src="gap du fin" data-kind="gap">
+      <header><span class="num">13</span><h3>Доходность, сумма</h3><span class="tag gap">Нет готового поля</span></header>
+      <div class="src">
+        <p><span class="mark no">Суммы доходности нет</span> Регистр <span class="obj">ДоходностьПортфеля</span> хранит только проценты.</p>
+        <p class="why">Доходность в деньгах пришлось бы считать: изменение стоимости активов минус вводы и плюс выводы. Готовой суммы «заработал столько-то» ни ДУ, ни ФИН, ни ПИФ не хранят. В CRM это либо расчет, либо поле остается пустым, пока формулу не согласуют.</p>
+      </div>
+    </article>
+
+    <article class="field" data-src="du fin" data-kind="ok">
+      <header><span class="num">14</span><h3>Доходность, %</h3><span class="tag du">ДУ</span><span class="tag fin">ФИН</span></header>
+      <div class="src">
+        <p><span class="mark ok">Есть поле</span> Регистр сведений <span class="obj">ДоходностьПортфеля</span>. В ДУ измерение - договор ДУ, в ФИН - портфель. Ресурсы: «Доходность с начала текущего года» и «Доходность за предшествующие 12 месяцев». Период - квартал.</p>
+        <p class="why">Это готовые проценты по портфелю, а не доходность пая фонда. Какой из двух показателей класть в CRM, нужно выбрать: с начала года или за 12 месяцев. Доходности «с даты приобретения» в регистре нет.</p>
+      </div>
+    </article>
+
+    <article class="field" data-src="du fin" data-kind="ok">
+      <header><span class="num">15</span><h3>Список операций</h3><span class="tag du">ДУ</span><span class="tag fin">ФИН</span></header>
+      <div class="src">
+        <p><span class="mark ok">Список документов</span> Документы, в которых заполнен договор ДУ или портфель. Опорные виды: ввод и вывод ценных бумаг, поступление и списание с расчетного счета, сделки.</p>
+        <p class="why">Одной таблицей «операции клиента» учет не обходится: операции - это документы по договору. Для CRM собирается лента документов этого договора или портфеля: дата, вид, сумма. В ПИФ по паям свои документы (заявки, выдача, погашение), они про фонд, а не про договор ДУ.</p>
+      </div>
+    </article>
+
+    <article class="field" data-src="du fin" data-kind="ok">
+      <header><span class="num">16</span><h3>Структура портфеля</h3><span class="tag du">ДУ</span><span class="tag fin">ФИН</span></header>
+      <div class="src">
+        <p><span class="mark ok">Есть регистр</span> Регистр накопления <span class="obj">СтоимостьАктивовУправленческий</span>. Измерения: договор ДУ (в ФИН - портфель), актив, валюта. Ресурсы: количество и сумма.</p>
+        <p class="why">Состав на дату - остатки этого регистра, сгруппированные по активу. Доля считается от суммы остатка. Это управленческая стоимость, не бухгалтерская оценка каждой бумаги по отдельной методике. Для паевого фонда структура активов фонда - другой контур, ПИФ, и к портфелю одного клиента ее прикладывать не нужно.</p>
+      </div>
+    </article>
+
+    <article class="field" data-src="pif du fin" data-kind="part">
+      <header><span class="num">17</span><h3>Связанный договор</h3><span class="tag pif">ПИФ</span><span class="tag du">ДУ</span><span class="tag fin">ФИН</span></header>
+      <div class="src">
+        <p><span class="mark part">Несколько связей</span> Лицевой счет ПИФ хранит <span class="obj">НомерДоговораДУ</span> и «Дату договора ДУ». В ФИН у портфеля есть «Мастер портфель». Договор контрагента ссылается на договор ДУ. На договоре ДУ есть цессия.</p>
+        <p class="why">Поле в перечне не уточняет, какой договор связан. Самая прямая связь продукта-пая с договором ДУ - номер и дата на лицевом счете. Мастер-портфель связывает портфели между собой внутри ФИН. Пока бизнес не выберет один смысл, в CRM лучше отдавать номер договора ДУ с лицевого счета, а остальные связи не подмешивать.</p>
+      </div>
+    </article>
+
+    <article class="field" data-src="pif" data-kind="ok">
+      <header><span class="num">18</span><h3>Дата формирования</h3><span class="tag pif">ПИФ</span></header>
+      <div class="src">
+        <p><span class="mark ok">Есть поле</span> Параметр фонда <span class="obj">ДатаНачалаФормирования</span>, тот же, что в общем списке продуктов.</p>
+        <p class="why">Для паевого продукта это дата формирования фонда. Для чистого договора ДУ такой даты нет: у договора есть дата заключения и дата ввода средств. Если продукт - договор без фонда, поле оставлять пустым, а не копировать дату договора.</p>
+      </div>
+    </article>
+
+    <article class="field" data-src="du fin pif" data-kind="ok">
+      <header><span class="num">19</span><h3>Состояние портфеля</h3><span class="tag du">ДУ</span><span class="tag fin">ФИН</span><span class="tag pif">ПИФ</span></header>
+      <p class="example"><b>Смысл по соседней группе.</b> Для структурных фондов в перечне написано «AUM на последнюю дату». Здесь та же величина.</p>
+      <div class="src">
+        <p><span class="mark ok">Есть поле</span> Договор ДУ: сумма остатка <span class="obj">СтоимостьАктивовУправленческий</span> на последнюю дату. ФИН: ресурс «СЧА» или «СЧА (УУ)» регистра <span class="obj">РегистрРСА_СЧА</span>. Фонд целиком: ресурс «СЧА» регистра <span class="obj">СтоимостьЧистыхАктивов</span>.</p>
+        <p class="why">Состояние портфеля клиента - это его активы под договором, а не СЧА всего фонда. СЧА фонда показывает размер фонда и подходит, только если продукт CRM - сам фонд. Для институционального договора основной источник - ДУ или ФИН. Дату состояния брать из периода той же записи.</p>
+      </div>
+    </article>
+
+    <article class="field" data-src="do du fin" data-kind="part">
+      <header><span class="num">20</span><h3>Ответственный</h3><span class="tag do">ДО</span><span class="tag du">ДУ</span><span class="tag fin">ФИН</span></header>
+      <div class="src">
+        <p><span class="mark part">На договоре пользователя нет</span> В ДО у внутреннего документа есть <span class="obj">Ответственный</span> - пользователь. В ДУ и ФИН на контрагенте есть «Менеджер», но это ссылка на контрагента, не на пользователя. На договоре ДУ и на портфеле ответственного нет.</p>
+        <p class="why">Если в CRM нужен сотрудник, который ведет договор как документ, источник - ДО. Менеджер с карточки клиента - другой смысл и другой тип данных. Подменять одно другим нельзя.</p>
+      </div>
+    </article>
+  </div>
+
+  <h2 id="contracts">Договоры клиента</h2>
+  <p class="lead">Юридический документ, файлы и срок действия - ДО, справочник «Внутренние документы» и подчиненные ему «Файлы». Учетная карточка того же договора - ДУ («Договоры ДУ») или ФИН («Портфели»). Номер и даты в этих базах могут не совпасть.</p>
+  <div class="grid">
+
+    <article class="field" data-src="do du fin" data-kind="ok">
+      <header><span class="num">1</span><h3>Название</h3><span class="tag do">ДО</span><span class="tag du">ДУ</span><span class="tag fin">ФИН</span></header>
+      <div class="src">
+        <p><span class="mark ok">Есть поле</span> ДО: <span class="obj">ВнутренниеДокументы.Заголовок</span> («Наименование»). ДУ: наименование договора ДУ. ФИН: наименование портфеля.</p>
+        <p class="why">Для карточки договора в CRM основной заголовок - наименование внутреннего документа: так документ назван в юридическом архиве. Учетное имя договора может быть короче и служебнее. Если документа в ДО еще нет, временно берется наименование из ДУ или ФИН.</p>
+      </div>
+    </article>
+
+    <article class="field" data-src="do du fin" data-kind="part">
+      <header><span class="num">2</span><h3>Номер договора</h3><span class="tag du">ДУ</span><span class="tag fin">ФИН</span><span class="tag do">ДО</span></header>
+      <div class="src">
+        <p><span class="mark part">Два номера</span> Учетный номер - код <span class="obj">ДоговорДУ</span> или код портфеля, плюс «Номер договора» на справочнике «Договоры контрагентов». Юридический номер регистрации - <span class="obj">РегистрационныйНомер</span> внутреннего документа.</p>
+        <p class="why">На бумаге договора номер часто совпадает с кодом учетной карточки, а в ДО документ получает свой регистрационный номер. В поле CRM нужен номер, который написан на договоре: сначала код договора ДУ или портфеля и номер из «Договоров контрагентов». Регистрационный номер ДО отдавать отдельно, если CRM хранит ссылку на архив.</p>
+      </div>
+    </article>
+
+    <article class="field" data-src="do du fin" data-kind="part">
+      <header><span class="num">3</span><h3>Тип</h3><span class="tag do">ДО</span><span class="tag du">ДУ</span><span class="tag fin">ФИН</span></header>
+      <div class="src">
+        <p><span class="mark part">Вид, а не один список</span> ДО: <span class="obj">ВидДокумента</span> (справочник «Виды внутренних документов»). ДУ: «Вид услуг по договору» и тип клиента. Договоры контрагентов: «Вид договора» и «Роль договора».</p>
+        <p class="why">Тип в CRM, скорее всего, ждут как вид юридического документа (договор ДУ, допсоглашение, правила фонда). Это вид внутреннего документа в ДО. Учетный вид услуг отвечает на другой вопрос - что именно оказывает управляющий. Их стоит развести, а не писать в одно поле подряд.</p>
+      </div>
+    </article>
+
+    <article class="field" data-src="do du fin" data-kind="part">
+      <header><span class="num">4</span><h3>Статус</h3><span class="tag do">ДО</span><span class="tag du">ДУ</span><span class="tag fin">ФИН</span></header>
+      <div class="src">
+        <p><span class="mark part">Набор признаков</span> ДО: «Не действует», «Подписан утвержден», «Бессрочный». ДУ: блокировка, дата приостановки, дата расторжения. ФИН: «Не продлевается», дата окончания, для ИИС - статус счета.</p>
+        <p class="why">Одного списка статусов «действует / закрыт / на согласовании» нет. Для CRM статус можно собрать правилом. Документ ДО с «Не действует» или договор с заполненной датой окончания в прошлом - не действующий. Пустая дата окончания и отсутствие блокировки - действующий. Промежуточные статусы согласования есть в ДО (подпись, утверждение), в учетной карточке их нет.</p>
+      </div>
+    </article>
+
+    <article class="field" data-src="du fin do" data-kind="ok">
+      <header><span class="num">5</span><h3>Заказчик (УК)</h3><span class="tag du">ДУ</span><span class="tag fin">ФИН</span></header>
+      <div class="src">
+        <p><span class="mark ok">Есть поле</span> <span class="obj">УправляющаяКомпания</span> на договоре ДУ и на портфеле ФИН. Тип - контрагент. В ДО ближайшее - реквизит «Организация».</p>
+        <p class="why">УК в учете указана явно на каждом договоре и портфеле, потому что в базе может быть больше одной компании. Организация в ДО - наша сторона документа, обычно та же УК, но справочник другой. Для подписи «заказчик (УК)» основной источник - управляющая компания договора.</p>
+      </div>
+    </article>
+
+    <article class="field" data-src="du fin do" data-kind="ok">
+      <header><span class="num">6</span><h3>Контрагент</h3><span class="tag du">ДУ</span><span class="tag fin">ФИН</span><span class="tag do">ДО</span></header>
+      <div class="src">
+        <p><span class="mark ok">Есть поле</span> ДУ: <span class="obj">ДоговорДУ.Клиент</span>. ФИН: <span class="obj">Портфели.Клиент</span>. ДО: <span class="obj">ВнутренниеДокументы.Контрагент</span>.</p>
+        <p class="why">Клиент договора в учете и контрагент документа в ДО должны быть одним лицом, но карточки разные. Связывать их по ИНН. В CRM контрагента договора лучше брать из ДУ или ФИН, а карточку ДО использовать, чтобы найти файлы.</p>
+      </div>
+    </article>
+
+    <article class="field" data-src="du fin do" data-kind="ok">
+      <header><span class="num">7</span><h3>Дата заключения</h3><span class="tag du">ДУ</span><span class="tag fin">ФИН</span><span class="tag do">ДО</span></header>
+      <div class="src">
+        <p><span class="mark ok">Есть поле</span> ДУ и ФИН: <span class="obj">ДатаНачала</span>, подпись «Дата заключения». ДО: <span class="obj">ДатаПодписания</span>.</p>
+        <p class="why">Учетная дата заключения уже подписана так, как называется поле CRM. Дата подписания в ДО - когда документ подписали в архиве, она может отличаться на дни. Основной источник для этого поля - ДУ или ФИН. Дату регистрации документа в ДО сюда не ставить.</p>
+      </div>
+    </article>
+
+    <article class="field" data-src="do" data-kind="ok">
+      <header><span class="num">8</span><h3>Дата начала действия</h3><span class="tag do">ДО</span></header>
+      <div class="src">
+        <p><span class="mark ok">Есть поле</span> <span class="obj">ВнутренниеДокументы.ДатаНачалаДействия</span>.</p>
+        <p class="why">Именно это поле так и называется. В учетной карточке договора отдельной даты начала действия нет, там «Дата начала» уже занята датой заключения. Для договора источник один - ДО. Если внутреннего документа нет, поле нечем заполнить из ДУ и ФИН без подмены смысла.</p>
+      </div>
+    </article>
+
+    <article class="field" data-src="do du fin" data-kind="ok">
+      <header><span class="num">9</span><h3>Дата окончания действия</h3><span class="tag do">ДО</span><span class="tag du">ДУ</span><span class="tag fin">ФИН</span></header>
+      <div class="src">
+        <p><span class="mark ok">Есть поле</span> ДО: <span class="obj">ДатаОкончанияДействия</span>. ДУ: <span class="obj">ДатаОкончания</span> и «Действует до». ФИН: <span class="obj">ДатаОкончания</span> и «Плановая дата окончания».</p>
+        <p class="why">Юридический конец срока - дата окончания действия в ДО. Учетная дата окончания может быть заполнена раньше, если договор закрыли в учете. Для карточки договора в CRM основная - ДО, а если документа нет - дата окончания из ДУ или ФИН. Флажок «Бессрочный» в ДО означает, что даты окончания может не быть осознанно.</p>
+      </div>
+    </article>
+
+    <article class="field" data-src="do" data-kind="ok">
+      <header><span class="num">10</span><h3>Файл договора</h3><span class="tag do">ДО</span></header>
+      <div class="src">
+        <p><span class="mark ok">Есть поле</span> Справочник <span class="obj">Файлы</span>. Владелец файла - внутренний документ. Имя файла - наименование, содержимое - текущая версия.</p>
+        <p class="why">Архив скан-копий и подлинников ведется в ДО, не в учетных карточках. У портфеля в ФИН есть присоединенные файлы, но это вложения учетного объекта, а не юридический архив. Файл договора - файл внутреннего документа с видом «договор». Если к документу прикреплено несколько файлов, договор отличают по виду документа и по имени файла.</p>
+      </div>
+    </article>
+
+    <article class="field" data-src="do" data-kind="part">
+      <header><span class="num">11</span><h3>Файл приложений</h3><span class="tag do">ДО</span></header>
+      <div class="src">
+        <p><span class="mark part">Те же файлы, отдельного слота нет</span> Остальные файлы того же внутреннего документа либо связанные документы. На карточке есть число <span class="obj">КоличествоПриложений</span> и «Листов в приложениях» - это количество листов, не файлы.</p>
+        <p class="why">ДО не делит вложения на два жестких реквизита «договор» и «приложения». Все файлы висят на документе. Приложения для CRM - все файлы документа, кроме основного файла договора, плюс дочерние внутренние документы (допсоглашения), если их заводят отдельно. Счетчик листов в файл не превращается.</p>
+      </div>
+    </article>
+
+    <article class="field" data-src="do du fin" data-kind="ok">
+      <header><span class="num">12</span><h3>Комментарий</h3><span class="tag do">ДО</span><span class="tag du">ДУ</span><span class="tag fin">ФИН</span></header>
+      <div class="src">
+        <p><span class="mark ok">Есть поле</span> <span class="obj">Комментарий</span> на внутреннем документе, на договоре ДУ, на портфеле и на договоре контрагента. В ДО есть еще «Содержание».</p>
+        <p class="why">Комментарии в трех базах пишут разные люди и про разное. Для карточки договора в CRM логичен комментарий внутреннего документа. Содержание в ДО - текст предмета документа, его можно отдать отдельно, в комментарий его лучше не склеивать.</p>
+      </div>
+    </article>
+
+    <article class="field" data-src="do" data-kind="ok">
+      <header><span class="num">13</span><h3>Ответственный</h3><span class="tag do">ДО</span></header>
+      <div class="src">
+        <p><span class="mark ok">Есть поле</span> <span class="obj">ВнутренниеДокументы.Ответственный</span>, справочник «Пользователи». Рядом «Подготовил» и «Подписал».</p>
+        <p class="why">Ответственный за документ в архиве - это пользователь ДО. На договоре ДУ и на портфеле такого реквизита нет. Если документ в ДО не заведен, ответственного из учета взять неоткуда. «Подготовил» - автор проекта, его в ответственные подставлять только если ответственный пуст и бизнес на это согласится.</p>
+      </div>
+    </article>
+  </div>
+
+  <h2 id="struct">Продукты клиента <span class="count">структурные фонды</span></h2>
+  <p class="lead">По комментариям в перечне это закрытый фонд: название фонда, дата создания, AUM, комиссия в фонде. Основной источник - ПИФ. ФИН дополняет, если тот же фонд ведется портфелем. ДУ эту карточку не закрывает.</p>
+  <div class="grid">
+
+    <article class="field" data-src="pif" data-kind="ok">
+      <header><span class="num">1</span><h3>Название</h3><span class="tag pif">ПИФ</span></header>
+      <p class="example"><b>Комментарий в перечне.</b> Прочерк. По смыслу группы - имя фонда.</p>
+      <div class="src">
+        <p><span class="mark ok">Есть поле</span> Справочник <span class="obj">ПИФ</span>, наименование. Отбор: тип фонда «Закрытый».</p>
+        <p class="why">Структурный фонд в учете - карточка фонда с типом «Закрытый паевой инвестиционный фонд». Отдельного признака «структурный» нет, закрытый тип - необходимый фильтр, категорию фонда бизнес должен сузить списком.</p>
+      </div>
+    </article>
+
+    <article class="field" data-src="pif" data-kind="part">
+      <header><span class="num">2</span><h3>Категория продукта</h3><span class="tag pif">ПИФ</span></header>
+      <p class="example"><b>Пример.</b> ЗПИФ Структурные фонды.</p>
+      <div class="src">
+        <p><span class="mark part">Подписи один в один нет</span> Параметры <span class="obj">ТипФонда</span> = закрытый и <span class="obj">КатегорияФонда</span>.</p>
+        <p class="why">«ЗПИФ» собирается из типа «Закрытый паевой инвестиционный фонд». Слов «Структурные фонды» в перечислении категорий нет: там недвижимость, комбинированный, рыночные инструменты, кредитный и другие. Категорию CRM либо фиксируют константой для отобранного списка фондов, либо показывают категорию фонда из ПИФ как есть.</p>
+      </div>
+    </article>
+
+    <article class="field" data-src="pif" data-kind="ok">
+      <header><span class="num">3</span><h3>Краткое наименование</h3><span class="tag pif">ПИФ</span></header>
+      <p class="example"><b>Комментарий.</b> Наименование фонда.</p>
+      <div class="src">
+        <p><span class="mark ok">Есть поле</span> Параметр <span class="obj">КраткоеНаименованиеФонда</span>. Если он пуст - наименование справочника фонда.</p>
+        <p class="why">Комментарий перечня прямо говорит «наименование фонда». Короткое имя для витрины - параметр «Краткое наименование фонда», оно для этого и заведено. Полное имя в это поле не класть.</p>
+      </div>
+    </article>
+
+    <article class="field" data-src="pif" data-kind="ok">
+      <header><span class="num">4</span><h3>Дата приобретения</h3><span class="tag pif">ПИФ</span></header>
+      <p class="example"><b>Комментарий.</b> Дата создания ЗПИФ.</p>
+      <div class="src">
+        <p><span class="mark ok">Есть поле</span> Параметр <span class="obj">ДатаНачалаФормирования</span>.</p>
+        <p class="why">В этой группе бизнес сам расшифровал поле как дату создания фонда, а не как дату покупки клиентом. Поэтому источник - дата начала формирования, а не дата открытия лицевого счета и не дата ввода средств в ДУ. Дата открытия лицевого счета пригодится, только если позже решат показывать вход конкретного клиента.</p>
+      </div>
+    </article>
+
+    <article class="field" data-src="gap pif fin" data-kind="gap">
+      <header><span class="num">5</span><h3>Доходность, сумма</h3><span class="tag gap">Нет готового поля</span></header>
+      <p class="example"><b>Комментарий.</b> Доходность в деньгах.</p>
+      <div class="src">
+        <p><span class="mark no">Суммы нет</span> Есть история СЧА и цены пая в <span class="obj">СтоимостьЧистыхАктивов</span>, но не сумма дохода.</p>
+        <p class="why">Прирост в деньгах можно посчитать из изменения СЧА только с оговорками: вводы и выводы имущества меняют СЧА и доходом не являются. Готового ресурса «доходность в деньгах» нет ни в ПИФ, ни в ФИН. Пока формулу не согласуют, поле из 1С не заполняется.</p>
+      </div>
+    </article>
+
+    <article class="field" data-src="pif fin" data-kind="part">
+      <header><span class="num">6</span><h3>Доходность, %</h3><span class="tag pif">ПИФ</span><span class="tag fin">ФИН</span></header>
+      <p class="example"><b>Комментарий.</b> Доходность в процентах.</p>
+      <div class="src">
+        <p><span class="mark part">Считается или берется с портфеля</span> История «Стоимость пая» в ПИФ. Если фонд ведется портфелем в ФИН - регистр <span class="obj">ДоходностьПортфеля</span>.</p>
+        <p class="why">У фонда нет регистра «доходность фонда» с готовым процентом. Процент по паю считается из цены пая на две даты. Если в ФИН на этот фонд заведен портфель, там уже лежат процент с начала года и процент за 12 месяцев - их можно отдать без своего расчета. Какой горизонт нужен CRM, в перечне не сказано.</p>
+      </div>
+    </article>
+
+    <article class="field" data-src="do pif" data-kind="ok">
+      <header><span class="num">7</span><h3>Связанные документы</h3><span class="tag do">ДО</span><span class="tag pif">ПИФ</span></header>
+      <div class="src">
+        <p><span class="mark ok">Есть связь</span> ДО: внутренние документы с реквизитами <span class="obj">ВТБ_ИК_Фонд</span>, «Номер ПДУ», «Дата ПДУ». Файлы этих документов - справочник «Файлы». ПИФ: правила фонда как значение параметров фонда.</p>
+        <p class="why">Правила доверительного управления и протоколы по фонду лежат в документообороте: на внутреннем документе есть ссылка на фонд и номер ПДУ. Это и есть связанные документы для CRM. Учетные «Правила фонда» в ПИФ - настройки расчета, их клиенту как комплект документов не отдавать. Файлы брать из ДО.</p>
+      </div>
+    </article>
+
+    <article class="field" data-src="pif fin" data-kind="ok">
+      <header><span class="num">8</span><h3>Состояние портфеля</h3><span class="tag pif">ПИФ</span><span class="tag fin">ФИН</span></header>
+      <p class="example"><b>Комментарий.</b> AUM на последнюю дату.</p>
+      <div class="src">
+        <p><span class="mark ok">Есть поле</span> ПИФ: ресурс «СЧА» регистра <span class="obj">СтоимостьЧистыхАктивов</span> на последнюю дату по фонду. ФИН: «СЧА» регистра <span class="obj">РегистрРСА_СЧА</span>, если фонд отражен портфелем.</p>
+        <p class="why">Для фонда AUM - это СЧА, а не сумма активов одного клиента. Берется последняя дневная запись. Стоимость пая в это поле не кладется: она в общем списке продуктов отдельно. СЧА всего фонда и доля конкретного пайщика - разные числа.</p>
+      </div>
+    </article>
+
+    <article class="field" data-src="pif fin" data-kind="ok">
+      <header><span class="num">9</span><h3>Комиссия MF</h3><span class="tag pif">ПИФ</span><span class="tag fin">ФИН</span></header>
+      <p class="example"><b>Комментарий.</b> Комиссия в фонде.</p>
+      <div class="src">
+        <p><span class="mark ok">Есть поле</span> Параметр фонда <span class="obj">ВеличинаВознагражденияУК</span>. Если фонд ведется в ФИН - строка вознаграждения УК в документе <span class="obj">НастройкиВознаграждения</span>.</p>
+        <p class="why">Комментарий говорит «комиссия в фонде», значит ставка фонда, а не ставка договора конкретного клиента. Мастер для фонда - параметр ПИФ. Вознаграждение спецдепозитария и вознаграждение за успех - другие параметры, в MF их не включать.</p>
+      </div>
+    </article>
+  </div>
+
+  <h2 id="gaps">Чего в этих базах нет готовым полем</h2>
+  <div class="note">
+    <p>Эти пункты перечня нельзя просто прочитать из реквизита. Их либо заводят в CRM, либо считают по отдельной формуле.</p>
+    <p><b>Описание продукта.</b> Маркетингового текста нет, есть только комментарий карточки фонда.</p>
+    <p><b>Статус «потенциальный».</b> Учет не хранит клиентов до появления договора. «Действующий» можно вывести из признака «Клиент ДУ» и незакрытого договора.</p>
+    <p><b>Тип «Корпоративный / Структурные фонды».</b> Такого значения нет. Есть тип клиента ДУ и тип фонда. Тип для CRM собирается правилом.</p>
+    <p><b>Глобальный бренд.</b> Нет справочника брендов. Головная организация - другое юрлицо, не бренд.</p>
+    <p><b>Доходность суммой.</b> И по договору, и по фонду хранится процент или цена пая и СЧА. Сумма дохода отдельным ресурсом не пишется.</p>
+    <p><b>Подпись «ЗПИФ Структурные фонды».</b> Есть тип «Закрытый» и категория фонда. Слово «структурные» в классификаторе не найдено.</p>
+  </div>
+
+  <footer class="colophon">
+    Составлено по перечню атрибутов CRM и по составу конфигураций ПИФ, ДУ (редакция 1.5), ФИН (ДУ, редакция 2) и ДО. Где поле есть в двух редакциях ДУ, договор читается только из той базы, в которой он ведется.
+  </footer>
+</div>
+
+<script>
+(function () {
+  var articles = Array.prototype.slice.call(document.querySelectorAll("article.field"));
+  var stats = document.getElementById("stats");
+  var kinds = { ok: 0, part: 0, gap: 0 };
+  articles.forEach(function (el) {
+    var k = el.getAttribute("data-kind");
+    if (kinds[k] !== undefined) kinds[k] += 1;
+  });
+  stats.innerHTML =
+    "<div class='stat'><b>" + articles.length + "</b><span>полей в перечне</span></div>" +
+    "<div class='stat'><b>" + kinds.ok + "</b><span>читаются из 1С как есть</span></div>" +
+    "<div class='stat'><b>" + kinds.part + "</b><span>близкое поле, смысл другой</span></div>" +
+    "<div class='stat'><b>" + kinds.gap + "</b><span>готового поля нет</span></div>";
+
+  var q = document.getElementById("q");
+  var filter = "all";
+  function apply() {
+    var text = (q.value || "").toLowerCase().trim();
+    var shown = 0;
+    articles.forEach(function (el) {
+      var src = el.getAttribute("data-src") || "";
+      var blob = el.innerText.toLowerCase();
+      var okSrc = filter === "all" || src.indexOf(filter) !== -1 || (filter === "gap" && el.getAttribute("data-kind") === "gap");
+      var okText = !text || blob.indexOf(text) !== -1;
+      var vis = okSrc && okText;
+      el.style.display = vis ? "" : "none";
+      if (vis) shown += 1;
+    });
+    document.querySelectorAll("h2").forEach(function (h) {
+      var grid = h.nextElementSibling;
+      while (grid && !grid.classList.contains("grid") && !grid.classList.contains("note")) {
+        grid = grid.nextElementSibling;
+      }
+      if (!grid || !grid.classList.contains("grid")) return;
+      var any = Array.prototype.some.call(grid.querySelectorAll("article.field"), function (el) {
+        return el.style.display !== "none";
+      });
+      h.style.display = any ? "" : "none";
+      var lead = h.nextElementSibling;
+      if (lead && lead.classList.contains("lead")) lead.style.display = any ? "" : "none";
+    });
+  }
+  q.addEventListener("input", apply);
+  document.getElementById("chips").addEventListener("click", function (e) {
+    var btn = e.target.closest("button");
+    if (!btn) return;
+    filter = btn.getAttribute("data-f");
+    Array.prototype.forEach.call(btn.parentNode.children, function (b) { b.classList.remove("on"); });
+    btn.classList.add("on");
+    apply();
+  });
+})();
+</script>
+</body>
+</html>
