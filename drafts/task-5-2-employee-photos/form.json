@@ -1,0 +1,202 @@
+{
+  "title": "Карточка сотрудника",
+  "properties": {
+    "autoTitle": true,
+    "width": 92
+  },
+  "events": {
+    "OnCreateAtServer": "ПриСозданииНаСервере",
+    "OnReadAtServer": "ПриЧтенииНаСервере",
+    "BeforeWriteAtServer": "ПередЗаписьюНаСервере",
+    "AfterWriteAtServer": "ПослеЗаписиНаСервере"
+  },
+  "elements": [
+    {
+      "group": "vertical",
+      "name": "ГруппаКарточка",
+      "showTitle": false,
+      "representation": "none",
+      "backColor": "#F6F1E8",
+      "children": [
+        {
+          "group": "alwaysHorizontal",
+          "name": "ГруппаШапка",
+          "showTitle": false,
+          "representation": "none",
+          "children": [
+            {
+              "group": "vertical",
+              "name": "ГруппаФото",
+              "title": "Портрет",
+              "showTitle": true,
+              "representation": "normal",
+              "backColor": "#EFE4D4",
+              "titleTextColor": "#243E4A",
+              "titleFont": { "faceName": "Segoe UI", "height": 11, "bold": true, "kind": "Absolute", "scale": 100 },
+              "children": [
+                {
+                  "picField": "Фотография",
+                  "path": "АдресФотографии",
+                  "title": "Портрет",
+                  "titleLocation": "none",
+                  "pictureSize": "Proportionally",
+                  "hyperlink": true,
+                  "width": 26,
+                  "height": 14,
+                  "horizontalStretch": false,
+                  "border": { "width": 1, "style": "Single" },
+                  "borderColor": "#C4A484",
+                  "nonselectedPictureText": "Здесь будет портрет. Нажмите, чтобы выбрать снимок.",
+                  "tooltip": "Нажмите на портрет, чтобы выбрать файл",
+                  "events": { "Click": "ФотографияНажатие" }
+                },
+                {
+                  "label": "ДекорацияПодсказкаФото",
+                  "title": "Нажмите на портрет или кнопку «Выбрать снимок».",
+                  "textColor": "#6B6258",
+                  "maxWidth": 28,
+                  "autoMaxWidth": false,
+                  "font": { "faceName": "Segoe UI", "height": 9, "kind": "Absolute", "scale": 100 }
+                }
+              ]
+            },
+            {
+              "group": "vertical",
+              "name": "ГруппаРеквизиты",
+              "showTitle": false,
+              "representation": "none",
+              "united": false,
+              "horizontalStretch": true,
+              "children": [
+                {
+                  "label": "ДекорацияЗаголовок",
+                  "title": "Карточка сотрудника",
+                  "textColor": "#243E4A",
+                  "font": { "faceName": "Segoe UI", "height": 16, "bold": true, "kind": "Absolute", "scale": 100 }
+                },
+                {
+                  "label": "ДекорацияПояснение",
+                  "title": "Имя видно коллегам в списках. Снимок можно оставить в карточке или положить в папку на сервере.",
+                  "textColor": "#6B6258",
+                  "maxWidth": 52,
+                  "autoMaxWidth": false,
+                  "font": { "faceName": "Segoe UI", "height": 9, "kind": "Absolute", "scale": 100 }
+                },
+                {
+                  "input": "Наименование",
+                  "path": "Объект.Description",
+                  "title": "Имя и фамилия",
+                  "titleLocation": "top",
+                  "titleTextColor": "#243E4A",
+                  "titleFont": { "faceName": "Segoe UI", "height": 10, "bold": true, "kind": "Absolute", "scale": 100 },
+                  "font": { "faceName": "Segoe UI", "height": 12, "kind": "Absolute", "scale": 100 },
+                  "backColor": "#FFFCF7",
+                  "inputHint": "Например, Иванова Мария",
+                  "autoMaxWidth": false,
+                  "maxWidth": 46
+                },
+                {
+                  "input": "Код",
+                  "path": "Объект.Code",
+                  "title": "Табельный номер",
+                  "titleLocation": "top",
+                  "titleTextColor": "#6B6258",
+                  "backColor": "#FFFCF7",
+                  "width": 16,
+                  "horizontalStretch": false
+                },
+                {
+                  "radio": "СпособХраненияФотографии",
+                  "path": "Объект.СпособХраненияФотографии",
+                  "title": "Где лежит снимок",
+                  "titleLocation": "top",
+                  "titleTextColor": "#243E4A",
+                  "titleFont": { "faceName": "Segoe UI", "height": 10, "bold": true, "kind": "Absolute", "scale": 100 },
+                  "textColor": "#243E4A",
+                  "radioButtonType": "Tumbler",
+                  "columnsCount": 2,
+                  "choiceList": [
+                    { "value": "Enum.СпособыХраненияФотографий.EnumValue.ВИнформационнойБазе", "presentation": "В карточке" },
+                    { "value": "Enum.СпособыХраненияФотографий.EnumValue.ВКаталогеНаДиске", "presentation": "В папке" }
+                  ],
+                  "events": { "OnChange": "СпособХраненияФотографииПриИзменении" }
+                },
+                {
+                  "group": "vertical",
+                  "name": "ГруппаФайл",
+                  "title": "Папка со снимками",
+                  "showTitle": true,
+                  "representation": "weak",
+                  "backColor": "#E4EEF0",
+                  "titleTextColor": "#243E4A",
+                  "titleFont": { "faceName": "Segoe UI", "height": 10, "bold": true, "kind": "Absolute", "scale": 100 },
+                  "children": [
+                    {
+                      "input": "ИмяФайлаФотографии",
+                      "path": "Объект.ИмяФайлаФотографии",
+                      "readOnly": true,
+                      "title": "Имя файла",
+                      "titleLocation": "top",
+                      "titleTextColor": "#243E4A",
+                      "backColor": "#F7FBFC"
+                    },
+                    {
+                      "labelField": "КаталогФотографий",
+                      "path": "КаталогФотографий",
+                      "title": "Папка на сервере",
+                      "titleLocation": "top",
+                      "titleTextColor": "#243E4A",
+                      "textColor": "#243E4A"
+                    },
+                    {
+                      "label": "ДекорацияКаталогНеЗадан",
+                      "title": "Папка еще не указана. Откройте константу «Каталог фотографий сотрудников» и впишите путь на сервере.",
+                      "visible": false,
+                      "textColor": "#8A3E24",
+                      "backColor": "#F8E4D4",
+                      "maxWidth": 48,
+                      "autoMaxWidth": false,
+                      "font": { "faceName": "Segoe UI", "height": 9, "bold": true, "kind": "Absolute", "scale": 100 }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "autoCmdBar": "ФормаКоманднаяПанель",
+      "children": [
+        { "button": "ЗагрузитьФотографию", "command": "ЗагрузитьФотографию", "representation": "PictureAndText" },
+        { "button": "ОчиститьФотографию", "command": "ОчиститьФотографию", "representation": "PictureAndText" }
+      ]
+    }
+  ],
+  "attributes": [
+    { "name": "Объект", "type": "CatalogObject.Сотрудники", "main": true },
+    { "name": "АдресФотографии", "type": "string", "title": "Адрес фотографии" },
+    { "name": "КаталогФотографий", "type": "string(255)", "title": "Папка на сервере" },
+    { "name": "ФотографияИзменена", "type": "boolean" },
+    { "name": "ИмяФайлаПриЧтении", "type": "string(255)" },
+    { "name": "РасширениеФайла", "type": "string(10)" },
+    { "name": "ИсходныйСпособХранения", "type": "EnumRef.СпособыХраненияФотографий" }
+  ],
+  "commands": [
+    {
+      "name": "ЗагрузитьФотографию",
+      "action": "ЗагрузитьФотографию",
+      "title": "Выбрать снимок",
+      "picture": "StdPicture.OpenFile",
+      "tooltip": "Открыть файл портрета"
+    },
+    {
+      "name": "ОчиститьФотографию",
+      "action": "ОчиститьФотографию",
+      "title": "Убрать снимок",
+      "picture": "StdPicture.Delete",
+      "tooltip": "Удалить портрет из карточки"
+    }
+  ]
+}
