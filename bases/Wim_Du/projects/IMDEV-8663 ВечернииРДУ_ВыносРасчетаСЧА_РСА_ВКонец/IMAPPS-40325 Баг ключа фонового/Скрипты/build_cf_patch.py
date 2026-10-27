@@ -20,10 +20,16 @@ MANAGER = os.path.join(OBJ, "Ext", "ManagerModule.bsl")
 FORM_MODULE = os.path.join(OBJ, "Forms", "РегламентныйПериод", "Ext", "Form", "Module.bsl")
 
 
+# Журнал примененных правок: (метка правки, найти, заменить на). По нему build_vendor_txt.py строит
+# инструкцию для вендора, поэтому CF и инструкция собираются из одних и тех же замен.
+APPLIED = []
+
+
 def replace_once(text, old, new, where):
     count = text.count(old)
     if count != 1:
         raise RuntimeError("%s: якорь найден %d раз:\n%s" % (where, count, old))
+    APPLIED.append((where, old, new))
     return text.replace(old, new)
 
 
@@ -126,7 +132,7 @@ def patch_manager(text):
         '\t\t\n'
         '\tКонецФункции\n'
         '\t\n'
-        '\t// Описание: Возвращает дату-время расчета СЧА/РСА',
+        '\t// Описание: Возвращает дату-время расчета СЧА/РСА для указанного регламентного периода.\n',
         '\t\tВозврат Порции;\n'
         '\t\t\n'
         '\tКонецФункции\n'
@@ -197,7 +203,7 @@ def patch_manager(text):
         '\t\t\n'
         '\tКонецФункции\n'
         '\t\n'
-        '\t// Описание: Возвращает дату-время расчета СЧА/РСА',
+        '\t// Описание: Возвращает дату-время расчета СЧА/РСА для указанного регламентного периода.\n',
         "служебные функции порций запуска")
     return text
 
