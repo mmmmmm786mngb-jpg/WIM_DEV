@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """Прогон ДиагностикаОперацийФО на dev ФО через внешнее соединение (проверка перед передачей на Т-1).
 
-    python run_diag_dev.py [ДнейИстории]   - по умолчанию 30; лог пишется в Тестирование/reports
+    python run_diag_dev.py [ДнейИстории] [deep] - по умолчанию 30; deep - глубокий анализ (9.6); лог в Тестирование/reports
 """
 import datetime
 import os
@@ -23,7 +23,8 @@ def main():
     fo = base.stage4.connect("wim_fo")
     obj = fo.ВнешниеОбработки.Создать(EPF, False)
     started = time.time()
-    text = obj.СобратьЛог(days)
+    deep = len(sys.argv) > 2 and sys.argv[2] == "deep"
+    text = obj.СобратьЛог(days, False, deep)
     out = os.path.join(PROJECT, "Тестирование", "reports",
                        "diag_dev_%s.txt" % datetime.datetime.now().strftime("%Y%m%d_%H%M"))
     os.makedirs(os.path.dirname(out), exist_ok=True)
