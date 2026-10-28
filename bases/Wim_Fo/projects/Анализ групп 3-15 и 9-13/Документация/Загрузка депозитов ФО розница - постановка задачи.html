@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>Загрузка депозитов ФО розница - постановка задачи</title>
+</head>
+<body style="margin:0;padding:24px;background:#ffffff;">
+<div style="max-width:1200px;font-family:Calibri,'Segoe UI',Arial,sans-serif;font-size:11pt;line-height:1.45;color:#1f1f1f;">
+<p style="margin:0 0 4px 0;font-size:16pt;font-weight:bold;color:#1f3864;">Постановка задачи: не загружать депозиты в базе ФО Розница</p>
+
+<p style="margin:0 0 14px 0;color:#595959;">От: аналитик. Кому: разработка. Дата: 28.10.2026. Объект: внешняя обработка внЗагрузкаДепозитовИзВнешнихИсточников, модуль объекта. Базы: Аванкор Фронт-офис (обычный) и Аванкор Фронт-офис Розница.</p>
+
+<p style="margin:20px 0 6px 0;font-size:13pt;font-weight:bold;color:#1f3864;">1. Причина</p>
+
+<p style="margin:0 0 8px 0;">Каждый день в 05:00 команда ФоновоеВыполнение этой обработки запускается в двух базах Фронт-офиса. Она вызывает веб-сервисы getDeposits баз Аванкор ДУ и Аванкор ПИФ и читает депозиты Calipso, затем обновляет фактическую позицию и отправляет письмо.</p>
+
+<p style="margin:0 0 8px 0;">В ФО Розница загрузка занимает 10-20 минут и не обновляет ни одного портфеля: у розничных клиентов нет депозитов из ДУ, ПИФ и Calipso. Вместо результата уходит письмо со списком из 110-123 ненайденных депозитов. Одновременно обычный ФО выполняет ту же загрузку, поэтому ДУ и ПИФ в 05:00 считают ответ дважды.</p>
+
+<p style="margin:0 0 8px 0;">Бизнес подтвердил: депозитов у розничных клиентов нет и не планируется. Загрузку в рознице нужно прекратить. В обычном ФО загрузка нужна и должна работать как сейчас.</p>
+
+<p style="margin:20px 0 6px 0;font-size:13pt;font-weight:bold;color:#1f3864;">2. Что реализовать</p>
+
+<p style="margin:0 0 8px 0;">В модуле объекта обработки добавить функцию ЭтоБазаРозницы. Она возвращает Истина, если константа ЗаголовокСистемы текущей базы содержит текст RETAIL. Так же розница отличается от обычной базы в расчете рыночной стоимости в МО (обработка внРасчетMVиWAP). Проверено: в ФО Розница константа содержит RETAIL, в обычном ФО не содержит.</p>
+
+<p style="margin:0 0 8px 0;">По этому признаку выходить из загрузки до любого обращения к источникам:</p>
+
+<ul style="margin:0 0 10px 0;padding-left:22px;">
+<li style="margin:0 0 5px 0;">ВыполнитьКоманду, команда ФоновоеВыполнение. Выход в самом начале процедуры, до замера времени, до ЗаполнитьДепозиты, до ОбновитьФактическуюПозицию и до письма. В журнал регистрации пишется информационная запись "ЗагрузкаДепозитов": база розницы, загрузка депозитов не выполняется.</li>
+<li style="margin:0 0 5px 0;">ЗаполнитьДепозиты, ЗаполнитьДепозитыАванкор, ЗаполнитьДепозитыКалипсоМодуль. Это кнопки формы "из всех источников", "из Аванкора" и "из Calipso". Выход первой строкой процедуры, параметр Лог инициализировать пустым массивом там, где процедура его создает.</li>
+</ul>
+
+<p style="margin:0 0 8px 0;">Выходить нужно именно из ВыполнитьКоманду, а не только из ЗаполнитьДепозиты. Иначе команда продолжит работу с пустыми списками и вызовет ОбновитьФактическуюПозицию. Та в конце вызывает ПолучитьДепозитыФО_КУдалению и удаляет записи регистра ВТБ_ФактическаяПозицияДепозитов на дату запроса, которых нет в пустом списке источников.</p>
+
+<p style="margin:0 0 8px 0;">Процедуры ЗаполнитьДепозитыДУ, ЗаполнитьДепозитыПИФ, ЗаполнитьДепозитыКалипсо и ОбновитьФактическуюПозицию не менять: снаружи формы и регламента они не вызываются. Расписание регламентного задания не отключать: в рознице задание остается, но команда сразу завершается. В обычном ФО ни одна ветка не меняется.</p>
+
+<p style="margin:20px 0 6px 0;font-size:13pt;font-weight:bold;color:#1f3864;">3. Приемка</p>
+
+<ul style="margin:0 0 10px 0;padding-left:22px;">
+<li style="margin:0 0 5px 0;">ФО Розница, запуск команды ФоновоеВыполнение: нет вызова getDeposits ДУ и ПИФ, нет чтения Calipso, нет записей и удалений в ВТБ_ФактическаяПозицияДепозитов, нет письма об обновлении депозитов. В журнале регистрации есть запись, что загрузка в базе розницы не выполняется. Время запуска - секунды, не 10-20 минут.</li>
+<li style="margin:0 0 5px 0;">ФО Розница, кнопки формы заполнения из всех источников, из Аванкора и из Calipso: источники не вызываются.</li>
+<li style="margin:0 0 5px 0;">Обычный ФО: загрузка в 05:00 и кнопки формы работают как до изменения, письмо и обновление позиции на месте.</li>
+</ul>
+
+<p style="margin:20px 0 6px 0;font-size:13pt;font-weight:bold;color:#1f3864;">Приложение. Код БЫЛО и СТАЛО</p>
+
+<p style="margin:0 0 8px 0;">Модуль объекта внЗагрузкаДепозитовИзВнешнихИсточников. <span style="background:#e2f0d9;color:#375623;padding:0 4px;">Зеленым</span> выделены добавляемые строки. Строки без выделения не меняются. Дальнейший текст каждой процедуры в таблице не показан: он остается как есть.</p>
+
+<p style="margin:14px 0 6px 0;font-weight:bold;">ВыполнитьКоманду</p>
+
+<table cellpadding="0" cellspacing="0" style="border-collapse:collapse;width:100%;border:1px solid #c9c9c9;margin:0 0 14px 0;table-layout:fixed;">
+<tr><td style="border:1px solid #c9c9c9;background:#d9e2f3;padding:5px 9px;font-weight:bold;vertical-align:top;width:50%;">БЫЛО</td><td style="border:1px solid #c9c9c9;background:#d9e2f3;padding:5px 9px;font-weight:bold;vertical-align:top;width:50%;">СТАЛО</td></tr>
+<tr><td style="font-family:Consolas,'Courier New',monospace;font-size:8.5pt;white-space:pre-wrap;overflow-wrap:anywhere;padding:1px 6px;border-right:1px solid #c9c9c9;vertical-align:top;">Процедура ВыполнитьКоманду(ИдентификаторКоманды, ПараметрыВыполненияКоманды) Экспорт</td><td style="font-family:Consolas,'Courier New',monospace;font-size:8.5pt;white-space:pre-wrap;overflow-wrap:anywhere;padding:1px 6px;vertical-align:top;">Процедура ВыполнитьКоманду(ИдентификаторКоманды, ПараметрыВыполненияКоманды) Экспорт</td></tr>
+<tr><td style="font-family:Consolas,'Courier New',monospace;font-size:8.5pt;padding:1px 6px;border-right:1px solid #c9c9c9;vertical-align:top;">&nbsp;</td><td style="font-family:Consolas,'Courier New',monospace;font-size:8.5pt;padding:1px 6px;vertical-align:top;">&nbsp;</td></tr>
+<tr><td style="font-family:Consolas,'Courier New',monospace;font-size:8.5pt;padding:1px 6px;border-right:1px solid #c9c9c9;background:#f7f7f7;vertical-align:top;">&nbsp;</td><td style="font-family:Consolas,'Courier New',monospace;font-size:8.5pt;white-space:pre-wrap;overflow-wrap:anywhere;padding:1px 6px;background:#e2f0d9;color:#375623;vertical-align:top;">    Если ИдентификаторКоманды = "ФоновоеВыполнение" И ЭтоБазаРозницы() Тогда</td></tr>
+<tr><td style="font-family:Consolas,'Courier New',monospace;font-size:8.5pt;padding:1px 6px;border-right:1px solid #c9c9c9;background:#f7f7f7;vertical-align:top;">&nbsp;</td><td style="font-family:Consolas,'Courier New',monospace;font-size:8.5pt;white-space:pre-wrap;overflow-wrap:anywhere;padding:1px 6px;background:#e2f0d9;color:#375623;vertical-align:top;">        ЗаписьЖурналаРегистрации("ЗагрузкаДепозитов", УровеньЖурналаРегистрации.Информация, , ,</td></tr>
+<tr><td style="font-family:Consolas,'Courier New',monospace;font-size:8.5pt;padding:1px 6px;border-right:1px solid #c9c9c9;background:#f7f7f7;vertical-align:top;">&nbsp;</td><td style="font-family:Consolas,'Courier New',monospace;font-size:8.5pt;white-space:pre-wrap;overflow-wrap:anywhere;padding:1px 6px;background:#e2f0d9;color:#375623;vertical-align:top;">            "База розницы: загрузка депозитов не выполняется");</td></tr>
+<tr><td style="font-family:Consolas,'Courier New',monospace;font-size:8.5pt;padding:1px 6px;border-right:1px solid #c9c9c9;background:#f7f7f7;vertical-align:top;">&nbsp;</td><td style="font-family:Consolas,'Courier New',monospace;font-size:8.5pt;white-space:pre-wrap;overflow-wrap:anywhere;padding:1px 6px;background:#e2f0d9;color:#375623;vertical-align:top;">        Возврат;</td></tr>
+<tr><td style="font-family:Consolas,'Courier New',monospace;font-size:8.5pt;padding:1px 6px;border-right:1px solid #c9c9c9;background:#f7f7f7;vertical-align:top;">&nbsp;</td><td style="font-family:Consolas,'Courier New',monospace;font-size:8.5pt;white-space:pre-wrap;overflow-wrap:anywhere;padding:1px 6px;background:#e2f0d9;color:#375623;vertical-align:top;">    КонецЕсли;</td></tr>
+<tr><td style="font-family:Consolas,'Courier New',monospace;font-size:8.5pt;padding:1px 6px;border-right:1px solid #c9c9c9;background:#f7f7f7;vertical-align:top;">&nbsp;</td><td style="font-family:Consolas,'Courier New',monospace;font-size:8.5pt;padding:1px 6px;background:#e2f0d9;vertical-align:top;">&nbsp;</td></tr>
+<tr><td style="font-family:Consolas,'Courier New',monospace;font-size:8.5pt;white-space:pre-wrap;overflow-wrap:anywhere;padding:1px 6px;border-right:1px solid #c9c9c9;vertical-align:top;">    Если ИдентификаторКоманды = "ФоновоеВыполнение" Тогда</td><td style="font-family:Consolas,'Courier New',monospace;font-size:8.5pt;white-space:pre-wrap;overflow-wrap:anywhere;padding:1px 6px;vertical-align:top;">    Если ИдентификаторКоманды = "ФоновоеВыполнение" Тогда</td></tr>
+<tr><td style="font-family:Consolas,'Courier New',monospace;font-size:8.5pt;white-space:pre-wrap;overflow-wrap:anywhere;padding:1px 6px;border-right:1px solid #c9c9c9;vertical-align:top;">        НачалоЗамера = ОценкаПроизводительности.НачатьЗамерВремени();</td><td style="font-family:Consolas,'Courier New',monospace;font-size:8.5pt;white-space:pre-wrap;overflow-wrap:anywhere;padding:1px 6px;vertical-align:top;">        НачалоЗамера = ОценкаПроизводительности.НачатьЗамерВремени();</td></tr>
+<tr><td style="font-family:Consolas,'Courier New',monospace;font-size:8.5pt;white-space:pre-wrap;overflow-wrap:anywhere;padding:1px 6px;border-right:1px solid #c9c9c9;vertical-align:top;">        ЗаполнитьДепозиты(Лог_Заполнение);</td><td style="font-family:Consolas,'Courier New',monospace;font-size:8.5pt;white-space:pre-wrap;overflow-wrap:anywhere;padding:1px 6px;vertical-align:top;">        ЗаполнитьДепозиты(Лог_Заполнение);</td></tr>
+<tr><td style="font-family:Consolas,'Courier New',monospace;font-size:8.5pt;white-space:pre-wrap;overflow-wrap:anywhere;padding:1px 6px;border-right:1px solid #c9c9c9;vertical-align:top;">        ОбновитьФактическуюПозицию(Лог);</td><td style="font-family:Consolas,'Courier New',monospace;font-size:8.5pt;white-space:pre-wrap;overflow-wrap:anywhere;padding:1px 6px;vertical-align:top;">        ОбновитьФактическуюПозицию(Лог);</td></tr>
+<tr><td style="font-family:Consolas,'Courier New',monospace;font-size:8.5pt;white-space:pre-wrap;overflow-wrap:anywhere;padding:1px 6px;border-right:1px solid #c9c9c9;vertical-align:top;">        // далее письмо и завершение замера без изменений</td><td style="font-family:Consolas,'Courier New',monospace;font-size:8.5pt;white-space:pre-wrap;overflow-wrap:anywhere;padding:1px 6px;vertical-align:top;">        // далее письмо и завершение замера без изменений</td></tr>
+</table>
+
+<p style="margin:14px 0 6px 0;font-weight:bold;">ЗаполнитьДепозиты</p>
+
+<table cellpadding="0" cellspacing="0" style="border-collapse:collapse;width:100%;border:1px solid #c9c9c9;margin:0 0 14px 0;table-layout:fixed;">
+<tr><td style="border:1px solid #c9c9c9;background:#d9e2f3;padding:5px 9px;font-weight:bold;vertical-align:top;width:50%;">БЫЛО</td><td style="border:1px solid #c9c9c9;background:#d9e2f3;padding:5px 9px;font-weight:bold;vertical-align:top;width:50%;">СТАЛО</td></tr>
+<tr><td style="font-family:Consolas,'Courier New',monospace;font-size:8.5pt;white-space:pre-wrap;overflow-wrap:anywhere;padding:1px 6px;border-right:1px solid #c9c9c9;vertical-align:top;">Процедура ЗаполнитьДепозиты(Лог) Экспорт</td><td style="font-family:Consolas,'Courier New',monospace;font-size:8.5pt;white-space:pre-wrap;overflow-wrap:anywhere;padding:1px 6px;vertical-align:top;">Процедура ЗаполнитьДепозиты(Лог) Экспорт</td></tr>
+<tr><td style="font-family:Consolas,'Courier New',monospace;font-size:8.5pt;padding:1px 6px;border-right:1px solid #c9c9c9;background:#f7f7f7;vertical-align:top;">&nbsp;</td><td style="font-family:Consolas,'Courier New',monospace;font-size:8.5pt;padding:1px 6px;background:#e2f0d9;vertical-align:top;">&nbsp;</td></tr>
+<tr><td style="font-family:Consolas,'Courier New',monospace;font-size:8.5pt;padding:1px 6px;border-right:1px solid #c9c9c9;background:#f7f7f7;vertical-align:top;">&nbsp;</td><td style="font-family:Consolas,'Courier New',monospace;font-size:8.5pt;white-space:pre-wrap;overflow-wrap:anywhere;padding:1px 6px;background:#e2f0d9;color:#375623;vertical-align:top;">    Если ЭтоБазаРозницы() Тогда</td></tr>
+<tr><td style="font-family:Consolas,'Courier New',monospace;font-size:8.5pt;padding:1px 6px;border-right:1px solid #c9c9c9;background:#f7f7f7;vertical-align:top;">&nbsp;</td><td style="font-family:Consolas,'Courier New',monospace;font-size:8.5pt;white-space:pre-wrap;overflow-wrap:anywhere;padding:1px 6px;background:#e2f0d9;color:#375623;vertical-align:top;">        Лог = Новый Массив;</td></tr>
+<tr><td style="font-family:Consolas,'Courier New',monospace;font-size:8.5pt;padding:1px 6px;border-right:1px solid #c9c9c9;background:#f7f7f7;vertical-align:top;">&nbsp;</td><td style="font-family:Consolas,'Courier New',monospace;font-size:8.5pt;white-space:pre-wrap;overflow-wrap:anywhere;padding:1px 6px;background:#e2f0d9;color:#375623;vertical-align:top;">        Возврат;</td></tr>
+<tr><td style="font-family:Consolas,'Courier New',monospace;font-size:8.5pt;padding:1px 6px;border-right:1px solid #c9c9c9;background:#f7f7f7;vertical-align:top;">&nbsp;</td><td style="font-family:Consolas,'Courier New',monospace;font-size:8.5pt;white-space:pre-wrap;overflow-wrap:anywhere;padding:1px 6px;background:#e2f0d9;color:#375623;vertical-align:top;">    КонецЕсли;</td></tr>
+<tr><td style="font-family:Consolas,'Courier New',monospace;font-size:8.5pt;padding:1px 6px;border-right:1px solid #c9c9c9;background:#f7f7f7;vertical-align:top;">&nbsp;</td><td style="font-family:Consolas,'Courier New',monospace;font-size:8.5pt;padding:1px 6px;background:#e2f0d9;vertical-align:top;">&nbsp;</td></tr>
+<tr><td style="font-family:Consolas,'Courier New',monospace;font-size:8.5pt;white-space:pre-wrap;overflow-wrap:anywhere;padding:1px 6px;border-right:1px solid #c9c9c9;vertical-align:top;">    НачалоЗамера = ОценкаПроизводительности.НачатьЗамерВремени();</td><td style="font-family:Consolas,'Courier New',monospace;font-size:8.5pt;white-space:pre-wrap;overflow-wrap:anywhere;padding:1px 6px;vertical-align:top;">    НачалоЗамера = ОценкаПроизводительности.НачатьЗамерВремени();</td></tr>
+<tr><td style="font-family:Consolas,'Courier New',monospace;font-size:8.5pt;white-space:pre-wrap;overflow-wrap:anywhere;padding:1px 6px;border-right:1px solid #c9c9c9;vertical-align:top;">    // далее ДУ, ПИФ и Calipso без изменений</td><td style="font-family:Consolas,'Courier New',monospace;font-size:8.5pt;white-space:pre-wrap;overflow-wrap:anywhere;padding:1px 6px;vertical-align:top;">    // далее ДУ, ПИФ и Calipso без изменений</td></tr>
+</table>
+
+<p style="margin:14px 0 6px 0;font-weight:bold;">ЗаполнитьДепозитыАванкор</p>
+
+<table cellpadding="0" cellspacing="0" style="border-collapse:collapse;width:100%;border:1px solid #c9c9c9;margin:0 0 14px 0;table-layout:fixed;">
+<tr><td style="border:1px solid #c9c9c9;background:#d9e2f3;padding:5px 9px;font-weight:bold;vertical-align:top;width:50%;">БЫЛО</td><td style="border:1px solid #c9c9c9;background:#d9e2f3;padding:5px 9px;font-weight:bold;vertical-align:top;width:50%;">СТАЛО</td></tr>
+<tr><td style="font-family:Consolas,'Courier New',monospace;font-size:8.5pt;white-space:pre-wrap;overflow-wrap:anywhere;padding:1px 6px;border-right:1px solid #c9c9c9;vertical-align:top;">Процедура ЗаполнитьДепозитыАванкор(Лог) Экспорт</td><td style="font-family:Consolas,'Courier New',monospace;font-size:8.5pt;white-space:pre-wrap;overflow-wrap:anywhere;padding:1px 6px;vertical-align:top;">Процедура ЗаполнитьДепозитыАванкор(Лог) Экспорт</td></tr>
+<tr><td style="font-family:Consolas,'Courier New',monospace;font-size:8.5pt;padding:1px 6px;border-right:1px solid #c9c9c9;background:#f7f7f7;vertical-align:top;">&nbsp;</td><td style="font-family:Consolas,'Courier New',monospace;font-size:8.5pt;padding:1px 6px;background:#e2f0d9;vertical-align:top;">&nbsp;</td></tr>
+<tr><td style="font-family:Consolas,'Courier New',monospace;font-size:8.5pt;padding:1px 6px;border-right:1px solid #c9c9c9;background:#f7f7f7;vertical-align:top;">&nbsp;</td><td style="font-family:Consolas,'Courier New',monospace;font-size:8.5pt;white-space:pre-wrap;overflow-wrap:anywhere;padding:1px 6px;background:#e2f0d9;color:#375623;vertical-align:top;">    Если ЭтоБазаРозницы() Тогда</td></tr>
+<tr><td style="font-family:Consolas,'Courier New',monospace;font-size:8.5pt;padding:1px 6px;border-right:1px solid #c9c9c9;background:#f7f7f7;vertical-align:top;">&nbsp;</td><td style="font-family:Consolas,'Courier New',monospace;font-size:8.5pt;white-space:pre-wrap;overflow-wrap:anywhere;padding:1px 6px;background:#e2f0d9;color:#375623;vertical-align:top;">        Лог = Новый Массив;</td></tr>
+<tr><td style="font-family:Consolas,'Courier New',monospace;font-size:8.5pt;padding:1px 6px;border-right:1px solid #c9c9c9;background:#f7f7f7;vertical-align:top;">&nbsp;</td><td style="font-family:Consolas,'Courier New',monospace;font-size:8.5pt;white-space:pre-wrap;overflow-wrap:anywhere;padding:1px 6px;background:#e2f0d9;color:#375623;vertical-align:top;">        Возврат;</td></tr>
+<tr><td style="font-family:Consolas,'Courier New',monospace;font-size:8.5pt;padding:1px 6px;border-right:1px solid #c9c9c9;background:#f7f7f7;vertical-align:top;">&nbsp;</td><td style="font-family:Consolas,'Courier New',monospace;font-size:8.5pt;white-space:pre-wrap;overflow-wrap:anywhere;padding:1px 6px;background:#e2f0d9;color:#375623;vertical-align:top;">    КонецЕсли;</td></tr>
+<tr><td style="font-family:Consolas,'Courier New',monospace;font-size:8.5pt;padding:1px 6px;border-right:1px solid #c9c9c9;background:#f7f7f7;vertical-align:top;">&nbsp;</td><td style="font-family:Consolas,'Courier New',monospace;font-size:8.5pt;padding:1px 6px;background:#e2f0d9;vertical-align:top;">&nbsp;</td></tr>
+<tr><td style="font-family:Consolas,'Courier New',monospace;font-size:8.5pt;white-space:pre-wrap;overflow-wrap:anywhere;padding:1px 6px;border-right:1px solid #c9c9c9;vertical-align:top;">    СопоставлениеИД.Очистить();</td><td style="font-family:Consolas,'Courier New',monospace;font-size:8.5pt;white-space:pre-wrap;overflow-wrap:anywhere;padding:1px 6px;vertical-align:top;">    СопоставлениеИД.Очистить();</td></tr>
+<tr><td style="font-family:Consolas,'Courier New',monospace;font-size:8.5pt;white-space:pre-wrap;overflow-wrap:anywhere;padding:1px 6px;border-right:1px solid #c9c9c9;vertical-align:top;">    // далее ДУ и ПИФ без изменений</td><td style="font-family:Consolas,'Courier New',monospace;font-size:8.5pt;white-space:pre-wrap;overflow-wrap:anywhere;padding:1px 6px;vertical-align:top;">    // далее ДУ и ПИФ без изменений</td></tr>
+</table>
+
+<p style="margin:14px 0 6px 0;font-weight:bold;">ЗаполнитьДепозитыКалипсоМодуль</p>
+
+<table cellpadding="0" cellspacing="0" style="border-collapse:collapse;width:100%;border:1px solid #c9c9c9;margin:0 0 14px 0;table-layout:fixed;">
+<tr><td style="border:1px solid #c9c9c9;background:#d9e2f3;padding:5px 9px;font-weight:bold;vertical-align:top;width:50%;">БЫЛО</td><td style="border:1px solid #c9c9c9;background:#d9e2f3;padding:5px 9px;font-weight:bold;vertical-align:top;width:50%;">СТАЛО</td></tr>
+<tr><td style="font-family:Consolas,'Courier New',monospace;font-size:8.5pt;white-space:pre-wrap;overflow-wrap:anywhere;padding:1px 6px;border-right:1px solid #c9c9c9;vertical-align:top;">Процедура ЗаполнитьДепозитыКалипсоМодуль(Лог) Экспорт</td><td style="font-family:Consolas,'Courier New',monospace;font-size:8.5pt;white-space:pre-wrap;overflow-wrap:anywhere;padding:1px 6px;vertical-align:top;">Процедура ЗаполнитьДепозитыКалипсоМодуль(Лог) Экспорт</td></tr>
+<tr><td style="font-family:Consolas,'Courier New',monospace;font-size:8.5pt;padding:1px 6px;border-right:1px solid #c9c9c9;background:#f7f7f7;vertical-align:top;">&nbsp;</td><td style="font-family:Consolas,'Courier New',monospace;font-size:8.5pt;padding:1px 6px;background:#e2f0d9;vertical-align:top;">&nbsp;</td></tr>
+<tr><td style="font-family:Consolas,'Courier New',monospace;font-size:8.5pt;padding:1px 6px;border-right:1px solid #c9c9c9;background:#f7f7f7;vertical-align:top;">&nbsp;</td><td style="font-family:Consolas,'Courier New',monospace;font-size:8.5pt;white-space:pre-wrap;overflow-wrap:anywhere;padding:1px 6px;background:#e2f0d9;color:#375623;vertical-align:top;">    Если ЭтоБазаРозницы() Тогда</td></tr>
+<tr><td style="font-family:Consolas,'Courier New',monospace;font-size:8.5pt;padding:1px 6px;border-right:1px solid #c9c9c9;background:#f7f7f7;vertical-align:top;">&nbsp;</td><td style="font-family:Consolas,'Courier New',monospace;font-size:8.5pt;white-space:pre-wrap;overflow-wrap:anywhere;padding:1px 6px;background:#e2f0d9;color:#375623;vertical-align:top;">        Возврат;</td></tr>
+<tr><td style="font-family:Consolas,'Courier New',monospace;font-size:8.5pt;padding:1px 6px;border-right:1px solid #c9c9c9;background:#f7f7f7;vertical-align:top;">&nbsp;</td><td style="font-family:Consolas,'Courier New',monospace;font-size:8.5pt;white-space:pre-wrap;overflow-wrap:anywhere;padding:1px 6px;background:#e2f0d9;color:#375623;vertical-align:top;">    КонецЕсли;</td></tr>
+<tr><td style="font-family:Consolas,'Courier New',monospace;font-size:8.5pt;padding:1px 6px;border-right:1px solid #c9c9c9;background:#f7f7f7;vertical-align:top;">&nbsp;</td><td style="font-family:Consolas,'Courier New',monospace;font-size:8.5pt;padding:1px 6px;background:#e2f0d9;vertical-align:top;">&nbsp;</td></tr>
+<tr><td style="font-family:Consolas,'Courier New',monospace;font-size:8.5pt;white-space:pre-wrap;overflow-wrap:anywhere;padding:1px 6px;border-right:1px solid #c9c9c9;vertical-align:top;">    ЗаполнитьДепозитыКалипсо(Лог);</td><td style="font-family:Consolas,'Courier New',monospace;font-size:8.5pt;white-space:pre-wrap;overflow-wrap:anywhere;padding:1px 6px;vertical-align:top;">    ЗаполнитьДепозитыКалипсо(Лог);</td></tr>
+</table>
+
+<p style="margin:14px 0 6px 0;font-weight:bold;">ЭтоБазаРозницы</p>
+
+<table cellpadding="0" cellspacing="0" style="border-collapse:collapse;width:100%;border:1px solid #c9c9c9;margin:0 0 14px 0;table-layout:fixed;">
+<tr><td style="border:1px solid #c9c9c9;background:#d9e2f3;padding:5px 9px;font-weight:bold;vertical-align:top;width:50%;">БЫЛО</td><td style="border:1px solid #c9c9c9;background:#d9e2f3;padding:5px 9px;font-weight:bold;vertical-align:top;width:50%;">СТАЛО</td></tr>
+<tr><td style="font-family:Consolas,'Courier New',monospace;font-size:8.5pt;white-space:pre-wrap;overflow-wrap:anywhere;padding:1px 6px;border-right:1px solid #c9c9c9;vertical-align:top;">Функции нет</td><td style="font-family:Consolas,'Courier New',monospace;font-size:8.5pt;white-space:pre-wrap;overflow-wrap:anywhere;padding:1px 6px;background:#e2f0d9;color:#375623;vertical-align:top;">// Описание: Возвращает Истина, если текущая база Фронт-офиса розничная.
+// Признак берется из константы ЗаголовокСистемы: в рознице в заголовке есть RETAIL.
+//
+// Возвращаемое значение:
+// Булево - Истина для базы розницы.
+//
+Функция ЭтоБазаРозницы()
+
+    Возврат СтрНайти(ВРег(Константы.ЗаголовокСистемы.Получить()), "RETAIL") &gt; 0;
+
+КонецФункции</td></tr>
+</table>
+
+</div>
+</body>
+</html>

@@ -1,0 +1,380 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ускорение выгрузки МО - ФО</title>
+<style>
+:root{--bg:#f6f6f3;--surface:#ffffff;--text:#1d1d1b;--muted:#5d5d58;--border:#dcdbd4;--accent:#2f5d8a;--head:#e6edf5;
+--code:#efeee9;--ok:#2e7d4f;--okbg:#e3f1e8;--warn:#9a5b00;--warnbg:#fbeed6;
+--del:#fbe3e1;--deltext:#8a1f1a;--add:#e2f3e6;--addtext:#1d5f33;--pad:#f2f1ec;--ln:#8d8c85}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--bg:#171716;--surface:#20201e;--text:#e8e7e2;--muted:#a6a59e;
+--border:#3a3a36;--accent:#8db4dc;--head:#263241;--code:#2b2b28;--ok:#7fcf9c;--okbg:#1f3327;--warn:#f0b860;--warnbg:#3a2e17;
+--del:#3d2321;--deltext:#f3b1ab;--add:#1f3526;--addtext:#9fdcb3;--pad:#262624;--ln:#77766f}}
+:root[data-theme="dark"]{--bg:#171716;--surface:#20201e;--text:#e8e7e2;--muted:#a6a59e;--border:#3a3a36;--accent:#8db4dc;--head:#263241;
+--code:#2b2b28;--ok:#7fcf9c;--okbg:#1f3327;--warn:#f0b860;--warnbg:#3a2e17;
+--del:#3d2321;--deltext:#f3b1ab;--add:#1f3526;--addtext:#9fdcb3;--pad:#262624;--ln:#77766f}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font:15px/1.55 "Segoe UI",system-ui,sans-serif}
+main{max-width:1280px;margin:0 auto;padding:28px 16px 64px}
+h1{font-size:25px;margin:0 0 6px}
+h2{font-size:21px;margin:0 0 10px;color:var(--accent)}
+h3{font-size:16px;margin:22px 0 6px}
+p{margin:6px 0}
+.sub{color:var(--muted)}
+section{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:20px 24px;margin-top:18px}
+.table-wrap{overflow-x:auto;margin:8px 0}
+table.t{border-collapse:collapse;width:100%;font-size:14px}
+table.t th,table.t td{border:1px solid var(--border);padding:6px 8px;text-align:left;vertical-align:top}
+table.t th{background:var(--head)}
+td.n,th.n{text-align:right;white-space:nowrap}
+code{background:var(--code);border-radius:4px;padding:1px 5px;font:13px Consolas,monospace;overflow-wrap:anywhere}
+ul,ol{margin:4px 0 8px;padding-left:22px}
+li{margin:3px 0}
+.legend span{display:inline-block;padding:1px 8px;border-radius:4px;margin-right:8px;font-size:13px}
+.legend .d{background:var(--del);color:var(--deltext)}.legend .a{background:var(--add);color:var(--addtext)}
+.diff-wrap{overflow-x:auto;border:1px solid var(--border);border-radius:6px;margin:6px 0 12px}
+table.diff{border-collapse:collapse;width:100%;table-layout:fixed;font:12.5px/1.45 Consolas,monospace}
+table.diff col.lnc{width:3.6em}
+table.diff th{background:var(--head);font:600 13px "Segoe UI",system-ui,sans-serif;text-align:left;padding:5px 8px;border-bottom:1px solid var(--border)}
+table.diff td{padding:0 6px;vertical-align:top}
+table.diff td.ln{color:var(--ln);text-align:right;user-select:none;border-right:1px solid var(--border)}
+table.diff td.c{white-space:pre-wrap;overflow-wrap:anywhere}
+table.diff td.c.eq{color:var(--muted)}
+table.diff td.c.del{background:var(--del);color:var(--deltext)}
+table.diff td.c.add{background:var(--add);color:var(--addtext)}
+table.diff td.c.pad{background:var(--pad)}
+@media (max-width:760px){main{padding:20px 12px 48px}section{padding:16px 14px}}
+</style>
+</head>
+<body>
+<main>
+<header>
+<h1>Ускорение утренней выгрузки остатков МО - ФО Розница: блокировки ДС одним вызовом на пакет</h1>
+<p class="sub">От аналитика разработчику. 28.10.2026. Объект доработки: дополнительная обработка МО "Выгрузка остатков МО
+ФО" (<code>внВыгрузкаОстатковМО_ФО</code>), версия 1.42 - 1.43. Конфигурации МО и ФО, расширения и обработки ФО не
+меняются.</p>
+</header>
+
+<section>
+<h2>1. Причина</h2>
+<p>С 21.10.2026 утренняя выгрузка остатков в ФО Розница (5 потоков) идет <b>94 минуты вместо 41</b>.</p>
+<div class="table-wrap"><table class="t">
+<tr><th>Показатель (замеры МО Розница)</th><th class="n">28.09-20.10</th><th class="n">21.10-27.10</th></tr>
+<tr><td>Строк блокировок, отправляемых в ФО (вес замера <code>внВыгрузкаОстатковМО_ФО_Блокировки_Сервер</code>)</td><td class="n">0</td><td class="n">19 423-19 447</td></tr>
+<tr><td>Шаг <code>Опубликовать</code>, сумма по 5 потокам</td><td class="n">12,2-13,6 тыс. с</td><td class="n">24,9-26,5 тыс. с</td></tr>
+<tr><td>Пачки 1-4 / пачка 5</td><td class="n">2 470-2 760 / около 2 500 с</td><td class="n">5 490-5 920 / 2 880-3 140 с</td></tr>
+</table></div>
+<ul>
+<li>В МО Розница у 19 447 мандатов "Розничное ДУ" появились блокировки денежных средств с объектом "Вознаграждение"
+(документы "Блокировка/разблокировка ДС" от 19.10.2026, 195,7 млн руб.). До 19.10 такая блокировка была одна.</li>
+<li>Обработка выгрузки отправляет блокировки в цикле по мандатам: на каждый мандат с блокировкой формирует поручение
+"Вывод" и делает <b>отдельный вызов</b> <code>DownloadOrders</code>. Это около 19,4 тыс. дополнительных вызовов за утро,
+примерно 0,7 с каждый: около 13 тыс. с суммарного времени потоков, плюс 53 минуты к окну.</li>
+<li>В ФО каждый вызов перезаписывает и проводит поручение: внешний код блокировки длиннее 36 символов реквизита в ФО,
+дата в нем обрезается, поэтому поручение по счету одно и то же; ночью его помечает на удаление обработка "Удалить
+неактуальные торговые поручения", утром выгрузка восстанавливает.</li>
+<li>Пачки 1-4 замедлились вдвое, пачка 5 меньше: у портфелей, которые обрабатывают только пачки 1-4, блокировки есть у
+97,5%, у портфелей начала окна - у 73%.</li>
+<li>Объем данных пакетов, скорость пересчета РСА и загрузки позиции за этот период не изменились.</li>
+</ul>
+</section>
+
+<section>
+<h2>2. Решение</h2>
+<h3>2.1. Что меняется</h3>
+<ol>
+<li>В цикле по мандатам блокировки мандата не отправляются, а добавляются в массив <code>БлокировкиПакета</code>;
+таблица для удаления блокировок заполняется как раньше.</li>
+<li>В конце пакета, перед <code>ПроверитьИУдалитьБлокировкиФО</code>, новая процедура <code>ОтправитьБлокировкиПакета</code>
+отправляет блокировки всех мандатов пакета одним вызовом <code>DownloadOrders</code>.</li>
+<li>Если ответ содержит ошибку, блокировки этого пакета отправляются повторно по каждому мандату отдельно
+(<code>ОтправитьБлокировкиМандата</code> - прежний код 1.42): ошибка по-прежнему относится к своему мандату, ставится
+признак ошибки выгрузки позиции, уходит рассылка. Повторная отправка не создает дублей: ФО находит поручение по внешнему
+коду и перезаписывает его.</li>
+<li>Если исключение не дало дойти до конца пакета, накопленные блокировки отправляются со следующим пакетом или после
+цикла по мандатам.</li>
+</ol>
+<h3>2.2. Что не меняется</h3>
+<ul>
+<li>Деление мандатов на параллельные потоки и пакеты по 50 портфелей: в общий вызов попадают только блокировки мандатов
+текущего пакета текущего потока, в рознице до 50 поручений (по одной блокировке на мандат).</li>
+<li>Состав и реквизиты поручений, внешние коды, таблица для удаления блокировок, порядок "блокировки - удаление
+блокировок - флаги пакета", обработка ответа, тексты в журнале обработки и рассылке.</li>
+<li>Меняется только момент отправки: блокировки пакета уходят после пакета позиции, а не вперемешку с ним. Проверка
+лимитов при загрузке блокировок выключена (<code>ЗапускатьПроверкуЛимитов = Ложь</code>), от позиции они не зависят.</li>
+</ul>
+<h3>2.3. Объем вызова</h3>
+<p>На стенде общий запрос пакета из 45 поручений занимает 67,7 КБ (1,5 КБ на поручение). Для сравнения, запрос позиции
+того же пакета - 197,7 КБ, запрос флагов - 52,7 КБ. В ФО общий вызов обрабатывается 8-9 с. Тайм-аут у прокси
+веб-сервиса в МО не задан. На ПРОД будет около 480 вызовов за утро вместо 19,4 тыс.</p>
+<h3>2.4. Проверка на разработческих базах</h3>
+<p>Стенд МО - ФО: 450 мандатов и портфелей, 5 потоков, 45 портфелей в пакете, одна блокировка 10 000 руб. на мандат;
+в ФО на время теста включены "Вести учет по субпортфелям" и "Обновлять справочные данные из бэк-офиса", как на ПРОД,
+после теста возвращены в исходное значение.</p>
+<div class="table-wrap"><table class="t">
+<tr><th>Сценарий</th><th class="n"><code>Опубликовать</code> на поток, с</th><th class="n">Вызовов <code>DownloadOrders</code></th><th>Результат в ФО</th></tr>
+<tr><td>Без блокировок</td><td class="n">11,8-12,1</td><td class="n">0</td><td>-</td></tr>
+<tr><td>1.42, поручения уже есть (как на ПРОД каждое утро), 2 прогона</td><td class="n">42,3-43,4</td><td class="n">450</td><td>450 проведены</td></tr>
+<tr><td><b>1.43</b>, то же, 2 прогона</td><td class="n"><b>27,1-29,0</b></td><td class="n">10</td><td>450 проведены</td></tr>
+<tr><td>Ошибка у одного мандата (счет, которого нет в ФО), 1.42</td><td class="n">72,3-73,2*</td><td class="n">450</td><td rowspan="2">449 проведены, признак ошибки выгрузки только у мандата с ошибкой, в журнале обработки одинаковый текст</td></tr>
+<tr><td>То же, 1.43</td><td class="n">28,2-28,7; поток с ошибкой 40,1</td><td class="n">55 (10 + 45 повторных)</td></tr>
+</table></div>
+<p class="sub">* в этом прогоне 1.42 поручения создавались впервые.</p>
+<p>Добавка от блокировок на поток уменьшилась с 30,5 с до 16 с на 90 блокировок, то есть примерно вдвое; остаток - запись
+и проведение поручений в ФО.</p>
+<h3>2.5. Ожидаемый эффект</h3>
+<p>По соотношениям стенда окно на ПРОД - около 70 минут (оценка 68-74) вместо 94. Точное значение даст прогон 1.43 на Т-1
+МО Розница. Если бизнес подтвердит, что блокировки "Вознаграждение" ФО Розница не нужны, и их перестанут передавать,
+окно вернется к 41 минуте и без доработки.</p>
+<h3>2.6. Для внедрения</h3>
+<ul>
+<li>Маркеры <code>IMDEV-____</code> в коде заменить номером задачи.</li>
+<li>Замечено, не исправлялось (вне объема правки): в рассылку ошибки блокировки уходит
+<code>"... возникла ошибка:" + Символы.ПС + Рез.ЕстьОшибки</code> - вместо текста ошибки выводится "Да".</li>
+<li>Тот же поштучный вызов есть в обработке "Сверка ФО МО" 1.70; она работает днем по небольшому числу мандатов, правка
+там не нужна.</li>
+</ul>
+</section>
+
+<section>
+<h2>Приложение. Код: было 1.42 и стало 1.43</h2>
+<p class="legend"><span class="d">удалено</span><span class="a">добавлено</span>серым - неизмененные строки рядом
+с изменением. Номера строк - по модулю объекта обработки в каждой версии.</p>
+<h3>А1. Регистрация обработки: номер версии</h3>
+<div class="diff-wrap"><table class="diff">
+<colgroup><col class="lnc"><col class="cc"><col class="lnc"><col class="cc"></colgroup>
+<tr><th colspan="2">Было: 1.42</th><th colspan="2">Стало: 1.43</th></tr>
+<tr><td class="ln">35</td><td class="c eq">    ПараметрыРегистрации.Вставить(&quot;НаправлениеОбмена&quot;, Перечисления.НаправленияОбменов.Выгрузка);</td><td class="ln">35</td><td class="c eq">    ПараметрыРегистрации.Вставить(&quot;НаправлениеОбмена&quot;, Перечисления.НаправленияОбменов.Выгрузка);</td></tr>
+<tr><td class="ln">36</td><td class="c eq">    ПараметрыРегистрации.Вставить(&quot;Назначение&quot;,МассивСтрокИмен);</td><td class="ln">36</td><td class="c eq">    ПараметрыРегистрации.Вставить(&quot;Назначение&quot;,МассивСтрокИмен);</td></tr>
+<tr><td class="ln">37</td><td class="c eq">    ПараметрыРегистрации.Вставить(&quot;Наименование&quot;, &quot;Выгрузка остатков МО ФО&quot;);</td><td class="ln">37</td><td class="c eq">    ПараметрыРегистрации.Вставить(&quot;Наименование&quot;, &quot;Выгрузка остатков МО ФО&quot;);</td></tr>
+<tr><td class="ln">38</td><td class="c del">    ПараметрыРегистрации.Вставить(&quot;Версия&quot;, &quot;1.42&quot;);</td><td class="ln">38</td><td class="c add">    ПараметрыРегистрации.Вставить(&quot;Версия&quot;, &quot;1.43&quot;);</td></tr>
+<tr><td class="ln">39</td><td class="c eq">    ПараметрыРегистрации.Вставить(&quot;БезопасныйРежим&quot;,Ложь);</td><td class="ln">39</td><td class="c eq">    ПараметрыРегистрации.Вставить(&quot;БезопасныйРежим&quot;,Ложь);</td></tr>
+<tr><td class="ln">40</td><td class="c eq">    ПараметрыРегистрации.Вставить(&quot;Информация&quot;,&quot;Выгрузка остатков МО ФО&quot;);</td><td class="ln">40</td><td class="c eq">    ПараметрыРегистрации.Вставить(&quot;Информация&quot;,&quot;Выгрузка остатков МО ФО&quot;);</td></tr>
+<tr><td class="ln">41</td><td class="c eq">    ПараметрыРегистрации.Вставить(&quot;ВерсияБСП&quot;, &quot;2.1.1.12&quot;);</td><td class="ln">41</td><td class="c eq">    ПараметрыРегистрации.Вставить(&quot;ВерсияБСП&quot;, &quot;2.1.1.12&quot;);</td></tr>
+</table></div>
+<h3>А2. Опубликовать: инициализация перед циклом по мандатам</h3>
+<div class="diff-wrap"><table class="diff">
+<colgroup><col class="lnc"><col class="cc"><col class="lnc"><col class="cc"></colgroup>
+<tr><th colspan="2">Было: 1.42</th><th colspan="2">Стало: 1.43</th></tr>
+<tr><td class="ln">1003</td><td class="c eq">    КоличествоПакет = КоличествоПортфелейВПакете;</td><td class="ln">1003</td><td class="c eq">    КоличествоПакет = КоличествоПортфелейВПакете;</td></tr>
+<tr><td class="ln">1004</td><td class="c eq">    КоличествоВПакете = 0;</td><td class="ln">1004</td><td class="c eq">    КоличествоВПакете = 0;</td></tr>
+<tr><td class="ln">1005</td><td class="c eq">    НовыйПакет = Истина;</td><td class="ln">1005</td><td class="c eq">    НовыйПакет = Истина;</td></tr>
+<tr><td class="ln"></td><td class="c pad">&nbsp;</td><td class="ln">1006</td><td class="c add">    // + IMDEV-____ 28.10.2026 блокировки пакета одним вызовом DownloadOrders</td></tr>
+<tr><td class="ln"></td><td class="c pad">&nbsp;</td><td class="ln">1007</td><td class="c add">    БлокировкиПакета = Новый Массив;</td></tr>
+<tr><td class="ln"></td><td class="c pad">&nbsp;</td><td class="ln">1008</td><td class="c add">    // - IMDEV-____ 28.10.2026</td></tr>
+<tr><td class="ln">1006</td><td class="c eq">    </td><td class="ln">1009</td><td class="c eq">    </td></tr>
+<tr><td class="ln">1007</td><td class="c eq">    //IMDEV-3786 RKatunin</td><td class="ln">1010</td><td class="c eq">    //IMDEV-3786 RKatunin</td></tr>
+<tr><td class="ln">1008</td><td class="c eq">    //ОпубликоватьПорученияРЕПОМО(ФабрикаСервиса, Прокси);</td><td class="ln">1011</td><td class="c eq">    //ОпубликоватьПорученияРЕПОМО(ФабрикаСервиса, Прокси);</td></tr>
+</table></div>
+<h3>А3. Опубликовать: блок &quot;выгрузка блокировок&quot; в цикле по мандатам и конец пакета перед удалением блокировок</h3>
+<div class="diff-wrap"><table class="diff">
+<colgroup><col class="lnc"><col class="cc"><col class="lnc"><col class="cc"></colgroup>
+<tr><th colspan="2">Было: 1.42</th><th colspan="2">Стало: 1.43</th></tr>
+<tr><td class="ln">1167</td><td class="c eq">            КонецЕсли;</td><td class="ln">1170</td><td class="c eq">            КонецЕсли;</td></tr>
+<tr><td class="ln">1168</td><td class="c eq">            </td><td class="ln">1171</td><td class="c eq">            </td></tr>
+<tr><td class="ln">1169</td><td class="c eq">            // выгрузка блокировок</td><td class="ln">1172</td><td class="c eq">            // выгрузка блокировок</td></tr>
+<tr><td class="ln"></td><td class="c pad">&nbsp;</td><td class="ln">1173</td><td class="c add">            // + IMDEV-____ 28.10.2026 блокировки пакета одним вызовом DownloadOrders</td></tr>
+<tr><td class="ln">1170</td><td class="c eq">            СтрокиБлокировки = Блокировки.НайтиСтроки(новый Структура(&quot;Мандат&quot;, ВыборкаПортфели.Мандат));</td><td class="ln">1174</td><td class="c eq">            СтрокиБлокировки = Блокировки.НайтиСтроки(новый Структура(&quot;Мандат&quot;, ВыборкаПортфели.Мандат));</td></tr>
+<tr><td class="ln">1171</td><td class="c eq">            Если СтрокиБлокировки.Количество() &gt; 0 Тогда</td><td class="ln">1175</td><td class="c eq">            Если СтрокиБлокировки.Количество() &gt; 0 Тогда</td></tr>
+<tr><td class="ln">1172</td><td class="c eq">                </td><td class="ln">1176</td><td class="c eq">                </td></tr>
+<tr><td class="ln">1173</td><td class="c del">                ПакетБлокировкиХДТО = ПроцедурыФункцииОбмена_МО_ФО.хдтоСформироватьПакетПоручений(ФабрикаСервиса);</td><td class="ln"></td><td class="c pad">&nbsp;</td></tr>
+<tr><td class="ln">1174</td><td class="c del">                ПакетБлокировкиХДТО.ЗапускатьПроверкуЛимитов = Ложь;</td><td class="ln"></td><td class="c pad">&nbsp;</td></tr>
+<tr><td class="ln">1175</td><td class="c del">                </td><td class="ln"></td><td class="c pad">&nbsp;</td></tr>
+<tr><td class="ln">1176</td><td class="c eq">                Для каждого СтрокаВыгрузить из СтрокиБлокировки Цикл</td><td class="ln">1177</td><td class="c eq">                Для каждого СтрокаВыгрузить из СтрокиБлокировки Цикл</td></tr>
+<tr><td class="ln">1177</td><td class="c del">                    хдтоДобавитьВПакетБлокировку(ПакетБлокировкиХДТО, ДатаДляФронт, СтрокаВыгрузить.ОперацияВнешнийКод, СтрокаВыгрузить.Мандат, СтрокаВыгрузить.Валюта, СтрокаВыгрузить.СчетМандата, СтрокаВыгрузить.Количество, СтрокаВыгрузить.Стоимость, ФабрикаСервиса);</td><td class="ln"></td><td class="c pad">&nbsp;</td></tr>
+<tr><td class="ln">1178</td><td class="c del">                    </td><td class="ln"></td><td class="c pad">&nbsp;</td></tr>
+<tr><td class="ln">1179</td><td class="c eq">                    НоваяСтрока = ТаблицаДляУдаленияБлокировок.Добавить();</td><td class="ln">1178</td><td class="c eq">                    НоваяСтрока = ТаблицаДляУдаленияБлокировок.Добавить();</td></tr>
+<tr><td class="ln">1180</td><td class="c eq">                    НоваяСтрока.КодМандата = ВыборкаПортфели.Мандат.КодМандата;</td><td class="ln">1179</td><td class="c eq">                    НоваяСтрока.КодМандата = ВыборкаПортфели.Мандат.КодМандата;</td></tr>
+<tr><td class="ln">1181</td><td class="c eq">                    НоваяСтрока.КодСчета = СтрокаВыгрузить.СчетМандата.КодСчета;</td><td class="ln">1180</td><td class="c eq">                    НоваяСтрока.КодСчета = СтрокаВыгрузить.СчетМандата.КодСчета;</td></tr>
+<tr><td class="ln">1182</td><td class="c eq">                    НоваяСтрока.КодВалюты = СтрокаВыгрузить.Валюта.Код;</td><td class="ln">1181</td><td class="c eq">                    НоваяСтрока.КодВалюты = СтрокаВыгрузить.Валюта.Код;</td></tr>
+<tr><td class="ln">1183</td><td class="c eq">                КонецЦикла;</td><td class="ln">1182</td><td class="c eq">                КонецЦикла;</td></tr>
+<tr><td class="ln"></td><td class="c pad">&nbsp;</td><td class="ln">1183</td><td class="c add">                БлокировкиПакета.Добавить(Новый Структура(&quot;Мандат, Колво, Строки&quot;,</td></tr>
+<tr><td class="ln"></td><td class="c pad">&nbsp;</td><td class="ln">1184</td><td class="c add">                    ВыборкаПортфели.Мандат, ВыборкаПортфели.Колво, СтрокиБлокировки));</td></tr>
+<tr><td class="ln">1184</td><td class="c eq">                </td><td class="ln">1185</td><td class="c eq">                </td></tr>
+<tr><td class="ln">1185</td><td class="c del">                Если вклОтладка Тогда</td><td class="ln"></td><td class="c pad">&nbsp;</td></tr>
+<tr><td class="ln">1186</td><td class="c del">                    обЗапись = Новый ЗаписьXML;</td><td class="ln"></td><td class="c pad">&nbsp;</td></tr>
+<tr><td class="ln">1187</td><td class="c del">                    обЗапись.УстановитьСтроку(&quot;UTF-8&quot;);</td><td class="ln"></td><td class="c pad">&nbsp;</td></tr>
+<tr><td class="ln">1188</td><td class="c del">                    ФабрикаСервиса.ЗаписатьXML(обЗапись, ПакетБлокировкиХДТО);</td><td class="ln"></td><td class="c pad">&nbsp;</td></tr>
+<tr><td class="ln">1189</td><td class="c del">                    ТекстовыйЛог.ДобавитьСтроку(обЗапись.Закрыть());</td><td class="ln"></td><td class="c pad">&nbsp;</td></tr>
+<tr><td class="ln">1190</td><td class="c del">                КонецЕсли;</td><td class="ln"></td><td class="c pad">&nbsp;</td></tr>
+<tr><td class="ln">1191</td><td class="c del">                </td><td class="ln"></td><td class="c pad">&nbsp;</td></tr>
+<tr><td class="ln">1192</td><td class="c del">            // + FVasiliev IMDEV-8829 03.06.2026</td><td class="ln"></td><td class="c pad">&nbsp;</td></tr>
+<tr><td class="ln">1193</td><td class="c del">            //Ответ = Прокси.DownloadOrders(ПакетБлокировкиХДТО);</td><td class="ln"></td><td class="c pad">&nbsp;</td></tr>
+<tr><td class="ln">1194</td><td class="c del">            Ответ = ВызватьDownloadOrders(Прокси, ПакетБлокировкиХДТО);</td><td class="ln"></td><td class="c pad">&nbsp;</td></tr>
+<tr><td class="ln">1195</td><td class="c del">            // - FVasiliev IMDEV-8829 03.06.2026</td><td class="ln"></td><td class="c pad">&nbsp;</td></tr>
+<tr><td class="ln">1196</td><td class="c del">            </td><td class="ln"></td><td class="c pad">&nbsp;</td></tr>
+<tr><td class="ln">1197</td><td class="c del">            // + FVasiliev IMDEV-8829 03.06.2026</td><td class="ln"></td><td class="c pad">&nbsp;</td></tr>
+<tr><td class="ln">1198</td><td class="c del">            //Рез = ПроцедурыФункцииОбмена_МО_ФО.ОбработатьОтвет(Ответ, ФабрикаСервиса, вклОтладка, Неопределено, УзелОбменаДляРегистрацииНенайденныхСчетовМандатов);</td><td class="ln"></td><td class="c pad">&nbsp;</td></tr>
+<tr><td class="ln">1199</td><td class="c del">            Рез = ОбработатьОтветЧерезОбертку(Ответ, ФабрикаСервиса, Неопределено, УзелОбменаДляРегистрацииНенайденныхСчетовМандатов);</td><td class="ln"></td><td class="c pad">&nbsp;</td></tr>
+<tr><td class="ln">1200</td><td class="c del">            // - FVasiliev IMDEV-8829 03.06.2026</td><td class="ln"></td><td class="c pad">&nbsp;</td></tr>
+<tr><td class="ln">1201</td><td class="c del">                Если Рез.ЕстьОшибки Тогда</td><td class="ln"></td><td class="c pad">&nbsp;</td></tr>
+<tr><td class="ln">1202</td><td class="c del">                    ЕстьОшибки = Истина;</td><td class="ln"></td><td class="c pad">&nbsp;</td></tr>
+<tr><td class="ln">1203</td><td class="c del">                    ЕстьОшибкиПортфель = Истина;</td><td class="ln"></td><td class="c pad">&nbsp;</td></tr>
+<tr><td class="ln">1204</td><td class="c del">                    СоответствиеПортфелей.Вставить(ВыборкаПортфели.Мандат, Истина);</td><td class="ln"></td><td class="c pad">&nbsp;</td></tr>
+<tr><td class="ln">1205</td><td class="c del">                    ДобавитьОшибкуВДанныеДляРассылки(ВыборкаПортфели.Мандат, &quot;При выгрузке блокировки в ФО возникла ошибка:&quot; + Символы.ПС + Рез.ЕстьОшибки, ВыборкаПортфели.Колво);</td><td class="ln"></td><td class="c pad">&nbsp;</td></tr>
+<tr><td class="ln">1206</td><td class="c del">                КонецЕсли;</td><td class="ln"></td><td class="c pad">&nbsp;</td></tr>
+<tr><td class="ln">1207</td><td class="c del">                </td><td class="ln"></td><td class="c pad">&nbsp;</td></tr>
+<tr><td class="ln">1208</td><td class="c del">                Если ЗначениеЗаполнено(Рез.ТекстОшибки) Тогда</td><td class="ln"></td><td class="c pad">&nbsp;</td></tr>
+<tr><td class="ln">1209</td><td class="c del">                    ТекстовыйЛог.ДобавитьСтроку(&quot;Ошибка выгрузки блокировки по: &quot; + ВыборкаПортфели.Мандат);</td><td class="ln"></td><td class="c pad">&nbsp;</td></tr>
+<tr><td class="ln">1210</td><td class="c del">                    ТекстовыйЛог.ДобавитьСтроку(Рез.ТекстОшибки);</td><td class="ln"></td><td class="c pad">&nbsp;</td></tr>
+<tr><td class="ln">1211</td><td class="c del">                КонецЕсли;</td><td class="ln"></td><td class="c pad">&nbsp;</td></tr>
+<tr><td class="ln">1212</td><td class="c del">                </td><td class="ln"></td><td class="c pad">&nbsp;</td></tr>
+<tr><td class="ln">1213</td><td class="c del">                Если вклОтладка Тогда</td><td class="ln"></td><td class="c pad">&nbsp;</td></tr>
+<tr><td class="ln">1214</td><td class="c del">                    ТекстовыйЛог.ДобавитьСтроку(Рез.ТекстОтвета);</td><td class="ln"></td><td class="c pad">&nbsp;</td></tr>
+<tr><td class="ln">1215</td><td class="c del">                КонецЕсли;</td><td class="ln"></td><td class="c pad">&nbsp;</td></tr>
+<tr><td class="ln">1216</td><td class="c eq">            Иначе</td><td class="ln">1186</td><td class="c eq">            Иначе</td></tr>
+<tr><td class="ln">1217</td><td class="c eq">                МассивКодовПортфелейДляУдаленияБлокировок.Добавить(ВыборкаПортфели.Мандат.КодМандата);</td><td class="ln">1187</td><td class="c eq">                МассивКодовПортфелейДляУдаленияБлокировок.Добавить(ВыборкаПортфели.Мандат.КодМандата);</td></tr>
+<tr><td class="ln">1218</td><td class="c eq">            КонецЕсли;</td><td class="ln">1188</td><td class="c eq">            КонецЕсли;</td></tr>
+<tr><td class="ln"></td><td class="c pad">&nbsp;</td><td class="ln">1189</td><td class="c add">            // - IMDEV-____ 28.10.2026</td></tr>
+<tr><td class="ln">1219</td><td class="c eq">            </td><td class="ln">1190</td><td class="c eq">            </td></tr>
+<tr><td class="ln">1220</td><td class="c eq">            Если КоличествоВПакете = КоличествоПакет Или КоличествоПортфелей = КоличествоПортфелейВсего Тогда</td><td class="ln">1191</td><td class="c eq">            Если КоличествоВПакете = КоличествоПакет Или КоличествоПортфелей = КоличествоПортфелейВсего Тогда</td></tr>
+<tr><td class="ln"></td><td class="c pad">&nbsp;</td><td class="ln">1192</td><td class="c add">                // + IMDEV-____ 28.10.2026 блокировки пакета одним вызовом DownloadOrders</td></tr>
+<tr><td class="ln"></td><td class="c pad">&nbsp;</td><td class="ln">1193</td><td class="c add">                ОтправитьБлокировкиПакета(БлокировкиПакета, ФабрикаСервиса, Прокси, СоответствиеПортфелей);</td></tr>
+<tr><td class="ln"></td><td class="c pad">&nbsp;</td><td class="ln">1194</td><td class="c add">                // - IMDEV-____ 28.10.2026</td></tr>
+<tr><td class="ln">1221</td><td class="c eq">                ПроверитьИУдалитьБлокировкиФО(МассивКодовПортфелейДляУдаленияБлокировок, ТаблицаДляУдаленияБлокировок, ФабрикаСервиса, Прокси, ИдентификаторСеанса);</td><td class="ln">1195</td><td class="c eq">                ПроверитьИУдалитьБлокировкиФО(МассивКодовПортфелейДляУдаленияБлокировок, ТаблицаДляУдаленияБлокировок, ФабрикаСервиса, Прокси, ИдентификаторСеанса);</td></tr>
+<tr><td class="ln">1222</td><td class="c eq">            КонецЕсли;</td><td class="ln">1196</td><td class="c eq">            КонецЕсли;</td></tr>
+<tr><td class="ln">1223</td><td class="c eq">            </td><td class="ln">1197</td><td class="c eq">            </td></tr>
+</table></div>
+<h3>А4. Опубликовать: после цикла по мандатам</h3>
+<div class="diff-wrap"><table class="diff">
+<colgroup><col class="lnc"><col class="cc"><col class="lnc"><col class="cc"></colgroup>
+<tr><th colspan="2">Было: 1.42</th><th colspan="2">Стало: 1.43</th></tr>
+<tr><td class="ln">1273</td><td class="c eq">            //Возврат;</td><td class="ln">1247</td><td class="c eq">            //Возврат;</td></tr>
+<tr><td class="ln">1274</td><td class="c eq">        КонецПопытки;</td><td class="ln">1248</td><td class="c eq">        КонецПопытки;</td></tr>
+<tr><td class="ln">1275</td><td class="c eq">    КонецЦикла;</td><td class="ln">1249</td><td class="c eq">    КонецЦикла;</td></tr>
+<tr><td class="ln"></td><td class="c pad">&nbsp;</td><td class="ln">1250</td><td class="c add">    </td></tr>
+<tr><td class="ln"></td><td class="c pad">&nbsp;</td><td class="ln">1251</td><td class="c add">    // + IMDEV-____ 28.10.2026 блокировки пакета одним вызовом DownloadOrders</td></tr>
+<tr><td class="ln"></td><td class="c pad">&nbsp;</td><td class="ln">1252</td><td class="c add">    // Блокировки пакета, конец которого не дошел до отправки из-за исключения, отправляются после цикла.</td></tr>
+<tr><td class="ln"></td><td class="c pad">&nbsp;</td><td class="ln">1253</td><td class="c add">    Если ЗначениеЗаполнено(БлокировкиПакета) Тогда</td></tr>
+<tr><td class="ln"></td><td class="c pad">&nbsp;</td><td class="ln">1254</td><td class="c add">        ОтправитьБлокировкиПакета(БлокировкиПакета, ФабрикаСервиса, Прокси, Новый Соответствие);</td></tr>
+<tr><td class="ln"></td><td class="c pad">&nbsp;</td><td class="ln">1255</td><td class="c add">    КонецЕсли;</td></tr>
+<tr><td class="ln"></td><td class="c pad">&nbsp;</td><td class="ln">1256</td><td class="c add">    // - IMDEV-____ 28.10.2026</td></tr>
+<tr><td class="ln">1276</td><td class="c eq">    </td><td class="ln">1257</td><td class="c eq">    </td></tr>
+<tr><td class="ln">1277</td><td class="c eq">    ОпубликоватьИсполнениеСделок(ФабрикаСервиса, Прокси); </td><td class="ln">1258</td><td class="c eq">    ОпубликоватьИсполнениеСделок(ФабрикаСервиса, Прокси); </td></tr>
+<tr><td class="ln">1278</td><td class="c eq">    </td><td class="ln">1259</td><td class="c eq">    </td></tr>
+</table></div>
+<h3>А5. Новые процедуры (перед ОпубликоватьАктивыРЕПО)</h3>
+<div class="diff-wrap"><table class="diff">
+<colgroup><col class="lnc"><col class="cc"><col class="lnc"><col class="cc"></colgroup>
+<tr><th colspan="2">Было: 1.42</th><th colspan="2">Стало: 1.43</th></tr>
+<tr><td class="ln">1389</td><td class="c eq">&nbsp;</td><td class="ln">1370</td><td class="c eq">&nbsp;</td></tr>
+<tr><td class="ln">1390</td><td class="c eq">КонецПроцедуры</td><td class="ln">1371</td><td class="c eq">КонецПроцедуры</td></tr>
+<tr><td class="ln">1391</td><td class="c eq">&nbsp;</td><td class="ln">1372</td><td class="c eq">&nbsp;</td></tr>
+<tr><td class="ln"></td><td class="c pad">&nbsp;</td><td class="ln">1373</td><td class="c add">&nbsp;</td></tr>
+<tr><td class="ln"></td><td class="c pad">&nbsp;</td><td class="ln">1374</td><td class="c add">// + IMDEV-____ 28.10.2026 блокировки пакета одним вызовом DownloadOrders</td></tr>
+<tr><td class="ln"></td><td class="c pad">&nbsp;</td><td class="ln">1375</td><td class="c add">//</td></tr>
+<tr><td class="ln"></td><td class="c pad">&nbsp;</td><td class="ln">1376</td><td class="c add">// Отправляет в ФО блокировки всех мандатов пакета одним вызовом DownloadOrders вместо вызова на каждый мандат.</td></tr>
+<tr><td class="ln"></td><td class="c pad">&nbsp;</td><td class="ln">1377</td><td class="c add">// Если ответ содержит ошибки, блокировки пакета отправляются повторно по каждому мандату отдельно, как в 1.42:</td></tr>
+<tr><td class="ln"></td><td class="c pad">&nbsp;</td><td class="ln">1378</td><td class="c add">// так ошибка по-прежнему относится к своему мандату (признак ошибки выгрузки позиции и рассылка). Повторная</td></tr>
+<tr><td class="ln"></td><td class="c pad">&nbsp;</td><td class="ln">1379</td><td class="c add">// отправка не создает дублей: ФО ищет поручение по внешнему коду и перезаписывает найденное.</td></tr>
+<tr><td class="ln"></td><td class="c pad">&nbsp;</td><td class="ln">1380</td><td class="c add">//</td></tr>
+<tr><td class="ln"></td><td class="c pad">&nbsp;</td><td class="ln">1381</td><td class="c add">// Параметры:</td></tr>
+<tr><td class="ln"></td><td class="c pad">&nbsp;</td><td class="ln">1382</td><td class="c add">//  БлокировкиПакета - Массив из Структура - блокировки мандатов пакета; после отправки массив очищается:</td></tr>
+<tr><td class="ln"></td><td class="c pad">&nbsp;</td><td class="ln">1383</td><td class="c add">//   * Мандат - СправочникСсылка.Мандаты - мандат</td></tr>
+<tr><td class="ln"></td><td class="c pad">&nbsp;</td><td class="ln">1384</td><td class="c add">//   * Колво - Число - число строк позиции мандата, передается в рассылку ошибок</td></tr>
+<tr><td class="ln"></td><td class="c pad">&nbsp;</td><td class="ln">1385</td><td class="c add">//   * Строки - Массив из СтрокаТабличнойЧасти - строки табличной части Блокировки мандата</td></tr>
+<tr><td class="ln"></td><td class="c pad">&nbsp;</td><td class="ln">1386</td><td class="c add">//  ФабрикаСервиса - ФабрикаXDTO - фабрика сервиса ФО</td></tr>
+<tr><td class="ln"></td><td class="c pad">&nbsp;</td><td class="ln">1387</td><td class="c add">//  Прокси - WSПрокси - прокси сервиса ФО</td></tr>
+<tr><td class="ln"></td><td class="c pad">&nbsp;</td><td class="ln">1388</td><td class="c add">//  СоответствиеПортфелей - Соответствие - мандат пакета и признак ошибки его выгрузки, дополняется</td></tr>
+<tr><td class="ln"></td><td class="c pad">&nbsp;</td><td class="ln">1389</td><td class="c add">//</td></tr>
+<tr><td class="ln"></td><td class="c pad">&nbsp;</td><td class="ln">1390</td><td class="c add">Процедура ОтправитьБлокировкиПакета(БлокировкиПакета, ФабрикаСервиса, Прокси, СоответствиеПортфелей)</td></tr>
+<tr><td class="ln"></td><td class="c pad">&nbsp;</td><td class="ln">1391</td><td class="c add">    </td></tr>
+<tr><td class="ln"></td><td class="c pad">&nbsp;</td><td class="ln">1392</td><td class="c add">    Если Не ЗначениеЗаполнено(БлокировкиПакета) Тогда</td></tr>
+<tr><td class="ln"></td><td class="c pad">&nbsp;</td><td class="ln">1393</td><td class="c add">        Возврат;</td></tr>
+<tr><td class="ln"></td><td class="c pad">&nbsp;</td><td class="ln">1394</td><td class="c add">    КонецЕсли;</td></tr>
+<tr><td class="ln"></td><td class="c pad">&nbsp;</td><td class="ln">1395</td><td class="c add">    </td></tr>
+<tr><td class="ln"></td><td class="c pad">&nbsp;</td><td class="ln">1396</td><td class="c add">    ПакетБлокировкиХДТО = ПроцедурыФункцииОбмена_МО_ФО.хдтоСформироватьПакетПоручений(ФабрикаСервиса);</td></tr>
+<tr><td class="ln"></td><td class="c pad">&nbsp;</td><td class="ln">1397</td><td class="c add">    ПакетБлокировкиХДТО.ЗапускатьПроверкуЛимитов = Ложь;</td></tr>
+<tr><td class="ln"></td><td class="c pad">&nbsp;</td><td class="ln">1398</td><td class="c add">    Для Каждого БлокировкиМандата Из БлокировкиПакета Цикл</td></tr>
+<tr><td class="ln"></td><td class="c pad">&nbsp;</td><td class="ln">1399</td><td class="c add">        Для каждого СтрокаВыгрузить из БлокировкиМандата.Строки Цикл</td></tr>
+<tr><td class="ln"></td><td class="c pad">&nbsp;</td><td class="ln">1400</td><td class="c add">            хдтоДобавитьВПакетБлокировку(ПакетБлокировкиХДТО, ДатаДляФронт, СтрокаВыгрузить.ОперацияВнешнийКод,</td></tr>
+<tr><td class="ln"></td><td class="c pad">&nbsp;</td><td class="ln">1401</td><td class="c add">                СтрокаВыгрузить.Мандат, СтрокаВыгрузить.Валюта, СтрокаВыгрузить.СчетМандата, СтрокаВыгрузить.Количество,</td></tr>
+<tr><td class="ln"></td><td class="c pad">&nbsp;</td><td class="ln">1402</td><td class="c add">                СтрокаВыгрузить.Стоимость, ФабрикаСервиса);</td></tr>
+<tr><td class="ln"></td><td class="c pad">&nbsp;</td><td class="ln">1403</td><td class="c add">        КонецЦикла;</td></tr>
+<tr><td class="ln"></td><td class="c pad">&nbsp;</td><td class="ln">1404</td><td class="c add">    КонецЦикла;</td></tr>
+<tr><td class="ln"></td><td class="c pad">&nbsp;</td><td class="ln">1405</td><td class="c add">    </td></tr>
+<tr><td class="ln"></td><td class="c pad">&nbsp;</td><td class="ln">1406</td><td class="c add">    Если вклОтладка Тогда</td></tr>
+<tr><td class="ln"></td><td class="c pad">&nbsp;</td><td class="ln">1407</td><td class="c add">        обЗапись = Новый ЗаписьXML;</td></tr>
+<tr><td class="ln"></td><td class="c pad">&nbsp;</td><td class="ln">1408</td><td class="c add">        обЗапись.УстановитьСтроку(&quot;UTF-8&quot;);</td></tr>
+<tr><td class="ln"></td><td class="c pad">&nbsp;</td><td class="ln">1409</td><td class="c add">        ФабрикаСервиса.ЗаписатьXML(обЗапись, ПакетБлокировкиХДТО);</td></tr>
+<tr><td class="ln"></td><td class="c pad">&nbsp;</td><td class="ln">1410</td><td class="c add">        ТекстовыйЛог.ДобавитьСтроку(обЗапись.Закрыть());</td></tr>
+<tr><td class="ln"></td><td class="c pad">&nbsp;</td><td class="ln">1411</td><td class="c add">    КонецЕсли;</td></tr>
+<tr><td class="ln"></td><td class="c pad">&nbsp;</td><td class="ln">1412</td><td class="c add">    </td></tr>
+<tr><td class="ln"></td><td class="c pad">&nbsp;</td><td class="ln">1413</td><td class="c add">    Ответ = ВызватьDownloadOrders(Прокси, ПакетБлокировкиХДТО);</td></tr>
+<tr><td class="ln"></td><td class="c pad">&nbsp;</td><td class="ln">1414</td><td class="c add">    Рез = ОбработатьОтветЧерезОбертку(Ответ, ФабрикаСервиса, Неопределено, УзелОбменаДляРегистрацииНенайденныхСчетовМандатов);</td></tr>
+<tr><td class="ln"></td><td class="c pad">&nbsp;</td><td class="ln">1415</td><td class="c add">    </td></tr>
+<tr><td class="ln"></td><td class="c pad">&nbsp;</td><td class="ln">1416</td><td class="c add">    Если Рез.ЕстьОшибки Тогда</td></tr>
+<tr><td class="ln"></td><td class="c pad">&nbsp;</td><td class="ln">1417</td><td class="c add">        ТекстовыйЛог.ДобавитьСтроку(&quot;Ошибка выгрузки блокировок пакета, повторная отправка по мандатам&quot;);</td></tr>
+<tr><td class="ln"></td><td class="c pad">&nbsp;</td><td class="ln">1418</td><td class="c add">        Для Каждого БлокировкиМандата Из БлокировкиПакета Цикл</td></tr>
+<tr><td class="ln"></td><td class="c pad">&nbsp;</td><td class="ln">1419</td><td class="c add">            ОтправитьБлокировкиМандата(БлокировкиМандата, ФабрикаСервиса, Прокси, СоответствиеПортфелей);</td></tr>
+<tr><td class="ln"></td><td class="c pad">&nbsp;</td><td class="ln">1420</td><td class="c add">        КонецЦикла;</td></tr>
+<tr><td class="ln"></td><td class="c pad">&nbsp;</td><td class="ln">1421</td><td class="c add">    Иначе</td></tr>
+<tr><td class="ln"></td><td class="c pad">&nbsp;</td><td class="ln">1422</td><td class="c add">        Если ЗначениеЗаполнено(Рез.ТекстОшибки) Тогда</td></tr>
+<tr><td class="ln"></td><td class="c pad">&nbsp;</td><td class="ln">1423</td><td class="c add">            ТекстовыйЛог.ДобавитьСтроку(&quot;Сообщения выгрузки блокировок пакета:&quot;);</td></tr>
+<tr><td class="ln"></td><td class="c pad">&nbsp;</td><td class="ln">1424</td><td class="c add">            ТекстовыйЛог.ДобавитьСтроку(Рез.ТекстОшибки);</td></tr>
+<tr><td class="ln"></td><td class="c pad">&nbsp;</td><td class="ln">1425</td><td class="c add">        КонецЕсли;</td></tr>
+<tr><td class="ln"></td><td class="c pad">&nbsp;</td><td class="ln">1426</td><td class="c add">        Если вклОтладка Тогда</td></tr>
+<tr><td class="ln"></td><td class="c pad">&nbsp;</td><td class="ln">1427</td><td class="c add">            ТекстовыйЛог.ДобавитьСтроку(Рез.ТекстОтвета);</td></tr>
+<tr><td class="ln"></td><td class="c pad">&nbsp;</td><td class="ln">1428</td><td class="c add">        КонецЕсли;</td></tr>
+<tr><td class="ln"></td><td class="c pad">&nbsp;</td><td class="ln">1429</td><td class="c add">    КонецЕсли;</td></tr>
+<tr><td class="ln"></td><td class="c pad">&nbsp;</td><td class="ln">1430</td><td class="c add">    </td></tr>
+<tr><td class="ln"></td><td class="c pad">&nbsp;</td><td class="ln">1431</td><td class="c add">    БлокировкиПакета.Очистить();</td></tr>
+<tr><td class="ln"></td><td class="c pad">&nbsp;</td><td class="ln">1432</td><td class="c add">    </td></tr>
+<tr><td class="ln"></td><td class="c pad">&nbsp;</td><td class="ln">1433</td><td class="c add">КонецПроцедуры</td></tr>
+<tr><td class="ln"></td><td class="c pad">&nbsp;</td><td class="ln">1434</td><td class="c add">&nbsp;</td></tr>
+<tr><td class="ln"></td><td class="c pad">&nbsp;</td><td class="ln">1435</td><td class="c add">// Отправляет в ФО блокировки одного мандата отдельным вызовом DownloadOrders - поведение 1.42. Используется при</td></tr>
+<tr><td class="ln"></td><td class="c pad">&nbsp;</td><td class="ln">1436</td><td class="c add">// ошибке в ответе на общий вызов пакета, чтобы отнести ошибку к мандату.</td></tr>
+<tr><td class="ln"></td><td class="c pad">&nbsp;</td><td class="ln">1437</td><td class="c add">//</td></tr>
+<tr><td class="ln"></td><td class="c pad">&nbsp;</td><td class="ln">1438</td><td class="c add">// Параметры:</td></tr>
+<tr><td class="ln"></td><td class="c pad">&nbsp;</td><td class="ln">1439</td><td class="c add">//  БлокировкиМандата - Структура - блокировки мандата, состав см. ОтправитьБлокировкиПакета</td></tr>
+<tr><td class="ln"></td><td class="c pad">&nbsp;</td><td class="ln">1440</td><td class="c add">//  ФабрикаСервиса - ФабрикаXDTO - фабрика сервиса ФО</td></tr>
+<tr><td class="ln"></td><td class="c pad">&nbsp;</td><td class="ln">1441</td><td class="c add">//  Прокси - WSПрокси - прокси сервиса ФО</td></tr>
+<tr><td class="ln"></td><td class="c pad">&nbsp;</td><td class="ln">1442</td><td class="c add">//  СоответствиеПортфелей - Соответствие - мандат пакета и признак ошибки его выгрузки, дополняется</td></tr>
+<tr><td class="ln"></td><td class="c pad">&nbsp;</td><td class="ln">1443</td><td class="c add">//</td></tr>
+<tr><td class="ln"></td><td class="c pad">&nbsp;</td><td class="ln">1444</td><td class="c add">Процедура ОтправитьБлокировкиМандата(БлокировкиМандата, ФабрикаСервиса, Прокси, СоответствиеПортфелей)</td></tr>
+<tr><td class="ln"></td><td class="c pad">&nbsp;</td><td class="ln">1445</td><td class="c add">    </td></tr>
+<tr><td class="ln"></td><td class="c pad">&nbsp;</td><td class="ln">1446</td><td class="c add">    ПакетБлокировкиХДТО = ПроцедурыФункцииОбмена_МО_ФО.хдтоСформироватьПакетПоручений(ФабрикаСервиса);</td></tr>
+<tr><td class="ln"></td><td class="c pad">&nbsp;</td><td class="ln">1447</td><td class="c add">    ПакетБлокировкиХДТО.ЗапускатьПроверкуЛимитов = Ложь;</td></tr>
+<tr><td class="ln"></td><td class="c pad">&nbsp;</td><td class="ln">1448</td><td class="c add">    Для каждого СтрокаВыгрузить из БлокировкиМандата.Строки Цикл</td></tr>
+<tr><td class="ln"></td><td class="c pad">&nbsp;</td><td class="ln">1449</td><td class="c add">        хдтоДобавитьВПакетБлокировку(ПакетБлокировкиХДТО, ДатаДляФронт, СтрокаВыгрузить.ОперацияВнешнийКод,</td></tr>
+<tr><td class="ln"></td><td class="c pad">&nbsp;</td><td class="ln">1450</td><td class="c add">            СтрокаВыгрузить.Мандат, СтрокаВыгрузить.Валюта, СтрокаВыгрузить.СчетМандата, СтрокаВыгрузить.Количество,</td></tr>
+<tr><td class="ln"></td><td class="c pad">&nbsp;</td><td class="ln">1451</td><td class="c add">            СтрокаВыгрузить.Стоимость, ФабрикаСервиса);</td></tr>
+<tr><td class="ln"></td><td class="c pad">&nbsp;</td><td class="ln">1452</td><td class="c add">    КонецЦикла;</td></tr>
+<tr><td class="ln"></td><td class="c pad">&nbsp;</td><td class="ln">1453</td><td class="c add">    </td></tr>
+<tr><td class="ln"></td><td class="c pad">&nbsp;</td><td class="ln">1454</td><td class="c add">    Если вклОтладка Тогда</td></tr>
+<tr><td class="ln"></td><td class="c pad">&nbsp;</td><td class="ln">1455</td><td class="c add">        обЗапись = Новый ЗаписьXML;</td></tr>
+<tr><td class="ln"></td><td class="c pad">&nbsp;</td><td class="ln">1456</td><td class="c add">        обЗапись.УстановитьСтроку(&quot;UTF-8&quot;);</td></tr>
+<tr><td class="ln"></td><td class="c pad">&nbsp;</td><td class="ln">1457</td><td class="c add">        ФабрикаСервиса.ЗаписатьXML(обЗапись, ПакетБлокировкиХДТО);</td></tr>
+<tr><td class="ln"></td><td class="c pad">&nbsp;</td><td class="ln">1458</td><td class="c add">        ТекстовыйЛог.ДобавитьСтроку(обЗапись.Закрыть());</td></tr>
+<tr><td class="ln"></td><td class="c pad">&nbsp;</td><td class="ln">1459</td><td class="c add">    КонецЕсли;</td></tr>
+<tr><td class="ln"></td><td class="c pad">&nbsp;</td><td class="ln">1460</td><td class="c add">    </td></tr>
+<tr><td class="ln"></td><td class="c pad">&nbsp;</td><td class="ln">1461</td><td class="c add">    Ответ = ВызватьDownloadOrders(Прокси, ПакетБлокировкиХДТО);</td></tr>
+<tr><td class="ln"></td><td class="c pad">&nbsp;</td><td class="ln">1462</td><td class="c add">    Рез = ОбработатьОтветЧерезОбертку(Ответ, ФабрикаСервиса, Неопределено, УзелОбменаДляРегистрацииНенайденныхСчетовМандатов);</td></tr>
+<tr><td class="ln"></td><td class="c pad">&nbsp;</td><td class="ln">1463</td><td class="c add">    </td></tr>
+<tr><td class="ln"></td><td class="c pad">&nbsp;</td><td class="ln">1464</td><td class="c add">    Если Рез.ЕстьОшибки Тогда</td></tr>
+<tr><td class="ln"></td><td class="c pad">&nbsp;</td><td class="ln">1465</td><td class="c add">        ЕстьОшибки = Истина;</td></tr>
+<tr><td class="ln"></td><td class="c pad">&nbsp;</td><td class="ln">1466</td><td class="c add">        СоответствиеПортфелей.Вставить(БлокировкиМандата.Мандат, Истина);</td></tr>
+<tr><td class="ln"></td><td class="c pad">&nbsp;</td><td class="ln">1467</td><td class="c add">        ДобавитьОшибкуВДанныеДляРассылки(БлокировкиМандата.Мандат, &quot;При выгрузке блокировки в ФО возникла ошибка:&quot;</td></tr>
+<tr><td class="ln"></td><td class="c pad">&nbsp;</td><td class="ln">1468</td><td class="c add">            + Символы.ПС + Рез.ЕстьОшибки, БлокировкиМандата.Колво);</td></tr>
+<tr><td class="ln"></td><td class="c pad">&nbsp;</td><td class="ln">1469</td><td class="c add">    КонецЕсли;</td></tr>
+<tr><td class="ln"></td><td class="c pad">&nbsp;</td><td class="ln">1470</td><td class="c add">    </td></tr>
+<tr><td class="ln"></td><td class="c pad">&nbsp;</td><td class="ln">1471</td><td class="c add">    Если ЗначениеЗаполнено(Рез.ТекстОшибки) Тогда</td></tr>
+<tr><td class="ln"></td><td class="c pad">&nbsp;</td><td class="ln">1472</td><td class="c add">        ТекстовыйЛог.ДобавитьСтроку(&quot;Ошибка выгрузки блокировки по: &quot; + БлокировкиМандата.Мандат);</td></tr>
+<tr><td class="ln"></td><td class="c pad">&nbsp;</td><td class="ln">1473</td><td class="c add">        ТекстовыйЛог.ДобавитьСтроку(Рез.ТекстОшибки);</td></tr>
+<tr><td class="ln"></td><td class="c pad">&nbsp;</td><td class="ln">1474</td><td class="c add">    КонецЕсли;</td></tr>
+<tr><td class="ln"></td><td class="c pad">&nbsp;</td><td class="ln">1475</td><td class="c add">    </td></tr>
+<tr><td class="ln"></td><td class="c pad">&nbsp;</td><td class="ln">1476</td><td class="c add">    Если вклОтладка Тогда</td></tr>
+<tr><td class="ln"></td><td class="c pad">&nbsp;</td><td class="ln">1477</td><td class="c add">        ТекстовыйЛог.ДобавитьСтроку(Рез.ТекстОтвета);</td></tr>
+<tr><td class="ln"></td><td class="c pad">&nbsp;</td><td class="ln">1478</td><td class="c add">    КонецЕсли;</td></tr>
+<tr><td class="ln"></td><td class="c pad">&nbsp;</td><td class="ln">1479</td><td class="c add">    </td></tr>
+<tr><td class="ln"></td><td class="c pad">&nbsp;</td><td class="ln">1480</td><td class="c add">КонецПроцедуры</td></tr>
+<tr><td class="ln"></td><td class="c pad">&nbsp;</td><td class="ln">1481</td><td class="c add">// - IMDEV-____ 28.10.2026</td></tr>
+<tr><td class="ln">1392</td><td class="c eq">&nbsp;</td><td class="ln">1482</td><td class="c eq">&nbsp;</td></tr>
+<tr><td class="ln">1393</td><td class="c eq">Процедура ОпубликоватьАктивыРЕПО(ФабрикаСервиса, Прокси, ДатаИсполнения = Неопределено, ТЗИсточник)</td><td class="ln">1483</td><td class="c eq">Процедура ОпубликоватьАктивыРЕПО(ФабрикаСервиса, Прокси, ДатаИсполнения = Неопределено, ТЗИсточник)</td></tr>
+<tr><td class="ln">1394</td><td class="c eq">&nbsp;</td><td class="ln">1484</td><td class="c eq">&nbsp;</td></tr>
+</table></div>
+</section>
+</main>
+</body>
+</html>
