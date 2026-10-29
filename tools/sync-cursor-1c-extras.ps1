@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+﻿# -*- coding: utf-8 -*-
 # Обновляет слой B из https://github.com/Desko77/cursor-1c-skills
 # Копирует только белый список. Каталог .cursor/skills не трогает.
 
@@ -26,7 +26,8 @@ $CursorSkills = Join-Path $Root ".cursor\skills"
 $SkillNames = @(
     "composing-1c-queries",
     "1c-query-optimization",
-    "v8unpack-cf"
+    "v8unpack-cf",
+    "1c-rls-perf-connect"
 )
 $RuleNames = @(
     "1c-form-reserved-names.mdc"
@@ -55,6 +56,7 @@ function Update-Cache {
         skills/composing-1c-queries `
         skills/1c-query-optimization `
         skills/v8unpack-cf `
+        skills/1c-rls-perf-connect `
         rules
     if ($LASTEXITCODE -ne 0) { throw "git sparse-checkout failed" }
 }
@@ -122,6 +124,22 @@ function Apply-LocalPatches {
         Write-Info "Patched 1c-query-optimization cross-refs"
     }
     Set-Content -Path $optSkill -Value $optText -Encoding UTF8 -NoNewline
+
+    $rlsSkill = Join-Path $DstSkills "1c-rls-perf-connect\SKILL.md"
+    $rlsText = Get-Content -Raw -Encoding UTF8 $rlsSkill
+    if ($rlsText -notmatch 'скиллами слоя A') {
+        $rlsNote = "В этом репозитории метаданные, роли и расширения править скиллами слоя A: ``cfe-patch-method``, ``cfe-borrow``, ``meta-edit``, ``role-edit``, ``role-compile``, ``role-validate``. Соседние скиллы Desko77 (``1c-ssl-patterns``, ``1c-bsp-api``, ``ai-edt-tools``) и правило ``bsp-profile-rights-api.md`` сюда не ставились. AI-EDT не вызывать, если сервер не поднят.`r`n`r`n"
+        $rlsText = $rlsText -replace '(?m)^# Подключение объекта к производительному RLS БСП\r?\n\r?\n',
+            ("# Подключение объекта к производительному RLS БСП`r`n`r`n" + $rlsNote)
+        Write-Info "Patched 1c-rls-perf-connect local intro"
+    }
+    if ($rlsText -match 'ai-edt-tools') {
+        $rlsText = $rlsText -replace "(?s)В EDT-проекте метаданные и модули правятся инструментами сервера ``ai-edt`` \(каталог - скил\r?\n``ai-edt-tools``\): BSL через ``write_module_source``, метаданные через ``edit_metadata``, перед\r?\n``update_database`` - ``validate_for_export``\. В формате Конфигуратора - скилы ``1c-cfe-\*``, ``1c-meta-\*``,\r?\n``1c-role-\*``\.",
+            'В формате Конфигуратора метаданные, роли и расширения править скиллами слоя A: `cfe-*`, `meta-*`, `role-*`.'
+        $rlsText = $rlsText -replace "скил ``1c-cfe-patch-method``", 'скилл `cfe-patch-method` слоя A'
+        Write-Info "Patched 1c-rls-perf-connect tool names"
+    }
+    Set-Content -Path $rlsSkill -Value $rlsText -Encoding UTF8 -NoNewline
 }
 
 Assert-LayerAUntouched

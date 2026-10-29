@@ -7,6 +7,7 @@ Cursor читает этот каталог отдельно от `.cursor/skill
 | `composing-1c-queries` | язык запросов 1С |
 | `1c-query-optimization` | оптимизация запросов |
 | `v8unpack-cf` | распаковка/сборка CF, CFE, EPF без платформы (`pip install v8unpack`) |
+| `1c-rls-perf-connect` | подключение объекта к ограничению доступа БСП в производительном варианте |
 
 Правило слоя B лежит в `.cursor/rules/1c-form-reserved-names.mdc` (уникальное имя, проектные правила не затирает).
 

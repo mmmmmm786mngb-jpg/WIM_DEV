@@ -29,9 +29,9 @@ powershell.exe -NoProfile -File ".cursor/skills/form-edit/scripts/form-edit.ps1"
 | Ключ | Правка |
 |------|--------|
 | `elements` | Элементы: добавить, перенести, изменить, удалить — список операций, по порядку |
-| `attributes` | Реквизиты: добавить; `{ "remove": "Имя" }` — удалить |
-| `commands` | Команды: добавить; `{ "remove": "Имя" }` — удалить |
-| `parameters` | Параметры формы: добавить; `{ "remove": "Имя" }` — удалить |
+| `attributes` | Реквизиты: добавить, `set` — изменить, `rename` — переименовать, `remove` — удалить; колонка — путём `Таблица.Колонка` |
+| `commands` | Команды: добавить, `set`, `rename`, `remove` |
+| `parameters` | Параметры формы: добавить, `set`, `rename`, `remove` |
 | `title` | Заголовок формы (строка или `{ru, en}`); `null` — убрать |
 | `properties` | Свойства формы: `{ "windowOpeningMode": "LockOwnerWindow" }`; `null` у свойства — убрать (`references/form-properties.md`) |
 | `events` | Обработчики событий формы: `{ "OnOpen": "ПриОткрытии" }` |
@@ -39,7 +39,7 @@ powershell.exe -NoProfile -File ".cursor/skills/form-edit/scripts/form-edit.ps1"
 | `conditionalAppearance` | Добавить правила условного оформления (`references/appearance.md`) |
 | `commandInterface` | Добавить команды в панели формы (`references/command-interface.md`) |
 
-Все ключи необязательны, в одной правке можно сочетать любые. Имена элементов, реквизитов и команд — из `/form-info`. Процедуры обработчиков в модуле формы не создаются — их добавляют в `Module.bsl` отдельно.
+Все ключи необязательны, в одной правке можно сочетать любые. Имена элементов, реквизитов и команд — из `/form-info`. Для обработчиков событий и команд, которых ещё нет в модуле формы, навык добавляет в `Module.bsl` пустые процедуры с нужной сигнатурой — остаётся написать тело.
 
 ## Элементы
 
@@ -71,7 +71,7 @@ powershell.exe -NoProfile -File ".cursor/skills/form-edit/scripts/form-edit.ps1"
     { "check": "Срочно", "path": "Срочно", "into": "ГруппаОтгрузка" },
     { "move": "ТоварыСумма", "before": "ТоварыЦена" },
     { "set": "Ответственный", "visible": false },
-    { "set": "Контрагент", "title": "Покупатель", "events": { "OnChange": null } },
+    { "set": "Контрагент", "title": "Покупатель", "events": { "OnChange": "КонтрагентПриИзменении" } },
     { "remove": "Комментарий" }
   ]
 }
@@ -121,7 +121,7 @@ powershell.exe -NoProfile -File ".cursor/skills/form-edit/scripts/form-edit.ps1"
 | `path` | Путь к данным: `"Объект.Склад"`, `"ИмяРеквизита"`; колонка таблицы — `"Объект.Товары.Сумма"` |
 | `title` / `tooltip` | Заголовок / подсказка (строка или `{ru, en}`) |
 | `visible: false` / `enabled: false` / `readOnly: true` | Скрыть / сделать недоступным / только чтение |
-| `events` | Обработчики: `{ "OnChange": "ИмяПроцедуры" }`; `null` вместо имени — имя по шаблону `<Элемент><Событие>` |
+| `events` | Обработчики: `{ "OnChange": "ИмяПроцедуры" }` |
 | `children` / `columns` | Вложенные элементы группы или страницы / колонки таблицы |
 
 Поле на новом реквизите формы — реквизит и элемент в одной правке:
@@ -154,14 +154,21 @@ powershell.exe -NoProfile -File ".cursor/skills/form-edit/scripts/form-edit.ps1"
 
 Имена регистрозависимы.
 
-**Форма:** `OnCreateAtServer`, `OnOpen`, `BeforeClose`, `OnClose`, `NotificationProcessing`, `ChoiceProcessing`, `OnReadAtServer`, `BeforeWriteAtServer`, `OnWriteAtServer`, `AfterWriteAtServer`, `BeforeWrite`, `AfterWrite`, `FillCheckProcessingAtServer`, `BeforeLoadDataFromSettingsAtServer`, `OnLoadDataFromSettingsAtServer`, `ExternalEvent`, `Opening`
+**Форма:** `OnCreateAtServer`, `OnOpen`, `BeforeClose`, `OnClose`, `NotificationProcessing`, `ChoiceProcessing`, `OnReadAtServer`, `BeforeWriteAtServer`, `OnWriteAtServer`, `AfterWriteAtServer`, `BeforeWrite`, `AfterWrite`, `FillCheckProcessingAtServer`, `BeforeLoadDataFromSettingsAtServer`, `OnLoadDataFromSettingsAtServer`, `OnSaveDataInSettingsAtServer`, `URLProcessing`, `ExternalEvent`, `OnReopen`
 
-**input:** `OnChange`, `StartChoice`, `ChoiceProcessing`, `AutoComplete`, `TextEditEnd`, `Clearing`, `Creating`, `EditTextChange`
+**input:** `OnChange`, `StartChoice`, `ChoiceProcessing`, `AutoComplete`, `TextEditEnd`, `Clearing`, `Opening`, `Creating`, `EditTextChange`, `Tuning`, `StartListChoice`
 **check / radio:** `OnChange`
-**table:** `OnStartEdit`, `OnEditEnd`, `OnChange`, `Selection`, `ValueChoice`, `BeforeAddRow`, `BeforeDeleteRow`, `AfterDeleteRow`, `BeforeRowChange`, `BeforeEditEnd`, `OnActivateRow`, `OnActivateCell`
-**label / labelField:** `Click`, `URLProcessing`; у `labelField` также `OnChange`, `StartChoice`, `ChoiceProcessing`, `Clearing`
-**picture / button:** `Click`
+**table:** `Selection`, `OnActivateRow`, `OnActivateCell`, `OnActivateField`, `BeforeAddRow`, `BeforeDeleteRow`, `AfterDeleteRow`, `BeforeRowChange`, `OnStartEdit`, `OnEditEnd`, `BeforeEditEnd`, `OnChange`, `ChoiceProcessing`, `ValueChoice`, `BeforeExpand`, `BeforeCollapse`, `Drag`, `DragStart`, `DragCheck`, `DragEnd`; только у таблицы динамического списка — `OnGetDataAtServer`, `URLGetProcessing`, `BeforeLoadUserSettingsAtServer`, `OnLoadUserSettingsAtServer`, `OnSaveUserSettingsAtServer`, `OnUpdateUserSettingSetAtServer`
+**label:** `Click`, `URLProcessing`
+**labelField:** `Click`, `URLProcessing`, `OnChange`
+**picture:** `Click`, `Drag`, `DragCheck`
+**picField:** `Click`, `OnChange`, `Drag`, `DragCheck`
+**calendar:** `OnChange`, `Selection`, `OnActivateDate`, `OnPeriodOutput`
 **pages:** `OnCurrentPageChange`
+**spreadsheet:** `Selection`, `OnActivate`, `OnChangeAreaContent`, `DetailProcessing`, `AdditionalDetailProcessing`
+**html:** `OnClick`, `DocumentComplete`
+
+У кнопки, страницы, группы колонок, командной панели и подменю событий нет. `Click` обычной группы и `OnHover`, `OnSelectedRowsSetChange` таблицы — только с платформы 8.5.
 
 ### Реквизиты, команды, параметры
 
@@ -173,6 +180,35 @@ powershell.exe -NoProfile -File ".cursor/skills/form-edit/scripts/form-edit.ps1"
 ```
 
 Типы: `string`, `string(100)`, `decimal(15,2)`, `boolean`, `date`, `dateTime`, `CatalogRef.X`, `DocumentRef.X`, `EnumRef.X`, `ValueTable`, `ValueList`, `DynamicList`, `Тип1 | Тип2` — все типы в `references/type-system-advanced.md`. Остальные ключи реквизитов — `attributes-advanced.md`, команд — `buttons-commands.md`.
+
+### Изменение и переименование
+
+`set` меняет существующий реквизит, команду или параметр — ключами, что и при добавлении; `null` возвращает значение по умолчанию. Колонка таблицы значений — путём `Таблица.Колонка`. Колонка реквизита формы в табличной части объекта (сам документ или справочник не меняется) — путём `Объект.ТабличнаяЧасть.Колонка`:
+
+```json
+{
+  "attributes": [
+    { "set": "Данные.Представление", "type": "string" },
+    { "name": "Данные.Код", "type": "string(9)" },
+    { "remove": "Данные.Устаревшая" },
+    { "name": "Объект.Товары.Скидка", "type": "decimal(15,2)" },
+    { "set": "Список", "settings": { "query": "ВЫБРАТЬ …" } }
+  ],
+  "elements": [ { "input": "ТоварыСкидка", "path": "Объект.Товары.Скидка", "after": "ТоварыКоличество" } ],
+  "commands": [ { "set": "Загрузить", "action": "ЗагрузитьИзФайла" } ]
+}
+```
+
+- `type` заменяет тип целиком. Вид реквизита (таблица ↔ значение ↔ динамический список) и тип основного реквизита не меняются.
+- `settings` у динамического списка меняет только переданные части — остальные настройки списка остаются.
+
+Переименование — `rename` и `to`:
+
+```json
+{ "attributes": [ { "rename": "Данные", "to": "Строки", "renameInModule": true } ] }
+```
+
+Пути элементов, условное оформление и командный интерфейс формы переходят на новое имя. `renameInModule: true` переписывает и обращения в `Module.bsl`; без него навык перечисляет строки модуля, которые надо поправить. Имена элементов и обработчиков не меняются.
 
 ## Форма расширения
 

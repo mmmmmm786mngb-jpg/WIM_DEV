@@ -1,4 +1,4 @@
-﻿# form-info v1.10 — Analyze 1C managed form structure
+﻿# form-info v1.14 — Analyze 1C managed form structure
 # Source: https://github.com/Nikolay-Shirokov/cc-1c-skills
 [CmdletBinding(PositionalBinding=$false)]
 param(
@@ -7,7 +7,8 @@ param(
 	[string]$FormPath,
 	[int]$Limit = 150,
 	[int]$Offset = 0,
-	[string]$Expand
+	[string]$Expand,
+	[switch]$Handlers
 )
 
 $ErrorActionPreference = "Stop"
@@ -15,7 +16,7 @@ $ErrorActionPreference = "Stop"
 
 # --- Resolve FormPath ---
 if (-not [System.IO.Path]::IsPathRooted($FormPath)) {
-	$FormPath = Join-Path (Get-Location).Path $FormPath
+	$FormPath = Join-Path (Get-Location).ProviderPath $FormPath
 }
 # A: Directory → Ext/Form.xml
 if (Test-Path $FormPath -PathType Container) {
@@ -46,7 +47,7 @@ if (-not (Test-Path $FormPath)) {
 
 $xmlDoc = New-Object System.Xml.XmlDocument
 $xmlDoc.PreserveWhitespace = $false
-$xmlDoc.Load((Resolve-Path $FormPath).Path)
+$xmlDoc.Load((Resolve-Path $FormPath).ProviderPath)
 
 $ns = New-Object System.Xml.XmlNamespaceManager($xmlDoc.NameTable)
 $ns.AddNamespace("d", "http://v8.1c.ru/8.3/xcf/logform")
@@ -63,6 +64,127 @@ $root = $xmlDoc.DocumentElement
 # --- Detect extension (BaseForm) ---
 $baseFormNode = $root.SelectSingleNode("d:BaseForm", $ns)
 $isExtension = ($baseFormNode -ne $null)
+
+# --- Обработчики: процедуры модуля формы (только с -Handlers) ---
+
+# Текст модуля формы; $null — модуль не в UTF-8 (с заменой символов имена процедур не найти — лучше сказать прямо)
+function Read-ModuleText([string]$path) {
+	try { return (New-Object System.Text.UTF8Encoding($false, $true)).GetString([System.IO.File]::ReadAllBytes($path)).TrimStart([char]0xFEFF) }
+	catch { return $null }
+}
+
+# Сканер BSL: строковые литералы (с "" и многострочными продолжениями «|») и комментарии // отделяются
+# от кода, номера строк сохраняются. Lines — строки текста; Code — они же без комментариев, литерал
+# заменён на ""; Mask — строки той же длины, литералы и комментарии — пробелами (позиции в маске —
+# позиции в тексте); Literals — @{ Line; Text; Prefix — код этой строки слева от литерала; Col — начало
+# текста литерала в строке, -1 у многострочного }.
+function Get-BslScan([string]$text) {
+	$lines = $text -replace "`r", "" -split "`n"
+	$code = New-Object System.Collections.ArrayList
+	$mask = New-Object System.Collections.ArrayList
+	$lits = New-Object System.Collections.ArrayList
+	$inStr = $false; $cur = $null; $curLine = 0; $curPrefix = ""; $curCol = -1
+	for ($i = 0; $i -lt $lines.Count; $i++) {
+		$line = $lines[$i]
+		# строка без кавычек вне литерала — только отрезать комментарий (посимвольный разбор в PS медленный)
+		if (-not $inStr -and $line.IndexOf('"') -lt 0) {
+			$k = $line.IndexOf('//')
+			[void]$code.Add($(if ($k -ge 0) { $line.Substring(0, $k) } else { $line }))
+			[void]$mask.Add($(if ($k -ge 0) { $line.Substring(0, $k) + (' ' * ($line.Length - $k)) } else { $line }))
+			continue
+		}
+		$sb = New-Object System.Text.StringBuilder
+		$mk = $line.ToCharArray()
+		$j = 0
+		if ($inStr) {
+			# продолжение многострочного литерала: пробелы, затем «|»
+			while ($j -lt $line.Length -and ($line[$j] -eq ' ' -or $line[$j] -eq "`t")) { $j++ }
+			# строка «//…» между строками литерала — комментарий, литерал продолжается на следующей
+			if ($j + 1 -lt $line.Length -and $line[$j] -eq '/' -and $line[$j + 1] -eq '/') { [void]$code.Add(""); [void]$mask.Add(' ' * $line.Length); continue }
+			if ($j -lt $line.Length -and $line[$j] -eq '|') { $mk[$j] = ' '; $j++ }
+			$cur += "`n"
+			$curCol = -1
+		}
+		while ($j -lt $line.Length) {
+			$c = $line[$j]
+			if ($inStr) {
+				if ($c -eq '"') {
+					if ($j + 1 -lt $line.Length -and $line[$j + 1] -eq '"') { $cur += '"'; $mk[$j] = ' '; $mk[$j + 1] = ' '; $j += 2; continue }
+					$inStr = $false
+					[void]$lits.Add(@{ Line = $curLine; Text = $cur; Prefix = $curPrefix; Col = $curCol })
+					[void]$sb.Append('""')
+					$j++
+					continue
+				}
+				$cur += $c; $mk[$j] = ' '; $j++; continue
+			}
+			if ($c -eq '/' -and $j + 1 -lt $line.Length -and $line[$j + 1] -eq '/') { for ($q = $j; $q -lt $mk.Length; $q++) { $mk[$q] = ' ' }; break }
+			if ($c -eq '"') { $inStr = $true; $cur = ""; $curLine = $i + 1; $curPrefix = $sb.ToString(); $curCol = $j + 1; $j++; continue }
+			[void]$sb.Append($c); $j++
+		}
+		[void]$code.Add($sb.ToString())
+		[void]$mask.Add([string]::new($mk))
+	}
+	return @{ Lines = $lines; Code = $code.ToArray(); Mask = $mask.ToArray(); Literals = $lits.ToArray() }
+}
+
+# Процедуры и функции модуля (имя, первая и последняя строка; первая — с аннотациями над заголовком)
+# и области (имя, строки #Область и #КонецОбласти, вложенность). Строки нумеруются с 1.
+# Заголовок — только в начале строки: продолжение литерала («|…») и комментарий заголовком не станут.
+function Get-ModuleOutline([string[]]$lines) {
+	$procs = New-Object System.Collections.ArrayList
+	$regions = New-Object System.Collections.ArrayList
+	$open = New-Object System.Collections.ArrayList
+	$cur = $null
+	for ($i = 0; $i -lt $lines.Count; $i++) {
+		$l = $lines[$i]
+		if ($null -ne $cur) {
+			# конец процедуры — в начале строки или после «;» (`Возврат Х;КонецФункции`)
+			if ($l -match '(^|;)\s*(КонецПроцедуры|КонецФункции|EndProcedure|EndFunction)(?![\w])') { $cur.end = $i + 1; [void]$procs.Add($cur); $cur = $null }
+			continue
+		}
+		$m = [regex]::Match($l, '^\s*(?:(?:Асинх|Async)\s+)?(?:Процедура|Функция|Procedure|Function)\s+(\w+)\s*\(', 'IgnoreCase')
+		if ($m.Success) {
+			$s = $i
+			while ($s -gt 0 -and $lines[$s - 1] -match '^\s*&') { $s-- }
+			$cur = [pscustomobject]@{ name = $m.Groups[1].Value; start = $s + 1; end = $i + 1 }
+			continue
+		}
+		$m = [regex]::Match($l, '^\s*#(?:Область|Region)\s+(\S+)', 'IgnoreCase')
+		if ($m.Success) { [void]$open.Add([pscustomobject]@{ name = $m.Groups[1].Value; start = $i + 1; end = 0; depth = $open.Count }); continue }
+		if ($l -match '^\s*#(КонецОбласти|EndRegion)(?![\w])' -and $open.Count -gt 0) {
+			$r = $open[$open.Count - 1]; $open.RemoveAt($open.Count - 1)
+			$r.end = $i + 1; [void]$regions.Add($r)
+		}
+	}
+	return @{ procs = $procs; regions = $regions }
+}
+
+$script:modulePath = Join-Path (Split-Path (Resolve-Path $FormPath).ProviderPath -Parent) "Form\Module.bsl"
+$script:moduleProcs = $null
+$script:moduleNotUtf8 = $false
+if ($Handlers -and (Test-Path -LiteralPath $script:modulePath)) {
+	$moduleText = Read-ModuleText $script:modulePath
+	$script:moduleNotUtf8 = ($null -eq $moduleText)
+}
+if ($Handlers -and (Test-Path -LiteralPath $script:modulePath) -and -not $script:moduleNotUtf8) {
+	$bsl = Get-BslScan $moduleText
+	# @{} регистронезависим — как имена в BSL
+	$script:moduleProcs = @{}
+	foreach ($p in (Get-ModuleOutline $bsl.Code).procs) { if (-not $script:moduleProcs.ContainsKey($p.name)) { $script:moduleProcs[$p.name] = $p } }
+}
+
+# Где процедура обработчика: " (lines a-b)", " (not in module)" или "" — без -Handlers, без модуля,
+# у привязки формы расширения без callType (процедура исходной формы — в модуле конфигурации)
+# и у события с GUID-именем без процедуры (платформа такой обработчик не вызывает).
+function Get-HandlerSuffix([string]$handler, [string]$callType, [string]$eventName) {
+	if ($null -eq $script:moduleProcs -or -not $handler) { return "" }
+	if ($isExtension -and -not $callType) { return "" }
+	$p = $script:moduleProcs[$handler.Trim()]
+	if ($p) { return " (lines $($p.start)-$($p.end))" }
+	if ($eventName -match '^[0-9a-fA-F]{8}-([0-9a-fA-F]{4}-){3}[0-9a-fA-F]{12}$') { return "" }
+	return " (not in module)"
+}
 
 # --- Helper: extract multilang text ---
 
@@ -171,8 +293,9 @@ function Get-EventsStr($node) {
 	foreach ($e in $eventsNode.SelectNodes("d:Event", $ns)) {
 		$eName = $e.GetAttribute("name")
 		$ct = $e.GetAttribute("callType")
-		if ($ct) { $evts += "$eName[$ct]" }
-		else { $evts += $eName }
+		$label = if ($ct) { "$eName[$ct]" } else { $eName }
+		if ($Handlers) { $label += ": $($e.InnerText.Trim())$(Get-HandlerSuffix $e.InnerText $ct $eName)" }
+		$evts += $label
 	}
 	if ($evts.Count -eq 0) { return "" }
 	return " {$($evts -join ', ')}"
@@ -358,7 +481,10 @@ function Build-TreeNodes($children, [string]$prefix) {
 			} else {
 				$cnt = Count-SignificantChildren $ci
 				$idx = $treeLines.Count - 1
-				$treeLines[$idx] = $treeLines[$idx] + " ($cnt items)"
+				# с -Handlers — сколько привязок внутри свёрнутой страницы: без счётчика их не заметить
+				$hc = if ($Handlers -and $ci) { $ci.SelectNodes(".//d:Event", $ns).Count } else { 0 }
+				$hcStr = if ($hc -gt 0) { ", $hc handlers" } else { "" }
+				$treeLines[$idx] = $treeLines[$idx] + " ($cnt items$hcStr)"
 				$script:hasCollapsed = $true
 			}
 		} else {
@@ -373,7 +499,7 @@ function Build-TreeNodes($children, [string]$prefix) {
 
 # --- Determine form name and object from path ---
 
-$resolvedPath = (Resolve-Path $FormPath).Path
+$resolvedPath = (Resolve-Path $FormPath).ProviderPath
 $parts = $resolvedPath -split '[/\\]'
 
 $formName = ""
@@ -424,7 +550,7 @@ function Test-ExternalObjectRoot([string]$xmlPath) {
 }
 function Get-SupportStatusForPath([string]$targetPath) {
 	try {
-		$rp = (Resolve-Path $targetPath).Path
+		$rp = (Resolve-Path $targetPath).ProviderPath
 		$elemUuid = $null
 		$binPath = $null
 		# Reads the uuid of the first metadata element in an .xml file (or $null).
@@ -502,6 +628,7 @@ $header += " ==="
 $lines += $header
 $support = Get-SupportStatusForPath $FormPath
 if ($null -ne $support) { $lines += "Поддержка: $support" }
+if ($Handlers) { $lines += "Module: $(if (Test-Path -LiteralPath $script:modulePath) { $script:modulePath } else { 'none' })$(if ($script:moduleNotUtf8) { ' (not UTF-8 — line ranges unavailable)' })" }
 
 # --- Form properties (Title excluded — shown in header) ---
 
@@ -549,7 +676,7 @@ if ($formEvents -and $formEvents.HasChildNodes) {
 		$eHandler = $e.InnerText
 		$ct = $e.GetAttribute("callType")
 		$ctStr = if ($ct) { "[$ct]" } else { "" }
-		$lines += "  $eName${ctStr} -> $eHandler"
+		$lines += "  $eName${ctStr} -> $eHandler$(Get-HandlerSuffix $eHandler $ct $eName)"
 	}
 }
 
@@ -723,13 +850,13 @@ if ($cmdsNode) {
 			foreach ($a in $actions) {
 				$ct = $a.GetAttribute("callType")
 				$ctStr = if ($ct) { "[$ct]" } else { "" }
-				$actParts += "$($a.InnerText)$ctStr"
+				$actParts += "$($a.InnerText)$ctStr$(Get-HandlerSuffix $a.InnerText $ct 'Action')"
 			}
 			$actionStr = " -> $($actParts -join ', ')"
 		} elseif ($actions.Count -eq 1) {
 			$ct = $actions[0].GetAttribute("callType")
 			$ctStr = if ($ct) { "[$ct]" } else { "" }
-			$actionStr = " -> $($actions[0].InnerText)$ctStr"
+			$actionStr = " -> $($actions[0].InnerText)$ctStr$(Get-HandlerSuffix $actions[0].InnerText $ct 'Action')"
 		} else {
 			$actionStr = ""
 		}
@@ -752,11 +879,16 @@ if ($isExtension) {
 	$lines += "BaseForm: $bfStr"
 }
 
-# --- Expand hint ---
+# --- Hints ---
 
-if ($script:hasCollapsed) {
+$hints = @()
+if ($script:hasCollapsed) { $hints += "Hint: use -Expand <name> to expand a collapsed section, -Expand * for all" }
+if (-not $Handlers -and $null -ne $root.SelectSingleNode(".//d:Events/d:Event | d:Commands/d:Command/d:Action", $ns)) {
+	$hints += "Hint: use -Handlers to show handler names with their line ranges in Form/Module.bsl"
+}
+if ($hints.Count -gt 0) {
 	$lines += ""
-	$lines += "Hint: use -Expand <name> to expand a collapsed section, -Expand * for all"
+	$lines += $hints
 }
 
 # --- Truncation protection ---
@@ -777,8 +909,8 @@ if ($lines.Count -gt $Limit) {
 	$remaining = $totalLines - $Offset - $Limit
 	Write-Host ""
 	Write-Host "[TRUNCATED] Shown $Limit of $totalLines lines. Use -Offset $($Offset + $Limit) to continue."
-	# Подсказка про свёрнутые секции стоит в конце вывода — при обрезке повторяем её здесь
-	if ($script:hasCollapsed) { Write-Host "Hint: use -Expand <name> to expand a collapsed section, -Expand * for all" }
+	# Подсказки стоят в конце вывода — при обрезке повторяем их здесь
+	foreach ($h in $hints) { Write-Host $h }
 } else {
 	foreach ($l in $lines) { Write-Host $l }
 }

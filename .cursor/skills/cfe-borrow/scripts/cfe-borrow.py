@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# cfe-borrow v1.50 — Borrow objects from configuration into extension (CFE)
+# cfe-borrow v1.58 — Borrow objects from configuration into extension (CFE)
 # Source: https://github.com/Nikolay-Shirokov/cc-1c-skills
 
 import argparse
@@ -54,6 +54,14 @@ MAIN_ATTR_ID = "1000001"
 
 # Виды дочерних объектов, которые заимствуются в оболочку поимённо (табличные части — отдельно)
 CHILD_OBJECT_KINDS = ("Attribute", "Dimension", "Resource", "AddressingAttribute", "AccountingFlag", "ExtDimensionAccountingFlag")
+
+# Виды подобъектов в -Object (Тип.Имя.<Вид>.<Имя>). Признак учёта субконто идёт только вместе с
+# ТЧ видов субконто (свойства ExtDimensionTypes у оболочки) — по одному не заимствуется.
+SUB_OBJECT_KINDS = ("Attribute", "TabularSection", "Dimension", "Resource", "AddressingAttribute", "AccountingFlag")
+# Своя колонка в заимствованной ТЧ: у этих видов — отказ UpdateDBCfg на любой платформе, у БП и
+# Задачи — ниже 8.3.25 (граница по версии платформы, не по режиму)
+TS_OWN_COLUMNS_BLOCKED = ("ChartOfCharacteristicTypes", "ChartOfAccounts", "ChartOfCalculationTypes")
+TS_OWN_COLUMNS_FROM_PLATFORM = {"BusinessProcess": "8.3.25", "Task": "8.3.25"}
 
 # Прямые дети <Form>, которые в заимствованную форму не переносятся.
 # Структурные секции: AutoCommandBar и ChildItems забираются отдельно, остальные выбрасываются целиком.
@@ -275,12 +283,22 @@ def rewrite_type_links(xml, ctx):
     return rewrite_link_blocks(xml, r'\s*<TypeLink>.*?</TypeLink>', ctx)
 
 
+class CiNames(set):
+    """Множество имён без учёта регистра — как хеш-таблица PS (@{}): имена 1С регистронезависимы."""
+
+    def add(self, name):
+        super().add(name.lower())
+
+    def __contains__(self, name):
+        return super().__contains__(name.lower())
+
+
 def get_own_child_object_names(obj_file):
     """Имена ПРЯМЫХ детей собственного <ChildObjects> объекта — для дедупа при повторном
     заимствовании. Текстом это не снять: regex «первый <ChildObjects> до первого </ChildObjects>»
     у объекта с табличными частями обрывается на закрытии первой ТЧ, забирает имена её колонок и
-    теряет то, что идёт после неё."""
-    names = set()
+    теряет то, что идёт после неё. Без учёта регистра, как хеш-таблица PS: имена 1С регистронезависимы."""
+    names = CiNames()
     try:
         tree = etree.parse(obj_file)
     except Exception:
@@ -304,19 +322,167 @@ def get_own_child_object_names(obj_file):
     return names
 
 
-def insert_into_own_child_objects(text, content):
-    """Вставка в СОБСТВЕННЫЙ <ChildObjects> объекта. Свой контейнер закрывается в файле последним:
-    объект в файле один, а вложенные <ChildObjects> табличных частей закрываются раньше. Замена по
-    всем вхождениям раскидывала реквизиты по каждой ТЧ — ps1 рвал XML, py прятал ТЧ внутрь ТЧ."""
-    close_idx = text.rfind("</ChildObjects>")
-    if close_idx >= 0:
-        return text[:close_idx] + content + "\r\n\t\t" + text[close_idx:]
-    # Своего закрывающего тега нет — значит контейнер самозакрытый (детей у него нет, вложенных тоже)
-    self_matches = list(re.finditer(r'<ChildObjects\s*/>', text))
-    if not self_matches:
-        return text
-    m = self_matches[-1]
-    return text[:m.start()] + f"<ChildObjects>{content}\r\n\t\t</ChildObjects>" + text[m.end():]
+def object_child_order():
+    """Порядок групп в <ChildObjects> объекта по виду. Это xs:sequence <Вид>ChildObjects из MDClasses XSD,
+    сверенный выгрузкой платформы: выгрузка сама ставит группы в этот порядок, так что вставка не на место
+    даёт дифф при следующей выгрузке. Единого порядка нет — у документа Form стоит до TabularSection."""
+    return {
+        "Catalog":                    ["Attribute", "TabularSection", "Form", "Template", "Command"],
+        "Document":                   ["Attribute", "Form", "TabularSection", "Template", "Command"],
+        "ExchangePlan":               ["Attribute", "TabularSection", "Form", "Template", "Command"],
+        "ChartOfCharacteristicTypes": ["Attribute", "TabularSection", "Form", "Template", "Command"],
+        "ChartOfAccounts":            ["Attribute", "TabularSection", "AccountingFlag", "ExtDimensionAccountingFlag", "Form", "Template", "Command"],
+        "ChartOfCalculationTypes":    ["Attribute", "TabularSection", "Form", "Template", "Command"],
+        "BusinessProcess":            ["Attribute", "TabularSection", "Form", "Template", "Command"],
+        "Task":                       ["Attribute", "TabularSection", "Form", "Template", "AddressingAttribute", "Command"],
+        "DataProcessor":              ["Attribute", "TabularSection", "Form", "Template", "Command"],
+        "Report":                     ["Attribute", "TabularSection", "Form", "Template", "Command"],
+        "ExternalDataProcessor":      ["Attribute", "TabularSection", "Form", "Template"],
+        "ExternalReport":             ["Attribute", "TabularSection", "Form", "Template"],
+        "Enum":                       ["EnumValue", "Form", "Template", "Command"],
+        "InformationRegister":        ["Resource", "Attribute", "Dimension", "Form", "Template", "Command"],
+        "AccumulationRegister":       ["Resource", "Attribute", "Dimension", "Form", "Template", "Command"],
+        "AccountingRegister":         ["Dimension", "Resource", "Attribute", "Form", "Template", "Command"],
+        "CalculationRegister":        ["Resource", "Attribute", "Dimension", "Recalculation", "Form", "Template", "Command"],
+        "DocumentJournal":            ["Column", "Form", "Template", "Command"],
+        "Table":                      ["Field", "Form", "Command", "Template"],
+        "ExternalDataSource":         ["Table", "Cube", "Function"],
+        "Cube":                       ["DimensionTable", "Dimension", "Resource", "Form", "Command", "Template"],
+        "DimensionTable":             ["Field", "Form", "Command", "Template"],
+        "FilterCriterion":            ["Form", "Command"],
+        "SettingsStorage":            ["Form", "Template"],
+        "TabularSection":             ["Attribute"],
+    }
+
+
+def find_child_anchor(container, tag, obj_type):
+    """Элемент <ChildObjects>, ПЕРЕД которым встаёт новый <tag>; None — дописать в конец.
+    Сразу за последним элементом своего тега, иначе перед первым элементом группы, идущей
+    по канону вида позже. Вид или тег вне канона — None, как раньше."""
+    children = [c for c in container if isinstance(c.tag, str)]
+    last_idx = -1
+    for i, c in enumerate(children):
+        if c.tag.rsplit('}', 1)[-1] == tag:
+            last_idx = i
+    if last_idx >= 0:
+        return children[last_idx + 1] if last_idx + 1 < len(children) else None
+    order = object_child_order().get(obj_type)
+    if not order or tag not in order:
+        return None
+    later = order[order.index(tag) + 1:]
+    for c in children:
+        if c.tag.rsplit('}', 1)[-1] in later:
+            return c
+    return None
+
+
+def insert_into_own_child_objects_by_canon(text, fragment, tag, obj_type):
+    """Вставка ОДНОГО узла <tag> (fragment — с отступом прямого ребёнка) в СОБСТВЕННЫЙ <ChildObjects>
+    объекта на место по канону вида — как find_child_anchor, только по тексту: за последним своим тегом,
+    иначе перед первой группой, идущей по канону позже, иначе перед закрывающим тегом. Свой контейнер
+    открывается первым (свойства объекта <ChildObjects> не содержат) и закрывается последним: вложенные
+    <ChildObjects> табличных частей лежат внутри него, поиск «первого </ChildObjects>» уводил вставку в ТЧ.
+    Прямые дети — по глубине вложенности, не по отступу. Строку с одним тегом дополняем целой строкой,
+    перевод строки — из самого файла. None — своего <ChildObjects> у объекта нет."""
+    eol = "\r\n" if "\r\n" in text else "\n"
+    frag = fragment.rstrip().lstrip("\r\n").replace("\r\n", "\n").replace("\n", eol)
+    m_open = re.search(r'<ChildObjects\b[^>]*?(/?)>', text)
+    if not m_open:
+        return None
+
+    def line_indent(p):
+        # Отступ строки до позиции p; None — перед p на строке есть что-то кроме пробелов
+        ls = text.rfind("\n", 0, p) + 1
+        return text[ls:p] if not text[ls:p].strip() else None
+
+    if m_open.group(1):
+        # Контейнер самозакрытый — детей у него нет, раскрыть с единственным узлом
+        ind = line_indent(m_open.start()) or ""
+        return text[:m_open.start()] + "<ChildObjects>" + eol + frag + eol + ind + "</ChildObjects>" + text[m_open.end():]
+    m_close = None
+    for m_close in re.finditer(r'</ChildObjects\s*>', text):
+        pass
+    if m_close is None or m_close.start() < m_open.end():
+        return None
+    starts = []
+    depth = 0
+    for m in re.finditer(r'<(/?)([\w:.-]+)[^>]*?(/?)>', text[m_open.end():m_close.start()]):
+        if m.group(1):
+            depth -= 1
+            continue
+        if depth == 0:
+            starts.append((m_open.end() + m.start(), m.group(2).rsplit(':', 1)[-1]))
+        if not m.group(3):
+            depth += 1
+    pos = m_close.start()
+    last_idx = max((i for i, s in enumerate(starts) if s[1] == tag), default=-1)
+    order = object_child_order().get(obj_type) or []
+    if last_idx >= 0:
+        if last_idx + 1 < len(starts):
+            pos = starts[last_idx + 1][0]
+    elif tag in order:
+        later = order[order.index(tag) + 1:]
+        pos = next((p for p, t in starts if t in later), pos)
+    if line_indent(pos) is not None:
+        ls = text.rfind("\n", 0, pos) + 1
+        return text[:ls] + frag + eol + text[ls:]
+    return text[:pos] + frag.lstrip() + text[pos:]
+
+
+def insert_own_child_or_die(text, fragment, tag, obj_type, obj_file):
+    """insert_into_own_child_objects_by_canon, но своего <ChildObjects> нет — создать его последним
+    ребёнком элемента объекта; вставить всё равно некуда — отказ, а не молчаливое «добавлено»."""
+    if not re.search(r'<ChildObjects\b', text):
+        m_end = None
+        for m_end in re.finditer(r'</' + re.escape(obj_type) + r'\s*>', text):
+            pass
+        if m_end:
+            ls = text.rfind("\n", 0, m_end.start()) + 1
+            pre = text[ls:m_end.start()]
+            if not pre.strip():
+                eol = "\r\n" if "\r\n" in text else "\n"
+                text = text[:ls] + pre + "\t<ChildObjects/>" + eol + text[ls:]
+            else:
+                text = text[:m_end.start()] + "<ChildObjects/>" + text[m_end.start():]
+    result = insert_into_own_child_objects_by_canon(text, fragment, tag, obj_type)
+    if result is None:
+        print(f"Cannot insert <{tag}>: no own <ChildObjects> in {obj_file}", file=sys.stderr)
+        sys.exit(1)
+    return result
+
+
+def find_own_tabular_section_span(text, ts_name):
+    """Блок <TabularSection> с именем ts_name среди прямых детей СОБСТВЕННОГО <ChildObjects> объекта:
+    (start, end) в тексте, None — нет. Прямые дети — по глубине, как в insert_into_own_child_objects_by_canon;
+    имя ТЧ — первый <Name> блока (в InternalInfo имён нет), без учёта регистра, как имена 1С. Реквизит с тем же
+    именем — не ТЧ."""
+    m_open = re.search(r'<ChildObjects\b[^>]*?(/?)>', text)
+    if not m_open or m_open.group(1):
+        return None
+    closes = list(re.finditer(r'</ChildObjects\s*>', text))
+    if not closes:
+        return None
+    body_start = m_open.end()
+    body_end = closes[-1].start()
+    if body_end < body_start:
+        return None
+    depth = 0
+    ts_start = -1
+    for m in re.finditer(r'<(/?)([\w:.-]+)[^>]*?(/?)>', text[body_start:body_end]):
+        if m.group(1):
+            depth -= 1
+            if depth == 0 and ts_start >= 0:
+                end = body_start + m.end()
+                nm = re.search(r'<Name>([^<]*)</Name>', text[ts_start:end])
+                if nm and nm.group(1).lower() == ts_name.lower():
+                    return (ts_start, end)
+                ts_start = -1
+            continue
+        if depth == 0:
+            ts_start = body_start + m.start() if m.group(2) == "TabularSection" else -1
+        if not m.group(3):
+            depth += 1
+    return None
 
 
 def decode_numeric_entities(s):
@@ -361,11 +527,12 @@ def get_new_object_position(cfg_dir):
             return "end"
         proj = json.loads(open(pj, encoding="utf-8-sig").read())
         proj_dir = os.path.dirname(pj)
-        cfg_full = os.path.normcase(os.path.abspath(cfg_dir or ".")).rstrip("\\/")
+        # Пути — настоящие (realpath): на macOS /var — ссылка на /private/var
+        cfg_full = os.path.normcase(os.path.realpath(cfg_dir or ".")).rstrip("\\/")
         for db in proj.get("databases", []):
             src = db.get("configSrc")
             if src and db.get("newObjectPosition"):
-                src_full = os.path.normcase(os.path.abspath(os.path.join(proj_dir, src))).rstrip("\\/")
+                src_full = os.path.normcase(os.path.realpath(os.path.join(proj_dir, src))).rstrip("\\/")
                 if cfg_full == src_full or cfg_full.startswith(src_full + os.sep):
                     return "byName" if str(db["newObjectPosition"]).lower() == "byname" else "end"
         if str(proj.get("newObjectPosition") or "").lower() == "byname":
@@ -1039,6 +1206,13 @@ def save_xml_bom(tree, path):
         f.write(xml_bytes)
 
 
+def write_text_keep_bom(path, content, style):
+    """Текст в файл с BOM, как был у файла (style — _detect_xml_style до записи; файла не было — с BOM)."""
+    bom = style is None or style["bom"]
+    with open(path, 'w', encoding='utf-8-sig' if bom else 'utf-8', newline='') as f:
+        f.write(content)
+
+
 def write_utf8_bom(path, content):
     # newline='' — без трансляции: иначе текстовый режим Python дал бы CRLF на Windows
     # и LF на macOS, то есть вывод навыка зависел бы от ОС.
@@ -1477,7 +1651,12 @@ def main():
 
         form_el = etree.Element(f"{{{MD_NS}}}Form")
         form_el.text = form_name
-        insert_before_closing(child_objs, form_el, "\t\t\t")
+        # Место — по канону вида (у документа форма до ТЧ, у справочника после)
+        anchor = find_child_anchor(child_objs, "Form", localname(obj_el))
+        if anchor is not None:
+            insert_before_ref(child_objs, form_el, anchor, "\t\t\t")
+        else:
+            insert_before_closing(child_objs, form_el, "\t\t\t")
 
         save_xml_bom(obj_tree, obj_file)
         info(f"  Registered form in: {obj_file}")
@@ -1835,8 +2014,19 @@ def main():
         with open(form_xml_path, "r", encoding="utf-8-sig") as fh:
             content = fh.read()
 
+        # Имена без учёта регистра, как у платформы (и у хеш-таблицы ps1): ключ — первое написание
         first_level = {}
+        first_seen = set()
         deep_paths = []
+        std_upper = {f.upper() for f in STANDARD_FIELDS}
+
+        def is_std(name):
+            return name.upper() in std_upper
+
+        def add_first(name):
+            if name.upper() not in first_seen:
+                first_seen.add(name.upper())
+                first_level[name] = True
 
         # Scan every data-binding tag (DataPath/TitleDataPath/FooterDataPath/HeaderDataPath/MultipleValue*)
         # for Объект.* references — picture-path tags carry picture indices, not data attributes.
@@ -1845,15 +2035,13 @@ def main():
                 path = m.group(1)
                 segments = path.split(".")
                 seg0 = segments[0]
-                if seg0 in STANDARD_FIELDS:
+                if is_std(seg0):
                     continue
-                first_level[seg0] = True
+                add_first(seg0)
                 if len(segments) >= 2:
-                    seg1 = segments[1]
-                    if seg1 in STANDARD_FIELDS:
+                    if is_std(segments[1]):
                         continue
-                    seg2 = segments[2] if len(segments) >= 3 else None
-                    deep_paths.append({"ObjectAttr": seg0, "SubAttr": seg1, "SubSubAttr": seg2})
+                    deep_paths.append(segments)
 
         # Also scan <Field>Объект.X</Field> — object attributes referenced by filter/conditional-appearance
         # fields (and dynamic lists), not via a *DataPath binding (e.g. УдалитьЮрФизЛицо). Designer borrows these too.
@@ -1861,24 +2049,22 @@ def main():
             path = m.group(1)
             segments = path.split(".")
             seg0 = segments[0]
-            if seg0 in STANDARD_FIELDS:
+            if is_std(seg0):
                 continue
-            first_level[seg0] = True
+            add_first(seg0)
             if len(segments) >= 2:
-                seg1 = segments[1]
-                if seg1 in STANDARD_FIELDS:
+                if is_std(segments[1]):
                     continue
-                seg2 = segments[2] if len(segments) >= 3 else None
-                deep_paths.append({"ObjectAttr": seg0, "SubAttr": seg1, "SubSubAttr": seg2})
+                deep_paths.append(segments)
 
         # Also scan <AdditionalColumns table="Объект.X"> — доп. колонки табличной части, объявленные в
         # самой форме (напр. Объект.Товары.Артикул). Такая ТЧ может больше нигде на форме не встречаться,
         # и без её заимствования платформа отвергает форму: «Неверный путь к данным».
         for m in re.finditer(r'<AdditionalColumns table="' + root + r'\.(\w+)"', content):
             seg0 = m.group(1)
-            if seg0 in STANDARD_FIELDS:
+            if is_std(seg0):
                 continue
-            first_level[seg0] = True
+            add_first(seg0)
 
         # Текст запроса динамического списка — такое же место ссылки на реквизиты объекта, как DataPath.
         # Конфигуратор заимствует всё, что упомянуто в запросе: на эталоне Issue66Example2 это 21 из 27
@@ -1888,15 +2074,15 @@ def main():
         # реальному составу объекта, поэтому лишние слова из запроса безвредны.
         for qm in re.finditer(r'(?s)<QueryText>(.*?)</QueryText>', content):
             for w in re.finditer(r'\w+', qm.group(1)):
-                if w.group(0) in STANDARD_FIELDS:
+                if is_std(w.group(0)):
                     continue
-                first_level[w.group(0)] = True
+                add_first(w.group(0))
 
-        # Deduplicate deep paths
+        # Deduplicate deep paths (each is the full segment list after the root)
         seen = set()
         unique_deep = []
         for dp in deep_paths:
-            key = f"{dp['ObjectAttr']}.{dp['SubAttr']}.{dp.get('SubSubAttr')}"
+            key = ".".join(dp).upper()
             if key not in seen:
                 seen.add(key)
                 unique_deep.append(dp)
@@ -2150,24 +2336,59 @@ def main():
 
         # newline="" => без трансляции: иначе CRLF молча схлопнется в LF при чтении
         # и файл будет переписан в LF.
+        style = _detect_xml_style(obj_file)
         with open(obj_file, "r", encoding="utf-8-sig", newline="") as fh:
             obj_content = fh.read()
 
         # Collect existing names for dedup — только прямые дети своего ChildObjects
         existing_names = get_own_child_object_names(obj_file)
 
-        all_attr_xml = ""
         added = 0
         for attr in attrs_to_add:
             if attr["Name"] in existing_names:
                 continue
-            all_attr_xml += "\r\n" + build_adopted_attribute_xml(attr["Name"], attr["Uuid"], attr["TypeXml"], "\t\t\t", attr.get("Kind", "Attribute"))
+            kind = attr.get("Kind", "Attribute")
+            obj_content = insert_own_child_or_die(
+                obj_content, build_adopted_attribute_xml(attr["Name"], attr["Uuid"], attr["TypeXml"], "\t\t\t", kind),
+                kind, type_name, obj_file)
             added += 1
 
         if added > 0:
-            obj_content = insert_into_own_child_objects(obj_content, all_attr_xml)
-            write_utf8_bom(obj_file, obj_content)
+            write_text_keep_bom(obj_file, obj_content, style)
             info(f"  Merged {added} attribute(s) into: {obj_file}")
+
+    # Колонки источника — в уже заимствованную ТЧ объекта расширения (недостающие по имени; свои колонки
+    # и порядок остальных не трогаем). Возвращает число добавленных; ТЧ нет — -1.
+    def merge_columns_into_tabular_section(type_name, obj_name, ts_name, cols):
+        obj_file = os.path.join(ext_dir, CHILD_TYPE_DIR_MAP[type_name], f"{obj_name}.xml")
+        style = _detect_xml_style(obj_file)
+        with open(obj_file, "r", encoding="utf-8-sig", newline="") as fh:
+            text = fh.read()
+        span = find_own_tabular_section_span(text, ts_name)
+        if not span:
+            return -1
+        block = text[span[0]:span[1]]
+        # Имена колонок — все <Name> блока, кроме первого (имя самой ТЧ)
+        existing = {m.group(1).lower() for m in list(re.finditer(r'<Name>([^<]*)</Name>', block))[1:]}
+        ls = text.rfind("\n", 0, span[0]) + 1
+        col_indent = text[ls:span[0]] + "\t\t"
+        added = 0
+        for c in cols:
+            if c["Name"].lower() in existing:
+                continue
+            new_block = insert_into_own_child_objects_by_canon(
+                block, build_adopted_attribute_xml(c["Name"], c["Uuid"], c["TypeXml"], col_indent), "Attribute", "TabularSection")
+            if new_block is None:
+                warn(f"  Tabular section {ts_name} has no <ChildObjects> — attribute {c['Name']} not added")
+                break
+            block = new_block
+            existing.add(c["Name"].lower())
+            added += 1
+        if added > 0:
+            text = text[:span[0]] + block + text[span[1]:]
+            write_text_keep_bom(obj_file, text, style)
+            info(f"  Merged {added} attribute(s) into tabular section {ts_name}: {obj_file}")
+        return added
 
     # --- 11h. Borrow main attribute orchestrator ---
     # Объект-оболочка в расширении: кто уже заимствован — пропускается, без источника — предупреждение.
@@ -2191,6 +2412,35 @@ def main():
         add_to_child_objects(type_name, obj_name)
         borrowed_files.append(target_file)
         info(f"  Auto-borrowed: {type_name}.{obj_name}")
+        # Оболочка определяемого типа несёт его состав: объекты из состава — оболочками (эталон
+        # Конфигуратора). Без них ниже 8.3.25 загрузка падает: «Неизвестное имя типа».
+        if type_name == "DefinedType" and "__TypeXml" in src["Properties"]:
+            for rt in collect_reference_types([src["Properties"]["__TypeXml"]]):
+                borrow_object_shell(rt["TypeName"], rt["ObjName"])
+
+    def resolve_single_ref_target(type_xml, allow_defined=True):
+        """Единственный объект, на который ведёт ссылочный тип: <Вид>Ref.<Имя> или определяемый тип из одной
+        такой ссылки (состав — из источника). Составной, примитивный, неизвестный вид — None: дальше
+        такого типа путь формы не продолжается. Определяемый тип раскрывается один раз: в его составе
+        определяемых типов не бывает."""
+        types = re.findall(r'<v8:(?:Type|TypeSet)>([^<]+)</v8:(?:Type|TypeSet)>', type_xml)
+        if len(types) != 1:
+            return None
+        dt = re.match(r'^(?:\w+:)?DefinedType\.(\w+)$', types[0])
+        if dt and not allow_defined:
+            return None
+        if dt:
+            dt_file = os.path.join(cfg_dir, CHILD_TYPE_DIR_MAP["DefinedType"], f"{dt.group(1)}.xml")
+            if not os.path.isfile(dt_file):
+                return None
+            dt_src = read_source_object("DefinedType", dt.group(1))
+            if "__TypeXml" not in dt_src["Properties"]:
+                return None
+            return resolve_single_ref_target(dt_src["Properties"]["__TypeXml"], False)
+        ref = re.match(r'^(?:\w+:)?(\w+)Ref\.(\w+)$', types[0])
+        if not ref or ref.group(1) not in CHILD_TYPE_DIR_MAP:
+            return None
+        return {"TypeName": ref.group(1), "ObjName": ref.group(2)}
 
     def borrow_reference_type_shells(type_xmls):
         """Ссылочные типы → объекты-оболочки в расширении (кто уже заимствован — пропускается)."""
@@ -2330,6 +2580,13 @@ def main():
             info(f"  Collected {len(first_level_names)} first-level DataPath references, {len(deep_paths)} deep paths")
         else:
             info("  Mode All: borrowing all attributes and tabular sections")
+            # Первый уровень — все реквизиты, но глубокие пути формы те же: объекты по ссылкам из них
+            # нужны с показанными реквизитами в любом режиме
+            if os.path.isfile(src_form_xml_path):
+                dp_ns_strip = re.compile(r'\s+xmlns(?::\w+)?="[^"]*"')
+                dp_info = get_main_attribute_info(etree.parse(src_form_xml_path).getroot(), dp_ns_strip)
+                if dp_info is not None:
+                    deep_paths = collect_form_data_paths(src_form_xml_path, dp_info["Name"])["DeepPaths"]
 
         # Step 2: Resolve source attributes
         resolved = resolve_source_attributes(type_name, obj_name, first_level_names)
@@ -2347,6 +2604,7 @@ def main():
         # Read existing object XML (needed for dedup + enrichment)
         # newline="" => без трансляции: иначе CRLF молча схлопнется в LF при чтении
         # и файл будет переписан в LF.
+        obj_style = _detect_xml_style(obj_file)
         with open(obj_file, "r", encoding="utf-8-sig", newline="") as fh:
             obj_content = fh.read()
 
@@ -2355,21 +2613,13 @@ def main():
         insert_attrs = [a for a in src_attrs if a["Name"] not in existing_child_names]
         insert_ts = [t for t in src_ts if t["Name"] not in existing_child_names]
 
-        # Generate full object XML with attributes and TS
+        # Узлы заимствуемого содержимого: (тег, XML). Место каждому — по канону вида при вставке
         content_parts = []
-        # Порядок как у платформы: реквизиты (измерения, ресурсы), ТЧ, затем признаки учёта плана счетов
-        flag_kinds = ("AccountingFlag", "ExtDimensionAccountingFlag")
         for attr in insert_attrs:
-            if attr.get("Kind") in flag_kinds:
-                continue
-            content_parts.append(build_adopted_attribute_xml(attr["Name"], attr["Uuid"], attr["TypeXml"], "\t\t\t", attr.get("Kind", "Attribute")))
+            kind = attr.get("Kind", "Attribute")
+            content_parts.append((kind, build_adopted_attribute_xml(attr["Name"], attr["Uuid"], attr["TypeXml"], "\t\t\t", kind)))
         for ts in insert_ts:
-            content_parts.append(build_adopted_tabular_section_xml(ts["Name"], ts["Uuid"], ts["GeneratedTypes"], ts["Attributes"], "\t\t\t"))
-        for fk in flag_kinds:
-            for attr in insert_attrs:
-                if attr.get("Kind") == fk:
-                    content_parts.append(build_adopted_attribute_xml(attr["Name"], attr["Uuid"], attr["TypeXml"], "\t\t\t", fk))
-        adopted_content = "\n".join(content_parts).rstrip()
+            content_parts.append(("TabularSection", build_adopted_tabular_section_xml(ts["Name"], ts["Uuid"], ts["GeneratedTypes"], ts["Attributes"], "\t\t\t")))
 
         # Inject extra properties into the object's OWN Properties only — idempotent and anchored to the
         # first ExtendedConfigurationObject (the object's). On re-borrow, adopted attributes each have their
@@ -2386,11 +2636,20 @@ def main():
                 obj_content = obj_content.replace("</ExtendedConfigurationObject>", f"</ExtendedConfigurationObject>{props_xml}", 1)
 
         # Добавить заимствованное содержимое в ChildObjects объекта (там уже может лежать <Form>)
-        if adopted_content:
-            obj_content = insert_into_own_child_objects(obj_content, f"\r\n{adopted_content}")
+        for part_tag, part_xml in content_parts:
+            obj_content = insert_own_child_or_die(obj_content, part_xml, part_tag, type_name, obj_file)
 
-        write_utf8_bom(obj_file, obj_content)
+        write_text_keep_bom(obj_file, obj_content, obj_style)
         info(f"  Enriched object: {obj_file}")
+
+        # ТЧ уже в расширении (заимствована без формы, своими колонками) — колонки, которые нужны форме,
+        # доливаются в неё: пропуск по имени оставил бы форму с «Неверный путь к данным Объект.<ТЧ>.<Колонка>»
+        for ts in src_ts:
+            if ts["Name"] not in existing_child_names:
+                continue
+            if merge_columns_into_tabular_section(type_name, obj_name, ts["Name"], ts["Attributes"]) < 0:
+                warn(f"  {ts['Name']}: name is taken in {type_name}.{obj_name}, but not by a tabular section \u2014 "
+                     f"its attributes not borrowed")
 
         # Step 4: Collect all reference types and borrow as shells
         all_type_xmls = []
@@ -2419,94 +2678,52 @@ def main():
             if edm:
                 borrow_object_shell(edm.group(1), edm.group(2))
 
-        # Step 5: Handle deep paths (Form mode only)
-        if mode == "Form" and deep_paths:
-            # Top-level ref deep paths: Объект.<Ref>.<Sub> — borrow the ref attribute's catalog with the sub-attribute
-            deep_by_attr = {}
-            for dp in deep_paths:
-                if dp["ObjectAttr"] in ts_names:
+        # Step 5: Deep paths — Объект.<Реквизит>.<…> and Объект.<ТЧ>.<Колонка>.<…>. Each reference step borrows
+        # its target object with the next segment's attribute (Designer etalon), down the whole chain
+        if deep_paths:
+            info(f"  Processing {len(deep_paths)} deep path(s)...")
+            # Имена в пути формы — без учёта регистра, как у платформы
+            std_upper = {f.upper() for f in STANDARD_FIELDS}
+            for segs in deep_paths:
+                ts_info = next((t for t in src_ts if t["Name"].upper() == segs[0].upper()), None)
+                if ts_info:
+                    start_attr = next((c for c in ts_info["Attributes"] if c["Name"].upper() == segs[1].upper()), None)
+                    nxt = 2
+                else:
+                    start_attr = next((a for a in src_attrs if a["Name"].upper() == segs[0].upper()), None)
+                    nxt = 1
+                if not start_attr:
                     continue
-                deep_by_attr.setdefault(dp["ObjectAttr"], [])
-                if dp["SubAttr"] not in deep_by_attr[dp["ObjectAttr"]]:
-                    deep_by_attr[dp["ObjectAttr"]].append(dp["SubAttr"])
-            if deep_by_attr:
-                info(f"  Processing {len(deep_by_attr)} deep path attribute(s)...")
-                for attr_name, sub_attr_names in deep_by_attr.items():
-                    attr_info = next((a for a in src_attrs if a["Name"] == attr_name), None)
-                    if not attr_info:
-                        continue
-                    cat_match = re.search(r'cfg:(\w+)Ref\.(\w+)', attr_info["TypeXml"])
-                    if not cat_match:
-                        continue
-                    borrow_deep_target_attrs(cat_match.group(1), cat_match.group(2), sub_attr_names)
-
-            # Tabular-section deep paths: Объект.<ТЧ>.<Колонка>.<Sub> — borrow the column's catalog with the sub-attribute
-            ts_deep_by_col = {}
-            for dp in deep_paths:
-                if dp["ObjectAttr"] not in ts_names:
-                    continue
-                if not dp.get("SubSubAttr"):
-                    continue
-                if dp["SubSubAttr"] in STANDARD_FIELDS:
-                    continue
-                k = (dp["ObjectAttr"], dp["SubAttr"])
-                ts_deep_by_col.setdefault(k, [])
-                if dp["SubSubAttr"] not in ts_deep_by_col[k]:
-                    ts_deep_by_col[k].append(dp["SubSubAttr"])
-            if ts_deep_by_col:
-                info(f"  Processing {len(ts_deep_by_col)} tabular-section deep path(s)...")
-                for (ts_name, col_name), sub_attr_names in ts_deep_by_col.items():
-                    ts_info = next((t for t in src_ts if t["Name"] == ts_name), None)
-                    if not ts_info:
-                        continue
-                    col_info = next((c for c in ts_info["Attributes"] if c["Name"] == col_name), None)
-                    if not col_info:
-                        continue
-                    cat_match = re.search(r'cfg:(\w+)Ref\.(\w+)', col_info["TypeXml"])
-                    if not cat_match:
-                        continue
-                    borrow_deep_target_attrs(cat_match.group(1), cat_match.group(2), sub_attr_names)
+                type_xml = start_attr["TypeXml"]
+                for i in range(nxt, len(segs)):
+                    if segs[i].upper() in std_upper:
+                        break
+                    target = resolve_single_ref_target(type_xml)
+                    if not target:
+                        break
+                    merged = borrow_deep_target_attrs(target["TypeName"], target["ObjName"], [segs[i]])
+                    if not merged:
+                        break
+                    type_xml = merged[0]["TypeXml"]
 
         info("  Main attribute borrowing complete")
 
     def borrow_deep_target_attrs(target_type_name, target_obj_name, sub_attr_names):
-        # Borrow a deep-path target catalog together with the referenced sub-attributes, for both
-        # Объект.<Ref>.<Sub> and Объект.<ТЧ>.<Колонка>.<Sub>. Mirrors Designer: the referenced catalog
-        # is adopted WITH the sub-attributes the form shows, else the platform rejects the deep DataPath.
+        # Borrow a deep-path target object together with the referenced sub-attributes. Mirrors Designer:
+        # the referenced object is adopted WITH the sub-attributes the form shows, else the platform rejects
+        # the deep DataPath. Returns the merged source attributes (Name/TypeXml) — the chain walk continues
+        # along their types.
+        borrow_object_shell(target_type_name, target_obj_name)
         if not test_object_borrowed(target_type_name, target_obj_name):
-            t_src = read_source_object(target_type_name, target_obj_name)
-            t_borrowed_xml = build_borrowed_object_xml(target_type_name, target_obj_name, t_src["Uuid"], t_src["Properties"])
-            t_target_dir = os.path.join(ext_dir, CHILD_TYPE_DIR_MAP[target_type_name])
-            os.makedirs(t_target_dir, exist_ok=True)
-            t_target_file = os.path.join(t_target_dir, f"{target_obj_name}.xml")
-            write_xml_file(t_target_file, t_borrowed_xml)
-            add_to_child_objects(target_type_name, target_obj_name)
-            borrowed_files.append(t_target_file)
-            info(f"  Auto-borrowed for deep path: {target_type_name}.{target_obj_name}")
-
+            return []
         sub_names = {sn: True for sn in sub_attr_names}
         sub_resolved = resolve_source_attributes(target_type_name, target_obj_name, sub_names)
-        if sub_resolved["Attributes"]:
-            merge_attributes_into_object(target_type_name, target_obj_name, sub_resolved["Attributes"])
-            sub_type_xmls = [sa["TypeXml"] for sa in sub_resolved["Attributes"]]
-            sub_ref_types = collect_reference_types(sub_type_xmls)
-            for srt in sub_ref_types:
-                if srt["TypeName"] not in CHILD_TYPE_DIR_MAP:
-                    continue
-                if test_object_borrowed(srt["TypeName"], srt["ObjName"]):
-                    continue
-                s_src_file = os.path.join(cfg_dir, CHILD_TYPE_DIR_MAP[srt["TypeName"]], f"{srt['ObjName']}.xml")
-                if not os.path.isfile(s_src_file):
-                    continue
-                s_src = read_source_object(srt["TypeName"], srt["ObjName"])
-                s_borrowed_xml = build_borrowed_object_xml(srt["TypeName"], srt["ObjName"], s_src["Uuid"], s_src["Properties"])
-                s_target_dir = os.path.join(ext_dir, CHILD_TYPE_DIR_MAP[srt["TypeName"]])
-                os.makedirs(s_target_dir, exist_ok=True)
-                s_target_file = os.path.join(s_target_dir, f"{srt['ObjName']}.xml")
-                write_xml_file(s_target_file, s_borrowed_xml)
-                add_to_child_objects(srt["TypeName"], srt["ObjName"])
-                borrowed_files.append(s_target_file)
-                info(f"  Auto-borrowed (deep): {srt['TypeName']}.{srt['ObjName']}")
+        if not sub_resolved["Attributes"]:
+            return []
+        merge_attributes_into_object(target_type_name, target_obj_name, sub_resolved["Attributes"])
+        # Ссылочные типы смёрженных реквизитов — оболочками
+        borrow_reference_type_shells([sa["TypeXml"] for sa in sub_resolved["Attributes"]])
+        return sub_resolved["Attributes"]
 
     def borrow_form(type_name, obj_name, form_name, borrow_main_attr=False):
         dir_name = CHILD_TYPE_DIR_MAP[type_name]
@@ -3125,25 +3342,43 @@ def main():
     def split_borrow_item(item):
         """Элемент -Object: тип (синоним → английское имя), объект, форма и путь к её Form.xml в источнике.
         Error — текст отказа для неверного элемента."""
+        fmt_hint = ("expected 'Type.Name', 'Type.Name.Form.FormName', 'Type.Name.<Kind>.<SubName>' or "
+                    "'Type.Name.TabularSection.<TS>.Attribute.<Attribute>'")
         dot_idx = item.find(".")
         if dot_idx < 1:
-            return {"Error": f"Invalid format '{item}', expected 'Type.Name' or 'Type.Name.Form.FormName'"}
+            return {"Error": f"Invalid format '{item}', {fmt_hint}"}
         type_name = item[:dot_idx]
         remainder = item[dot_idx + 1:]
         type_name = SYNONYM_MAP.get(type_name, type_name)
         if type_name not in CHILD_TYPE_DIR_MAP:
             return {"Error": f"Unknown type '{type_name}'"}
-        form_name = None
-        form_idx = remainder.find(".Form.")
-        if form_idx > 0:
-            obj_name = remainder[:form_idx]
-            form_name = remainder[form_idx + 6:]
+        # Имена метаданных без точек — разбор по сегментам: Имя | Имя.Form.Ф | Имя.<Вид>.<П> | Имя.TabularSection.<ТЧ>.Attribute.<К>
+        segs = remainder.split(".")
+        if "" in segs:
+            return {"Error": f"Invalid format '{item}', {fmt_hint}"}
+        obj_name = segs[0]
+        form_name = sub_kind = sub_name = col_name = None
+        if len(segs) == 1:
+            pass
+        elif len(segs) == 3 and segs[1] == "Form":
+            form_name = segs[2]
+        elif len(segs) == 3 and segs[1] in SUB_OBJECT_KINDS:
+            sub_kind, sub_name = segs[1], segs[2]
+        elif len(segs) == 5 and segs[1] == "TabularSection" and segs[3] == "Attribute":
+            sub_kind, sub_name, col_name = "TabularSection", segs[2], segs[4]
+        elif len(segs) == 3:
+            return {"Error": f"Unsupported child object kind '{segs[1]}' in '{item}': expected Form, {', '.join(SUB_OBJECT_KINDS)}"}
         else:
-            obj_name = remainder
+            return {"Error": f"Invalid format '{item}', {fmt_hint}"}
+        # Вид подобъекта — из канона ChildObjects своего типа: измерения у документа нет
+        if sub_kind:
+            order = object_child_order().get(type_name)
+            if not order or sub_kind not in order:
+                return {"Error": f"{type_name} has no child objects of kind {sub_kind} ('{item}')"}
         # Общая форма — сама форма: «CommonForm.X» заимствуется вместе с содержимым, владельца у неё нет
         is_common_form = type_name == "CommonForm"
         if is_common_form:
-            if form_name:
+            if len(segs) != 1:
                 return {"Error": f"Invalid format '{item}': общая форма задаётся как 'CommonForm.Имя'"}
             form_name = obj_name
         dir_name = CHILD_TYPE_DIR_MAP[type_name]
@@ -3153,7 +3388,86 @@ def main():
         elif form_name:
             src_form_xml = os.path.join(cfg_dir, dir_name, obj_name, "Forms", form_name, "Ext", "Form.xml")
         return {"TypeName": type_name, "ObjName": obj_name, "FormName": form_name, "IsCommonForm": is_common_form,
-                "DirName": dir_name, "SrcFormXml": src_form_xml}
+                "DirName": dir_name, "SrcFormXml": src_form_xml,
+                "SubKind": sub_kind, "SubName": sub_name, "ColName": col_name}
+
+    def resolve_sub_object_source(pi):
+        """Подобъект в источнике: реквизит/измерение/… своего вида, ТЧ и колонка. Имя сверяется ключом
+        запроса, как у resolve_source_attributes; в расширение идёт имя из источника. Нет — Error."""
+        res = resolve_source_attributes(pi["TypeName"], pi["ObjName"], {pi["SubName"]: True})
+        key = query_key(pi["SubName"])
+        where = f"{pi['TypeName']}.{pi['ObjName']}"
+        if pi["SubKind"] == "TabularSection":
+            ts = next((t for t in res["TabularSections"] if query_key(t["Name"]) == key), None)
+            if not ts:
+                return {"Error": f"TabularSection '{pi['SubName']}' not found in {where}"}
+            col = None
+            if pi["ColName"]:
+                col_key = query_key(pi["ColName"])
+                col = next((c for c in ts["Attributes"] if query_key(c["Name"]) == col_key), None)
+                if not col:
+                    return {"Error": f"Attribute '{pi['ColName']}' not found in tabular section {where}.{ts['Name']}"}
+            return {"TS": ts, "Col": col}
+        attr = next((a for a in res["Attributes"] if a.get("Kind") == pi["SubKind"] and query_key(a["Name"]) == key), None)
+        if not attr:
+            return {"Error": f"{pi['SubKind']} '{pi['SubName']}' not found in {where}"}
+        return {"Attr": attr}
+
+    def ensure_parent_borrowed(type_name, obj_name):
+        """Объект-родитель формы или подобъекта: не заимствован — заимствовать заготовкой."""
+        if test_object_borrowed(type_name, obj_name):
+            return
+        info(f"  Parent object {type_name}.{obj_name} not yet borrowed — borrowing first...")
+        src = read_source_object(type_name, obj_name)
+        info(f"  Source UUID: {src['Uuid']}")
+        borrowed_xml = build_borrowed_object_xml(type_name, obj_name, src["Uuid"], src["Properties"])
+        target_dir = os.path.join(ext_dir, CHILD_TYPE_DIR_MAP[type_name])
+        os.makedirs(target_dir, exist_ok=True)
+        target_file = os.path.join(target_dir, f"{obj_name}.xml")
+        write_xml_file(target_file, borrowed_xml)
+        info(f"  Created: {target_file}")
+        add_to_child_objects(type_name, obj_name)
+        borrowed_files.append(target_file)
+
+    def borrow_sub_object(pi, src):
+        """Подобъект без формы — как «Добавить в расширение» Конфигуратора: ТЧ пустая (свои колонки — потом,
+        meta-edit), реквизит/измерение/колонка — по одному, ссылочные типы — оболочками. Свойства объекта
+        (Hierarchical, CodeLength…) не переносятся — Конфигуратор их тут тоже не пишет."""
+        type_name, obj_name = pi["TypeName"], pi["ObjName"]
+        ensure_parent_borrowed(type_name, obj_name)
+        obj_file = os.path.join(ext_dir, pi["DirName"], f"{obj_name}.xml")
+        if pi["SubKind"] != "TabularSection":
+            attr = src["Attr"]
+            if attr["Name"] in get_own_child_object_names(obj_file):
+                info(f"  Already borrowed: {pi['SubKind']} {attr['Name']}")
+            else:
+                merge_attributes_into_object(type_name, obj_name, [attr])
+            borrow_reference_type_shells([attr["TypeXml"]])
+            return
+        ts = src["TS"]
+        style = _detect_xml_style(obj_file)
+        with open(obj_file, "r", encoding="utf-8-sig", newline="") as fh:
+            text = fh.read()
+        if find_own_tabular_section_span(text, ts["Name"]):
+            info(f"  Already borrowed: TabularSection {ts['Name']}")
+        else:
+            text = insert_own_child_or_die(
+                text, build_adopted_tabular_section_xml(ts["Name"], ts["Uuid"], ts["GeneratedTypes"], [], "\t\t\t"),
+                "TabularSection", type_name, obj_file)
+            write_text_keep_bom(obj_file, text, style)
+            info(f"  Borrowed TabularSection {ts['Name']} (no attributes): {obj_file}")
+        # Собственный реквизит в заимствованную ТЧ этих видов платформа не примет — отказ на обновлении БД.
+        # Предупреждаем, когда ТЧ заимствуется под собственные реквизиты — элемент без реквизита источника
+        if not src["Col"]:
+            if type_name in TS_OWN_COLUMNS_BLOCKED:
+                warn(f"  {type_name}: own attributes cannot be added to a borrowed tabular section of this kind \u2014 "
+                     f"the platform rejects them on database update")
+            elif type_name in TS_OWN_COLUMNS_FROM_PLATFORM:
+                warn(f"  {type_name}: own attributes in a borrowed tabular section are accepted only from platform "
+                     f"{TS_OWN_COLUMNS_FROM_PLATFORM[type_name]}")
+        if src["Col"]:
+            merge_columns_into_tabular_section(type_name, obj_name, ts["Name"], [src["Col"]])
+            borrow_reference_type_shells([src["Col"]["TypeXml"]])
 
     # С -BorrowMainAttribute реквизиты берутся у объекта из типа основного реквизита формы. Если это не
     # владелец формы и его нет в конфигурации-источнике, форма в расширении не загрузится — отказываем
@@ -3180,6 +3494,22 @@ def main():
                       f"конфигурации-источнике — форма в расширении не загрузится. Расширение не изменено", file=sys.stderr)
                 sys.exit(1)
 
+    # Элементы разобраны и подобъекты найдены в источнике ДО записи: ошибка в любом элементе пакета —
+    # расширение не тронуто
+    sub_object_sources = {}
+    for item in items:
+        pi = split_borrow_item(item)
+        if pi.get("Error"):
+            print(pi["Error"], file=sys.stderr)
+            sys.exit(1)
+        if not pi["SubKind"]:
+            continue
+        sub_src = resolve_sub_object_source(pi)
+        if sub_src.get("Error"):
+            print(f"{sub_src['Error']}. Extension not changed", file=sys.stderr)
+            sys.exit(1)
+        sub_object_sources[item] = sub_src
+
     for item in items:
         pi = split_borrow_item(item)
         if pi.get("Error"):
@@ -3189,28 +3519,19 @@ def main():
 
         dir_name = CHILD_TYPE_DIR_MAP[type_name]
 
-        if form_name:
+        if pi["SubKind"]:
+            info(f"Borrowing {item}...")
+            borrow_sub_object(pi, sub_object_sources[item])
+            borrowed_count += 1
+        elif form_name:
             # --- Form borrowing ---
             if is_common_form:
                 info(f"Borrowing common form {type_name}.{obj_name}...")
             else:
                 info(f"Borrowing form {type_name}.{obj_name}.Form.{form_name}...")
 
-            if not is_common_form and not test_object_borrowed(type_name, obj_name):
-                info(f"  Parent object {type_name}.{obj_name} not yet borrowed \u2014 borrowing first...")
-
-                src = read_source_object(type_name, obj_name)
-                info(f"  Source UUID: {src['Uuid']}")
-                borrowed_xml = build_borrowed_object_xml(type_name, obj_name, src["Uuid"], src["Properties"])
-
-                target_dir = os.path.join(ext_dir, dir_name)
-                os.makedirs(target_dir, exist_ok=True)
-                target_file = os.path.join(target_dir, f"{obj_name}.xml")
-                write_xml_file(target_file, borrowed_xml)
-                info(f"  Created: {target_file}")
-
-                add_to_child_objects(type_name, obj_name)
-                borrowed_files.append(target_file)
+            if not is_common_form:
+                ensure_parent_borrowed(type_name, obj_name)
 
             has_bma = borrow_main_attribute_mode is not None
             form_files = borrow_form(type_name, obj_name, form_name, borrow_main_attr=has_bma)
@@ -3256,6 +3577,7 @@ def main():
             # расширения, заимствованные подобъекты и состояния, которые из источника не
             # выводятся. Повторный вызов — законный способ доделать модуль (-Module), а не
             # переиздать заготовку.
+            src = None
             if test_object_borrowed(type_name, obj_name):
                 info(f"Already borrowed: {type_name}.{obj_name} — XML сохранён без изменений")
             else:
@@ -3271,6 +3593,10 @@ def main():
                 info(f"  Created: {target_file}")
 
             add_to_child_objects(type_name, obj_name)
+            # Определяемый тип — с оболочками объектов своего состава, как у Конфигуратора
+            if src and type_name == "DefinedType" and "__TypeXml" in src["Properties"]:
+                for rt in collect_reference_types([src["Properties"]["__TypeXml"]]):
+                    borrow_object_shell(rt["TypeName"], rt["ObjName"])
 
             borrowed_files.append(target_file)
             for kind in resolve_module_kinds(type_name):

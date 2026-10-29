@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# db-cfe-admin v1.2 — Configuration extensions in a 1C infobase: list, check, properties, delete
+# db-cfe-admin v1.8 — Configuration extensions in a 1C infobase: list, check, properties, delete
 # Source: https://github.com/Nikolay-Shirokov/cc-1c-skills
 
 import argparse
@@ -13,6 +13,8 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import threading
+import time
 
 # Общий блок группы db-*: реквизиты хранилища, дополнительные аргументы, запуск платформы.
 # Копии держит одинаковыми tests/skills/check-inline-drift.mjs — правку вносить в навык-эталон.
@@ -122,6 +124,37 @@ def same_path(a, b):
         return False
 
 
+def resolve_infobase_path(path):
+    """Относительный путь к базе — от корня проекта (каталог .v8-project.json, вверх от рабочего
+    каталога), как configSrc; без файла проекта — от рабочего каталога. Платформе уходит только
+    абсолютный: ibcmd считает относительный --db-path от каталога --data, а он у навыков временный."""
+    if not path:
+        return path
+    # Абсолютный на Windows — только с диском и разделителем или UNC, как в PS-порте; «\\x» берёт
+    # диск базового каталога (os.path.join); «C:x» отклоняет ещё clean_path. На POSIX — os.path.isabs.
+    absolute = re.match(r"^([A-Za-z]:[\\/]|[\\/]{2})", path) if os.name == "nt" else os.path.isabs(path)
+    if not absolute:
+        cwd = os.getcwd()
+        base = cwd
+        d = cwd
+        for _ in range(20):
+            if not d:
+                break
+            if os.path.isfile(os.path.join(d, ".v8-project.json")):
+                base = d
+                break
+            parent = os.path.dirname(d)
+            if parent == d:
+                break
+            d = parent
+        path = os.path.abspath(os.path.join(base, path))
+    # Хвостовые разделители срезаются, но корень («C:\\», на POSIX «/») остаётся корнем
+    seps, keep = ("\\/", 3) if os.name == "nt" else ("/", 1)
+    while len(path) > keep and path[-1] in seps:
+        path = path[:-1]
+    return path
+
+
 def find_project_database(args):
     """Запись базы в реестре, соответствующая переданному соединению. None, если не найдена."""
     pf = _sg_find_v8project(os.getcwd())
@@ -133,7 +166,7 @@ def find_project_database(args):
     except Exception:
         return None
     for db in proj.get("databases") or []:
-        if args.InfoBasePath and db.get("path") and same_path(db["path"], args.InfoBasePath):
+        if args.InfoBasePath and db.get("path") and same_path(os.path.join(os.path.dirname(pf), db["path"]), args.InfoBasePath):
             return db
         if args.InfoBaseServer and args.InfoBaseRef and db.get("server") and db.get("ref"):
             if (db["server"].lower() == args.InfoBaseServer.lower()
@@ -374,6 +407,51 @@ IBCMD_NOUSER_HINT = (
 )
 
 
+def run_platform_process(cmd):
+    """Run the platform with stdin closed (EOF) and capture its output.
+
+    Waits for the process, not for EOF on its pipes: a process the platform leaves behind
+    (crashpad_handler on 8.5) inherits them and keeps them open. By the time the platform
+    exits, what it wrote is already buffered; the reader threads get a second to drain it."""
+    p = subprocess.Popen(cmd, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    p.stdin.close()
+    chunks = {p.stdout: [], p.stderr: []}
+
+    def drain(stream):
+        # Chunked reads: read() returns only at EOF, and a held pipe never gives one
+        while True:
+            data = os.read(stream.fileno(), 65536)
+            if not data:
+                break
+            chunks[stream].append(data)
+
+    readers = [threading.Thread(target=drain, args=(s,), daemon=True) for s in (p.stdout, p.stderr)]
+    for t in readers:
+        t.start()
+    try:
+        while True:
+            try:
+                returncode = p.wait(timeout=0.5)
+                break
+            except subprocess.TimeoutExpired:
+                pass   # short waits: on Windows an endless one doesn't see Ctrl+C until the child exits
+    except BaseException:
+        # Like subprocess.run: an interrupt must not leave the platform running, holding the
+        # infobase lock and the license
+        p.kill()
+        p.wait()
+        raise
+    deadline = time.monotonic() + 1
+    for t in readers:
+        t.join(max(0, deadline - time.monotonic()))
+    result = subprocess.CompletedProcess(cmd, returncode, b"".join(chunks[p.stdout]), b"".join(chunks[p.stderr]))
+    # A pipe still held by a leftover process stays with its blocked reader
+    for t, stream in zip(readers, (p.stdout, p.stderr)):
+        if not t.is_alive():
+            stream.close()
+    return result
+
+
 def decode_platform_bytes(data):
     """ibcmd writes UTF-8 (checked on 8.3.24, 8.3.27, 8.5), a crashing 1cv8 may still emit
     OEM text. Decode strictly as UTF-8 and fall back to cp866 on invalid bytes — the locale
@@ -406,6 +484,13 @@ def clean_path(value, param=""):
     v = value.strip()
     if len(v) >= 2 and v[0] == v[-1] and v[0] in "\"'":
         v = v[1:-1].strip()
+    # «C:x» — от текущего каталога диска C, своего у каждого процесса: смысл не угадать, почти
+    # всегда это опечатка в «C:\x». Отказ с подсказкой, а не путь «где-то» у платформы.
+    if os.name == "nt" and re.match(r"^[A-Za-z]:(?![\\/])", v):
+        drive = v[:2]
+        print(f"Error: {param or 'path'} is relative to the current directory of drive {drive} ({value})"
+              f" - use {drive}\\{v[2:]} or a path without a drive")
+        sys.exit(1)
     if len(v) > 3 and v[-1] in "\\/":
         v = v[:-1]
     if '"' in v:
@@ -453,7 +538,7 @@ def run_v8(v8path, arguments):
                                                      # часть синтаксиса строки соединения,
                                                      # и с ними на POSIX всё работает
         cmd = [v8path] + [strip_framing_quotes(a) for a in arguments]
-    r = subprocess.run(cmd, input=b"", capture_output=True)
+    r = run_platform_process(cmd)
     r.stdout = decode_platform_bytes(r.stdout)
     r.stderr = decode_platform_bytes(r.stderr)
     return r
@@ -476,14 +561,14 @@ def print_platform_output(result):
 def run_ibcmd(cmd, has_username=False, warn_no_user=True):
     """Run an ibcmd command non-interactively.
 
-    input="" closes stdin (EOF) so ibcmd's auth prompt fast-fails instead of hanging.
+    The closed stdin (EOF) makes ibcmd's auth prompt fast-fail instead of hanging.
     On Windows without -UserName ibcmd reads the console directly and may still block —
     that residual case is flagged via IBCMD_NOUSER_HINT (model-facing).
     """
     if warn_no_user and os.name == "nt" and not has_username:
         sys.stdout.write(IBCMD_NOUSER_HINT)
         sys.stderr.flush()
-    r = subprocess.run(cmd, input=b"", capture_output=True)
+    r = run_platform_process(cmd)
     r.stdout = decode_platform_bytes(r.stdout)
     r.stderr = decode_platform_bytes(r.stderr)
     return r
@@ -635,6 +720,7 @@ def main():
 
     args.V8Path = clean_path(args.V8Path, "-V8Path")
     args.InfoBasePath = clean_path(args.InfoBasePath, "-InfoBasePath")
+    args.InfoBasePath = resolve_infobase_path(args.InfoBasePath)
     assert_infobase_exists(args.InfoBasePath)
 
     v8path = resolve_v8path(args.V8Path, args)
@@ -898,9 +984,12 @@ def main():
             r = invoke_designer(op_args)
             done += 1
             log_lines = [x for x in r["log"].splitlines() if x.strip()]
-            if r["exit"] == 0:
+            # Код возврата этой команды ненадёжен: часть отказов (&Вместо на несуществующий метод)
+            # приходит с кодом 0 и только строкой в /Out, а у применимого расширения лог пуст.
+            # Поэтому отказ — любая строка лога, как и в run_apply_check загрузчиков.
+            if r["exit"] == 0 and not log_lines:
                 rows.append(["применимость", "ОК", "", []])
-            elif r["exit"] == 1:
+            elif r["exit"] in (0, 1):
                 failed += 1
                 rows.append(["применимость", "ОШИБКА", "", log_lines])
             else:

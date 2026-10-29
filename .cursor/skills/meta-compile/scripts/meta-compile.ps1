@@ -1,4 +1,4 @@
-﻿# meta-compile v1.120 — Compile 1C metadata object from JSON
+﻿# meta-compile v1.125 — Compile 1C metadata object from JSON
 # Source: https://github.com/Nikolay-Shirokov/cc-1c-skills
 [CmdletBinding(PositionalBinding=$false)]
 param(
@@ -16,14 +16,19 @@ $ErrorActionPreference = "Stop"
 # идёт чинить скрипт, а не свой вызов. $source — файл или параметр. $expected заполняем только
 # для полиморфного входа: у файла подсказка была бы наполнителем. -Inline печатает ещё и то,
 # что доехало: у файла такого вопроса нет — путь назван, позицию дал парсер, файл на диске.
-# Возврат через -NoEnumerate: без него одноэлементный
-# JSON-массив разворачивался бы в скаляр вторым анруллингом.
+# Возврат через запятую: без неё одноэлементный JSON-массив разворачивался бы в скаляр
+# вторым анруллингом. Не Write-Output -NoEnumerate: pwsh 7.6 заворачивает им в List
+# и одиночный объект (issue #136).
 function ConvertFrom-JsonInput([string]$text, [string]$source, [string]$expected, [switch]$Inline) {
 	try {
 		# PS 5.1 на пустой строке отдаёт $null, а не ошибку — навык уходил дальше с $null,
 		# тогда как py-порт падал. Проверяем сами, чтобы порты вели себя одинаково.
 		if ([string]::IsNullOrWhiteSpace($text)) { throw 'input is empty' }
-		$parsed = $text | ConvertFrom-Json
+		# pwsh 7+ сам разворачивает массив верхнего уровня ([x] → x, [] → $null). Ключ -NoEnumerate
+		# появился там же: в 5.1 и pwsh 6 его нет, поэтому спрашиваем командлет, а не версию.
+		$cfj = @{}
+		if ((Get-Command ConvertFrom-Json).Parameters.ContainsKey('NoEnumerate')) { $cfj.NoEnumerate = $true }
+		$parsed = $text | ConvertFrom-Json @cfj
 	} catch {
 		$what = if ($expected) { "$source expects $expected" } else { "Invalid JSON in $source" }
 		if ($Inline) {
@@ -36,7 +41,7 @@ function ConvertFrom-JsonInput([string]$text, [string]$source, [string]$expected
 		[Console]::Error.WriteLine("[ERROR] ${what} ($($_.Exception.Message))")
 		exit 1
 	}
-	Write-Output -NoEnumerate $parsed
+	return ,$parsed
 }
 
 # --- Чтение входного JSON-файла ---
@@ -124,16 +129,20 @@ function Find-V8Project([string]$startDir) {
 }
 function Get-EditMode([string]$cfgDir) {
 	try {
-		$pj = Find-V8Project (Get-Location).Path
-		if (-not $pj) { $pj = Find-V8Project $cfgDir }
+		$pj = Find-V8Project (Get-Location).ProviderPath
+		if (-not $pj) { $pj = Find-V8Project ([System.IO.Path]::GetFullPath($cfgDir)) }
 		if (-not $pj) { return 'deny' }
-		$proj = Get-Content -Raw $pj | ConvertFrom-Json
+		# UTF-8 явно: PS 5.1 читает файл без BOM как ANSI, и configSrc с кириллицей не совпал бы
+		$proj = Get-Content -Raw -Encoding UTF8 $pj | ConvertFrom-Json
+		# configSrc — от каталога .v8-project.json, а не от рабочего каталога: иначе из подкаталога
+		# проекта база не сопоставляется и берётся правило проекта.
+		$projDir = [System.IO.Path]::GetDirectoryName($pj)
 		$cfgFull = [System.IO.Path]::GetFullPath($cfgDir).TrimEnd('\', '/')
 		if ($proj.databases) {
 			foreach ($db in $proj.databases) {
 				if ($db.configSrc) {
-					$src = [System.IO.Path]::GetFullPath($db.configSrc).TrimEnd('\', '/')
-					if ($cfgFull -eq $src -or $cfgFull.StartsWith($src + [System.IO.Path]::DirectorySeparatorChar)) {
+					$src = [System.IO.Path]::GetFullPath([System.IO.Path]::Combine($projDir, $db.configSrc)).TrimEnd('\', '/')
+					if ($cfgFull -eq $src -or $cfgFull.StartsWith($src + [System.IO.Path]::DirectorySeparatorChar, [System.StringComparison]::OrdinalIgnoreCase)) {
 						if ($db.editingAllowedCheck) { return $db.editingAllowedCheck }
 					}
 				}
@@ -146,7 +155,7 @@ function Get-EditMode([string]$cfgDir) {
 function Assert-EditAllowed([string]$targetPath, [string]$require) {
 	try {
 		$rp = $targetPath
-		try { $rp = (Resolve-Path $targetPath -ErrorAction Stop).Path } catch {}
+		try { $rp = (Resolve-Path $targetPath -ErrorAction Stop).ProviderPath } catch {}
 		# Autonomous external object (EPF/ERF): never part of a config on support (issue #39).
 		if (Test-ExternalObjectRoot $rp) { return }
 		$elemUuid = Get-RootUuid $rp
@@ -1899,6 +1908,34 @@ $script:reservedAttrNames = @{
 	"Account"="Счет"; "ValueType"="ТипЗначения"; "ActionPeriodIsBasic"="ПериодДействияБазовый"
 }
 
+# Имена стандартных команд вида — англ. и рус., в нижнем регистре: команда объекта с таким именем
+# не загрузится («Имя команды не может совпадать с именем стандартной команды»; регистр не важен, от
+# UseStandardCommands не зависит — замер 8.3.24/8.3.27). Вида нет в карте — ограничения нет
+# (перечисление, план обмена; критерий отбора и таблица внешнего источника не замерены).
+function Get-ReservedCommandNames {
+	$openList = @("openlist", "открытьсписок")
+	$create = @("create", "создать")
+	$folder = @("createfolder", "создатьгруппу")
+	$byValue = @("openbyvalue", "открытьпозначению")
+	$basedOn = @("createbasedon", "создатьнаосновании")
+	return @{
+		"Catalog"                    = $openList + $create + $folder + $byValue + $basedOn
+		"ChartOfCharacteristicTypes" = $openList + $create + $folder + $basedOn
+		"Task"                       = $openList + $create + $byValue + $basedOn
+		"Document"                   = $openList + $create + $basedOn
+		"BusinessProcess"            = $openList + $create + $basedOn
+		"ChartOfAccounts"            = $openList + $create + $basedOn
+		"ChartOfCalculationTypes"    = $openList + $create + $basedOn
+		"InformationRegister"        = $openList + $create + $byValue
+		"AccumulationRegister"       = $openList
+		"AccountingRegister"         = $openList
+		"CalculationRegister"        = $openList
+		"DocumentJournal"            = $openList
+		"DataProcessor"              = @("open", "открыть")
+		"Report"                     = @("open", "открыть")
+	}
+}
+
 # Стандартные реквизиты по типу объекта (ключи из reservedAttrNames). Имя реквизита, совпадающее
 # с ними (англ. ИЛИ рус.), платформа не позволит — жёсткий отказ. Контексты вне карты → мягкое предупреждение.
 $script:reservedByContext = @{
@@ -2492,6 +2529,11 @@ function Emit-CommandPicture {
 # picture, shortcut, onMainServerUnavalableBehavior (Auto).
 function Emit-Command {
 	param([string]$indent, [string]$cmdName, $cmd)
+	$reservedCmd = (Get-ReservedCommandNames)[$objType]
+	if ($reservedCmd -and ($reservedCmd -contains $cmdName)) {
+		[Console]::Error.WriteLine("meta-compile: имя команды '$cmdName' совпадает со стандартной командой объекта '$objType'. Выберите другое имя.")
+		exit 1
+	}
 	X "$indent<Command uuid=`"$(New-Guid-String)`">"
 	X "$indent`t<Properties>"
 	X "$indent`t`t<Name>$(Esc-XmlText $cmdName)</Name>"
@@ -4858,7 +4900,7 @@ function Detect-CompatibilityMode([string]$dir) {
 
 # Номер версии режима совместимости для сравнений: "Version8_3_27" → 80327, "Version8_5_1" → 80501.
 function Get-CompatModeRank([string]$mode) {
-	if ($mode -match '^Version(\d+)_(\d+)_(\d+)$') {
+	if ($mode -match '^Version(\d+)_(\d+)(?:_(\d+))?$') {   # и двухчастный Version8_1
 		return [int]$Matches[1] * 10000 + [int]$Matches[2] * 100 + [int]$Matches[3]
 	}
 	return 0
@@ -5686,6 +5728,12 @@ if ($objType -eq "CommonForm") {
 		$cfFormNs = 'xmlns="http://v8.1c.ru/8.3/xcf/logform" xmlns:app="http://v8.1c.ru/8.2/managed-application/core" xmlns:cfg="http://v8.1c.ru/8.1/data/enterprise/current-config" xmlns:dcscor="http://v8.1c.ru/8.1/data-composition-system/core" xmlns:dcsset="http://v8.1c.ru/8.1/data-composition-system/settings" xmlns:ent="http://v8.1c.ru/8.1/data/enterprise" xmlns:lf="http://v8.1c.ru/8.2/managed-application/logform" xmlns:style="http://v8.1c.ru/8.1/data/ui/style" xmlns:sys="http://v8.1c.ru/8.1/data/ui/fonts/system" xmlns:v8="http://v8.1c.ru/8.1/data/core" xmlns:v8ui="http://v8.1c.ru/8.1/data/ui" xmlns:web="http://v8.1c.ru/8.1/data/ui/colors/web" xmlns:win="http://v8.1c.ru/8.1/data/ui/colors/windows" xmlns:xr="http://v8.1c.ru/8.3/xcf/readable" xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"'
 		# Шапка Form на 2.21 тоже несёт палитру — см. комментарий у $script:xmlnsDecl.
 		if ($script:isFormat221) { $cfFormNs = $cfFormNs -replace ' xmlns:style=', ' xmlns:pal="http://v8.1c.ru/8.1/data/ui/colors/palette" xmlns:style=' }
+		# xmlns:dcssch платформа пишет в шапку всегда, кроме режима совместимости ниже 8.3.19 (там —
+		# только при использовании; пустая заготовка его не использует). Как у form-add.
+		$cfRank = Get-CompatModeRank $script:compatMode
+		if (-not ($cfRank -gt 0 -and $cfRank -lt 80319)) {
+			$cfFormNs = $cfFormNs -replace ' xmlns:dcsset=', ' xmlns:dcssch="http://v8.1c.ru/8.1/data-composition-system/schema" xmlns:dcsset='
+		}
 		$cfFormXml = "<?xml version=`"1.0`" encoding=`"UTF-8`"?>`r`n<Form $cfFormNs version=`"$($script:formatVersion)`">`r`n`t<AutoCommandBar name=`"ФормаКоманднаяПанель`" id=`"-1`">`r`n`t`t<Autofill>true</Autofill>`r`n`t</AutoCommandBar>`r`n`t<ChildItems/>`r`n</Form>`r`n"
 		Write-XmlFileKeepEol $cfFormXmlPath $cfFormXml $enc
 		$modulesCreated += $cfFormXmlPath
@@ -5815,17 +5863,18 @@ if ($commands -and $commands.Count -gt 0) {
 function Get-NewObjectPosition([string]$cfgDir) {
 	try {
 		if (-not $cfgDir) { $cfgDir = "." }
-		$pj = Find-V8Project (Get-Location).Path
+		$pj = Find-V8Project (Get-Location).ProviderPath
 		if (-not $pj) { $pj = Find-V8Project ([System.IO.Path]::GetFullPath($cfgDir)) }
 		if (-not $pj) { return "end" }
-		$proj = Get-Content -Raw $pj | ConvertFrom-Json
+		# UTF-8 явно: PS 5.1 читает файл без BOM как ANSI, и configSrc с кириллицей не совпал бы
+		$proj = Get-Content -Raw -Encoding UTF8 $pj | ConvertFrom-Json
 		$projDir = [System.IO.Path]::GetDirectoryName($pj)
 		$cfgFull = [System.IO.Path]::GetFullPath($cfgDir).TrimEnd('\', '/')
 		if ($proj.databases) {
 			foreach ($db in $proj.databases) {
 				if ($db.configSrc -and $db.newObjectPosition) {
 					$src = [System.IO.Path]::GetFullPath([System.IO.Path]::Combine($projDir, $db.configSrc)).TrimEnd('\', '/')
-					if ($cfgFull -eq $src -or $cfgFull.StartsWith($src + [System.IO.Path]::DirectorySeparatorChar)) {
+					if ($cfgFull -eq $src -or $cfgFull.StartsWith($src + [System.IO.Path]::DirectorySeparatorChar, [System.StringComparison]::OrdinalIgnoreCase)) {
 						if ("$($db.newObjectPosition)" -eq "byName") { return "byName" }
 						return "end"
 					}

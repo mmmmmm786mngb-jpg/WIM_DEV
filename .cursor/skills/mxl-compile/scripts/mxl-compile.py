@@ -1,5 +1,5 @@
 ﻿#!/usr/bin/env python3
-# mxl-compile v1.56 — Compile 1C spreadsheet from JSON
+# mxl-compile v1.60 — Compile 1C spreadsheet from JSON
 # Source: https://github.com/Nikolay-Shirokov/cc-1c-skills
 import argparse
 import hashlib
@@ -182,15 +182,19 @@ def _sg_find_v8project(start_dir):
 
 def _sg_get_edit_mode(cfg_dir):
     try:
-        pj = _sg_find_v8project(os.getcwd()) or _sg_find_v8project(cfg_dir)
+        pj = _sg_find_v8project(os.getcwd()) or _sg_find_v8project(os.path.abspath(cfg_dir))
         if not pj:
             return "deny"
         proj = json.loads(open(pj, encoding="utf-8-sig").read())
-        cfg_full = os.path.normcase(os.path.abspath(cfg_dir)).rstrip("\\/")
+        # configSrc — от каталога .v8-project.json, а не от рабочего каталога: иначе из подкаталога
+        # проекта база не сопоставляется и берётся правило проекта. Пути — настоящие (realpath):
+        # на macOS /var — ссылка на /private/var, и getcwd с путём аргумента иначе не совпадут.
+        proj_dir = os.path.dirname(pj)
+        cfg_full = os.path.normcase(os.path.realpath(cfg_dir)).rstrip("\\/")
         for db in proj.get("databases", []):
             src = db.get("configSrc")
             if src:
-                src_full = os.path.normcase(os.path.abspath(src)).rstrip("\\/")
+                src_full = os.path.normcase(os.path.realpath(os.path.join(proj_dir, src))).rstrip("\\/")
                 if cfg_full == src_full or cfg_full.startswith(src_full + os.sep):
                     if db.get("editingAllowedCheck"):
                         return db["editingAllowedCheck"]
@@ -2059,7 +2063,7 @@ def main():
                 lines.append(f'\t\t\t\t\t<f>{cell_info["FormatIdx"]}</f>')
 
                 if cell_info['Param']:
-                    lines.append(f'\t\t\t\t\t<parameter>{cell_info["Param"]}</parameter>')
+                    lines.append(f'\t\t\t\t\t<parameter>{esc_xml_text(str(cell_info["Param"]))}</parameter>')
 
                 # Проверяем НАЛИЧИЕ ключа, а не истинность: пустая строка — это текст,
                 # платформа такие ячейки пишет с пустым <tl>, и по истинности он терялся.
@@ -2089,7 +2093,7 @@ def main():
                 # Пока она стояла внутри ветки параметра, две трети расшифровок терялись молча.
                 # Порядок тегов ячейки снят с корпуса: parameter · текст · detailParameter.
                 if cell_info['Detail']:
-                    lines.append(f'\t\t\t\t\t<detailParameter>{cell_info["Detail"]}</detailParameter>')
+                    lines.append(f'\t\t\t\t\t<detailParameter>{esc_xml_text(str(cell_info["Detail"]))}</detailParameter>')
 
                 # Третий параметр ячейки — имя параметра, которым подставляют картинку. Сама
                 # картинка при этом задаётся оформлением (picIndex), а параметр — тут, последним
@@ -2242,7 +2246,7 @@ def main():
         lines.append(f'\t\t<id>{dr["Id"]}</id>')
         lines.append(f'\t\t<formatIndex>{dr["FormatIdx"]}</formatIndex>')
         if dr['Detail']:
-            lines.append(f'\t\t<detailParameter>{dr["Detail"]}</detailParameter>')
+            lines.append(f'\t\t<detailParameter>{esc_xml_text(str(dr["Detail"]))}</detailParameter>')
         if dr['Text'] is not None:
             value = dr['Text']
             if isinstance(value, dict):
@@ -2422,7 +2426,7 @@ def main():
     for ni in sorted(named_items, key=lambda x: str(x['Name']).lower()):
         if ni.get('DrawingId'):
             lines.append('\t<namedItem xsi:type="NamedItemDrawing">')
-            lines.append(f'\t\t<name>{ni["Name"]}</name>')
+            lines.append(f'\t\t<name>{esc_xml_text(str(ni["Name"]))}</name>')
             lines.append(f'\t\t<drawingID>{ni["DrawingId"]}</drawingID>')
             lines.append('\t</namedItem>')
             continue
@@ -2432,7 +2436,7 @@ def main():
         has_cols = int(ni.get('BeginCol', -1)) >= 0
         area_type = 'Rectangle' if (has_rows and has_cols) else ('Columns' if has_cols else 'Rows')
         lines.append('\t<namedItem xsi:type="NamedItemCells">')
-        lines.append(f'\t\t<name>{ni["Name"]}</name>')
+        lines.append(f'\t\t<name>{esc_xml_text(str(ni["Name"]))}</name>')
         lines.append('\t\t<area>')
         lines.append(f'\t\t\t<type>{area_type}</type>')
         lines.append(f'\t\t\t<beginRow>{ni["BeginRow"]}</beginRow>')
@@ -2463,7 +2467,7 @@ def main():
             else:
                 lines.append(f'	<font ref="{esc_xml(fe["Ref"])}" kind="{fe["Kind"]}"/>')
             continue
-        lines.append(f'\t<font faceName="{fe["Face"]}" height="{fe["Size"]}" bold="{fe["Bold"]}" italic="{fe["Italic"]}" underline="{fe["Underline"]}" strikeout="{fe["Strikeout"]}" kind="Absolute" scale="100"/>')
+        lines.append(f'\t<font faceName="{esc_xml(str(fe["Face"]))}" height="{fe["Size"]}" bold="{fe["Bold"]}" italic="{fe["Italic"]}" underline="{fe["Underline"]}" strikeout="{fe["Strikeout"]}" kind="Absolute" scale="100"/>')
 
     # 7j. Format palette
     for key in format_order:

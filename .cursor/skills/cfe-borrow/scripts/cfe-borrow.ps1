@@ -1,4 +1,4 @@
-﻿# cfe-borrow v1.50 — Borrow objects from configuration into extension (CFE)
+﻿# cfe-borrow v1.58 — Borrow objects from configuration into extension (CFE)
 # Source: https://github.com/Nikolay-Shirokov/cc-1c-skills
 [CmdletBinding(PositionalBinding=$false)]
 param(
@@ -33,6 +33,14 @@ $script:mainAttrId = "1000001"
 
 # Виды дочерних объектов, которые заимствуются в оболочку поимённо (табличные части — отдельно)
 $script:childObjectKinds = @('Attribute','Dimension','Resource','AddressingAttribute','AccountingFlag','ExtDimensionAccountingFlag')
+
+# Виды подобъектов в -Object (Тип.Имя.<Вид>.<Имя>). Признак учёта субконто идёт только вместе с
+# ТЧ видов субконто (свойства ExtDimensionTypes у оболочки) — по одному не заимствуется.
+$script:subObjectKinds = @('Attribute','TabularSection','Dimension','Resource','AddressingAttribute','AccountingFlag')
+# Своя колонка в заимствованной ТЧ: у этих видов — отказ UpdateDBCfg на любой платформе, у БП и
+# Задачи — ниже 8.3.25 (граница по версии платформы, не по режиму)
+$script:tsOwnColumnsBlocked = @('ChartOfCharacteristicTypes','ChartOfAccounts','ChartOfCalculationTypes')
+$script:tsOwnColumnsFromPlatform = @{ 'BusinessProcess' = '8.3.25'; 'Task' = '8.3.25' }
 
 # Прямые дети <Form>, которые в заимствованную форму не переносятся.
 # Структурные секции: AutoCommandBar и ChildItems забираются отдельно, остальные выбрасываются целиком.
@@ -281,26 +289,155 @@ function Get-OwnChildObjectNames {
 	return $names
 }
 
-# Вставка в СОБСТВЕННЫЙ <ChildObjects> объекта. Свой контейнер закрывается в файле последним:
-# объект в файле один, а вложенные <ChildObjects> табличных частей закрываются раньше. Замена по
-# всем вхождениям раскидывала реквизиты по каждой ТЧ — ps1 рвал XML, py прятал ТЧ внутрь ТЧ.
-function Insert-IntoOwnChildObjects {
-	param([string]$text, [string]$content)
-
-	$closeIdx = $text.LastIndexOf('</ChildObjects>')
-	if ($closeIdx -ge 0) {
-		return $text.Substring(0, $closeIdx) + "${content}`r`n`t`t" + $text.Substring($closeIdx)
+# Порядок групп в <ChildObjects> объекта по виду. Это xs:sequence <Вид>ChildObjects из MDClasses XSD,
+# сверенный выгрузкой платформы: выгрузка сама ставит группы в этот порядок, так что вставка не на место
+# даёт дифф при следующей выгрузке. Единого порядка нет — у документа Form стоит до TabularSection.
+function Get-ObjectChildOrder {
+	return @{
+		"Catalog"                    = @("Attribute", "TabularSection", "Form", "Template", "Command")
+		"Document"                   = @("Attribute", "Form", "TabularSection", "Template", "Command")
+		"ExchangePlan"               = @("Attribute", "TabularSection", "Form", "Template", "Command")
+		"ChartOfCharacteristicTypes" = @("Attribute", "TabularSection", "Form", "Template", "Command")
+		"ChartOfAccounts"            = @("Attribute", "TabularSection", "AccountingFlag", "ExtDimensionAccountingFlag", "Form", "Template", "Command")
+		"ChartOfCalculationTypes"    = @("Attribute", "TabularSection", "Form", "Template", "Command")
+		"BusinessProcess"            = @("Attribute", "TabularSection", "Form", "Template", "Command")
+		"Task"                       = @("Attribute", "TabularSection", "Form", "Template", "AddressingAttribute", "Command")
+		"DataProcessor"              = @("Attribute", "TabularSection", "Form", "Template", "Command")
+		"Report"                     = @("Attribute", "TabularSection", "Form", "Template", "Command")
+		"ExternalDataProcessor"      = @("Attribute", "TabularSection", "Form", "Template")
+		"ExternalReport"             = @("Attribute", "TabularSection", "Form", "Template")
+		"Enum"                       = @("EnumValue", "Form", "Template", "Command")
+		"InformationRegister"        = @("Resource", "Attribute", "Dimension", "Form", "Template", "Command")
+		"AccumulationRegister"       = @("Resource", "Attribute", "Dimension", "Form", "Template", "Command")
+		"AccountingRegister"         = @("Dimension", "Resource", "Attribute", "Form", "Template", "Command")
+		"CalculationRegister"        = @("Resource", "Attribute", "Dimension", "Recalculation", "Form", "Template", "Command")
+		"DocumentJournal"            = @("Column", "Form", "Template", "Command")
+		"Table"                      = @("Field", "Form", "Command", "Template")
+		"ExternalDataSource"         = @("Table", "Cube", "Function")
+		"Cube"                       = @("DimensionTable", "Dimension", "Resource", "Form", "Command", "Template")
+		"DimensionTable"             = @("Field", "Form", "Command", "Template")
+		"FilterCriterion"            = @("Form", "Command")
+		"SettingsStorage"            = @("Form", "Template")
+		"TabularSection"             = @("Attribute")
 	}
-	# Своего закрывающего тега нет — значит контейнер самозакрытый (детей у него нет, вложенных тоже)
-	$selfMatches = [regex]::Matches($text, '<ChildObjects\s*/>')
-	if ($selfMatches.Count -eq 0) { return $text }
-	$m = $selfMatches[$selfMatches.Count - 1]
-	return $text.Substring(0, $m.Index) + "<ChildObjects>${content}`r`n`t`t</ChildObjects>" + $text.Substring($m.Index + $m.Length)
+}
+
+# Элемент <ChildObjects>, ПЕРЕД которым встаёт новый <tag>; $null — дописать в конец.
+# Сразу за последним элементом своего тега, иначе перед первым элементом группы, идущей
+# по канону вида позже. Вид или тег вне канона — $null, как раньше.
+function Find-ChildAnchor($container, [string]$tag, [string]$objType) {
+	$children = New-Object System.Collections.Generic.List[object]
+	foreach ($c in $container.ChildNodes) { if ($c.NodeType -eq 'Element') { $children.Add($c) } }
+	$lastIdx = -1
+	for ($i = 0; $i -lt $children.Count; $i++) {
+		if ($children[$i].LocalName -ceq $tag) { $lastIdx = $i }
+	}
+	if ($lastIdx -ge 0) {
+		if ($lastIdx + 1 -lt $children.Count) { return $children[$lastIdx + 1] }
+		return $null
+	}
+	$order = (Get-ObjectChildOrder)[$objType]
+	if (-not $order) { return $null }
+	$tagIdx = [array]::IndexOf([string[]]$order, $tag)
+	if ($tagIdx -lt 0) { return $null }
+	$later = @($order | Select-Object -Skip ($tagIdx + 1))
+	foreach ($c in $children) {
+		if ($later -ccontains $c.LocalName) { return $c }
+	}
+	return $null
+}
+
+# Вставка ОДНОГО узла <tag> ($fragment — с отступом прямого ребёнка) в СОБСТВЕННЫЙ <ChildObjects>
+# объекта на место по канону вида — как Find-ChildAnchor, только по тексту: за последним своим тегом,
+# иначе перед первой группой, идущей по канону позже, иначе перед закрывающим тегом. Свой контейнер
+# открывается первым (свойства объекта <ChildObjects> не содержат) и закрывается последним: вложенные
+# <ChildObjects> табличных частей лежат внутри него, поиск «первого </ChildObjects>» уводил вставку в ТЧ.
+# Прямые дети — по глубине вложенности, не по отступу. Строку с одним тегом дополняем целой строкой,
+# перевод строки — из самого файла. $null — своего <ChildObjects> у объекта нет.
+function Insert-IntoOwnChildObjectsByCanon {
+	param([string]$text, [string]$fragment, [string]$tag, [string]$objType)
+
+	$eol = if ($text.Contains("`r`n")) { "`r`n" } else { "`n" }
+	$frag = ($fragment.TrimEnd().TrimStart([char[]]"`r`n") -replace "`r`n", "`n") -replace "`n", $eol
+	$mOpen = [regex]::Match($text, '<ChildObjects\b[^>]*?(/?)>')
+	if (-not $mOpen.Success) { return $null }
+
+	# Начало строки и отступ до позиции p; Indent = $null — перед p на строке есть что-то кроме пробелов
+	$lineAt = {
+		param([int]$p)
+		$ls = if ($p -gt 0) { $text.LastIndexOf("`n", $p - 1) + 1 } else { 0 }
+		$pre = $text.Substring($ls, $p - $ls)
+		@{ Start = $ls; Indent = $(if ($pre.Trim().Length -eq 0) { $pre } else { $null }) }
+	}
+
+	if ($mOpen.Groups[1].Value) {
+		# Контейнер самозакрытый — детей у него нет, раскрыть с единственным узлом
+		$ind = (& $lineAt $mOpen.Index).Indent
+		if ($null -eq $ind) { $ind = "" }
+		return $text.Substring(0, $mOpen.Index) + "<ChildObjects>" + $eol + $frag + $eol + $ind + "</ChildObjects>" + $text.Substring($mOpen.Index + $mOpen.Length)
+	}
+	$closes = [regex]::Matches($text, '</ChildObjects\s*>')
+	if ($closes.Count -eq 0) { return $null }
+	$mClose = $closes[$closes.Count - 1]
+	$bodyStart = $mOpen.Index + $mOpen.Length
+	if ($mClose.Index -lt $bodyStart) { return $null }
+	$starts = New-Object System.Collections.Generic.List[object]
+	$depth = 0
+	foreach ($m in [regex]::Matches($text.Substring($bodyStart, $mClose.Index - $bodyStart), '<(/?)([\w:.-]+)[^>]*?(/?)>')) {
+		if ($m.Groups[1].Value) { $depth--; continue }
+		if ($depth -eq 0) {
+			$nm = $m.Groups[2].Value
+			$starts.Add(@{ Pos = $bodyStart + $m.Index; Tag = $nm.Substring($nm.LastIndexOf(':') + 1) })
+		}
+		if (-not $m.Groups[3].Value) { $depth++ }
+	}
+	$pos = $mClose.Index
+	$lastIdx = -1
+	for ($i = 0; $i -lt $starts.Count; $i++) { if ($starts[$i].Tag -ceq $tag) { $lastIdx = $i } }
+	$order = (Get-ObjectChildOrder)[$objType]
+	if ($lastIdx -ge 0) {
+		if ($lastIdx + 1 -lt $starts.Count) { $pos = $starts[$lastIdx + 1].Pos }
+	} elseif ($order -and ($order -ccontains $tag)) {
+		$later = @($order | Select-Object -Skip ([array]::IndexOf([string[]]$order, $tag) + 1))
+		foreach ($s in $starts) { if ($later -ccontains $s.Tag) { $pos = $s.Pos; break } }
+	}
+	$line = & $lineAt $pos
+	if ($null -ne $line.Indent) {
+		return $text.Substring(0, $line.Start) + $frag + $eol + $text.Substring($line.Start)
+	}
+	return $text.Substring(0, $pos) + $frag.TrimStart() + $text.Substring($pos)
+}
+
+# Insert-IntoOwnChildObjectsByCanon, но своего <ChildObjects> нет — создать его последним ребёнком
+# элемента объекта; вставить всё равно некуда — отказ, а не молчаливое «добавлено».
+function Insert-OwnChildOrDie {
+	param([string]$text, [string]$fragment, [string]$tag, [string]$objType, [string]$objFile)
+
+	if (-not [regex]::IsMatch($text, '<ChildObjects\b')) {
+		$ends = [regex]::Matches($text, '</' + [regex]::Escape($objType) + '\s*>')
+		if ($ends.Count -gt 0) {
+			$mEnd = $ends[$ends.Count - 1]
+			$ls = if ($mEnd.Index -gt 0) { $text.LastIndexOf("`n", $mEnd.Index - 1) + 1 } else { 0 }
+			$pre = $text.Substring($ls, $mEnd.Index - $ls)
+			if ($pre.Trim().Length -eq 0) {
+				$eol = if ($text.Contains("`r`n")) { "`r`n" } else { "`n" }
+				$text = $text.Substring(0, $ls) + $pre + "`t<ChildObjects/>" + $eol + $text.Substring($ls)
+			} else {
+				$text = $text.Substring(0, $mEnd.Index) + "<ChildObjects/>" + $text.Substring($mEnd.Index)
+			}
+		}
+	}
+	$result = Insert-IntoOwnChildObjectsByCanon $text $fragment $tag $objType
+	if ($null -eq $result) {
+		Write-Error "Cannot insert <${tag}>: no own <ChildObjects> in $objFile"
+		exit 1
+	}
+	return $result
 }
 
 # --- 1. Resolve paths ---
 if (-not [System.IO.Path]::IsPathRooted($ExtensionPath)) {
-	$ExtensionPath = Join-Path (Get-Location).Path $ExtensionPath
+	$ExtensionPath = Join-Path (Get-Location).ProviderPath $ExtensionPath
 }
 if (Test-Path $ExtensionPath -PathType Container) {
 	$candidate = Join-Path $ExtensionPath "Configuration.xml"
@@ -308,11 +445,11 @@ if (Test-Path $ExtensionPath -PathType Container) {
 	else { Write-Error "No Configuration.xml in extension directory: $ExtensionPath"; exit 1 }
 }
 if (-not (Test-Path $ExtensionPath)) { Write-Error "Extension file not found: $ExtensionPath"; exit 1 }
-$extResolvedPath = (Resolve-Path $ExtensionPath).Path
+$extResolvedPath = (Resolve-Path $ExtensionPath).ProviderPath
 $extDir = Split-Path $extResolvedPath -Parent
 
 if (-not [System.IO.Path]::IsPathRooted($ConfigPath)) {
-	$ConfigPath = Join-Path (Get-Location).Path $ConfigPath
+	$ConfigPath = Join-Path (Get-Location).ProviderPath $ConfigPath
 }
 if (Test-Path $ConfigPath -PathType Container) {
 	$candidate = Join-Path $ConfigPath "Configuration.xml"
@@ -320,7 +457,7 @@ if (Test-Path $ConfigPath -PathType Container) {
 	else { Write-Error "No Configuration.xml in config directory: $ConfigPath"; exit 1 }
 }
 if (-not (Test-Path $ConfigPath)) { Write-Error "Config file not found: $ConfigPath"; exit 1 }
-$cfgResolvedPath = (Resolve-Path $ConfigPath).Path
+$cfgResolvedPath = (Resolve-Path $ConfigPath).ProviderPath
 $cfgDir = Split-Path $cfgResolvedPath -Parent
 
 # --- 2. Load extension Configuration.xml ---
@@ -1610,7 +1747,12 @@ function Register-FormInObject {
 
 	$trailing = $childObjs.LastChild
 	$ws = $objDoc.CreateWhitespace("`r`n`t`t`t")
-	if ($trailing -and ($trailing.NodeType -eq 'Whitespace' -or $trailing.NodeType -eq 'SignificantWhitespace')) {
+	# Место — по канону вида (у документа форма до ТЧ, у справочника после)
+	$anchor = Find-ChildAnchor $childObjs "Form" $objEl.LocalName
+	if ($anchor) {
+		$childObjs.InsertBefore($formEl, $anchor) | Out-Null
+		$childObjs.InsertBefore($ws, $anchor) | Out-Null
+	} elseif ($trailing -and ($trailing.NodeType -eq 'Whitespace' -or $trailing.NodeType -eq 'SignificantWhitespace')) {
 		$childObjs.InsertBefore($ws, $trailing) | Out-Null
 		$childObjs.InsertBefore($formEl, $trailing) | Out-Null
 	} else {
@@ -2190,10 +2332,8 @@ function Collect-FormDataPaths {
 			if ($script:standardFields -contains $seg0) { continue }
 			$firstLevel[$seg0] = $true
 			if ($segments.Count -ge 2) {
-				$seg1 = $segments[1]
-				if ($script:standardFields -contains $seg1) { continue }
-				$seg2 = if ($segments.Count -ge 3) { $segments[2] } else { $null }
-				$deepPaths += @{ ObjectAttr = $seg0; SubAttr = $seg1; SubSubAttr = $seg2 }
+				if ($script:standardFields -contains $segments[1]) { continue }
+				$deepPaths += ,$segments
 			}
 		}
 	}
@@ -2208,9 +2348,8 @@ function Collect-FormDataPaths {
 		if ($script:standardFields -contains $seg0) { continue }
 		$firstLevel[$seg0] = $true
 		if ($segments.Count -ge 2) {
-			$seg1 = $segments[1]
-			if ($script:standardFields -contains $seg1) { continue }
-			$deepPaths += @{ ObjectAttr = $seg0; SubAttr = $seg1 }
+			if ($script:standardFields -contains $segments[1]) { continue }
+			$deepPaths += ,$segments
 		}
 	}
 
@@ -2238,14 +2377,14 @@ function Collect-FormDataPaths {
 		}
 	}
 
-	# Deduplicate deep paths
+	# Deduplicate deep paths (each is the full segment list after the root)
 	$seen = @{}
 	$uniqueDeep = @()
 	foreach ($dp in $deepPaths) {
-		$key = "$($dp.ObjectAttr).$($dp.SubAttr).$($dp.SubSubAttr)"
+		$key = $dp -join "."
 		if (-not $seen.ContainsKey($key)) {
 			$seen[$key] = $true
-			$uniqueDeep += $dp
+			$uniqueDeep += ,$dp
 		}
 	}
 
@@ -2524,20 +2663,17 @@ function Merge-AttributesIntoObject {
 	}
 	if (-not $objEl) { Warn "No type element in $objFile"; return }
 
+	# Нет своего <ChildObjects> — его создаст Insert-OwnChildOrDie
 	$childObjs = $objEl.SelectSingleNode("md:ChildObjects", $objNs)
-	if (-not $childObjs) {
-		$childObjs = $objDoc.CreateElement("ChildObjects", $script:mdNs)
-		$objEl.AppendChild($objDoc.CreateWhitespace("`r`n`t`t")) | Out-Null
-		$objEl.AppendChild($childObjs) | Out-Null
-		$objEl.AppendChild($objDoc.CreateWhitespace("`r`n`t")) | Out-Null
-	}
 
-	# Collect existing attribute names for dedup
+	# Имена всех прямых детей своего ChildObjects — дедуп для любого вида (реквизит, измерение, признак)
 	$existingNames = @{}
-	foreach ($c in $childObjs.ChildNodes) {
-		if ($c.NodeType -ne 'Element' -or $c.LocalName -ne 'Attribute') { continue }
-		$nameNode = $c.SelectSingleNode("md:Properties/md:Name", $objNs)
-		if ($nameNode) { $existingNames[$nameNode.InnerText] = $true }
+	if ($childObjs) {
+		foreach ($c in $childObjs.ChildNodes) {
+			if ($c.NodeType -ne 'Element') { continue }
+			$nameNode = $c.SelectSingleNode("md:Properties/md:Name", $objNs)
+			if ($nameNode) { $existingNames[$nameNode.InnerText.Trim()] = $true }
+		}
 	}
 
 	$added = 0
@@ -2548,11 +2684,11 @@ function Merge-AttributesIntoObject {
 
 	if ($added -gt 0) {
 		# Build all adopted attributes as text and do string-level insertion
-		$allAttrXml = ""
+		$attrParts = New-Object System.Collections.Generic.List[object]
 		foreach ($attr in $attrsToAdd) {
 			if ($existingNames.ContainsKey($attr.Name)) { continue }
 			$kind = if ($attr.Kind) { $attr.Kind } else { "Attribute" }
-			$allAttrXml += "`r`n" + (Build-AdoptedAttributeXml $attr.Name $attr.Uuid $attr.TypeXml "`t`t`t" $kind)
+			$attrParts.Add(@{ Tag = $kind; Xml = (Build-AdoptedAttributeXml $attr.Name $attr.Uuid $attr.TypeXml "`t`t`t" $kind) })
 		}
 
 		# Save via text manipulation to avoid namespace issues with InnerXml
@@ -2572,12 +2708,82 @@ function Merge-AttributesIntoObject {
 		# Самозакрытый элемент раскрывается текстом, а не пробельным узлом в DOM: тот давал
 		# лишнюю строку с табуляцией перед первым <Attribute> (у Конфигуратора пустых строк нет).
 		# Стоит ДО Finalize-XmlText, чтобы схлопывание пустых тегов накрыло и вставленные реквизиты.
-		$text3 = Insert-IntoOwnChildObjects $text3 $allAttrXml
+		foreach ($part in $attrParts) {
+			$text3 = Insert-OwnChildOrDie $text3 $part.Xml $part.Tag $typeName $objFile
+		}
 		$text3 = Finalize-XmlText $text3 $style3
 		$writeBom3 = ($null -eq $style3) -or $style3.bom
 		[System.IO.File]::WriteAllText($objFile, $text3, (New-Object System.Text.UTF8Encoding($writeBom3)))
 		Info "  Merged $added attribute(s) into: $objFile"
 	}
+}
+
+# Блок <TabularSection> с именем $tsName среди прямых детей СОБСТВЕННОГО <ChildObjects> объекта:
+# @{ Start; End } в тексте, $null — нет. Прямые дети — по глубине, как в Insert-IntoOwnChildObjectsByCanon;
+# имя ТЧ — первый <Name> блока (в InternalInfo имён нет), без учёта регистра, как имена 1С. Реквизит с тем же
+# именем — не ТЧ.
+function Find-OwnTabularSectionSpan([string]$text, [string]$tsName) {
+	$mOpen = [regex]::Match($text, '<ChildObjects\b[^>]*?(/?)>')
+	if (-not $mOpen.Success -or $mOpen.Groups[1].Value) { return $null }
+	$closes = [regex]::Matches($text, '</ChildObjects\s*>')
+	if ($closes.Count -eq 0) { return $null }
+	$bodyStart = $mOpen.Index + $mOpen.Length
+	$bodyEnd = $closes[$closes.Count - 1].Index
+	if ($bodyEnd -lt $bodyStart) { return $null }
+	$depth = 0
+	$tsStart = -1
+	foreach ($m in [regex]::Matches($text.Substring($bodyStart, $bodyEnd - $bodyStart), '<(/?)([\w:.-]+)[^>]*?(/?)>')) {
+		if ($m.Groups[1].Value) {
+			$depth--
+			if ($depth -eq 0 -and $tsStart -ge 0) {
+				$end = $bodyStart + $m.Index + $m.Length
+				$nm = [regex]::Match($text.Substring($tsStart, $end - $tsStart), '<Name>([^<]*)</Name>')
+				if ($nm.Success -and $nm.Groups[1].Value -eq $tsName) { return @{ Start = $tsStart; End = $end } }
+				$tsStart = -1
+			}
+			continue
+		}
+		if ($depth -eq 0) { $tsStart = if ($m.Groups[2].Value -ceq 'TabularSection') { $bodyStart + $m.Index } else { -1 } }
+		if (-not $m.Groups[3].Value) { $depth++ }
+	}
+	return $null
+}
+
+# Колонки источника — в уже заимствованную ТЧ объекта расширения (недостающие по имени; свои колонки
+# и порядок остальных не трогаем). Возвращает число добавленных; ТЧ нет — -1.
+function Merge-ColumnsIntoTabularSection {
+	param([string]$typeName, [string]$objName, [string]$tsName, $cols)
+
+	$objFile = Join-Path (Join-Path $extDir $childTypeDirMap[$typeName]) "${objName}.xml"
+	$style = Detect-XmlStyle $objFile
+	$text = [System.IO.File]::ReadAllText($objFile, (New-Object System.Text.UTF8Encoding($true)))
+	$span = Find-OwnTabularSectionSpan $text $tsName
+	if (-not $span) { return -1 }
+	$block = $text.Substring($span.Start, $span.End - $span.Start)
+	# Имена колонок — все <Name> блока, кроме первого (имя самой ТЧ)
+	$existing = @{}
+	$first = $true
+	foreach ($nm in [regex]::Matches($block, '<Name>([^<]*)</Name>')) {
+		if ($first) { $first = $false; continue }
+		$existing[$nm.Groups[1].Value] = $true
+	}
+	$ls = if ($span.Start -gt 0) { $text.LastIndexOf("`n", $span.Start - 1) + 1 } else { 0 }
+	$colIndent = $text.Substring($ls, $span.Start - $ls) + "`t`t"
+	$added = 0
+	foreach ($c in $cols) {
+		if ($existing.ContainsKey($c.Name)) { continue }
+		$newBlock = Insert-IntoOwnChildObjectsByCanon $block (Build-AdoptedAttributeXml $c.Name $c.Uuid $c.TypeXml $colIndent) "Attribute" "TabularSection"
+		if ($null -eq $newBlock) { Warn "  Tabular section ${tsName} has no <ChildObjects> — attribute $($c.Name) not added"; break }
+		$block = $newBlock
+		$existing[$c.Name] = $true
+		$added++
+	}
+	if ($added -gt 0) {
+		$text = $text.Substring(0, $span.Start) + $block + $text.Substring($span.End)
+		[System.IO.File]::WriteAllText($objFile, $text, (Get-StyleEncoding $style))
+		Info "  Merged $added attribute(s) into tabular section ${tsName}: $objFile"
+	}
+	return $added
 }
 
 # --- 11h. Borrow-MainAttribute orchestrator ---
@@ -2608,12 +2814,40 @@ function Borrow-ObjectShell([string]$typeName, [string]$objName) {
 	Add-ToChildObjects $typeName $objName
 	$script:borrowedFiles += $targetFile
 	Info "  Auto-borrowed: ${typeName}.${objName}"
+	# Оболочка определяемого типа несёт его состав: объекты из состава — оболочками (эталон
+	# Конфигуратора). Без них ниже 8.3.25 загрузка падает: «Неизвестное имя типа».
+	if ($typeName -eq "DefinedType" -and $src.Properties.ContainsKey("__TypeXml")) {
+		foreach ($rt in (Collect-ReferenceTypes @($src.Properties["__TypeXml"]))) {
+			Borrow-ObjectShell $rt.TypeName $rt.ObjName
+		}
+	}
+}
+
+# Единственный объект, на который ведёт ссылочный тип: <Вид>Ref.<Имя> или определяемый тип из одной
+# такой ссылки (состав — из источника). Составной, примитивный, неизвестный вид — $null: дальше
+# такого типа путь формы не продолжается. Определяемый тип раскрывается один раз: в его составе
+# определяемых типов не бывает.
+function Resolve-SingleRefTarget([string]$typeXml, [bool]$allowDefined = $true) {
+	$types = @([regex]::Matches($typeXml, '<v8:(?:Type|TypeSet)>([^<]+)</v8:(?:Type|TypeSet)>') | ForEach-Object { $_.Groups[1].Value })
+	if ($types.Count -ne 1) { return $null }
+	$dt = [regex]::Match($types[0], '^(?:\w+:)?DefinedType\.(\w+)$')
+	if ($dt.Success -and -not $allowDefined) { return $null }
+	if ($dt.Success) {
+		$dtFile = Join-Path (Join-Path $cfgDir $childTypeDirMap["DefinedType"]) "$($dt.Groups[1].Value).xml"
+		if (-not (Test-Path $dtFile)) { return $null }
+		$dtSrc = Read-SourceObject "DefinedType" $dt.Groups[1].Value
+		if (-not $dtSrc.Properties.ContainsKey("__TypeXml")) { return $null }
+		return Resolve-SingleRefTarget $dtSrc.Properties["__TypeXml"] $false
+	}
+	$ref = [regex]::Match($types[0], '^(?:\w+:)?(\w+)Ref\.(\w+)$')
+	if (-not $ref.Success -or -not $childTypeDirMap.ContainsKey($ref.Groups[1].Value)) { return $null }
+	return @{ TypeName = $ref.Groups[1].Value; ObjName = $ref.Groups[2].Value }
 }
 
 function Borrow-ReferenceTypeShells {
 	param([string[]]$typeXmls)
 
-	$refTypes = Collect-ReferenceTypes $typeXmls
+	$refTypes = @(Collect-ReferenceTypes $typeXmls)
 	Info "  Reference types to borrow: $($refTypes.Count)"
 
 	foreach ($rt in $refTypes) {
@@ -2755,6 +2989,15 @@ function Borrow-MainAttribute {
 		Info "  Collected $($firstLevelNames.Count) first-level DataPath references, $($deepPaths.Count) deep paths"
 	} else {
 		Info "  Mode All: borrowing all attributes and tabular sections"
+		# Первый уровень — все реквизиты, но глубокие пути формы те же: объекты по ссылкам из них
+		# нужны с показанными реквизитами в любом режиме
+		if (Test-Path $srcFormXmlPath) {
+			$dpDoc = New-Object System.Xml.XmlDocument
+			$dpDoc.PreserveWhitespace = $true
+			$dpDoc.Load($srcFormXmlPath)
+			$dpInfo = Get-MainAttributeInfo $dpDoc.DocumentElement '\s+xmlns(?::\w+)?="[^"]*"'
+			if ($dpInfo) { $deepPaths = (Collect-FormDataPaths $srcFormXmlPath $dpInfo.Name).DeepPaths }
+		}
 	}
 
 	# Step 2: Resolve source attributes
@@ -2772,6 +3015,7 @@ function Borrow-MainAttribute {
 	$objFile = Join-Path (Join-Path $extDir $dirName) "${objName}.xml"
 
 	# Read existing object XML (needed for dedup + enrichment)
+	$objStyle = Detect-XmlStyle $objFile
 	$objContent = [System.IO.File]::ReadAllText($objFile, (New-Object System.Text.UTF8Encoding($true)))
 
 	# Dedup: skip attributes/TS already present in object's ChildObjects (idempotent re-borrow)
@@ -2779,25 +3023,15 @@ function Borrow-MainAttribute {
 	$insertAttrs = @($srcAttrs | Where-Object { -not $existingChildNames.ContainsKey($_.Name) })
 	$insertTS = @($srcTS | Where-Object { -not $existingChildNames.ContainsKey($_.Name) })
 
-	# Generate full object XML with attributes and TS
-	$contentSb = New-Object System.Text.StringBuilder
-	# Порядок как у платформы: реквизиты (измерения, ресурсы), ТЧ, затем признаки учёта плана счетов
-	$flagKinds = @('AccountingFlag','ExtDimensionAccountingFlag')
-	foreach ($attr in @($insertAttrs | Where-Object { $_.Kind -notin $flagKinds })) {
+	# Узлы заимствуемого содержимого: тег + XML. Место каждому — по канону вида при вставке
+	$contentParts = New-Object System.Collections.Generic.List[object]
+	foreach ($attr in $insertAttrs) {
 		$attrKind = if ($attr.Kind) { $attr.Kind } else { "Attribute" }
-		$attrXml = Build-AdoptedAttributeXml $attr.Name $attr.Uuid $attr.TypeXml "`t`t`t" $attrKind
-		$contentSb.AppendLine($attrXml) | Out-Null
+		$contentParts.Add(@{ Tag = $attrKind; Xml = (Build-AdoptedAttributeXml $attr.Name $attr.Uuid $attr.TypeXml "`t`t`t" $attrKind) })
 	}
 	foreach ($ts in $insertTS) {
-		$tsXml = Build-AdoptedTabularSectionXml $ts.Name $ts.Uuid $ts.GeneratedTypes $ts.Attributes "`t`t`t"
-		$contentSb.AppendLine($tsXml) | Out-Null
+		$contentParts.Add(@{ Tag = "TabularSection"; Xml = (Build-AdoptedTabularSectionXml $ts.Name $ts.Uuid $ts.GeneratedTypes $ts.Attributes "`t`t`t") })
 	}
-	foreach ($fk in $flagKinds) {
-		foreach ($attr in @($insertAttrs | Where-Object { $_.Kind -eq $fk })) {
-			$contentSb.AppendLine((Build-AdoptedAttributeXml $attr.Name $attr.Uuid $attr.TypeXml "`t`t`t" $fk)) | Out-Null
-		}
-	}
-	$adoptedContent = $contentSb.ToString().TrimEnd()
 
 	# Inject extra properties into the object's OWN Properties only — idempotent and anchored to the
 	# first ExtendedConfigurationObject (the object's). On re-borrow, adopted attributes each have their
@@ -2816,13 +3050,21 @@ function Borrow-MainAttribute {
 	}
 
 	# Добавить заимствованное содержимое в ChildObjects объекта (там уже может лежать <Form>)
-	if ($adoptedContent) {
-		$objContent = Insert-IntoOwnChildObjects $objContent "`r`n${adoptedContent}"
+	foreach ($part in $contentParts) {
+		$objContent = Insert-OwnChildOrDie $objContent $part.Xml $part.Tag $typeName $objFile
 	}
 
-	$encBom = New-Object System.Text.UTF8Encoding($true)
-	[System.IO.File]::WriteAllText($objFile, $objContent, $encBom)
+	[System.IO.File]::WriteAllText($objFile, $objContent, (Get-StyleEncoding $objStyle))
 	Info "  Enriched object: $objFile"
+
+	# ТЧ уже в расширении (заимствована без формы, своими колонками) — колонки, которые нужны форме,
+	# доливаются в неё: пропуск по имени оставил бы форму с «Неверный путь к данным Объект.<ТЧ>.<Колонка>»
+	foreach ($ts in $srcTS) {
+		if (-not $existingChildNames.ContainsKey($ts.Name)) { continue }
+		if ((Merge-ColumnsIntoTabularSection $typeName $objName $ts.Name $ts.Attributes) -lt 0) {
+			Warn "  $($ts.Name): name is taken in ${typeName}.${objName}, but not by a tabular section — its attributes not borrowed"
+		}
+	}
 
 	# Step 4: Collect all reference types and borrow as shells
 	$allTypeXmls = @()
@@ -2853,48 +3095,28 @@ function Borrow-MainAttribute {
 		if ($edm.Success) { Borrow-ObjectShell $edm.Groups[1].Value $edm.Groups[2].Value }
 	}
 
-	# Step 5: Handle deep paths (Form mode only)
-	if ($mode -eq "Form" -and $deepPaths.Count -gt 0) {
-		# Top-level ref deep paths: Объект.<Ref>.<Sub> — borrow the ref attribute's catalog with the sub-attribute
-		$deepByAttr = @{}
-		foreach ($dp in $deepPaths) {
-			if ($tsNames.ContainsKey($dp.ObjectAttr)) { continue }
-			if (-not $deepByAttr.ContainsKey($dp.ObjectAttr)) { $deepByAttr[$dp.ObjectAttr] = @() }
-			if ($deepByAttr[$dp.ObjectAttr] -notcontains $dp.SubAttr) { $deepByAttr[$dp.ObjectAttr] += $dp.SubAttr }
-		}
-		if ($deepByAttr.Count -gt 0) {
-			Info "  Processing $($deepByAttr.Count) deep path attribute(s)..."
-			foreach ($attrName in $deepByAttr.Keys) {
-				$attrInfo = $srcAttrs | Where-Object { $_.Name -eq $attrName } | Select-Object -First 1
-				if (-not $attrInfo) { continue }
-				$catMatch = [regex]::Match($attrInfo.TypeXml, 'cfg:(\w+)Ref\.(\w+)')
-				if (-not $catMatch.Success) { continue }
-				Borrow-DeepTargetAttrs $catMatch.Groups[1].Value $catMatch.Groups[2].Value $deepByAttr[$attrName]
+	# Step 5: Deep paths — Объект.<Реквизит>.<…> and Объект.<ТЧ>.<Колонка>.<…>. Each reference step borrows
+	# its target object with the next segment's attribute (Designer etalon), down the whole chain
+	if ($deepPaths.Count -gt 0) {
+		Info "  Processing $($deepPaths.Count) deep path(s)..."
+		foreach ($segs in $deepPaths) {
+			if ($tsNames.ContainsKey($segs[0])) {
+				$tsInfo = $srcTS | Where-Object { $_.Name -eq $segs[0] } | Select-Object -First 1
+				$startAttr = $tsInfo.Attributes | Where-Object { $_.Name -eq $segs[1] } | Select-Object -First 1
+				$next = 2
+			} else {
+				$startAttr = $srcAttrs | Where-Object { $_.Name -eq $segs[0] } | Select-Object -First 1
+				$next = 1
 			}
-		}
-
-		# Tabular-section deep paths: Объект.<ТЧ>.<Колонка>.<Sub> — borrow the column's catalog with the sub-attribute
-		$tsDeepByCol = @{}
-		foreach ($dp in $deepPaths) {
-			if (-not $tsNames.ContainsKey($dp.ObjectAttr)) { continue }
-			if (-not $dp.SubSubAttr) { continue }
-			if ($script:standardFields -contains $dp.SubSubAttr) { continue }
-			$k = "$($dp.ObjectAttr)|$($dp.SubAttr)"
-			if (-not $tsDeepByCol.ContainsKey($k)) { $tsDeepByCol[$k] = @() }
-			if ($tsDeepByCol[$k] -notcontains $dp.SubSubAttr) { $tsDeepByCol[$k] += $dp.SubSubAttr }
-		}
-		if ($tsDeepByCol.Count -gt 0) {
-			Info "  Processing $($tsDeepByCol.Count) tabular-section deep path(s)..."
-			foreach ($k in $tsDeepByCol.Keys) {
-				$parts = $k.Split("|")
-				$tsName = $parts[0]; $colName = $parts[1]
-				$tsInfo = $srcTS | Where-Object { $_.Name -eq $tsName } | Select-Object -First 1
-				if (-not $tsInfo) { continue }
-				$colInfo = $tsInfo.Attributes | Where-Object { $_.Name -eq $colName } | Select-Object -First 1
-				if (-not $colInfo) { continue }
-				$catMatch = [regex]::Match($colInfo.TypeXml, 'cfg:(\w+)Ref\.(\w+)')
-				if (-not $catMatch.Success) { continue }
-				Borrow-DeepTargetAttrs $catMatch.Groups[1].Value $catMatch.Groups[2].Value $tsDeepByCol[$k]
+			if (-not $startAttr) { continue }
+			$typeXml = $startAttr.TypeXml
+			for ($i = $next; $i -lt $segs.Count; $i++) {
+				if ($script:standardFields -contains $segs[$i]) { break }
+				$target = Resolve-SingleRefTarget $typeXml
+				if (-not $target) { break }
+				$merged = @(Borrow-DeepTargetAttrs $target.TypeName $target.ObjName @($segs[$i]))
+				if ($merged.Count -eq 0) { break }
+				$typeXml = $merged[0].TypeXml
 			}
 		}
 	}
@@ -2902,55 +3124,24 @@ function Borrow-MainAttribute {
 	Info "  Main attribute borrowing complete"
 }
 
-# --- 11i. Helper: borrow a deep-path target catalog together with the referenced sub-attributes ---
-# Used for both Объект.<Ref>.<Sub> (top-level ref attr) and Объект.<ТЧ>.<Колонка>.<Sub> (tabular-section
-# column ref). Mirrors Designer: the referenced catalog is adopted WITH the sub-attributes the form shows,
-# otherwise the platform rejects the deep DataPath ("Неверный путь к данным").
+# --- 11i. Helper: borrow a deep-path target object together with the referenced sub-attributes ---
+# Mirrors Designer: the referenced object is adopted WITH the sub-attributes the form shows, otherwise
+# the platform rejects the deep DataPath ("Неверный путь к данным"). Returns the merged source attributes
+# (Name/TypeXml) — the chain walk continues along their types.
 function Borrow-DeepTargetAttrs {
 	param([string]$targetTypeName, [string]$targetObjName, $subAttrNames)
 
-	$encBomLocal = New-Object System.Text.UTF8Encoding($true)
+	Borrow-ObjectShell $targetTypeName $targetObjName
+	if (-not (Test-ObjectBorrowed $targetTypeName $targetObjName)) { return @() }
 
-	# Ensure target is borrowed (shell)
-	if (-not (Test-ObjectBorrowed $targetTypeName $targetObjName)) {
-		$tSrc = Read-SourceObject $targetTypeName $targetObjName
-		$tBorrowedXml = Build-BorrowedObjectXml $targetTypeName $targetObjName $tSrc.Uuid $tSrc.Properties
-		$tTargetDir = Join-Path $extDir $childTypeDirMap[$targetTypeName]
-		if (-not (Test-Path $tTargetDir)) { New-Item -ItemType Directory -Path $tTargetDir -Force | Out-Null }
-		$tTargetFile = Join-Path $tTargetDir "${targetObjName}.xml"
-		[System.IO.File]::WriteAllText($tTargetFile, $tBorrowedXml, $encBomLocal)
-		Add-ToChildObjects $targetTypeName $targetObjName
-		$script:borrowedFiles += $tTargetFile
-		Info "  Auto-borrowed for deep path: ${targetTypeName}.${targetObjName}"
-	}
-
-	# Resolve sub-attributes in target catalog and merge them in
 	$subNames = @{}
 	foreach ($sn in $subAttrNames) { $subNames[$sn] = $true }
 	$subResolved = Resolve-SourceAttributes $targetTypeName $targetObjName $subNames
-	if ($subResolved.Attributes.Count -gt 0) {
-		Merge-AttributesIntoObject $targetTypeName $targetObjName $subResolved.Attributes
-
-		# Borrow ref types referenced by the sub-attributes
-		$subTypeXmls = @()
-		foreach ($sa in $subResolved.Attributes) { $subTypeXmls += $sa.TypeXml }
-		$subRefTypes = Collect-ReferenceTypes $subTypeXmls
-		foreach ($srt in $subRefTypes) {
-			if (-not $childTypeDirMap.ContainsKey($srt.TypeName)) { continue }
-			if (Test-ObjectBorrowed $srt.TypeName $srt.ObjName) { continue }
-			$sSrcFile = Join-Path (Join-Path $cfgDir $childTypeDirMap[$srt.TypeName]) "$($srt.ObjName).xml"
-			if (-not (Test-Path $sSrcFile)) { continue }
-			$sSrc = Read-SourceObject $srt.TypeName $srt.ObjName
-			$sBorrowedXml = Build-BorrowedObjectXml $srt.TypeName $srt.ObjName $sSrc.Uuid $sSrc.Properties
-			$sTargetDir = Join-Path $extDir $childTypeDirMap[$srt.TypeName]
-			if (-not (Test-Path $sTargetDir)) { New-Item -ItemType Directory -Path $sTargetDir -Force | Out-Null }
-			$sTargetFile = Join-Path $sTargetDir "$($srt.ObjName).xml"
-			[System.IO.File]::WriteAllText($sTargetFile, $sBorrowedXml, $encBomLocal)
-			Add-ToChildObjects $srt.TypeName $srt.ObjName
-			$script:borrowedFiles += $sTargetFile
-			Info "  Auto-borrowed (deep): $($srt.TypeName).$($srt.ObjName)"
-		}
-	}
+	if ($subResolved.Attributes.Count -eq 0) { return @() }
+	Merge-AttributesIntoObject $targetTypeName $targetObjName $subResolved.Attributes
+	# Ссылочные типы смёрженных реквизитов — оболочками
+	Borrow-ReferenceTypeShells @($subResolved.Attributes | ForEach-Object { $_.TypeXml })
+	return $subResolved.Attributes
 }
 
 # --- 12. Helper: build borrowed object XML ---
@@ -3023,6 +3214,11 @@ function Build-BorrowedObjectXml {
 # Стиль существующего файла для round-trip-сохранения: BOM / EOL / регистр encoding /
 # финальный перенос. $null → файл новый (сохранить текущее поведение).
 # Реестр семьи: tests/skills/check-inline-drift.mjs.
+# Кодировка записи с BOM, как был у файла ($style — Detect-XmlStyle до записи; файла не было — с BOM)
+function Get-StyleEncoding($style) {
+	return (New-Object System.Text.UTF8Encoding(($null -eq $style) -or $style.bom))
+}
+
 function Detect-XmlStyle([string]$path) {
 	if (-not (Test-Path -LiteralPath $path)) { return $null }
 	$raw = [System.IO.File]::ReadAllBytes($path)
@@ -3079,17 +3275,18 @@ function Find-V8Project([string]$startDir) {
 function Get-NewObjectPosition([string]$cfgDir) {
 	try {
 		if (-not $cfgDir) { $cfgDir = "." }
-		$pj = Find-V8Project (Get-Location).Path
+		$pj = Find-V8Project (Get-Location).ProviderPath
 		if (-not $pj) { $pj = Find-V8Project ([System.IO.Path]::GetFullPath($cfgDir)) }
 		if (-not $pj) { return "end" }
-		$proj = Get-Content -Raw $pj | ConvertFrom-Json
+		# UTF-8 явно: PS 5.1 читает файл без BOM как ANSI, и configSrc с кириллицей не совпал бы
+		$proj = Get-Content -Raw -Encoding UTF8 $pj | ConvertFrom-Json
 		$projDir = [System.IO.Path]::GetDirectoryName($pj)
 		$cfgFull = [System.IO.Path]::GetFullPath($cfgDir).TrimEnd('\', '/')
 		if ($proj.databases) {
 			foreach ($db in $proj.databases) {
 				if ($db.configSrc -and $db.newObjectPosition) {
 					$src = [System.IO.Path]::GetFullPath([System.IO.Path]::Combine($projDir, $db.configSrc)).TrimEnd('\', '/')
-					if ($cfgFull -eq $src -or $cfgFull.StartsWith($src + [System.IO.Path]::DirectorySeparatorChar)) {
+					if ($cfgFull -eq $src -or $cfgFull.StartsWith($src + [System.IO.Path]::DirectorySeparatorChar, [System.StringComparison]::OrdinalIgnoreCase)) {
 						if ("$($db.newObjectPosition)" -eq "byName") { return "byName" }
 						return "end"
 					}
@@ -3213,33 +3410,131 @@ $borrowedCount = 0
 # Элемент -Object: тип (синоним → английское имя), объект, форма и путь к её Form.xml в источнике.
 # Error — текст отказа для неверного элемента.
 function Split-BorrowItem([string]$item) {
+	$fmtHint = "expected 'Type.Name', 'Type.Name.Form.FormName', 'Type.Name.<Kind>.<SubName>' or 'Type.Name.TabularSection.<TS>.Attribute.<Attribute>'"
 	$dotIdx = $item.IndexOf(".")
-	if ($dotIdx -lt 1) { return @{ Error = "Invalid format '${item}', expected 'Type.Name' or 'Type.Name.Form.FormName'" } }
+	if ($dotIdx -lt 1) { return @{ Error = "Invalid format '${item}', $fmtHint" } }
 	$typeName = $item.Substring(0, $dotIdx)
 	$remainder = $item.Substring($dotIdx + 1)
 	# Resolve Russian synonym to English type name
 	if ($synonymMap.ContainsKey($typeName)) { $typeName = $synonymMap[$typeName] }
 	if (-not $childTypeDirMap.ContainsKey($typeName)) { return @{ Error = "Unknown type '${typeName}'" } }
-	# Check for .Form. pattern: Type.ObjName.Form.FormName
-	$formName = $null
-	$formIdx = $remainder.IndexOf(".Form.")
-	if ($formIdx -gt 0) {
-		$objName = $remainder.Substring(0, $formIdx)
-		$formName = $remainder.Substring($formIdx + 6) # skip ".Form."
+	# Имена метаданных без точек — разбор по сегментам: Имя | Имя.Form.Ф | Имя.<Вид>.<П> | Имя.TabularSection.<ТЧ>.Attribute.<К>
+	$segs = $remainder.Split('.')
+	if ($segs -contains '') { return @{ Error = "Invalid format '${item}', $fmtHint" } }
+	$objName = $segs[0]
+	$formName = $null; $subKind = $null; $subName = $null; $colName = $null
+	if ($segs.Count -eq 1) {
+	} elseif ($segs.Count -eq 3 -and $segs[1] -ceq 'Form') {
+		$formName = $segs[2]
+	} elseif ($segs.Count -eq 3 -and $script:subObjectKinds -ccontains $segs[1]) {
+		$subKind = $segs[1]; $subName = $segs[2]
+	} elseif ($segs.Count -eq 5 -and $segs[1] -ceq 'TabularSection' -and $segs[3] -ceq 'Attribute') {
+		$subKind = 'TabularSection'; $subName = $segs[2]; $colName = $segs[4]
+	} elseif ($segs.Count -eq 3) {
+		return @{ Error = "Unsupported child object kind '$($segs[1])' in '${item}': expected Form, $($script:subObjectKinds -join ', ')" }
 	} else {
-		$objName = $remainder
+		return @{ Error = "Invalid format '${item}', $fmtHint" }
+	}
+	# Вид подобъекта — из канона ChildObjects своего типа: измерения у документа нет
+	if ($subKind) {
+		$order = (Get-ObjectChildOrder)[$typeName]
+		if (-not $order -or $order -cnotcontains $subKind) { return @{ Error = "${typeName} has no child objects of kind ${subKind} ('${item}')" } }
 	}
 	# Общая форма — сама форма: «CommonForm.X» заимствуется вместе с содержимым, владельца у неё нет
 	$isCommonForm = $typeName -eq 'CommonForm'
 	if ($isCommonForm) {
-		if ($formName) { return @{ Error = "Invalid format '${item}': общая форма задаётся как 'CommonForm.Имя'" } }
+		if ($segs.Count -ne 1) { return @{ Error = "Invalid format '${item}': общая форма задаётся как 'CommonForm.Имя'" } }
 		$formName = $objName
 	}
 	$dirName = $childTypeDirMap[$typeName]
 	$srcFormXml = $null
 	if ($isCommonForm) { $srcFormXml = Join-Path (Join-Path (Join-Path $cfgDir $dirName) $objName) "Ext/Form.xml" }
 	elseif ($formName) { $srcFormXml = Join-Path (Join-Path (Join-Path (Join-Path (Join-Path $cfgDir $dirName) $objName) "Forms") $formName) "Ext/Form.xml" }
-	return @{ TypeName = $typeName; ObjName = $objName; FormName = $formName; IsCommonForm = $isCommonForm; DirName = $dirName; SrcFormXml = $srcFormXml }
+	return @{ TypeName = $typeName; ObjName = $objName; FormName = $formName; IsCommonForm = $isCommonForm; DirName = $dirName; SrcFormXml = $srcFormXml
+		SubKind = $subKind; SubName = $subName; ColName = $colName }
+}
+
+# Подобъект в источнике: реквизит/измерение/… своего вида, ТЧ и колонка. Имя сверяется ключом
+# запроса, как у Resolve-SourceAttributes; в расширение идёт имя из источника. Нет — Error.
+function Resolve-SubObjectSource($pi) {
+	$res = Resolve-SourceAttributes $pi.TypeName $pi.ObjName @{ $pi.SubName = $true }
+	$key = Get-QueryKey $pi.SubName
+	$where = "$($pi.TypeName).$($pi.ObjName)"
+	if ($pi.SubKind -ceq 'TabularSection') {
+		$ts = $res.TabularSections | Where-Object { (Get-QueryKey $_.Name) -ceq $key } | Select-Object -First 1
+		if (-not $ts) { return @{ Error = "TabularSection '$($pi.SubName)' not found in ${where}" } }
+		$col = $null
+		if ($pi.ColName) {
+			$colKey = Get-QueryKey $pi.ColName
+			$col = $ts.Attributes | Where-Object { (Get-QueryKey $_.Name) -ceq $colKey } | Select-Object -First 1
+			if (-not $col) { return @{ Error = "Attribute '$($pi.ColName)' not found in tabular section ${where}.$($ts.Name)" } }
+		}
+		return @{ TS = $ts; Col = $col }
+	}
+	$attr = $res.Attributes | Where-Object { $_.Kind -ceq $pi.SubKind -and (Get-QueryKey $_.Name) -ceq $key } | Select-Object -First 1
+	if (-not $attr) { return @{ Error = "$($pi.SubKind) '$($pi.SubName)' not found in ${where}" } }
+	return @{ Attr = $attr }
+}
+
+# Объект-родитель формы или подобъекта: не заимствован — заимствовать заготовкой
+function Ensure-ParentBorrowed([string]$typeName, [string]$objName) {
+	if (Test-ObjectBorrowed $typeName $objName) { return }
+	Info "  Parent object ${typeName}.${objName} not yet borrowed — borrowing first..."
+	$src = Read-SourceObject $typeName $objName
+	Info "  Source UUID: $($src.Uuid)"
+	$borrowedXml = Build-BorrowedObjectXml $typeName $objName $src.Uuid $src.Properties
+	$targetDir = Join-Path $extDir $childTypeDirMap[$typeName]
+	if (-not (Test-Path $targetDir)) {
+		New-Item -ItemType Directory -Path $targetDir -Force | Out-Null
+	}
+	$targetFile = Join-Path $targetDir "${objName}.xml"
+	$enc = New-Object System.Text.UTF8Encoding($true)
+	[System.IO.File]::WriteAllText($targetFile, $borrowedXml, $enc)
+	Info "  Created: $targetFile"
+	Add-ToChildObjects $typeName $objName
+	$script:borrowedFiles += $targetFile
+}
+
+# Подобъект без формы — как «Добавить в расширение» Конфигуратора: ТЧ пустая (свои колонки — потом,
+# meta-edit), реквизит/измерение/колонка — по одному, ссылочные типы — оболочками. Свойства объекта
+# (Hierarchical, CodeLength…) не переносятся — Конфигуратор их тут тоже не пишет.
+function Borrow-SubObject($pi, $src) {
+	$typeName = $pi.TypeName; $objName = $pi.ObjName
+	Ensure-ParentBorrowed $typeName $objName
+	$objFile = Join-Path (Join-Path $extDir $pi.DirName) "${objName}.xml"
+	if ($pi.SubKind -cne 'TabularSection') {
+		$attr = $src.Attr
+		if ((Get-OwnChildObjectNames $objFile).ContainsKey($attr.Name)) {
+			Info "  Already borrowed: $($pi.SubKind) $($attr.Name)"
+		} else {
+			Merge-AttributesIntoObject $typeName $objName @($attr)
+		}
+		Borrow-ReferenceTypeShells @($attr.TypeXml)
+		return
+	}
+	$ts = $src.TS
+	$style = Detect-XmlStyle $objFile
+	$text = [System.IO.File]::ReadAllText($objFile, (New-Object System.Text.UTF8Encoding($true)))
+	if (Find-OwnTabularSectionSpan $text $ts.Name) {
+		Info "  Already borrowed: TabularSection $($ts.Name)"
+	} else {
+		$text = Insert-OwnChildOrDie $text (Build-AdoptedTabularSectionXml $ts.Name $ts.Uuid $ts.GeneratedTypes @() "`t`t`t") "TabularSection" $typeName $objFile
+		[System.IO.File]::WriteAllText($objFile, $text, (Get-StyleEncoding $style))
+		Info "  Borrowed TabularSection $($ts.Name) (no attributes): $objFile"
+	}
+	# Собственный реквизит в заимствованную ТЧ этих видов платформа не примет — отказ на обновлении БД.
+	# Предупреждаем, когда ТЧ заимствуется под собственные реквизиты — элемент без реквизита источника
+	if (-not $src.Col) {
+		if ($script:tsOwnColumnsBlocked -ccontains $typeName) {
+			Warn "  ${typeName}: own attributes cannot be added to a borrowed tabular section of this kind — the platform rejects them on database update"
+		} elseif ($script:tsOwnColumnsFromPlatform.ContainsKey($typeName)) {
+			Warn "  ${typeName}: own attributes in a borrowed tabular section are accepted only from platform $($script:tsOwnColumnsFromPlatform[$typeName])"
+		}
+	}
+	if ($src.Col) {
+		Merge-ColumnsIntoTabularSection $typeName $objName $ts.Name @($src.Col) | Out-Null
+		Borrow-ReferenceTypeShells @($src.Col.TypeXml)
+	}
 }
 
 # С -BorrowMainAttribute реквизиты берутся у объекта из типа основного реквизита формы. Если это не
@@ -3268,6 +3563,24 @@ if ($BorrowMainAttribute) {
 	}
 }
 
+# Элементы разобраны и подобъекты найдены в источнике ДО записи: ошибка в любом элементе пакета —
+# расширение не тронуто
+$script:subObjectSources = @{}
+foreach ($item in $items) {
+	$pi = Split-BorrowItem $item
+	if ($pi.Error) {
+		Write-Error $pi.Error
+		exit 1
+	}
+	if (-not $pi.SubKind) { continue }
+	$subSrc = Resolve-SubObjectSource $pi
+	if ($subSrc.Error) {
+		Write-Error "$($subSrc.Error). Extension not changed"
+		exit 1
+	}
+	$script:subObjectSources[$item] = $subSrc
+}
+
 foreach ($item in $items) {
 	$pi = Split-BorrowItem $item
 	if ($pi.Error) {
@@ -3277,31 +3590,17 @@ foreach ($item in $items) {
 	$typeName = $pi.TypeName; $objName = $pi.ObjName; $formName = $pi.FormName; $isCommonForm = $pi.IsCommonForm
 	$dirName = $childTypeDirMap[$typeName]
 
-	if ($formName) {
+	if ($pi.SubKind) {
+		Info "Borrowing ${item}..."
+		Borrow-SubObject $pi $script:subObjectSources[$item]
+		$borrowedCount++
+	} elseif ($formName) {
 		# --- Form borrowing ---
 		if ($isCommonForm) { Info "Borrowing common form ${typeName}.${objName}..." }
 		else { Info "Borrowing form ${typeName}.${objName}.Form.${formName}..." }
 
 		# Auto-borrow parent object if not yet borrowed
-		if (-not $isCommonForm -and -not (Test-ObjectBorrowed $typeName $objName)) {
-			Info "  Parent object ${typeName}.${objName} not yet borrowed — borrowing first..."
-
-			$src = Read-SourceObject $typeName $objName
-			Info "  Source UUID: $($src.Uuid)"
-			$borrowedXml = Build-BorrowedObjectXml $typeName $objName $src.Uuid $src.Properties
-
-			$targetDir = Join-Path $extDir $dirName
-			if (-not (Test-Path $targetDir)) {
-				New-Item -ItemType Directory -Path $targetDir -Force | Out-Null
-			}
-			$targetFile = Join-Path $targetDir "${objName}.xml"
-			$enc = New-Object System.Text.UTF8Encoding($true)
-			[System.IO.File]::WriteAllText($targetFile, $borrowedXml, $enc)
-			Info "  Created: $targetFile"
-
-			Add-ToChildObjects $typeName $objName
-			$script:borrowedFiles += $targetFile
-		}
+		if (-not $isCommonForm) { Ensure-ParentBorrowed $typeName $objName }
 
 		# Borrow the form
 		$hasBMA = [bool]$BorrowMainAttribute
@@ -3359,6 +3658,7 @@ foreach ($item in $items) {
 		# Уже заимствованный объект НЕ переписываем: в его XML лежат собственные реквизиты
 		# расширения, заимствованные подобъекты и состояния, которые из источника не выводятся.
 		# Повторный вызов — законный способ доделать модуль (-Module), а не переиздать заготовку.
+		$src = $null
 		if (Test-ObjectBorrowed $typeName $objName) {
 			Info "Already borrowed: ${typeName}.${objName} — XML сохранён без изменений"
 		} else {
@@ -3379,6 +3679,12 @@ foreach ($item in $items) {
 		}
 
 		Add-ToChildObjects $typeName $objName
+		# Определяемый тип — с оболочками объектов своего состава, как у Конфигуратора
+		if ($src -and $typeName -eq "DefinedType" -and $src.Properties.ContainsKey("__TypeXml")) {
+			foreach ($rt in (Collect-ReferenceTypes @($src.Properties["__TypeXml"]))) {
+				Borrow-ObjectShell $rt.TypeName $rt.ObjName
+			}
+		}
 
 		$script:borrowedFiles += $targetFile
 		foreach ($kind in (Resolve-ModuleKinds $typeName)) {

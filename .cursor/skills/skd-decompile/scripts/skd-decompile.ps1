@@ -1,4 +1,4 @@
-﻿# skd-decompile v0.104 — Decompile 1C DCS Template.xml to JSON DSL (draft)
+﻿# skd-decompile v0.107 — Decompile 1C DCS Template.xml to JSON DSL (draft)
 # Source: https://github.com/Nikolay-Shirokov/cc-1c-skills
 [CmdletBinding(PositionalBinding=$false)]
 param(
@@ -16,14 +16,19 @@ $ErrorActionPreference = "Stop"
 # идёт чинить скрипт, а не свой вызов. $source — файл или параметр. $expected заполняем только
 # для полиморфного входа: у файла подсказка была бы наполнителем. -Inline печатает ещё и то,
 # что доехало: у файла такого вопроса нет — путь назван, позицию дал парсер, файл на диске.
-# Возврат через -NoEnumerate: без него одноэлементный
-# JSON-массив разворачивался бы в скаляр вторым анруллингом.
+# Возврат через запятую: без неё одноэлементный JSON-массив разворачивался бы в скаляр
+# вторым анруллингом. Не Write-Output -NoEnumerate: pwsh 7.6 заворачивает им в List
+# и одиночный объект (issue #136).
 function ConvertFrom-JsonInput([string]$text, [string]$source, [string]$expected, [switch]$Inline) {
 	try {
 		# PS 5.1 на пустой строке отдаёт $null, а не ошибку — навык уходил дальше с $null,
 		# тогда как py-порт падал. Проверяем сами, чтобы порты вели себя одинаково.
 		if ([string]::IsNullOrWhiteSpace($text)) { throw 'input is empty' }
-		$parsed = $text | ConvertFrom-Json
+		# pwsh 7+ сам разворачивает массив верхнего уровня ([x] → x, [] → $null). Ключ -NoEnumerate
+		# появился там же: в 5.1 и pwsh 6 его нет, поэтому спрашиваем командлет, а не версию.
+		$cfj = @{}
+		if ((Get-Command ConvertFrom-Json).Parameters.ContainsKey('NoEnumerate')) { $cfj.NoEnumerate = $true }
+		$parsed = $text | ConvertFrom-Json @cfj
 	} catch {
 		$what = if ($expected) { "$source expects $expected" } else { "Invalid JSON in $source" }
 		if ($Inline) {
@@ -36,7 +41,7 @@ function ConvertFrom-JsonInput([string]$text, [string]$source, [string]$expected
 		[Console]::Error.WriteLine("[ERROR] ${what} ($($_.Exception.Message))")
 		exit 1
 	}
-	Write-Output -NoEnumerate $parsed
+	return ,$parsed
 }
 
 # --- Чтение входного JSON-файла ---
@@ -83,7 +88,7 @@ if (-not (Test-Path $TemplatePath)) {
 	exit 1
 }
 
-$TemplatePath = (Resolve-Path $TemplatePath).Path
+$TemplatePath = (Resolve-Path $TemplatePath).ProviderPath
 
 $xmlDoc = New-Object System.Xml.XmlDocument
 $xmlDoc.PreserveWhitespace = $false
@@ -2829,7 +2834,7 @@ $script:outputDir = $null
 $script:outputBasename = $null
 if ($OutputPath) {
 	if (-not [System.IO.Path]::IsPathRooted($OutputPath)) {
-		$OutputPath = Join-Path (Get-Location).Path $OutputPath
+		$OutputPath = Join-Path (Get-Location).ProviderPath $OutputPath
 	}
 	$script:outputDir = [System.IO.Path]::GetDirectoryName($OutputPath)
 	$script:outputBasename = [System.IO.Path]::GetFileNameWithoutExtension($OutputPath)
@@ -2861,6 +2866,10 @@ function Build-DataSet {
 		'DataSetQuery' {
 			$queryText = Get-Text $dsNode "r:query"
 			$ds['query'] = Maybe-ExternalizeQuery -queryText $queryText -datasetName $name
+			# Platform default is true (element omitted) — emit only false
+			foreach ($flag in @('autoFillFields', 'useQueryGroupIfPossible')) {
+				if ((Get-Text $dsNode "r:$flag") -ceq 'false') { $ds[$flag] = $false }
+			}
 		}
 		'DataSetObject' {
 			$ds['objectName'] = Get-Text $dsNode "r:objectName"
@@ -2912,7 +2921,7 @@ function Build-DataSet {
 	# dataSource attachment — omit if matches default (Union has no dataSource)
 	if ($xsiType -ne 'DataSetUnion') {
 		$dsSrc = Get-Text $dsNode "r:dataSource"
-		if ($emitDataSources -and $dsSrc) { $ds['dataSource'] = $dsSrc }
+		if ($emitDataSources -and $dsSrc) { $ds['source'] = $dsSrc }
 	}
 
 	return $ds

@@ -1,4 +1,4 @@
-﻿# cfe-validate v1.23 — Validate 1C configuration extension structure (CFE)
+﻿# cfe-validate v1.31 — Validate 1C configuration extension structure (CFE)
 # Source: https://github.com/Nikolay-Shirokov/cc-1c-skills
 [CmdletBinding(PositionalBinding=$false)]
 param(
@@ -22,7 +22,7 @@ $ErrorActionPreference = "Stop"
 
 # --- Resolve path ---
 if (-not [System.IO.Path]::IsPathRooted($ExtensionPath)) {
-	$ExtensionPath = Join-Path (Get-Location).Path $ExtensionPath
+	$ExtensionPath = Join-Path (Get-Location).ProviderPath $ExtensionPath
 }
 
 if (Test-Path $ExtensionPath -PathType Container) {
@@ -40,7 +40,7 @@ if (-not (Test-Path $ExtensionPath)) {
 	exit 1
 }
 
-$resolvedPath = (Resolve-Path $ExtensionPath).Path
+$resolvedPath = (Resolve-Path $ExtensionPath).ProviderPath
 $configDir = Split-Path $resolvedPath -Parent
 
 # --- Output infrastructure ---
@@ -254,7 +254,7 @@ foreach ($entry in @(
 	@("TaskObject", "Number Date Description Ref DeletionMark BusinessProcess RoutePoint Executed Номер Дата Наименование Ссылка ПометкаУдаления БизнесПроцесс ТочкаМаршрута Выполнена"),
 	@("BusinessProcessObject", "Number Date Ref DeletionMark Started Completed HeadTask Номер Дата Ссылка ПометкаУдаления Стартован Завершен ВедущаяЗадача"),
 	@("DataProcessorObject", ""),
-	@("ReportObject", ""),
+	@("ReportObject", "SettingsComposer КомпоновщикНастроек"),
 	@("InformationRegisterRecordManager", "Period Recorder LineNumber Active Период Регистратор НомерСтроки Активность"),
 	@("InformationRegisterRecordSet", "Period Recorder LineNumber Active RowsCount Период Регистратор НомерСтроки Активность КоличествоСтрок"),
 	@("AccumulationRegisterRecordSet", "Period Recorder LineNumber Active RecordType RowsCount Период Регистратор НомерСтроки Активность ВидДвижения КоличествоСтрок"),
@@ -264,6 +264,45 @@ foreach ($entry in @(
 	$set = New-Object System.Collections.Hashtable ([StringComparer]::OrdinalIgnoreCase)
 	foreach ($n in ($entry[1] -split ' ' | Where-Object { $_ })) { $set[$n] = $true }
 	$script:mainAttrStandardFields[$entry[0]] = $set
+}
+
+# Путь через компоновщик настроек отчёта (<Отчет>.SettingsComposer.<Свойство>.<Колонка или коллекция>) —
+# по дереву реквизита формы в конфигураторе (замер 8.3.24, 8.3.27, 8.5). Справка синтакс-помощника тут не
+# источник: Structure, Parent, UserSettings.Items во встроенном языке есть, а в пути формы — «Неверный путь
+# к данным». Платформа проверяет путь на всю глубину; здесь — два уровня после компоновщика, поля строк
+# коллекций (Filter.Use) не проверяем.
+$script:settingsComposerNames = @('SettingsComposer', 'КомпоновщикНастроек')
+$scSettings = "Use ReportStructurePicture ReportStructure HasSelection HasFilter HasOrder HasConditionalAppearance " +
+	"HasOutputParameters DataParameters Filter Selection Order ConditionalAppearance OutputParameters UserFields " +
+	"Использование КартинкаСтруктурыОтчета СтруктураОтчета НаличиеВыбора НаличиеОтбора НаличиеПорядка " +
+	"НаличиеУсловногоОформления НаличиеПараметровВывода ПараметрыДанных Отбор Выбор Порядок УсловноеОформление " +
+	"ПараметрыВывода ПользовательскиеПоля"
+$scUserSettings = "Use SettingPicture Setting ComparisonType ValuePicture Value EditInReportForm " +
+	"Использование КартинкаНастройки Настройка ВидСравнения КартинкаЗначения Значение РедактированиеВФормеОтчета"
+$script:settingsComposerTree = New-Object System.Collections.Hashtable ([StringComparer]::OrdinalIgnoreCase)
+foreach ($entry in @(
+	@("Settings", $scSettings), @("Настройки", $scSettings),
+	@("FixedSettings", $scSettings), @("ФиксированныеНастройки", $scSettings),
+	@("UserSettings", $scUserSettings), @("ПользовательскиеНастройки", $scUserSettings)
+)) {
+	$set = New-Object System.Collections.Hashtable ([StringComparer]::OrdinalIgnoreCase)
+	foreach ($n in ($entry[1] -split ' ' | Where-Object { $_ })) { $set[$n] = $true }
+	$script:settingsComposerTree[$entry[0]] = $set
+}
+
+# Путь после компоновщика настроек ($segs[0]): @(номер неверного сегмента, текст) или $null
+function Get-SettingsComposerError([string[]]$segs) {
+	if ($segs.Count -lt 2) { return $null }
+	$node = $script:settingsComposerTree[$segs[1]]
+	if ($null -eq $node) {
+		# Подсказка — на языке, которым записан сам компоновщик
+		$names = if ($segs[0] -eq 'КомпоновщикНастроек') { 'Настройки, ПользовательскиеНастройки, ФиксированныеНастройки' } else { 'Settings, UserSettings, FixedSettings' }
+		return @(1, "the settings composer has no such property (available to forms: $names)")
+	}
+	if ($segs.Count -ge 3 -and -not $node.ContainsKey($segs[2])) {
+		return @(2, "$($segs[1]) has no such column or settings collection available to forms")
+	}
+	return $null
 }
 
 # Объект, по которому разрешаются пути формы, — тип её основного реквизита, а не владелец формы:
@@ -679,8 +718,8 @@ if ($childObjNode) {
 
 if ($script:stopped) { & $finalize; exit 1 }
 
-# Типы подобъекта метаданных: тексты <v8:Type>; определяемый тип и прочие наборы — меткой «#TypeSet»,
-# квалификаторы пропускаются.
+# Типы подобъекта метаданных: тексты <v8:Type>; определяемый тип — меткой «#DefinedType.<Имя>», прочие
+# наборы — «#TypeSet», квалификаторы пропускаются.
 function Get-MdTypeList {
 	param($el, $nsm)
 	$list = @()
@@ -689,7 +728,10 @@ function Get-MdTypeList {
 		foreach ($tn in $typeNode.ChildNodes) {
 			if ($tn.NodeType -ne 'Element') { continue }
 			if ($tn.LocalName -eq 'Type') { $list += $tn.InnerText.Trim() }
-			elseif ($tn.LocalName -eq 'TypeSet') { $list += '#TypeSet' }
+			elseif ($tn.LocalName -eq 'TypeSet') {
+				$dtm = [regex]::Match($tn.InnerText.Trim(), '^(?:\w+:)?DefinedType\.(.+)$')
+				$list += $(if ($dtm.Success) { "#DefinedType.$($dtm.Groups[1].Value)" } else { '#TypeSet' })
+			}
 		}
 	}
 	return ,$list
@@ -717,15 +759,25 @@ function Get-StdRefTypes {
 # нет — только стандартные.
 # ТЧ цели — дальше колонка этой ТЧ; Родитель и Владелец справочника — дальше по их типу. Правило
 # повторяется на каждом шаге. У составного типа (любой состав) дальше реквизита путь не разрешается.
-# Не замерено (определяемый, примитивный тип, перечисление, прочие стандартные реквизиты в середине
-# пути) — не проверяем. Ошибка — @(номер сегмента, текст), иначе $null.
+# Определяемый тип раскрывается по его составу в расширении (замер 8.3.27: путь через составной ОТ
+# отвергается и в конфигурации); ОТ нет в расширении — не проверяем, это проверка 19.
+# Не замерено (примитивный тип, перечисление, прочие стандартные реквизиты в середине пути) — не
+# проверяем. Ошибка — @(номер сегмента, текст), иначе $null.
 function Get-RefTailError {
 	param($types, [string[]]$segs, [int]$i)
 	while ($i -lt $segs.Count) {
-		$types = @($types)
+		$expanded = @()
+		foreach ($t in @($types)) {
+			if (([string]$t).StartsWith('#DefinedType.')) {
+				$dtEntry = $script:extObjIndex["DefinedType.$(([string]$t).Substring(13))"]
+				if (-not $dtEntry) { return $null }
+				$expanded += $dtEntry.Types
+			} else { $expanded += $t }
+		}
+		$types = $expanded
 		if ($types -contains '#TypeSet') { return $null }
 		if ($types.Count -ge 2) {
-			return @($i, "у $($segs[$i - 1]) составной тип — дальше него путь не разрешается")
+			return @($i, "$($segs[$i - 1]) has a composite type — the path cannot continue past it")
 		}
 		if ($types.Count -ne 1) { return $null }
 		$rm = [regex]::Match([string]$types[0], '^(?:\w+:)?(\w+?)Ref\.(.+)$')
@@ -745,17 +797,17 @@ function Get-RefTailError {
 		$tEntry = $script:extObjIndex[$tKey]
 		if (-not $tEntry) {
 			if ($script:extObjListed.ContainsKey($tKey)) { return $null }
-			return @($i, "у $tKey нет в расширении реквизита ${seg}: объект не заимствован, без заимствования через ссылку видны только стандартные реквизиты")
+			return @($i, "$tKey has no attribute ${seg} in the extension: the object is not borrowed, and through a reference only its standard attributes are visible")
 		}
 		if (-not $tEntry.Names.ContainsKey($seg)) {
-			return @($i, "у $tKey в расширении нет реквизита ${seg} (незаимствованный реквизит источника форме расширения не виден)")
+			return @($i, "$tKey has no attribute ${seg} in the extension (an unborrowed source attribute is not visible to extension forms)")
 		}
 		if ($tEntry.TSColumns.ContainsKey($seg)) {
 			if ($i + 1 -ge $segs.Count) { return $null }
 			$col = $segs[$i + 1]
 			if ($script:standardObjectFields -contains $col) { return $null }
 			if (-not $tEntry.TSColumns[$seg].ContainsKey($col)) {
-				return @(($i + 1), "у табличной части $seg объекта $tKey в расширении нет колонки $col")
+				return @(($i + 1), "tabular section $seg of $tKey has no column $col in the extension")
 			}
 			$types = $tEntry.TSColumns[$seg][$col]
 			$i += 2
@@ -791,6 +843,16 @@ $script:ownChildRestricted = @{
 	"ChartOfCharacteristicTypes" = "Error"; "ChartOfAccounts" = "Error"; "ChartOfCalculationTypes" = "Error"
 	"InformationRegister" = "Error"; "AccumulationRegister" = "Error"; "AccountingRegister" = "Error"
 	"CalculationRegister" = "Error"; "BusinessProcess" = "Since8325"; "Task" = "Since8325"
+}
+# Собственные объекты верхнего уровня: платформа загружает расширение, но базу не обновляет
+# («Добавление дочерних объектов этого типа к заимствованным в расширениях недопустимо в режиме
+# совместимости <режим> и ниже» — режим в сообщении лишь текущий). Последовательность, хранилище
+# настроек, общий реквизит — нигде (8.3.24–8.5.1, и в режиме 8.5.1); БП и Задача — на платформе ниже
+# 8.3.25, журнал документов — ниже 8.3.26 (граница по версии платформы, режим расширения 8.3.24).
+# Остальные виды — можно уже на 8.3.24.
+$script:ownObjectRestricted = @{
+	"Sequence" = "Error"; "SettingsStorage" = "Error"; "CommonAttribute" = "Error"
+	"BusinessProcess" = "8.3.25"; "Task" = "8.3.25"; "DocumentJournal" = "8.3.26"
 }
 $script:ownDataChildTags = @('Attribute','TabularSection','Dimension','Resource','AccountingFlag','ExtDimensionAccountingFlag','AddressingAttribute')
 
@@ -852,6 +914,10 @@ if ($childObjNode) {
 		$dirName = $childTypeDirMap[$typeName]
 		$script:extObjListed["${typeName}.${childName}"] = $true
 		$objFile = Join-Path (Join-Path $configDir $dirName) "$childName.xml"
+		# Общая форма — сама себе объект: её Form.xml проверяют те же 11–14, что и формы объектов
+		if ($typeName -eq "CommonForm" -and (Test-Path -LiteralPath (Join-Path $configDir "$dirName/$childName/Ext/Form.xml"))) {
+			$script:formList += @{ TypeName = $typeName; ObjName = $childName; FormName = $childName; DirName = $dirName; IsCommon = $true }
+		}
 
 		if (-not (Test-Path $objFile)) { continue }
 
@@ -915,6 +981,14 @@ if ($childObjNode) {
 					$check9Ok = $false
 				}
 			}
+		} else {
+			$ownObjRule = $script:ownObjectRestricted[$typeName]
+			if ($ownObjRule -eq "Error") {
+				Report-Error "9. ${typeName}.${childName}: own object of this kind in an extension — the platform loads the extension but does not update the database («Добавление дочерних объектов этого типа к заимствованным в расширениях недопустимо»)"
+				$check9Ok = $false
+			} elseif ($ownObjRule) {
+				Report-Warn "9. ${typeName}.${childName}: own object of this kind — below platform $ownObjRule the database is not updated («Добавление дочерних объектов этого типа к заимствованным в расширениях недопустимо»)"
+			}
 		}
 
 		# --- Check 10: Sub-items (Attribute, TabularSection, EnumValue, Form) ---
@@ -948,7 +1022,8 @@ if ($childObjNode) {
 		$ixExtDim = $objEl.SelectSingleNode("md:Properties/md:ExtDimensionTypes", $objNs)
 		$ixMaxExtDim = $objEl.SelectSingleNode("md:Properties/md:MaxExtDimensionCount", $objNs)
 		$script:extObjIndex["${typeName}.${childName}"] = @{ Names = $ixNames; TSColumns = $ixTSColumns; Owners = $ixOwners
-			ExtDimTypes = [bool]($ixExtDim -and $ixExtDim.InnerText.Trim() -and $ixMaxExtDim -and $ixMaxExtDim.InnerText.Trim()) }
+			ExtDimTypes = [bool]($ixExtDim -and $ixExtDim.InnerText.Trim() -and $ixMaxExtDim -and $ixMaxExtDim.InnerText.Trim())
+			Types = $(if ($typeName -eq "DefinedType") { Get-MdTypeList $objEl $objNs } else { @() }) }
 
 		# Собственные подобъекты данных в заимствованном объекте вида, где они запрещены
 		$ownRule = $null
@@ -970,10 +1045,10 @@ if ($childObjNode) {
 			foreach ($ownLabel in $ownFound) {
 				if ($script:stopped) { break }
 				if ($ownRule -eq "Error") {
-					Report-Error "10. ${typeName}.${childName}: собственный $ownLabel в заимствованном объекте — платформа загрузит расширение, но базу не обновит («Добавление дочерних объектов этого типа к заимствованным в расширениях недопустимо»)"
+					Report-Error "10. ${typeName}.${childName}: own $ownLabel in a borrowed object — the platform loads the extension but does not update the database («Добавление дочерних объектов этого типа к заимствованным в расширениях недопустимо»)"
 					$check10Ok = $false
 				} else {
-					Report-Warn "10. ${typeName}.${childName}: собственный $ownLabel в заимствованном объекте — на платформе ниже 8.3.25 базу не обновит («Добавление дочерних объектов этого типа к заимствованным в расширениях недопустимо»)"
+					Report-Warn "10. ${typeName}.${childName}: own $ownLabel in a borrowed object — below platform 8.3.25 the database is not updated («Добавление дочерних объектов этого типа к заимствованным в расширениях недопустимо»)"
 				}
 			}
 		}
@@ -1024,7 +1099,7 @@ if ($childObjNode) {
 								if ($tsAttr.NodeType -ne 'Element' -or $tsAttr.LocalName -ne "Attribute") { continue }
 								if (-not (Test-BorrowedSubItem $tsAttr $objNs)) { continue }
 								$subItemCount++
-								if (-not (Validate-BorrowedSubItem "10" "${ctx}.ТЧ.${tsLabel}" "Attribute" $tsAttr $objNs)) {
+								if (-not (Validate-BorrowedSubItem "10" "${ctx}.TabularSection.${tsLabel}" "Attribute" $tsAttr $objNs)) {
 									$check10Ok = $false
 								}
 							}
@@ -1067,10 +1142,13 @@ if ($childObjNode) {
 		if ($script:stopped) { break }
 	}
 
-	if ($borrowedCount -eq 0) {
-		Report-OK "9. Borrowed objects: none found"
-	} elseif ($check9Ok) {
-		Report-OK "9. Borrowed objects: $borrowedOk/$borrowedCount validated"
+	# Ошибка проверки 9 (в т.ч. на собственном объекте) гасит итоговую строку OK
+	if ($check9Ok) {
+		if ($borrowedCount -eq 0) {
+			Report-OK "9. Borrowed objects: none found"
+		} else {
+			Report-OK "9. Borrowed objects: $borrowedOk/$borrowedCount validated"
+		}
 	}
 
 	if ($subItemCount -eq 0) {
@@ -1091,11 +1169,15 @@ $formCount = 0
 
 foreach ($fi in $script:formList) {
 	$formCount++
-	$formBase = Join-Path (Join-Path (Join-Path (Join-Path $configDir $fi.DirName) $fi.ObjName) "Forms") $fi.FormName
+	# Каталог формы относительно корня: CommonForms/X у общей, Catalogs/X/Forms/Y у формы объекта
+	$formRel = if ($fi.IsCommon) { "$($fi.DirName)/$($fi.ObjName)" } else { "$($fi.DirName)/$($fi.ObjName)/Forms/$($fi.FormName)" }
+	$formBase = Join-Path $configDir $formRel
 	$formMetaFile = Join-Path (Split-Path $formBase -Parent) "$($fi.FormName).xml"
 	$formXmlFile = Join-Path (Join-Path $formBase "Ext") "Form.xml"
 	$moduleBslFile = Join-Path (Join-Path (Join-Path $formBase "Ext") "Form") "Module.bsl"
-	$ctx = "$($fi.TypeName).$($fi.ObjName).Form.$($fi.FormName)"
+	$ctx = if ($fi.IsCommon) { "$($fi.TypeName).$($fi.ObjName)" } else { "$($fi.TypeName).$($fi.ObjName).Form.$($fi.FormName)" }
+	# Владелец формы — объект, у общей формы его нет
+	$ownerKey11 = if ($fi.IsCommon) { "" } else { "$($fi.TypeName).$($fi.ObjName)" }
 
 	# Validate form metadata XML
 	if (Test-Path $formMetaFile) {
@@ -1115,7 +1197,8 @@ foreach ($fi in $script:formList) {
 				if ($fmProps) {
 					$fmOb = $fmProps.SelectSingleNode("md:ObjectBelonging", $fmNs)
 					$isBorrowed = $fmOb -and $fmOb.InnerText -eq "Adopted"
-					if ($isBorrowed) {
+					# У общей формы это описание самого объекта — его уже проверила проверка 9
+					if ($isBorrowed -and -not $fi.IsCommon) {
 						$fmExt = $fmProps.SelectSingleNode("md:ExtendedConfigurationObject", $fmNs)
 						if (-not $fmExt -or $fmExt.InnerText -notmatch $guidPattern) {
 							Report-Error "11. ${ctx}: invalid/missing ExtendedConfigurationObject"
@@ -1149,7 +1232,7 @@ foreach ($fi in $script:formList) {
 	# Read Form.xml as raw text for BaseForm checks
 	$formRawText = [System.IO.File]::ReadAllText($formXmlFile, [System.Text.Encoding]::UTF8)
 	$script:formsWithText += @{
-		RawText = $formRawText; Context = $ctx; OwnerKey = "$($fi.TypeName).$($fi.ObjName)"
+		RawText = $formRawText; Context = $ctx; OwnerKey = $ownerKey11; FormRel = $formRel
 	}
 
 	if ($formRawText -match '<BaseForm') {
@@ -1159,7 +1242,7 @@ foreach ($fi in $script:formList) {
 		}
 
 		$script:borrowedFormsWithTree += @{
-			Path = $formXmlFile; RawText = $formRawText; Context = $ctx
+			Path = $formXmlFile; RawText = $formRawText; Context = $ctx; OwnerKey = $ownerKey11
 		}
 	}
 }
@@ -1174,6 +1257,8 @@ if ($formCount -eq 0) {
 if ($script:stopped) { & $finalize; exit 1 }
 
 # --- Check 12: Form dependency references ---
+# Основной реквизит формы: <Attribute name="X"> с <MainAttribute>true</MainAttribute> внутри (проверки 12, 14)
+$script:mainAttrPattern = '(?s)<Attribute name="([^"]+)"[^>]*>(?:(?!</Attribute>).)*?<MainAttribute>true</MainAttribute>'
 $platformStyleItems = @{
 	"TableHeaderBackColor"=$true; "AccentColor"=$true; "NormalTextFont"=$true
 	"FormBackColor"=$true; "ToolTipBackColor"=$true; "BorderColor"=$true
@@ -1239,7 +1324,7 @@ foreach ($bf in $script:borrowedFormsWithTree) {
 	# списка «Список», у формы записи регистра «Запись». С зашитым «Объект» обе проверки ниже на
 	# таких формах молча не срабатывали. Ищем сначала в <Attributes> самой формы, потом в <BaseForm>.
 	$rootName = ""
-	$rootMatch = [regex]::Match($raw, '(?s)<Attribute name="([^"]+)"[^>]*>(?:(?!</Attribute>).)*?<MainAttribute>true</MainAttribute>')
+	$rootMatch = [regex]::Match($raw, $script:mainAttrPattern)
 	if ($rootMatch.Success) { $rootName = $rootMatch.Groups[1].Value }
 
 	# <AdditionalColumns table="Объект.X"> — доп. колонки табличной части, объявленные в самой форме.
@@ -1263,8 +1348,8 @@ foreach ($bf in $script:borrowedFormsWithTree) {
 	$ownerKey = $null
 	if ($acTarget) {
 		if ($script:extObjIndex.ContainsKey($acTarget.Key)) { $ownerKey = $acTarget.Key }
-	} elseif ($rootMatch.Value -notmatch '<v8:Type') {
-		$ownerKey = ($ctx -split '\.Form\.')[0]
+	} elseif ($rootMatch.Value -notmatch '<v8:Type' -and $bf.OwnerKey) {
+		$ownerKey = $bf.OwnerKey
 	}
 	if ($acTables.Count -gt 0 -and $ownerKey) {
 		$ownerEntry = $script:extObjIndex[$ownerKey]
@@ -1316,7 +1401,7 @@ if ($script:borrowedFormsWithTree.Count -eq 0) {
 # проверки 18; есть ли там Configuration.xml, она решает и сообщает сама.
 function Get-SourceConfigRoot {
 	$root = $ConfigPath
-	if (-not [System.IO.Path]::IsPathRooted($root)) { $root = Join-Path (Get-Location).Path $root }
+	if (-not [System.IO.Path]::IsPathRooted($root)) { $root = Join-Path (Get-Location).ProviderPath $root }
 	if ((Test-Path $root) -and -not (Test-Path $root -PathType Container)) { $root = Split-Path $root -Parent }
 	return $root
 }
@@ -1328,6 +1413,9 @@ function Get-SourceConfigRoot {
 # на заимствованной форме, где он был в исходной: «Неверный путь к данным». Имена — без учёта
 # регистра. Стандартные реквизиты — по типу основного реквизита ($script:mainAttrStandardFields).
 # После ссылочного реквизита или колонки путь продолжается по целевому объекту (Get-RefTailError).
+# Обычные имена основного реквизита формы — когда настоящее имя взять неоткуда
+$script:mainAttrDefaultNames = @('Объект', 'Список', 'Запись', 'Отчет', 'НаборЗаписей', 'НаборКонстант',
+	'Object', 'List', 'Record', 'Report', 'RecordSet', 'ConstantsSet')
 if (-not $script:stopped -and $script:formsWithText.Count -gt 0) {
 	$check14Ok = $true
 	$pathCheckCount = 0
@@ -1338,9 +1426,59 @@ if (-not $script:stopped -and $script:formsWithText.Count -gt 0) {
 		# Только своя часть формы: <BaseForm> — снимок исходной формы, его платформа разрешает по
 		# конфигурации, а не по расширению.
 		$own = ($raw -split '<BaseForm', 2)[0]
-		# Корень путей — имя основного реквизита формы (см. проверку 12). Нет его в <Attributes>
-		# формы — путей с корнем не бывает, проверять нечего.
-		$rootMatch14 = [regex]::Match($own, '(?s)<Attribute name="([^"]+)"[^>]*>(?:(?!</Attribute>).)*?<MainAttribute>true</MainAttribute>')
+		$rootMatch14 = [regex]::Match($own, $script:mainAttrPattern)
+
+		# Корень любого пути — реквизит, объявленный в <Attributes> самой формы, иначе «Неверный путь к
+		# данным». Заимствованная без основного реквизита форма его не объявляет, а поле Объект.* на неё
+		# дописать можно. Пропускаются Items.* (текущая строка таблицы) и ссылки, которые Конфигуратор
+		# пишет номерами (58, 1/0:<uuid>, 306:<uuid>/8:<uuid>) — имя реквизита с цифры не начинается.
+		$declared = New-Object System.Collections.Hashtable ([StringComparer]::OrdinalIgnoreCase)
+		$attrSection = [regex]::Match($own, '(?s)<Attributes>(.*?)</Attributes>')
+		if ($attrSection.Success) {
+			foreach ($am in [regex]::Matches($attrSection.Groups[1].Value, '<Attribute name="([^"]+)"')) { $declared[$am.Groups[1].Value] = $true }
+		}
+		# Порядок корней — как в файле: одинаков в обоих портах
+		$undeclared = New-Object System.Collections.Specialized.OrderedDictionary ([StringComparer]::OrdinalIgnoreCase)
+		foreach ($m in [regex]::Matches($own, '<(?:\w+:)?\w*DataPath[^>]*>([^<]+)</(?:\w+:)?\w*DataPath>')) {
+			$dp = $m.Groups[1].Value.Trim()
+			if (-not $dp -or $dp -match '^\d') { continue }
+			$pathRoot = ((($dp -replace '\[\d+\]', '') -replace '^~', '') -split '\.', 2)[0]
+			if ($pathRoot -eq 'Items' -or $declared.ContainsKey($pathRoot)) { continue }
+			if (-not $undeclared.Contains($pathRoot)) { $undeclared[$pathRoot] = New-Object System.Collections.Generic.List[string] }
+			if (-not $undeclared[$pathRoot].Contains($dp)) { $undeclared[$pathRoot].Add($dp) }
+		}
+		if ($undeclared.Count -gt 0) {
+			# Подсказка — только когда корень и есть основной реквизит исходной формы: по самой исходной
+			# форме (-ConfigPath), без неё — по снимку <BaseForm>, а нет его и там — по обычным именам
+			# основного реквизита (так же решает form-validate).
+			$hintRoots = @()
+			$hintExact = $false   # имя взято из исходной формы или <BaseForm>, а не из обычных имён
+			if (-not $rootMatch14.Success -and $raw -match '<BaseForm') {
+				$srcForm = if ($ConfigPath) { Join-Path (Get-SourceConfigRoot) "$($fw.FormRel)/Ext/Form.xml" } else { "" }
+				if ($srcForm -and (Test-Path -LiteralPath $srcForm)) {
+					$srcRaw = [System.IO.File]::ReadAllText($srcForm, [System.Text.Encoding]::UTF8)
+					$srcMatch = [regex]::Match(($srcRaw -split '<BaseForm', 2)[0], $script:mainAttrPattern)
+					if ($srcMatch.Success) { $hintRoots = @($srcMatch.Groups[1].Value); $hintExact = $true }
+				} else {
+					$baseMatch = [regex]::Match(($raw -split '<BaseForm', 2)[1], $script:mainAttrPattern)
+					$hintExact = $baseMatch.Success
+					$hintRoots = if ($baseMatch.Success) { @($baseMatch.Groups[1].Value) } else { $script:mainAttrDefaultNames }
+				}
+			}
+			foreach ($pathRoot in @($undeclared.Keys)) {
+				$paths = $undeclared[$pathRoot]
+				$sample = ($paths | Select-Object -First 3) -join "', '"
+				$more = if ($paths.Count -gt 3) { " (and $($paths.Count - 3) more)" } else { "" }
+				$hint = if ($pathRoot -notin $hintRoots) { "" }
+					elseif ($hintExact) { " — the form was borrowed without its main attribute, re-borrow it with -BorrowMainAttribute Form" }
+					else { " — if '${pathRoot}' is the source form's main attribute, re-borrow the form with -BorrowMainAttribute Form" }
+				Report-Error "14. ${ctx}: path '${sample}'${more} — form attribute '${pathRoot}' is not declared in the form${hint}"
+			}
+			$check14Ok = $false
+		}
+
+		# Дальше — хвост путей от основного реквизита по составу объекта (см. проверку 12). Основного
+		# реквизита нет — проверять хвост не по чему.
 		if (-not $rootMatch14.Success) { continue }
 		$rootName = $rootMatch14.Groups[1].Value
 		# Тип не объект метаданных — пути не по составу объекта. Так и у динамического списка: его поля —
@@ -1356,7 +1494,7 @@ if (-not $script:stopped -and $script:formsWithText.Count -gt 0) {
 			# Объекта основного реквизита в расширении нет — тип не разрешается, и платформа не читает
 			# форму целиком: «Исключение XDTO произошло при чтении файла». Это ошибка типа, а не путей,
 			# поэтому она не зависит от того, замерен ли набор стандартных реквизитов этого типа (ниже).
-			Report-Error "14. ${ctx}: основной реквизит '${rootName}' типа $($target.TypeName) — объекта $ownerKey в расширении нет (заимствуйте его)"
+			Report-Error "14. ${ctx}: main attribute '${rootName}' of type $($target.TypeName) — object $ownerKey is not in the extension (borrow it)"
 			$check14Ok = $false
 			continue
 		}
@@ -1390,7 +1528,12 @@ if (-not $script:stopped -and $script:formsWithText.Count -gt 0) {
 				# данным» (замер 8.3.24). ПВХ видов субконто ещё должен быть заимствован — иначе «Неизвестный объект
 				# метаданных», это не про пути.
 				if ($target.Category -eq 'ChartOfAccountsObject' -and $seg0 -in @('ExtDimensionTypes','ВидыСубконто') -and -not $ownerEntry.ExtDimTypes) {
-					$badPaths["${rootName}.${seg0}"] = "у ${ownerKey} в расширении не заданы свойства ExtDimensionTypes и MaxExtDimensionCount — стандартная ТЧ видов субконто форме не видна (перенесите их и заимствуйте ПВХ видов субконто)"
+					$badPaths["${rootName}.${seg0}"] = "${ownerKey} in the extension lacks ExtDimensionTypes or MaxExtDimensionCount — the standard tabular section ExtDimensionTypes is not visible to the form (copy both properties and borrow the extra dimension types chart)"
+					continue
+				}
+				if ($target.Category -eq 'ReportObject' -and $seg0 -in $script:settingsComposerNames) {
+					$scErr = Get-SettingsComposerError $segments
+					if ($scErr) { $badPaths["${rootName}." + ($segments[0..$scErr[0]] -join '.')] = $scErr[1] }
 					continue
 				}
 				if ($segments.Count -ge 2) {
@@ -1401,7 +1544,7 @@ if (-not $script:stopped -and $script:formsWithText.Count -gt 0) {
 				continue
 			}
 			if (-not $ownerEntry.Names.ContainsKey($seg0)) {
-				$badPaths["${rootName}.${seg0}"] = "у ${ownerKey} в расширении нет такого реквизита или табличной части (незаимствованный реквизит источника форме расширения не виден)"
+				$badPaths["${rootName}.${seg0}"] = "${ownerKey} has no such attribute or tabular section in the extension (an unborrowed source attribute is not visible to extension forms)"
 				continue
 			}
 			if ($segments.Count -lt 2) { continue }
@@ -1414,7 +1557,7 @@ if (-not $script:stopped -and $script:formsWithText.Count -gt 0) {
 			# Итог колонки — псевдополе платформы: Total<Колонка> при живой колонке законен
 			if ($seg1 -like "Total*" -and $tsColumns[$seg0].ContainsKey($seg1.Substring(5))) { continue }
 			if (-not $tsColumns[$seg0].ContainsKey($seg1)) {
-				$badPaths["${rootName}.${seg0}.${seg1}"] = "у табличной части ${seg0} в расширении нет колонки ${seg1}, и <Columns> формы её не объявляет"
+				$badPaths["${rootName}.${seg0}.${seg1}"] = "tabular section ${seg0} has no column ${seg1} in the extension, and the form <Columns> does not declare it"
 				continue
 			}
 			# Дальше колонки — по её типу (Объект.Товары.Номенклатура.Артикул)
@@ -1423,7 +1566,7 @@ if (-not $script:stopped -and $script:formsWithText.Count -gt 0) {
 			}
 		}
 		foreach ($bad in ($badPaths.Keys | Sort-Object)) {
-			Report-Error "14. ${ctx}: путь '${bad}' — $($badPaths[$bad])"
+			Report-Error "14. ${ctx}: path '${bad}' — $($badPaths[$bad])"
 			$check14Ok = $false
 		}
 	}
@@ -1485,14 +1628,14 @@ if ($defaultRoleNodes.Count -gt 0) {
 			if ($segs.Count -lt 2 -or $segs[0] -eq "Configuration") { continue }
 			$check15Count++
 			if (Test-ObjectAdopted $segs[0] $segs[1]) {
-				Report-Error ("15. Роль '$defRoleName' входит в DefaultRoles и даёт права на заимствованный $($segs[0]).$($segs[1]) " +
-					"($fullName): платформа это запрещает. Вынесите такие права в отдельную роль вне DefaultRoles.")
+				Report-Error ("15. Role '$defRoleName' is in DefaultRoles and grants rights on borrowed $($segs[0]).$($segs[1]) " +
+					"($fullName): the platform forbids this. Move these rights to a separate role outside DefaultRoles.")
 				$check15Ok = $false
 			}
 		}
 	}
 	if ($check15Ok -and $check15Count -gt 0) {
-		Report-OK "15. Основные роли: прав на заимствованные объекты нет ($check15Count checked)"
+		Report-OK "15. Default roles: no rights on borrowed objects ($check15Count checked)"
 	}
 }
 
@@ -1524,16 +1667,16 @@ if ($versionRank -ge 219 -and $childObjNode) {
 			$hasFile = Test-Path (Join-Path (Join-Path (Join-Path $typeDir $stateObjName) "Ext") "$kind.bsl")
 			$hasFlag = $objText -match "<xr:Property>$kind</xr:Property>"
 			if ($hasFile -and -not $hasFlag) {
-				$stateIssues += "$typeName.$stateObjName — есть $kind.bsl, но нет <xr:PropertyState> для $kind"
+				$stateIssues += "$typeName.$stateObjName — $kind.bsl exists but <xr:PropertyState> for $kind is missing"
 			} elseif ($hasFlag -and -not $hasFile) {
-				$stateIssues += "$typeName.$stateObjName — есть <xr:PropertyState> для $kind, но нет $kind.bsl"
+				$stateIssues += "$typeName.$stateObjName — <xr:PropertyState> for $kind is present but $kind.bsl is missing"
 			}
 		}
 	}
 
 	if ($stateChecked -gt 0) {
 		if ($stateIssues.Count -eq 0) {
-			Report-OK "16. Модули заимствованных объектов: пометки расширенных свойств согласованы ($stateChecked)"
+			Report-OK "16. Borrowed object modules: extended property marks are consistent ($stateChecked)"
 		} else {
 			foreach ($issue in $stateIssues) { Report-Warn "16. $issue" }
 		}
@@ -1754,14 +1897,14 @@ if (-not $script:stopped -and $childObjNode) {
 		$srcRoot = Get-SourceConfigRoot
 		$srcCfgFile = Join-Path $srcRoot "Configuration.xml"
 		if (-not (Test-Path $srcCfgFile)) {
-			Report-Warn "18. -ConfigPath '$ConfigPath': Configuration.xml не найден — сверка с конфигурацией-источником пропущена"
+			Report-Warn "18. -ConfigPath '$ConfigPath': Configuration.xml not found — comparison with the source configuration skipped"
 			$srcRoot = $null
 		} else {
 			try {
 				$srcCfgDoc = New-Object System.Xml.XmlDocument
 				$srcCfgDoc.Load($srcCfgFile)
 			} catch {
-				Report-Warn "18. -ConfigPath '$ConfigPath': Configuration.xml не читается — сверка с конфигурацией-источником пропущена"
+				Report-Warn "18. -ConfigPath '$ConfigPath': Configuration.xml is unreadable — comparison with the source configuration skipped"
 				$srcRoot = $null
 			}
 		}
@@ -1777,7 +1920,7 @@ if (-not $script:stopped -and $childObjNode) {
 		if ($extDefLang -and $srcDefLang) {
 			$check18Count++
 			if ($extDefLang -cne $srcDefLang) {
-				Report-Error "18. DefaultLanguage расширения `"$defLang`", а у конфигурации-источника `"$srcDefLang`" — платформа загрузит расширение, но не применит («ОсновнойЯзык не совпадает»)"
+				Report-Error "18. Extension DefaultLanguage `"$defLang`" differs from the source configuration `"$srcDefLang`" — the platform loads the extension but does not apply it («ОсновнойЯзык не совпадает»)"
 				$check18Ok = $false
 			}
 		}
@@ -1798,7 +1941,7 @@ if (-not $script:stopped -and $childObjNode) {
 			foreach ($key in $extIdx.Keys) {
 				$check18Count++
 				if ($extIdx[$key] -ceq $zeroGuid) {
-					Report-Warn "18. ${key}: ExtendedConfigurationObject нулевой — платформа загрузит расширение, но не применит. Создайте расширение и заимствуйте объекты с -ConfigPath"
+					Report-Warn "18. ${key}: ExtendedConfigurationObject is zero — the platform loads the extension but does not apply it. Create the extension and borrow objects with -ConfigPath"
 				}
 			}
 			continue
@@ -1806,7 +1949,7 @@ if (-not $script:stopped -and $childObjNode) {
 
 		$srcIdx = Get-MdIdIndex (Join-Path $srcRoot $dirName) $typeName $objName18 $false
 		if ($null -eq $srcIdx) {
-			Report-Error "18. ${typeName}.${objName18}: заимствованного объекта нет в конфигурации-источнике ($dirName/$objName18.xml)"
+			Report-Error "18. ${typeName}.${objName18}: borrowed object is missing from the source configuration ($dirName/$objName18.xml)"
 			$check18Ok = $false
 			continue
 		}
@@ -1819,14 +1962,14 @@ if (-not $script:stopped -and $childObjNode) {
 					if ([string]::Equals($sk, $key, [StringComparison]::OrdinalIgnoreCase)) { $caseTwin = $sk; break }
 				}
 				if ($caseTwin) {
-					Report-Error "18. ${key}: в конфигурации-источнике имя в другом регистре ($caseTwin) — платформа загрузит расширение, но не применит («контролируемое свойство Имя не совпадает»)"
+					Report-Error "18. ${key}: the source configuration has this name in a different case ($caseTwin) — the platform loads the extension but does not apply it («контролируемое свойство Имя не совпадает»)"
 				} else {
-					Report-Error "18. ${key}: заимствованного подобъекта нет в конфигурации-источнике"
+					Report-Error "18. ${key}: borrowed sub-object is missing from the source configuration"
 				}
 				$check18Ok = $false
 			} elseif ($extId.ToLowerInvariant() -cne $srcIdx[$key].ToLowerInvariant()) {
-				$what = if ($extId -ceq $zeroGuid) { "нулевой" } else { "$extId" }
-				Report-Error "18. ${key}: ExtendedConfigurationObject $what, а UUID в конфигурации-источнике $($srcIdx[$key]) — платформа загрузит расширение, но не применит («ОбъектРасширяемойКонфигурации не совпадает»)"
+				$what = if ($extId -ceq $zeroGuid) { "zero" } else { "$extId" }
+				Report-Error "18. ${key}: ExtendedConfigurationObject is $what, but the UUID in the source configuration is $($srcIdx[$key]) — the platform loads the extension but does not apply it («ОбъектРасширяемойКонфигурации не совпадает»)"
 				$check18Ok = $false
 			}
 			if ($script:stopped) { break }
@@ -1837,16 +1980,211 @@ if (-not $script:stopped -and $childObjNode) {
 		$dataBanned = $script:ownChildRestricted[$typeName] -eq "Error"
 		foreach ($nc in @(Get-OwnNameCollisions (Join-Path (Join-Path $configDir $dirName) "$objName18.xml") "$typeName.$objName18" $extIdx $srcIdx)) {
 			if ($dataBanned -and ($nc.Own -split '\.')[2] -notin @('Form','Command','Template')) { continue }
-			Report-Error "18. $($nc.Own): собственный подобъект, а в конфигурации-источнике есть незаимствованный подобъект с этим именем ($($nc.Src)) — платформа загрузит расширение, но базу не обновит («Уже существует объект с именем …»)"
+			Report-Error "18. $($nc.Own): own sub-object, but the source configuration has an unborrowed sub-object with this name ($($nc.Src)) — the platform loads the extension but does not update the database («Уже существует объект с именем …»)"
 			$check18Ok = $false
 			if ($script:stopped) { break }
 		}
 	}
 
 	if (-not $ConfigPath) {
-		Out-Line "[INFO]  18. Заимствованные объекты и основной язык против конфигурации-источника не сверялись: не задан -ConfigPath"
+		Out-Line "[INFO]  18. Borrowed objects and the default language were not compared with the source configuration: -ConfigPath not set"
 	} elseif ($srcRoot -and $check18Ok -and $check18Count -gt 0) {
 		Report-OK "18. Source config: $check18Count link(s) agree (DefaultLanguage, ExtendedConfigurationObject)"
+	}
+}
+
+# --- Check 19: ссылки на объекты, которых нет в расширении ---
+# Объект основной конфигурации виден расширению, только если он заимствован (замер 8.3.24/8.3.27):
+# - ссылочный тип (реквизит, колонка, константа, измерение, параметр команды, реквизит формы, состав
+#   заимствованного определяемого типа): ниже 8.3.25 — «Неизвестное имя типа», с 8.3.25 работает;
+# - ссылка на объект (владельцы, движения, ввод на основании, журнал, состав подсистемы, план
+#   счетов регистра, задача БП): ниже 8.3.25 — «Неизвестный объект метаданных», с 8.3.25 грузится,
+#   но в рантайме связь пуста;
+# - права роли на такой объект платформа выбрасывает;
+# - тип собственного определяемого типа, источник подписки, виды субконто плана счетов не грузятся нигде;
+# - заимствованный определяемый тип с таким составом в реквизите, колонке, измерении собственного объекта
+#   или в собственной константе — «Недопустимый тип» на любой платформе (замер 8.3.25/8.3.27); в
+#   реквизитах заимствованного объекта и в реквизитах форм с 8.3.25 работает.
+# Формы (значения, СКД) и макеты не проверяются — не замерено.
+$script:refTypeKind = New-Object System.Collections.Hashtable ([StringComparer]::Ordinal)
+foreach ($k in @("Catalog","Document","Enum","ChartOfCharacteristicTypes","ChartOfAccounts","ChartOfCalculationTypes","ExchangePlan","BusinessProcess","Task")) {
+	foreach ($s in @("Ref","Object","Selection","List","Manager")) { $script:refTypeKind["$k$s"] = $k }
+}
+foreach ($k in @("InformationRegister","AccumulationRegister","AccountingRegister","CalculationRegister")) {
+	foreach ($s in @("RecordSet","RecordKey","Record","Manager","Selection","List","RecordManager")) { $script:refTypeKind["$k$s"] = $k }
+}
+foreach ($k in @("DataProcessor","Report")) { $script:refTypeKind["${k}Object"] = $k; $script:refTypeKind["${k}Manager"] = $k }
+$script:refTypeKind["ConstantValueManager"] = "Constant"; $script:refTypeKind["ConstantManager"] = "Constant"
+$script:refTypeKind["DefinedType"] = "DefinedType"; $script:refTypeKind["Characteristic"] = "ChartOfCharacteristicTypes"
+$script:refTypeKind["BusinessProcessRoutePointRef"] = "BusinessProcess"; $script:refTypeKind["DocumentJournalSelection"] = "DocumentJournal"
+
+$refTypeRe = '<v8:(Type|TypeSet)>(?:\w+:)?(\w+)\.([^<.\s]+)</v8:\1>'
+$refListRe = '(?s)<(Owners|RegisterRecords|BasedOn|RegisteredDocuments|Content)>(.*?)</\1>'
+$refItemRe = '>(\w+)\.([^<.\s]+)</xr:Item>'
+$refTagRe = '<(ChartOfAccounts|Task|ExtDimensionTypes)>(\w+)\.([^<.\s]+)</\1>'
+$refRightsRe = '<object>\s*<name>(\w+)\.([^<.\s]+)'
+
+# Файлы под каталогом: @(относительный путь через "/", полный путь); сначала файлы, потом
+# подкаталоги, имена по Ordinal. Относительный путь собирается из имён, а не вырезается из полного:
+# Resolve-Path оставляет короткие имена 8.3 (NSHIRO~1), а перечисление их разворачивает.
+function Get-RelFiles {
+	param([string]$dir, [string]$rel)
+	$out = New-Object System.Collections.ArrayList
+	# Каталог не читается (битая ссылка, нет доступа) — пропустить, как py
+	try {
+		$fileList = [System.IO.Directory]::GetFiles($dir)
+		$dirList = [System.IO.Directory]::GetDirectories($dir)
+	} catch { return ,$out }
+	$files = @($fileList | ForEach-Object { [System.IO.Path]::GetFileName($_) })
+	[Array]::Sort($files, [StringComparer]::Ordinal)
+	foreach ($n in $files) {
+		$r = if ($rel) { "$rel/$n" } else { $n }
+		[void]$out.Add(@($r, (Join-Path $dir $n)))
+	}
+	$dirs = @($dirList | ForEach-Object { [System.IO.Path]::GetFileName($_) })
+	[Array]::Sort($dirs, [StringComparer]::Ordinal)
+	foreach ($d in $dirs) {
+		$r = if ($rel) { "$rel/$d" } else { $d }
+		foreach ($x in (Get-RelFiles (Join-Path $dir $d) $r)) { [void]$out.Add($x) }
+	}
+	return ,$out
+}
+
+if (-not $script:stopped -and $childObjNode) {
+	$refSeen = @{}
+	# $where — что ссылается (относительный путь файла), $prop — свойство, $kind.$name — цель
+	$reportRef = {
+		param([string]$where, [string]$prop, [string]$kind, [string]$name, [string]$level)
+		if (-not $childTypeDirMap.ContainsKey($kind)) { return }
+		$target = "$kind.$name"
+		$script:check19Count++
+		if ($script:extObjListed.ContainsKey($target)) { return }
+		$key = "$where|$prop|$target"
+		if ($refSeen.ContainsKey($key)) { return }
+		$refSeen[$key] = $true
+		$script:check19Ok = $false
+		switch ($level) {
+			"type" { Report-Warn "19. ${where}: $prop refers to $target, which is not in the extension — below 8.3.25 it does not load («Неизвестное имя типа»), from 8.3.25 it is allowed. Borrow $target" }
+			"adt" { Report-Warn "19. ${where}: $prop refers to $target, which is not in the extension — below 8.3.25 it does not load («Неизвестное имя типа»), from 8.3.25 it is allowed only in borrowed objects and forms. Borrow $target" }
+			"owndt" { Report-Error "19. ${where}: type $prop includes $target, which is not in the extension — the platform does not load the extension («Недопустимый тип»). Borrow $target" }
+			"never" { Report-Error "19. ${where}: $prop refers to $target, which is not in the extension — the platform does not load the extension. Borrow $target" }
+			"rights" { Report-Error "19. ${where}: rights on $target, which is not in the extension — the platform drops them. Borrow $target" }
+			default { Report-Error "19. ${where}: $prop refers to $target, which is not in the extension — below 8.3.25 it does not load («Неизвестный объект метаданных»), from 8.3.25 it loads but the link is empty at runtime. Borrow $target" }
+		}
+	}
+	$script:check19Count = 0
+	$script:check19Ok = $true
+	$readText = { param([string]$f) try { return [System.IO.File]::ReadAllText($f, [System.Text.Encoding]::UTF8) } catch { return $null } }
+	$scanTypes = {
+		param([string]$text, [string]$where, [string]$prop, [string]$level)
+		foreach ($m in [regex]::Matches($text, $refTypeRe)) {
+			$k = $script:refTypeKind[$m.Groups[2].Value]
+			if ($k) { & $reportRef $where $prop $k $m.Groups[3].Value $level }
+			if ($script:stopped) { return }
+		}
+	}
+
+	foreach ($child in $childObjNode.ChildNodes) {
+		if ($script:stopped) { break }
+		if ($child.NodeType -ne 'Element') { continue }
+		$typeName = $child.LocalName
+		$childName = $child.InnerText
+		if ($typeName -eq "Language" -or -not $childTypeDirMap.ContainsKey($typeName)) { continue }
+		$objDir = Join-Path $configDir $childTypeDirMap[$typeName]
+		$objFile = Join-Path $objDir "$childName.xml"
+		$text = & $readText $objFile
+		if ($null -eq $text) { continue }
+		$where = "$typeName.$childName"
+
+		# Подсистема: состав — у неё и у вложенных подсистем
+		$texts = @(,@($where, $text))
+		if ($typeName -eq "Subsystem") {
+			$subDir = Join-Path $objDir $childName
+			if (Test-Path -LiteralPath $subDir) {
+				foreach ($e in (Get-RelFiles $subDir "")) {
+					$segs = $e[0].Split('/')
+					if ($segs.Count -lt 2 -or $segs[-2] -ne "Subsystems" -or -not $e[0].EndsWith(".xml", [StringComparison]::OrdinalIgnoreCase)) { continue }
+					$t = & $readText $e[1]
+					if ($null -ne $t) { $texts += ,@("$where/$($e[0])", $t) }
+				}
+			}
+		}
+		foreach ($pair in $texts) {
+			$w = $pair[0]; $t = $pair[1]
+			$typeLevel = "type"
+			$typeProp = "type"
+			# Состав заимствованного определяемого типа — как ссылочный тип (замер 8.3.24/8.3.27, в т.ч.
+			# режим расширения 8.3.24 на 8.3.27); у собственного не грузится нигде
+			if ($typeName -eq "DefinedType") {
+				$typeProp = "Type"
+				$typeLevel = if ($t -match '<ObjectBelonging>Adopted</ObjectBelonging>') { "adt" } else { "never" }
+			}
+			elseif ($typeName -eq "EventSubscription") { $typeLevel = "never"; $typeProp = "Source" }
+			& $scanTypes $t $w $typeProp $typeLevel
+			if ($script:stopped) { break }
+			# Собственный объект: заимствованный определяемый тип, в составе которого объект вне расширения
+			if ($typeName -ne "DefinedType" -and $t -notmatch '<ObjectBelonging>Adopted</ObjectBelonging>') {
+				foreach ($dm in [regex]::Matches($t, '<v8:TypeSet>(?:\w+:)?DefinedType\.([^<.\s]+)</v8:TypeSet>')) {
+					$dtName = $dm.Groups[1].Value
+					$dtText = & $readText (Join-Path (Join-Path $configDir $childTypeDirMap["DefinedType"]) "$dtName.xml")
+					if ($null -eq $dtText -or $dtText -notmatch '<ObjectBelonging>Adopted</ObjectBelonging>') { continue }
+					foreach ($m in [regex]::Matches($dtText, $refTypeRe)) {
+						$k = $script:refTypeKind[$m.Groups[2].Value]
+						if ($k -and $k -ne "DefinedType") { & $reportRef $w "DefinedType.$dtName" $k $m.Groups[3].Value "owndt" }
+						if ($script:stopped) { break }
+					}
+					if ($script:stopped) { break }
+				}
+				if ($script:stopped) { break }
+			}
+			# Движения последовательности не замерены
+			$lists = if ($typeName -eq "Sequence") { @() } else { [regex]::Matches($t, $refListRe) }
+			foreach ($lm in $lists) {
+				foreach ($im in [regex]::Matches($lm.Groups[2].Value, $refItemRe)) {
+					& $reportRef $w $lm.Groups[1].Value $im.Groups[1].Value $im.Groups[2].Value "object"
+					if ($script:stopped) { break }
+				}
+				if ($script:stopped) { break }
+			}
+			foreach ($tm in [regex]::Matches($t, $refTagRe)) {
+				$lvl = "object"
+				if ($tm.Groups[1].Value -eq "ExtDimensionTypes") { $lvl = "never" }
+				& $reportRef $w $tm.Groups[1].Value $tm.Groups[2].Value $tm.Groups[3].Value $lvl
+				if ($script:stopped) { break }
+			}
+		}
+		if ($script:stopped) { break }
+
+		# Формы объекта (и общая форма): типы реквизитов и параметров формы
+		$formRoot = Join-Path $objDir $childName
+		if (Test-Path -LiteralPath $formRoot) {
+			foreach ($e in (Get-RelFiles $formRoot "")) {
+				$segs = $e[0].Split('/')
+				if ($segs.Count -lt 2 -or $segs[-1] -ne "Form.xml" -or $segs[-2] -ne "Ext") { continue }
+				$t = & $readText $e[1]
+				if ($null -eq $t) { continue }
+				# Общая форма — сам объект (Ext/Form.xml), форма объекта — <Объект>/Forms/<Имя>
+				$rel = $where
+				if ($segs.Count -gt 2) { $rel = "$where/" + ($segs[0..($segs.Count - 3)] -join '/') }
+				& $scanTypes $t $rel "type" "type"
+				if ($script:stopped) { break }
+			}
+		}
+		if ($script:stopped) { break }
+
+		if ($typeName -eq "Role") {
+			$t = & $readText (Join-Path (Join-Path (Join-Path $objDir $childName) "Ext") "Rights.xml")
+			if ($null -ne $t) {
+				foreach ($rm in [regex]::Matches($t, $refRightsRe)) {
+					& $reportRef $where "rights" $rm.Groups[1].Value $rm.Groups[2].Value "rights"
+					if ($script:stopped) { break }
+				}
+			}
+		}
+	}
+
+	if ($script:check19Ok -and $script:check19Count -gt 0) {
+		Report-OK "19. References: $($script:check19Count) reference(s) to objects, all present in the extension"
 	}
 }
 
@@ -1896,7 +2234,7 @@ foreach ($bslFile in (Get-ChildItem -Path $extRootDir -Recurse -Filter *.bsl -Fi
 	$ctrlCount += ([regex]::Matches($txt, $ctrlRe)).Count
 }
 if ($ctrlCount -gt 0) {
-	Out-Line "[INFO]  Контролируемых методов (&ИзменениеИКонтроль): $ctrlCount — их актуальность здесь не проверяется. Сверьте: /cfe-patch-method -Check -ExtensionPath <ext> -ConfigPath <cf>"
+	Out-Line "[INFO]  Controlled methods (&ИзменениеИКонтроль): $ctrlCount — not checked for staleness here. Check with: /cfe-patch-method -Check -ExtensionPath <ext> -ConfigPath <cf>"
 }
 
 # --- Final output ---

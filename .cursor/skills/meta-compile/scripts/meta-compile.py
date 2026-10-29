@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# meta-compile v1.120 — Compile 1C metadata object from JSON
+# meta-compile v1.125 — Compile 1C metadata object from JSON
 # Source: https://github.com/Nikolay-Shirokov/cc-1c-skills
 
 import argparse
@@ -190,15 +190,19 @@ def _sg_find_v8project(start_dir):
 
 def _sg_get_edit_mode(cfg_dir):
     try:
-        pj = _sg_find_v8project(os.getcwd()) or _sg_find_v8project(cfg_dir)
+        pj = _sg_find_v8project(os.getcwd()) or _sg_find_v8project(os.path.abspath(cfg_dir))
         if not pj:
             return "deny"
         proj = json.loads(open(pj, encoding="utf-8-sig").read())
-        cfg_full = os.path.normcase(os.path.abspath(cfg_dir)).rstrip("\\/")
+        # configSrc — от каталога .v8-project.json, а не от рабочего каталога: иначе из подкаталога
+        # проекта база не сопоставляется и берётся правило проекта. Пути — настоящие (realpath):
+        # на macOS /var — ссылка на /private/var, и getcwd с путём аргумента иначе не совпадут.
+        proj_dir = os.path.dirname(pj)
+        cfg_full = os.path.normcase(os.path.realpath(cfg_dir)).rstrip("\\/")
         for db in proj.get("databases", []):
             src = db.get("configSrc")
             if src:
-                src_full = os.path.normcase(os.path.abspath(src)).rstrip("\\/")
+                src_full = os.path.normcase(os.path.realpath(os.path.join(proj_dir, src))).rstrip("\\/")
                 if cfg_full == src_full or cfg_full.startswith(src_full + os.sep):
                     if db.get("editingAllowedCheck"):
                         return db["editingAllowedCheck"]
@@ -2052,6 +2056,33 @@ RESERVED_ATTR_NAMES_RU = {
     '\u041f\u0435\u0440\u0438\u043e\u0434\u0414\u0435\u0439\u0441\u0442\u0432\u0438\u044f\u0411\u0430\u0437\u043e\u0432\u044b\u0439',
 }
 
+def reserved_command_names():
+    """Имена стандартных команд вида — англ. и рус., в нижнем регистре: команда объекта с таким именем
+    не загрузится («Имя команды не может совпадать с именем стандартной команды»; регистр не важен, от
+    UseStandardCommands не зависит — замер 8.3.24/8.3.27). Вида нет в карте — ограничения нет
+    (перечисление, план обмена; критерий отбора и таблица внешнего источника не замерены)."""
+    open_list = {"openlist", "открытьсписок"}
+    create = {"create", "создать"}
+    folder = {"createfolder", "создатьгруппу"}
+    by_value = {"openbyvalue", "открытьпозначению"}
+    based_on = {"createbasedon", "создатьнаосновании"}
+    return {
+        "Catalog":                    open_list | create | folder | by_value | based_on,
+        "ChartOfCharacteristicTypes": open_list | create | folder | based_on,
+        "Task":                       open_list | create | by_value | based_on,
+        "Document":                   open_list | create | based_on,
+        "BusinessProcess":            open_list | create | based_on,
+        "ChartOfAccounts":            open_list | create | based_on,
+        "ChartOfCalculationTypes":    open_list | create | based_on,
+        "InformationRegister":        open_list | create | by_value,
+        "AccumulationRegister":       open_list,
+        "AccountingRegister":         open_list,
+        "CalculationRegister":        open_list,
+        "DocumentJournal":            open_list,
+        "DataProcessor":              {"open", "открыть"},
+        "Report":                     {"open", "открыть"},
+    }
+
 # Стандартные реквизиты по типу объекта (EN + RU). Совпадение имени реквизита с ними платформа
 # не позволит — жёсткий отказ. Контексты вне карты → мягкое предупреждение по плоскому списку.
 RESERVED_BY_CONTEXT = {
@@ -2652,6 +2683,9 @@ def emit_command_picture(indent, cmd):
     X(f'{indent}</Picture>')
 
 def emit_command(indent, cmd_name, cmd):
+    if cmd_name.lower() in reserved_command_names().get(obj_type, set()):
+        print(f"meta-compile: имя команды '{cmd_name}' совпадает со стандартной командой объекта '{obj_type}'. Выберите другое имя.", file=sys.stderr)
+        sys.exit(1)
     X(f'{indent}<Command uuid="{new_uuid()}">')
     X(f'{indent}\t<Properties>')
     X(f'{indent}\t\t<Name>{esc_xml_text(cmd_name)}</Name>')
@@ -4876,8 +4910,8 @@ def detect_compatibility_mode(d):
 
 def compat_mode_rank(mode):
     """"Version8_3_27" → 80327, "Version8_5_1" → 80501."""
-    m = re.match(r'^Version(\d+)_(\d+)_(\d+)$', mode or '')
-    return int(m.group(1)) * 10000 + int(m.group(2)) * 100 + int(m.group(3)) if m else 0
+    m = re.match(r'^Version(\d+)_(\d+)(?:_(\d+))?$', mode or '')   # и двухчастный Version8_1
+    return int(m.group(1)) * 10000 + int(m.group(2)) * 100 + int(m.group(3) or 0) if m else 0
 
 
 def format_rank(ver):
@@ -5453,6 +5487,12 @@ if obj_type == 'CommonForm':
         if is_format_221:
             cf_ns = cf_ns.replace(' xmlns:style=',
                                   ' xmlns:pal="http://v8.1c.ru/8.1/data/ui/colors/palette" xmlns:style=')
+        # xmlns:dcssch платформа пишет в шапку всегда, кроме режима совместимости ниже 8.3.19 (там —
+        # только при использовании; пустая заготовка его не использует). Как у form-add.
+        cf_rank = compat_mode_rank(compat_mode)
+        if not (0 < cf_rank < 80319):
+            cf_ns = cf_ns.replace(' xmlns:dcsset=',
+                                  ' xmlns:dcssch="http://v8.1c.ru/8.1/data-composition-system/schema" xmlns:dcsset=')
         cf_form_xml = ('<?xml version="1.0" encoding="UTF-8"?>\r\n<Form ' + cf_ns + ' version="' + format_version + '">\r\n'
                        '\t<AutoCommandBar name="ФормаКоманднаяПанель" id="-1">\r\n\t\t<Autofill>true</Autofill>\r\n\t</AutoCommandBar>\r\n'
                        '\t<ChildItems/>\r\n</Form>\r\n')
@@ -5813,11 +5853,12 @@ def get_new_object_position(cfg_dir):
             return "end"
         proj = json.loads(open(pj, encoding="utf-8-sig").read())
         proj_dir = os.path.dirname(pj)
-        cfg_full = os.path.normcase(os.path.abspath(cfg_dir or ".")).rstrip("\\/")
+        # Пути — настоящие (realpath): на macOS /var — ссылка на /private/var
+        cfg_full = os.path.normcase(os.path.realpath(cfg_dir or ".")).rstrip("\\/")
         for db in proj.get("databases", []):
             src = db.get("configSrc")
             if src and db.get("newObjectPosition"):
-                src_full = os.path.normcase(os.path.abspath(os.path.join(proj_dir, src))).rstrip("\\/")
+                src_full = os.path.normcase(os.path.realpath(os.path.join(proj_dir, src))).rstrip("\\/")
                 if cfg_full == src_full or cfg_full.startswith(src_full + os.sep):
                     return "byName" if str(db["newObjectPosition"]).lower() == "byname" else "end"
         if str(proj.get("newObjectPosition") or "").lower() == "byname":

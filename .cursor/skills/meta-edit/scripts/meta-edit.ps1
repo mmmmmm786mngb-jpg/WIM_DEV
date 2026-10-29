@@ -1,4 +1,4 @@
-﻿# meta-edit v1.65 — Edit existing 1C metadata object XML
+﻿# meta-edit v1.71 — Edit existing 1C metadata object XML
 # Source: https://github.com/Nikolay-Shirokov/cc-1c-skills
 [CmdletBinding(PositionalBinding=$false)]
 param(
@@ -38,14 +38,19 @@ $ErrorActionPreference = "Stop"
 # идёт чинить скрипт, а не свой вызов. $source — файл или параметр. $expected заполняем только
 # для полиморфного входа: у файла подсказка была бы наполнителем. -Inline печатает ещё и то,
 # что доехало: у файла такого вопроса нет — путь назван, позицию дал парсер, файл на диске.
-# Возврат через -NoEnumerate: без него одноэлементный
-# JSON-массив разворачивался бы в скаляр вторым анруллингом.
+# Возврат через запятую: без неё одноэлементный JSON-массив разворачивался бы в скаляр
+# вторым анруллингом. Не Write-Output -NoEnumerate: pwsh 7.6 заворачивает им в List
+# и одиночный объект (issue #136).
 function ConvertFrom-JsonInput([string]$text, [string]$source, [string]$expected, [switch]$Inline) {
 	try {
 		# PS 5.1 на пустой строке отдаёт $null, а не ошибку — навык уходил дальше с $null,
 		# тогда как py-порт падал. Проверяем сами, чтобы порты вели себя одинаково.
 		if ([string]::IsNullOrWhiteSpace($text)) { throw 'input is empty' }
-		$parsed = $text | ConvertFrom-Json
+		# pwsh 7+ сам разворачивает массив верхнего уровня ([x] → x, [] → $null). Ключ -NoEnumerate
+		# появился там же: в 5.1 и pwsh 6 его нет, поэтому спрашиваем командлет, а не версию.
+		$cfj = @{}
+		if ((Get-Command ConvertFrom-Json).Parameters.ContainsKey('NoEnumerate')) { $cfj.NoEnumerate = $true }
+		$parsed = $text | ConvertFrom-Json @cfj
 	} catch {
 		$what = if ($expected) { "$source expects $expected" } else { "Invalid JSON in $source" }
 		if ($Inline) {
@@ -58,7 +63,7 @@ function ConvertFrom-JsonInput([string]$text, [string]$source, [string]$expected
 		[Console]::Error.WriteLine("[ERROR] ${what} ($($_.Exception.Message))")
 		exit 1
 	}
-	Write-Output -NoEnumerate $parsed
+	return ,$parsed
 }
 
 # --- Чтение входного JSON-файла ---
@@ -272,7 +277,7 @@ if (-not (Test-Path $ObjectPath)) {
 	Write-Error "Object file not found: $ObjectPath"
 	exit 1
 }
-$resolvedPath = (Resolve-Path $ObjectPath).Path
+$resolvedPath = (Resolve-Path $ObjectPath).ProviderPath
 
 # --- Support guard (Ext/ParentConfigurations.bin) ---
 # See docs/1c-support-state-spec.md. Blocks edits of vendor objects "на замке" /
@@ -312,16 +317,20 @@ function Find-V8Project([string]$startDir) {
 }
 function Get-EditMode([string]$cfgDir) {
 	try {
-		$pj = Find-V8Project (Get-Location).Path
-		if (-not $pj) { $pj = Find-V8Project $cfgDir }
+		$pj = Find-V8Project (Get-Location).ProviderPath
+		if (-not $pj) { $pj = Find-V8Project ([System.IO.Path]::GetFullPath($cfgDir)) }
 		if (-not $pj) { return 'deny' }
-		$proj = Get-Content -Raw $pj | ConvertFrom-Json
+		# UTF-8 явно: PS 5.1 читает файл без BOM как ANSI, и configSrc с кириллицей не совпал бы
+		$proj = Get-Content -Raw -Encoding UTF8 $pj | ConvertFrom-Json
+		# configSrc — от каталога .v8-project.json, а не от рабочего каталога: иначе из подкаталога
+		# проекта база не сопоставляется и берётся правило проекта.
+		$projDir = [System.IO.Path]::GetDirectoryName($pj)
 		$cfgFull = [System.IO.Path]::GetFullPath($cfgDir).TrimEnd('\', '/')
 		if ($proj.databases) {
 			foreach ($db in $proj.databases) {
 				if ($db.configSrc) {
-					$src = [System.IO.Path]::GetFullPath($db.configSrc).TrimEnd('\', '/')
-					if ($cfgFull -eq $src -or $cfgFull.StartsWith($src + [System.IO.Path]::DirectorySeparatorChar)) {
+					$src = [System.IO.Path]::GetFullPath([System.IO.Path]::Combine($projDir, $db.configSrc)).TrimEnd('\', '/')
+					if ($cfgFull -eq $src -or $cfgFull.StartsWith($src + [System.IO.Path]::DirectorySeparatorChar, [System.StringComparison]::OrdinalIgnoreCase)) {
 						if ($db.editingAllowedCheck) { return $db.editingAllowedCheck }
 					}
 				}
@@ -334,7 +343,7 @@ function Get-EditMode([string]$cfgDir) {
 function Assert-EditAllowed([string]$targetPath, [string]$require) {
 	try {
 		$rp = $targetPath
-		try { $rp = (Resolve-Path $targetPath -ErrorAction Stop).Path } catch {}
+		try { $rp = (Resolve-Path $targetPath -ErrorAction Stop).ProviderPath } catch {}
 		# Autonomous external object (EPF/ERF): never part of a config on support (issue #39).
 		if (Test-ExternalObjectRoot $rp) { return }
 		$elemUuid = Get-RootUuid $rp
@@ -1033,25 +1042,6 @@ function Find-ElementByName($container, [string]$elemLocalName, [string]$nameVal
 	return $null
 }
 
-function Find-LastElementOfType($container, [string]$localName) {
-	$last = $null
-	foreach ($child in $container.ChildNodes) {
-		if ($child.NodeType -eq 'Element' -and $child.LocalName -eq $localName) {
-			$last = $child
-		}
-	}
-	return $last
-}
-
-function Find-FirstElementOfType($container, [string]$localName) {
-	foreach ($child in $container.ChildNodes) {
-		if ($child.NodeType -eq 'Element' -and $child.LocalName -eq $localName) {
-			return $child
-		}
-	}
-	return $null
-}
-
 function Ensure-ChildObjectsOpen {
 	if ($script:childObjectsEl) {
 		# Check if it's self-closing (no child elements)
@@ -1236,6 +1226,34 @@ $script:reservedAttrNames = @{
 	"ThisNode"="ЭтотУзел"; "SentNo"="НомерОтправленного"; "ReceivedNo"="НомерПринятого"
 	"CalculationType"="ВидРасчета"; "RegistrationPeriod"="ПериодРегистрации"; "ReversingEntry"="СторноЗапись"
 	"Account"="Счет"; "ValueType"="ТипЗначения"; "ActionPeriodIsBasic"="ПериодДействияБазовый"
+}
+
+# Имена стандартных команд вида — англ. и рус., в нижнем регистре: команда объекта с таким именем
+# не загрузится («Имя команды не может совпадать с именем стандартной команды»; регистр не важен, от
+# UseStandardCommands не зависит — замер 8.3.24/8.3.27). Вида нет в карте — ограничения нет
+# (перечисление, план обмена; критерий отбора и таблица внешнего источника не замерены).
+function Get-ReservedCommandNames {
+	$openList = @("openlist", "открытьсписок")
+	$create = @("create", "создать")
+	$folder = @("createfolder", "создатьгруппу")
+	$byValue = @("openbyvalue", "открытьпозначению")
+	$basedOn = @("createbasedon", "создатьнаосновании")
+	return @{
+		"Catalog"                    = $openList + $create + $folder + $byValue + $basedOn
+		"ChartOfCharacteristicTypes" = $openList + $create + $folder + $basedOn
+		"Task"                       = $openList + $create + $byValue + $basedOn
+		"Document"                   = $openList + $create + $basedOn
+		"BusinessProcess"            = $openList + $create + $basedOn
+		"ChartOfAccounts"            = $openList + $create + $basedOn
+		"ChartOfCalculationTypes"    = $openList + $create + $basedOn
+		"InformationRegister"        = $openList + $create + $byValue
+		"AccumulationRegister"       = $openList
+		"AccountingRegister"         = $openList
+		"CalculationRegister"        = $openList
+		"DocumentJournal"            = $openList
+		"DataProcessor"              = @("open", "открыть")
+		"Report"                     = @("open", "открыть")
+	}
 }
 
 # Стандартные реквизиты по типу объекта (ключи из reservedAttrNames). Имя реквизита, совпадающее
@@ -1787,13 +1805,63 @@ $script:validChildTypes = @{
 	"Table"                      = @("fields","forms","templates","commands")
 }
 
-# Canonical child order in ChildObjects
-$script:childOrder = @(
-	"Resource", "Dimension", "Attribute", "TabularSection", "Field", "Table", "Function",
-	"AccountingFlag", "ExtDimensionAccountingFlag",
-	"EnumValue", "Column", "AddressingAttribute", "Recalculation",
-	"Form", "Template", "Command"
-)
+# Порядок групп в <ChildObjects> объекта по виду. Это xs:sequence <Вид>ChildObjects из MDClasses XSD,
+# сверенный выгрузкой платформы: выгрузка сама ставит группы в этот порядок, так что вставка не на место
+# даёт дифф при следующей выгрузке. Единого порядка нет — у документа Form стоит до TabularSection.
+function Get-ObjectChildOrder {
+	return @{
+		"Catalog"                    = @("Attribute", "TabularSection", "Form", "Template", "Command")
+		"Document"                   = @("Attribute", "Form", "TabularSection", "Template", "Command")
+		"ExchangePlan"               = @("Attribute", "TabularSection", "Form", "Template", "Command")
+		"ChartOfCharacteristicTypes" = @("Attribute", "TabularSection", "Form", "Template", "Command")
+		"ChartOfAccounts"            = @("Attribute", "TabularSection", "AccountingFlag", "ExtDimensionAccountingFlag", "Form", "Template", "Command")
+		"ChartOfCalculationTypes"    = @("Attribute", "TabularSection", "Form", "Template", "Command")
+		"BusinessProcess"            = @("Attribute", "TabularSection", "Form", "Template", "Command")
+		"Task"                       = @("Attribute", "TabularSection", "Form", "Template", "AddressingAttribute", "Command")
+		"DataProcessor"              = @("Attribute", "TabularSection", "Form", "Template", "Command")
+		"Report"                     = @("Attribute", "TabularSection", "Form", "Template", "Command")
+		"ExternalDataProcessor"      = @("Attribute", "TabularSection", "Form", "Template")
+		"ExternalReport"             = @("Attribute", "TabularSection", "Form", "Template")
+		"Enum"                       = @("EnumValue", "Form", "Template", "Command")
+		"InformationRegister"        = @("Resource", "Attribute", "Dimension", "Form", "Template", "Command")
+		"AccumulationRegister"       = @("Resource", "Attribute", "Dimension", "Form", "Template", "Command")
+		"AccountingRegister"         = @("Dimension", "Resource", "Attribute", "Form", "Template", "Command")
+		"CalculationRegister"        = @("Resource", "Attribute", "Dimension", "Recalculation", "Form", "Template", "Command")
+		"DocumentJournal"            = @("Column", "Form", "Template", "Command")
+		"Table"                      = @("Field", "Form", "Command", "Template")
+		"ExternalDataSource"         = @("Table", "Cube", "Function")
+		"Cube"                       = @("DimensionTable", "Dimension", "Resource", "Form", "Command", "Template")
+		"DimensionTable"             = @("Field", "Form", "Command", "Template")
+		"FilterCriterion"            = @("Form", "Command")
+		"SettingsStorage"            = @("Form", "Template")
+		"TabularSection"             = @("Attribute")
+	}
+}
+
+# Элемент <ChildObjects>, ПЕРЕД которым встаёт новый <tag>; $null — дописать в конец.
+# Сразу за последним элементом своего тега, иначе перед первым элементом группы, идущей
+# по канону вида позже. Вид или тег вне канона — $null, как раньше.
+function Find-ChildAnchor($container, [string]$tag, [string]$objType) {
+	$children = New-Object System.Collections.Generic.List[object]
+	foreach ($c in $container.ChildNodes) { if ($c.NodeType -eq 'Element') { $children.Add($c) } }
+	$lastIdx = -1
+	for ($i = 0; $i -lt $children.Count; $i++) {
+		if ($children[$i].LocalName -ceq $tag) { $lastIdx = $i }
+	}
+	if ($lastIdx -ge 0) {
+		if ($lastIdx + 1 -lt $children.Count) { return $children[$lastIdx + 1] }
+		return $null
+	}
+	$order = (Get-ObjectChildOrder)[$objType]
+	if (-not $order) { return $null }
+	$tagIdx = [array]::IndexOf([string[]]$order, $tag)
+	if ($tagIdx -lt 0) { return $null }
+	$later = @($order | Select-Object -Skip ($tagIdx + 1))
+	foreach ($c in $children) {
+		if ($later -ccontains $c.LocalName) { return $c }
+	}
+	return $null
+}
 
 # Map from DSL child type to XML element name
 $script:childTypeToXmlTag = @{
@@ -2341,8 +2409,9 @@ function Convert-InlineToDefinition([string]$operation, [string]$value) {
 # ============================================================
 
 function Find-InsertionPoint {
-	param([string]$xmlTag, $parsed)
+	param([string]$xmlTag, $parsed, [string]$kind = "")
 	# Returns $refNode for Insert-BeforeElement (null = append)
+	# $kind — вид владельца контейнера для канона (по умолчанию вид объекта; для ТЧ — TabularSection)
 
 	if (-not $script:childObjectsEl) { return $null }
 
@@ -2350,41 +2419,24 @@ function Find-InsertionPoint {
 	if ($parsed.after) {
 		$afterEl = Find-ElementByName $script:childObjectsEl $xmlTag $parsed.after
 		if ($afterEl) {
-			# Insert after = insert before the next element sibling
+			# Insert after = insert before the next element sibling, какого бы вида он ни был:
+			# за последним элементом группы идёт уже следующая группа, а не конец ChildObjects
 			$next = $afterEl.NextSibling
 			while ($next -and $next.NodeType -ne 'Element') { $next = $next.NextSibling }
-			if ($next -and $next.LocalName -eq $xmlTag) { return $next }
-			return $null  # append
+			return $next
 		} else {
-			Warn "after='$($parsed.after)': element '$($parsed.after)' not found in $xmlTag, appending"
+			Warn "after='$($parsed.after)': element '$($parsed.after)' not found in $xmlTag, using default position"
 		}
 	}
 	if ($parsed.before) {
 		$beforeEl = Find-ElementByName $script:childObjectsEl $xmlTag $parsed.before
 		if ($beforeEl) { return $beforeEl }
-		Warn "before='$($parsed.before)': element '$($parsed.before)' not found in $xmlTag, appending"
+		Warn "before='$($parsed.before)': element '$($parsed.before)' not found in $xmlTag, using default position"
 	}
 
-	# Default: after last element of this type, or in canonical position
-	$lastOfType = Find-LastElementOfType $script:childObjectsEl $xmlTag
-	if ($lastOfType) {
-		$next = $lastOfType.NextSibling
-		while ($next -and $next.NodeType -ne 'Element') { $next = $next.NextSibling }
-		return $next  # null means append (which is correct: after last of type)
-	}
-
-	# No elements of this type yet — find canonical position
-	$tagIdx = [array]::IndexOf($script:childOrder, $xmlTag)
-	if ($tagIdx -lt 0) { return $null }
-
-	# Find first element of any type that comes AFTER in the canonical order
-	for ($i = $tagIdx + 1; $i -lt $script:childOrder.Count; $i++) {
-		$nextTag = $script:childOrder[$i]
-		$firstOfNext = Find-FirstElementOfType $script:childObjectsEl $nextTag
-		if ($firstOfNext) { return $firstOfNext }
-	}
-
-	return $null  # append at end
+	# Default: after last element of this type, or in canonical position of the owner kind
+	if (-not $kind) { $kind = $script:objType }
+	return Find-ChildAnchor $script:childObjectsEl $xmlTag $kind
 }
 
 function Process-Add($addDef) {
@@ -2641,6 +2693,10 @@ function Process-Add($addDef) {
 						Warn "Command '$itemName' already exists, skipping"
 						continue
 					}
+					$reservedCmd = (Get-ReservedCommandNames)[$script:objType]
+					if ($reservedCmd -and ($reservedCmd -contains $itemName)) {
+						Die "meta-edit: имя команды '$itemName' совпадает со стандартной командой объекта '$($script:objType)'. Выберите другое имя."
+					}
 					# У команды есть модуль обработчика (Commands/<Имя>/Ext/CommandModule.bsl) — в корпусе
 					# он есть у всех команд без исключения. Пишем ту же заготовку, что и meta-compile.
 					$cmdExtDir = Join-Path (Join-Path (Join-Path (Join-Path (Split-Path -Parent $resolvedPath) $script:objName) "Commands") $itemName) "Ext"
@@ -2859,7 +2915,13 @@ function Modify-ChildElements($modifyDef, [string]$childType) {
 
 		$el = Find-ElementByName $script:childObjectsEl $xmlTag $elemName
 		if (-not $el) {
-			Die "$xmlTag '$elemName' not found for modify"
+			# ТЧ заимствованного объекта появляется в расширении только заимствованием — подсказать как
+			$hint = ""
+			$belonging = Find-PropertyElement 'ObjectBelonging'
+			if ($xmlTag -ceq 'TabularSection' -and $belonging -and $belonging.InnerText -ceq 'Adopted') {
+				$hint = " — in an extension, borrow it first: cfe-borrow -Object $($script:objType).$($script:objName).TabularSection.$elemName"
+			}
+			Die "$xmlTag '$elemName' not found for modify$hint"
 		}
 
 		# Find Properties inside the element
@@ -2915,7 +2977,7 @@ function Modify-ChildElements($modifyDef, [string]$childType) {
 							$nodes = Import-Fragment $fragmentXml
 							$savedCO = $script:childObjectsEl
 							$script:childObjectsEl = $tsChildObjEl
-							$refNode = Find-InsertionPoint "Attribute" $parsed
+							$refNode = Find-InsertionPoint "Attribute" $parsed "TabularSection"
 							$script:childObjectsEl = $savedCO
 							foreach ($node in $nodes) {
 								Insert-BeforeElement $tsChildObjEl $node $refNode $tsAttrIndent
@@ -2966,6 +3028,12 @@ function Modify-ChildElements($modifyDef, [string]$childType) {
 					if ($nameEl) {
 						$oldName = $nameEl.InnerText.Trim()
 						$newName = "$changeValue"
+						if ($xmlTag -eq "Command") {
+							$reservedCmd = (Get-ReservedCommandNames)[$script:objType]
+							if ($reservedCmd -and ($reservedCmd -contains $newName)) {
+								Die "meta-edit: имя команды '$newName' совпадает со стандартной командой объекта '$($script:objType)'. Выберите другое имя."
+							}
+						}
 						$nameEl.InnerText = $newName
 
 						# Update Synonym if it was auto-generated (matches old CamelCase split)

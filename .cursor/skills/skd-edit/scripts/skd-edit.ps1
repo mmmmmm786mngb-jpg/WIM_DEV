@@ -1,4 +1,4 @@
-﻿# skd-edit v1.48 — Atomic 1C DCS editor
+﻿# skd-edit v1.50 — Atomic 1C DCS editor
 # Source: https://github.com/Nikolay-Shirokov/cc-1c-skills
 # NB: парный .py собирает выражения автодат вне f-string ради совместимости с python 3.9 (PEP 701).
 [CmdletBinding(PositionalBinding=$false)]
@@ -48,7 +48,7 @@ if (-not (Test-Path $TemplatePath)) {
 	exit 1
 }
 
-$resolvedPath = (Resolve-Path $TemplatePath).Path
+$resolvedPath = (Resolve-Path $TemplatePath).ProviderPath
 
 # --- Support guard (Ext/ParentConfigurations.bin) ---
 # See docs/1c-support-state-spec.md. Blocks edits of vendor objects "на замке" /
@@ -88,16 +88,20 @@ function Find-V8Project([string]$startDir) {
 }
 function Get-EditMode([string]$cfgDir) {
 	try {
-		$pj = Find-V8Project (Get-Location).Path
-		if (-not $pj) { $pj = Find-V8Project $cfgDir }
+		$pj = Find-V8Project (Get-Location).ProviderPath
+		if (-not $pj) { $pj = Find-V8Project ([System.IO.Path]::GetFullPath($cfgDir)) }
 		if (-not $pj) { return 'deny' }
-		$proj = Get-Content -Raw $pj | ConvertFrom-Json
+		# UTF-8 явно: PS 5.1 читает файл без BOM как ANSI, и configSrc с кириллицей не совпал бы
+		$proj = Get-Content -Raw -Encoding UTF8 $pj | ConvertFrom-Json
+		# configSrc — от каталога .v8-project.json, а не от рабочего каталога: иначе из подкаталога
+		# проекта база не сопоставляется и берётся правило проекта.
+		$projDir = [System.IO.Path]::GetDirectoryName($pj)
 		$cfgFull = [System.IO.Path]::GetFullPath($cfgDir).TrimEnd('\', '/')
 		if ($proj.databases) {
 			foreach ($db in $proj.databases) {
 				if ($db.configSrc) {
-					$src = [System.IO.Path]::GetFullPath($db.configSrc).TrimEnd('\', '/')
-					if ($cfgFull -eq $src -or $cfgFull.StartsWith($src + [System.IO.Path]::DirectorySeparatorChar)) {
+					$src = [System.IO.Path]::GetFullPath([System.IO.Path]::Combine($projDir, $db.configSrc)).TrimEnd('\', '/')
+					if ($cfgFull -eq $src -or $cfgFull.StartsWith($src + [System.IO.Path]::DirectorySeparatorChar, [System.StringComparison]::OrdinalIgnoreCase)) {
 						if ($db.editingAllowedCheck) { return $db.editingAllowedCheck }
 					}
 				}
@@ -110,7 +114,7 @@ function Get-EditMode([string]$cfgDir) {
 function Assert-EditAllowed([string]$targetPath, [string]$require) {
 	try {
 		$rp = $targetPath
-		try { $rp = (Resolve-Path $targetPath -ErrorAction Stop).Path } catch {}
+		try { $rp = (Resolve-Path $targetPath -ErrorAction Stop).ProviderPath } catch {}
 		# Autonomous external object (EPF/ERF): never part of a config on support (issue #39).
 		if (Test-ExternalObjectRoot $rp) { return }
 		$elemUuid = Get-RootUuid $rp
@@ -203,7 +207,7 @@ function Resolve-TextFromFile {
 	} else {
 		$candidates = @(
 			(Join-Path $baseDir $filePath),
-			(Join-Path (Get-Location).Path $filePath)
+			(Join-Path (Get-Location).ProviderPath $filePath)
 		)
 	}
 	foreach ($c in $candidates) {

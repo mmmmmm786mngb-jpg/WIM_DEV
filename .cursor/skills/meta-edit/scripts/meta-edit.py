@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# meta-edit v1.65 — Edit existing 1C metadata object XML
+# meta-edit v1.71 — Edit existing 1C metadata object XML
 # Source: https://github.com/Nikolay-Shirokov/cc-1c-skills
 
 import argparse
@@ -182,15 +182,19 @@ def _sg_find_v8project(start_dir):
 
 def _sg_get_edit_mode(cfg_dir):
     try:
-        pj = _sg_find_v8project(os.getcwd()) or _sg_find_v8project(cfg_dir)
+        pj = _sg_find_v8project(os.getcwd()) or _sg_find_v8project(os.path.abspath(cfg_dir))
         if not pj:
             return "deny"
         proj = json.loads(open(pj, encoding="utf-8-sig").read())
-        cfg_full = os.path.normcase(os.path.abspath(cfg_dir)).rstrip("\\/")
+        # configSrc — от каталога .v8-project.json, а не от рабочего каталога: иначе из подкаталога
+        # проекта база не сопоставляется и берётся правило проекта. Пути — настоящие (realpath):
+        # на macOS /var — ссылка на /private/var, и getcwd с путём аргумента иначе не совпадут.
+        proj_dir = os.path.dirname(pj)
+        cfg_full = os.path.normcase(os.path.realpath(cfg_dir)).rstrip("\\/")
         for db in proj.get("databases", []):
             src = db.get("configSrc")
             if src:
-                src_full = os.path.normcase(os.path.abspath(src)).rstrip("\\/")
+                src_full = os.path.normcase(os.path.realpath(os.path.join(proj_dir, src))).rstrip("\\/")
                 if cfg_full == src_full or cfg_full.startswith(src_full + os.sep):
                     if db.get("editingAllowedCheck"):
                         return db["editingAllowedCheck"]
@@ -1084,21 +1088,6 @@ def find_element_by_name(container, elem_local_name, name_value):
     return None
 
 
-def find_last_element_of_type(container, local_name):
-    last = None
-    for child in container:
-        if localname(child) == local_name:
-            last = child
-    return last
-
-
-def find_first_element_of_type(container, local_name):
-    for child in container:
-        if localname(child) == local_name:
-            return child
-    return None
-
-
 def ensure_child_objects_open():
     """Ensure ChildObjects element exists and is open (not self-closing empty)."""
     global child_objects_el
@@ -1285,6 +1274,33 @@ RESERVED_ATTR_NAMES_RU = {
     'Счет', 'ТипЗначения', 'ПериодДействияБазовый',
 }
 
+
+def reserved_command_names():
+    """Имена стандартных команд вида — англ. и рус., в нижнем регистре: команда объекта с таким именем
+    не загрузится («Имя команды не может совпадать с именем стандартной команды»; регистр не важен, от
+    UseStandardCommands не зависит — замер 8.3.24/8.3.27). Вида нет в карте — ограничения нет
+    (перечисление, план обмена; критерий отбора и таблица внешнего источника не замерены)."""
+    open_list = {"openlist", "открытьсписок"}
+    create = {"create", "создать"}
+    folder = {"createfolder", "создатьгруппу"}
+    by_value = {"openbyvalue", "открытьпозначению"}
+    based_on = {"createbasedon", "создатьнаосновании"}
+    return {
+        "Catalog":                    open_list | create | folder | by_value | based_on,
+        "ChartOfCharacteristicTypes": open_list | create | folder | based_on,
+        "Task":                       open_list | create | by_value | based_on,
+        "Document":                   open_list | create | based_on,
+        "BusinessProcess":            open_list | create | based_on,
+        "ChartOfAccounts":            open_list | create | based_on,
+        "ChartOfCalculationTypes":    open_list | create | based_on,
+        "InformationRegister":        open_list | create | by_value,
+        "AccumulationRegister":       open_list,
+        "AccountingRegister":         open_list,
+        "CalculationRegister":        open_list,
+        "DocumentJournal":            open_list,
+        "DataProcessor":              {"open", "открыть"},
+        "Report":                     {"open", "открыть"},
+    }
 
 # Стандартные реквизиты по типу объекта (EN + RU). Совпадение имени реквизита с ними платформа
 # не позволит — жёсткий отказ. Контексты вне карты → предупреждение по плоскому списку.
@@ -1808,13 +1824,58 @@ valid_child_types = {
     "Table": ["fields", "forms", "templates", "commands"],
 }
 
-# Canonical child order in ChildObjects
-child_order = [
-    "Resource", "Dimension", "Attribute", "TabularSection", "Field", "Table", "Function",
-    "AccountingFlag", "ExtDimensionAccountingFlag",
-    "EnumValue", "Column", "AddressingAttribute", "Recalculation",
-    "Form", "Template", "Command",
-]
+def object_child_order():
+    """Порядок групп в <ChildObjects> объекта по виду. Это xs:sequence <Вид>ChildObjects из MDClasses XSD,
+    сверенный выгрузкой платформы: выгрузка сама ставит группы в этот порядок, так что вставка не на место
+    даёт дифф при следующей выгрузке. Единого порядка нет — у документа Form стоит до TabularSection."""
+    return {
+        "Catalog":                    ["Attribute", "TabularSection", "Form", "Template", "Command"],
+        "Document":                   ["Attribute", "Form", "TabularSection", "Template", "Command"],
+        "ExchangePlan":               ["Attribute", "TabularSection", "Form", "Template", "Command"],
+        "ChartOfCharacteristicTypes": ["Attribute", "TabularSection", "Form", "Template", "Command"],
+        "ChartOfAccounts":            ["Attribute", "TabularSection", "AccountingFlag", "ExtDimensionAccountingFlag", "Form", "Template", "Command"],
+        "ChartOfCalculationTypes":    ["Attribute", "TabularSection", "Form", "Template", "Command"],
+        "BusinessProcess":            ["Attribute", "TabularSection", "Form", "Template", "Command"],
+        "Task":                       ["Attribute", "TabularSection", "Form", "Template", "AddressingAttribute", "Command"],
+        "DataProcessor":              ["Attribute", "TabularSection", "Form", "Template", "Command"],
+        "Report":                     ["Attribute", "TabularSection", "Form", "Template", "Command"],
+        "ExternalDataProcessor":      ["Attribute", "TabularSection", "Form", "Template"],
+        "ExternalReport":             ["Attribute", "TabularSection", "Form", "Template"],
+        "Enum":                       ["EnumValue", "Form", "Template", "Command"],
+        "InformationRegister":        ["Resource", "Attribute", "Dimension", "Form", "Template", "Command"],
+        "AccumulationRegister":       ["Resource", "Attribute", "Dimension", "Form", "Template", "Command"],
+        "AccountingRegister":         ["Dimension", "Resource", "Attribute", "Form", "Template", "Command"],
+        "CalculationRegister":        ["Resource", "Attribute", "Dimension", "Recalculation", "Form", "Template", "Command"],
+        "DocumentJournal":            ["Column", "Form", "Template", "Command"],
+        "Table":                      ["Field", "Form", "Command", "Template"],
+        "ExternalDataSource":         ["Table", "Cube", "Function"],
+        "Cube":                       ["DimensionTable", "Dimension", "Resource", "Form", "Command", "Template"],
+        "DimensionTable":             ["Field", "Form", "Command", "Template"],
+        "FilterCriterion":            ["Form", "Command"],
+        "SettingsStorage":            ["Form", "Template"],
+        "TabularSection":             ["Attribute"],
+    }
+
+
+def find_child_anchor(container, tag, obj_type):
+    """Элемент <ChildObjects>, ПЕРЕД которым встаёт новый <tag>; None — дописать в конец.
+    Сразу за последним элементом своего тега, иначе перед первым элементом группы, идущей
+    по канону вида позже. Вид или тег вне канона — None, как раньше."""
+    children = [c for c in container if isinstance(c.tag, str)]
+    last_idx = -1
+    for i, c in enumerate(children):
+        if c.tag.rsplit('}', 1)[-1] == tag:
+            last_idx = i
+    if last_idx >= 0:
+        return children[last_idx + 1] if last_idx + 1 < len(children) else None
+    order = object_child_order().get(obj_type)
+    if not order or tag not in order:
+        return None
+    later = order[order.index(tag) + 1:]
+    for c in children:
+        if c.tag.rsplit('}', 1)[-1] in later:
+            return c
+    return None
 
 # Map from DSL child type to XML element name
 child_type_to_xml_tag = {
@@ -2329,8 +2390,9 @@ def convert_inline_to_definition(operation, value):
 # ============================================================
 
 
-def find_insertion_point(xml_tag, parsed):
-    """Find reference node for insertion. Returns element or None (meaning append)."""
+def find_insertion_point(xml_tag, parsed, kind=None):
+    """Find reference node for insertion. Returns element or None (meaning append).
+    kind — вид владельца контейнера для канона (по умолчанию вид объекта; для ТЧ — TabularSection)."""
     if child_objects_el is None:
         return None
 
@@ -2341,44 +2403,23 @@ def find_insertion_point(xml_tag, parsed):
     if after_name:
         after_el = find_element_by_name(child_objects_el, xml_tag, after_name)
         if after_el is not None:
-            # Insert after = insert before the next element sibling
+            # Insert after = insert before the next element sibling, какого бы вида он ни был:
+            # за последним элементом группы идёт уже следующая группа, а не конец ChildObjects
             nxt = after_el.getnext()
             while nxt is not None and not isinstance(nxt.tag, str):
                 nxt = nxt.getnext()
-            if nxt is not None and localname(nxt) == xml_tag:
-                return nxt
-            return None  # append
+            return nxt
         else:
-            warn(f"after='{after_name}': element '{after_name}' not found in {xml_tag}, appending")
+            warn(f"after='{after_name}': element '{after_name}' not found in {xml_tag}, using default position")
 
     if before_name:
         before_el = find_element_by_name(child_objects_el, xml_tag, before_name)
         if before_el is not None:
             return before_el
-        warn(f"before='{before_name}': element '{before_name}' not found in {xml_tag}, appending")
+        warn(f"before='{before_name}': element '{before_name}' not found in {xml_tag}, using default position")
 
-    # Default: after last element of this type, or in canonical position
-    last_of_type = find_last_element_of_type(child_objects_el, xml_tag)
-    if last_of_type is not None:
-        nxt = last_of_type.getnext()
-        while nxt is not None and not isinstance(nxt.tag, str):
-            nxt = nxt.getnext()
-        return nxt  # None means append (correct: after last of type)
-
-    # No elements of this type yet -- find canonical position
-    if xml_tag in child_order:
-        tag_idx = child_order.index(xml_tag)
-    else:
-        return None
-
-    # Find first element of any type that comes AFTER in the canonical order
-    for i in range(tag_idx + 1, len(child_order)):
-        next_tag = child_order[i]
-        first_of_next = find_first_element_of_type(child_objects_el, next_tag)
-        if first_of_next is not None:
-            return first_of_next
-
-    return None  # append at end
+    # Default: after last element of this type, or in canonical position of the owner kind
+    return find_child_anchor(child_objects_el, xml_tag, kind or obj_type)
 
 
 def process_add(add_def):
@@ -2605,6 +2646,8 @@ def process_add(add_def):
                 if item_name in existing_names:
                     warn(f"Command '{item_name}' already exists, skipping")
                     continue
+                if item_name.lower() in reserved_command_names().get(obj_type, set()):
+                    die(f"meta-edit: имя команды '{item_name}' совпадает со стандартной командой объекта '{obj_type}'. Выберите другое имя.")
                 # У команды есть модуль обработчика (Commands/<Имя>/Ext/CommandModule.bsl) — в корпусе
                 # он есть у всех команд без исключения. Пишем ту же заготовку, что и meta-compile.
                 cmd_ext_dir = os.path.join(os.path.dirname(resolved_path), obj_name, "Commands", item_name, "Ext")
@@ -2765,7 +2808,13 @@ def modify_child_elements(modify_def, child_type):
     for elem_name, changes in modify_def.items():
         el = find_element_by_name(child_objects_el, xml_tag, elem_name)
         if el is None:
-            die(f"{xml_tag} '{elem_name}' not found for modify")
+            # ТЧ заимствованного объекта появляется в расширении только заимствованием — подсказать как
+            hint = ""
+            belonging = find_property_element("ObjectBelonging")
+            if xml_tag == "TabularSection" and belonging is not None and (belonging.text or "") == "Adopted":
+                hint = (f" — in an extension, borrow it first: cfe-borrow -Object "
+                        f"{obj_type}.{obj_name}.TabularSection.{elem_name}")
+            die(f"{xml_tag} '{elem_name}' not found for modify{hint}")
 
         # Find Properties inside the element
         props_el = None
@@ -2808,7 +2857,7 @@ def modify_child_elements(modify_def, child_type):
                         nodes = import_fragment(fragment_xml)
                         saved_co = child_objects_el
                         child_objects_el = ts_child_obj_el
-                        ref_node = find_insertion_point("Attribute", parsed)
+                        ref_node = find_insertion_point("Attribute", parsed, "TabularSection")
                         child_objects_el = saved_co
                         for node in nodes:
                             insert_before_element(ts_child_obj_el, node, ref_node, ts_attr_indent)
@@ -2850,6 +2899,8 @@ def modify_child_elements(modify_def, child_type):
                 if name_el is not None:
                     old_name = (name_el.text or "").strip()
                     new_name = str(change_value)
+                    if xml_tag == "Command" and new_name.lower() in reserved_command_names().get(obj_type, set()):
+                        die(f"meta-edit: имя команды '{new_name}' совпадает со стандартной командой объекта '{obj_type}'. Выберите другое имя.")
                     name_el.text = new_name
 
                     # Update Synonym if it was auto-generated

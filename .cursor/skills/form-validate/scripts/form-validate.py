@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
-# form-validate v1.25 — Validate 1C managed form
+# form-validate v1.36 — Validate 1C managed form
 # Source: https://github.com/Nikolay-Shirokov/cc-1c-skills
 
 import argparse
+import bisect
 import os
 import re
 import sys
@@ -913,13 +914,276 @@ CHILD_TAG_ORDER = {
     "Table": "Representation Visible UserVisible TitleLocation CommandBarLocation Autofill Enabled TitleHeight ReadOnly SkipOnInput DefaultItem ChangeRowSet ChangeRowOrder Width AutoMaxWidth MaxWidth Height AutoMaxHeight MaxHeight HeightInTableRows HeightControlVariant AutoMaxRowsCount MaxRowsCount ChoiceMode MultipleChoice RowInputMode SelectionMode RowSelectionMode Header FooterHeight HeaderHeight Footer HorizontalScrollBar VerticalScrollBar HorizontalLines VerticalLines UseAlternationRowColor AutoInsertNewRow AutoAddIncomplete AutoMarkIncomplete SearchOnInput InitialListView InitialTreeView HorizontalStretch Output VerticalStretch EnableStartDrag EnableDrag FileDragMode DataPath Font RowPictureDataPath RowsPicture BackColor BorderColor TextColor Title BehaviorOnHorizontalCompression GroupVerticalAlign Shortcut TitleTextColor TitleFont CommandSet ToolTip ToolTipRepresentation SearchStringLocation ViewStatusLocation SearchControlLocation GroupHorizontalAlign CurrentRowUse RefreshRequest AutoRefresh AutoRefreshPeriod Period ChoiceFoldersAndItems RestoreCurrentRow RowFilter TopLevelParent ShowRoot AllowRootChoice UpdateOnDataChange UserSettingsGroup AllowGettingCurrentRowURL ViewMode SettingsNamedItemDetailedRepresentation ContextMenu AutoCommandBar ExtendedTooltip SearchStringAddition ViewStatusAddition SearchControlAddition Events ChildItems",
     "TextDocumentField": "DataPath DefaultItem ReadOnly Title TitleFont TitleLocation EditMode ToolTip Width AutoMaxWidth Font MaxWidth Height AutoMaxHeight ContextMenu ExtendedTooltip Events",
     "TrackBarField": "DataPath Title TitleLocation HorizontalAlign ToolTip ToolTipRepresentation Width AutoMaxWidth HorizontalStretch MaxWidth Height AutoMaxHeight MinValue MarkingAppearance MaxValue LargeStep Step MarkingStep ContextMenu ExtendedTooltip Events",
-    "UsualGroup": "UserVisible Visible Enabled ReadOnly EnableContentChange Title TitleTextColor TitleFont ToolTip ToolTipRepresentation Shortcut Width Height HorizontalStretch VerticalStretch GroupHorizontalAlign GroupVerticalAlign Group ChildrenAlign HorizontalSpacing VerticalSpacing HorizontalAlign VerticalAlign Behavior CollapsedRepresentationTitle Collapsed ControlRepresentation Representation CurrentRowUse Format ShowLeftMargin United ChildItemsWidth ShowTitle BackColor ThroughAlign TitleDataPath ExtendedTooltip ChildItems",
+    "UsualGroup": "UserVisible Visible Enabled ReadOnly EnableContentChange Title TitleTextColor TitleFont ToolTip ToolTipRepresentation Shortcut Width Height HorizontalStretch VerticalStretch GroupHorizontalAlign GroupVerticalAlign Group ChildrenAlign HorizontalSpacing VerticalSpacing HorizontalAlign VerticalAlign Behavior CollapsedRepresentationTitle Collapsed ControlRepresentation Representation CurrentRowUse Format ShowLeftMargin United ChildItemsWidth ShowTitle BackColor ThroughAlign TitleDataPath ExtendedTooltip Events ChildItems",
 }
 CHILD_RANK = {t: {c: i for i, c in enumerate(v.split(" "))} for t, v in CHILD_TAG_ORDER.items()}
 
 
 def get_child_rank(parent_tag, child_tag):
     return CHILD_RANK.get(parent_tag, {}).get(child_tag, -1)
+
+
+# --- Структура элементов формы (генерируется) ---
+# Структура элементов формы: теги членов ChildItems (с версии формата), компаньоны по родителю, свойства типа.
+# Источник — XSD xcf-logform 2.10–2.21, корпус БП/ERP и замер загрузки 8.3.24/8.3.27 (#130).
+# Перегенерировать: python debug/form-dsl-revision/gen_structure_table.py
+FORM_ELEMENT_TAGS = {
+    'AutoCommandBar': '2.10',
+    'Button': '2.10',
+    'ButtonGroup': '2.10',
+    'CalendarField': '2.10',
+    'ChartField': '2.10',
+    'CheckBoxField': '2.10',
+    'ColumnGroup': '2.10',
+    'CommandBar': '2.10',
+    'ContextMenu': '2.10',
+    'DendrogramField': '2.10',
+    'FormattedDocumentField': '2.10',
+    'GanttChartField': '2.10',
+    'GeographicalSchemaField': '2.10',
+    'GraphicalSchemaField': '2.10',
+    'HTMLDocumentField': '2.10',
+    'InputField': '2.10',
+    'LabelDecoration': '2.10',
+    'LabelField': '2.10',
+    'PDFDocumentField': '2.14',
+    'Page': '2.10',
+    'Pages': '2.10',
+    'PeriodField': '2.10',
+    'PictureDecoration': '2.10',
+    'PictureField': '2.10',
+    'PlannerField': '2.10',
+    'Popup': '2.10',
+    'ProgressBarField': '2.10',
+    'RadioButtonField': '2.10',
+    'RowActionsPanel': '2.21',
+    'SearchControlAddition': '2.10',
+    'SearchStringAddition': '2.10',
+    'SelectedItemsActionsPanel': '2.21',
+    'SpreadSheetDocumentField': '2.10',
+    'Table': '2.10',
+    'TextDocumentField': '2.10',
+    'TrackBarField': '2.10',
+    'UsualGroup': '2.10',
+    'ViewStatusAddition': '2.10',
+}
+# Опечатки XSD, которые платформа читает как каноничный тег
+FORM_ELEMENT_TAG_ALIASES = {
+    'LableDecoration': 'LabelDecoration',
+    'LableField': 'LabelField',
+}
+COMPANION_PARENTS = {
+    'ContextMenu': 'CalendarField ChartField CheckBoxField DendrogramField FormattedDocumentField GanttChartField GeographicalSchemaField GraphicalSchemaField HTMLDocumentField InputField LabelDecoration LabelField PDFDocumentField PeriodField PictureDecoration PictureField PlannerField ProgressBarField RadioButtonField SearchControlAddition SearchStringAddition SpreadSheetDocumentField Table TextDocumentField TrackBarField ViewStatusAddition',
+    'AutoCommandBar': 'Table',
+    'SearchStringAddition': 'Table',
+    'SearchControlAddition': 'Table',
+    'ViewStatusAddition': 'PDFDocumentField Table',
+    'RowActionsPanel': 'AutoCommandBar Button ButtonGroup CalendarField ChartField CheckBoxField ColumnGroup CommandBar ContextMenu DendrogramField FormattedDocumentField GanttChartField GeographicalSchemaField GraphicalSchemaField HTMLDocumentField InputField LabelDecoration LabelField PDFDocumentField Page Pages PeriodField PictureDecoration PictureField PlannerField Popup ProgressBarField RadioButtonField RowActionsPanel SearchControlAddition SearchStringAddition SelectedItemsActionsPanel SpreadSheetDocumentField Table TextDocumentField TrackBarField UsualGroup ViewStatusAddition',
+    'SelectedItemsActionsPanel': 'AutoCommandBar Button ButtonGroup CalendarField ChartField CheckBoxField ColumnGroup CommandBar ContextMenu DendrogramField FormattedDocumentField GanttChartField GeographicalSchemaField GraphicalSchemaField HTMLDocumentField InputField LabelDecoration LabelField PDFDocumentField Page Pages PeriodField PictureDecoration PictureField PlannerField Popup ProgressBarField RadioButtonField RowActionsPanel SearchControlAddition SearchStringAddition SelectedItemsActionsPanel SpreadSheetDocumentField Table TextDocumentField TrackBarField UsualGroup ViewStatusAddition',
+}
+CONTAINER_TYPES = 'AutoCommandBar ButtonGroup ColumnGroup CommandBar ContextMenu Page Pages Popup RowActionsPanel SearchControlAddition SelectedItemsActionsPanel Table UsualGroup'
+# Контейнер → допустимые члены его ChildItems
+CHILD_ITEMS_PLACEMENT = {
+    'AutoCommandBar': 'Button ButtonGroup Popup SearchControlAddition SearchStringAddition ViewStatusAddition',
+    'ButtonGroup': 'Button ButtonGroup Popup SearchControlAddition SearchStringAddition ViewStatusAddition',
+    'ColumnGroup': 'CheckBoxField ColumnGroup InputField LabelField PictureField',
+    'CommandBar': 'Button ButtonGroup Popup SearchControlAddition SearchStringAddition ViewStatusAddition',
+    'ContextMenu': 'Button ButtonGroup Popup SearchControlAddition SearchStringAddition ViewStatusAddition',
+    'Form': 'Button CalendarField ChartField CheckBoxField CommandBar DendrogramField FormattedDocumentField GanttChartField GeographicalSchemaField GraphicalSchemaField HTMLDocumentField InputField LabelDecoration LabelField PDFDocumentField Pages PeriodField PictureDecoration PictureField PlannerField ProgressBarField RadioButtonField SearchControlAddition SearchStringAddition SpreadSheetDocumentField Table TextDocumentField TrackBarField UsualGroup ViewStatusAddition',
+    'Page': 'Button CalendarField ChartField CheckBoxField CommandBar DendrogramField FormattedDocumentField GanttChartField GeographicalSchemaField GraphicalSchemaField HTMLDocumentField InputField LabelDecoration LabelField PDFDocumentField Pages PeriodField PictureDecoration PictureField PlannerField ProgressBarField RadioButtonField SearchControlAddition SearchStringAddition SpreadSheetDocumentField Table TextDocumentField TrackBarField UsualGroup ViewStatusAddition',
+    'Pages': 'Page',
+    'Popup': 'Button ButtonGroup Popup SearchControlAddition SearchStringAddition ViewStatusAddition',
+    'SearchControlAddition': 'Button ButtonGroup Popup SearchControlAddition SearchStringAddition ViewStatusAddition',
+    'Table': 'CheckBoxField ColumnGroup InputField LabelField PictureField',
+    'UsualGroup': 'Button CalendarField ChartField CheckBoxField CommandBar DendrogramField FormattedDocumentField GanttChartField GeographicalSchemaField GraphicalSchemaField HTMLDocumentField InputField LabelDecoration LabelField PDFDocumentField Pages PeriodField PictureDecoration PictureField PlannerField ProgressBarField RadioButtonField SearchControlAddition SearchStringAddition SpreadSheetDocumentField Table TextDocumentField TrackBarField UsualGroup ViewStatusAddition',
+}
+ELEMENT_PROPERTY_TAGS = {
+    'AutoCommandBar': 'AppearanceMode Autofill EnableContentChange Enabled Events GroupHorizontalAlign GroupVerticalAlign Height HorizontalAlign HorizontalStretch ReadOnly Shortcut Title TitleFont TitleTextColor ToolTip ToolTipRepresentation UserVisible VerticalStretch Visible Width',
+    'Button': 'AutoMaxHeight AutoMaxWidth BackColor BackPicture BackPictureEffect BorderColor ButtonImportance CardPictureAndTitleAlign Check CommandName CommandUniqueness DataPath DefaultButton DefaultItem Enabled Events Font GroupHorizontalAlign GroupVerticalAlign Height HorizontalStretch LocationInCommandBar MaxHeight MaxWidth MinWidth OnMainServerUnavalableBehavior OnlyInAllActions Parameter Picture PictureHeight PictureLocation PlacementArea Representation RepresentationInContextMenu Shape ShapeRepresentation Shortcut ShowAsCard SkipOnInput TextColor Title TitleHeight ToolTipRepresentation Type UserVisible VerticalStretch Visible Width',
+    'ButtonGroup': 'CommandSource EnableContentChange Enabled Events GroupHorizontalAlign GroupVerticalAlign Height HorizontalStretch PlacementArea ReadOnly Representation Shortcut Title TitleFont TitleTextColor ToolTip ToolTipRepresentation UserVisible VerticalStretch Visible Width',
+    'CalendarField': 'AppearanceInCard AutoCellHeight AutoEditMode AutoMaxHeight AutoMaxWidth AutoWidthInTable BeginOfRepresentationPeriod Border BorderColor CalendarNavigation CellHyperlink CellHyperlinkDisplayVariant CellHyperlinkRepresentation CellMark CommandSet DataPath DefaultItem DisplayImportance EditMode EnableDrag EnableStartDrag Enabled EndOfRepresentationPeriod Events FixInCard FixingInTable Font FooterBackColor FooterDataPath FooterFont FooterHorizontalAlign FooterPicture FooterText FooterTextColor GroupHorizontalAlign GroupVerticalAlign HeaderHorizontalAlign HeaderPicture Height HeightInMonths HorizontalAlign HorizontalStretch MarkRequiredComplete MaxHeight MaxWidth MinWidth OnMainServerUnavalableBehavior ReadOnly SelectionMode Shortcut ShowCurrentDate ShowInCard ShowInFooter ShowInHeader ShowMonthsPanel ShowTitleInCard SkipOnInput Title TitleBackColor TitleFont TitleHeight TitleLocation TitleTextColor ToolTip ToolTipRepresentation UserVisible VerticalAlign VerticalStretch Visible WarningOnEdit WarningOnEditRepresentation Width WidthInCard WidthInMonths',
+    'ChartField': 'AppearanceInCard AutoCellHeight AutoEditMode AutoMaxHeight AutoMaxWidth AutoWidthInTable CellHyperlink CellHyperlinkDisplayVariant CellHyperlinkRepresentation CellMark CommandSet DataPath DefaultItem DisplayImportance EditMode Enabled Events FixInCard FixingInTable FooterBackColor FooterDataPath FooterFont FooterHorizontalAlign FooterPicture FooterText FooterTextColor GroupHorizontalAlign GroupVerticalAlign HeaderHorizontalAlign HeaderPicture Height HorizontalAlign HorizontalStretch MarkRequiredComplete MaxHeight MaxWidth MinWidth OnMainServerUnavalableBehavior ReadOnly Shortcut ShowInCard ShowInFooter ShowInHeader ShowTitleInCard SkipOnInput Title TitleBackColor TitleFont TitleHeight TitleLocation TitleTextColor ToolTip ToolTipRepresentation UserVisible VerticalAlign VerticalStretch Visible WarningOnEdit WarningOnEditRepresentation Width WidthInCard',
+    'CheckBoxField': 'AppearanceInCard AutoCellHeight AutoEditMode AutoWidthInTable BackColor BorderColor CellHyperlink CellHyperlinkDisplayVariant CellHyperlinkRepresentation CellMark CheckBoxType CommandSet DataPath DefaultItem DisplayImportance EditFormat EditMode Enabled EqualItemsWidth Events FixInCard FixingInTable Font FooterBackColor FooterDataPath FooterFont FooterHorizontalAlign FooterPicture FooterText FooterTextColor GroupHorizontalAlign GroupVerticalAlign HeaderHorizontalAlign HeaderPicture HorizontalAlign HorizontalStretch ItemHeight ItemTitleHeight ItemWidth MarkRequiredComplete OnMainServerUnavalableBehavior ReadOnly Shortcut ShowInCard ShowInFooter ShowInHeader ShowTitleInCard SkipOnInput TextColor ThreeState Title TitleBackColor TitleFont TitleHeight TitleLocation TitleTextColor ToolTip ToolTipRepresentation TumblerRepresentation UserVisible VerticalAlign Visible WarningOnEdit WarningOnEditRepresentation WidthInCard',
+    'ColumnGroup': 'EnableContentChange Enabled Events FixInCard FixingInTable Group GroupHorizontalAlign GroupVerticalAlign HeaderDataPath HeaderFormat HeaderHorizontalAlign HeaderPicture Height HorizontalStretch ReadOnly Shortcut ShowInCard ShowInHeader ShowTitle ShowTitleInCard Title TitleBackColor TitleFont TitleTextColor ToolTip ToolTipRepresentation UserVisible VerticalStretch Visible Width',
+    'CommandBar': 'AppearanceMode CommandSource EnableContentChange Enabled Events GroupHorizontalAlign GroupVerticalAlign Height HorizontalLocation HorizontalStretch ReadOnly Shortcut Title TitleFont TitleTextColor ToolTip ToolTipRepresentation UserVisible VerticalStretch Visible Width',
+    'ContextMenu': 'Autofill EnableContentChange Enabled Events GroupHorizontalAlign GroupVerticalAlign Height HorizontalStretch ReadOnly Shortcut Title TitleFont TitleTextColor ToolTip ToolTipRepresentation UserVisible VerticalStretch Visible Width',
+    'DendrogramField': 'AppearanceInCard AutoCellHeight AutoEditMode AutoMaxHeight AutoMaxWidth AutoWidthInTable CellHyperlink CellHyperlinkDisplayVariant CellHyperlinkRepresentation CellMark CommandSet DataPath DefaultItem DisplayImportance EditMode Enabled Events FixInCard FixingInTable FooterBackColor FooterDataPath FooterFont FooterHorizontalAlign FooterPicture FooterText FooterTextColor GroupHorizontalAlign GroupVerticalAlign HeaderHorizontalAlign HeaderPicture Height HorizontalAlign HorizontalStretch MarkRequiredComplete MaxHeight MaxWidth MinWidth OnMainServerUnavalableBehavior ReadOnly Shortcut ShowInCard ShowInFooter ShowInHeader ShowTitleInCard SkipOnInput Title TitleBackColor TitleFont TitleHeight TitleLocation TitleTextColor ToolTip ToolTipRepresentation UserVisible VerticalAlign VerticalStretch Visible WarningOnEdit WarningOnEditRepresentation Width WidthInCard',
+    'FormattedDocumentField': 'AppearanceInCard AutoCellHeight AutoEditMode AutoMaxHeight AutoMaxWidth AutoWidthInTable BackColor BorderColor CellHyperlink CellHyperlinkDisplayVariant CellHyperlinkRepresentation CellMark CommandSet DataPath DefaultItem DisplayImportance EditMode Enabled Events FixInCard FixingInTable Font FooterBackColor FooterDataPath FooterFont FooterHorizontalAlign FooterPicture FooterText FooterTextColor GroupHorizontalAlign GroupVerticalAlign HeaderHorizontalAlign HeaderPicture Height HorizontalAlign HorizontalStretch MarkRequiredComplete MaxHeight MaxWidth MinWidth OnMainServerUnavalableBehavior Output ReadOnly Shortcut ShowInCard ShowInFooter ShowInHeader ShowTitleInCard SkipOnInput TextColor Title TitleBackColor TitleFont TitleHeight TitleLocation TitleTextColor ToolTip ToolTipRepresentation UserVisible VerticalAlign VerticalStretch Visible WarningOnEdit WarningOnEditRepresentation Width WidthInCard',
+    'GanttChartField': 'AppearanceInCard AutoCellHeight AutoEditMode AutoMaxHeight AutoMaxWidth AutoWidthInTable CellHyperlink CellHyperlinkDisplayVariant CellHyperlinkRepresentation CellMark CommandSet DataPath DefaultItem DisplayImportance EditMode Enabled Events FixInCard FixingInTable FooterBackColor FooterDataPath FooterFont FooterHorizontalAlign FooterPicture FooterText FooterTextColor GroupHorizontalAlign GroupVerticalAlign HeaderHorizontalAlign HeaderPicture Height HorizontalAlign HorizontalStretch IntervalsSelectionMode MarkRequiredComplete MaxHeight MaxWidth MinWidth OnMainServerUnavalableBehavior ReadOnly Shortcut ShowHorizontalLinesFlag ShowInCard ShowInFooter ShowInHeader ShowTitleInCard ShowVerticalLinesFlag SkipOnInput Table TableLocation Title TitleBackColor TitleFont TitleHeight TitleLocation TitleTextColor ToolTip ToolTipRepresentation UserVisible ValuesSelectionMode VerticalAlign VerticalStretch Visible WarningOnEdit WarningOnEditRepresentation Width WidthInCard',
+    'GeographicalSchemaField': 'AppearanceInCard AutoCellHeight AutoEditMode AutoMaxHeight AutoMaxWidth AutoWidthInTable BorderColor CellHyperlink CellHyperlinkDisplayVariant CellHyperlinkRepresentation CellMark CommandSet DataPath DefaultItem DisplayImportance EditMode Enabled Events FixInCard FixingInTable FooterBackColor FooterDataPath FooterFont FooterHorizontalAlign FooterPicture FooterText FooterTextColor GroupHorizontalAlign GroupVerticalAlign HeaderHorizontalAlign HeaderPicture Height HorizontalAlign HorizontalStretch MarkRequiredComplete MaxHeight MaxWidth MinWidth OnMainServerUnavalableBehavior Output ReadOnly Shortcut ShowInCard ShowInFooter ShowInHeader ShowTitleInCard SkipOnInput Title TitleBackColor TitleFont TitleHeight TitleLocation TitleTextColor ToolTip ToolTipRepresentation UserVisible VerticalAlign VerticalStretch Visible WarningOnEdit WarningOnEditRepresentation Width WidthInCard',
+    'GraphicalSchemaField': 'AppearanceInCard AutoCellHeight AutoEditMode AutoMaxHeight AutoMaxWidth AutoWidthInTable BorderColor CellHyperlink CellHyperlinkDisplayVariant CellHyperlinkRepresentation CellMark CommandSet DataPath DefaultItem DisplayImportance Edit EditMode Enabled Events FixInCard FixingInTable FooterBackColor FooterDataPath FooterFont FooterHorizontalAlign FooterPicture FooterText FooterTextColor GroupHorizontalAlign GroupVerticalAlign HeaderHorizontalAlign HeaderPicture Height HorizontalAlign HorizontalStretch MarkRequiredComplete MaxHeight MaxWidth MinWidth OnMainServerUnavalableBehavior Output ReadOnly Shortcut ShowInCard ShowInFooter ShowInHeader ShowTitleInCard SkipOnInput Title TitleBackColor TitleFont TitleHeight TitleLocation TitleTextColor ToolTip ToolTipRepresentation UserVisible VerticalAlign VerticalStretch Visible WarningOnEdit WarningOnEditRepresentation Width WidthInCard',
+    'HTMLDocumentField': 'AppearanceInCard AutoCellHeight AutoEditMode AutoMaxHeight AutoMaxWidth AutoWidthInTable Border BorderColor CellHyperlink CellHyperlinkDisplayVariant CellHyperlinkRepresentation CellMark CommandSet DataPath DefaultItem DisplayImportance EditMode Enabled Events FixInCard FixingInTable FooterBackColor FooterDataPath FooterFont FooterHorizontalAlign FooterPicture FooterText FooterTextColor GroupHorizontalAlign GroupVerticalAlign HeaderHorizontalAlign HeaderPicture Height HorizontalAlign HorizontalStretch MarkRequiredComplete MaxHeight MaxWidth MinWidth OnMainServerUnavalableBehavior Output ReadOnly Shortcut ShowInCard ShowInFooter ShowInHeader ShowTitleInCard SkipOnInput Title TitleBackColor TitleFont TitleHeight TitleLocation TitleTextColor ToolTip ToolTipRepresentation UserVisible VerticalAlign VerticalStretch Visible WarningOnEdit WarningOnEditRepresentation Width WidthInCard',
+    'InputField': 'AllowInputEmptyMultipleValues AllowMultipleValuesDuplicates AppearanceInCard AutoCapitalizationOnTextInput AutoCellHeight AutoChoiceIncomplete AutoCorrectionOnTextInput AutoEditMode AutoMarkIncomplete AutoMaxHeight AutoMaxWidth AutoShowClearButtonMode AutoShowOpenButtonMode AutoWidthInTable AutofillHint AvailableTypes BackColor BorderColor CellHyperlink CellHyperlinkDisplayVariant CellHyperlinkRepresentation CellMark ChoiceButton ChoiceButtonPicture ChoiceButtonRepresentation ChoiceButtonTitle ChoiceFoldersAndItems ChoiceForm ChoiceHistoryOnInput ChoiceList ChoiceListButton ChoiceListHeight ChoiceParameterLinks ChoiceParameters ChooseType ClearButton CommandSet CreateButton DataPath DefaultItem DisplayImportance DropListButton DropListHint DropListWidth EditFormat EditMode EditTextUpdate Enabled Events ExtendedEdit ExtendedEditMultipleValues FixInCard FixingInTable Font FooterBackColor FooterDataPath FooterFont FooterHorizontalAlign FooterPicture FooterText FooterTextColor Format GroupHorizontalAlign GroupVerticalAlign HeaderHorizontalAlign HeaderPicture Height HeightControlVariant HorizontalAlign HorizontalStretch IncompleteChoiceMode InputHint ListChoiceMode MarkNegatives MarkRequiredComplete Mask MaxHeight MaxValue MaxWidth MinValue MinWidth MultiLine MultipleValueDataPath MultipleValuePictureDataPath MultipleValuePictureShape MultipleValuePictureSize MultipleValuePresentDataPath MultipleValuesBackColor MultipleValuesFont MultipleValuesHyperlink MultipleValuesPicture MultipleValuesTextColor OnMainServerUnavalableBehavior OnScreenKeyboardReturnKeyText OpenButton PasswordMode Picture QuickChoice ReadOnly Shortcut ShowCheckBoxesInDropList ShowInCard ShowInFooter ShowInHeader ShowTitleInCard SkipOnInput SpecialTextInputMode SpellCheckingOnTextInput SpinButton TextColor TextEdit TextSize TimeChoiceMode Title TitleBackColor TitleFont TitleHeight TitleLocation TitleTextColor ToolTip ToolTipRepresentation TypeDomainEnabled TypeLink UserVisible VerticalAlign VerticalStretch Visible WarningOnEdit WarningOnEditRepresentation Width WidthInCard Wrap',
+    'LabelDecoration': 'AutoMaxHeight AutoMaxWidth BackColor Border BorderColor Enabled Events Font GroupHorizontalAlign GroupVerticalAlign Height HorizontalAlign HorizontalStretch Hyperlink MaxHeight MaxWidth MinWidth OnMainServerUnavalableBehavior Shortcut SkipOnInput TextColor Title TitleHeight ToolTip ToolTipRepresentation UserVisible VerticalAlign VerticalStretch Visible Width',
+    'LabelField': 'AppearanceInCard AutoCellHeight AutoEditMode AutoMaxHeight AutoMaxWidth AutoWidthInTable BackColor Border BorderColor CellHyperlink CellHyperlinkDisplayVariant CellHyperlinkRepresentation CellMark CommandSet DataPath DefaultItem DisplayImportance EditMode Enabled Events FixInCard FixingInTable Font FooterBackColor FooterDataPath FooterFont FooterHorizontalAlign FooterPicture FooterText FooterTextColor Format GroupHorizontalAlign GroupVerticalAlign HeaderHorizontalAlign HeaderPicture Height Hiperlink HorizontalAlign HorizontalStretch MarkNegatives MarkRequiredComplete MaxHeight MaxWidth MinWidth OnMainServerUnavalableBehavior PasswordMode ReadOnly Shortcut ShowInCard ShowInFooter ShowInHeader ShowTitleInCard SkipOnInput TextColor Title TitleBackColor TitleFont TitleHeight TitleLocation TitleTextColor ToolTip ToolTipRepresentation UseCopy UserVisible VerticalAlign VerticalStretch Visible WarningOnEdit WarningOnEditRepresentation Width WidthInCard',
+    'PDFDocumentField': 'AppearanceInCard AutoCellHeight AutoEditMode AutoMaxHeight AutoMaxWidth AutoWidthInTable BorderColor CellHyperlink CellHyperlinkDisplayVariant CellHyperlinkRepresentation CellMark CommandSet CurrentPageNumber DataPath DefaultItem DisplayImportance EditMode Enabled Events FixInCard FixingInTable FooterBackColor FooterDataPath FooterFont FooterHorizontalAlign FooterPicture FooterText FooterTextColor GroupHorizontalAlign GroupVerticalAlign HeaderHorizontalAlign HeaderPicture Height HorizontalAlign HorizontalStretch MarkRequiredComplete MaxHeight MaxWidth MinWidth OnMainServerUnavalableBehavior Orientation Output ReadOnly Scale Shortcut ShowInCard ShowInFooter ShowInHeader ShowTitleInCard SkipOnInput Title TitleBackColor TitleFont TitleHeight TitleLocation TitleTextColor ToolTip ToolTipRepresentation UserVisible VerticalAlign VerticalStretch ViewStatusLocation Visible WarningOnEdit WarningOnEditRepresentation Width WidthInCard',
+    'Page': 'BackColor ChildItemsTitleLocation ChildItemsWidth ChildrenAlign EnableContentChange Enabled Events Format Group GroupHorizontalAlign GroupVerticalAlign Height HorizontalAlign HorizontalSpacing HorizontalStretch Picture ReadOnly ScrollOnCompress Shortcut ShowTitle Title TitleDataPath TitleFont TitleTextColor ToolTip ToolTipRepresentation UserVisible VerticalAlign VerticalSpacing VerticalStretch Visible Width',
+    'Pages': 'AssociatedTableElementId CurrentRowUse EnableContentChange Enabled Events GroupHorizontalAlign GroupVerticalAlign Height HorizontalStretch PagesRepresentation ReadOnly Shortcut Title TitleFont TitleTextColor ToolTip ToolTipRepresentation UserVisible VerticalStretch Visible Width',
+    'PeriodField': 'AppearanceInCard AutoCellHeight AutoEditMode AutoMaxHeight AutoMaxWidth AutoWidthInTable Border BorderColor CellHyperlink CellHyperlinkDisplayVariant CellHyperlinkRepresentation CellMark CommandSet DataPath DefaultItem DisplayImportance EditMode Enabled Events FixInCard FixingInTable Font FooterBackColor FooterDataPath FooterFont FooterHorizontalAlign FooterPicture FooterText FooterTextColor GroupHorizontalAlign GroupVerticalAlign HeaderHorizontalAlign HeaderPicture Height HorizontalAlign HorizontalStretch MarkRequiredComplete MaxHeight MaxWidth MinWidth OnMainServerUnavalableBehavior ReadOnly Shortcut ShowInCard ShowInFooter ShowInHeader ShowTitleInCard SkipOnInput Title TitleBackColor TitleFont TitleHeight TitleLocation TitleTextColor ToolTip ToolTipRepresentation UserVisible VerticalAlign VerticalStretch Visible WarningOnEdit WarningOnEditRepresentation Width WidthInCard',
+    'PictureDecoration': 'AutoMaxHeight AutoMaxWidth BackgroundShowMode Border BorderColor EnableDrag EnableStartDrag Enabled Events FileDragMode Font GroupHorizontalAlign GroupVerticalAlign Height HorizontalStretch Hyperlink ImageScale MaxHeight MaxWidth MinWidth NonselectedPictureText OnMainServerUnavalableBehavior Picture PictureColor PictureSize Shortcut SkipOnInput TextColor Title ToolTip ToolTipRepresentation UserVisible VerticalStretch Visible Width Zoomable',
+    'PictureField': 'AppearanceInCard AutoCellHeight AutoEditMode AutoMaxHeight AutoMaxWidth AutoWidthInTable BackgroundShowMode Border BorderColor CellHyperlink CellHyperlinkDisplayVariant CellHyperlinkRepresentation CellMark CommandSet DataPath DefaultItem DisplayImportance EditMode EnableDrag EnableStartDrag Enabled Events FileDragMode FixInCard FixingInTable Font FooterBackColor FooterDataPath FooterFont FooterHorizontalAlign FooterPicture FooterText FooterTextColor GroupHorizontalAlign GroupVerticalAlign HeaderHorizontalAlign HeaderPicture Height HorizontalAlign HorizontalStretch Hyperlink ImageScale MarkRequiredComplete MaxHeight MaxWidth MinWidth NonselectedPictureText OnMainServerUnavalableBehavior PictureColor PictureSize ReadOnly Shortcut ShowInCard ShowInFooter ShowInHeader ShowTitleInCard SkipOnInput TextColor Title TitleBackColor TitleFont TitleHeight TitleLocation TitleTextColor ToolTip ToolTipRepresentation UserVisible ValuesPicture VerticalAlign VerticalStretch Visible WarningOnEdit WarningOnEditRepresentation Width WidthInCard Zoomable',
+    'PlannerField': 'AppearanceInCard AutoCellHeight AutoEditMode AutoMaxHeight AutoMaxWidth AutoWidthInTable CellHyperlink CellHyperlinkDisplayVariant CellHyperlinkRepresentation CellMark CommandSet DataPath DefaultItem DimensionItemHyperlink DisplayImportance EditMode EnableDrag EnableStartDrag Enabled Events FixInCard FixingInTable FooterBackColor FooterDataPath FooterFont FooterHorizontalAlign FooterPicture FooterText FooterTextColor GroupHorizontalAlign GroupVerticalAlign HeaderHorizontalAlign HeaderPicture Height HorizontalAlign HorizontalStretch MarkRequiredComplete MaxHeight MaxWidth MinWidth OnMainServerUnavalableBehavior ReadOnly Shortcut ShowInCard ShowInFooter ShowInHeader ShowTitleInCard SkipOnInput TimeScaleItemHyperlink Title TitleBackColor TitleFont TitleHeight TitleLocation TitleTextColor ToolTip ToolTipRepresentation UserVisible VerticalAlign VerticalStretch Visible WarningOnEdit WarningOnEditRepresentation Width WidthInCard WrappedTimeScaleHeaderHyperlink',
+    'Popup': 'BackColor BorderColor CommandSource EnableContentChange Enabled Events GroupHorizontalAlign GroupVerticalAlign Height HorizontalStretch Importance Picture PlacementArea ReadOnly Representation Shape ShapeRepresentation Shortcut Title TitleFont TitleTextColor ToolTip ToolTipRepresentation UserVisible VerticalStretch Visible Width',
+    'ProgressBarField': 'AppearanceInCard AutoCellHeight AutoEditMode AutoMaxHeight AutoMaxWidth AutoWidthInTable BorderColor CellHyperlink CellHyperlinkDisplayVariant CellHyperlinkRepresentation CellMark CommandSet DataPath DefaultItem DisplayImportance EditMode Enabled Events FixInCard FixingInTable FooterBackColor FooterDataPath FooterFont FooterHorizontalAlign FooterPicture FooterText FooterTextColor GroupHorizontalAlign GroupVerticalAlign HeaderHorizontalAlign HeaderPicture Height HorizontalAlign HorizontalStretch MarkRequiredComplete MaxHeight MaxValue MaxWidth MinValue MinWidth OnMainServerUnavalableBehavior Orientation ReadOnly Representation Shortcut ShowInCard ShowInFooter ShowInHeader ShowPercent ShowTitleInCard SkipOnInput Title TitleBackColor TitleFont TitleHeight TitleLocation TitleTextColor ToolTip ToolTipRepresentation UserVisible VerticalAlign VerticalStretch Visible WarningOnEdit WarningOnEditRepresentation Width WidthInCard',
+    'RadioButtonField': 'AppearanceInCard AutoCellHeight AutoEditMode AutoWidthInTable BackColor BorderColor CellHyperlink CellHyperlinkDisplayVariant CellHyperlinkRepresentation CellMark ChoiceList ColumnsCount CommandSet DataPath DefaultItem DisplayImportance EditMode Enabled EqualColumnsWidth Events FixInCard FixingInTable Font FooterBackColor FooterDataPath FooterFont FooterHorizontalAlign FooterPicture FooterText FooterTextColor GroupHorizontalAlign GroupVerticalAlign HeaderHorizontalAlign HeaderPicture HorizontalAlign HorizontalStretch ItemHeight ItemTitleHeight ItemWidth MarkRequiredComplete OnMainServerUnavalableBehavior Orientation RadioButtonType ReadOnly Shortcut ShowInCard ShowInFooter ShowInHeader ShowTitleInCard SkipOnInput TextColor Title TitleBackColor TitleFont TitleHeight TitleLocation TitleTextColor ToolTip ToolTipRepresentation TumblerRepresentation UserVisible VerticalAlign Visible WarningOnEdit WarningOnEditRepresentation WidthInCard',
+    'RowActionsPanel': 'AppearanceMode EnableContentChange Enabled Events FillStdCommands GroupHorizontalAlign GroupVerticalAlign HAlign Height HorizontalStretch ReadOnly Shortcut Title TitleFont TitleTextColor ToolTip ToolTipRepresentation UserVisible VerticalStretch Visible Width',
+    'SearchControlAddition': 'AdditionSource AutoMaxWidth BackColor BorderColor Enabled Events Font GroupHorizontalAlign GroupVerticalAlign HorizontalStretch MaxWidth MinWidth PlacementArea Source TextColor Title ToolTip ToolTipRepresentation UserVisible Visible Width',
+    'SearchStringAddition': 'AdditionSource AutoMaxWidth BackColor BorderColor Enabled Events Font GroupHorizontalAlign GroupVerticalAlign HorizontalStretch MaxWidth MinWidth PlacementArea Source TextColor Title ToolTip ToolTipRepresentation UserVisible Visible Width',
+    'SelectedItemsActionsPanel': 'AppearanceMode EnableContentChange Enabled Events FillStdCommands GroupHorizontalAlign GroupVerticalAlign HAlign Height HorizontalStretch ReadOnly Shortcut Title TitleFont TitleTextColor ToolTip ToolTipRepresentation UserVisible VerticalStretch Visible Width',
+    'SpreadSheetDocumentField': 'AppearanceInCard AutoCellHeight AutoEditMode AutoMaxHeight AutoMaxWidth AutoWidthInTable BlackAndWhiteView BorderColor CellActionsButtonViewMode CellHyperlink CellHyperlinkDisplayVariant CellHyperlinkRepresentation CellMark CommandSet DataPath DefaultItem DisplayImportance DrawingSelectionShowMode Edit EditMode EnableDrag EnableStartDrag Enabled Events FixInCard FixingInTable FooterBackColor FooterDataPath FooterFont FooterHorizontalAlign FooterPicture FooterText FooterTextColor GroupHorizontalAlign GroupVerticalAlign HeaderHorizontalAlign HeaderPicture Height HorizontalAlign HorizontalScrollBar HorizontalStretch MarkRequiredComplete MaxHeight MaxWidth MinWidth OnMainServerUnavalableBehavior Output PointerType Protection ReadOnly SelectionShowMode Shortcut ShowCellNames ShowGrid ShowGroups ShowHeaders ShowInCard ShowInFooter ShowInHeader ShowRowAndColumnNames ShowTitleInCard SkipOnInput SpreadsheetDocumentMultipleSelectionPanelViewMode Title TitleBackColor TitleFont TitleHeight TitleLocation TitleTextColor ToolTip ToolTipRepresentation UserVisible VerticalAlign VerticalScrollBar VerticalStretch ViewScalingMode Visible WarningOnEdit WarningOnEditRepresentation Width WidthInCard',
+    'Table': 'AllowGettingCurrentRowURL AllowRootChoice AutoAddIncomplete AutoInsertNewRow AutoMarkIncomplete AutoMaxCardHeight AutoMaxHeight AutoMaxRowsCount AutoMaxWidth AutoRefresh AutoRefreshPeriod Autofill BackColor BehaviorOnHorizontalCompression BorderColor CardBehaviorOnVerticalCompression CellHyperlinksRepresentation ChangeRowOrder ChangeRowSet ChoiceFoldersAndItems ChoiceMode CommandBarLocation CommandSet ComplexSettingsViewMode CurrentRowUse DataPath DefaultItem EnableDrag EnableStartDrag Enabled Events FileDragMode FixedLeft FixedRight Font Footer FooterHeight GroupHorizontalAlign GroupVerticalAlign Header HeaderHeight Height HeightControlVariant HeightInTableRows HierarchyPanelLocation HorizontalLines HorizontalLinesBWA HorizontalScrollBar HorizontalStretch IconSaveColorsKey InitialListView InitialRowActivation InitialTreeView MarkRequiredComplete MaxCardHeight MaxHeight MaxRowsCount MaxWidth MinWidth MobileDeviceTableType MultipleChoice OnMainServerUnavalableBehavior Output Period ReadOnly RefreshRequest Representation RestoreCurrentRow RowActionsShowType RowFilter RowInputMode RowPictureDataPath RowSelectionMode RowsPicture SaveColors SearchControlLocation SearchOnInput SearchStringLocation SelectionMode SettingsNamedItemDetailedRepresentation ShapeSaveColorsKey Shortcut ShowCommandBar ShowRoot SkipOnInput TextColor Title TitleFont TitleHeight TitleLocation TitleTextColor ToolTip ToolTipRepresentation TopLevelParent TreeSpecialSearch UpdateOnDataChange UseAlternationRowColor UseAlternationRowColorBWA UserSettingsGroup UserVisible VerticalLines VerticalLinesBWA VerticalScrollBar VerticalStretch ViewMode ViewStatusLocation Visible Width',
+    'TextDocumentField': 'AppearanceInCard AutoCellHeight AutoEditMode AutoMaxHeight AutoMaxWidth AutoWidthInTable BackColor BorderColor CellHyperlink CellHyperlinkDisplayVariant CellHyperlinkRepresentation CellMark CommandSet DataPath DefaultItem DisplayImportance EditMode Enabled Events FixInCard FixingInTable Font FooterBackColor FooterDataPath FooterFont FooterHorizontalAlign FooterPicture FooterText FooterTextColor GroupHorizontalAlign GroupVerticalAlign HeaderHorizontalAlign HeaderPicture Height HorizontalAlign HorizontalStretch MarkRequiredComplete MaxHeight MaxWidth MinWidth OnMainServerUnavalableBehavior Output ReadOnly Shortcut ShowInCard ShowInFooter ShowInHeader ShowTitleInCard SkipOnInput TextColor Title TitleBackColor TitleFont TitleHeight TitleLocation TitleTextColor ToolTip ToolTipRepresentation UserVisible VerticalAlign VerticalStretch Visible WarningOnEdit WarningOnEditRepresentation Width WidthInCard',
+    'TrackBarField': 'AppearanceInCard AutoCellHeight AutoEditMode AutoMaxHeight AutoMaxWidth AutoWidthInTable BorderColor CellHyperlink CellHyperlinkDisplayVariant CellHyperlinkRepresentation CellMark CommandSet DataPath DefaultItem DisplayImportance EditMode Enabled Events FixInCard FixingInTable FooterBackColor FooterDataPath FooterFont FooterHorizontalAlign FooterPicture FooterText FooterTextColor GroupHorizontalAlign GroupVerticalAlign HeaderHorizontalAlign HeaderPicture Height HorizontalAlign HorizontalStretch LargeStep MarkRequiredComplete MarkingAppearance MarkingStep MaxHeight MaxValue MaxWidth MinValue MinWidth OnMainServerUnavalableBehavior Orientation ReadOnly Shortcut ShowInCard ShowInFooter ShowInHeader ShowTitleInCard SkipOnInput Step Title TitleBackColor TitleFont TitleHeight TitleLocation TitleTextColor ToolTip ToolTipRepresentation UserVisible VerticalAlign VerticalStretch Visible WarningOnEdit WarningOnEditRepresentation Width WidthInCard',
+    'UsualGroup': 'AssociatedTableElementId BackColor BackPicture BackPictureEffect Behavior CardRepresentationType ChildItemsTitleLocation ChildItemsWidth ChildrenAlign Collapsed CollapsedRepresentationItem CollapsedRepresentationTitle ControlRepresentation CurrentRowUse EnableContentChange Enabled Events Format Group GroupHorizontalAlign GroupVerticalAlign Height HiddenStateTitleBackColor HorizontalAlign HorizontalSpacing HorizontalStretch Hyperlink ReadOnly Representation ScrollOnCompress Shortcut ShowAsCard ShowLeftMargin ShowTitle ThroughAlign Title TitleDataPath TitleFont TitleTextColor ToolTip ToolTipRepresentation United UserVisible VerticalAlign VerticalSpacing VerticalStretch Visible Width',
+    'ViewStatusAddition': 'AdditionSource AutoMaxWidth BackColor Border BorderColor ButtonColor Enabled Events Font GroupHorizontalAlign GroupVerticalAlign HorizontalLocation HorizontalStretch MaxWidth MinWidth PlacementArea Source TextColor Title TitleFont TitleTextColor ToolTip ToolTipRepresentation UserVisible Visible Width',
+}
+# --- /Структура элементов формы ---
+
+
+# Сканер BSL: строковые литералы (с "" и многострочными продолжениями «|») и комментарии // отделяются
+# от кода, номера строк сохраняются. Lines — строки текста; Code — они же без комментариев, литерал
+# заменён на ""; Literals — {Line, Text, Prefix — код этой строки слева от литерала}.
+def get_bsl_scan(text):
+    lines = text.replace("\r", "").split("\n")
+    code = []
+    mask = []
+    lits = []
+    in_str = False
+    cur = None
+    cur_line = 0
+    cur_prefix = ""
+    cur_col = -1
+    for i, line in enumerate(lines):
+        # строка без кавычек вне литерала — только отрезать комментарий
+        if not in_str and '"' not in line:
+            k = line.find('//')
+            code.append(line[:k] if k >= 0 else line)
+            mask.append(line[:k] + ' ' * (len(line) - k) if k >= 0 else line)
+            continue
+        sb = []
+        mk = list(line)
+        j = 0
+        if in_str:
+            # продолжение многострочного литерала: пробелы, затем «|»
+            while j < len(line) and line[j] in (' ', '\t'):
+                j += 1
+            # строка «//…» между строками литерала — комментарий, литерал продолжается на следующей
+            if line.startswith('//', j):
+                code.append("")
+                mask.append(' ' * len(line))
+                continue
+            if j < len(line) and line[j] == '|':
+                mk[j] = ' '
+                j += 1
+            cur += "\n"
+            cur_col = -1
+        while j < len(line):
+            c = line[j]
+            if in_str:
+                if c == '"':
+                    if j + 1 < len(line) and line[j + 1] == '"':
+                        cur += '"'
+                        mk[j] = ' '
+                        mk[j + 1] = ' '
+                        j += 2
+                        continue
+                    in_str = False
+                    lits.append({"Line": cur_line, "Text": cur, "Prefix": cur_prefix, "Col": cur_col})
+                    sb.append('""')
+                    j += 1
+                    continue
+                cur += c
+                mk[j] = ' '
+                j += 1
+                continue
+            if c == '/' and j + 1 < len(line) and line[j + 1] == '/':
+                for q in range(j, len(mk)):
+                    mk[q] = ' '
+                break
+            if c == '"':
+                in_str = True
+                cur = ""
+                cur_line = i + 1
+                cur_prefix = "".join(sb)
+                cur_col = j + 1
+                j += 1
+                continue
+            sb.append(c)
+            j += 1
+        code.append("".join(sb))
+        mask.append("".join(mk))
+    return {"Lines": lines, "Code": code, "Mask": mask, "Literals": lits}
+
+# Процедуры и функции модуля (имя, первая и последняя строка; первая — с аннотациями над заголовком)
+# и области (имя, строки #Область и #КонецОбласти, вложенность). Строки нумеруются с 1.
+# Заголовок — только в начале строки: продолжение литерала («|…») и комментарий заголовком не станут.
+def get_module_outline(lines):
+    procs, regions, opened = [], [], []
+    cur = None
+    for i, l in enumerate(lines):
+        if cur is not None:
+            # \u043a\u043e\u043d\u0435\u0446 \u043f\u0440\u043e\u0446\u0435\u0434\u0443\u0440\u044b \u2014 \u0432 \u043d\u0430\u0447\u0430\u043b\u0435 \u0441\u0442\u0440\u043e\u043a\u0438 \u0438\u043b\u0438 \u043f\u043e\u0441\u043b\u0435 \u00ab;\u00bb (`\u0412\u043e\u0437\u0432\u0440\u0430\u0442 \u0425;\u041a\u043e\u043d\u0435\u0446\u0424\u0443\u043d\u043a\u0446\u0438\u0438`)
+            if re.search(r'(^|;)\s*(\u041a\u043e\u043d\u0435\u0446\u041f\u0440\u043e\u0446\u0435\u0434\u0443\u0440\u044b|\u041a\u043e\u043d\u0435\u0446\u0424\u0443\u043d\u043a\u0446\u0438\u0438|EndProcedure|EndFunction)(?!\w)', l, re.I):
+                cur['end'] = i + 1
+                procs.append(cur)
+                cur = None
+            continue
+        m = re.match(r'^\s*(?:(?:\u0410\u0441\u0438\u043d\u0445|Async)\s+)?(?:\u041f\u0440\u043e\u0446\u0435\u0434\u0443\u0440\u0430|\u0424\u0443\u043d\u043a\u0446\u0438\u044f|Procedure|Function)\s+(\w+)\s*\(', l, re.I)
+        if m:
+            s = i
+            while s > 0 and re.match(r'^\s*&', lines[s - 1]):
+                s -= 1
+            cur = {'name': m.group(1), 'start': s + 1, 'end': i + 1}
+            continue
+        m = re.match(r'^\s*#(?:\u041e\u0431\u043b\u0430\u0441\u0442\u044c|Region)\s+(\S+)', l, re.I)
+        if m:
+            opened.append({'name': m.group(1), 'start': i + 1, 'end': 0, 'depth': len(opened)})
+            continue
+        if re.match(r'^\s*#(\u041a\u043e\u043d\u0435\u0446\u041e\u0431\u043b\u0430\u0441\u0442\u0438|EndRegion)(?!\w)', l, re.I) and opened:
+            r = opened.pop()
+            r['end'] = i + 1
+            regions.append(r)
+    return {'procs': procs, 'regions': regions}
+
+
+# Текст модуля формы; None — модуль не в UTF-8 (с заменой символов имена процедур не найти — лучше сказать прямо)
+# Объявления Перем по операторам (в строке их может быть несколько, оператор — на несколько строк):
+# имя и строка, где оно стоит
+def get_var_declarations(mask):
+    text = '\n'.join(mask)
+    starts = []
+    acc = 0
+    for l in mask:
+        starts.append(acc)
+        acc += len(l) + 1
+    out = []
+    for m in re.finditer(r'(?:^|;)\s*(?:&[^\s;]+\s+)*(?:Перем|Var)\s+([^;]*)', text, re.I | re.M):
+        off = m.start(1)
+        for part in m.group(1).split(','):
+            nm = re.sub(r'\s+(Экспорт|Export)\s*$', '', part, flags=re.I).strip()
+            if nm:
+                pos = off + part.index(nm)
+                out.append({'Name': nm, 'Line': bisect.bisect_right(starts, pos)})
+            off += len(part) + 1
+    return out
+
+
+# Реквизиты формы по имени (регистронезависимо — как имена в 1С). В форме расширения — и реквизиты
+# исходной формы (<BaseForm>): их видит модуль и на них ссылаются пути. Своя копия заимствованного
+# реквизита побеждает — в ней изменения расширения (добавленные колонки).
+def get_form_attribute_map(root):
+    m = {}
+    for a in root.findall(f"{{{F_NS}}}Attributes/{{{F_NS}}}Attribute") + root.findall(f"{{{F_NS}}}BaseForm/{{{F_NS}}}Attributes/{{{F_NS}}}Attribute"):
+        m.setdefault((a.get('name') or '').lower(), a)
+    return m
+
+
+def read_module_text(path):
+    try:
+        with open(path, encoding='utf-8-sig', newline='') as fh:
+            return fh.read()
+    except UnicodeDecodeError:
+        return None
 
 
 def main():
@@ -1254,13 +1518,35 @@ def main():
     if not stopped:
         path_errors = 0
         path_checked = 0
-        path_base_skipped = 0
+        # \u041f\u0443\u0442\u0438, \u043e \u043a\u043e\u0442\u043e\u0440\u044b\u0445 \u0443\u0436\u0435 \u0441\u043a\u0430\u0437\u0430\u043d\u043e \u043f\u043e\u044d\u043b\u0435\u043c\u0435\u043d\u0442\u043d\u043e, — \u043f\u0440\u043e\u0445\u043e\u0434 \u043f\u043e \u043f\u0440\u043e\u0447\u0438\u043c \u043f\u0440\u0438\u0432\u044f\u0437\u043a\u0430\u043c \u043d\u0438\u0436\u0435 \u0438\u0445 \u043d\u0435 \u043f\u043e\u0432\u0442\u043e\u0440\u044f\u0435\u0442
+        reported_paths = set()
+        # \u0418\u043c\u0435\u043d\u0430 \u0440\u0435\u043a\u0432\u0438\u0437\u0438\u0442\u043e\u0432 — \u0431\u0435\u0437 \u0443\u0447\u0451\u0442\u0430 \u0440\u0435\u0433\u0438\u0441\u0442\u0440\u0430, \u043a\u0430\u043a \u0443 \u043f\u043b\u0430\u0442\u0444\u043e\u0440\u043c\u044b
+        attr_upper = {n.upper() for n in attr_map}
 
         # All data-binding tags whose value is an attribute path (root must exist in <Attributes>).
         binding_tags = ["DataPath", "TitleDataPath", "FooterDataPath", "HeaderDataPath",
                         "MultipleValueDataPath", "MultipleValuePresentDataPath", "RowPictureDataPath", "MultipleValuePictureDataPath"]
 
         skip_tags = {"ContextMenu", "ExtendedTooltip", "AutoCommandBar", "SearchStringAddition", "ViewStatusAddition", "SearchControlAddition"}
+
+        # \u0417\u0430\u0438\u043c\u0441\u0442\u0432\u043e\u0432\u0430\u043d\u043d\u0430\u044f \u0444\u043e\u0440\u043c\u0430 \u0431\u0435\u0437 \u043e\u0441\u043d\u043e\u0432\u043d\u043e\u0433\u043e \u0440\u0435\u043a\u0432\u0438\u0437\u0438\u0442\u0430: \u043f\u0443\u0442\u044c \u041e\u0431\u044a\u0435\u043a\u0442.* \u043d\u0430 \u043d\u0435\u0439 — \u0440\u043e\u0432\u043d\u043e \u044d\u0442\u043e\u0442 \u0441\u043b\u0443\u0447\u0430\u0439. \u041f\u043e\u0434\u0441\u043a\u0430\u0437\u043a\u0430 —
+        # \u0442\u043e\u043b\u044c\u043a\u043e \u043a \u043a\u043e\u0440\u043d\u044e, \u043a\u043e\u0442\u043e\u0440\u044b\u0439 \u0438 \u0431\u044b\u043b \u0431\u044b \u043e\u0441\u043d\u043e\u0432\u043d\u044b\u043c \u0440\u0435\u043a\u0432\u0438\u0437\u0438\u0442\u043e\u043c: \u0438\u043c\u044f \u0438\u0437 <BaseForm>, \u0430 \u043d\u0435\u0442 \u0435\u0433\u043e \u0442\u0430\u043c — \u043e\u0431\u044b\u0447\u043d\u044b\u0435
+        # \u0438\u043c\u0435\u043d\u0430 \u043e\u0441\u043d\u043e\u0432\u043d\u043e\u0433\u043e \u0440\u0435\u043a\u0432\u0438\u0437\u0438\u0442\u0430. \u041e\u043f\u0435\u0447\u0430\u0442\u043a\u0435 \u0432 \u043a\u043e\u0440\u043d\u0435 \u0438\u043b\u0438 \u0447\u0443\u0436\u043e\u043c\u0443 \u0440\u0435\u043a\u0432\u0438\u0437\u0438\u0442\u0443 \u043e\u043d\u0430 \u043d\u0435 \u043d\u0443\u0436\u043d\u0430.
+        main_root_names = set()
+        if has_base_form:
+            main_root_names = {'\u041e\u0411\u042a\u0415\u041a\u0422', '\u0421\u041f\u0418\u0421\u041e\u041a', '\u0417\u0410\u041f\u0418\u0421\u042c', '\u041e\u0422\u0427\u0415\u0422', '\u041d\u0410\u0411\u041e\u0420\u0417\u0410\u041f\u0418\u0421\u0415\u0419', '\u041d\u0410\u0411\u041e\u0420\u041a\u041e\u041d\u0421\u0422\u0410\u041d\u0422',
+                               'OBJECT', 'LIST', 'RECORD', 'REPORT', 'RECORDSET', 'CONSTANTSSET'}
+            main_base = root.find(f"{{{F_NS}}}BaseForm/{{{F_NS}}}Attributes/{{{F_NS}}}Attribute[{{{F_NS}}}MainAttribute='true']")
+            if main_base is not None and main_base.get("name"):
+                main_root_names = {main_base.get("name").upper()}
+            for attr in attr_nodes:
+                ma_node = attr.find(f"{{{F_NS}}}MainAttribute")
+                if ma_node is not None and (ma_node.text or "").strip() == "true":
+                    main_root_names = set()
+                    break
+
+        def no_main_hint(r):
+            return " (the borrowed form declares no MainAttribute)" if r.upper() in main_root_names else ""
 
         for el in all_elements:
             if stopped:
@@ -1272,14 +1558,8 @@ def main():
             if tag in skip_tags:
                 continue
 
-            if has_base_form and el["Id"]:
-                try:
-                    if int(el["Id"]) < 1000000:
-                        path_base_skipped += 1
-                        continue
-                except (ValueError, TypeError):
-                    pass
-
+            # \u0411\u0430\u0437\u043e\u0432\u044b\u0435 \u044d\u043b\u0435\u043c\u0435\u043d\u0442\u044b \u0437\u0430\u0438\u043c\u0441\u0442\u0432\u043e\u0432\u0430\u043d\u043d\u043e\u0439 \u0444\u043e\u0440\u043c\u044b (id < 1000000) \u043f\u0440\u043e\u0432\u0435\u0440\u044f\u044e\u0442\u0441\u044f \u0442\u0430\u043a \u0436\u0435: \u0432\u0438\u0441\u044f\u0447\u0443\u044e \u043f\u0440\u0438\u0432\u044f\u0437\u043a\u0443
+            # \u043f\u043b\u0430\u0442\u0444\u043e\u0440\u043c\u0430 \u043e\u0442\u0432\u0435\u0440\u0433\u0430\u0435\u0442 \u0438 \u043d\u0430 \u043d\u0438\u0445 — «\u041d\u0435\u0432\u0435\u0440\u043d\u044b\u0439 \u043f\u0443\u0442\u044c \u043a \u0434\u0430\u043d\u043d\u044b\u043c».
             for b_tag in binding_tags:
                 if stopped:
                     break
@@ -1291,10 +1571,9 @@ def main():
                 if not data_path:
                     continue
 
-                # Opaque platform-internal shapes — not validatable from Form.xml alone:
-                #   - bare numeric (e.g. "10", "1000003") — internal index
-                #   - "N/M:<uuid>" — metadata reference by UUID
-                if re.match(r'^\d+$', data_path) or re.match(r'^\d+/\d+:[0-9a-fA-F-]+$', data_path):
+                # \u0421\u0441\u044b\u043b\u043a\u0438, \u043a\u043e\u0442\u043e\u0440\u044b\u0435 \u041a\u043e\u043d\u0444\u0438\u0433\u0443\u0440\u0430\u0442\u043e\u0440 \u043f\u0438\u0448\u0435\u0442 \u043d\u043e\u043c\u0435\u0440\u0430\u043c\u0438, \u043f\u043e Form.xml \u043d\u0435 \u0440\u0430\u0437\u0440\u0435\u0448\u0438\u0442\u044c: «10», «1/0:<uuid>»,
+                # «306:<uuid>/8:<uuid>», «1/-5». \u0418\u043c\u044f \u0440\u0435\u043a\u0432\u0438\u0437\u0438\u0442\u0430 \u0441 \u0446\u0438\u0444\u0440\u044b \u043d\u0435 \u043d\u0430\u0447\u0438\u043d\u0430\u0435\u0442\u0441\u044f.
+                if data_path[0].isdigit():
                     continue
 
                 path_checked += 1
@@ -1312,12 +1591,12 @@ def main():
                 # НастройкаПравилОбработкиЗаявокСотрудников в БП и ERP).
                 items_hops = 0
                 items_broken = False
-                while root_attr == 'Items':
+                while root_attr.upper() == 'ITEMS':
                     items_hops += 1
                     if items_hops > 10:          # страховка от кольца ссылок
                         items_broken = True
                         break
-                    if len(segments) < 3 or segments[2] != 'CurrentData':
+                    if len(segments) < 3 or segments[2].upper() != 'CURRENTDATA':
                         report_warn(f"[{tag}] '{el_name}': {b_tag}='{data_path}' — unknown Items.* shape, expected Items.<Table>.CurrentData.*")
                         items_broken = True
                         break
@@ -1344,18 +1623,37 @@ def main():
                 if items_broken:
                     continue
 
-                if root_attr not in attr_map:
-                    report_error(f"[{tag}] '{el_name}': {b_tag}='{data_path}' — attribute '{root_attr}' not found")
+                if root_attr.upper() not in attr_upper:
+                    report_error(f"[{tag}] '{el_name}': {b_tag}='{data_path}' — attribute '{root_attr}' not found{no_main_hint(root_attr)}")
                     path_errors += 1
+                    reported_paths.add(data_path.upper())
 
-        path_msg = ""
-        if path_checked > 0:
-            path_msg = f"{path_checked} paths checked"
-        if path_base_skipped > 0:
-            skip_note = f"{path_base_skipped} base skipped"
-            path_msg = f"{path_msg}, {skip_note}" if path_msg else skip_note
-        if path_errors == 0 and path_msg:
-            report_ok(f"Data bindings: {path_msg}")
+        # \u041f\u0440\u043e\u0447\u0438\u0435 \u043f\u0440\u0438\u0432\u044f\u0437\u043a\u0438 — <xr:DataPath> \u0432 <ChoiceParameterLinks>/<TypeLink> \u0438 \u043b\u044e\u0431\u043e\u0439 *DataPath \u0432\u043d\u0435 \u0442\u0435\u0433\u043e\u0432
+        # \u0432\u044b\u0448\u0435: \u043a\u043e\u0440\u0435\u043d\u044c \u0442\u043e\u0436\u0435 \u0434\u043e\u043b\u0436\u0435\u043d \u0431\u044b\u0442\u044c \u0440\u0435\u043a\u0432\u0438\u0437\u0438\u0442\u043e\u043c \u0444\u043e\u0440\u043c\u044b. \u0422\u043e\u043b\u044c\u043a\u043e \u0441\u0432\u043e\u044f \u0447\u0430\u0441\u0442\u044c: <BaseForm> — \u0441\u043d\u0438\u043c\u043e\u043a \u0438\u0441\u0445\u043e\u0434\u043d\u043e\u0439
+        # \u0444\u043e\u0440\u043c\u044b, \u0435\u0433\u043e \u043f\u043b\u0430\u0442\u0444\u043e\u0440\u043c\u0430 \u0440\u0430\u0437\u0440\u0435\u0448\u0430\u0435\u0442 \u043f\u043e \u043a\u043e\u043d\u0444\u0438\u0433\u0443\u0440\u0430\u0446\u0438\u0438. Items.* \u0438 \u043d\u043e\u043c\u0435\u0440\u043d\u044b\u0435 \u0441\u0441\u044b\u043b\u043a\u0438 — \u043a\u0430\u043a \u0432\u044b\u0448\u0435.
+        with open(form_path, "r", encoding="utf-8-sig") as fh:
+            own_text = fh.read().split('<BaseForm', 1)[0]
+        undeclared = {}   # \u043a\u043e\u0440\u0435\u043d\u044c \u0432 \u0432\u0435\u0440\u0445\u043d\u0435\u043c \u0440\u0435\u0433\u0438\u0441\u0442\u0440\u0435 -> (\u043a\u043e\u0440\u0435\u043d\u044c \u043a\u0430\u043a \u0432 \u043f\u0435\u0440\u0432\u043e\u043c \u043f\u0443\u0442\u0438, \u043f\u0443\u0442\u0438); \u043f\u043e\u0440\u044f\u0434\u043e\u043a — \u043a\u0430\u043a \u0432 \u0444\u0430\u0439\u043b\u0435
+        for m in re.finditer(r'<(?:\w+:)?\w*DataPath[^>]*>([^<]+)</(?:\w+:)?\w*DataPath>', own_text):
+            dp = m.group(1).strip()
+            if not dp or dp[0].isdigit() or dp.upper() in reported_paths:
+                continue
+            root_attr = re.sub(r'^~', '', re.sub(r'\[\d+\]', '', dp)).split('.', 1)[0]
+            if root_attr.upper() == 'ITEMS' or root_attr.upper() in attr_upper:
+                continue
+            entry = undeclared.setdefault(root_attr.upper(), (root_attr, []))
+            if dp not in entry[1]:
+                entry[1].append(dp)
+        for root_attr, shown in undeclared.values():
+            if stopped:
+                break
+            sample = ", ".join(shown[:3])
+            suffix = f" (and {len(shown) - 3} more)" if len(shown) > 3 else ""
+            report_error(f"Path(s) rooted at '{root_attr}' — attribute '{root_attr}' not found{no_main_hint(root_attr)}: {sample}{suffix}")
+            path_errors += 1
+
+        if path_errors == 0 and path_checked > 0:
+            report_ok(f"Data bindings: {path_checked} paths checked")
         elif path_errors == 0:
             report_ok("Data bindings: none")
 
@@ -1590,39 +1888,6 @@ def main():
             if (ext_attr_count + ext_cmd_count) > 0:
                 report_ok(f"Extension ID ranges: {ext_attr_count} attr(s), {ext_cmd_count} cmd(s) \u2014 all >= 1000000")
 
-        # 11d. \u041f\u0443\u0442\u0438 \u043d\u0430 \u043e\u0441\u043d\u043e\u0432\u043d\u043e\u0439 \u0440\u0435\u043a\u0432\u0438\u0437\u0438\u0442, \u043a\u043e\u0442\u043e\u0440\u043e\u0433\u043e \u0444\u043e\u0440\u043c\u0430 \u043d\u0435 \u043e\u0431\u044a\u044f\u0432\u043b\u044f\u0435\u0442.
-        # Check 5 \u0442\u0430\u043a\u043e\u0435 \u043f\u0440\u043e\u043f\u0443\u0441\u043a\u0430\u0435\u0442: \u0443 \u0437\u0430\u0438\u043c\u0441\u0442\u0432\u043e\u0432\u0430\u043d\u043d\u043e\u0439 \u0444\u043e\u0440\u043c\u044b \u043e\u043d \u043d\u0435 \u043f\u0440\u043e\u0432\u0435\u0440\u044f\u0435\u0442 \u0431\u0430\u0437\u043e\u0432\u044b\u0435 \u044d\u043b\u0435\u043c\u0435\u043d\u0442\u044b (id < 1000000),
-        # \u0430 \u043f\u0440\u0438\u0432\u044f\u0437\u043a\u0438 \u0432 <xr:Link> \u0432\u043e\u043e\u0431\u0449\u0435 \u0432\u043d\u0435 \u0435\u0433\u043e \u0441\u043f\u0438\u0441\u043a\u0430 \u0442\u0435\u0433\u043e\u0432. \u041c\u0435\u0436\u0434\u0443 \u0442\u0435\u043c \u044d\u0442\u043e \u0440\u043e\u0432\u043d\u043e \u0442\u043e\u0442 \u0441\u043b\u0443\u0447\u0430\u0439, \u043d\u0430 \u043a\u043e\u0442\u043e\u0440\u043e\u043c
-        # \u043f\u043b\u0430\u0442\u0444\u043e\u0440\u043c\u0430 \u043e\u0442\u0432\u0435\u0440\u0433\u0430\u0435\u0442 \u0437\u0430\u0433\u0440\u0443\u0437\u043a\u0443: \u00ab\u041d\u0435\u0432\u0435\u0440\u043d\u044b\u0439 \u043f\u0443\u0442\u044c \u043a \u043f\u043e\u043b\u044e - \u041e\u0431\u044a\u0435\u043a\u0442.X\u00bb. \u041f\u0440\u0430\u0432\u0438\u043b\u043e: \u0435\u0441\u043b\u0438 \u043e\u0441\u043d\u043e\u0432\u043d\u043e\u0439 \u0440\u0435\u043a\u0432\u0438\u0437\u0438\u0442
-        # \u043d\u0435 \u043e\u0431\u044a\u044f\u0432\u043b\u0435\u043d \u0432 <Attributes> \u0444\u043e\u0440\u043c\u044b, \u043b\u044e\u0431\u043e\u0439 \u043f\u0443\u0442\u044c \u0441 \u0435\u0433\u043e \u043a\u043e\u0440\u043d\u0435\u043c \u043d\u0435 \u0440\u0430\u0437\u0440\u0435\u0448\u0438\u0442\u0441\u044f.
-        # \u041a\u043e\u0440\u0435\u043d\u044c \u0431\u0435\u0440\u0451\u0442\u0441\u044f \u0438\u0437 \u043e\u0441\u043d\u043e\u0432\u043d\u043e\u0433\u043e \u0440\u0435\u043a\u0432\u0438\u0437\u0438\u0442\u0430 BaseForm: \u00ab\u041e\u0431\u044a\u0435\u043a\u0442\u00bb \u043e\u043d \u0442\u043e\u043b\u044c\u043a\u043e \u0443 \u0444\u043e\u0440\u043c\u044b \u043e\u0431\u044a\u0435\u043a\u0442\u0430, \u0443 \u0444\u043e\u0440\u043c\u044b
-        # \u0441\u043f\u0438\u0441\u043a\u0430 \u044d\u0442\u043e \u00ab\u0421\u043f\u0438\u0441\u043e\u043a\u00bb, \u0443 \u0444\u043e\u0440\u043c\u044b \u0437\u0430\u043f\u0438\u0441\u0438 \u0440\u0435\u0433\u0438\u0441\u0442\u0440\u0430 \u00ab\u0417\u0430\u043f\u0438\u0441\u044c\u00bb. \u0421 \u0437\u0430\u0448\u0438\u0442\u044b\u043c \u00ab\u041e\u0431\u044a\u0435\u043a\u0442\u00bb \u043f\u0440\u043e\u0432\u0435\u0440\u043a\u0430 \u043d\u0430 \u0442\u0430\u043a\u0438\u0445
-        # \u0444\u043e\u0440\u043c\u0430\u0445 \u043c\u043e\u043b\u0447\u0430 \u043d\u0435 \u0441\u0440\u0430\u0431\u0430\u0442\u044b\u0432\u0430\u043b\u0430.
-        main_attr_declared = False
-        for attr in attr_nodes:
-            ma_node = attr.find(f"{{{F_NS}}}MainAttribute")
-            if ma_node is not None and (ma_node.text or "").strip() == "true":
-                main_attr_declared = True
-                break
-
-        if not main_attr_declared:
-            # \u0417\u043d\u0430\u0447\u0435\u043d\u0438\u044f \u043f\u0440\u0438\u0432\u044f\u0437\u043e\u043a \u0438\u0449\u0435\u043c \u0442\u0435\u043a\u0441\u0442\u043e\u043c: \u0438\u043d\u0442\u0435\u0440\u0435\u0441\u0443\u044e\u0442 \u0438 \u043e\u0431\u044b\u0447\u043d\u044b\u0435 \u0442\u0435\u0433\u0438, \u0438 <xr:DataPath> \u0432\u043d\u0443\u0442\u0440\u0438
-            # <ChoiceParameterLinks>, \u0430 \u0442\u0435 \u0436\u0438\u0432\u0443\u0442 \u0432 \u0447\u0443\u0436\u043e\u043c \u043f\u0440\u043e\u0441\u0442\u0440\u0430\u043d\u0441\u0442\u0432\u0435 \u0438\u043c\u0451\u043d.
-            with open(form_path, "r", encoding="utf-8-sig") as fh:
-                raw_form = fh.read()
-            main_base = base_form_node.find(f"{{{F_NS}}}Attributes/{{{F_NS}}}Attribute[{{{F_NS}}}MainAttribute='true']")
-            root_name = main_base.get("name") if main_base is not None and main_base.get("name") else "\u041e\u0431\u044a\u0435\u043a\u0442"
-            root_pat = re.escape(root_name)
-            dangling_paths = set(re.findall(
-                r'<(?:\w+:)?\w*DataPath[^>]*>(' + root_pat + r'\.[^<]+)</(?:\w+:)?\w*DataPath>', raw_form))
-            if dangling_paths:
-                shown = sorted(dangling_paths)
-                sample = ", ".join(shown[:3])
-                suffix = f" (\u0438 \u0435\u0449\u0451 {len(shown) - 3})" if len(shown) > 3 else ""
-                report_error(f"Path(s) rooted at '{root_name}' but the form declares no MainAttribute: {sample}{suffix}")
-            elif main_base is not None:
-                report_ok("Object paths: none dangling (MainAttribute not declared)")
-
     # Check callType without BaseForm
     if not stopped and not is_extension:
         call_type_without_base = False
@@ -1842,12 +2107,430 @@ def main():
         if order_bad == 0:
             report_ok('16. Property order: matches the platform')
 
+    # --- Check 17: настройки динамического списка в режиме совместимости ниже 8.3.19 ---
+    # Field / CalculatedField / Parameter списка такая конфигурация принимает при загрузке и хранит в
+    # базе, но в выгрузку XML не пишет — исходник с ними после выгрузки «теряет» их в диффе. Только для
+    # конфигурации: у внешней обработки режим базы на форму не влияет.
+    if not stopped and is_config_context:
+        with open(dump_anchor, 'r', encoding='utf-8-sig') as f:
+            cfg_head = f.read(65536)
+        m = re.search(r'<CompatibilityMode>([^<]+)</CompatibilityMode>', cfg_head)
+        # Расширение: своего CompatibilityMode нет, форму ведёт его собственный режим. В основной
+        # конфигурации этот тег — режим для её расширений, не её собственный: только для расширения.
+        if not m and '<ConfigurationExtensionPurpose>' in cfg_head:
+            m = re.search(r'<ConfigurationExtensionCompatibilityMode>([^<]+)</ConfigurationExtensionCompatibilityMode>', cfg_head)
+        compat_mode = m.group(1).strip() if m else ''
+        m = re.match(r'^Version(\d+)_(\d+)(?:_(\d+))?$', compat_mode)   # и двухчастный Version8_1
+        compat_rank = int(m.group(1)) * 10000 + int(m.group(2)) * 100 + int(m.group(3) or 0) if m else 0
+        if 0 < compat_rank < 80319:
+            dyn_bad = 0
+            for a in attr_nodes:
+                st = a.find(f"{{{F_NS}}}Settings")
+                if st is None or st.get('{http://www.w3.org/2001/XMLSchema-instance}type') != 'DynamicList':
+                    continue
+                if any(isinstance(c.tag, str) and etree.QName(c.tag).localname in ('Field', 'CalculatedField', 'Parameter')
+                       and etree.QName(c.tag).namespace == F_NS for c in st):
+                    report_warn(f"17. Dynamic list '{a.get('name', '')}': Field/CalculatedField/Parameter under compatibility mode {compat_mode} (< 8.3.19) are kept in the infobase but not written to the XML dump")
+                    dyn_bad += 1
+            if dyn_bad == 0:
+                report_ok(f'17. Dynamic list settings: dumpable under {compat_mode}')
+
+    # Члены ChildItems вне <BaseForm> (его пишет платформа) — элементы формы, командных панелей и меню
+    def child_items_members():
+        return root.xpath("//f:ChildItems/*[not(ancestor::*[local-name()='BaseForm'])]", namespaces={'f': F_NS})
+
+    def ci_key(table, tag):
+        return next((k for k in table if k.lower() == tag.lower()), None)
+
+    companion_tags = list(COMPANION_PARENTS)
+    # Списки таблиц — множества, разобранные один раз
+    companion_parent_sets = {k: set(v.split(' ')) for k, v in COMPANION_PARENTS.items()}
+    property_sets = {k: set(v.split(' ')) for k, v in ELEMENT_PROPERTY_TAGS.items()}
+    placement_sets = {k: set(v.split(' ')) for k, v in CHILD_ITEMS_PLACEMENT.items()}
+
+    def is_form_child(c):
+        return isinstance(c.tag, str) and etree.QName(c.tag).namespace == F_NS
+
+    # --- Check 18: тег элемента формы ---
+    # Тег члена ChildItems — из словаря формата (XSD logform) и не новее версии формата формы.
+    members = child_items_members() if not stopped else []
+    member_types = {}   # узел → каноничный тег (для 19/20; незнакомые теги не проверяются дальше)
+    if not stopped:
+        check18_ok = True
+        form_ver = root.get("version", "")
+        form_rank = format_rank(form_ver)
+        for m in members:
+            if stopped:
+                break
+            tag = localname(m)
+            if m.get('name') is not None:
+                label = f"<{tag}> '{m.get('name')}'"
+            elif m.get('id') is not None:
+                label = f"<{tag}> id={m.get('id')}"
+            else:
+                label = f"<{tag}>"
+            # Без name/id платформа загружает элемент с пустым именем / id=0
+            missing = [a for a in ('name', 'id') if not m.get(a)]
+            if missing:
+                report_error(f"18. {label}: missing {' and '.join(missing)} attribute{'s' if len(missing) > 1 else ''}")
+                check18_ok = False
+            if tag in FORM_ELEMENT_TAGS:
+                since = FORM_ELEMENT_TAGS[tag]
+                if form_rank > 0 and format_rank(since) > form_rank:
+                    report_error(f"18. {label}: not available in format {form_ver} (since {since})")
+                    check18_ok = False
+                else:
+                    member_types[m] = tag
+            elif tag in FORM_ELEMENT_TAG_ALIASES:
+                report_warn(f"18. {label} is an old name — the platform reads it as <{FORM_ELEMENT_TAG_ALIASES[tag]}>")
+                member_types[m] = FORM_ELEMENT_TAG_ALIASES[tag]
+            else:
+                hint = ci_key(FORM_ELEMENT_TAGS, tag)
+                if not hint:
+                    alias_key = ci_key(FORM_ELEMENT_TAG_ALIASES, tag)
+                    hint = FORM_ELEMENT_TAG_ALIASES[alias_key] if alias_key else None
+                if hint:
+                    report_error(f"18. {label}: wrong case, use <{hint}>")
+                else:
+                    report_error(f"18. {label} is not a form element type")
+                check18_ok = False
+        if check18_ok:
+            report_ok(f"18. Element types: {len(members)} checked")
+
+    # --- Check 19: компаньоны элемента ---
+    # Контекстное меню, командная панель и дополнения таблицы бывают только у своих типов; каждый — один.
+    if not stopped:
+        check19_ok = True
+        for m in members:
+            if stopped:
+                break
+            if m not in member_types:
+                continue
+            typ = member_types[m]
+            seen = set()
+            for c in m:
+                if not is_form_child(c):
+                    continue
+                ct = localname(c)
+                if ct != 'ExtendedTooltip' and ct not in companion_tags:
+                    continue
+                if ct in seen:
+                    report_error(f"19. {typ} '{m.get('name', '')}': duplicate <{ct}>")
+                    check19_ok = False
+                    continue
+                seen.add(ct)
+                if ct == 'ExtendedTooltip':
+                    continue
+                if typ not in companion_parent_sets[ct]:
+                    report_error(f"19. {typ} '{m.get('name', '')}' cannot have <{ct}>")
+                    check19_ok = False
+        if check19_ok:
+            report_ok("19. Companions: match element types")
+
+    # --- Check 20: свойства элемента ---
+    # Дочерний тег — свойство своего типа (корпус выгрузок ∪ XSD); ChildItems — только у контейнеров.
+    if not stopped:
+        check20_ok = True
+        containers = CONTAINER_TYPES.split(' ')
+        for m in members:
+            if stopped:
+                break
+            if m not in member_types:
+                continue
+            typ = member_types[m]
+            allowed = property_sets.get(typ)
+            for c in m:
+                if not is_form_child(c):
+                    continue
+                pt = localname(c)
+                if pt == 'ExtendedTooltip' or pt in companion_tags:
+                    continue
+                if pt == 'ChildItems':
+                    if typ not in containers:
+                        report_error(f"20. {typ} '{m.get('name', '')}' cannot have <ChildItems>")
+                        check20_ok = False
+                    continue
+                if allowed is None or pt in allowed:
+                    continue
+                hint = sorted(a for a in allowed if a.lower() == pt.lower())
+                if hint:
+                    report_warn(f"20. {typ} '{m.get('name', '')}': <{pt}> — wrong case, use <{hint[0]}>")
+                else:
+                    report_warn(f"20. {typ} '{m.get('name', '')}': <{pt}> is not a property of {typ}")
+                check20_ok = False
+        if check20_ok:
+            report_ok("20. Element properties: match element types")
+
+    # --- Check 21: размещение элемента в контейнере ---
+    # Что можно положить в контейнер — по правилам редактора форм (их отпечаток — корпус выгрузок):
+    # в Pages — только страницы, колонка таблицы — поле или группа колонок, подменю и группа кнопок —
+    # только в командной панели. Платформа такое загружает, поэтому предупреждение.
+    if not stopped:
+        check21_ok = True
+        for m in members:
+            if stopped:
+                break
+            if m not in member_types:
+                continue
+            owner = m.getparent().getparent()
+            # Владелец — элемент (каноничный тег) или компаньон (ContextMenu, AutoCommandBar) — тег как есть
+            owner_type = 'Form' if owner is root else member_types.get(owner, localname(owner))
+            allowed = placement_sets.get(owner_type)
+            if not allowed or member_types[m] in allowed:
+                continue
+            where = 'the form' if owner_type == 'Form' else f"{owner_type} '{owner.get('name', '')}'"
+            report_warn(f"21. {member_types[m]} '{m.get('name', '')}' cannot be placed in {where}")
+            check21_ok = False
+        if check21_ok:
+            report_ok("21. Element placement: match containers")
+
+    # --- Check 23: источник дополнения ---
+    # Источник строки поиска, состояния просмотра и управления поиском — таблица (у состояния просмотра
+    # ещё поле PDF). Несуществующий Item платформа молча выбрасывает вместе со связью; остальное загружает
+    # как есть, но в выгрузках такого не бывает. Отсутствие AdditionSource законно (у компаньона платформа
+    # восстанавливает его сама).
+    if not stopped:
+        check23_ok = True
+        addition_types = {'SearchStringAddition': 'SearchStringRepresentation', 'ViewStatusAddition': 'ViewStatusRepresentation',
+                          'SearchControlAddition': 'SearchControl'}
+        type_by_name = {}
+        # Все именованные члены: элемент с неверным тегом (ошибка 18) всё же есть в форме, его тип — None
+        for m in members:
+            if m.get('name'):
+                type_by_name.setdefault(m.get('name').lower(), member_types.get(m))
+        additions = []
+        for m in members:
+            if m not in member_types:
+                continue
+            if member_types[m] in addition_types:
+                additions.append((m, member_types[m], None))
+            for c in m:
+                if isinstance(c.tag, str) and c.tag.startswith(f"{{{F_NS}}}") and localname(c) in addition_types:
+                    additions.append((c, localname(c), m.get('name', '')))
+        for node, tag, owner in additions:
+            if stopped:
+                break
+            src = node.find(f"{{{F_NS}}}AdditionSource")
+            if src is None:
+                continue
+            label = f"{tag} '{node.get('name', '')}'"
+            item_node = src.find(f"{{{F_NS}}}Item")
+            item = ''.join(item_node.itertext()).strip() if item_node is not None else ''
+            if not item:
+                report_error(f"23. {label}: source item is empty")
+                check23_ok = False
+                continue
+            if item.lower() not in type_by_name:
+                report_error(f"23. {label}: source item '{item}' not found in the form — the platform drops the link on load")
+                check23_ok = False
+                continue
+            item_type = type_by_name[item.lower()]
+            sources = ['Table', 'PDFDocumentField'] if tag == 'ViewStatusAddition' else ['Table']
+            if item_type is not None and item_type not in sources:
+                report_warn(f"23. {label}: source item '{item}' is {item_type}, expected {' or '.join(sources)}")
+                check23_ok = False
+            elif owner and item.lower() != owner.lower():
+                report_warn(f"23. {label}: source item '{item}' is not its owner '{owner}'")
+                check23_ok = False
+            type_node = src.find(f"{{{F_NS}}}Type")
+            src_type = ''.join(type_node.itertext()).strip() if type_node is not None else ''
+            if src_type != addition_types[tag]:
+                report_warn(f"23. {label}: source type '{src_type}' does not match the addition, expected {addition_types[tag]}")
+                check23_ok = False
+        if check23_ok:
+            report_ok("23. Addition sources: match items")
+
+    # --- Check 22: обработчики — модуль формы ---
+    # Привязки Form.xml (события, действия команд) сверяются с процедурами модуля <каталог Form.xml>/Form/Module.bsl.
+    # Читается только модуль формы: общие модули, которые подключают процедуры формы по имени, не смотрим —
+    # поэтому процедура без привязки только предупреждение.
+    if not stopped:
+        module_path = os.path.join(os.path.dirname(os.path.abspath(form_path)), 'Form', 'Module.bsl')
+        module_text = read_module_text(module_path) if os.path.isfile(module_path) else None
+        if not os.path.isfile(module_path):
+            report_ok("22. Form module handlers: no module \u2014 skipped")
+        elif module_text is None:
+            report_warn("22. Form module is not UTF-8 \u2014 handlers are not checked")
+        else:
+            bsl = get_bsl_scan(module_text)
+            outline = get_module_outline(bsl['Code'])
+            procs = {}
+            for p in outline['procs']:
+                procs.setdefault(p['name'].lower(), p)
+            bound = set()
+            check22_ok = True
+            guid_rx = re.compile(r'^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$')
+
+            # Привязка без процедуры. Событие с GUID вместо имени — событие объекта, которого у основного реквизита
+            # формы нет: платформа его хранит, но не вызывает. В форме расширения привязка без callType — исходной
+            # формы, её процедура в модуле конфигурации.
+            for evt in root.xpath('.//f:Events/f:Event[not(ancestor::f:BaseForm)]', namespaces={'f': F_NS}):
+                if stopped:
+                    break
+                h = ''.join(evt.itertext()).strip()
+                if not h:
+                    continue
+                bound.add(h.lower())
+                evt_name = evt.get('name', '')
+                if guid_rx.match(evt_name):
+                    continue
+                if has_base_form and not evt.get('callType'):
+                    continue
+                if h.lower() in procs:
+                    continue
+                owner = evt.getparent().getparent()
+                what = f"Form event '{evt_name}'" if owner is root else f"Event '{evt_name}' of {localname(owner)} '{owner.get('name', '')}'"
+                report_error(f"22. {what}: handler '{h}' not found in the form module")
+                check22_ok = False
+            for cmd in cmd_nodes:
+                if stopped:
+                    break
+                for act in cmd.findall(f"{{{F_NS}}}Action"):
+                    h = ''.join(act.itertext()).strip()
+                    if not h:
+                        continue
+                    bound.add(h.lower())
+                    if has_base_form and not act.get('callType'):
+                        continue
+                    if h.lower() in procs:
+                        continue
+                    report_error(f"22. Command '{cmd.get('name', '')}': action '{h}' not found in the form module")
+                    check22_ok = False
+
+            # Процедура без привязки. Не висячая: экспортная, с аннотацией расширения, Подключаемый_* (их подключает
+            # БСП), имя в коде модуля или равно литералу, имя оканчивается куском склейки в позиции обработчика.
+            # Позиция обработчика — по коду строки слева от литерала: ПодключитьОбработчикОжидания(X, …),
+            # Новый ОписаниеОповещения(X, …), УстановитьДействие(Событие, X), .Действие = X.
+            handler_arg_prefix = re.compile(
+                r'(?:(?:\u041f\u043e\u0434\u043a\u043b\u044e\u0447\u0438\u0442\u044c\u041e\u0431\u0440\u0430\u0431\u043e\u0442\u0447\u0438\u043a\u041e\u0436\u0438\u0434\u0430\u043d\u0438\u044f|AttachIdleHandler|\u041e\u043f\u0438\u0441\u0430\u043d\u0438\u0435\u041e\u043f\u043e\u0432\u0435\u0449\u0435\u043d\u0438\u044f|NotifyDescription)\s*\((?P<a>[^,]*)'
+                r'|(?:\u0423\u0441\u0442\u0430\u043d\u043e\u0432\u0438\u0442\u044c\u0414\u0435\u0439\u0441\u0442\u0432\u0438\u0435|SetAction)\s*\([^,]*,(?P<b>[^,]*)|\.(?:\u0414\u0435\u0439\u0441\u0442\u0432\u0438\u0435|Action)\s*=(?P<c>[^;]*))$', re.I)
+            lits = set()
+            tails = []
+            for lit in bsl['Literals']:
+                t = str(lit['Text']).strip()
+                if not t:
+                    continue
+                lits.add(t.lower())
+                m = handler_arg_prefix.search(lit['Prefix'])
+                if m and '+' in (m.group('a') or m.group('b') or m.group('c') or ''):
+                    tails.append(t.lower())
+            # слова кода — один проход: поиск имени по всему модулю для каждой процедуры на больших модулях долог
+            word_count = {}
+            for w in re.split(r'\W+', '\n'.join(bsl['Code'])):
+                if w:
+                    w = w.lower()
+                    word_count[w] = word_count.get(w, 0) + 1
+            ann_rx = re.compile(r'^\s*&\s*(\u041f\u0435\u0440\u0435\u0434|\u041f\u043e\u0441\u043b\u0435|\u0412\u043c\u0435\u0441\u0442\u043e|\u0418\u0437\u043c\u0435\u043d\u0435\u043d\u0438\u0435\u0418\u041a\u043e\u043d\u0442\u0440\u043e\u043b\u044c|Before|After|Around|ChangeAndValidate)\s*\(', re.I)
+            for p in outline['procs']:
+                if stopped:
+                    break
+                n = p['name']
+                nl = n.lower()
+                if nl in bound or nl in lits or nl.startswith('\u043f\u043e\u0434\u043a\u043b\u044e\u0447\u0430\u0435\u043c\u044b\u0439_'):
+                    continue
+                k = p['start'] - 1
+                ann = []
+                while k < p['end'] - 1 and re.match(r'^\s*&', bsl['Code'][k]):
+                    ann.append(bsl['Code'][k])
+                    k += 1
+                hdr = bsl['Code'][k]
+                e = k
+                while ')' not in hdr and e + 1 < p['end']:
+                    e += 1
+                    hdr += ' ' + bsl['Code'][e]
+                if re.search(r'\)\s*(\u042d\u043a\u0441\u043f\u043e\u0440\u0442|Export)(?!\w)', hdr, re.I):
+                    continue
+                if any(ann_rx.match(a) for a in ann):
+                    continue
+                # имя в коде, кроме самого заголовка
+                if word_count.get(nl, 0) > 1:
+                    continue
+                if any(nl.endswith(t) for t in tails):
+                    continue
+                report_warn(f"22. Procedure '{n}' (Module.bsl:{k + 1}) is not bound in Form.xml and not referenced in the form module \u2014 dead code, unless a common module attaches it by name")
+                check22_ok = False
+            if check22_ok:
+                report_ok("22. Form module handlers: bindings match procedures")
+
+    # --- Check 24: переменные модуля против реквизитов формы ---
+    # Переменная модуля (Перем вне процедур) с именем реквизита формы — модуль не компилируется: «Переменная
+    # с указанным именем уже определена». Загрузка XML и обновление конфигурации этого не показывают — ошибка
+    # всплывает при первом обращении к форме. Локальная Перем в процедуре реквизит перекрывает, это допустимо.
+    if not stopped:
+        module_path = os.path.join(os.path.dirname(os.path.abspath(form_path)), 'Form', 'Module.bsl')
+        if not os.path.isfile(module_path):
+            report_ok("24. Module variables: no module — skipped")
+        else:
+            module_text = read_module_text(module_path)
+            if module_text is None:
+                report_warn("24. Form module is not UTF-8 — module variables are not checked")
+            else:
+                bsl = get_bsl_scan(module_text)
+                outline = get_module_outline(bsl['Code'])
+                in_proc = [False] * (len(bsl['Code']) + 1)
+                for p in outline['procs']:
+                    for k in range(p['start'], min(p['end'], len(bsl['Code'])) + 1):
+                        in_proc[k] = True
+                # В форме расширения модуль видит и реквизиты исходной формы — замер на 8.3.24
+                form_attrs = get_form_attribute_map(root)
+                check24_ok = True
+                for v in get_var_declarations(bsl['Mask']):
+                    if in_proc[v['Line']] or v['Name'].lower() not in form_attrs:
+                        continue
+                    report_error(f"24. Module variable '{v['Name']}' (Module.bsl:{v['Line']}) has the same name as form attribute '{form_attrs[v['Name'].lower()].get('name')}' — the platform will not compile the module: \"Переменная с указанным именем уже определена\"")
+                    check24_ok = False
+                if check24_ok:
+                    report_ok("24. Module variables: no clash with form attributes")
+
+    # --- Check 25: поля условного оформления формы ---
+    # Поле отбора условного оформления — путь от реквизита формы. Устаревший путь (реквизит или колонку
+    # переименовали, удалили) платформа принимает молча — правило просто не срабатывает (замер 8.3.24/8.3.27).
+    # Глубже корня проверяются только колонки таблиц значений: поля объекта и динамического списка — в метаданных.
+    if not stopped:
+        ca_node = root.find(f"{{{F_NS}}}Attributes/{{{F_NS}}}ConditionalAppearance")
+        if ca_node is None:
+            report_ok("25. Conditional appearance fields: none")
+        else:
+            dcsset_ns = "http://v8.1c.ru/8.1/data-composition-system/settings"
+            xsi_ns = "http://www.w3.org/2001/XMLSchema-instance"
+            ca_attrs = get_form_attribute_map(root)
+            ca_cols = {}
+            check25_ok = True
+            seen25 = set()
+            for t in ca_node.iter(f"{{{dcsset_ns}}}left", f"{{{dcsset_ns}}}right"):
+                if not (t.get(f"{{{xsi_ns}}}type") or '').endswith(':Field'):
+                    continue
+                path = (t.text or '').strip()
+                if not path or path.lower() in seen25:
+                    continue
+                seen25.add(path.lower())
+                segs = path.split('.')
+                attr = ca_attrs.get(segs[0].lower())
+                if attr is None:
+                    report_warn(f"25. Conditional appearance: filter field '{path}' — the form has no attribute '{segs[0]}' — a stale path, the platform accepts it without error")
+                    check25_ok = False
+                    continue
+                ts = [(x.text or '').strip() for x in attr.findall(f"{{{F_NS}}}Type/{{{V8_NS}}}Type")]
+                if len(segs) < 2 or len(ts) != 1 or ts[0] not in ('v8:ValueTable', 'v8:ValueTree'):
+                    continue
+                # Второй сегмент — своя колонка таблицы (AdditionalColumns у неё — колонки вложенных таблиц, уровнем ниже)
+                an = (attr.get('name') or '').lower()
+                if an not in ca_cols:
+                    ca_cols[an] = set((c.get('name') or '').lower() for c in attr.findall(f"{{{F_NS}}}Columns/{{{F_NS}}}Column"))
+                if segs[1].lower() not in ca_cols[an]:
+                    report_warn(f"25. Conditional appearance: filter field '{path}' — attribute '{segs[0]}' has no column '{segs[1]}' — a stale path, the platform accepts it without error")
+                    check25_ok = False
+            if check25_ok:
+                report_ok("25. Conditional appearance fields: rooted at form attributes")
+
     # --- Finalize ---
     checks = ok_count + errors + warnings
     if errors == 0 and warnings == 0 and not detailed:
         result = f"=== Validation OK: Form.{form_name} ({checks} checks) ==="
     else:
         output_lines.append("")
+        if stopped:
+            output_lines.append(f"Stopped after {max_errors} errors. Fix and re-run.")
         output_lines.append(f"=== Result: {errors} errors, {warnings} warnings ({checks} checks) ===")
         result = "\n".join(output_lines)
 

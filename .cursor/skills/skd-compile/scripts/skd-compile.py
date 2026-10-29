@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# skd-compile v1.136 — Compile 1C DCS from JSON
+# skd-compile v1.140 — Compile 1C DCS from JSON
 # Source: https://github.com/Nikolay-Shirokov/cc-1c-skills
 import argparse
 import json
@@ -181,15 +181,19 @@ def _sg_find_v8project(start_dir):
 
 def _sg_get_edit_mode(cfg_dir):
     try:
-        pj = _sg_find_v8project(os.getcwd()) or _sg_find_v8project(cfg_dir)
+        pj = _sg_find_v8project(os.getcwd()) or _sg_find_v8project(os.path.abspath(cfg_dir))
         if not pj:
             return "deny"
         proj = json.loads(open(pj, encoding="utf-8-sig").read())
-        cfg_full = os.path.normcase(os.path.abspath(cfg_dir)).rstrip("\\/")
+        # configSrc — от каталога .v8-project.json, а не от рабочего каталога: иначе из подкаталога
+        # проекта база не сопоставляется и берётся правило проекта. Пути — настоящие (realpath):
+        # на macOS /var — ссылка на /private/var, и getcwd с путём аргумента иначе не совпадут.
+        proj_dir = os.path.dirname(pj)
+        cfg_full = os.path.normcase(os.path.realpath(cfg_dir)).rstrip("\\/")
         for db in proj.get("databases", []):
             src = db.get("configSrc")
             if src:
-                src_full = os.path.normcase(os.path.abspath(src)).rstrip("\\/")
+                src_full = os.path.normcase(os.path.realpath(os.path.join(proj_dir, src))).rstrip("\\/")
                 if cfg_full == src_full or cfg_full.startswith(src_full + os.sep):
                     if db.get("editingAllowedCheck"):
                         return db["editingAllowedCheck"]
@@ -1440,7 +1444,7 @@ def emit_data_set(lines, ds, indent, default_source, tag_name='dataSet'):
 
     # DataSource (not for Union)
     if ds_type != 'DataSetUnion':
-        src = str(ds['source']) if ds.get('source') else default_source
+        src = str(ds.get('source') or ds.get('dataSource') or default_source)
         lines.append(f'{indent}\t<dataSource>{esc_xml_text(src)}</dataSource>')
 
     # Type-specific content
@@ -1449,6 +1453,8 @@ def emit_data_set(lines, ds, indent, default_source, tag_name='dataSet'):
         lines.append(f'{indent}\t<query>{esc_xml_text(query_text)}</query>')
         if ds.get('autoFillFields') is False:
             lines.append(f'{indent}\t<autoFillFields>false</autoFillFields>')
+        if ds.get('useQueryGroupIfPossible') is False:
+            lines.append(f'{indent}\t<useQueryGroupIfPossible>false</useQueryGroupIfPossible>')
     elif ds_type == 'DataSetObject':
         lines.append(f'{indent}\t<objectName>{esc_xml_text(str(ds["objectName"]))}</objectName>')
     elif ds_type == 'DataSetUnion':

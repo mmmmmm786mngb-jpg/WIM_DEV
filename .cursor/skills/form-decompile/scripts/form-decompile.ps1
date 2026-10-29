@@ -1,4 +1,4 @@
-﻿# form-decompile v0.153 — Decompile 1C managed Form.xml to JSON DSL (draft)
+﻿# form-decompile v0.155 — Decompile 1C managed Form.xml to JSON DSL (draft)
 # Source: https://github.com/Nikolay-Shirokov/cc-1c-skills
 # ВНИМАНИЕ: раундтрип не гарантируется. Навык исключён из авто-использования моделью.
 [CmdletBinding(PositionalBinding=$false)]
@@ -18,7 +18,7 @@ if (-not (Test-Path $FormPath)) {
 	Write-Error "Form not found: $FormPath"
 	exit 1
 }
-$FormPath = (Resolve-Path $FormPath).Path
+$FormPath = (Resolve-Path $FormPath).ProviderPath
 
 $xmlDoc = New-Object System.Xml.XmlDocument
 $xmlDoc.PreserveWhitespace = $false
@@ -61,6 +61,18 @@ $ns.AddNamespace("dcscor", $NS_DCSCOR)
 $ns.AddNamespace("v8ui", $NS_V8UI)
 $ns.AddNamespace("app", $NS_APP)
 
+# Список с явным ключом набора (FieldValue/RowKey/RowNumber) без основной таблицы: ссылки в строке нет,
+# умный дефолт RowPictureDataPath = <Список>.DefaultPicture компилятор ему не ставит.
+function Test-DynListExplicitKey([string]$listName) {
+	foreach ($a in $root.SelectNodes("lf:Attributes/lf:Attribute", $ns)) {
+		if ($a.GetAttribute('name') -ne $listName) { continue }
+		$kt = $a.SelectSingleNode("lf:Settings/lf:KeyType", $ns)
+		$v = if ($null -ne $kt) { $kt.InnerText.Trim() } else { '' }
+		return ($v -ne '' -and $v -ne 'Auto' -and $null -eq $a.SelectSingleNode("lf:Settings/lf:MainTable", $ns))
+	}
+	return $false
+}
+
 # Каноничные GUID пустых контейнеров ListSettings (умолчание платформы, ~90% форм).
 # Если ListSettings = пустой скелет с этими GUID → декомпилятор опускает настройки вовсе,
 # компилятор регенерит тот же скелет → чистый раундтрип.
@@ -74,7 +86,7 @@ $script:outputDir = $null
 $script:outputBasename = $null
 if ($OutputPath) {
 	$od = Split-Path -Parent $OutputPath
-	if (-not $od) { $od = (Get-Location).Path }
+	if (-not $od) { $od = (Get-Location).ProviderPath }
 	$script:outputDir = $od
 	$script:outputBasename = [System.IO.Path]::GetFileNameWithoutExtension($OutputPath)
 }
@@ -2136,8 +2148,13 @@ function Decompile-Element {
 				if ((Get-Child $node 'AllowRootChoice') -eq 'true') { $obj['allowRootChoice'] = $true }
 				$uodc = Get-Child $node 'UpdateOnDataChange'; if ($uodc -and $uodc -ne 'Auto') { $obj['updateOnDataChange'] = $uodc }
 				if ((Get-Child $node 'AllowGettingCurrentRowURL') -eq 'false') { $obj['allowGettingCurrentRowURL'] = $false }
-				# RowPictureDataPath: инверсия умного дефолта <Список>.DefaultPicture
-				if ($null -eq $rpdp) { $obj['rowPictureDataPath'] = '' }
+				# RowPictureDataPath: инверсия умного дефолта <Список>.DefaultPicture. У списка с явным ключом
+				# без основной таблицы умолчание — отсутствие (компилятор его не ставит): ""-маркер не нужен,
+				# а любое значение — явное.
+				if (Test-DynListExplicitKey "$($obj['path'])") {
+					if ($null -ne $rpdp) { $obj['rowPictureDataPath'] = $rpdp }
+				}
+				elseif ($null -eq $rpdp) { $obj['rowPictureDataPath'] = '' }
 				elseif ($rpdp -ne "$($obj['path']).DefaultPicture") { $obj['rowPictureDataPath'] = $rpdp }
 				$usg = Get-Child $node 'UserSettingsGroup'
 				if ($usg) { if ($usg -match '^\d+:[0-9a-fA-F]{8}-') { [Console]::Error.WriteLine("form-decompile: UserSettingsGroup '$usg' ($name) — ссылка по id, не воспроизводима, опущена") } else { $obj['userSettingsGroup'] = $usg } }

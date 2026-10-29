@@ -1,4 +1,4 @@
-﻿# skd-compile v1.136 — Compile 1C DCS from JSON
+﻿# skd-compile v1.140 — Compile 1C DCS from JSON
 # Source: https://github.com/Nikolay-Shirokov/cc-1c-skills
 [CmdletBinding(PositionalBinding=$false)]
 param(
@@ -15,14 +15,19 @@ $ErrorActionPreference = "Stop"
 # идёт чинить скрипт, а не свой вызов. $source — файл или параметр. $expected заполняем только
 # для полиморфного входа: у файла подсказка была бы наполнителем. -Inline печатает ещё и то,
 # что доехало: у файла такого вопроса нет — путь назван, позицию дал парсер, файл на диске.
-# Возврат через -NoEnumerate: без него одноэлементный
-# JSON-массив разворачивался бы в скаляр вторым анруллингом.
+# Возврат через запятую: без неё одноэлементный JSON-массив разворачивался бы в скаляр
+# вторым анруллингом. Не Write-Output -NoEnumerate: pwsh 7.6 заворачивает им в List
+# и одиночный объект (issue #136).
 function ConvertFrom-JsonInput([string]$text, [string]$source, [string]$expected, [switch]$Inline) {
 	try {
 		# PS 5.1 на пустой строке отдаёт $null, а не ошибку — навык уходил дальше с $null,
 		# тогда как py-порт падал. Проверяем сами, чтобы порты вели себя одинаково.
 		if ([string]::IsNullOrWhiteSpace($text)) { throw 'input is empty' }
-		$parsed = $text | ConvertFrom-Json
+		# pwsh 7+ сам разворачивает массив верхнего уровня ([x] → x, [] → $null). Ключ -NoEnumerate
+		# появился там же: в 5.1 и pwsh 6 его нет, поэтому спрашиваем командлет, а не версию.
+		$cfj = @{}
+		if ((Get-Command ConvertFrom-Json).Parameters.ContainsKey('NoEnumerate')) { $cfj.NoEnumerate = $true }
+		$parsed = $text | ConvertFrom-Json @cfj
 	} catch {
 		$what = if ($expected) { "$source expects $expected" } else { "Invalid JSON in $source" }
 		if ($Inline) {
@@ -35,7 +40,7 @@ function ConvertFrom-JsonInput([string]$text, [string]$source, [string]$expected
 		[Console]::Error.WriteLine("[ERROR] ${what} ($($_.Exception.Message))")
 		exit 1
 	}
-	Write-Output -NoEnumerate $parsed
+	return ,$parsed
 }
 
 # --- Чтение входного JSON-файла ---
@@ -113,16 +118,20 @@ function Find-V8Project([string]$startDir) {
 }
 function Get-EditMode([string]$cfgDir) {
 	try {
-		$pj = Find-V8Project (Get-Location).Path
-		if (-not $pj) { $pj = Find-V8Project $cfgDir }
+		$pj = Find-V8Project (Get-Location).ProviderPath
+		if (-not $pj) { $pj = Find-V8Project ([System.IO.Path]::GetFullPath($cfgDir)) }
 		if (-not $pj) { return 'deny' }
-		$proj = Get-Content -Raw $pj | ConvertFrom-Json
+		# UTF-8 явно: PS 5.1 читает файл без BOM как ANSI, и configSrc с кириллицей не совпал бы
+		$proj = Get-Content -Raw -Encoding UTF8 $pj | ConvertFrom-Json
+		# configSrc — от каталога .v8-project.json, а не от рабочего каталога: иначе из подкаталога
+		# проекта база не сопоставляется и берётся правило проекта.
+		$projDir = [System.IO.Path]::GetDirectoryName($pj)
 		$cfgFull = [System.IO.Path]::GetFullPath($cfgDir).TrimEnd('\', '/')
 		if ($proj.databases) {
 			foreach ($db in $proj.databases) {
 				if ($db.configSrc) {
-					$src = [System.IO.Path]::GetFullPath($db.configSrc).TrimEnd('\', '/')
-					if ($cfgFull -eq $src -or $cfgFull.StartsWith($src + [System.IO.Path]::DirectorySeparatorChar)) {
+					$src = [System.IO.Path]::GetFullPath([System.IO.Path]::Combine($projDir, $db.configSrc)).TrimEnd('\', '/')
+					if ($cfgFull -eq $src -or $cfgFull.StartsWith($src + [System.IO.Path]::DirectorySeparatorChar, [System.StringComparison]::OrdinalIgnoreCase)) {
 						if ($db.editingAllowedCheck) { return $db.editingAllowedCheck }
 					}
 				}
@@ -135,7 +144,7 @@ function Get-EditMode([string]$cfgDir) {
 function Assert-EditAllowed([string]$targetPath, [string]$require) {
 	try {
 		$rp = $targetPath
-		try { $rp = (Resolve-Path $targetPath -ErrorAction Stop).Path } catch {}
+		try { $rp = (Resolve-Path $targetPath -ErrorAction Stop).ProviderPath } catch {}
 		# Autonomous external object (EPF/ERF): never part of a config on support (issue #39).
 		if (Test-ExternalObjectRoot $rp) { return }
 		$elemUuid = Get-RootUuid $rp
@@ -219,7 +228,7 @@ if (-not $DefinitionFile -and -not $Value) {
 
 if ($DefinitionFile) {
 	if (-not [System.IO.Path]::IsPathRooted($DefinitionFile)) {
-		$DefinitionFile = Join-Path (Get-Location).Path $DefinitionFile
+		$DefinitionFile = Join-Path (Get-Location).ProviderPath $DefinitionFile
 	}
 	if (-not (Test-Path $DefinitionFile)) {
 		Write-Error "Definition file not found: $DefinitionFile"
@@ -283,7 +292,7 @@ if (-not $def.dataSets -or $def.dataSets.Count -eq 0) {
 }
 
 # Base directory for resolving @file references in query
-$script:queryBaseDir = if ($DefinitionFile) { [System.IO.Path]::GetDirectoryName($DefinitionFile) } else { (Get-Location).Path }
+$script:queryBaseDir = if ($DefinitionFile) { [System.IO.Path]::GetDirectoryName($DefinitionFile) } else { (Get-Location).ProviderPath }
 
 # --- 2. XML helpers ---
 
@@ -314,7 +323,7 @@ function Resolve-TextFromFile {
 	} else {
 		$candidates = @(
 			(Join-Path $baseDir $filePath),
-			(Join-Path (Get-Location).Path $filePath)
+			(Join-Path (Get-Location).ProviderPath $filePath)
 		)
 	}
 	foreach ($c in $candidates) {
@@ -1553,7 +1562,7 @@ function Emit-DataSet {
 
 	# DataSource (not for Union)
 	if ($dsType -ne "DataSetUnion") {
-		$src = if ($ds.source) { "$($ds.source)" } else { $defaultSource }
+		$src = if ($ds.source) { "$($ds.source)" } elseif ($ds.dataSource) { "$($ds.dataSource)" } else { $defaultSource }
 		X "$indent`t<dataSource>$(Esc-XmlText $src)</dataSource>"
 	}
 
@@ -1563,6 +1572,9 @@ function Emit-DataSet {
 		X "$indent`t<query>$(Esc-XmlText $queryText)</query>"
 		if ($ds.autoFillFields -eq $false) {
 			X "$indent`t<autoFillFields>false</autoFillFields>"
+		}
+		if ($ds.useQueryGroupIfPossible -eq $false) {
+			X "$indent`t<useQueryGroupIfPossible>false</useQueryGroupIfPossible>"
 		}
 	} elseif ($dsType -eq "DataSetObject") {
 		X "$indent`t<objectName>$(Esc-XmlText "$($ds.objectName)")</objectName>"
@@ -2044,9 +2056,9 @@ $script:areaStylePresets = @{
 $script:userStylesLoaded = $false
 $searchPaths = @(
 	(Join-Path $script:queryBaseDir "skd-styles.json"),
-	(Join-Path (Get-Location).Path "skd-styles.json")
+	(Join-Path (Get-Location).ProviderPath "skd-styles.json")
 )
-$outResolved = if ([System.IO.Path]::IsPathRooted($OutputPath)) { $OutputPath } else { Join-Path (Get-Location).Path $OutputPath }
+$outResolved = if ([System.IO.Path]::IsPathRooted($OutputPath)) { $OutputPath } else { Join-Path (Get-Location).ProviderPath $OutputPath }
 $scanDir = [System.IO.Path]::GetDirectoryName($outResolved)
 while ($scanDir) {
 	$searchPaths += Join-Path (Join-Path (Join-Path (Join-Path $scanDir "presets") "skills") "skd") "skd-styles.json"
