@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Выгрузка остатков МО в ФО PP Retail: что и где настроить</title>
+    <style>
+        :root {
+            --ok: #28a745;
+            --err: #dc3545;
+            --info: #17a2b8;
+            --warn-bg: #fff3cd;
+            --warn-border: #ffc107;
+            --blue-bg: #e7f3ff;
+            --text: #212529;
+            --muted: #6c757d;
+            --border: #dee2e6;
+        }
+        * { box-sizing: border-box; }
+        body {
+            font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.55;
+            color: var(--text);
+            max-width: 920px;
+            margin: 0 auto;
+            padding: 24px 20px 48px;
+            background: #f8f9fa;
+        }
+        h1 { font-size: 1.6rem; margin-bottom: 0.35rem; }
+        h2 {
+            font-size: 1.25rem;
+            margin-top: 2rem;
+            padding-bottom: 0.35rem;
+            border-bottom: 2px solid var(--info);
+        }
+        h3 { font-size: 1.05rem; margin-top: 1.25rem; }
+        .meta { color: var(--muted); margin-bottom: 1.25rem; }
+        .lead, .box-warn, .box-info, .card {
+            background: #fff;
+            border-radius: 6px;
+            margin: 1rem 0;
+        }
+        .lead {
+            border-left: 4px solid var(--info);
+            padding: 1rem 1.25rem;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+        }
+        .box-warn {
+            background: var(--warn-bg);
+            border: 1px solid var(--warn-border);
+            padding: 0.85rem 1rem;
+        }
+        .box-info {
+            background: var(--blue-bg);
+            border: 1px solid var(--info);
+            padding: 0.85rem 1rem;
+        }
+        .card {
+            border: 1px solid var(--border);
+            padding: 0.25rem 1.25rem 1rem;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: #fff;
+            margin: 1rem 0;
+            font-size: 0.95rem;
+        }
+        th, td {
+            border: 1px solid var(--border);
+            padding: 0.55rem 0.7rem;
+            text-align: left;
+            vertical-align: top;
+        }
+        th { background: #e9ecef; }
+        code, pre { font-family: Consolas, "Courier New", monospace; font-size: 0.9rem; }
+        pre {
+            background: #272822;
+            color: #f8f8f2;
+            padding: 0.85rem 1rem;
+            border-radius: 6px;
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+        ol.steps { padding-left: 1.35rem; }
+        ol.steps li { margin: 0.45rem 0; }
+        .tag {
+            display: inline-block;
+            padding: 0.1rem 0.45rem;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+        .tag-ok { background: #d4edda; color: #155724; }
+        .tag-err { background: #f8d7da; color: #721c24; }
+        nav a { margin-right: 1rem; }
+        footer {
+            margin-top: 2rem;
+            padding-top: 0.8rem;
+            border-top: 1px solid var(--border);
+            color: var(--muted);
+            font-size: 0.85rem;
+        }
+    </style>
+</head>
+<body>
+
+<h1>Выгрузка остатков МО в тестовую ФО PP Retail</h1>
+<p class="meta">Обработка «Выгрузка остатков МО ФО», версия 1.42. Только тестовая база МО. Получатель: публикация AVC_PP_RETAIL_FO.</p>
+
+<nav>
+    <a href="#common">Общий шаг</a>
+    <a href="#manual">Ручной запуск</a>
+    <a href="#job">Регламент</a>
+    <a href="#check">Проверка</a>
+</nav>
+
+<div class="lead">
+    В версии 1.42 поле <strong>Адрес WS</strong> — это не строка URL, а элемент справочника
+    <strong>Внешние информационные базы</strong>. Обработка сама собирает адрес:
+    <code>Адрес web-сервиса</code> + <code>/ws/</code> + <code>Имя web-сервиса</code> + <code>.1cws?wsdl</code>.
+    И ручной запуск, и регламент должны указывать на один и тот же элемент этого справочника.
+</div>
+
+<div class="box-warn">
+    <strong>Чтобы выгрузка не ушла на прод:</strong>
+    <ul>
+        <li>Работайте в тестовой МО, не в продуктивной.</li>
+        <li>Не меняйте элемент справочника, у которого в адресе уже есть <code>amapfront</code>, <code>ammgavancore</code> или <code>PROD_</code>. Заведите отдельный элемент для PP Retail.</li>
+        <li>На узле <code>ВыгрузкаОстатков_ФОРозн</code> снимите флажок <strong>Регламентное задание разрешено</strong> и запишите узел до того, как поменяете адрес. Иначе утренний запуск уйдет по старому адресу.</li>
+        <li>Кнопку <strong>Настройки по умолчанию</strong> на форме настроек не нажимайте: она подставляет продуктивный адрес и для этой версии имеет неверный тип.</li>
+        <li>Узел <code>ВыгрузкаОстатков_ФО</code> (корпоративный ДУ) не открывайте и не меняйте.</li>
+    </ul>
+</div>
+
+<h2 id="common">1. Общий шаг. Элемент справочника с адресом ФО</h2>
+<p>Этот шаг один для обоих способов запуска.</p>
+<ol class="steps">
+    <li>В тестовой МО откройте раздел <strong>Администрирование</strong>, справочник <strong>Внешние информационные базы</strong>.</li>
+    <li>Создайте новый элемент. Наименование, например: <code>AVC_PP_RETAIL_FO</code>.</li>
+    <li>Заполните поля строго так, как в таблице. Полный адрес с <code>?wsdl</code> в поле адреса не пишите.</li>
+    <li>Запишите элемент.</li>
+    <li>Откройте получившийся адрес в браузере с сервера 1С, где работает тестовая МО. Должен открыться XML веб-сервиса <code>avancore_ws</code>.</li>
+</ol>
+
+<table>
+    <thead>
+        <tr><th>Поле элемента</th><th>Что вписать</th></tr>
+    </thead>
+    <tbody>
+        <tr>
+            <td>Адрес web-сервиса</td>
+            <td><code>http://smsk02mg138u/AVC_PP_RETAIL_FO</code></td>
+        </tr>
+        <tr>
+            <td>Имя web-сервиса</td>
+            <td><code>avancore_ws</code></td>
+        </tr>
+        <tr>
+            <td>Имя пользователя</td>
+            <td>пусто</td>
+        </tr>
+        <tr>
+            <td>Пароль</td>
+            <td>пусто</td>
+        </tr>
+    </tbody>
+</table>
+
+<p>Из этих двух полей обработка получает адрес:</p>
+<pre>http://smsk02mg138u/AVC_PP_RETAIL_FO/ws/avancore_ws.1cws?wsdl</pre>
+
+<div class="box-info">
+    Логин и пароль оставьте пустыми: публикация PP Retail принимает учетную запись Windows сервера 1С.
+    Если WSDL в браузере с сервера открывается, а из обработки нет, значит у сеанса сервера 1С нет прав на эту публикацию.
+</div>
+
+<h2 id="manual">2. Ручной запуск</h2>
+<p>Форма обработки при открытии адрес из узла обмена не подставляет. Элемент справочника нужно выбрать на форме перед каждой выгрузкой.</p>
+
+<div class="card">
+    <h3>Где</h3>
+    <p>Файл, Открыть, обработка <strong>Выгрузка остатков МО ФО</strong> (внВыгрузкаОстатковМО_ФО), версия в заголовке формы: <strong>v.1.42</strong>.</p>
+    <p>Либо раздел дополнительных обработок, команда <strong>Выгрузка остатков МО ФО</strong> (открытие формы, не команда «в фоне»).</p>
+    <h3>Что заполнить</h3>
+    <ol class="steps">
+        <li>Поле <strong>Адрес WS</strong>: элемент <code>AVC_PP_RETAIL_FO</code>, созданный в шаге 1. Не вставляйте сюда текст URL.</li>
+        <li><strong>Дата позиции</strong>: дата, за которую нужны остатки. Для пробы возьмите предыдущий рабочий день.</li>
+        <li><strong>Количество портфелей в пакете</strong>: для первой пробы <strong>1</strong>.</li>
+        <li>В отборе мандатов оставьте один тестовый мандат. Без отбора уйдут все остатки тестовой МО.</li>
+        <li>Нажмите <strong>Заполнить</strong>. Этот шаг только читает МО и в ФО не ходит. На форме должны появиться строки остатков.</li>
+        <li>Нажмите <strong>Опубликовать</strong>. Только эта кнопка вызывает веб-сервис ФО.</li>
+    </ol>
+</div>
+
+<div class="box-info">
+    После публикации сообщение начинается с «Загрузка произведена по адресу». Там будет наименование элемента справочника, а не URL.
+    Сверьте, что это <code>AVC_PP_RETAIL_FO</code>, и еще раз откройте карточку элемента: в адресе web-сервиса должен быть <code>smsk02mg138u/AVC_PP_RETAIL_FO</code>.
+</div>
+
+<h2 id="job">3. Запуск через регламент</h2>
+<p>
+    Регламент форму не открывает. Адрес он берет из настроек узла плана обмена, которые записываются вместе с узлом.
+    Пока узел не записан после кнопки «Установить», задание продолжает использовать старый адрес.
+</p>
+
+<div class="card">
+    <h3>Где</h3>
+    <p><strong>Обмен данными</strong>, <strong>Инфраструктура</strong>, план обмена <strong>Источники обмена</strong>, узел <code>ВыгрузкаОстатков_ФОРозн</code>.</p>
+    <h3>Что сделать</h3>
+    <ol class="steps">
+        <li>Откройте узел. Снимите флажок <strong>Регламентное задание разрешено</strong>. Запишите узел.</li>
+        <li>Проверьте поле <strong>Внешняя обработка</strong>: обработка «Выгрузка остатков МО ФО».</li>
+        <li>Проверьте поле <strong>Имя метода</strong>: точно <code>ФоноваяВыгрузка</code>, без пробелов. Другое имя метод версии 1.42 не выполняет.</li>
+        <li>Если узел изменен и еще не записан, форма настроек не откроется. Сначала запишите узел.</li>
+        <li>Нажмите гиперссылку под полем «Имя метода». Это команда <strong>Настройка внешней обработки</strong>. Если настройки уже есть, на ссылке их краткое описание, иначе текст «настройки не установлены».</li>
+        <li>В открывшейся форме в поле <strong>Адрес WS</strong> выберите элемент <code>AVC_PP_RETAIL_FO</code>. Остальные поля узла (узлы регистрации ненайденных, УК, почта) не меняйте.</li>
+        <li>Нажмите <strong>Установить</strong>.</li>
+        <li>Вернитесь на узел и запишите его. Без этой записи новый адрес в задание не попадет.</li>
+        <li>Для проверки запустите обмен вручную кнопкой <strong>Старт</strong> на узле, с одним тестовым мандатом в настройках, если отбор уже задан. Флажок регламента пока не включайте.</li>
+        <li>Когда в протоколе адрес — элемент PP Retail, верните флажок <strong>Регламентное задание разрешено</strong> и запишите узел. Расписание кнопкой <strong>Настройка расписания</strong> не меняйте, если оно уже настроено на тестовом контуре.</li>
+    </ol>
+</div>
+
+<table>
+    <thead>
+        <tr><th></th><th>Ручной запуск</th><th>Регламент</th></tr>
+    </thead>
+    <tbody>
+        <tr>
+            <td>Куда писать адрес</td>
+            <td>Поле «Адрес WS» на форме обработки</td>
+            <td>То же поле в настройках узла <code>ВыгрузкаОстатков_ФОРозн</code>, затем запись узла</td>
+        </tr>
+        <tr>
+            <td>Что выбирать</td>
+            <td colspan="2">Элемент справочника «Внешние информационные базы» <code>AVC_PP_RETAIL_FO</code></td>
+        </tr>
+        <tr>
+            <td>Что запускает выгрузку в ФО</td>
+            <td>Кнопка «Опубликовать»</td>
+            <td>Команда узла <code>ФоноваяВыгрузка</code> (кнопка «Старт» или регламентное задание)</td>
+        </tr>
+        <tr>
+            <td>Что в ФО не ходит</td>
+            <td>Кнопка «Заполнить»</td>
+            <td>Сам по себе открытый узел, пока не нажат «Старт» и не включен регламент</td>
+        </tr>
+    </tbody>
+</table>
+
+<h2 id="check">4. Проверка перед выгрузкой</h2>
+<table>
+    <thead>
+        <tr><th>Где смотреть</th><th>Как должно быть</th><th>Так быть не должно</th></tr>
+    </thead>
+    <tbody>
+        <tr>
+            <td>Карточка элемента <code>AVC_PP_RETAIL_FO</code></td>
+            <td><span class="tag tag-ok">Адрес</span> <code>http://smsk02mg138u/AVC_PP_RETAIL_FO</code>, имя сервиса <code>avancore_ws</code></td>
+            <td><span class="tag tag-err">Прод</span> <code>amapfront</code>, <code>ammgavancore</code>, <code>PROD_</code></td>
+        </tr>
+        <tr>
+            <td>Браузер с сервера тестовой МО</td>
+            <td>XML по адресу <code>.../AVC_PP_RETAIL_FO/ws/avancore_ws.1cws?wsdl</code></td>
+            <td>Ошибка 401/404 или XML другой публикации</td>
+        </tr>
+        <tr>
+            <td>Форма обработки или настройки узла</td>
+            <td>В «Адрес WS» выбран <code>AVC_PP_RETAIL_FO</code></td>
+            <td>Другой элемент или пустое поле</td>
+        </tr>
+        <tr>
+            <td>Узел <code>ВыгрузкаОстатков_ФОРозн</code></td>
+            <td>После «Установить» узел записан. До проверки флажок регламента снят</td>
+            <td>Настройки изменены, узел не записан, регламент включен</td>
+        </tr>
+    </tbody>
+</table>
+
+</body>
+</html>
