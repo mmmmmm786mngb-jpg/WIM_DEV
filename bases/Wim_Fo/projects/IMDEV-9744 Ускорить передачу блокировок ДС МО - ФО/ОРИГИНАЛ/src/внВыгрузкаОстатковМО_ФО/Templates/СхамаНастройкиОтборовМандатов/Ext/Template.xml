@@ -1,0 +1,54 @@
+﻿<?xml version="1.0" encoding="UTF-8"?>
+<DataCompositionSchema xmlns="http://v8.1c.ru/8.1/data-composition-system/schema" xmlns:dcscom="http://v8.1c.ru/8.1/data-composition-system/common" xmlns:dcscor="http://v8.1c.ru/8.1/data-composition-system/core" xmlns:dcsset="http://v8.1c.ru/8.1/data-composition-system/settings" xmlns:v8="http://v8.1c.ru/8.1/data/core" xmlns:v8ui="http://v8.1c.ru/8.1/data/ui" xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+	<dataSource>
+		<name>ИсточникДанных1</name>
+		<dataSourceType>Local</dataSourceType>
+	</dataSource>
+	<dataSet xsi:type="DataSetQuery">
+		<name>НаборДанных1</name>
+		<field xsi:type="DataSetFieldField">
+			<dataPath>Ссылка</dataPath>
+			<field>Ссылка</field>
+		</field>
+		<dataSource>ИсточникДанных1</dataSource>
+		<query>ВЫБРАТЬ РАЗЛИЧНЫЕ
+	СчетаМандатов.Владелец.Ссылка КАК Ссылка
+ИЗ
+	Справочник.СчетаМандатов КАК СчетаМандатов
+ГДЕ
+	1 = 1
+	И СчетаМандатов.Наименование &lt;&gt; "Счет мандата не определен"
+	И ЕСТЬNULL(СчетаМандатов.МестоХранения.ВидБанковскогоСчета, "") &lt;&gt; ЗНАЧЕНИЕ(Перечисление.ВидБанковскогоСчета.Депозитный)
+	И (СчетаМандатов.ВидСчетаМандата.Наименование = "Брокерский"
+				И СчетаМандатов.Владелец.ТипМандата.Ссылка В (ЗНАЧЕНИЕ(Перечисление.ТипыМандата.V), ЗНАЧЕНИЕ(Перечисление.ТипыМандата.Y), ЗНАЧЕНИЕ(Перечисление.ТипыМандата.Q), ЗНАЧЕНИЕ(Перечисление.ТипыМандата.H))
+			ИЛИ НЕ СчетаМандатов.Владелец.ТипМандата.Ссылка В (ЗНАЧЕНИЕ(Перечисление.ТипыМандата.V), ЗНАЧЕНИЕ(Перечисление.ТипыМандата.Y), ЗНАЧЕНИЕ(Перечисление.ТипыМандата.Q), ЗНАЧЕНИЕ(Перечисление.ТипыМандата.H)))</query>
+	</dataSet>
+	<settingsVariant>
+		<dcsset:name>Основной</dcsset:name>
+		<dcsset:presentation xsi:type="xs:string">Основной</dcsset:presentation>
+		<dcsset:settings xmlns:style="http://v8.1c.ru/8.1/data/ui/style" xmlns:sys="http://v8.1c.ru/8.1/data/ui/fonts/system" xmlns:web="http://v8.1c.ru/8.1/data/ui/colors/web" xmlns:win="http://v8.1c.ru/8.1/data/ui/colors/windows">
+			<dcsset:selection>
+				<dcsset:item xsi:type="dcsset:SelectedItemField">
+					<dcsset:field>Ссылка</dcsset:field>
+				</dcsset:item>
+			</dcsset:selection>
+			<dcsset:filter>
+				<dcsset:item xsi:type="dcsset:FilterItemComparison">
+					<dcsset:use>false</dcsset:use>
+					<dcsset:left xsi:type="dcscor:Field">Ссылка</dcsset:left>
+					<dcsset:comparisonType>Equal</dcsset:comparisonType>
+					<dcsset:userSettingID>9f77a6af-07ce-49cd-a084-3cc28d4902f4</dcsset:userSettingID>
+				</dcsset:item>
+				<dcsset:userSettingID>08f87fde-f94e-4679-b7f3-434b3d409d54</dcsset:userSettingID>
+			</dcsset:filter>
+			<dcsset:item xsi:type="dcsset:StructureItemGroup">
+				<dcsset:order>
+					<dcsset:item xsi:type="dcsset:OrderItemAuto"/>
+				</dcsset:order>
+				<dcsset:selection>
+					<dcsset:item xsi:type="dcsset:SelectedItemAuto"/>
+				</dcsset:selection>
+			</dcsset:item>
+		</dcsset:settings>
+	</settingsVariant>
+</DataCompositionSchema>
