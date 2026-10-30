@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# form-compile v1.218 — Compile 1C managed form from JSON or object metadata
+# form-compile v1.224 — Compile 1C managed form from JSON or object metadata
 # Source: https://github.com/Nikolay-Shirokov/cc-1c-skills
 import argparse
 import copy
@@ -873,7 +873,7 @@ def generate_catalog_item_dsl(meta, p, fd):
     # BSP group
     bsp_group = (p.get('additional') or {}).get('bspGroup', True)
     if bsp_group:
-        root_elements.append(OrderedDict([('group', 'vertical'), ('name', '\u0413\u0440\u0443\u043f\u043f\u0430\u0414\u043e\u043f\u043e\u043b\u043d\u0438\u0442\u0435\u043b\u044c\u043d\u044b\u0435\u0420\u0435\u043a\u0432\u0438\u0437\u0438\u0442\u044b')]))
+        root_elements.append(OrderedDict([('group', 'vertical'), ('name', '\u0413\u0440\u0443\u043f\u043f\u0430\u0414\u043e\u043f\u043e\u043b\u043d\u0438\u0442\u0435\u043b\u044c\u043d\u044b\u0435\u0420\u0435\u043a\u0432\u0438\u0437\u0438\u0442\u044b'), ('showTitle', True)]))
 
     # Properties
     form_props = OrderedDict()
@@ -1087,7 +1087,7 @@ def generate_document_item_dsl(meta, p, fd):
         else:
             add_page_children.extend(add_left_els + add_right_els)
         if add_bsp_group:
-            add_page_children.append(OrderedDict([('group', 'vertical'), ('name', '\u0413\u0440\u0443\u043f\u043f\u0430\u0414\u043e\u043f\u043e\u043b\u043d\u0438\u0442\u0435\u043b\u044c\u043d\u044b\u0435\u0420\u0435\u043a\u0432\u0438\u0437\u0438\u0442\u044b')]))
+            add_page_children.append(OrderedDict([('group', 'vertical'), ('name', '\u0413\u0440\u0443\u043f\u043f\u0430\u0414\u043e\u043f\u043e\u043b\u043d\u0438\u0442\u0435\u043b\u044c\u043d\u044b\u0435\u0420\u0435\u043a\u0432\u0438\u0437\u0438\u0442\u044b'), ('showTitle', True)]))
         additional_page = OrderedDict([('page', '\u0413\u0440\u0443\u043f\u043f\u0430\u0414\u043e\u043f\u043e\u043b\u043d\u0438\u0442\u0435\u043b\u044c\u043d\u043e'), ('title', '\u0414\u043e\u043f\u043e\u043b\u043d\u0438\u0442\u0435\u043b\u044c\u043d\u043e'), ('children', add_page_children)])
 
     # Build TS page elements
@@ -1114,7 +1114,7 @@ def generate_document_item_dsl(meta, p, fd):
         if footer_elements:
             root_elements.extend(footer_elements)
         if add_bsp_group and add_pos != 'none':
-            root_elements.append(OrderedDict([('group', 'vertical'), ('name', '\u0413\u0440\u0443\u043f\u043f\u0430\u0414\u043e\u043f\u043e\u043b\u043d\u0438\u0442\u0435\u043b\u044c\u043d\u044b\u0435\u0420\u0435\u043a\u0432\u0438\u0437\u0438\u0442\u044b')]))
+            root_elements.append(OrderedDict([('group', 'vertical'), ('name', '\u0413\u0440\u0443\u043f\u043f\u0430\u0414\u043e\u043f\u043e\u043b\u043d\u0438\u0442\u0435\u043b\u044c\u043d\u044b\u0435\u0420\u0435\u043a\u0432\u0438\u0437\u0438\u0442\u044b'), ('showTitle', True)]))
     else:
         # Pages form
         if header_pos == 'abovePages':
@@ -1451,7 +1451,7 @@ def generate_chart_of_accounts_item_dsl(meta, p, fd, preset_data):
         for flag in meta['AccountingFlags']:
             flag_children.append(OrderedDict([('check', flag['Name']), ('path', f"\u041e\u0431\u044a\u0435\u043a\u0442.{flag['Name']}")]))
         elements.append(OrderedDict([
-            ('group', 'vertical'), ('name', '\u0413\u0440\u0443\u043f\u043f\u0430\u041f\u0440\u0438\u0437\u043d\u0430\u043a\u0438\u0423\u0447\u0435\u0442\u0430'), ('title', '\u041f\u0440\u0438\u0437\u043d\u0430\u043a\u0438 \u0443\u0447\u0435\u0442\u0430'),
+            ('group', 'vertical'), ('name', '\u0413\u0440\u0443\u043f\u043f\u0430\u041f\u0440\u0438\u0437\u043d\u0430\u043a\u0438\u0423\u0447\u0435\u0442\u0430'), ('showTitle', True), ('title', '\u041f\u0440\u0438\u0437\u043d\u0430\u043a\u0438 \u0443\u0447\u0435\u0442\u0430'),
             ('children', flag_children),
         ]))
 
@@ -1708,7 +1708,7 @@ def parse_filter_shorthand(s):
             elif re.match(r'^\d+(\.\d+)?$', val_part):
                 result['value'] = val_part
                 result['valueType'] = 'xs:decimal'
-            elif re.match(r'^(Перечисление|Справочник|ПланСчетов|Документ|ПланВидовХарактеристик|ПланВидовРасчета)\.', val_part):
+            elif re.match(r'^(Перечисление|Справочник|ПланСчетов|Документ|ПланВидовХарактеристик|ПланВидовРасчета|БизнесПроцесс|Задача|ПланОбмена|Enum|Catalog|Document|ChartOfAccounts|ChartOfCharacteristicTypes|ChartOfCalculationTypes|BusinessProcess|Task|ExchangePlan)\.[^.]+\.[^.]+', val_part):
                 result['value'] = val_part
                 result['valueType'] = 'dcscor:DesignTimeValue'
             else:
@@ -1803,7 +1803,7 @@ def emit_filter_item(lines, item, indent):
         else:
             for v in val:
                 vt = _value_type_for(v, item.get('valueType'))
-                v_str = str(v).lower() if isinstance(v, bool) else esc_xml_text(str(v))
+                v_str = str(v).lower() if isinstance(v, bool) else esc_xml_text(normalize_design_time_value(v) if vt == 'dcscor:DesignTimeValue' else str(v))
                 ns_attr = _value_type_ns_attr(vt, v)
                 lines.append(f'{indent}\t<dcsset:right{ns_attr} xsi:type="{vt}">{v_str}</dcsset:right>')
     elif val is not None and (
@@ -1831,7 +1831,7 @@ def emit_filter_item(lines, item, indent):
         lines.append(f'{indent}\t<dcsset:right xsi:type="{vt}"/>')
     elif val is not None:
         vt = _value_type_for(val, item.get('valueType'))
-        v_str = str(val).lower() if isinstance(val, bool) else esc_xml_text(str(val))
+        v_str = str(val).lower() if isinstance(val, bool) else esc_xml_text(normalize_design_time_value(val) if vt == 'dcscor:DesignTimeValue' else str(val))
         ns_attr = _value_type_ns_attr(vt, val)
         lines.append(f'{indent}\t<dcsset:right{ns_attr} xsi:type="{vt}">{v_str}</dcsset:right>')
     if item.get('presentation'):
@@ -2682,6 +2682,29 @@ REF_ROOT_SYNONYMS = {
     "КритерийОтбора": "FilterCriterion",
 }
 ENUM_VALUE_SYNONYMS = {"EnumValue", "ЗначениеПеречисления"}
+
+
+# Значение ссылки в dcscor:DesignTimeValue (отборы, параметры) — к виду Конфигуратора:
+# "Enum.X.EnumValue.Y" / "Enum.X.Y" → "Перечисление.X.Y", "Catalog.X.EmptyRef" → "Справочник.X.ПустаяСсылка".
+# Вид с сегментом EnumValue платформа не разрешает: сравнение с ним всегда ложно (замер 8.3.24).
+DESIGN_TIME_REF_ROOTS = {
+    "Enum": "Перечисление", "Catalog": "Справочник", "Document": "Документ", "ChartOfAccounts": "ПланСчетов",
+    "ChartOfCharacteristicTypes": "ПланВидовХарактеристик", "ChartOfCalculationTypes": "ПланВидовРасчета",
+    "ExchangePlan": "ПланОбмена", "BusinessProcess": "БизнесПроцесс", "Task": "Задача",
+}
+
+
+def normalize_design_time_value(v):
+    parts = str(v).split('.')
+    if len(parts) < 3:
+        return str(v)
+    # Сравнения без учёта регистра — как в PS-порте (ключи хэш-таблицы, -contains)
+    parts[0] = next((v for k, v in DESIGN_TIME_REF_ROOTS.items() if k.lower() == parts[0].lower()), parts[0])
+    if parts[0] == 'Перечисление' and len(parts) >= 4 and parts[2].lower() in {x.lower() for x in ENUM_VALUE_SYNONYMS}:
+        parts = parts[:2] + parts[3:]
+    if parts[-1] == 'EmptyRef':
+        parts[-1] = 'ПустаяСсылка'
+    return '.'.join(parts)
 
 
 def normalize_meta_type_ref(ref):
@@ -5711,8 +5734,16 @@ def emit_group(lines, el, name, eid, indent):
         lines.append(f'{inner}<CurrentRowUse>{el["currentRowUse"]}</CurrentRowUse>')
 
     # ShowTitle
-    # ShowTitle=true — умолчание платформы (в корпусе только false): пишем лишь false
-    if el.get('showTitle') is not None and not el['showTitle']:
+    # Обычная группа без showTitle: заголовок показан, если он задан (title или titleDataPath), иначе скрыт — служебная группа
+    # раскладки без заголовка давала бы пустую строку-заголовок (умолчание платформы — показан).
+    # У сворачиваемой/всплывающей заголовок — переключатель: умолчание платформы, пишется лишь явный false.
+    if behavior_val in ('collapsible', 'popup'):
+        if el.get('showTitle') is not None and not el['showTitle']:
+            lines.append(f'{inner}<ShowTitle>false</ShowTitle>')
+    elif el.get('showTitle') is not None:
+        if str(el['showTitle']).lower() != 'true':
+            lines.append(f'{inner}<ShowTitle>false</ShowTitle>')
+    elif not el.get('title') and not el.get('titleDataPath'):
         lines.append(f'{inner}<ShowTitle>false</ShowTitle>')
     # Заголовок свёрнутого представления (collapsible/popup) — мультиязычный текст
     if el.get('collapsedTitle'):
@@ -6851,14 +6882,14 @@ def emit_dl_value(lines, type_str, val, indent, value_list_allowed=False):
     elif re.match(r'^string', t):
         lines.append(f'{indent}<dcssch:value xsi:type="xs:string">{esc_xml_text(val_str)}</dcssch:value>')
     elif re.match(r'^(CatalogRef|DocumentRef|EnumRef|ChartOfAccountsRef|ChartOfCharacteristicTypesRef|ChartOfCalculationTypesRef|BusinessProcessRef|TaskRef|ExchangePlanRef)\.', t):
-        lines.append(f'{indent}<dcssch:value xsi:type="dcscor:DesignTimeValue">{esc_xml_text(val_str)}</dcssch:value>')
+        lines.append(f'{indent}<dcssch:value xsi:type="dcscor:DesignTimeValue">{esc_xml_text(normalize_design_time_value(val_str))}</dcssch:value>')
     else:
         if re.match(r'^\d{4}-\d{2}-\d{2}T', val_str):
             lines.append(f'{indent}<dcssch:value xsi:type="xs:dateTime">{esc_xml_text(val_str)}</dcssch:value>')
         elif val_str in ('true', 'false'):
             lines.append(f'{indent}<dcssch:value xsi:type="xs:boolean">{esc_xml_text(val_str)}</dcssch:value>')
         elif re.match(r'^(ПланСчетов|Справочник|Перечисление|Документ|ПланВидовХарактеристик|ПланВидовРасчета|БизнесПроцесс|Задача|РегистрСведений|ПланОбмена)\.', val_str) or re.match(r'^(ChartOfAccounts|Catalog|Enum|Document|ChartOfCharacteristicTypes|ChartOfCalculationTypes|BusinessProcess|Task|InformationRegister|ExchangePlan)\.', val_str):
-            lines.append(f'{indent}<dcssch:value xsi:type="dcscor:DesignTimeValue">{esc_xml_text(val_str)}</dcssch:value>')
+            lines.append(f'{indent}<dcssch:value xsi:type="dcscor:DesignTimeValue">{esc_xml_text(normalize_design_time_value(val_str))}</dcssch:value>')
         else:
             lines.append(f'{indent}<dcssch:value xsi:type="xs:string">{esc_xml_text(val_str)}</dcssch:value>')
 
@@ -6909,7 +6940,7 @@ def emit_dl_input_parameters(lines, ip, indent):
                         elif isinstance(v, (int, float)):
                             lines.append(f'{indent}\t\t\t\t<dcscor:value xsi:type="xs:decimal">{v}</dcscor:value>')
                         else:
-                            lines.append(f'{indent}\t\t\t\t<dcscor:value xsi:type="dcscor:DesignTimeValue">{esc_xml_text(str(v))}</dcscor:value>')
+                            lines.append(f'{indent}\t\t\t\t<dcscor:value xsi:type="dcscor:DesignTimeValue">{esc_xml_text(normalize_design_time_value(v))}</dcscor:value>')
                     lines.append(f'{indent}\t\t\t</dcscor:item>')
                 lines.append(f'{indent}\t\t</dcscor:value>')
         elif 'choiceParameterLinks' in item:
@@ -7042,9 +7073,10 @@ def emit_data_parameters(lines, items, indent, block_view_mode=None):
             for v in val:
                 v_str = ('true' if v else 'false') if isinstance(v, bool) else str(v)
                 if re.match(r'^[a-zA-Z]+:', avtype):
-                    lines.append(f'{indent}\t\t<dcscor:value xsi:type="{avtype}">{esc_xml_text(v_str)}</dcscor:value>')
+                    av_str = normalize_design_time_value(v_str) if avtype == 'dcscor:DesignTimeValue' else v_str
+                    lines.append(f'{indent}\t\t<dcscor:value xsi:type="{avtype}">{esc_xml_text(av_str)}</dcscor:value>')
                 elif re.match(r'^(ПланСчетов|Справочник|Перечисление|Документ|ПланВидовХарактеристик|ПланВидовРасчета|БизнесПроцесс|Задача|РегистрСведений|ПланОбмена)\.', v_str) or re.match(r'^(ChartOfAccounts|Catalog|Enum|Document|ChartOfCharacteristicTypes|ChartOfCalculationTypes|BusinessProcess|Task|InformationRegister|ExchangePlan)\.', v_str):
-                    lines.append(f'{indent}\t\t<dcscor:value xsi:type="dcscor:DesignTimeValue">{esc_xml_text(v_str)}</dcscor:value>')
+                    lines.append(f'{indent}\t\t<dcscor:value xsi:type="dcscor:DesignTimeValue">{esc_xml_text(normalize_design_time_value(v_str))}</dcscor:value>')
                 else:
                     lines.append(f'{indent}\t\t<dcscor:value xsi:type="xs:string">{esc_xml_text(v_str)}</dcscor:value>')
         elif dp.get('nilValue') is True:
@@ -7087,7 +7119,7 @@ def emit_data_parameters(lines, items, indent, block_view_mode=None):
             elif re.match(r'^string', vtype):
                 lines.append(f'{indent}\t\t<dcscor:value xsi:type="xs:string">{esc_xml_text(str(val))}</dcscor:value>')
             elif re.match(r'^(ПланСчетов|Справочник|Перечисление|Документ|ПланВидовХарактеристик|ПланВидовРасчета|БизнесПроцесс|Задача|РегистрСведений|ПланОбмена)\.', str(val)) or re.match(r'^(ChartOfAccounts|Catalog|Enum|Document|ChartOfCharacteristicTypes|ChartOfCalculationTypes|BusinessProcess|Task|InformationRegister|ExchangePlan)\.', str(val)):
-                lines.append(f'{indent}\t\t<dcscor:value xsi:type="dcscor:DesignTimeValue">{esc_xml_text(str(val))}</dcscor:value>')
+                lines.append(f'{indent}\t\t<dcscor:value xsi:type="dcscor:DesignTimeValue">{esc_xml_text(normalize_design_time_value(val))}</dcscor:value>')
             else:
                 lines.append(f'{indent}\t\t<dcscor:value xsi:type="xs:string">{esc_xml_text(str(val))}</dcscor:value>')
         if dp.get('viewMode'):

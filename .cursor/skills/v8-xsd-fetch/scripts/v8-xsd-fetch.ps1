@@ -1,4 +1,4 @@
-﻿# v8-xsd-fetch v1.1 — Download 1C platform XSD schemas (dump format) into .v8-xsd
+﻿# v8-xsd-fetch v1.2 — Download 1C platform XSD schemas (dump format) into .v8-xsd
 # Source: https://github.com/Nikolay-Shirokov/cc-1c-skills
 <#
 .SYNOPSIS
@@ -141,10 +141,17 @@ $srcPath = Join-Path $target "source.json"
 $srcVers = @{}
 if (Test-Path -LiteralPath $srcPath) {
 	try {
-		$old = Get-Content -LiteralPath $srcPath -Raw -Encoding UTF8 | ConvertFrom-Json
+		# pwsh 7.5+ без -DateKind String сделал бы из fetched DateTime, и неперекачанная версия
+		# переписалась бы в формате локали; в 5.1 и pwsh до 7.5 ключа нет.
+		$cfj = @{}
+		if ((Get-Command ConvertFrom-Json).Parameters.ContainsKey('DateKind')) { $cfj.DateKind = 'String' }
+		$old = Get-Content -LiteralPath $srcPath -Raw -Encoding UTF8 | ConvertFrom-Json @cfj
 		if ($old.versions -is [PSCustomObject]) {
 			foreach ($pr in $old.versions.PSObject.Properties) {
-				$srcVers[$pr.Name] = @{ ref = "$($pr.Value.ref)"; commit = "$($pr.Value.commit)"; fetched = "$($pr.Value.fetched)" }
+				# pwsh 6 и 7.0–7.4 ключа DateKind не знают — формат наш, возвращаем его без потерь
+				$f = $pr.Value.fetched
+				if ($f -is [datetime]) { $f = $f.ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ', [Globalization.CultureInfo]::InvariantCulture) }
+				$srcVers[$pr.Name] = @{ ref = "$($pr.Value.ref)"; commit = "$($pr.Value.commit)"; fetched = "$f" }
 			}
 		}
 	} catch { }
