@@ -62,7 +62,41 @@ def main():
     run(count)
 
 
+def run_v3():
+    """Версия 3: без подстановки, мандаты T9532, тестовые блокировки, сравнение версий 1.42/1.43, раздел прогонов.
+    Для раздела прогонов создаются два пустых фоновых задания с именем пачки выгрузки (метод БСП без действий)."""
+    mo = connect("wim_mo")
+    for number in (1, 2):
+        mo.ФоновыеЗадания.Выполнить("ФоновыеЗаданияСервер.ТестФоновогоЗадания", mo.NewObject("Массив"),
+                                    "T9744_" + str(number), "Выгрузка остатков МО-ФО, пачка %d" % number)
+    protection = mo.NewObject("ОписаниеЗащитыОтОпасныхДействий")
+    protection.ПредупреждатьОбОпасныхДействиях = False
+    obj = mo.ВнешниеОбработки.Создать(EPF, False, protection)
+    params = obj.ПараметрыПоУмолчанию()
+    for name, value in (("АдресФО", "localhost/win_fo"), ("ПрефиксКодаМандата", PREFIX), ("МандатовВЗамере", 10),
+                        ("РазмерПакета", 10), ("МалыйПакет", 5), ("МандатовПроверкиОшибок", 10),
+                        ("МандатовВШагеПроверки", 10), ("МандатовВСравненииВерсий", 20)):
+        params.Вставить(name, value)
+    # На dev МО нет остатков ни в одном регистре: блокировки подставляются, Опубликовать версий идет без позиций.
+    params.Вставить("ТаблицаБлокировок", blocks_table(mo, 60))
+    prepared = obj.ПодготовитьЗамер(params)
+    text = ["######## Версия 3: тестовые блокировки, сравнение версий", prepared.Лог]
+    steps = prepared.Шаги
+    for i in range(steps.Количество()):
+        step = steps.Получить(i)
+        text.append(obj.ВыполнитьШаг(step, prepared.Данные))
+        print("шаг %d/%d: %s" % (i + 1, steps.Количество(), step.Серия), flush=True)
+    out = os.path.join(HERE, "reports", "zamer_dev_v3_%s.txt" % datetime.datetime.now().strftime("%Y%m%d_%H%M"))
+    os.makedirs(os.path.dirname(out), exist_ok=True)
+    with open(out, "w", encoding="utf-8") as handle:
+        handle.write("\n".join(text))
+    print("лог:", out)
+
+
 def run(count):
+    if "--v3" in sys.argv:
+        run_v3()
+        return
     mo = connect("wim_mo")
     protection = mo.NewObject("ОписаниеЗащитыОтОпасныхДействий")
     protection.ПредупреждатьОбОпасныхДействиях = False
