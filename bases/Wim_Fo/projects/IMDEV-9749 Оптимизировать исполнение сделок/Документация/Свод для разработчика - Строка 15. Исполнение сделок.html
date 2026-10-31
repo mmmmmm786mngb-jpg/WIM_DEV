@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>IMDEV-9749 - Свод по операциям ФО</title>
+<style>
+:root{--bg:#f6f6f3;--surface:#ffffff;--text:#1d1d1b;--muted:#5d5d58;--border:#dcdbd4;--accent:#2f5d8a;--head:#e6edf5;
+--code:#efeee9;--ok:#2e7d4f;--okbg:#e3f1e8;--warn:#9a5b00;--warnbg:#fbeed6;--bad:#a8322d;--badbg:#f8e1df}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--bg:#171716;--surface:#20201e;--text:#e8e7e2;--muted:#a6a59e;
+--border:#3a3a36;--accent:#8db4dc;--head:#263241;--code:#2b2b28;--ok:#7fcf9c;--okbg:#1f3327;--warn:#f0b860;--warnbg:#3a2e17;--bad:#f09a94;--badbg:#3b2220}}
+:root[data-theme="dark"]{--bg:#171716;--surface:#20201e;--text:#e8e7e2;--muted:#a6a59e;--border:#3a3a36;--accent:#8db4dc;--head:#263241;
+--code:#2b2b28;--ok:#7fcf9c;--okbg:#1f3327;--warn:#f0b860;--warnbg:#3a2e17;--bad:#f09a94;--badbg:#3b2220}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font:15px/1.55 "Segoe UI",system-ui,sans-serif}
+main{max-width:1100px;margin:0 auto;padding:28px 16px 64px}
+h1{font-size:25px;margin:0 0 6px}
+h2{font-size:21px;margin:0 0 10px;color:var(--accent)}
+h3{font-size:16.5px;margin:20px 0 6px}
+h4{font-size:15px;margin:14px 0 4px}
+p{margin:6px 0}
+.sub{color:var(--muted)}
+nav{display:flex;flex-wrap:wrap;gap:8px;margin:16px 0 4px}
+nav a{color:var(--accent);text-decoration:none;border:1px solid var(--border);border-radius:6px;padding:4px 10px;background:var(--surface);font-size:14px}
+section{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:20px 24px;margin-top:18px}
+.table-wrap{overflow-x:auto;margin:8px 0}
+table{border-collapse:collapse;width:100%;font-size:14px}
+th,td{border:1px solid var(--border);padding:6px 8px;text-align:left;vertical-align:top}
+th{background:var(--head)}
+code{background:var(--code);border-radius:4px;padding:1px 5px;font:13px Consolas,monospace;overflow-wrap:anywhere}
+ul,ol{margin:4px 0 8px;padding-left:22px}
+li{margin:3px 0}
+.tag{display:inline-block;font-size:12px;border-radius:10px;padding:2px 9px;margin-left:6px;vertical-align:2px}
+.ok{color:var(--ok);background:var(--okbg)}.warn{color:var(--warn);background:var(--warnbg)}.bad{color:var(--bad);background:var(--badbg)}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media (max-width:760px){.two{grid-template-columns:1fr}}
+.box{border:1px solid var(--border);border-radius:8px;padding:10px 14px}
+.box h4{margin-top:2px}
+.jira{border-left:3px solid var(--accent);background:var(--code);padding:10px 14px;border-radius:4px;margin-top:14px}
+.jira b{color:var(--accent)}
+</style>
+</head>
+<body>
+<main>
+<header>
+<h1>IMDEV-9749. Строка 15. Исполнение сделок</h1>
+<p class="sub">Для разработчиков. Данные: замеры и регистры копий ПРОД (Т-1) розничного ФО и ФО за 28.09-27.10.2026, код базовой конфигурации ФО 1.4.10.0 (на ПРОД 1.4.9.5), внешние обработки с ПРОД, сервисы ДУ и ПИФ, обработки выгрузки МО. Каждый раздел - основа отдельной задачи.</p>
+</header>
+
+<section id="r15">
+<h2>4. Строка 15. Исполнение сделок</h2>
+
+<h3>Как запускается</h3>
+<ul>
+<li>Предопределенное РЗ <code>АванкорИсполнениеСделок</code>, ежедневно 23:55 (включено в обеих базах) -> <code>АванкорВыполнениеРегламентныхЗаданий.ИсполнениеСделок</code> -> <code>Обработки.ГрупповоеИсполнениеСделок.СоздатьДокументыИсполнения(Истина)</code>.</li>
+<li><code>ЗаполнитьТаблицуСделок</code>: остатки <code>ПлановаяПозиция</code> на конец дня по всем портфелям, соединение со сделками с <code>ДатаПоставки</code> = дате (реквизит не индексирован), отбор биржевых и валютных.</li>
+<li>Цикл: документ на каждую строку остатка, проведение по одному, один поток, без <code>Попытка</code>.</li>
+<li>Ручной запуск: форма обработки (раздел "Заявки и сделки").</li>
+<li>В 23:55 одновременно стартует <code>АванкорОбработатьНеисполненныеИЧастичноИсполненныеПоручения</code> (обе базы), рядом 23:50 обновление статусов РЕПО, 23:51 очистка истории.</li>
+</ul>
+
+<h3>Что создает и меняет</h3>
+<ul>
+<li>Документ <code>ИсполнениеПоСделке</code> (дата документа - начало дня, не время запуска).</li>
+<li>РН <code>ПлановаяПозиция</code> (расход), <code>ЗадолженностьПоБумаге</code>/<code>ЗадолженностьПоВалюте</code>, РС <code>СделкиДляОбмена</code>.</li>
+<li><b>На каждый документ</b>: <code>РасширенияПоручений.ОбновитьДанныеИсполнения</code> и <code>СтатусыПоручений.ОбработатьРасчетныеСтатусыРасш</code> по поручению сделки - по одному поручению 2 и более раз за ночь.</li>
+<li>Событие ЖР "Аванкор. Исполнение сделок".</li>
+</ul>
+
+<div class="two">
+<div class="box">
+<h4>ФО Розница</h4>
+<ul>
+<li>430-1420 документов за ночь (16.10 - 3528 по 1764 сделкам).</li>
+<li>На 28.10 к исполнению 1274 строки, 637 сделок, 110 портфелей.</li>
+<li>Запрос заполнения 0,2 с.</li>
+<li>Неисполненных остатков за 30 дней - 0.</li>
+</ul>
+</div>
+<div class="box">
+<h4>ФО (обычный) <span class="tag warn">объем в 10-15 раз больше</span></h4>
+<ul>
+<li>4356-18 886 документов за ночь (27.10 - 18 886 по 9443 сделкам).</li>
+<li>На 28.10 к исполнению 16 282 строки, 8141 сделка, 269 портфелей.</li>
+<li>Запрос заполнения 0,7 с.</li>
+<li>1 неисполненный остаток: сделка 00001437159 от 02.10, документов исполнения по ней нет - не обрыв цикла, задание ее не брало (вероятно, отбор по бирже поручения).</li>
+</ul>
+</div>
+</div>
+
+<h3>Что уже известно о длительности</h3>
+<ul>
+<li>Замера нет: в 1.4.9.5 его нет, расширение замеров FO_KeyOpsPerf на ПРОД не установлено, журнал регистрации на Т-1 свой, дата документов - 00:00, время обновления поручений затирается дневными изменениями.</li>
+<li>Оценка для ФО: при 0,1-0,2 с на документ - 30-60 мин после 23:55 (не замер).</li>
+<li>Вендор в 1.4.10.0 уже включил в базовый код ключи <code>ИсполнениеСделок</code>, <code>ИсполнениеСделок.ЗаполнитьТаблицуСделок</code>, <code>ИсполнениеСделок.Проведение</code> (и остальные ключи FO_KeyOpsPerf). При установке 1.4.10.0 FO_KeyOpsPerf снять.</li>
+</ul>
+
+<h3>Что изучить для оптимизации (вендор)</h3>
+<ol>
+<li>Получить длительность: журнал регистрации ПРОД (старт и последнее проведение <code>ИсполнениеПоСделке</code> за ночь) или замеры 1.4.10.0.</li>
+<li>Пересчет расширений и статусов поручений один раз в конце: в цикле <code>ДополнительныеСвойства.ОбновитьДанныеИсполнения = Ложь</code> (точка уже есть в <code>ПередЗаписью</code>), после цикла один вызов по всем поручениям.</li>
+<li>Отбор по дате поставки в параметрах виртуальной таблицы; индекс по <code>Сделка.ДатаПоставки</code>.</li>
+<li>Параллельное проведение по портфелям (фоновые задания, как в постконтроле).</li>
+<li>Надежность: <code>Попытка</code> на документ с записью в ЖР и продолжением цикла.</li>
+<li>Развести старт с <code>АванкорОбработатьНеисполненныеИЧастичноИсполненныеПоручения</code> (оба работают с поручениями в 23:55).</li>
+<li>Разобрать сделку 00001437159 от 02.10 в ФО.</li>
+</ol>
+<div class="jira"><b>Задача:</b> Замерить и ускорить ночное исполнение сделок (особенно ФО, до 19 тыс. документов): пакетный пересчет поручений, отбор в виртуальной таблице, параллельность, защита от сбоя одного документа; разбор неисполненной сделки 02.10. <b>Приемка:</b> длительность известна по замерам; после доработки - те же движения и данные исполнения поручений, время не менее чем вдвое меньше.</div>
+</section>
+</main>
+</body>
+</html>

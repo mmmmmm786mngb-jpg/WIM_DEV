@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>IMDEV-9748 - Свод по операциям ФО</title>
+<style>
+:root{--bg:#f6f6f3;--surface:#ffffff;--text:#1d1d1b;--muted:#5d5d58;--border:#dcdbd4;--accent:#2f5d8a;--head:#e6edf5;
+--code:#efeee9;--ok:#2e7d4f;--okbg:#e3f1e8;--warn:#9a5b00;--warnbg:#fbeed6;--bad:#a8322d;--badbg:#f8e1df}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--bg:#171716;--surface:#20201e;--text:#e8e7e2;--muted:#a6a59e;
+--border:#3a3a36;--accent:#8db4dc;--head:#263241;--code:#2b2b28;--ok:#7fcf9c;--okbg:#1f3327;--warn:#f0b860;--warnbg:#3a2e17;--bad:#f09a94;--badbg:#3b2220}}
+:root[data-theme="dark"]{--bg:#171716;--surface:#20201e;--text:#e8e7e2;--muted:#a6a59e;--border:#3a3a36;--accent:#8db4dc;--head:#263241;
+--code:#2b2b28;--ok:#7fcf9c;--okbg:#1f3327;--warn:#f0b860;--warnbg:#3a2e17;--bad:#f09a94;--badbg:#3b2220}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font:15px/1.55 "Segoe UI",system-ui,sans-serif}
+main{max-width:1100px;margin:0 auto;padding:28px 16px 64px}
+h1{font-size:25px;margin:0 0 6px}
+h2{font-size:21px;margin:0 0 10px;color:var(--accent)}
+h3{font-size:16.5px;margin:20px 0 6px}
+h4{font-size:15px;margin:14px 0 4px}
+p{margin:6px 0}
+.sub{color:var(--muted)}
+nav{display:flex;flex-wrap:wrap;gap:8px;margin:16px 0 4px}
+nav a{color:var(--accent);text-decoration:none;border:1px solid var(--border);border-radius:6px;padding:4px 10px;background:var(--surface);font-size:14px}
+section{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:20px 24px;margin-top:18px}
+.table-wrap{overflow-x:auto;margin:8px 0}
+table{border-collapse:collapse;width:100%;font-size:14px}
+th,td{border:1px solid var(--border);padding:6px 8px;text-align:left;vertical-align:top}
+th{background:var(--head)}
+code{background:var(--code);border-radius:4px;padding:1px 5px;font:13px Consolas,monospace;overflow-wrap:anywhere}
+ul,ol{margin:4px 0 8px;padding-left:22px}
+li{margin:3px 0}
+.tag{display:inline-block;font-size:12px;border-radius:10px;padding:2px 9px;margin-left:6px;vertical-align:2px}
+.ok{color:var(--ok);background:var(--okbg)}.warn{color:var(--warn);background:var(--warnbg)}.bad{color:var(--bad);background:var(--badbg)}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media (max-width:760px){.two{grid-template-columns:1fr}}
+.box{border:1px solid var(--border);border-radius:8px;padding:10px 14px}
+.box h4{margin-top:2px}
+.jira{border-left:3px solid var(--accent);background:var(--code);padding:10px 14px;border-radius:4px;margin-top:14px}
+.jira b{color:var(--accent)}
+</style>
+</head>
+<body>
+<main>
+<header>
+<h1>IMDEV-9748. Строка 13. Загрузка неторговых поручений РОСТ</h1>
+<p class="sub">Для разработчиков. Данные: замеры и регистры копий ПРОД (Т-1) розничного ФО и ФО за 28.09-27.10.2026, код базовой конфигурации ФО 1.4.10.0 (на ПРОД 1.4.9.5), внешние обработки с ПРОД, сервисы ДУ и ПИФ, обработки выгрузки МО. Каждый раздел - основа отдельной задачи.</p>
+</header>
+
+<section id="r13">
+<h2>3. Строка 13. Загрузка неторговых поручений РОСТ</h2>
+
+<h3>Как запускается</h3>
+<ul>
+<li><code>ЗапускДополнительныхОбработок</code>, ВО <code>внЗагрузкаНеторговыхПорученийРОСТ</code> 1.07 (в справочнике зарегистрирована как <code>ЗагрузкаНеторговыхПорученийРОСТ</code>), команда <code>ФоновоеВыполнение</code>, пн-пт 10:00-18:30 каждые 600 с. Выход в нерабочий день биржи (<code>КалендарьБиржи</code>).</li>
+<li>Внешние вызовы: адаптер FIX (<code>Менеджер.Позиция</code> по брокерскому счету) и веб-сервис 1С:ДО <code>DMService.GetAgreementAmount</code> на каждый портфель в статусах поиска.</li>
+</ul>
+
+<h3>Что создает и меняет</h3>
+<ul>
+<li>В транзакции на портфель: документ <code>Поручение</code> (неторговое, Ввод, проведение; движения <code>ПланПоПоручению</code>, <code>ПрогнозПоПоручению</code>, <code>ПрогнозПоПоручениюАктивыВРЕПО</code>, <code>УтилизацияПорученийКазначейства</code>), РС <code>РегистрРСА_СЧА</code>, <code>ДатаАктуальностиФактическойПозиции</code>, <code>ДополнительныеСведения</code> (статус, дата статуса, <code>ПризнакПозицияВыгружена</code>, <code>ПризнакДатаПересчетаРСА</code>), <code>ВТБ_СтатусыПортфелей</code>.</li>
+<li>Вне транзакции: смена статусов "ДС выведены" и "ДС отправлены брокеру"; письмо с xlsx; ЖР; <code>ЗамерыВремени</code>.</li>
+<li>Ночью ВО "Удалить неактуальные торговые поручения" (задание 01:00, <code>svc_avancore</code>) помечает на удаление <b>все неторговые поручения с датой меньше сегодняшней</b> (версии в ~02:00).</li>
+</ul>
+
+<div class="two">
+<div class="box">
+<h4>ФО Розница <span class="tag ok">не узкое место</span></h4>
+<ul>
+<li>52 запуска в день, 240-270 с в день, в среднем 4,7 с, максимум 35,6 с (письмо 30 с).</li>
+<li>Создание: около 0,55 с на поручение; пустой запуск 5-7 с постоянных затрат.</li>
+<li>70-100 поручений в день; 530 из 1426 за месяц - в запуске 10:00.</li>
+<li><b>Отправлено 0</b>: прошлые поручения - "Черновик", непроведены и помечены на удаление ночью, вчерашние - "Ожидает проверки". Процедура <code>ОтправитьПоручения</code> есть, но не вызывается.</li>
+<li>Портфелей в статусе поиска 15 -> 15 вызовов 1С:ДО на запуск; в статусе "ДС выведены" 4050.</li>
+<li>Запрос купонов 0,7 с (результат не используется), отбор портфелей 0,15 с.</li>
+</ul>
+</div>
+<div class="box">
+<h4>ФО (обычный)</h4>
+<ul>
+<li>Не используется: поручений обработкой нет, обработка не зарегистрирована.</li>
+</ul>
+</div>
+</div>
+
+<h3>Что изучить для оптимизации</h3>
+<ol>
+<li>Подтвердить с бизнесом схему: поручения "Ввод" - однодневные, не отправляются, ночью удаляются. Если так - удалить мертвый код отправки.</li>
+<li>Постоянные 5-7 с на запуск: разложить на запрос позиции FIX и вызовы 1С:ДО (замеры шагов).</li>
+<li>Вызов 1С:ДО делать после проверки наличия поручения у портфеля (меняет текст строки отчета - согласовать).</li>
+<li>Удалить неиспользуемый запрос <code>ПолучитьСуммуКупоны</code>.</li>
+<li>Письмо до 30 с (тайм-аут почты) и сообщение "Ошибка рассылки отчета по почте" для любой ошибки создания поручений - исправить текст ошибки.</li>
+</ol>
+<div class="jira"><b>Задача:</b> Ревизия загрузки неторговых поручений РОСТ: подтвердить однодневную схему поручений, убрать мертвый код и неиспользуемый запрос, разложить постоянные затраты запуска. <b>Приемка:</b> результат поручений и статусов не меняется; постоянные затраты запуска разложены по шагам в замерах.</div>
+</section>
+</main>
+</body>
+</html>
