@@ -59,7 +59,7 @@ def legend(target):
 
 def chart_versions(out):
     fig, axes = plt.subplots(1, 2, figsize=(9.2, 3.6), sharey=True)
-    for ax, mode, title in ((axes[0], "без", "Без блокировок"), (axes[1], "с", "С блокировками 28.10 (200 шт.)")):
+    for ax, mode, title in ((axes[0], "без", "Без блокировок"), (axes[1], "с", "С блокировками (200 шт., по одной на мандат)")):
         rows = [r for r in RUNS if r[2] == mode]
         bars(ax, range(len(rows)), [r[4] for r in rows], [color(r[1]) for r in rows],
              ["шаг %d\n%s" % (r[0], r[1]) for r in rows])
