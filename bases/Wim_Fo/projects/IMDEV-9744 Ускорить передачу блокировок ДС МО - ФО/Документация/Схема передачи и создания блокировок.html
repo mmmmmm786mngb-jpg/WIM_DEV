@@ -1,0 +1,729 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>IMDEV-9744. Передача и создание блокировок МО - ФО</title>
+<style>
+:root {
+  --paper: #f3efe6;
+  --card: #fffdf8;
+  --ink: #1c2430;
+  --muted: #5c6570;
+  --line: #d9d3c7;
+  --navy: #1b3a4b;
+  --navy2: #24556e;
+  --red: #b42318;
+  --redbg: #fde8e6;
+  --redline: #e7b2ac;
+  --green: #0d6b3d;
+  --greenbg: #e5f6ec;
+  --greenline: #b7dfc6;
+  --graybg: #f4f5f7;
+  --grayline: #d5d8de;
+  --amber: #8a5a00;
+  --amberbg: #fff6e0;
+  --amberline: #f0d7a2;
+  --same: #5c6570;
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  margin: 0;
+  background:
+    radial-gradient(1200px 420px at 10% -10%, #e7f0ea 0%, transparent 55%),
+    radial-gradient(900px 380px at 110% 0%, #fdecea 0%, transparent 50%),
+    var(--paper);
+  color: var(--ink);
+  font: 16px/1.5 "Segoe UI", system-ui, sans-serif;
+}
+main { max-width: 1120px; margin: 0 auto; padding: 28px 18px 72px; }
+h1 { font-size: 30px; line-height: 1.25; margin: 0 0 8px; letter-spacing: -0.02em; }
+h2 { font-size: 22px; margin: 0 0 12px; color: var(--navy); }
+h3 { font-size: 16px; margin: 0 0 8px; }
+p { margin: 8px 0; }
+.lead { font-size: 18px; margin: 0; max-width: 780px; }
+.sub { color: var(--muted); margin: 8px 0 0; }
+a { color: var(--navy2); }
+section.card {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  padding: 22px 24px;
+  margin-top: 18px;
+  box-shadow: 0 1px 0 rgba(28, 36, 48, 0.03);
+}
+.kicker {
+  display: inline-block;
+  background: var(--navy);
+  color: #fff;
+  border-radius: 999px;
+  padding: 3px 10px;
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  margin-bottom: 10px;
+}
+.stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-top: 18px; }
+.stat {
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 14px 16px;
+}
+.stat b { display: block; font-size: 26px; letter-spacing: -0.03em; line-height: 1.15; }
+.stat span { color: var(--muted); font-size: 13px; }
+.stat .oldn { color: var(--red); }
+.stat .newn { color: var(--green); }
+.legend { display: flex; flex-wrap: wrap; gap: 8px; margin: 4px 0 14px; }
+.legend i {
+  display: inline-flex; align-items: center; gap: 6px;
+  border-radius: 999px; padding: 4px 10px; font-style: normal; font-size: 13px;
+  border: 1px solid var(--line);
+}
+.sw { width: 12px; height: 12px; border-radius: 3px; display: inline-block; }
+.sw.g { background: #c5cad1; }
+.sw.r { background: #e07a72; }
+.sw.n { background: #3cba7a; }
+.sw.a { background: #e2b657; }
+
+.story { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.panel { border-radius: 14px; padding: 14px 14px 12px; border: 1px solid var(--line); min-height: 100%; }
+.panel.was { background: linear-gradient(180deg, #fff 0%, #fff6f5 100%); }
+.panel.now { background: linear-gradient(180deg, #fff 0%, #f3fbf6 100%); }
+.panel h3 { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+.badge { font-size: 12px; border-radius: 999px; padding: 2px 8px; font-weight: 650; }
+.badge.r { background: var(--redbg); color: var(--red); }
+.badge.n { background: var(--greenbg); color: var(--green); }
+.caption { color: var(--muted); font-size: 14px; margin: 8px 0 0; }
+svg.pic { width: 100%; height: auto; display: block; }
+
+.bars { display: grid; gap: 14px; }
+.bar-row { display: grid; grid-template-columns: 108px 1fr; gap: 10px; align-items: center; }
+.bar-name { font-size: 14px; font-weight: 650; }
+.track { background: #efece4; border-radius: 10px; overflow: hidden; height: 38px; display: flex; }
+.seg { height: 100%; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 12px; font-weight: 650; white-space: nowrap; }
+.seg small { font-weight: 500; margin-left: 4px; }
+.seg.shake { background: #d6453d; }
+.seg.write { background: #5e6975; }
+.seg.save { background: repeating-linear-gradient(-45deg, #e5f6ec, #e5f6ec 6px, #d3f0df 6px, #d3f0df 12px); color: #0d6b3d; }
+.seg.common { background: #8aa0b3; }
+.seg.lockold { background: #d6453d; }
+.seg.locknew { background: #1f9d5a; }
+.scale { display: flex; justify-content: space-between; color: var(--muted); font-size: 12px; margin: -6px 0 0 118px; }
+.scale.slim { margin: 4px 0 0 0; }
+.vol { display: grid; gap: 14px; margin-top: 10px; }
+.vol-row {
+  display: grid;
+  grid-template-columns: 148px 1fr 108px;
+  gap: 12px;
+  align-items: center;
+  padding: 8px 10px;
+  border-radius: 12px;
+}
+.vol-row.now { background: #fff8ea; outline: 1px solid var(--amberline); }
+.vol-name { font-size: 14px; font-weight: 700; }
+.vol-name small { display: block; font-weight: 500; color: var(--muted); }
+.vol-lines { display: grid; gap: 5px; }
+.vol-line { display: grid; grid-template-columns: 38px 1fr 72px; gap: 8px; align-items: center; }
+.vol-ver { font-size: 12px; font-weight: 700; }
+.vol-track { background: #efece4; border-radius: 7px; height: 22px; display: flex; overflow: hidden; }
+.vol-val { font-size: 13px; font-weight: 700; text-align: right; white-space: nowrap; }
+.vol-win { text-align: right; color: var(--green); font-size: 12px; line-height: 1.25; }
+.vol-win b { display: block; font-size: 20px; letter-spacing: -0.03em; }
+.save-row { display: grid; grid-template-columns: 148px 1fr 88px; gap: 12px; align-items: center; }
+.save-track { background: #efece4; border-radius: 8px; height: 28px; overflow: hidden; }
+.save-fill {
+  height: 100%;
+  background: repeating-linear-gradient(-45deg, #1f9d5a, #1f9d5a 8px, #39b371 8px, #39b371 16px);
+}
+.note {
+  background: var(--amberbg);
+  border: 1px solid var(--amberline);
+  color: #5c4308;
+  border-radius: 12px;
+  padding: 12px 14px;
+  margin-top: 14px;
+  font-size: 14.5px;
+}
+.note b { color: #6a4b08; }
+
+.flow-wrap { margin-top: 6px; }
+.node {
+  border-radius: 12px;
+  padding: 11px 14px;
+  border: 1px solid var(--grayline);
+  background: var(--graybg);
+}
+.node strong { display: block; margin-bottom: 2px; }
+.node.same strong { color: #3d4651; }
+.node.old { background: var(--redbg); border-color: var(--redline); }
+.node.old strong { color: var(--red); }
+.node.new { background: var(--greenbg); border-color: var(--greenline); }
+.node.new strong { color: var(--green); }
+.node.warn { background: var(--amberbg); border-color: var(--amberline); }
+.node.warn strong { color: var(--amber); }
+.down { width: 0; height: 16px; margin: 0 auto; border-left: 2px solid #9aa3ad; position: relative; }
+.down:after {
+  content: "";
+  position: absolute;
+  left: -5px; bottom: -1px;
+  border: 5px solid transparent;
+  border-top-color: #9aa3ad;
+}
+.fork { margin-top: 2px; }
+.fork-rail {
+  height: 18px;
+  margin: 0 22% 0;
+  border-top: 2px solid #9aa3ad;
+  border-left: 2px solid #9aa3ad;
+  border-right: 2px solid #9aa3ad;
+  border-radius: 0 0 0 0;
+  position: relative;
+}
+.fork-rail:before, .fork-rail:after {
+  content: "";
+  position: absolute;
+  bottom: -6px;
+  border: 5px solid transparent;
+  border-top-color: #9aa3ad;
+}
+.fork-rail:before { left: -6px; }
+.fork-rail:after { right: -6px; }
+.split { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.branch { border-radius: 16px; padding: 12px; }
+.branch.old { background: #fff8f7; border: 1px solid #f0c7c3; }
+.branch.new { background: #f5fbf7; border: 1px solid #c6e6d2; }
+.tag {
+  display: inline-block;
+  font-size: 12px;
+  font-weight: 750;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  margin-bottom: 8px;
+}
+.tag.r { color: var(--red); }
+.tag.n { color: var(--green); }
+.merge {
+  margin-top: 8px;
+  text-align: center;
+  color: var(--muted);
+  font-size: 13px;
+}
+.pipe { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; margin-top: 8px; }
+.pipe .node { min-height: 92px; font-size: 14px; }
+.pipe .n { display: block; font-weight: 750; color: var(--navy2); margin-bottom: 4px; }
+.same-banner {
+  background: var(--graybg);
+  border: 1px dashed #b7bdc6;
+  border-radius: 12px;
+  padding: 10px 12px;
+  color: #3d4651;
+  margin-bottom: 8px;
+}
+
+table.t { border-collapse: collapse; width: 100%; font-size: 14.5px; }
+table.t th, table.t td { border: 1px solid var(--line); padding: 8px 10px; text-align: left; vertical-align: top; }
+table.t th { background: #eef3f6; color: var(--navy); }
+td.num, th.num { text-align: right; white-space: nowrap; }
+tr.hl td { background: #f3fbf6; }
+
+.two { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.mini { border-radius: 12px; padding: 12px 14px; border: 1px solid var(--line); }
+.mini ul { margin: 6px 0 0; padding-left: 18px; }
+.mini li { margin: 4px 0; }
+footer.foot { color: var(--muted); font-size: 13px; margin-top: 16px; }
+
+@media (max-width: 860px) {
+  h1 { font-size: 24px; }
+  .stats, .story, .split, .pipe, .two { grid-template-columns: 1fr; }
+  .bar-row, .vol-row, .save-row, .vol-line { grid-template-columns: 1fr; }
+  .scale { margin-left: 0; }
+  .vol-win, .vol-val { text-align: left; }
+  .fork-rail { margin: 0 8% 0; }
+  main { padding: 18px 12px 48px; }
+  section.card { padding: 16px 14px; }
+}
+@media print {
+  body { background: #fff; }
+  section.card { box-shadow: none; break-inside: avoid; }
+  a { color: inherit; text-decoration: none; }
+}
+</style>
+</head>
+<body>
+<main>
+<header>
+  <div class="kicker">IMDEV-9744</div>
+  <h1>Как блокировки денежных средств едут из МО в ФО и где появляется ускорение</h1>
+  <p class="lead">Утром МО сообщает ФО о блокировках денег по мандатам. ФО на каждую блокировку создает или обновляет поручение и проводит его. Поручений столько же. Быстрее становится доставка: не отдельный вызов на каждый мандат, а один вызов на пакет.</p>
+  <p class="sub">Обработка выгрузки остатков МО - ФО, версия 1.42 и версия 1.43. Оценка по замеру на Т-1 от 30.10.2026 для 19 399 блокировок и 5 потоков.</p>
+</header>
+
+<div class="stats">
+  <div class="stat">
+    <b><span class="oldn">19 400</span> <span style="color:#98a2ad">/</span> <span class="newn">~390</span></b>
+    <span>вызовов ФО за утро: было по мандату, стало один вызов на пакет до 50</span>
+  </div>
+  <div class="stat">
+    <b><span class="oldn">0,68 с</span> <span style="color:#98a2ad">/</span> <span class="newn">0,43 с</span></b>
+    <span>на одну блокировку. Разница - это отдельный вызов, а не запись поручения</span>
+  </div>
+  <div class="stat">
+    <b><span class="oldn">85 мин</span> <span style="color:#98a2ad">/</span> <span class="newn">69 мин</span></b>
+    <span>оценка окна выгрузки. Короче примерно на 16 минут</span>
+  </div>
+</div>
+
+<section class="card">
+  <h2>1. Для простого чтения: почему быстрее, хотя поручений столько же</h2>
+  <p>Блокировка в МО - это отметка "эти деньги мандата сейчас тратить нельзя", например на вознаграждение. Каждое утро МО передает такие отметки в ФО. ФО превращает каждую в поручение на вывод и проводит его. Число поручений не уменьшается. Уменьшается число походов из МО в ФО.</p>
+
+  <div class="story" style="margin-top:14px">
+    <div class="panel was">
+      <h3>Было, версия 1.42 <span class="badge r">отдельный поход</span></h3>
+      <svg class="pic" viewBox="0 0 520 250" role="img" aria-label="Четыре отдельных похода из МО в ФО">
+        <rect x="16" y="28" width="78" height="168" rx="10" fill="#1b3a4b"/>
+        <text x="55" y="118" text-anchor="middle" fill="#fff" font-size="16" font-family="Segoe UI, sans-serif">МО</text>
+        <rect x="420" y="28" width="84" height="168" rx="10" fill="#8f2d27"/>
+        <text x="462" y="118" text-anchor="middle" fill="#fff" font-size="16" font-family="Segoe UI, sans-serif">ФО</text>
+        <g font-family="Segoe UI, sans-serif" font-size="12" fill="#8f2d27">
+          <rect x="150" y="40" width="92" height="26" rx="6" fill="#fde8e6" stroke="#e7b2ac"/>
+          <text x="196" y="57" text-anchor="middle">1 блокировка</text>
+          <line x1="96" y1="53" x2="148" y2="53" stroke="#d6453d" stroke-width="2"/>
+          <line x1="244" y1="53" x2="418" y2="53" stroke="#d6453d" stroke-width="2"/>
+          <polygon points="418,48 418,58 428,53" fill="#d6453d"/>
+
+          <rect x="150" y="84" width="92" height="26" rx="6" fill="#fde8e6" stroke="#e7b2ac"/>
+          <text x="196" y="101" text-anchor="middle">1 блокировка</text>
+          <line x1="96" y1="97" x2="148" y2="97" stroke="#d6453d" stroke-width="2"/>
+          <line x1="244" y1="97" x2="418" y2="97" stroke="#d6453d" stroke-width="2"/>
+          <polygon points="418,92 418,102 428,97" fill="#d6453d"/>
+
+          <rect x="150" y="128" width="92" height="26" rx="6" fill="#fde8e6" stroke="#e7b2ac"/>
+          <text x="196" y="145" text-anchor="middle">1 блокировка</text>
+          <line x1="96" y1="141" x2="148" y2="141" stroke="#d6453d" stroke-width="2"/>
+          <line x1="244" y1="141" x2="418" y2="141" stroke="#d6453d" stroke-width="2"/>
+          <polygon points="418,136 418,146 428,141" fill="#d6453d"/>
+
+          <rect x="150" y="172" width="92" height="26" rx="6" fill="#fde8e6" stroke="#e7b2ac"/>
+          <text x="196" y="189" text-anchor="middle">1 блокировка</text>
+          <line x1="96" y1="185" x2="148" y2="185" stroke="#d6453d" stroke-width="2"/>
+          <line x1="244" y1="185" x2="418" y2="185" stroke="#d6453d" stroke-width="2"/>
+          <polygon points="418,180 418,190 428,185" fill="#d6453d"/>
+        </g>
+        <text x="260" y="230" text-anchor="middle" fill="#5c6570" font-size="13" font-family="Segoe UI, sans-serif">На рисунке 4 похода. Утром их около 19 400.</text>
+      </svg>
+      <p class="caption">Каждый поход: открыть вызов, передать одно поручение, дождаться ответа, закрыть вызов. На это уходит около 0,25 с сверху, еще до записи документа.</p>
+    </div>
+    <div class="panel now">
+      <h3>Стало, версия 1.43 <span class="badge n">один поход на пакет</span></h3>
+      <svg class="pic" viewBox="0 0 520 250" role="img" aria-label="Один поход пакета из МО в ФО">
+        <rect x="16" y="28" width="78" height="168" rx="10" fill="#1b3a4b"/>
+        <text x="55" y="118" text-anchor="middle" fill="#fff" font-size="16" font-family="Segoe UI, sans-serif">МО</text>
+        <rect x="420" y="28" width="84" height="168" rx="10" fill="#0d6b3d"/>
+        <text x="462" y="78" text-anchor="middle" fill="#fff" font-size="16" font-family="Segoe UI, sans-serif">ФО</text>
+        <g font-family="Segoe UI, sans-serif" font-size="11" fill="#0d6b3d">
+          <rect x="438" y="96" width="48" height="14" rx="2" fill="#d9f5e4"/>
+          <rect x="438" y="114" width="48" height="14" rx="2" fill="#d9f5e4"/>
+          <rect x="438" y="132" width="48" height="14" rx="2" fill="#d9f5e4"/>
+          <rect x="438" y="150" width="48" height="14" rx="2" fill="#d9f5e4"/>
+        </g>
+        <text x="462" y="182" text-anchor="middle" fill="#d9f5e4" font-size="11" font-family="Segoe UI, sans-serif">пишет все</text>
+        <g>
+          <rect x="132" y="78" width="150" height="78" rx="10" fill="#e5f6ec" stroke="#1f9d5a" stroke-width="2"/>
+          <text x="207" y="108" text-anchor="middle" fill="#0d6b3d" font-size="15" font-family="Segoe UI, sans-serif" font-weight="700">папка на 50</text>
+          <text x="207" y="130" text-anchor="middle" fill="#0d6b3d" font-size="13" font-family="Segoe UI, sans-serif">блокировок</text>
+          <line x1="96" y1="117" x2="130" y2="117" stroke="#1f9d5a" stroke-width="3"/>
+          <line x1="284" y1="117" x2="416" y2="117" stroke="#1f9d5a" stroke-width="3"/>
+          <polygon points="416,110 416,124 430,117" fill="#1f9d5a"/>
+        </g>
+        <text x="260" y="230" text-anchor="middle" fill="#5c6570" font-size="13" font-family="Segoe UI, sans-serif">Один поход на пакет. Утром таких походов около 390.</text>
+      </svg>
+      <p class="caption">Дверь открывают один раз на пакет. Внутри ФО все равно записывает и проводит каждое поручение. Поэтому время не падает до нуля: остается около 0,43 с на блокировку.</p>
+    </div>
+  </div>
+
+  <h3 style="margin-top:22px">Куда уходит время одной блокировки</h3>
+  <p>Замер на Т-1: по мандату 676 мс, пакетом по 50 мандатов 427 мс. Красная часть - плата за отдельный вызов. Серая часть - запись и проведение поручения в ФО, ее пакет не убирает.</p>
+  <div class="bars">
+    <div class="bar-row">
+      <div class="bar-name" style="color:var(--red)">1.42</div>
+      <div class="track" aria-label="0,68 секунды: 0,25 на вызов и 0,43 на запись">
+        <div class="seg shake" style="width:36.8%">вызов 0,25 с</div>
+        <div class="seg write" style="width:63.2%">запись поручения 0,43 с</div>
+      </div>
+    </div>
+    <div class="bar-row">
+      <div class="bar-name" style="color:var(--green)">1.43</div>
+      <div class="track" aria-label="0,43 секунды на запись поручения, экономия 0,25 секунды">
+        <div class="seg write" style="width:63.2%">запись поручения 0,43 с</div>
+        <div class="seg save" style="width:36.8%">минус 0,25 с</div>
+      </div>
+    </div>
+  </div>
+  <p class="caption">Вызов пакета тоже занимает время, но одно открытие делится на все поручения пакета, и на одну блокировку его почти не видно. На рисунке полоса 1.43 короче ровно на красный кусок.</p>
+
+  <h3 style="margin-top:22px">Как это складывается в утреннее окно</h3>
+  <p>Пять потоков работают одновременно, поэтому время всех блокировок делится на пять. Общая часть обмена - позиции, флаги, пересчет РСА - в обеих версиях одна и та же, около 41 минуты.</p>
+  <div class="bars">
+    <div class="bar-row">
+      <div class="bar-name" style="color:var(--red)">1.42<br>85 мин</div>
+      <div class="track" aria-label="85 минут: 41 общая часть и 44 блокировки">
+        <div class="seg common" style="width:41%">обмен 41 мин</div>
+        <div class="seg lockold" style="width:44%">блокировки 44 мин</div>
+      </div>
+    </div>
+    <div class="bar-row">
+      <div class="bar-name" style="color:var(--green)">1.43<br>69 мин</div>
+      <div class="track" aria-label="69 минут: 41 общая часть, 28 блокировки, экономия 16 минут">
+        <div class="seg common" style="width:41%">обмен 41 мин</div>
+        <div class="seg locknew" style="width:28%">блокировки 28 мин</div>
+        <div class="seg save" style="width:16%">-16 мин</div>
+      </div>
+    </div>
+  </div>
+  <div class="scale"><span>0</span><span>20</span><span>40</span><span>60</span><span>80</span><span>100 мин</span></div>
+  <p class="caption">На этой шкале 16 минут выглядят узкой полоской, потому что рядом лежат 41 минута позиций, флагов и РСА. Ниже те же 16 минут показаны отдельно, только на блоке блокировок.</p>
+  <div class="note">
+    <b>Что оценка не обещает.</b>
+    На проде 21-28 октября выгрузка шла около 94 минут вместо 41: блокировки добавляли примерно 53 минуты, потому что пять потоков мешали друг другу в ФО. Оценка "минус 16 минут" посчитана по времени одной блокировки и эту конкуренцию не учитывает. Пакет убирает лишние вызовы. Запись поручения и очередь потоков в ФО остаются.
+  </div>
+</section>
+
+<section class="card" id="locks-only">
+  <h2>2. Только блок блокировок: передача и обработка</h2>
+  <p>В эти диаграммы не входят позиции, флаги и пересчет РСА. Полоса - это только путь блокировки: вызов из МО в ФО плюс запись и проведение поручения. Выигрыш здесь - разница двух полос, и она растет вместе с числом блокировок.</p>
+  <p>Опора замера Т-1, одна блокировка: версия 1.42 - 0,68 с, версия 1.43 - 0,43 с, разница 0,25 с. Минуты окна считаются так: секунды на блокировку умножить на их число и разделить на 5 потоков и на 60. Запись поручения в обеих версиях одна и та же. Пакет убирает отдельный вызов.</p>
+
+  <h3>Сейчас: 19 399 блокировок, шкала только этого блока</h3>
+  <p>44 минуты версии 1.42 - это 16 минут на отдельные вызовы и 28 минут на запись поручений. Версия 1.43 оставляет 28 минут записи. Выигрыш 16 минут - это 37% блока блокировок, а не 16 минут из всего утра.</p>
+  <div class="bars">
+    <div class="bar-row">
+      <div class="bar-name" style="color:var(--red)">1.42<br>44 мин</div>
+      <div class="track" aria-label="44 минуты блока блокировок: 16 на вызовы и 28 на запись">
+        <div class="seg shake" style="width:32%">вызовы 16 мин</div>
+        <div class="seg write" style="width:56%">запись 28 мин</div>
+      </div>
+    </div>
+    <div class="bar-row">
+      <div class="bar-name" style="color:var(--green)">1.43<br>28 мин</div>
+      <div class="track" aria-label="28 минут записи и выигрыш 16 минут">
+        <div class="seg write" style="width:56%">запись 28 мин</div>
+        <div class="seg save" style="width:32%">выигрыш 16 мин</div>
+      </div>
+    </div>
+  </div>
+  <div class="scale"><span>0</span><span>10</span><span>20</span><span>30</span><span>40</span><span>50 мин</span></div>
+
+  <h3 style="margin-top:22px">Если блокировок станет больше</h3>
+  <p>Секунды на одну блокировку не меняются. Растет только количество, поэтому обе полосы длиннее, но красная часть вызовов у версии 1.42 растет, а у версии 1.43 ее нет. Серая запись растет одинаково. Шкала общая, от 0 до 240 минут, чтобы 100 000 блокировок поместились рядом с сегодняшними.</p>
+  <div class="vol">
+    <div class="vol-row">
+      <div class="vol-name">5 000<small>вчетверо меньше</small></div>
+      <div class="vol-lines">
+        <div class="vol-line">
+          <span class="vol-ver" style="color:var(--red)">1.42</span>
+          <div class="vol-track" aria-label="11 минут: 4 вызовы и 7 запись">
+            <div class="seg shake" style="width:1.7%"></div>
+            <div class="seg write" style="width:2.9%"></div>
+          </div>
+          <span class="vol-val">11 мин</span>
+        </div>
+        <div class="vol-line">
+          <span class="vol-ver" style="color:var(--green)">1.43</span>
+          <div class="vol-track" aria-label="7 минут записи">
+            <div class="seg write" style="width:2.9%"></div>
+          </div>
+          <span class="vol-val">7 мин</span>
+        </div>
+      </div>
+      <div class="vol-win">выигрыш<b>4 мин</b></div>
+    </div>
+    <div class="vol-row now">
+      <div class="vol-name">19 399<small>как 21-28 октября</small></div>
+      <div class="vol-lines">
+        <div class="vol-line">
+          <span class="vol-ver" style="color:var(--red)">1.42</span>
+          <div class="vol-track" aria-label="44 минуты: 16 вызовы и 28 запись">
+            <div class="seg shake" style="width:6.7%"></div>
+            <div class="seg write" style="width:11.7%"></div>
+          </div>
+          <span class="vol-val">44 мин</span>
+        </div>
+        <div class="vol-line">
+          <span class="vol-ver" style="color:var(--green)">1.43</span>
+          <div class="vol-track" aria-label="28 минут записи">
+            <div class="seg write" style="width:11.7%"></div>
+          </div>
+          <span class="vol-val">28 мин</span>
+        </div>
+      </div>
+      <div class="vol-win">выигрыш<b>16 мин</b></div>
+    </div>
+    <div class="vol-row">
+      <div class="vol-name">40 000<small>примерно вдвое</small></div>
+      <div class="vol-lines">
+        <div class="vol-line">
+          <span class="vol-ver" style="color:var(--red)">1.42</span>
+          <div class="vol-track" aria-label="90 минут: 33 вызовы и 57 запись">
+            <div class="seg shake" style="width:13.8%"></div>
+            <div class="seg write" style="width:23.8%"></div>
+          </div>
+          <span class="vol-val">90 мин</span>
+        </div>
+        <div class="vol-line">
+          <span class="vol-ver" style="color:var(--green)">1.43</span>
+          <div class="vol-track" aria-label="57 минут записи">
+            <div class="seg write" style="width:23.8%"></div>
+          </div>
+          <span class="vol-val">57 мин</span>
+        </div>
+      </div>
+      <div class="vol-win">выигрыш<b>33 мин</b></div>
+    </div>
+    <div class="vol-row">
+      <div class="vol-name">100 000<small>примерно впятеро</small></div>
+      <div class="vol-lines">
+        <div class="vol-line">
+          <span class="vol-ver" style="color:var(--red)">1.42</span>
+          <div class="vol-track" aria-label="225 минут: 83 вызовы и 142 запись">
+            <div class="seg shake" style="width:34.6%"></div>
+            <div class="seg write" style="width:59.2%"></div>
+          </div>
+          <span class="vol-val">225 мин</span>
+        </div>
+        <div class="vol-line">
+          <span class="vol-ver" style="color:var(--green)">1.43</span>
+          <div class="vol-track" aria-label="142 минуты записи">
+            <div class="seg write" style="width:59.2%"></div>
+          </div>
+          <span class="vol-val">142 мин</span>
+        </div>
+      </div>
+      <div class="vol-win">выигрыш<b>83 мин</b></div>
+    </div>
+  </div>
+  <div class="vol-row" style="padding-top:0">
+    <div></div>
+    <div class="vol-line">
+      <span class="vol-ver"></span>
+      <div class="scale slim"><span>0</span><span>60</span><span>120</span><span>180</span><span>240 мин</span></div>
+      <span></span>
+    </div>
+    <div></div>
+  </div>
+  <p class="caption">Красный кусок внутри полосы 1.42 - отдельные вызовы. Серый - запись и проведение поручений. У 1.43 красного куска нет, серый той же длины. Чем больше блокировок, тем шире красный кусок и тем больше минут выигрыша.</p>
+
+  <h3 style="margin-top:22px">Сам выигрыш по блокировкам</h3>
+  <p>Та же разница, без полос "как было". Каждые 10 000 блокировок добавляют около 8 минут выигрыша. Каждая лишняя тысяча - около 50 секунд окна. Доля одна и та же, около 37% блока, потому что на каждой блокировке экономится один и тот же вызов 0,25 с.</p>
+  <div class="vol">
+    <div class="save-row">
+      <div class="vol-name">5 000</div>
+      <div class="save-track" aria-label="выигрыш 4 минуты"><div class="save-fill" style="width:4.4%"></div></div>
+      <div class="vol-win"><b>4 мин</b></div>
+    </div>
+    <div class="save-row">
+      <div class="vol-name">19 399</div>
+      <div class="save-track" aria-label="выигрыш 16 минут"><div class="save-fill" style="width:17.8%"></div></div>
+      <div class="vol-win"><b>16 мин</b></div>
+    </div>
+    <div class="save-row">
+      <div class="vol-name">40 000</div>
+      <div class="save-track" aria-label="выигрыш 33 минуты"><div class="save-fill" style="width:36.7%"></div></div>
+      <div class="vol-win"><b>33 мин</b></div>
+    </div>
+    <div class="save-row">
+      <div class="vol-name">100 000</div>
+      <div class="save-track" aria-label="выигрыш 83 минуты"><div class="save-fill" style="width:92.2%"></div></div>
+      <div class="vol-win"><b>83 мин</b></div>
+    </div>
+  </div>
+  <div class="save-row" style="margin-top:4px">
+    <div></div>
+    <div class="scale slim"><span>0</span><span>выигрыш, шкала до 90 мин</span><span>90 мин</span></div>
+    <div></div>
+  </div>
+
+  <div class="table-wrap" style="overflow-x:auto; margin-top:16px">
+    <table class="t">
+      <tr>
+        <th>Блокировок</th>
+        <th class="num">1.42, блок</th>
+        <th class="num">из них вызовы</th>
+        <th class="num">из них запись</th>
+        <th class="num">1.43, блок</th>
+        <th class="num">Выигрыш</th>
+      </tr>
+      <tr>
+        <td>5 000</td>
+        <td class="num">11 мин</td>
+        <td class="num">4 мин</td>
+        <td class="num">7 мин</td>
+        <td class="num">7 мин</td>
+        <td class="num">4 мин</td>
+      </tr>
+      <tr class="hl">
+        <td>19 399, сейчас</td>
+        <td class="num">44 мин</td>
+        <td class="num">16 мин</td>
+        <td class="num">28 мин</td>
+        <td class="num">28 мин</td>
+        <td class="num">16 мин</td>
+      </tr>
+      <tr>
+        <td>40 000</td>
+        <td class="num">90 мин</td>
+        <td class="num">33 мин</td>
+        <td class="num">57 мин</td>
+        <td class="num">57 мин</td>
+        <td class="num">33 мин</td>
+      </tr>
+      <tr>
+        <td>100 000</td>
+        <td class="num">225 мин</td>
+        <td class="num">83 мин</td>
+        <td class="num">142 мин</td>
+        <td class="num">142 мин</td>
+        <td class="num">83 мин</td>
+      </tr>
+    </table>
+  </div>
+  <div class="note">
+    <b>Как читать рост.</b>
+    Это линейка по замеру одной блокировки и пяти потокам. Запись поручения с числом блокировок растет в обеих версиях одинаково, выигрыш на вызовах растет только у сравнения с 1.42. Если блокировок станет очень много, потоки могут сильнее мешать друг другу именно на записи. Эта добавка в линейку не входит и есть у обеих версий.
+  </div>
+</section>
+
+<section class="card" id="algorithm">
+  <h2>3. Алгоритм: что остается и что меняется</h2>
+  <div class="legend">
+    <i><span class="sw g"></span>Серый - одинаково в 1.42 и 1.43</i>
+    <i><span class="sw r"></span>Красный - было, в 1.43 этого шага нет</i>
+    <i><span class="sw n"></span>Зеленый - новый шаг 1.43</i>
+    <i><span class="sw a"></span>Желтый - запасной путь, если пакет вернулся с ошибкой</i>
+  </div>
+
+  <div class="flow-wrap">
+    <div class="node same"><strong>1. Старт утра</strong>Пять потоков выгружают остатки параллельно. Мандаты внутри потока идут пакетами до 50.</div>
+    <div class="down"></div>
+    <div class="node same"><strong>2. Позиция мандата</strong>Позиция этого мандата уходит в ФО как раньше. К блокировкам этот шаг не относится.</div>
+    <div class="down"></div>
+    <div class="node same"><strong>3. Найти блокировки мандата</strong>Если блокировок нет, мандат попадает в список на удаление старых блокировок в ФО. Если есть - запоминаем счет, валюту и код мандата для будущего удаления. Эта таблица заполняется так же, как в 1.42.</div>
+    <div class="down"></div>
+
+    <div class="fork">
+      <div class="fork-rail"></div>
+      <div class="split">
+        <div class="branch old">
+          <div class="tag r">Было 1.42 - убираем</div>
+          <div class="node old"><strong>4. Сразу позвонить в ФО</strong>На этот мандат собирается пакет из его поручений и сразу вызывается загрузка поручений. Обычно это одно поручение.</div>
+          <div class="down"></div>
+          <div class="node old"><strong>5. ФО записывает одно поручение</strong>Ищет документ по внешнему коду, создает или перезаписывает, проводит. Проверка лимитов выключена.</div>
+          <div class="down"></div>
+          <div class="node old"><strong>6. И так на каждый мандат пакета</strong>На 50 мандатов - 50 вызовов, вперемешку с выгрузкой позиций. Ошибка вызова сразу относится к этому мандату: признак ошибки и рассылка.</div>
+        </div>
+        <div class="branch new">
+          <div class="tag n">Стало 1.43 - добавляем</div>
+          <div class="node new"><strong>4. Положить в корзину пакета</strong>Блокировки мандата копятся в памяти. В ФО на этом шаге не звоним.</div>
+          <div class="down"></div>
+          <div class="node new"><strong>5. Конец пакета: один вызов</strong>Когда набралось 50 мандатов или поток закончился, вся корзина уходит одним вызовом. В рознице это до 50 поручений.</div>
+          <div class="down"></div>
+          <div class="node new"><strong>6. ФО записывает все поручения пакета</strong>То же создание, что слева, но за один заход: на каждое поручение найти по внешнему коду, записать и провести.</div>
+          <div class="down"></div>
+          <div class="node warn"><strong>7. Если в ответе есть ошибка</strong>Корзина отправляется повторно по каждому мандату отдельно, как в 1.42. Ошибка снова относится к своему мандату. Второго поручения не появляется: ФО находит уже созданное по внешнему коду и перезаписывает его.</div>
+          <div class="down"></div>
+          <div class="node new"><strong>8. Если пакет оборвался исключением</strong>Корзина, которую не успели отправить, уходит со следующим пакетом или сразу после обхода мандатов. В 1.42 копить было нечего: каждый мандат уже ушел своим вызовом.</div>
+        </div>
+      </div>
+    </div>
+
+    <p class="merge">Дальше обе версии снова идут одним путем</p>
+    <div class="down"></div>
+    <div class="node same"><strong>9. После блокировок, как раньше</strong>Удалить в ФО блокировки, которых больше нет. Выставить флаги "позиция выгружена". Пересчитать РСА.</div>
+  </div>
+</section>
+
+<section class="card">
+  <h2>4. Создание поручения в ФО: этот кусок не меняется</h2>
+  <div class="same-banner">Меняется только то, сколько поручений приезжает за один вызов: одно или до пятидесяти. Правило создания одно и то же. Конфигурация ФО не дорабатывается.</div>
+  <div class="pipe">
+    <div class="node same"><span class="n">1</span>Принять пакет поручений из МО.</div>
+    <div class="node same"><span class="n">2</span>Для каждого найти документ по внешнему коду блокировки.</div>
+    <div class="node same"><span class="n">3</span>Нет документа - создать поручение на вывод. Есть - перезаписать.</div>
+    <div class="node same"><span class="n">4</span>Провести поручение. Проверка лимитов при этой загрузке выключена.</div>
+    <div class="node same"><span class="n">5</span>Вернуть ответ: успех или ошибка. Ошибка пакета в 1.43 приводит к повтору по мандатам.</div>
+  </div>
+  <p class="caption">Поэтому повторная отправка безопасна: внешний код тот же, ФО обновляет найденное поручение, а не заводит копию.</p>
+</section>
+
+<section class="card">
+  <h2>5. Что в алгоритме трогаем, а что нет</h2>
+  <div class="two">
+    <div class="mini" style="background:var(--greenbg); border-color:var(--greenline)">
+      <h3 style="color:var(--green)">Меняется</h3>
+      <ul>
+        <li>Момент отправки: не внутри мандата, а один раз в конце пакета.</li>
+        <li>Число вызовов: около 19 400 становится около 390.</li>
+        <li>При ошибке пакета - повтор по мандатам, чтобы ошибка не размазалась на весь пакет.</li>
+        <li>Неотправленная корзина не теряется, если пакет оборвался.</li>
+      </ul>
+    </div>
+    <div class="mini" style="background:var(--graybg)">
+      <h3>Не меняется</h3>
+      <ul>
+        <li>Состав поручения, внешний код, сумма, счет, валюта, вид операции "Вывод".</li>
+        <li>Деление на 5 потоков и пакеты по 50 мандатов.</li>
+        <li>Удаление снятых блокировок, флаги позиции, пересчет РСА.</li>
+        <li>Создание и проведение поручения внутри ФО.</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="table-wrap" style="overflow-x:auto; margin-top:16px">
+    <table class="t">
+      <tr>
+        <th>Показатель</th>
+        <th class="num">1.42, по мандату</th>
+        <th class="num">1.43, пакетом</th>
+      </tr>
+      <tr>
+        <td>Блокировок и поручений в ФО</td>
+        <td class="num">19 399</td>
+        <td class="num">19 399</td>
+      </tr>
+      <tr>
+        <td>Вызовов загрузки поручений за утро</td>
+        <td class="num">около 19 400</td>
+        <td class="num">около 390</td>
+      </tr>
+      <tr>
+        <td>Время одной блокировки, замер Т-1</td>
+        <td class="num">676 мс</td>
+        <td class="num">427 мс</td>
+      </tr>
+      <tr>
+        <td>Общая часть обмена: позиции, флаги, РСА</td>
+        <td class="num">около 41 мин</td>
+        <td class="num">около 41 мин</td>
+      </tr>
+      <tr>
+        <td>Отправка блокировок в окне выгрузки</td>
+        <td class="num">около 44 мин</td>
+        <td class="num">около 28 мин</td>
+      </tr>
+      <tr class="hl">
+        <td>Оценка всего окна</td>
+        <td class="num">около 85 мин</td>
+        <td class="num">около 69 мин</td>
+      </tr>
+    </table>
+  </div>
+  <p class="caption">390 вызовов - это 19 399 блокировок, разделенные на пакет по 50, если в пакете блокировка есть у каждого мандата. Если в части пакетов блокировок меньше, вызовов будет немного больше, но каждый все равно один на пакет, а не на мандат.</p>
+</section>
+
+<footer class="foot">
+  IMDEV-9744. Утренняя выгрузка остатков МО - ФО, розница. Цифры окна - оценка по замеру одной блокировки на Т-1 30.10.2026, без конкуренции пяти потоков за ФО.
+</footer>
+</main>
+</body>
+</html>
