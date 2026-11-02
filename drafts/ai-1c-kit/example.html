@@ -1,0 +1,481 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Приложение. Одна задача от фразы до проверки</title>
+<meta name="description" content="Учебный сквозной пример: платеж нельзя провести, если на счете меньше денег. Как записки, карточки и три специалиста делают эту работу.">
+<style>
+:root {
+  --paper: #f3eee4;
+  --card: #fffdf8;
+  --ink: #1c2430;
+  --muted: #5e6872;
+  --line: #e4d8c6;
+  --navy: #17233c;
+  --orange: #e15a2a;
+  --teal: #1c7c74;
+  --gold: #c49212;
+  --green: #2e7d4f;
+  --bad: #a33b32;
+  --shadow: 0 16px 40px rgba(23, 35, 60, 0.08);
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  margin: 0;
+  color: var(--ink);
+  background:
+    radial-gradient(circle at 0 0, #ffe4cf 0, transparent 28%),
+    #f3eee4;
+  font: 18px/1.55 "Segoe UI", sans-serif;
+}
+a { color: var(--teal); }
+.wrap { width: min(1120px, calc(100% - 32px)); margin: 0 auto; }
+.top {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: center;
+  padding: 18px 0;
+  flex-wrap: wrap;
+}
+.brand { color: var(--ink); text-decoration: none; font-weight: 700; }
+.top nav { display: flex; gap: 16px; flex-wrap: wrap; }
+.top nav a { color: var(--ink); text-decoration: none; }
+h1, h2, h3 { font-family: Georgia, "Palatino Linotype", serif; line-height: 1.15; }
+h1 { font-size: 44px; margin: 0 0 12px; }
+h2 { font-size: 30px; margin: 0 0 8px; }
+.lead { font-size: 20px; max-width: 760px; }
+.banner {
+  background: #17233c;
+  color: #f6f1e7;
+  border-radius: 28px;
+  padding: 28px;
+  margin-bottom: 18px;
+}
+.banner p { color: #efe6d8; }
+.map {
+  display: flex;
+  gap: 8px;
+  overflow: auto;
+  padding: 8px 0 18px;
+}
+.map a {
+  flex: 0 0 auto;
+  text-decoration: none;
+  color: var(--ink);
+  background: white;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 8px 12px;
+  font-size: 15px;
+}
+.scene {
+  display: grid;
+  grid-template-columns: 88px 1fr;
+  gap: 18px;
+  margin: 0 0 22px;
+}
+.num {
+  width: 72px;
+  height: 72px;
+  border-radius: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font: 700 28px Georgia, serif;
+  background: white;
+  border: 1px solid var(--line);
+}
+.panel {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 24px;
+  box-shadow: var(--shadow);
+  padding: 18px;
+  display: grid;
+  grid-template-columns: 0.9fr 1.1fr;
+  gap: 18px;
+}
+.panel.wide { grid-template-columns: 1fr; }
+.who {
+  display: inline-block;
+  border-radius: 999px;
+  padding: 3px 10px;
+  font-size: 13px;
+  background: #f8e6d8;
+  color: #8a3b1e;
+  margin-bottom: 8px;
+}
+.who.teal { background: #e5f4f1; color: #0f5c56; }
+.who.navy { background: #e7eefb; color: #243e73; }
+.who.gold { background: #fff4cc; color: #7a5b0a; }
+.who.green { background: #e5f6ec; color: #1d6b3a; }
+.say, .got {
+  border-radius: 16px;
+  padding: 12px 14px;
+  margin: 10px 0;
+}
+.say { background: #f8e6d8; }
+.got { background: #e5f4f1; }
+.say b, .got b { display: block; font-size: 13px; letter-spacing: 0.04em; text-transform: uppercase; }
+.picture, .mock, .files, .check, .split {
+  background: #f7f3ea;
+  border-radius: 16px;
+  padding: 12px;
+}
+pre {
+  margin: 0;
+  white-space: pre-wrap;
+  font: 14px/1.45 Consolas, monospace;
+  background: #17233c;
+  color: #f6f1e7;
+  border-radius: 14px;
+  padding: 14px;
+}
+.mock {
+  background: white;
+  border: 1px solid var(--line);
+}
+.mock h3 { margin: 0 0 10px; font-size: 20px; }
+.row { display: flex; justify-content: space-between; gap: 8px; padding: 8px 0; border-bottom: 1px solid var(--line); }
+.field { min-width: 120px; text-align: right; }
+.msg { margin-top: 12px; border-radius: 12px; padding: 10px 12px; }
+.msg.bad { background: #fde8e6; color: var(--bad); }
+.msg.ok { background: #e5f6ec; color: var(--green); }
+.btn {
+  display: inline-block;
+  margin-top: 12px;
+  background: var(--orange);
+  color: white;
+  border-radius: 10px;
+  padding: 8px 12px;
+  font-weight: 700;
+}
+.pair { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.files div, .check li, .split div {
+  background: white;
+  border-radius: 12px;
+  padding: 10px 12px;
+  margin: 6px 0;
+  border: 1px solid var(--line);
+}
+.check { list-style: none; margin: 0; padding: 12px; }
+.check li::before { content: "OK  "; color: var(--green); font-weight: 700; }
+.split { display: grid; gap: 8px; }
+.note-paper {
+  background: #fffdf8;
+  border: 1px dashed #c49212;
+  border-radius: 16px;
+  padding: 14px;
+}
+.path { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+.path span {
+  background: white;
+  border-radius: 999px;
+  padding: 8px 12px;
+  border: 1px solid var(--line);
+}
+footer { color: var(--muted); padding: 10px 0 40px; }
+@media (max-width: 900px) {
+  h1 { font-size: 32px; }
+  .scene, .panel, .pair { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header class="top">
+  <a class="brand" href="index.html">Снаряжение для 1С</a>
+  <nav>
+    <a href="index.html">К рассказу</a>
+    <a href="#scene-1">Фраза</a>
+    <a href="#scene-3">Архивариус</a>
+    <a href="#scene-5">Языковед</a>
+    <a href="#scene-10">Испытатель</a>
+  </nav>
+</header>
+
+<section class="banner">
+  <p>Приложение к рассказу</p>
+  <h1>Одна фраза проходит весь путь</h1>
+  <p class="lead">Учебная задача: платеж нельзя провести, если на счете меньше денег, чем сумма документа. Человеку должно быть видно, почему отказали. Имена "Платеж" и "ДенежныеСредства" здесь придуманы, чтобы было на что смотреть. В живой базе настоящие имена приносит архивариус.</p>
+</section>
+
+<nav class="map" aria-label="Шаги примера">
+  <a href="#scene-1">1. Фраза</a>
+  <a href="#scene-2">2. Записки</a>
+  <a href="#scene-3">3. Архивариус</a>
+  <a href="#scene-4">4. Объект</a>
+  <a href="#scene-5">5. Языковед</a>
+  <a href="#scene-6">6. Расширение</a>
+  <a href="#scene-7">7. Запрос</a>
+  <a href="#scene-8">8. Проверка</a>
+  <a href="#scene-9">9. База</a>
+  <a href="#scene-10">10. Кнопки</a>
+  <a href="#scene-11">11. Записка людям</a>
+</nav>
+
+<article class="scene" id="scene-1">
+  <div class="num">1</div>
+  <div class="panel">
+    <div class="picture">
+      <svg viewBox="0 0 420 260" xmlns="http://www.w3.org/2000/svg">
+        <rect width="420" height="260" rx="16" fill="#f8e6d8"/>
+        <circle cx="86" cy="110" r="36" fill="#f0c9a0"/>
+        <rect x="58" y="148" width="56" height="64" rx="16" fill="#e15a2a"/>
+        <rect x="150" y="48" width="230" height="120" rx="18" fill="#fffdf8" stroke="#1c2430" stroke-width="3"/>
+        <text x="168" y="100" font-size="16" font-family="Georgia, serif">Не проводи,</text>
+        <text x="168" y="126" font-size="16" font-family="Georgia, serif">если денег мало</text>
+      </svg>
+    </div>
+    <div>
+      <span class="who">Вы</span>
+      <h2>Задача звучит как просьба коллеге</h2>
+      <div class="say"><b>Фраза</b>Платеж нельзя проводить, если на счете меньше денег, чем в документе. Напиши человеку, почему отказали.</div>
+      <p>На этом шаге еще нет кода. Помощник принимает результат: отказ в проведении и понятный текст. Карточку и специалиста он выбирает сам.</p>
+    </div>
+  </div>
+</article>
+
+<article class="scene" id="scene-2">
+  <div class="num">2</div>
+  <div class="panel">
+    <div class="files">
+      <div><b>База платежей</b><br>Проект лежит в папке этой базы.</div>
+      <div><b>Полка расширения</b><br>Новая проверка живет рядом с типовым документом, сам документ поставщика остается на месте.</div>
+      <div><b>Образец</b><br>Похожий прием сначала ищут в Управлении торговлей.</div>
+      <div><b>Имена</b><br>Свою переменную не называют Параметры или СписокВыбора: эти слова уже заняты формой.</div>
+    </div>
+    <div>
+      <span class="who gold">Записки, они же правила</span>
+      <h2>До кода открываются нужные записки</h2>
+      <div class="got"><b>Что решено заранее</b>Куда класть работу, чью типовую программу не переписывать, где искать образец и какие имена на форме уже заняты.</div>
+      <p>Записки не пишут проверку остатка. Они не дают помощнику положить файл в чужую папку и не дают выдумать "как принято" с нуля.</p>
+    </div>
+  </div>
+</article>
+
+<article class="scene" id="scene-3">
+  <div class="num">3</div>
+  <div class="panel">
+    <div class="files">
+      <div><b>Документ.Платеж</b><br>Сумма и счет уже есть. Отдельное поле заводить не нужно.</div>
+      <div><b>Регистр остатков</b><br>Остаток денег лежит в регистре накопления. Для рассказа он называется ДенежныеСредства.</div>
+      <div><b>Похожее место в УТ</b><br>Там проведение тоже останавливают через отказ и сообщение, а не через отдельную кнопку "на удачу".</div>
+    </div>
+    <div>
+      <span class="who teal">Специалист: архивариус, индекс кода</span>
+      <h2>Звонок туда, где лежит настоящий код</h2>
+      <div class="say"><b>Спросили</b>Где в этой базе уже проверяют деньги и какой регистр хранит остаток по счету?</div>
+      <div class="got"><b>Принес</b>Имена документа и регистра, плюс образец из Управления торговлей. Помощник не выбирает регистр по догадке.</div>
+      <p>Архивариус умеет искать фразу, процедуру, состав объекта и кто записывает регистр. Язык платформы он не объясняет: для этого следующий звонок.</p>
+    </div>
+  </div>
+</article>
+
+<article class="scene" id="scene-4">
+  <div class="num">4</div>
+  <div class="panel">
+    <div class="mock">
+      <h3>Платеж, как его увидел помощник</h3>
+      <div class="row"><span>Счет</span><span class="field">ссылка</span></div>
+      <div class="row"><span>Сумма</span><span class="field">число</span></div>
+      <div class="row"><span>Дата</span><span class="field">момент остатка</span></div>
+      <div class="row"><span>Проведение</span><span class="field">сюда встанет отказ</span></div>
+    </div>
+    <div>
+      <span class="who navy">Карточки meta-info и form-info</span>
+      <h2>Сначала читают объект, потом рисуют проверку</h2>
+      <div class="got"><b>Что выяснили</b>Сумма и счет уже на документе. Форма умеет показать сообщение у поля суммы. Отказ стоит на проведении документа, поэтому он срабатывает при любом проведении.</div>
+    </div>
+  </div>
+</article>
+
+<article class="scene" id="scene-5">
+  <div class="num">5</div>
+  <div class="panel">
+    <div class="mock">
+      <h3>Страница словаря</h3>
+      <div class="row"><span>Отказ</span><span class="field">Истина останавливает проведение</span></div>
+      <div class="row"><span>СообщениеПользователю</span><span class="field">объект сообщения</span></div>
+      <div class="row"><span>Текст</span><span class="field">что прочитать человеку</span></div>
+      <div class="row"><span>Поле</span><span class="field">какое поле подсветить</span></div>
+      <div class="row"><span>Сообщить()</span><span class="field">показать на экране</span></div>
+    </div>
+    <div>
+      <span class="who gold">Специалист: языковед, справочник платформы</span>
+      <h2>Незнакомый вызов сверяют до записи</h2>
+      <div class="say"><b>Спросили</b>Как в проведении остановить документ и показать текст у суммы?</div>
+      <div class="got"><b>Принес</b>У сообщения есть Текст, Поле, метод Сообщить и метод УстановитьДанные. Это словарь платформы 8.3.27, не память помощника.</div>
+      <p>Языковед не знает, как называется ваш регистр. Он отвечает только за язык платформы.</p>
+    </div>
+  </div>
+</article>
+
+<article class="scene" id="scene-6">
+  <div class="num">6</div>
+  <div class="panel wide">
+    <div class="split">
+      <div><b>Типовой документ</b><br>Проведение остается как было. Его можно обновлять от поставщика.</div>
+      <div><b>Полоска расширения</b><br>Перед проведением: сравнить сумму с остатком. Если денег меньше, поставить отказ и показать текст.</div>
+    </div>
+    <div>
+      <span class="who navy">Карточки cfe-borrow и cfe-patch-method</span>
+      <h2>Проверку приклеивают сбоку</h2>
+      <p>Одна карточка заимствует документ в расширение. Вторая вставляет процедуру перед типовым проведением. Надпись Перед значит: сделать это до обычного кода.</p>
+      <pre>// Описание: Не дает провести платеж, если на счете меньше денег, чем сумма документа
+//
+// Параметры:
+//  Отказ - Булево - признак отказа, его читает платформа
+//  РежимПроведения - РежимПроведенияДокумента - оперативное проведение или обычное
+//
+&amp;Перед("ОбработкаПроведения")
+Процедура Расш_ПроверитьОстатокПередПроведением(Отказ, РежимПроведения)
+
+    Остаток = ОстатокНаСчете(Счет, Дата);
+    Если Сумма &gt; Остаток Тогда
+        Отказ = Истина;
+        Сообщение = Новый СообщениеПользователю;
+        Сообщение.Текст = "На счете не хватает денег. Остаток "
+            + Остаток + ", в документе " + Сумма;
+        Сообщение.Поле = "Сумма";
+        Сообщение.УстановитьДанные(ЭтотОбъект);
+        Сообщение.Сообщить();
+    КонецЕсли;
+
+КонецПроцедуры</pre>
+    </div>
+  </div>
+</article>
+
+<article class="scene" id="scene-7">
+  <div class="num">7</div>
+  <div class="panel wide">
+    <pre>ВЫБРАТЬ
+    ДенежныеСредстваОстатки.СуммаОстаток КАК СуммаОстаток
+ИЗ
+    РегистрНакопления.ДенежныеСредства.Остатки(
+        &amp;Момент,
+        Счет = &amp;Счет
+    ) КАК ДенежныеСредстваОстатки</pre>
+    <div>
+      <span class="who navy">Карточка composing-1c-queries</span>
+      <h2>Остаток спрашивают запросом, не перебором</h2>
+      <div class="got"><b>Как читается запрос</b>На момент документа взять остаток регистра по нужному счету. Счет и момент передаются параметрами. Если строки нет, остаток считают нулем, и платеж с суммой больше нуля получит отказ.</div>
+      <p>Имя регистра в живой базе будет тем, которое на шаге 3 принес архивариус. Здесь оно учебное.</p>
+    </div>
+  </div>
+</article>
+
+<article class="scene" id="scene-8">
+  <div class="num">8</div>
+  <div class="panel">
+    <ul class="check">
+      <li>Документ заимствован, типовой модуль не переписан</li>
+      <li>Процедура стоит перед проведением</li>
+      <li>В запросе параметры, а не текст, склеенный руками</li>
+      <li>Сообщение собрано из методов, которые подтвердил языковед</li>
+      <li>Переменная не названа занятым словом формы</li>
+    </ul>
+    <div>
+      <span class="who green">Карточки проверки</span>
+      <h2>Заготовку смотрят до базы</h2>
+      <p>Для такой правки подходят проверка расширения и проверка формы, если форма тоже менялась: cfe-validate и form-validate. Смысл шага простой. Ошибку устройства ловят в файлах, пока пользователи еще работают в прежней программе.</p>
+    </div>
+  </div>
+</article>
+
+<article class="scene" id="scene-9">
+  <div class="num">9</div>
+  <div class="panel">
+    <div class="picture">
+      <svg viewBox="0 0 420 240" xmlns="http://www.w3.org/2000/svg">
+        <rect width="420" height="240" rx="16" fill="#e7eefb"/>
+        <rect x="40" y="70" width="140" height="100" rx="12" fill="#fff" stroke="#1c2430" stroke-width="3"/>
+        <text x="62" y="126" font-size="16" font-family="Georgia, serif">Расширение</text>
+        <path d="M190 120 H270" stroke="#e15a2a" stroke-width="6"/>
+        <path d="M258 104 l24 16 l-24 16" fill="#e15a2a"/>
+        <rect x="280" y="48" width="100" height="140" rx="12" fill="#17233c"/>
+        <text x="300" y="124" fill="#f6f1e7" font-size="16" font-family="Georgia, serif">База</text>
+      </svg>
+    </div>
+    <div>
+      <span class="who navy">Карточки базы</span>
+      <h2>Расширение ставят на полку программы</h2>
+      <p>Загрузка исходников, обновление конфигурации базы и проверка, что расширение подключено: db-load-xml, db-update, db-cfe-admin. После этого отказ уже может сработать у человека в предприятии. Пока испытатель не нажал проведение, это только установленная полка.</p>
+    </div>
+  </div>
+</article>
+
+<article class="scene" id="scene-10">
+  <div class="num">10</div>
+  <div class="panel wide">
+    <div class="pair">
+      <div class="mock">
+        <h3>Платеж 12</h3>
+        <div class="row"><span>Счет</span><span class="field">Основной</span></div>
+        <div class="row"><span>Остаток</span><span class="field">3 000</span></div>
+        <div class="row"><span>Сумма</span><span class="field">10 000</span></div>
+        <div class="msg bad">На счете не хватает денег. Остаток 3 000, в документе 10 000.</div>
+        <div class="btn">Провести</div>
+      </div>
+      <div class="mock">
+        <h3>Платеж 13</h3>
+        <div class="row"><span>Счет</span><span class="field">Основной</span></div>
+        <div class="row"><span>Остаток</span><span class="field">3 000</span></div>
+        <div class="row"><span>Сумма</span><span class="field">2 000</span></div>
+        <div class="msg ok">Документ проведен.</div>
+        <div class="btn">Провести</div>
+      </div>
+    </div>
+    <div>
+      <span class="who teal">Специалист: испытатель, тест-пилот</span>
+      <h2>В живой программе нажимают два раза</h2>
+      <div class="say"><b>Просьба</b>Открой платеж и проверь проведение. Сначала сумма больше остатка, потом меньше.</div>
+      <div class="got"><b>Что должен увидеть</b>Первый документ остается непроведенным, текст виден у суммы. Второй проводится. Клиент после сценария закрывают.</div>
+      <p>Испытатель нужен, потому что файлы могут быть верными, а кнопка в интерфейсе все равно ведет себя иначе. Этот звонок делают, когда вы просите открыть программу.</p>
+    </div>
+  </div>
+</article>
+
+<article class="scene" id="scene-11">
+  <div class="num">11</div>
+  <div class="panel">
+    <div class="note-paper">
+      <h3>Для кассира и заказчика</h3>
+      <p>Платеж больше не проводится, если на выбранном счете меньше денег, чем сумма документа. На экране написано, сколько было и сколько просили списать. Если денег хватает, проведение идет как раньше.</p>
+    </div>
+    <div>
+      <span class="who gold">Записка про бумаги для людей</span>
+      <h2>Наружу выходит результат, не кухня</h2>
+      <p>В записке для заказчика нет папок, имен карточек и серверов. Там есть изменение в работе: когда платеж остановят и что будет написано на экране.</p>
+    </div>
+  </div>
+</article>
+
+<section class="banner" id="path">
+  <h2>Весь путь на одной ленте</h2>
+  <p>Одна и та же фраза про недостаток денег. Снаряжение только передает ее из рук в руки.</p>
+  <div class="path">
+    <span>1. Фраза</span>
+    <span>2. Записки: база и расширение</span>
+    <span>3. Архивариус: документ и регистр</span>
+    <span>4. Карточки: прочитать объект</span>
+    <span>5. Языковед: отказ и сообщение</span>
+    <span>6. Карточка: вставка перед проведением</span>
+    <span>7. Карточка: запрос остатка</span>
+    <span>8. Проверка файлов</span>
+    <span>9. Полка в базе</span>
+    <span>10. Два нажатия в программе</span>
+    <span>11. Записка для людей</span>
+  </div>
+  <p><a href="index.html">Вернуться к рассказу о снаряжении</a></p>
+</section>
+<footer>
+  <p>Учебное приложение. Код на картинках показывает форму результата, а не готовую доработку конкретной базы. Настоящие имена объектов подставляет индекс исходников.</p>
+</footer>
+</div>
+</body>
+</html>
