@@ -1,0 +1,324 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Установка лимитов: оптимизация</title>
+<style>
+:root{--bg:#f6f6f3;--surface:#ffffff;--text:#1d1d1b;--muted:#5d5d58;--border:#dcdbd4;--accent:#2f5d8a;--head:#e6edf5;
+--code:#efeee9;--ok:#2e7d4f;--okbg:#e3f1e8;--warn:#9a5b00;--warnbg:#fbeed6;--bad:#a8322d;--badbg:#f8e1df;
+--now:#eb6834;--after:#2a78d6;--track:#ecebe5;--line:#b9b8b0}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--bg:#171716;--surface:#20201e;--text:#e8e7e2;--muted:#a6a59e;
+--border:#3a3a36;--accent:#8db4dc;--head:#263241;--code:#2b2b28;--ok:#7fcf9c;--okbg:#1f3327;--warn:#f0b860;--warnbg:#3a2e17;
+--bad:#f09a94;--badbg:#3b2220;--now:#d95926;--after:#3987e5;--track:#2c2c29;--line:#55554f}}
+:root[data-theme="dark"]{--bg:#171716;--surface:#20201e;--text:#e8e7e2;--muted:#a6a59e;--border:#3a3a36;--accent:#8db4dc;--head:#263241;
+--code:#2b2b28;--ok:#7fcf9c;--okbg:#1f3327;--warn:#f0b860;--warnbg:#3a2e17;--bad:#f09a94;--badbg:#3b2220;--now:#d95926;--after:#3987e5;
+--track:#2c2c29;--line:#55554f}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font:15px/1.55 "Segoe UI",system-ui,sans-serif}
+main{max-width:1100px;margin:0 auto;padding:28px 16px 64px}
+h1{font-size:25px;margin:0 0 6px}
+h2{font-size:21px;margin:0 0 10px;color:var(--accent)}
+h3{font-size:16.5px;margin:20px 0 6px}
+h4{font-size:15px;margin:12px 0 4px}
+p{margin:6px 0}
+.sub{color:var(--muted)}
+nav{display:flex;flex-wrap:wrap;gap:8px;margin:16px 0 4px}
+nav a{color:var(--accent);text-decoration:none;border:1px solid var(--border);border-radius:6px;padding:4px 10px;background:var(--surface);font-size:14px}
+section{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:20px 24px;margin-top:18px}
+@media (max-width:600px){section{padding:16px}}
+.table-wrap{overflow-x:auto;margin:8px 0}
+table{border-collapse:collapse;width:100%;font-size:14px}
+th,td{border:1px solid var(--border);padding:6px 8px;text-align:left;vertical-align:top}
+th{background:var(--head)}
+td.n,th.n{text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
+code{background:var(--code);border-radius:4px;padding:1px 5px;font:13px Consolas,monospace;overflow-wrap:anywhere}
+ul,ol{margin:4px 0 8px;padding-left:22px}
+li{margin:3px 0}
+.tag{display:inline-block;font-size:12px;border-radius:10px;padding:2px 9px;margin:0 4px 2px 0;white-space:nowrap}
+.ok{color:var(--ok);background:var(--okbg)}.warn{color:var(--warn);background:var(--warnbg)}.bad{color:var(--bad);background:var(--badbg)}
+.base{color:var(--accent);background:var(--head)}
+.cards{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:10px}
+@media (max-width:860px){.cards{grid-template-columns:1fr}}
+.card{border:1px solid var(--border);border-radius:8px;padding:12px 14px}
+.card .big{font-size:30px;font-weight:600;line-height:1.2;margin:4px 0}
+.card .big small{font-size:15px;font-weight:400;color:var(--muted)}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media (max-width:860px){.two{grid-template-columns:1fr}}
+.box{border:1px solid var(--border);border-radius:8px;padding:10px 14px}
+.box h4{margin-top:2px}
+.note{border-left:3px solid var(--accent);background:var(--code);padding:8px 12px;border-radius:4px;margin:10px 0}
+/* дерево шагов */
+.tree,.tree ul{list-style:none;margin:0;padding:0}
+.tree ul{margin-left:18px;padding-left:14px;border-left:1px solid var(--line)}
+.tree li{position:relative;margin:4px 0;padding-left:4px}
+.tree ul>li::before{content:"";position:absolute;left:-14px;top:12px;width:12px;border-top:1px solid var(--line)}
+.tree .step{display:inline-block;border:1px solid var(--border);border-radius:6px;padding:2px 8px;background:var(--surface)}
+.tree .hot{border-color:var(--now);box-shadow:inset 3px 0 0 var(--now)}
+.tree .moved{border-color:var(--after);box-shadow:inset 3px 0 0 var(--after)}
+.tree .t{color:var(--muted);font-size:13px;margin-left:6px;white-space:nowrap}
+@media (max-width:600px){.tree ul{margin-left:8px;padding-left:10px}.tree ul>li::before{left:-10px;width:8px}
+.tree .t{display:block;white-space:normal;margin-left:0}}
+/* полосы долей */
+.bar{display:flex;align-items:center;gap:8px;min-width:150px}
+.bar .track{flex:1;height:10px;background:var(--track);border-radius:0 4px 4px 0;position:relative}
+.bar .fill{height:10px;background:var(--after);border-radius:0 4px 4px 0}
+.bar .v{min-width:44px;text-align:right;font-variant-numeric:tabular-nums}
+/* сравнение сейчас / после */
+.cmp{margin:8px 0 4px}
+.cmp .row{display:grid;grid-template-columns:150px 1fr;gap:10px;align-items:center;margin:8px 0}
+@media (max-width:600px){.cmp .row{grid-template-columns:1fr}}
+.cmp .lines{display:flex;flex-direction:column;gap:2px}
+.cmp .line{display:flex;align-items:center;gap:8px}
+.cmp .b{height:14px;border-radius:0 4px 4px 0}
+.cmp .now{background:var(--now)}.cmp .after{background:var(--after)}
+.cmp .val{font-variant-numeric:tabular-nums;white-space:nowrap;font-size:14px}
+.legend{display:flex;gap:16px;font-size:14px;color:var(--muted);margin:4px 0}
+.legend i{display:inline-block;width:12px;height:12px;border-radius:2px;margin-right:6px;vertical-align:-1px}
+dl{margin:6px 0}dt{font-weight:600;margin-top:8px}dd{margin:2px 0 0 0}
+</style>
+</head>
+<body>
+<main>
+<header>
+<h1>IMDEV-9746. Ускорение распространения правил лимитов на новых клиентов</h1>
+<p class="sub">Предложения по доработке обработки "Распространение правил с одного клиента на список клиентов" для ФО и ФО розница. Основа: замеры времени ПРОД за 16.10-02.11.2026 и стенд на разработческой базе ФО (03.11.2026) с данными, похожими на копию ПРОД. Все доработки - только в этой обработке, базовая конфигурация не меняется.</p>
+<nav>
+<a href="#itog">Итог</a><a href="#kak">Как работает</a><a href="#vremya">Где теряется время</a><a href="#pochemu">Почему ФО медленнее</a>
+<a href="#dorabotki">Доработки</a><a href="#svod">Свод</a><a href="#vyigrysh">Выигрыш</a><a href="#poryadok">Порядок</a><a href="#cifry">Как получены цифры</a>
+</nav>
+</header>
+
+<section id="itog">
+<h2>Итог</h2>
+<div class="cards">
+<div class="card"><span class="tag base">ФО</span>
+<div class="big">в 7,7 раза <small>быстрее</small></div>
+<p>Запуск с одним новым клиентом: 26,8 с → 3,5 с. Главная доработка - запись порогов лимитов (пункт 2).</p></div>
+<div class="card"><span class="tag base">ФО розница</span>
+<div class="big">в 1,35 раза <small>быстрее</small></div>
+<p>Запуск с двумя клиентами: 8,9 с → 6,6 с. Меньше писем и нет лишнего ожидания (пункты 3 и 4). Фоновая запись версий - в 5 раз короче (пункт 5).</p></div>
+<div class="card"><span class="tag base">обе базы</span>
+<div class="big">0 <small>лишних файлов</small></div>
+<p>Временные файлы вложений писем перестают накапливаться на сервере (пункт 1).</p></div>
+</div>
+<p class="note">Сейчас операция не тормозит работу: розница тратит на нее около 6 минут в день, обычный ФО - до полутора минут. Доработки нужны на случай массового заведения клиентов: 100 новых клиентов в ФО сейчас обрабатываются около 45 минут в сеансах обмена, после доработки - около 6 минут.</p>
+</section>
+
+<section id="kak">
+<h2>Как работает операция</h2>
+<p>После каждого обмена с МО система ищет новых клиентов (портфели), у которых еще нет лимитов. Каждому такому клиенту она копирует правила лимитов с клиента-образца (эталонного портфеля): создает документ "Установка лимитов", записывает пороги лимитов, служебные отметки и отправляет письма ответственным.</p>
+<dl>
+<dt>Класс лимитов</dt><dd>Группа правил. В обычном ФО один класс (комплаенс), в рознице два (комплаенс и риски), поэтому новый клиент розницы дает две "пары клиент + класс".</dd>
+<dt>Порог лимита</dt><dd>Граница, при которой лимит считается нарушенным или выдается предупреждение. У нового клиента обычного ФО около 25 порогов, в рознице около 2 на класс.</dd>
+<dt>Версия лимита</dt><dd>Запись в истории изменений лимита. В каждой версии хранится таблица порогов этого лимита по всем клиентам.</dd>
+<dt>Кэш настроек лимита</dt><dd>Заранее подготовленная копия настроек лимита для быстрой проверки лимитов. В ней тоже хранятся пороги лимита по всем клиентам.</dd>
+<dt>Служебные отметки (дополнительные сведения)</dt><dd>Дата автоустановки, эталонный портфель, дата распространения, "лимиты заведены" и другие признаки клиента.</dd>
+</dl>
+
+<h3>Шаги одного запуска сейчас</h3>
+<p class="sub">Оранжевым отмечено то, на что уходит основное время.</p>
+<ul class="tree">
+<li><span class="step">Обмен с МО: пакет данных пришел в ФО</span>
+<ul>
+<li><span class="step">Операции после обмена → распространение правил</span>
+<ul>
+<li><span class="step">По каждому классу лимитов</span>
+<ul>
+<li><span class="step">Поиск новых клиентов</span><span class="t">ФО 0,4 с, розница 0,6 с на класс</span></li>
+<li><span class="step">По каждому новому клиенту</span>
+<ul>
+<li><span class="step hot">Служебные отметки клиента: 5-6 записей</span><span class="t">ФО 0,5 с, розница 0,5 с</span></li>
+<li><span class="step">Запросы эталона и его порогов</span><span class="t">0,1 с</span></li>
+<li><span class="step hot">Запись порогов: по одному на каждый лимит</span><span class="t">ФО 23,6 с (25 порогов), розница 0,04 с</span>
+<ul>
+<li><span class="step hot">Проверки записи</span><span class="t">ФО 0,2 с</span></li>
+<li><span class="step hot">Дописать прошлую версию лимита (все пороги всех клиентов)</span><span class="t">ФО 3,5 с</span></li>
+<li><span class="step hot">Новая версия лимита (все пороги всех клиентов)</span><span class="t">ФО 7,9 с</span></li>
+<li><span class="step hot">Пересчитать кэш настроек лимита (все пороги всех клиентов)</span><span class="t">ФО 11,7 с</span></li>
+</ul>
+<span class="t">в рознице эти четыре действия выключены</span></li>
+<li><span class="step hot">Документ "Установка лимитов": создать и провести</span><span class="t">ФО 0,7 с, розница 0,5 с</span></li>
+<li><span class="step hot">Письмо по клиенту с файлом порогов</span><span class="t">0,4 с; в ФО еще письмо об успешном автораспространении 0,4 с</span></li>
+</ul></li>
+<li><span class="step">Итоговое письмо по классу</span><span class="t">0,4 с</span></li>
+</ul></li>
+<li><span class="step">Только розница: поставить фоновое задание "Запись версий лимитов" и подождать</span><span class="t">0,8 с ожидания</span>
+<ul><li><span class="step">Фоновое задание: пауза 2 с на каждую пару, затем версии лимитов</span><span class="t">10 с при 4 парах, обмен не ждет</span></li></ul></li>
+</ul></li>
+</ul></li>
+</ul>
+<p class="sub">Время указано на ПРОД на одного клиента (на одну пару в рознице), оценка по стенду.</p>
+</section>
+
+<section id="vremya">
+<h2>Где теряется время</h2>
+<p>Доля каждого действия во всем времени операции за 16.10-02.11.2026. Время поиска и итогового письма замерено на ПРОД, остальное - на стенде с переводом на ПРОД (см. раздел "Как получены цифры").</p>
+<div class="two">
+<div class="box">
+<h3>ФО обычный</h3>
+<p class="sub">577 с за период, 20 новых клиентов, около 26 с на клиента</p>
+<div class="table-wrap"><table>
+<thead><tr><th>Действие</th><th>Доля времени</th></tr></thead>
+<tbody>
+<tr><td>Пересчет кэша настроек лимита при записи порогов</td><td><div class="bar" title="40,4% времени операции"><div class="track"><div class="fill" style="width:100%"></div></div><span class="v">40,4%</span></div></td></tr>
+<tr><td>Новая версия лимита при записи порогов</td><td><div class="bar" title="27,2% времени операции"><div class="track"><div class="fill" style="width:67%"></div></div><span class="v">27,2%</span></div></td></tr>
+<tr><td>Дописать прошлую версию лимита</td><td><div class="bar" title="12,0% времени операции"><div class="track"><div class="fill" style="width:30%"></div></div><span class="v">12,0%</span></div></td></tr>
+<tr><td>Поиск новых клиентов</td><td><div class="bar" title="7,9% времени операции"><div class="track"><div class="fill" style="width:20%"></div></div><span class="v">7,9%</span></div></td></tr>
+<tr><td>Письма (по клиенту и итоговое)</td><td><div class="bar" title="4,3% времени операции"><div class="track"><div class="fill" style="width:11%"></div></div><span class="v">4,3%</span></div></td></tr>
+<tr><td>Документ "Установка лимитов"</td><td><div class="bar" title="2,3% времени операции"><div class="track"><div class="fill" style="width:6%"></div></div><span class="v">2,3%</span></div></td></tr>
+<tr><td>Служебные отметки клиента</td><td><div class="bar" title="1,9% времени операции"><div class="track"><div class="fill" style="width:5%"></div></div><span class="v">1,9%</span></div></td></tr>
+<tr><td>Остальное (запись строк порогов, проверки, запросы, файл, лог)</td><td><div class="bar" title="4,0% времени операции"><div class="track"><div class="fill" style="width:10%"></div></div><span class="v">4,0%</span></div></td></tr>
+</tbody></table></div>
+<p><b>82% времени</b> - работа, которая запускается при записи каждого порога и каждый раз перебирает пороги лимита по всем клиентам.</p>
+</div>
+<div class="box">
+<h3>ФО розница</h3>
+<p class="sub">3828 с за период, 1878 пар клиент + класс, около 1,5 с на пару</p>
+<div class="table-wrap"><table>
+<thead><tr><th>Действие</th><th>Доля времени</th></tr></thead>
+<tbody>
+<tr><td>Письма (по каждой паре и итоговое)</td><td><div class="bar" title="30,1% времени операции"><div class="track"><div class="fill" style="width:100%"></div></div><span class="v">30,1%</span></div></td></tr>
+<tr><td>Служебные отметки клиента</td><td><div class="bar" title="24,7% времени операции"><div class="track"><div class="fill" style="width:82%"></div></div><span class="v">24,7%</span></div></td></tr>
+<tr><td>Документ "Установка лимитов"</td><td><div class="bar" title="22,5% времени операции"><div class="track"><div class="fill" style="width:75%"></div></div><span class="v">22,5%</span></div></td></tr>
+<tr><td>Поиск новых клиентов</td><td><div class="bar" title="14,1% времени операции"><div class="track"><div class="fill" style="width:47%"></div></div><span class="v">14,1%</span></div></td></tr>
+<tr><td>Запросы эталона и его порогов</td><td><div class="bar" title="4,1% времени операции"><div class="track"><div class="fill" style="width:14%"></div></div><span class="v">4,1%</span></div></td></tr>
+<tr><td>Запись порогов</td><td><div class="bar" title="2,0% времени операции"><div class="track"><div class="fill" style="width:7%"></div></div><span class="v">2,0%</span></div></td></tr>
+<tr><td>Остальное (лог, прочее, вне шагов)</td><td><div class="bar" title="2,6% времени операции"><div class="track"><div class="fill" style="width:9%"></div></div><span class="v">2,6%</span></div></td></tr>
+</tbody></table></div>
+<p>Время распределено равномерно: письма, служебные отметки и документ дают по четверти-трети. Пороги в рознице почти ничего не стоят.</p>
+</div>
+</div>
+</section>
+
+<section id="pochemu">
+<h2>Почему обычный ФО в 17 раз медленнее розницы</h2>
+<p><b>Простыми словами.</b> Чтобы добавить новому клиенту 25 порогов, обычный ФО 25 раз полностью пересобирает историю лимита и его рабочую копию для проверок. Каждый раз перебираются пороги этого лимита по всем клиентам, у которых он есть, - на стенде это около 3000 строк. Работа растет вместе с числом клиентов: чем больше клиентов в базе, тем дороже каждый следующий новый клиент.</p>
+<div class="two">
+<div class="box"><h4>Обычный ФО</h4>
+<p>Порог записывается "по полной программе": при каждой записи выполняются проверки, обновляется история лимита (прошлая и новая версия) и пересчитывается кэш настроек лимита.</p>
+<p>Время записи одного порога растет с числом клиентов: 0,26 с при 2000 клиентов с этим лимитом, 0,42 с при 3000, 0,68 с при 6000 (стенд).</p></div>
+<div class="box"><h4>ФО розница</h4>
+<p>Порог записывается без этих действий, а история лимита дописывается позже фоновым заданием - один раз на лимит за запуск. Так включено флажком "Это база розничного ДУ" в настройках обработки; программа в обеих базах одна и та же.</p>
+<p>Поэтому запись порога в рознице занимает сотые доли секунды.</p></div>
+</div>
+<p class="note">Пункт 2 переносит в обычный ФО ту же схему, что давно работает в рознице, и добавляет то, чего в рознице нет: обновление кэша настроек лимита после записи.</p>
+</section>
+
+<section id="dorabotki">
+<h2>Доработки</h2>
+<p>Все изменения - только в обработке распространения правил. Базовая конфигурация и ее объекты не меняются, обработка лишь вызывает ее стандартные методы.</p>
+
+<h3>1. Удалять временные файлы вложений <span class="tag base">обе базы</span></h3>
+<p><b>Сейчас:</b> для каждого письма по клиенту на сервере создается файл с порогами, после отправки он остается. В рознице это около 160 файлов в день, они копятся в каталоге временных файлов сервера.</p>
+<p><b>Предлагаем:</b> удалять файл сразу после отправки письма.</p>
+<p><span class="tag ok">риск низкий</span><span class="tag ok">сложность низкая</span> Выигрыш - не время, а порядок на сервере: файлы больше не накапливаются.</p>
+
+<h3>2. Ускорить запись порогов в обычном ФО <span class="tag base">ФО</span></h3>
+<p><b>Сейчас:</b> каждый из 25 порогов нового клиента записывается со всеми проверками, обновлением истории и кэша лимита - 82% времени операции.</p>
+<p><b>Предлагаем:</b> записать пороги быстро, как в рознице; проверку "нельзя менять пороги подтвержденного лимита" выполнить в самой обработке; историю лимита и кэш настроек обновить один раз на лимит в фоновом задании сразу после распространения.</p>
+<div class="two">
+<div class="box"><h4>Сейчас: запись 25 порогов, 23,6 с</h4>
+<ul class="tree"><li><span class="step hot">Порог 1 из 25</span>
+<ul><li><span class="step hot">проверки</span></li><li><span class="step hot">история лимита: прошлая и новая версия</span></li><li><span class="step hot">кэш настроек лимита</span></li></ul></li>
+<li><span class="step hot">Порог 2 из 25: то же самое</span></li>
+<li><span class="step hot">... и так 25 раз</span></li></ul>
+</div>
+<div class="box"><h4>После: запись 25 порогов, около 0,7 с</h4>
+<ul class="tree"><li><span class="step">Проверка подтвержденных лимитов - один раз</span></li>
+<li><span class="step">25 порогов - быстрая запись</span></li>
+<li><span class="step moved">Фоновое задание после распространения</span>
+<ul><li><span class="step moved">по каждому лимиту один раз: история и кэш</span></li></ul><span class="t">обмен не ждет</span></li></ul>
+</div>
+</div>
+<p><b>Выигрыш:</b> запуск с одним клиентом 26,8 с → 3,9 с, <b>примерно в 7 раз</b>. Если за запуск приходит несколько клиентов, история и кэш обновляются один раз на лимит, а не для каждого клиента.</p>
+<p><span class="tag warn">риск средний</span><span class="tag warn">сложность средняя</span> История лимита будет содержать одну запись за запуск, а не на каждый порог; кэш обновится на несколько секунд позже; при сбое фонового задания история и кэш не обновятся - ошибка пишется в журнал регистрации. Перед внедрением результаты сравниваются со старой схемой на стенде и на копии ПРОД.</p>
+<h4>2а. Дополнение: обновлять кэш настроек только там, где он используется <span class="tag base">ФО</span></h4>
+<p>Проверка лимитов берет пороги из кэша только для классов лимитов с расширенным подтверждением, остальные - напрямую из регистра порогов. Для остальных классов кэш можно не обновлять. Время обмена не меняется (это уже фон после пункта 2), но фоновая работа на одного клиента уменьшается примерно с 23 до 11 секунд.</p>
+<p><span class="tag warn">риск средний</span><span class="tag ok">сложность низкая</span> Нужна полная сверка, кто еще читает кэш, и проверка признака расширенного подтверждения у классов на копии ПРОД.</p>
+
+<h3>3. Одно письмо на класс вместо письма на каждого клиента <span class="tag base">обе базы</span></h3>
+<p><b>Сейчас:</b> по каждой паре клиент + класс уходит отдельное письмо с файлом порогов, плюс итоговое письмо по классу. В рознице это около 160 писем в день сверх итоговых.</p>
+<p><b>Предлагаем:</b> собирать пороги всех клиентов запуска в один файл и прикладывать его к итоговому письму класса.</p>
+<p><b>Выигрыш:</b> розница - минус 1,5 с на запуск (около 19% времени операции), ФО - минус 0,4 с на клиента; в почте на 160 писем в день меньше.</p>
+<p><span class="tag ok">риск для данных низкий</span><span class="tag warn">меняется формат писем</span><span class="tag ok">сложность низкая</span></p>
+
+<h3>4. Не ждать запуска фонового задания <span class="tag base">ФО розница</span></h3>
+<p><b>Сейчас:</b> поставив фоновое задание записи версий лимитов, обработка еще 0,8 с ждет его окончания, хотя результат ей не нужен. Это ожидание не попадает в замеры, но удлиняет сеанс обмена.</p>
+<p><b>Предлагаем:</b> запускать задание без ожидания.</p>
+<p><b>Выигрыш:</b> минус 0,8 с на каждый запуск, около 33 с в день.</p>
+<p><span class="tag ok">риск низкий</span><span class="tag ok">сложность очень низкая</span> Задание выполняется так же, меняется только то, что обмен его не ждет.</p>
+
+<h3>5. Убрать паузу в фоновом задании записи версий <span class="tag base">ФО розница</span></h3>
+<p><b>Сейчас:</b> фоновое задание перед записью версий спит 2 секунды на каждую пару: при 4 парах из 10 секунд работы 8 - пауза. Документы к этому моменту уже созданы, ждать нечего. Кроме того, в конце задание лишний раз просматривает весь регистр порогов.</p>
+<p><b>Предлагаем:</b> убрать паузу и лишний просмотр регистра.</p>
+<p><b>Выигрыш:</b> фоновое задание около 10 с → около 2 с на запуск, примерно в 5 раз; на время обмена не влияет.</p>
+<p><span class="tag warn">риск низкий/средний</span><span class="tag ok">сложность низкая</span> Нужно убедиться, что после проведения документа нет отложенной обработки, которой эта пауза давала время.</p>
+</section>
+
+<section id="svod">
+<h2>Свод доработок</h2>
+<div class="table-wrap"><table>
+<thead><tr><th>#</th><th>Доработка</th><th>База</th><th>Выигрыш</th><th>Риск</th><th>Сложность</th></tr></thead>
+<tbody>
+<tr><td>1</td><td>Удалять временные файлы вложений</td><td>обе</td><td>порядок на сервере</td><td><span class="tag ok">низкий</span></td><td><span class="tag ok">низкая</span></td></tr>
+<tr><td>2</td><td>Быстрая запись порогов, история и кэш лимита в фоне</td><td>ФО</td><td><b>в 7 раз</b>: 26,8 → 3,9 с</td><td><span class="tag warn">средний</span></td><td><span class="tag warn">средняя</span></td></tr>
+<tr><td>2а</td><td>Кэш настроек только для классов с расширенным подтверждением</td><td>ФО</td><td>фон в 2 раза меньше</td><td><span class="tag warn">средний</span></td><td><span class="tag ok">низкая</span></td></tr>
+<tr><td>3</td><td>Одно письмо на класс</td><td>обе</td><td>розница −1,5 с на запуск, ФО −0,4 с</td><td><span class="tag ok">низкий</span>, формат писем</td><td><span class="tag ok">низкая</span></td></tr>
+<tr><td>4</td><td>Не ждать запуска фонового задания</td><td>розница</td><td>−0,8 с на запуск</td><td><span class="tag ok">низкий</span></td><td><span class="tag ok">очень низкая</span></td></tr>
+<tr><td>5</td><td>Убрать паузу в фоновом задании</td><td>розница</td><td>фон в 5 раз короче</td><td><span class="tag warn">низкий/средний</span></td><td><span class="tag ok">низкая</span></td></tr>
+</tbody></table></div>
+</section>
+
+<section id="vyigrysh">
+<h2>Выигрыш по базам</h2>
+<div class="legend"><span><i style="background:var(--now)"></i>сейчас</span><span><i style="background:var(--after)"></i>после доработок</span></div>
+<div class="cmp">
+<div class="row"><div><b>ФО</b><br><span class="sub">запуск с 1 клиентом, пункты 2 и 3</span></div>
+<div class="lines">
+<div class="line" title="Сейчас: 26,8 с"><div class="b now" style="width:85%"></div><span class="val">26,8 с</span></div>
+<div class="line" title="После: 3,5 с"><div class="b after" style="width:11%"></div><span class="val">3,5 с - в 7,7 раза быстрее</span></div>
+</div></div>
+<div class="row"><div><b>ФО розница</b><br><span class="sub">запуск с 2 клиентами, пункты 3 и 4</span></div>
+<div class="lines">
+<div class="line" title="Сейчас: 8,9 с"><div class="b now" style="width:28%"></div><span class="val">8,9 с</span></div>
+<div class="line" title="После: 6,6 с"><div class="b after" style="width:21%"></div><span class="val">6,6 с - в 1,35 раза быстрее</span></div>
+</div></div>
+</div>
+<div class="table-wrap"><table>
+<thead><tr><th>Показатель</th><th>База</th><th class="n">Сейчас</th><th class="n">После</th><th class="n">Во сколько раз</th></tr></thead>
+<tbody>
+<tr><td>Запуск с одним новым клиентом</td><td>ФО</td><td class="n">26,8 с</td><td class="n">3,5 с</td><td class="n">7,7</td></tr>
+<tr><td>100 новых клиентов в сеансах обмена</td><td>ФО</td><td class="n">≈ 45 мин</td><td class="n">≈ 6 мин</td><td class="n">7,7</td></tr>
+<tr><td>Запуск с двумя новыми клиентами</td><td>розница</td><td class="n">8,9 с</td><td class="n">6,6 с</td><td class="n">1,35</td></tr>
+<tr><td>Время операции за рабочий день</td><td>розница</td><td class="n">≈ 6 мин</td><td class="n">≈ 4,4 мин</td><td class="n">1,35</td></tr>
+<tr><td>1000 новых клиентов в сеансах обмена</td><td>розница</td><td class="n">≈ 51 мин</td><td class="n">≈ 38 мин</td><td class="n">1,35</td></tr>
+<tr><td>Фоновое задание записи версий на запуск</td><td>розница</td><td class="n">≈ 10 с</td><td class="n">≈ 2 с</td><td class="n">5</td></tr>
+</tbody></table></div>
+<p class="sub">В рознице главные оставшиеся затраты - проведение документа "Установка лимитов" и служебные отметки клиента. Они выполняются в базовой конфигурации, которую по условиям задачи не меняем, поэтому выигрыш в рознице ограничен.</p>
+</section>
+
+<section id="poryadok">
+<h2>Порядок внедрения</h2>
+<ol>
+<li><b>Сразу:</b> пункты 1 и 4 - малый объем и низкий риск.</li>
+<li><b>Проверка на копии ПРОД (только чтение):</b> признак расширенного подтверждения у классов лимитов, число клиентов с порогами по лимитам эталонов; в рознице - попадают ли пороги новых клиентов в кэш настроек лимитов.</li>
+<li><b>Основной выигрыш:</b> пункт 2 для ФО, затем 2а - доработка, сравнение со старой схемой на стенде и на копии ПРОД.</li>
+<li><b>После согласования формата писем:</b> пункт 3.</li>
+<li><b>После проверки, что пауза не нужна:</b> пункт 5.</li>
+<li><b>После установки на ПРОД:</b> сверить замеры времени операции через несколько дней.</li>
+</ol>
+</section>
+
+<section id="cifry">
+<h2>Как получены цифры</h2>
+<ul>
+<li><b>Замеры ПРОД</b> за 16.10-02.11.2026: время запуска и трех шагов операции (поиск, создание установок, итоговое письмо) в обеих базах. Внутри шага "создание установок" замеров нет.</li>
+<li><b>Стенд на разработческой базе ФО</b> (03.11.2026): копия рабочей версии обработки с замером каждого действия, данные как на копии ПРОД: в обычном ФО 31 лимит в установке эталона и 25 порогов, в рознице два класса по 7 лимитов и по 2 порога; пороги около 3000 клиентов по каждому лимиту. Всего 18 запусков обычного ФО на разных объемах и 10 запусков розницы.</li>
+<li><b>Перевод на ПРОД:</b> ПРОД медленнее разработческой базы примерно в 2,5-2,7 раза; коэффициент подобран так, чтобы время шага на стенде совпало с замером ПРОД. Почта на стенде работала с локальной заглушкой, поэтому письма посчитаны по их стоимости на ПРОД (около 0,4 с на письмо).</li>
+<li><b>Что остается оценкой:</b> одинаковый коэффициент для всех действий; число клиентов с порогами на ПРОД (выбрано по совпадению коэффициентов двух баз). Вывод о главной причине в ФО от этих допущений не зависит: при любом объеме от 2000 до 6000 клиентов запись порогов дает 80-84% времени.</li>
+</ul>
+</section>
+</main>
+</body>
+</html>
