@@ -53,7 +53,7 @@ MODES = {
     "r": {"имя": "розница", "тип": f"{PREFIX} Розничный ДУ", "эталон": f"{PREFIX}_ETALON_R", "клиенты": f"{PREFIX}_R_",
           "классы": {"комплаенс": ("Compliance", 7, 2), "риски": ("Регуляторные", 7, 2)}, "розница": True},
 }
-CLIENTS = {"o": 40, "r": 60}
+CLIENTS = {"o": 60, "r": 100}
 STRATEGY = f"{PREFIX} Стратегия"
 MAIL_ACCOUNT = "T9748 Тестовая почта"
 MAILING = f"{PREFIX} тест рассылки"
