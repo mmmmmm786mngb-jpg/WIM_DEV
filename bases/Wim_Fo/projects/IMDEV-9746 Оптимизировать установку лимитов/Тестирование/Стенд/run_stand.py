@@ -17,7 +17,11 @@ T9746. Пороги других портфелей по лимитам стен
     python run_stand.py prep                    справочники, лимиты, эталоны, клиенты, рассылка, версионирование
     python run_stand.py volume <N> [o|r]        пороги N других портфелей по каждому лимиту обычного (o) или розницы (r)
     python run_stand.py ordinary <запусков>     запуски обычного ФО, по одному новому клиенту
-    python run_stand.py retail <запусков> [клиентов]  запуски розницы (по умолчанию 2 клиента)
+    python run_stand.py retail <запусков> [клиентов] [check] [nosvc]  запуски розницы (по умолчанию 2 клиента);
+                                                check - задание записи версий сначала проверяет установки,
+                                                nosvc - текущий пользователь не в списке сервисных
+    python run_stand.py subs on|off             подписки ВТБ_Прод на запись сведений: рабочие имена свойств стенда
+                                                и настройки стенда у рабочей обработки 1.16 / исходные
     python run_stand.py bench <повторов> [лимитов]   раскладка записи набора порогов по действиям обработчиков
     python run_stand.py report                  сводка results/*.jsonl -> results/summary.json
     python run_stand.py restore                 константа и версионирование лимитов - как до стенда
@@ -322,7 +326,9 @@ def mailing(fo):
     return checked(scenario(fo, p, "настройка рассылки"))["данные"].Настройка
 
 
-def settings(fo, mode, props, mail):
+def settings(fo, mode, props, mail, check_first=False, service=True):
+    """Настройки обработки распространения. check_first - вариант задания записи версий "сначала проверить"
+    (только стендовая копия), service - текущий пользователь в списке сервисных пользователей."""
     m = MODES[mode]
     s = fo.NewObject("Структура")
     for key, ref in props.items():
@@ -332,7 +338,8 @@ def settings(fo, mode, props, mail):
     for key in ["НастройкаРассылкиКомплаенс", "НастройкаРассылкиРиски", "НастройкаРассылкиПриУспешномАвтораспространении"]:
         s.Вставить(key, mail)
     users = fo.NewObject("СписокЗначений")
-    users.Добавить(fo.ПараметрыСеанса.ТекущийПользователь)
+    if service:
+        users.Добавить(fo.ПараметрыСеанса.ТекущийПользователь)
     s.Вставить("СписокСервисныхПользователей", users)
     client_type = ensure_named(fo, "ТипыКлиентов", "ТипыКлиентов", m["тип"])
     for key in ["СписокТиповКлиентовКомплаенс", "СписокТиповКлиентовРиски"]:
@@ -340,6 +347,7 @@ def settings(fo, mode, props, mail):
         types.Добавить(client_type)
         s.Вставить(key, types)
     s.Вставить("ЭтоБазаРозничногоДУ", m["розница"])
+    s.Вставить("СтендПроверкаДоПаузы", check_first)
     return s
 
 
@@ -470,12 +478,79 @@ def set_client_type(fo, refs, client_type):
         obj.Записать()
 
 
-def step_runs(fo, mode, runs, clients_per_run):
+WORK_NAME = "Распространение правил с одного клиента на список клиентов"
+SUBS_PROPS = ["Эталонный портфель лимитов (комплаенс)", "Эталонный портфель лимитов (риски)",
+              "Дата распространения правил (комплаенс)", "Дата распространения правил (риски)"]
+
+
+def work_item(fo):
+    """Рабочая обработка 1.16 разработческой базы: ее по наименованию находят подписки ВТБ_Прод."""
+    return find_ref(fo, "ВЫБРАТЬ Д.Ссылка КАК Ссылка ИЗ Справочник.ДополнительныеОтчетыИОбработки КАК Д "
+                        "ГДЕ Д.Наименование = &Имя И НЕ Д.ПометкаУдаления", {"Имя": WORK_NAME})
+
+
+def step_subs(fo, on):
+    """Подписки ВТБ_Прод на запись сведений находят свойства по рабочим именам (без префикса T9746_), а обработку - по
+    наименованию. on: свойствам стенда - рабочие имена, рабочей обработке - настройки стенда; off - исходные."""
+    state = load_state()
+    saved = state.setdefault("подписка", {})
+    for name in SUBS_PROPS:
+        ref = find_ref(fo, "ВЫБРАТЬ Св.Ссылка КАК Ссылка ИЗ ПланВидовХарактеристик.ДополнительныеРеквизитыИСведения КАК Св "
+                           "ГДЕ Св.Наименование = &Имя", {"Имя": f"{PREFIX} {name}"})
+        obj = ref.ПолучитьОбъект()
+        work = name.replace(" (", "_").replace(")", "").replace(" ", "_")
+        if on:
+            saved.setdefault("имена", {})[name] = obj.Имя
+            obj.Имя = work
+        else:
+            obj.Имя = saved.get("имена", {}).get(name, f"{PREFIX}_{work}")
+        obj.Записать()
+        log(f"  свойство {PREFIX} {name}: Имя = {obj.Имя}")
+    item = work_item(fo).ПолучитьОбъект()
+    if on:
+        if "настройки_1_16" not in saved:
+            saved["настройки_1_16"] = fo.XMLСтрока(item.ХранилищеНастроек)
+        state["подписка"]["включена"] = True
+    else:
+        if "настройки_1_16" in saved:
+            item.ХранилищеНастроек = fo.XMLЗначение(fo.NewObject("ОписаниеТипов", "ХранилищеЗначения").Типы().Получить(0),
+                                                    saved["настройки_1_16"])
+            item.ОбменДанными.Загрузка = True
+            item.Записать()
+            log("  рабочей обработке 1.16 возвращены исходные настройки")
+        state.pop("подписка", None)
+    save_state(state)
+
+
+def duplicates(fo, codes):
+    rows = query(fo, """ВЫБРАТЬ У.ОбъектНазначения КАК П, У.КлассЛимита КАК К, КОЛИЧЕСТВО(*) КАК Н
+        ИЗ Документ.УстановкаЛимитов КАК У
+        ГДЕ У.Проведен И ВЫРАЗИТЬ(У.ОбъектНазначения КАК Справочник.Портфели).ВнешнийКод В (&Коды)
+        СГРУППИРОВАТЬ ПО У.ОбъектНазначения, У.КлассЛимита ИМЕЮЩИЕ КОЛИЧЕСТВО(*) > 1""", {"Коды": array(fo, codes)})
+    return len(rows)
+
+
+def version_job_events(fo, since):
+    table = fo.NewObject("ТаблицаЗначений")
+    filt = fo.NewObject("Структура")
+    filt.Вставить("ДатаНачала", since)
+    fo.ВыгрузитьЖурналРегистрации(table, filt)
+    return [table.Получить(i).Комментарий for i in range(table.Количество())
+            if (table.Получить(i).Событие or "").startswith("IMDEV-9746 стенд. Запись версий")]
+
+
+def step_runs(fo, mode, runs, clients_per_run, check_first=False, service=True):
     state = load_state()
     m = MODES[mode]
     props = properties(fo)
     mail = mailing(fo)
-    ref = register(fo, settings(fo, mode, props, mail))
+    run_settings = settings(fo, mode, props, mail, check_first, service)
+    ref = register(fo, run_settings)
+    if load_state().get("подписка", {}).get("включена"):
+        item = work_item(fo).ПолучитьОбъект()
+        item.ХранилищеНастроек = fo.NewObject("ХранилищеЗначения", run_settings)
+        item.ОбменДанными.Загрузка = True
+        item.Записать()
     ensure_conditions(fo, state)
     client_type = ensure_named(fo, "ТипыКлиентов", "ТипыКлиентов", m["тип"])
     volume = load_state().get("объем", {}).get(mode)
@@ -486,16 +561,24 @@ def step_runs(fo, mode, runs, clients_per_run):
         p.Вставить("Сценарий", "Распространение")
         p.Вставить("ОбработкаСсылка", ref)
         started = datetime.datetime.now()
+        since = fo.ТекущаяДатаСеанса()
         out = scenario(fo, p, f"распространение {m['имя']} ({', '.join(r['Код'] for r in batch)})")
         record = {"режим": mode, "объем": volume, "начало": started.isoformat(timespec="seconds"),
                   "клиенты": [r["Код"] for r in batch], "длительность_с": out["длительность_с"],
                   "ошибка": out["ошибка"], "замеры": out["замеры"], "лог": out["лог"][-2000:]}
         if m["розница"]:
             record["ожидание_записи_версий_с"], record["активных_заданий"] = wait_jobs(fo, "Запись версий лимитов")
+        wait_jobs(fo, WORK_NAME)
+        record["вариант"] = {"проверка_до_паузы": check_first, "сервисный": service,
+                             "подписка": bool(load_state().get("подписка", {}).get("включена"))}
+        record["задание_версий"] = version_job_events(fo, since)
+        record["дублей_установок"] = duplicates(fo, [r["Код"] for r in batch])
         append("runs.jsonl", record)
         pairs = out["замеры"].get("СоздатьУстановкиЛимитов.Всего", (0, 0))[0]
         total = out["замеры"].get("Запуск.Всего", (0, 0))[1]
-        log(f"  пар {pairs}, запуск {total} мс, порогов {out['замеры'].get('Пороги.ЗаписьНабора', (0, 0))}")
+        log(f"  пар {pairs}, запуск {total} мс, порогов {out['замеры'].get('Пороги.ЗаписьНабора', (0, 0))}, "
+            f"эталон {out['замеры'].get('ДопСведения.ЭталонныйПортфель', (0, 0))}, дублей {record['дублей_установок']}, "
+            f"задание: {record['задание_версий']}")
         if out["ошибка"]:
             raise SystemExit("остановлено по ошибке")
 
@@ -604,7 +687,11 @@ def main():
     elif cmd == "ordinary":
         step_runs(fo, "o", int(sys.argv[2]), 1)
     elif cmd == "retail":
-        step_runs(fo, "r", int(sys.argv[2]), int(sys.argv[3]) if len(sys.argv) > 3 else 2)
+        opts = sys.argv[4:]
+        step_runs(fo, "r", int(sys.argv[2]), int(sys.argv[3]) if len(sys.argv) > 3 else 2,
+                  check_first="check" in opts, service="nosvc" not in opts)
+    elif cmd == "subs":
+        step_subs(fo, sys.argv[2] == "on")
     elif cmd == "bench":
         step_bench(fo, int(sys.argv[2]), int(sys.argv[3]) if len(sys.argv) > 3 else 5)
     elif cmd == "restore":
