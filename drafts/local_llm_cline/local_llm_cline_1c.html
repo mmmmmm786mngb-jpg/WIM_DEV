@@ -1,0 +1,949 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Локальная LLM для разработки 1С: открытые модели + VS Code + Cline + MCP + Skills</title>
+<style>
+  :root {
+    --bg: #0f172a;
+    --card: #ffffff;
+    --text: #1f2937;
+    --muted: #6b7280;
+    --line: #e5e7eb;
+    --blue: #2563eb;
+    --blue-l: #dbeafe;
+    --green: #16a34a;
+    --green-l: #dcfce7;
+    --orange: #ea580c;
+    --orange-l: #ffedd5;
+    --red: #dc2626;
+    --red-l: #fee2e2;
+    --purple: #7c3aed;
+    --purple-l: #ede9fe;
+    --teal: #0d9488;
+    --teal-l: #ccfbf1;
+    --yellow-l: #fef9c3;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: "Segoe UI", Arial, sans-serif; color: var(--text); background: #f3f4f6; line-height: 1.55; }
+  a { color: var(--blue); }
+  code, pre { font-family: Consolas, "Courier New", monospace; }
+  code { background: #eef2ff; padding: 1px 5px; border-radius: 4px; font-size: 0.92em; }
+  pre { background: #0b1220; color: #e2e8f0; padding: 16px 18px; border-radius: 10px; overflow-x: auto; font-size: 13px; line-height: 1.5; }
+  pre code { background: none; padding: 0; color: inherit; }
+
+  .hero { background: linear-gradient(135deg, var(--bg) 0%, #1e3a8a 60%, #0e7490 100%); color: #fff; padding: 56px 24px 48px; }
+  .hero .inner { max-width: 1100px; margin: 0 auto; }
+  .hero h1 { font-size: 38px; margin: 0 0 12px; line-height: 1.2; }
+  .hero p.lead { font-size: 19px; opacity: 0.92; max-width: 860px; margin: 0 0 24px; }
+  .badges { display: flex; flex-wrap: wrap; gap: 10px; }
+  .badge { background: rgba(255,255,255,0.14); border: 1px solid rgba(255,255,255,0.3); padding: 6px 14px; border-radius: 999px; font-size: 14px; }
+
+  .wrap { max-width: 1100px; margin: 0 auto; padding: 24px; }
+  section { margin: 36px 0; }
+  h2 { font-size: 28px; margin: 0 0 6px; color: #0f172a; }
+  h2 .num { display: inline-block; background: var(--blue); color: #fff; width: 38px; height: 38px; line-height: 38px; text-align: center; border-radius: 10px; margin-right: 12px; font-size: 20px; }
+  h3 { font-size: 20px; margin: 22px 0 8px; color: #111827; }
+  .sub { color: var(--muted); margin: 0 0 18px; font-size: 16px; }
+
+  .grid { display: grid; gap: 18px; }
+  .grid-2 { grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); }
+  .grid-3 { grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); }
+  .grid-4 { grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
+
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 20px 22px; box-shadow: 0 1px 2px rgba(0,0,0,0.04); }
+  .card h4 { margin: 0 0 8px; font-size: 17px; }
+  .card.accent-blue { border-top: 5px solid var(--blue); }
+  .card.accent-green { border-top: 5px solid var(--green); }
+  .card.accent-orange { border-top: 5px solid var(--orange); }
+  .card.accent-purple { border-top: 5px solid var(--purple); }
+  .card.accent-teal { border-top: 5px solid var(--teal); }
+  .card.accent-red { border-top: 5px solid var(--red); }
+
+  .kpi { text-align: center; }
+  .kpi .v { font-size: 36px; font-weight: 700; color: var(--blue); }
+  .kpi .l { color: var(--muted); font-size: 14px; }
+
+  .note { border-left: 5px solid; padding: 12px 16px; border-radius: 8px; margin: 14px 0; }
+  .note.info { background: var(--blue-l); border-color: var(--blue); }
+  .note.ok { background: var(--green-l); border-color: var(--green); }
+  .note.warn { background: var(--yellow-l); border-color: #ca8a04; }
+  .note.danger { background: var(--red-l); border-color: var(--red); }
+
+  table { width: 100%; border-collapse: collapse; background: #fff; border-radius: 10px; overflow: hidden; font-size: 14.5px; }
+  th, td { padding: 10px 12px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; }
+  th { background: #f1f5f9; font-weight: 600; }
+  tr:last-child td { border-bottom: none; }
+  tr.group td { background: #f8fafc; font-weight: 700; color: #334155; }
+  .tag { display: inline-block; padding: 2px 9px; border-radius: 999px; font-size: 12.5px; font-weight: 600; white-space: nowrap; }
+  .tag.g { background: var(--green-l); color: #166534; }
+  .tag.o { background: var(--orange-l); color: #9a3412; }
+  .tag.r { background: var(--red-l); color: #991b1b; }
+  .tag.b { background: var(--blue-l); color: #1e40af; }
+  .tag.p { background: var(--purple-l); color: #5b21b6; }
+  .tag.t { background: var(--teal-l); color: #115e59; }
+  .tag.gr { background: #e5e7eb; color: #374151; }
+
+  .steps { counter-reset: step; }
+  .step { position: relative; padding: 18px 20px 18px 74px; background: #fff; border: 1px solid var(--line); border-radius: 14px; margin: 14px 0; }
+  .step::before { counter-increment: step; content: counter(step); position: absolute; left: 20px; top: 18px; width: 38px; height: 38px; border-radius: 50%; background: var(--blue); color: #fff; font-weight: 700; font-size: 19px; text-align: center; line-height: 38px; }
+  .step h4 { margin: 0 0 6px; font-size: 18px; }
+  .step .where { font-size: 13px; color: var(--muted); margin-bottom: 8px; }
+
+  .bar-chart { margin: 10px 0 0; }
+  .bar-row { display: grid; grid-template-columns: 250px 1fr 90px; align-items: center; gap: 10px; margin: 7px 0; font-size: 14px; }
+  .bar-track { background: #e5e7eb; border-radius: 6px; height: 22px; overflow: hidden; }
+  .bar { height: 100%; border-radius: 6px; }
+  .bar.b1 { background: #60a5fa; } .bar.b2 { background: #2563eb; } .bar.b3 { background: #7c3aed; } .bar.b4 { background: #ea580c; } .bar.b5 { background: #dc2626; } .bar.b6 { background: #16a34a; } .bar.b7 { background: #0d9488; }
+  .bar.cn { background: #dc2626; } .bar.us { background: #2563eb; } .bar.eu { background: #7c3aed; }
+  .bar-val { text-align: right; font-weight: 600; }
+  .legend { display: flex; gap: 16px; flex-wrap: wrap; font-size: 13px; color: #374151; margin: 8px 0 0; }
+  .legend span::before { content: ""; display: inline-block; width: 12px; height: 12px; border-radius: 3px; margin-right: 6px; vertical-align: -1px; }
+  .legend .cn::before { background: #dc2626; } .legend .us::before { background: #2563eb; } .legend .eu::before { background: #7c3aed; }
+
+  .diagram { background: #fff; border: 1px solid var(--line); border-radius: 14px; padding: 14px; overflow-x: auto; }
+  .diagram svg { display: block; margin: 0 auto; max-width: 100%; height: auto; }
+  .caption { text-align: center; color: var(--muted); font-size: 13.5px; margin-top: 8px; }
+
+  ul.check { list-style: none; padding: 0; }
+  ul.check li { padding: 6px 0 6px 30px; position: relative; }
+  ul.check li::before { content: ""; position: absolute; left: 0; top: 10px; width: 18px; height: 18px; border: 2px solid var(--blue); border-radius: 4px; }
+
+  /* Блок для DevOps */
+  .devops { background: #0b1220; color: #e2e8f0; border-left: 6px solid #22d3ee; border-radius: 12px; padding: 18px 22px; margin-top: 26px; }
+  .devops h4 { color: #67e8f9; margin: 0 0 12px; font-size: 14px; letter-spacing: 1px; text-transform: uppercase; }
+  .devops h4::before { content: "DEVOPS"; background: #22d3ee; color: #0b1220; padding: 2px 8px; border-radius: 4px; margin-right: 10px; font-size: 12px; }
+  .devops table { background: transparent; color: #e2e8f0; font-size: 13.5px; }
+  .devops th { background: #1e293b; color: #a5f3fc; border-bottom: 1px solid #334155; }
+  .devops td { border-bottom: 1px solid #1e293b; }
+  .devops code { background: #1e293b; color: #a5f3fc; }
+  .devops pre { background: #020617; border: 1px solid #1e293b; margin: 10px 0 0; }
+  .devops p { margin: 6px 0; }
+  .devops ul { margin: 6px 0; padding-left: 20px; }
+
+  footer { text-align: center; color: var(--muted); font-size: 13px; padding: 30px 0 40px; }
+  @media print { .hero { padding: 30px 20px; } .card, .step, .devops { break-inside: avoid; } }
+</style>
+</head>
+<body>
+
+<div class="hero">
+  <div class="inner">
+    <h1>Локальная LLM для разработки 1С</h1>
+    <p class="lead">Открытые модели (Qwen, GLM, DeepSeek, gpt-oss, Devstral, Gemma) на тестовом сервере компании + VS Code с расширением Cline на ноутбуках разработчиков + те же MCP-серверы и навыки (skills) по 1С, которые сегодня используют Cursor и Claude Code. Код и данные не покидают контур.</p>
+    <div class="badges">
+      <span class="badge">Только автономные модели: без обращений в интернет</span>
+      <span class="badge">Open weights: Китай, США, Европа</span>
+      <span class="badge">Ollama / vLLM</span>
+      <span class="badge">VS Code + Cline</span>
+      <span class="badge">MCP: платформа, индекс кода, тест-клиент 1С</span>
+      <span class="badge">Agent Skills: ~100 навыков по 1С</span>
+      <span class="badge">0 руб. за токены</span>
+    </div>
+  </div>
+</div>
+
+<div class="wrap">
+
+<!-- ======================= 1. ЗАЧЕМ ======================= -->
+<section>
+  <h2><span class="num">1</span>Зачем это нужно</h2>
+  <p class="sub">Сейчас ИИ-помощь в разработке 1С работает через облачные модели. Локальная модель на своем сервере снимает три ограничения сразу.</p>
+  <div class="grid grid-3">
+    <div class="card accent-green">
+      <h4>Безопасность контура</h4>
+      Исходники конфигураций, расширения, тексты запросов и данные тестовых баз не отправляются во внешние сервисы. Модель отвечает по локальной сети, доступ в интернет сервер не требует.
+    </div>
+    <div class="card accent-blue">
+      <h4>Предсказуемая стоимость</h4>
+      Открытые модели бесплатны (Apache 2.0, MIT). Затраты — один раз на GPU-сервер и электричество. Нет лимитов на запросы, нет счетов за токены, нет зависимости от курса, платежных и санкционных ограничений.
+    </div>
+    <div class="card accent-purple">
+      <h4>Переиспользование наработок</h4>
+      Навыки по 1С (сборка обработок, формы, СКД, роли, расширения) и MCP-серверы уже написаны и работают в Cursor и Claude Code. Cline поддерживает тот же стандарт — переносится копированием папок.
+    </div>
+  </div>
+
+  <div class="grid grid-4" style="margin-top:18px">
+    <div class="card kpi"><div class="v">3</div><div class="l">MCP-сервера по 1С уже готовы</div></div>
+    <div class="card kpi"><div class="v">~100</div><div class="l">навыков (SKILL.md) по 1С</div></div>
+    <div class="card kpi"><div class="v">24 ГБ</div><div class="l">VRAM — минимум для рабочей модели</div></div>
+    <div class="card kpi"><div class="v">1 день</div><div class="l">на развертывание пилота</div></div>
+  </div>
+
+  <div class="devops">
+    <h4>Требования к контуру и безопасности</h4>
+    <table>
+      <thead><tr><th>Параметр</th><th>Значение</th><th>Комментарий</th></tr></thead>
+      <tbody>
+        <tr><td>Сетевой сегмент сервера LLM</td><td>VLAN разработки / тестовый сегмент</td><td>Доступ только из подсети рабочих мест разработчиков. Наружу не публикуется.</td></tr>
+        <tr><td>Исходящий интернет с сервера</td><td>нужен один раз</td><td>Для скачивания весов модели (20-500 ГБ) и образов. После — можно закрыть. Веса можно принести офлайн на диске.</td></tr>
+        <tr><td>Исходящий интернет с рабочих мест</td><td>не требуется для работы агента</td><td>Cline обращается только к серверу LLM и к локальным MCP-процессам.</td></tr>
+        <tr><td>Телеметрия Cline</td><td>отключить</td><td>VS Code: <code>"cline.telemetrySetting": "disabled"</code> или в настройках расширения.</td></tr>
+        <tr><td>Хранение промптов на сервере</td><td>не ведется по умолчанию</td><td>Ollama/vLLM не логируют тела запросов. При необходимости аудита — включить логирование на reverse proxy.</td></tr>
+        <tr><td>Учетные записи</td><td>без аутентификации в LAN или API-ключ через прокси</td><td>Ollama не имеет встроенной аутентификации; при необходимости — nginx с заголовком Authorization.</td></tr>
+        <tr><td>Исходящие соединения от модели</td><td>отсутствуют</td><td>Модель — файл весов на диске. Ollama и vLLM не обращаются к внешним сервисам во время работы. Проверка: <code>ss -tnp | grep ollama</code> показывает только соединения из LAN.</td></tr>
+        <tr><td>Лицензии моделей</td><td>Apache 2.0 / MIT — без ограничений</td><td>Исключения: Llama 4 (своя лицензия, для крупных компаний), Mistral Medium 3.5 (лимит по выручке), Kimi K3 (условия для сервисов).</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ======================= 2. АРХИТЕКТУРА ======================= -->
+<section>
+  <h2><span class="num">2</span>Архитектура решения</h2>
+  <p class="sub">Четыре слоя: модель (думает), Cline (действует в редакторе), MCP-серверы (дают доступ к 1С), навыки (объясняют, как правильно работать с 1С).</p>
+
+  <div class="diagram">
+    <svg width="1040" height="560" viewBox="0 0 1040 560" xmlns="http://www.w3.org/2000/svg" font-family="Segoe UI, Arial, sans-serif">
+      <defs>
+        <marker id="arr" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#475569"/></marker>
+        <marker id="arrb" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#2563eb"/></marker>
+      </defs>
+
+      <rect x="20" y="20" width="470" height="520" rx="16" fill="#f8fafc" stroke="#94a3b8" stroke-width="2" stroke-dasharray="6 4"/>
+      <text x="40" y="50" font-size="18" font-weight="700" fill="#0f172a">Ноутбук разработчика (Windows)</text>
+
+      <rect x="40" y="70" width="430" height="180" rx="12" fill="#dbeafe" stroke="#2563eb" stroke-width="2"/>
+      <text x="56" y="96" font-size="16" font-weight="700" fill="#1e3a8a">VS Code + расширение Cline</text>
+      <rect x="56" y="110" width="190" height="56" rx="8" fill="#fff" stroke="#93c5fd"/>
+      <text x="66" y="132" font-size="13" font-weight="600" fill="#1e40af">Cline (агент)</text>
+      <text x="66" y="150" font-size="12" fill="#334155">план, правки файлов, терминал</text>
+      <rect x="260" y="110" width="194" height="56" rx="8" fill="#fff" stroke="#93c5fd"/>
+      <text x="270" y="132" font-size="13" font-weight="600" fill="#1e40af">Провайдер: Ollama / OpenAI</text>
+      <text x="270" y="150" font-size="12" fill="#334155">http://srv-llm:11434</text>
+      <rect x="56" y="178" width="190" height="56" rx="8" fill="#ede9fe" stroke="#a78bfa"/>
+      <text x="66" y="200" font-size="13" font-weight="600" fill="#5b21b6">.cline/skills/</text>
+      <text x="66" y="218" font-size="12" fill="#334155">~100 навыков по 1С (SKILL.md)</text>
+      <rect x="260" y="178" width="194" height="56" rx="8" fill="#ede9fe" stroke="#a78bfa"/>
+      <text x="270" y="200" font-size="13" font-weight="600" fill="#5b21b6">.clinerules/</text>
+      <text x="270" y="218" font-size="12" fill="#334155">правила проекта, стиль BSL</text>
+
+      <rect x="40" y="270" width="430" height="150" rx="12" fill="#ccfbf1" stroke="#0d9488" stroke-width="2"/>
+      <text x="56" y="296" font-size="16" font-weight="700" fill="#115e59">MCP-серверы (локальные процессы, stdio)</text>
+      <rect x="56" y="310" width="130" height="94" rx="8" fill="#fff" stroke="#5eead4"/>
+      <text x="66" y="332" font-size="13" font-weight="600" fill="#0f766e">1c-platform</text>
+      <text x="66" y="350" font-size="11.5" fill="#334155">синтакс-помощник</text>
+      <text x="66" y="366" font-size="11.5" fill="#334155">платформы 8.3.27</text>
+      <text x="66" y="382" font-size="11.5" fill="#334155">(Java, jar)</text>
+      <rect x="198" y="310" width="130" height="94" rx="8" fill="#fff" stroke="#5eead4"/>
+      <text x="208" y="332" font-size="13" font-weight="600" fill="#0f766e">code-index</text>
+      <text x="208" y="350" font-size="11.5" fill="#334155">индекс выгрузок</text>
+      <text x="208" y="366" font-size="11.5" fill="#334155">конфигураций</text>
+      <text x="208" y="382" font-size="11.5" fill="#334155">(bsl-indexer)</text>
+      <rect x="340" y="310" width="114" height="94" rx="8" fill="#fff" stroke="#5eead4"/>
+      <text x="350" y="332" font-size="13" font-weight="600" fill="#0f766e">1c-testpilot</text>
+      <text x="350" y="350" font-size="11.5" fill="#334155">запуск клиента</text>
+      <text x="350" y="366" font-size="11.5" fill="#334155">1С, формы,</text>
+      <text x="350" y="382" font-size="11.5" fill="#334155">скриншоты</text>
+
+      <rect x="40" y="440" width="430" height="84" rx="12" fill="#fff7ed" stroke="#ea580c" stroke-width="2"/>
+      <text x="56" y="466" font-size="15" font-weight="700" fill="#9a3412">Платформа 1С 8.3.27 и выгрузки конфигураций (XML)</text>
+      <text x="56" y="488" font-size="12.5" fill="#334155">пакетный режим конфигуратора: сборка EPF/ERF, загрузка XML, базы</text>
+      <text x="56" y="508" font-size="12.5" fill="#334155">каталоги src/cf, src/cfe по базам (WIM, SBB, NRB, УТ-эталон)</text>
+
+      <line x1="150" y1="250" x2="150" y2="268" stroke="#475569" stroke-width="2" marker-end="url(#arr)"/>
+      <line x1="250" y1="420" x2="250" y2="438" stroke="#475569" stroke-width="2" marker-end="url(#arr)"/>
+
+      <line x1="490" y1="140" x2="580" y2="140" stroke="#2563eb" stroke-width="3" marker-end="url(#arrb)"/>
+      <line x1="580" y1="170" x2="490" y2="170" stroke="#2563eb" stroke-width="3" marker-end="url(#arrb)"/>
+      <text x="492" y="128" font-size="12" fill="#1e40af" font-weight="600">HTTP, LAN</text>
+      <text x="492" y="196" font-size="12" fill="#1e40af">prompt + tools</text>
+      <text x="492" y="212" font-size="12" fill="#1e40af">ответ / tool call</text>
+
+      <rect x="585" y="20" width="435" height="520" rx="16" fill="#f8fafc" stroke="#94a3b8" stroke-width="2" stroke-dasharray="6 4"/>
+      <text x="605" y="50" font-size="18" font-weight="700" fill="#0f172a">Тестовый сервер компании (GPU)</text>
+
+      <rect x="605" y="70" width="395" height="110" rx="12" fill="#dcfce7" stroke="#16a34a" stroke-width="2"/>
+      <text x="621" y="96" font-size="16" font-weight="700" fill="#14532d">Сервер инференса</text>
+      <text x="621" y="120" font-size="13" fill="#334155">Ollama (просто) или vLLM (много пользователей)</text>
+      <text x="621" y="140" font-size="13" fill="#334155">OpenAI-совместимый API, tool calling</text>
+      <text x="621" y="160" font-size="13" fill="#334155">порт 11434 (Ollama) / 8000 (vLLM), только LAN</text>
+
+      <rect x="605" y="200" width="395" height="150" rx="12" fill="#fef3c7" stroke="#d97706" stroke-width="2"/>
+      <text x="621" y="226" font-size="16" font-weight="700" fill="#92400e">Модель (open weights) — на выбор</text>
+      <rect x="621" y="240" width="118" height="94" rx="8" fill="#fff" stroke="#fcd34d"/>
+      <text x="631" y="262" font-size="13" font-weight="600" fill="#92400e">Китай</text>
+      <text x="631" y="280" font-size="11.5" fill="#334155">Qwen3-Coder</text>
+      <text x="631" y="296" font-size="11.5" fill="#334155">GLM-4.7 / 5.3</text>
+      <text x="631" y="312" font-size="11.5" fill="#334155">DeepSeek V3.2/V4</text>
+      <rect x="749" y="240" width="118" height="94" rx="8" fill="#fff" stroke="#fcd34d"/>
+      <text x="759" y="262" font-size="13" font-weight="600" fill="#92400e">США</text>
+      <text x="759" y="280" font-size="11.5" fill="#334155">gpt-oss (OpenAI)</text>
+      <text x="759" y="296" font-size="11.5" fill="#334155">Gemma 4 (Google)</text>
+      <text x="759" y="312" font-size="11.5" fill="#334155">Llama 4 (Meta)</text>
+      <rect x="877" y="240" width="112" height="94" rx="8" fill="#fff" stroke="#fcd34d"/>
+      <text x="887" y="262" font-size="13" font-weight="600" fill="#92400e">Европа</text>
+      <text x="887" y="280" font-size="11.5" fill="#334155">Devstral Small 2</text>
+      <text x="887" y="296" font-size="11.5" fill="#334155">Mistral Medium</text>
+      <text x="887" y="312" font-size="11.5" fill="#334155">(Mistral AI)</text>
+
+      <rect x="605" y="370" width="395" height="80" rx="12" fill="#e2e8f0" stroke="#64748b" stroke-width="2"/>
+      <text x="621" y="396" font-size="16" font-weight="700" fill="#1e293b">Железо</text>
+      <text x="621" y="418" font-size="12.5" fill="#334155">GPU NVIDIA 24-96 ГБ на карту; 4-8 карт для больших моделей</text>
+      <text x="621" y="438" font-size="12.5" fill="#334155">RAM от 64 ГБ, NVMe под веса (20-500 ГБ), Linux / Windows Server</text>
+
+      <rect x="605" y="470" width="395" height="54" rx="12" fill="#f1f5f9" stroke="#94a3b8"/>
+      <text x="621" y="494" font-size="13" font-weight="600" fill="#334155">Опционально: сервер 1С и тестовые базы рядом,</text>
+      <text x="621" y="512" font-size="13" fill="#334155">веб-публикация базы для тестов через MCP</text>
+
+      <line x1="802" y1="180" x2="802" y2="198" stroke="#475569" stroke-width="2" marker-end="url(#arr)"/>
+      <line x1="802" y1="350" x2="802" y2="368" stroke="#475569" stroke-width="2" marker-end="url(#arr)"/>
+    </svg>
+    <div class="caption">Схема 1. Модель живет на сервере, все инструменты (MCP, навыки, платформа 1С) остаются на рабочем месте разработчика. По сети ходит только текст запросов и ответов.</div>
+  </div>
+
+  <h3>Роли компонентов</h3>
+  <div class="grid grid-4">
+    <div class="card accent-orange">
+      <h4>Модель</h4>
+      Читает контекст, пишет код на BSL, решает, какой инструмент вызвать. Главный критерий выбора: умение надежно вызывать инструменты (tool calling) и большой контекст (от 64К токенов).
+    </div>
+    <div class="card accent-blue">
+      <h4>Cline</h4>
+      Открытое расширение VS Code (Apache 2.0). Превращает ответы модели в действия: правит файлы, выполняет команды, вызывает MCP. Каждое действие подтверждает разработчик.
+    </div>
+    <div class="card accent-teal">
+      <h4>MCP-серверы</h4>
+      Стандартный протокол подключения инструментов. Один и тот же JSON-конфиг работает в Cursor, Claude Code и Cline. Для 1С уже есть три сервера: платформа, индекс кода, тест-клиент.
+    </div>
+    <div class="card accent-purple">
+      <h4>Skills (навыки)</h4>
+      Папки с файлом <code>SKILL.md</code>: пошаговые инструкции и скрипты для конкретной задачи (собрать EPF, добавить форму, проверить роль). Подгружаются по требованию, не расходуют контекст впустую.
+    </div>
+  </div>
+
+  <div class="devops">
+    <h4>Протоколы, порты, транспорт</h4>
+    <table>
+      <thead><tr><th>Связь</th><th>Протокол / порт</th><th>Направление</th><th>Примечание</th></tr></thead>
+      <tbody>
+        <tr><td>Cline &rarr; сервер LLM (Ollama)</td><td>HTTP, TCP 11434</td><td>рабочее место &rarr; сервер</td><td>API: <code>/api/chat</code> (нативный) и <code>/v1/chat/completions</code> (OpenAI-совместимый). Потоковая передача (SSE).</td></tr>
+        <tr><td>Cline &rarr; сервер LLM (vLLM)</td><td>HTTP, TCP 8000</td><td>рабочее место &rarr; сервер</td><td>Только OpenAI-совместимый API. Для TLS — nginx/caddy перед vLLM, порт 443.</td></tr>
+        <tr><td>Cline &rarr; MCP-серверы</td><td>stdio (stdin/stdout процесса)</td><td>локально</td><td>Cline сам запускает процесс при старте и держит его открытым. Сетевых портов нет.</td></tr>
+        <tr><td>MCP 1c-platform</td><td>Java 17+, jar</td><td>локально</td><td>Читает синтакс-помощник из каталога установленной платформы 1С. Требует JDK/JRE 17.</td></tr>
+        <tr><td>MCP code-index</td><td>exe, индексирует каталоги XML</td><td>локально</td><td>Первая индексация крупной конфигурации — 5-15 минут; далее инкрементально. Индекс в <code>CODE_INDEX_HOME</code>.</td></tr>
+        <tr><td>MCP 1c-testpilot</td><td>exe, запускает 1cv8c.exe</td><td>локально</td><td>Профили баз в <code>profiles.yaml</code>. Нужен установленный тонкий клиент 8.3.27 и доступ к серверу 1С / файловой базе.</td></tr>
+        <tr><td>Объем трафика</td><td>~50-300 КБ на шаг агента</td><td>&nbsp;</td><td>Контекст 64К токенов — около 250 КБ текста. Гигабитной сети достаточно для 20+ пользователей.</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ======================= 3. МОДЕЛИ И ЖЕЛЕЗО ======================= -->
+<section>
+  <h2><span class="num">3</span>Открытые модели: что есть и что выбрать</h2>
+  <p class="sub">В презентацию включены только модели с открытыми весами, которые скачиваются один раз и далее работают на сервере компании без обращений в интернет. Облачные модели и API (Claude, GPT, Gemini, облачные версии DeepSeek и Qwen) не рассматриваются. Все ниже — бесплатны для коммерческого использования (кроме отмеченных), запускаются в Ollama или vLLM. Память указана для весов при квантовании 4-bit (если не указано иное); к ней добавляется KV-кэш контекста (для 32К токенов: 1-3 ГБ на запрос).</p>
+
+  <div class="note ok"><b>Критерий отбора.</b> Модель — это файл весов на диске сервера. Весь расчет ответа идет на GPU компании. У модели нет сетевого доступа: она не может ничего отправить наружу, даже если «захочет». Единственный выход в интернет — разовое скачивание весов администратором (или перенос на носителе).</div>
+
+  <table>
+    <thead>
+      <tr><th>Модель</th><th>Разработчик</th><th>Параметры</th><th>Память</th><th>Контекст</th><th>Лицензия</th><th>Оценка для 1С-агента</th></tr>
+    </thead>
+    <tbody>
+      <tr class="group"><td colspan="7">Одна видеокарта 24-32 ГБ (уровень A)</td></tr>
+      <tr><td><b>qwen2.5-coder:7b</b></td><td>Alibaba <span class="tag r">CN</span></td><td>7B dense</td><td>5 ГБ</td><td>32К</td><td>Apache 2.0</td><td><span class="tag o">только проба</span> ноутбук без GPU</td></tr>
+      <tr><td><b>gpt-oss-20b</b></td><td>OpenAI <span class="tag b">US</span></td><td>21B-A3.6B MoE</td><td>14 ГБ (MXFP4)</td><td>128К</td><td>Apache 2.0</td><td><span class="tag g">хорошо</span> сильное рассуждение, нативный tool calling</td></tr>
+      <tr><td><b>Devstral Small 2</b></td><td>Mistral AI <span class="tag p">EU</span></td><td>24B dense</td><td>13 ГБ</td><td>256К</td><td>Apache 2.0</td><td><span class="tag g">хорошо</span> создана для агентов, Cline в списке поддержки</td></tr>
+      <tr><td><b>Qwen3.8-27B</b></td><td>Alibaba <span class="tag r">CN</span></td><td>27B dense</td><td>15 ГБ</td><td>262К</td><td>Apache 2.0</td><td><span class="tag g">хорошо</span> универсальная, режим рассуждения</td></tr>
+      <tr><td><b>Gemma 4 31B</b></td><td>Google <span class="tag b">US</span></td><td>31B dense</td><td>17 ГБ</td><td>256К</td><td>Apache 2.0</td><td><span class="tag g">хорошо</span> нативный function calling</td></tr>
+      <tr><td><b>qwen3-coder:30b</b></td><td>Alibaba <span class="tag r">CN</span></td><td>30B-A3B MoE</td><td>18 ГБ</td><td>256К</td><td>Apache 2.0</td><td><span class="tag g">рекомендуем</span> быстрая (3B активных), заточена под код</td></tr>
+      <tr><td><b>glm-4.7-flash</b></td><td>Z.ai <span class="tag r">CN</span></td><td>30B-A3B MoE</td><td>19 ГБ</td><td>198К</td><td>MIT</td><td><span class="tag g">рекомендуем</span> сильнейшая в классе 30B</td></tr>
+
+      <tr class="group"><td colspan="7">Одна карта 80-96 ГБ или две по 48 ГБ (уровень B)</td></tr>
+      <tr><td><b>qwen3-coder-next</b></td><td>Alibaba <span class="tag r">CN</span></td><td>80B-A3B MoE</td><td>44-52 ГБ</td><td>256К</td><td>Apache 2.0</td><td><span class="tag g">рекомендуем</span> обучена на 800К агентных задач, быстрая</td></tr>
+      <tr><td><b>Llama 4 Scout</b></td><td>Meta <span class="tag b">US</span></td><td>109B-A17B MoE</td><td>~60 ГБ</td><td>до 10М</td><td>Llama 4 Community</td><td><span class="tag o">средне</span> сильна в длинном контексте, слабее в коде</td></tr>
+      <tr><td><b>gpt-oss-120b</b></td><td>OpenAI <span class="tag b">US</span></td><td>117B-A5B MoE</td><td>65 ГБ (MXFP4)</td><td>128К</td><td>Apache 2.0</td><td><span class="tag g">хорошо</span> уровень o4-mini, дешевая в обслуживании</td></tr>
+      <tr><td><b>Mistral Medium 3.5</b></td><td>Mistral AI <span class="tag p">EU</span></td><td>128B dense</td><td>70 ГБ</td><td>256К</td><td>Modified MIT*</td><td><span class="tag g">хорошо</span> 77,6% SWE-bench; *лицензия с лимитом по выручке</td></tr>
+
+      <tr class="group"><td colspan="7">Многокарточный сервер 256-512 ГБ (уровень C)</td></tr>
+      <tr><td><b>DeepSeek-V4-Flash</b></td><td>DeepSeek <span class="tag r">CN</span></td><td>284B-A13B MoE</td><td>167 ГБ</td><td>1М</td><td>MIT</td><td><span class="tag p">уровень облачных</span> три режима рассуждения</td></tr>
+      <tr><td><b>GLM-5.3-Flash</b></td><td>Z.ai <span class="tag r">CN</span></td><td>320B-A18B MoE</td><td>176 ГБ</td><td>1М</td><td>MIT</td><td><span class="tag p">уровень облачных</span> мультимодальная</td></tr>
+      <tr><td><b>GLM-4.7</b></td><td>Z.ai <span class="tag r">CN</span></td><td>358B-A32B MoE</td><td>215 (NVFP4) / 430 (FP8)</td><td>200К</td><td>MIT</td><td><span class="tag p">уровень облачных</span></td></tr>
+      <tr><td><b>Qwen3-Coder-480B</b></td><td>Alibaba <span class="tag r">CN</span></td><td>480B-A35B MoE</td><td>270 / 449 (FP8)</td><td>256К</td><td>Apache 2.0</td><td><span class="tag p">уровень облачных</span></td></tr>
+      <tr><td><b>DeepSeek-V3.2</b></td><td>DeepSeek <span class="tag r">CN</span></td><td>685B-A37B MoE</td><td>403 (NVFP4) / 805 (FP8)</td><td>164К</td><td>MIT</td><td><span class="tag p">уровень облачных</span> 67,8% SWE-bench</td></tr>
+
+      <tr class="group"><td colspan="7">Стоечный кластер, 8+ GPU</td></tr>
+      <tr><td><b>GLM-5.3</b></td><td>Z.ai <span class="tag r">CN</span></td><td>753B MoE</td><td>~400+ ГБ</td><td>1М</td><td>GLM-5.3 License</td><td><span class="tag p">лучшая открытая</span> 41,8% Terminal-Bench vs 51,8% у Claude Opus 5</td></tr>
+      <tr><td><b>Kimi K3</b></td><td>Moonshot <span class="tag r">CN</span></td><td>2.8T-A104B MoE</td><td>1,56 ТБ</td><td>1М</td><td>Kimi K3 License</td><td><span class="tag gr">не для нас</span> масштаб дата-центра</td></tr>
+    </tbody>
+  </table>
+
+  <div class="note info"><b>Американские и европейские модели.</b> Если политика компании требует модель не из Китая, рабочие варианты есть на каждом уровне: <b>gpt-oss-20b / 120b</b> (OpenAI, Apache 2.0), <b>Gemma 4</b> (Google, Apache 2.0), <b>Devstral Small 2</b> (Mistral, Apache 2.0), <b>Llama 4</b> (Meta). По качеству кода на одной видеокарте они близки к Qwen/GLM; на верхнем уровне (256+ ГБ) открытых американских моделей сейчас нет — лидируют китайские.</div>
+
+  <h3>Память под веса, ГБ: одна видеокарта</h3>
+  <div class="card">
+    <div class="bar-chart">
+      <div class="bar-row"><span>qwen2.5-coder:7b</span><div class="bar-track"><div class="bar cn" style="width:7%"></div></div><span class="bar-val">5</span></div>
+      <div class="bar-row"><span>Devstral Small 2</span><div class="bar-track"><div class="bar eu" style="width:18%"></div></div><span class="bar-val">13</span></div>
+      <div class="bar-row"><span>gpt-oss-20b</span><div class="bar-track"><div class="bar us" style="width:19%"></div></div><span class="bar-val">14</span></div>
+      <div class="bar-row"><span>Qwen3.8-27B</span><div class="bar-track"><div class="bar cn" style="width:21%"></div></div><span class="bar-val">15</span></div>
+      <div class="bar-row"><span>Gemma 4 31B</span><div class="bar-track"><div class="bar us" style="width:24%"></div></div><span class="bar-val">17</span></div>
+      <div class="bar-row"><span>qwen3-coder:30b</span><div class="bar-track"><div class="bar cn" style="width:25%"></div></div><span class="bar-val">18</span></div>
+      <div class="bar-row"><span>glm-4.7-flash</span><div class="bar-track"><div class="bar cn" style="width:26%"></div></div><span class="bar-val">19</span></div>
+      <div class="bar-row"><span>порог: GPU 24 ГБ</span><div class="bar-track"><div class="bar" style="width:33%;background:repeating-linear-gradient(45deg,#9ca3af,#9ca3af 4px,#e5e7eb 4px,#e5e7eb 8px)"></div></div><span class="bar-val">24</span></div>
+      <div class="bar-row"><span>qwen3-coder-next</span><div class="bar-track"><div class="bar cn" style="width:72%"></div></div><span class="bar-val">52</span></div>
+      <div class="bar-row"><span>Llama 4 Scout</span><div class="bar-track"><div class="bar us" style="width:83%"></div></div><span class="bar-val">~60</span></div>
+      <div class="bar-row"><span>gpt-oss-120b</span><div class="bar-track"><div class="bar us" style="width:90%"></div></div><span class="bar-val">65</span></div>
+      <div class="bar-row"><span>Mistral Medium 3.5</span><div class="bar-track"><div class="bar eu" style="width:97%"></div></div><span class="bar-val">70</span></div>
+    </div>
+    <div class="legend"><span class="cn">Китай</span><span class="us">США</span><span class="eu">Европа</span></div>
+    <div class="caption">Шкала 0-72 ГБ. Квантование 4-bit (gpt-oss — нативный MXFP4).</div>
+  </div>
+
+  <h3>Память под веса, ГБ: многокарточный сервер</h3>
+  <div class="card">
+    <div class="bar-chart">
+      <div class="bar-row"><span>DeepSeek-V4-Flash</span><div class="bar-track"><div class="bar cn" style="width:19%"></div></div><span class="bar-val">167</span></div>
+      <div class="bar-row"><span>GLM-5.3-Flash</span><div class="bar-track"><div class="bar cn" style="width:20%"></div></div><span class="bar-val">176</span></div>
+      <div class="bar-row"><span>GLM-4.7 NVFP4</span><div class="bar-track"><div class="bar cn" style="width:24%"></div></div><span class="bar-val">215</span></div>
+      <div class="bar-row"><span>Qwen3-Coder-480B 4-bit</span><div class="bar-track"><div class="bar cn" style="width:30%"></div></div><span class="bar-val">270</span></div>
+      <div class="bar-row"><span>DeepSeek-V3.2 NVFP4</span><div class="bar-track"><div class="bar cn" style="width:45%"></div></div><span class="bar-val">403</span></div>
+      <div class="bar-row"><span>GLM-4.7 FP8</span><div class="bar-track"><div class="bar cn" style="width:48%"></div></div><span class="bar-val">430</span></div>
+      <div class="bar-row"><span>порог: 8x H100 80 ГБ</span><div class="bar-track"><div class="bar" style="width:71%;background:repeating-linear-gradient(45deg,#9ca3af,#9ca3af 4px,#e5e7eb 4px,#e5e7eb 8px)"></div></div><span class="bar-val">640</span></div>
+      <div class="bar-row"><span>DeepSeek-V3.2 FP8</span><div class="bar-track"><div class="bar cn" style="width:89%"></div></div><span class="bar-val">805</span></div>
+    </div>
+    <div class="caption">Шкала 0-900 ГБ. На этом уровне открытые модели только китайские.</div>
+  </div>
+
+  <h3>Три уровня внедрения</h3>
+  <div class="grid grid-3">
+    <div class="card accent-green">
+      <h4>Уровень A. Пилот</h4>
+      <p><b>Сервер:</b> 1 GPU 24-32 ГБ, 64 ГБ RAM.<br><b>Модели:</b> glm-4.7-flash, qwen3-coder:30b; американская альтернатива — gpt-oss-20b, Gemma 4; европейская — Devstral Small 2.<br><b>Сервер инференса:</b> Ollama.<br><b>Пользователи:</b> 1-3 одновременно.</p>
+    </div>
+    <div class="card accent-blue">
+      <h4>Уровень B. Команда</h4>
+      <p><b>Сервер:</b> 1-2 GPU 48-96 ГБ (L40S, A6000, H100, RTX PRO 6000).<br><b>Модели:</b> qwen3-coder-next; американская — gpt-oss-120b; европейская — Mistral Medium 3.5 (проверить лицензию).<br><b>Сервер инференса:</b> vLLM.<br><b>Пользователи:</b> 5-15.</p>
+    </div>
+    <div class="card accent-purple">
+      <h4>Уровень C. Замена облака</h4>
+      <p><b>Сервер:</b> 4-8x H100/H200 (256-640 ГБ).<br><b>Модели:</b> DeepSeek-V4-Flash, GLM-5.3-Flash, GLM-4.7, Qwen3-Coder-480B, DeepSeek-V3.2.<br><b>Сервер инференса:</b> vLLM с тензорным/экспертным параллелизмом.<br><b>Пользователи:</b> вся разработка.</p>
+    </div>
+  </div>
+
+  <div class="note warn"><b>Почему не ноутбук.</b> На типовом рабочем ноутбуке (16 ГБ RAM, без дискретной GPU) помещается только 7B-модель, и считает она на процессоре: один шаг агента занимает минуты, а инструменты она вызывает нестабильно. Сервер с GPU решает обе проблемы: модель в 4-10 раз крупнее и скорость в 10-30 раз выше.</div>
+
+  <div class="devops">
+    <h4>Параметры сервера инференса и моделей</h4>
+    <table>
+      <thead><tr><th>Параметр</th><th>Уровень A</th><th>Уровень B</th><th>Уровень C</th></tr></thead>
+      <tbody>
+        <tr><td>GPU</td><td>1x 24-32 ГБ (RTX 4090 / 5090, A10, L4)</td><td>1x 80-96 ГБ (H100, RTX PRO 6000) или 2x 48 ГБ (L40S, A6000)</td><td>4-8x H100 80 ГБ / H200 141 ГБ, NVLink</td></tr>
+        <tr><td>Драйвер / CUDA</td><td colspan="3">NVIDIA driver 570+, CUDA 12.4+ (для Blackwell — 12.8+). Проверка: <code>nvidia-smi</code></td></tr>
+        <tr><td>RAM</td><td>64 ГБ</td><td>128 ГБ</td><td>512 ГБ - 2 ТБ (для загрузки весов)</td></tr>
+        <tr><td>Диск под веса</td><td>100 ГБ NVMe</td><td>300 ГБ NVMe</td><td>1-2 ТБ NVMe</td></tr>
+        <tr><td>Сервер инференса</td><td>Ollama 0.14+</td><td>vLLM 0.11+ (Docker)</td><td>vLLM 0.18+ nightly для новейших моделей</td></tr>
+        <tr><td>Квантование</td><td>Q4_K_M (GGUF) / MXFP4</td><td>FP8 или Q8_0</td><td>FP8, NVFP4 (Blackwell)</td></tr>
+        <tr><td>Контекст на запрос</td><td>64К</td><td>128К</td><td>128-256К</td></tr>
+        <tr><td>Параллельных запросов</td><td>2-4</td><td>8-16</td><td>32+</td></tr>
+        <tr><td>Ожидаемая скорость генерации</td><td>40-80 ток/с (MoE 3B активных)</td><td>60-120 ток/с</td><td>50-100 ток/с на пользователя</td></tr>
+      </tbody>
+    </table>
+    <p style="margin-top:12px"><b>Парсеры вызова инструментов в vLLM</b> (обязательны для работы Cline):</p>
+    <table>
+      <thead><tr><th>Модель</th><th><code>--tool-call-parser</code></th><th>Дополнительно</th></tr></thead>
+      <tbody>
+        <tr><td>Qwen3-Coder (все размеры)</td><td><code>qwen3_coder</code></td><td>&nbsp;</td></tr>
+        <tr><td>Qwen3 / Qwen3.8 (не Coder)</td><td><code>hermes</code></td><td><code>--reasoning-parser qwen3</code></td></tr>
+        <tr><td>GLM-4.7 / GLM-5.x</td><td><code>glm47</code></td><td><code>--reasoning-parser glm47</code></td></tr>
+        <tr><td>DeepSeek V3.2 / V4</td><td><code>deepseek_v3</code></td><td><code>--reasoning-parser deepseek_r1</code>, <code>--trust-remote-code</code></td></tr>
+        <tr><td>gpt-oss</td><td><code>openai</code></td><td>формат harmony применяется автоматически шаблоном чата; в Ollama — из коробки</td></tr>
+        <tr><td>Devstral / Mistral</td><td><code>mistral</code></td><td><code>--tokenizer-mode mistral</code></td></tr>
+        <tr><td>Llama 4</td><td><code>llama4_pythonic</code> или <code>llama4_json</code></td><td>&nbsp;</td></tr>
+        <tr><td>Gemma 4</td><td><code>hermes</code></td><td>&nbsp;</td></tr>
+      </tbody>
+    </table>
+    <p style="margin-top:12px"><b>Рекомендуемые параметры генерации</b> для агентного кода (задаются в Cline или в Modelfile Ollama): <code>temperature 0.2-0.7</code> (для Qwen3-Coder-Next вендор рекомендует 1.0, top_p 0.95, top_k 40, repeat_penalty 1.0), <code>num_ctx 65536</code>.</p>
+  </div>
+</section>
+
+<!-- ======================= 4. ПОРЯДОК ПОДКЛЮЧЕНИЯ ======================= -->
+<section>
+  <h2><span class="num">4</span>Порядок подключения и настройки</h2>
+  <p class="sub">Семь шагов. Шаги 1-2 делает администратор сервера один раз, шаги 3-7 — каждый разработчик на своем рабочем месте (или централизованно через скрипт).</p>
+
+  <div class="diagram">
+    <svg width="1040" height="150" viewBox="0 0 1040 150" xmlns="http://www.w3.org/2000/svg" font-family="Segoe UI, Arial, sans-serif">
+      <defs><marker id="arr2" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#94a3b8"/></marker></defs>
+      <rect x="10" y="20" width="285" height="110" rx="12" fill="#dcfce7" stroke="#16a34a" stroke-width="2"/>
+      <text x="24" y="46" font-size="14" font-weight="700" fill="#14532d">СЕРВЕР (администратор)</text>
+      <circle cx="40" cy="80" r="16" fill="#16a34a"/><text x="40" y="85" font-size="14" fill="#fff" text-anchor="middle" font-weight="700">1</text>
+      <text x="64" y="85" font-size="13" fill="#1f2937">Ollama / vLLM + модель</text>
+      <circle cx="40" cy="112" r="16" fill="#16a34a"/><text x="40" y="117" font-size="14" fill="#fff" text-anchor="middle" font-weight="700">2</text>
+      <text x="64" y="117" font-size="13" fill="#1f2937">Проверка API из сети</text>
+      <line x1="298" y1="75" x2="330" y2="75" stroke="#94a3b8" stroke-width="3" marker-end="url(#arr2)"/>
+      <rect x="335" y="20" width="695" height="110" rx="12" fill="#dbeafe" stroke="#2563eb" stroke-width="2"/>
+      <text x="349" y="46" font-size="14" font-weight="700" fill="#1e3a8a">РАБОЧЕЕ МЕСТО (разработчик)</text>
+      <circle cx="365" cy="80" r="16" fill="#2563eb"/><text x="365" y="85" font-size="14" fill="#fff" text-anchor="middle" font-weight="700">3</text>
+      <text x="389" y="85" font-size="13" fill="#1f2937">VS Code + Cline</text>
+      <circle cx="365" cy="112" r="16" fill="#2563eb"/><text x="365" y="117" font-size="14" fill="#fff" text-anchor="middle" font-weight="700">4</text>
+      <text x="389" y="117" font-size="13" fill="#1f2937">Подключение к модели</text>
+      <circle cx="590" cy="80" r="16" fill="#0d9488"/><text x="590" y="85" font-size="14" fill="#fff" text-anchor="middle" font-weight="700">5</text>
+      <text x="614" y="85" font-size="13" fill="#1f2937">MCP-серверы 1С</text>
+      <circle cx="590" cy="112" r="16" fill="#7c3aed"/><text x="590" y="117" font-size="14" fill="#fff" text-anchor="middle" font-weight="700">6</text>
+      <text x="614" y="117" font-size="13" fill="#1f2937">Навыки (skills) и правила</text>
+      <circle cx="830" cy="80" r="16" fill="#ea580c"/><text x="830" y="85" font-size="14" fill="#fff" text-anchor="middle" font-weight="700">7</text>
+      <text x="854" y="85" font-size="13" fill="#1f2937">Приемочный сценарий</text>
+    </svg>
+    <div class="caption">Схема 2. Последовательность развертывания</div>
+  </div>
+
+  <div class="steps">
+
+    <div class="step">
+      <h4>Сервер инференса и модель</h4>
+      <div class="where">Где: тестовый сервер с GPU. Кто: администратор. Время: 1-2 часа (основное — скачивание весов).</div>
+      <p><b>Вариант 1 — Ollama</b> (рекомендуется для пилота: одна команда, автоматическая загрузка моделей, OpenAI-совместимый API).</p>
+<pre><code># Linux
+curl -fsSL https://ollama.com/install.sh | sh
+
+# Открыть доступ из локальной сети и держать модель в памяти постоянно
+sudo systemctl edit ollama
+#   [Service]
+#   Environment="OLLAMA_HOST=0.0.0.0:11434"
+#   Environment="OLLAMA_KEEP_ALIVE=-1"
+#   Environment="OLLAMA_CONTEXT_LENGTH=65536"
+#   Environment="OLLAMA_NUM_PARALLEL=4"
+sudo systemctl restart ollama
+
+# Скачать модель: китайская / американская / европейская
+ollama pull glm-4.7-flash          # 19 ГБ
+ollama pull qwen3-coder:30b        # 18 ГБ
+ollama pull gpt-oss:20b            # 14 ГБ
+ollama pull devstral-small-2       # 13 ГБ</code></pre>
+      <p>На Windows Server те же переменные задаются как системные переменные окружения, после чего перезапускается служба Ollama.</p>
+
+      <p><b>Вариант 2 — vLLM</b> (для уровней B и C: параллельные запросы, высокая пропускная способность, точные парсеры вызова инструментов).</p>
+<pre><code>docker run --gpus all -p 8000:8000 --ipc=host \
+  -v /opt/models:/root/.cache/huggingface \
+  vllm/vllm-openai:latest \
+  --model Qwen/Qwen3-Coder-30B-A3B-Instruct-FP8 \
+  --max-model-len 131072 \
+  --enable-auto-tool-choice --tool-call-parser qwen3_coder \
+  --served-model-name qwen3-coder
+
+# gpt-oss-120b на одной H100:
+#   --model openai/gpt-oss-120b --tool-call-parser openai
+# GLM-4.7 на 8 GPU:
+#   --model zai-org/GLM-4.7-FP8 --tensor-parallel-size 8 --tool-call-parser glm47 --reasoning-parser glm47</code></pre>
+      <div class="note info">Параметр <code>--tool-call-parser</code> критичен: он переводит ответ модели в структурированный вызов инструмента. Без него Cline не сможет вызывать MCP и редактировать файлы.</div>
+    </div>
+
+    <div class="step">
+      <h4>Проверка API с рабочего места</h4>
+      <div class="where">Где: любой ноутбук в сети. Что проверяем: порт открыт, модель загружена, вызов инструментов работает.</div>
+<pre><code>curl http://srv-llm:11434/v1/models
+
+curl http://srv-llm:11434/v1/chat/completions -H "Content-Type: application/json" -d '{
+  "model": "glm-4.7-flash",
+  "messages": [{"role":"user","content":"Какая сейчас погода в Москве? Используй инструмент."}],
+  "tools": [{"type":"function","function":{"name":"get_weather",
+    "parameters":{"type":"object","properties":{"city":{"type":"string"}},"required":["city"]}}}]
+}'
+# Ожидаем в ответе: "tool_calls": [{"function":{"name":"get_weather","arguments":"{\"city\":\"Москва\"}"}}]</code></pre>
+    </div>
+
+    <div class="step">
+      <h4>VS Code и расширение Cline</h4>
+      <div class="where">Где: ноутбук разработчика. Время: 10 минут.</div>
+      <ol>
+        <li>Установить VS Code и расширение <b>Cline</b> из Marketplace (издатель saoudrizwan, открытый код, Apache 2.0).</li>
+        <li>Дополнительно поставить расширение <b>Language 1C (BSL)</b> для подсветки и диагностики кода BSL.</li>
+        <li>Открыть папку репозитория разработки (ту же, что открывается в Cursor).</li>
+      </ol>
+      <div class="note ok">Cline и Cursor могут использоваться параллельно на одном репозитории: конфигурации у них в разных папках (<code>.cline/</code> и <code>.cursor/</code>), конфликтов нет.</div>
+    </div>
+
+    <div class="step">
+      <h4>Подключение Cline к модели на сервере</h4>
+      <div class="where">Где: Cline, шестеренка Settings, раздел API Configuration.</div>
+      <table>
+        <thead><tr><th>Параметр</th><th>Ollama</th><th>vLLM</th></tr></thead>
+        <tbody>
+          <tr><td>API Provider</td><td>Ollama</td><td>OpenAI Compatible</td></tr>
+          <tr><td>Base URL</td><td><code>http://srv-llm:11434</code></td><td><code>http://srv-llm:8000/v1</code></td></tr>
+          <tr><td>API Key</td><td>не требуется</td><td>любая строка (например <code>local</code>)</td></tr>
+          <tr><td>Model ID</td><td><code>glm-4.7-flash</code></td><td><code>qwen3-coder</code> (значение served-model-name)</td></tr>
+          <tr><td>Context Window</td><td colspan="2">64К и выше (минимум 32К по документации Cline)</td></tr>
+        </tbody>
+      </table>
+      <p style="margin-top:12px">Затем в <b>Settings → Features</b>: включить <b>Use Compact Prompt</b> (сокращенный системный промпт для локальных моделей), включить <b>Enable Skills</b>, в режимах Plan / Act указать одну и ту же модель.</p>
+    </div>
+
+    <div class="step">
+      <h4>Подключение MCP-серверов 1С</h4>
+      <div class="where">Где: Cline, иконка MCP Servers → Configure → Configure MCP Servers (открывается файл <code>cline_mcp_settings.json</code>).</div>
+      <p>Формат файла совпадает с <code>mcp.json</code> Cursor и <code>.mcp.json</code> Claude Code: те же поля <code>command</code>, <code>args</code>, <code>env</code>. Добавляются два поля Cline: <code>disabled</code> и <code>autoApprove</code>.</p>
+<pre><code>{
+  "mcpServers": {
+    "1c-platform": {
+      "command": "C:\\Program Files\\Eclipse Adoptium\\jdk-17\\bin\\java.exe",
+      "args": ["-Dfile.encoding=UTF-8", "-jar",
+               "C:\\Tools\\mcp\\mcp-bsl-platform-context\\mcp-bsl-context.jar",
+               "--platform-path", "C:\\Program Files\\1cv8\\8.3.27.2214"],
+      "disabled": false,
+      "autoApprove": ["search", "getMember", "getMembers", "getConstructors", "info"]
+    },
+    "code-index": {
+      "command": "C:\\Tools\\mcp\\code-index\\bsl-indexer.exe",
+      "args": ["serve",
+               "--path", "wim_fo=D:\\1c\\WORK\\WIM_Fo\\src\\cf",
+               "--path", "wim_du=D:\\1c\\WORK\\Wim_Du\\SRC\\CF",
+               "--path", "ut=D:\\1c\\WORK\\UT\\SRC\\CF"],
+      "env": { "CODE_INDEX_HOME": "C:\\Tools\\mcp\\code-index" },
+      "disabled": false,
+      "autoApprove": ["find_symbol", "search_function", "search_terms", "get_object_structure",
+                      "get_form_handlers", "find_path_bsl", "grep_text", "read_file"]
+    },
+    "1c-testpilot": {
+      "command": "C:\\Tools\\mcp\\1c-testpilot\\1c-testpilot.exe",
+      "env": { "TC1C_TRANSPORT": "stdio",
+               "TC1C_PROFILES_FILE": "C:\\Tools\\mcp\\1c-testpilot\\profiles.yaml",
+               "TC_PLATFORM_VERSION": "8.3.27.2214" },
+      "disabled": false,
+      "autoApprove": []
+    }
+  }
+}</code></pre>
+      <table>
+        <thead><tr><th>MCP-сервер</th><th>Что дает модели</th><th>autoApprove</th></tr></thead>
+        <tbody>
+          <tr><td><b>1c-platform</b></td><td>Сигнатуры методов, свойств, конструкторов платформы 8.3.27. Модель перестает выдумывать несуществующие методы.</td><td>все инструменты (только чтение)</td></tr>
+          <tr><td><b>code-index</b></td><td>Поиск процедур, состав объектов метаданных, обработчики форм, цепочки вызовов, движения регистров по выгрузкам конфигураций и расширений. Эталон УТ.</td><td>инструменты чтения и поиска</td></tr>
+          <tr><td><b>1c-testpilot</b></td><td>Запуск тонкого клиента 1С, открытие форм, нажатия, скриншоты для приемочных сценариев.</td><td>пусто: каждое действие подтверждает разработчик</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="step">
+      <h4>Навыки (skills) по 1С и правила проекта</h4>
+      <div class="where">Где: папка репозитория. Это ключевой шаг: без него модель знает BSL «в общем», но не знает, как собрать обработку нашими скриптами или где лежат исходники баз.</div>
+
+      <p><b>Как это устроено.</b> Навык — папка с файлом <code>SKILL.md</code>. В начале файла YAML-шапка с полями <code>name</code> и <code>description</code>, дальше инструкции и ссылки на скрипты внутри папки. Cline при старте читает только шапки (около 100 токенов на навык), а полный текст подгружает, когда запрос разработчика совпал с описанием. Это стандарт Agent Skills, его поддерживают Cursor, Claude Code, Cline, Codex, OpenCode — одна и та же папка работает везде.</p>
+
+<pre><code>epf-build/
+  SKILL.md              # шапка: name: epf-build, description: Собрать внешнюю обработку 1С (EPF/ERF) из XML...
+  scripts/
+    build-epf.ps1       # вызывает конфигуратор в пакетном режиме
+  docs/
+    troubleshooting.md</code></pre>
+
+      <p><b>Откуда берем.</b> Сегодня в работе три набора, все в одном формате:</p>
+      <table>
+        <thead><tr><th>Набор</th><th>Сейчас лежит</th><th>Состав</th><th>Примеры</th></tr></thead>
+        <tbody>
+          <tr><td><b>cc-1c-skills</b></td><td><code>.cursor/skills/</code> (обновляется из git)</td><td>~85 навыков: сборка и разбор EPF/ERF, формы, макеты, СКД, роли, расширения, подсистемы, XDTO, базы, хранилище, веб-публикация</td><td><code>epf-build</code>, <code>form-add</code>, <code>skd-compile</code>, <code>cfe-borrow</code>, <code>db-load-xml</code></td></tr>
+          <tr><td><b>cursor-1c-extras</b></td><td><code>.agents/skills/</code></td><td>4 навыка: язык запросов, оптимизация запросов, RLS, распаковка CF</td><td><code>composing-1c-queries</code>, <code>1c-query-optimization</code></td></tr>
+          <tr><td><b>1c-* (Claude Code)</b></td><td><code>~/.claude/skills/</code></td><td>12 навыков: ревью BSL, проверка запросов, справочник БСП, паттерны БСП, пакет изменений, состояние поддержки, шаги Vanessa</td><td><code>1c-code-review</code>, <code>1c-bsp-api</code>, <code>1c-query-validate</code></td></tr>
+        </tbody>
+      </table>
+
+      <p style="margin-top:14px"><b>Куда кладем для Cline.</b> Cline ищет навыки в трех папках проекта: <code>.cline/skills/</code> (рекомендуется), <code>.clinerules/skills/</code>, <code>.claude/skills/</code>, и в глобальной <code>%USERPROFILE%\.cline\skills\</code>. Структура строго плоская: <code>skills/&lt;имя&gt;/SKILL.md</code>, вложенные категории не распознаются.</p>
+
+<pre><code># PowerShell: собрать все три набора в .cline/skills проекта
+$dst = ".cline\skills"
+New-Item -ItemType Directory -Force $dst | Out-Null
+
+$sources = @(".cursor\skills", ".agents\skills", "$env:USERPROFILE\.claude\skills")
+foreach ($src in $sources) {
+    Get-ChildItem $src -Directory | Where-Object { Test-Path (Join-Path $_.FullName "SKILL.md") } |
+        ForEach-Object { Copy-Item $_.FullName (Join-Path $dst $_.Name) -Recurse -Force }
+}
+
+# Контроль: имя папки обязано совпадать с полем name в шапке SKILL.md
+Get-ChildItem $dst -Directory | ForEach-Object {
+    $head = Get-Content (Join-Path $_.FullName "SKILL.md") -TotalCount 5 -Encoding UTF8
+    $name = ($head | Select-String '^name:\s*(.+)$').Matches.Groups[1].Value.Trim()
+    if ($name -ne $_.Name) { Write-Warning "Несовпадение: папка $($_.Name), name: $name" }
+}</code></pre>
+
+      <div class="note warn"><b>Три правила, из-за которых навык «молча» не подхватывается:</b> (1) в шапке есть и <code>name</code>, и <code>description</code>; (2) <code>name</code> точно равен имени папки, с учетом регистра; (3) папка лежит непосредственно в <code>skills/</code>, без промежуточных каталогов. Остальные поля шапки (<code>allowed-tools</code>, <code>argument-hint</code>) Cline не мешают.</div>
+
+      <p><b>Чем отличается вызов.</b> В Claude Code навык вызывается как команда <code>/epf-build ИмяОбработки</code>. В Cline навык активируется по смыслу запроса: «собери обработку ЗагрузкаВыписок из src» — Cline сам сопоставит с описанием <code>epf-build</code> и загрузит инструкцию. Можно назвать навык явно: «используй навык epf-build». Список и переключатели навыков — в панели по иконке весов под строкой ввода.</p>
+
+      <p><b>Правила проекта.</b> Правила Cursor (<code>.cursor/rules/*.mdc</code>) в Cline переносятся в папку <code>.clinerules/</code> как обычные markdown-файлы; они всегда в контексте. Для локальной модели правила держим короткими: 30-60 строк каждое, без длинных примеров.</p>
+
+<pre><code>.clinerules/
+  01-project-structure.md     # bases/, projects/, source-path.txt
+  02-ut-reference.md          # где эталон УТ, как им пользоваться
+  03-code-index-mcp.md        # алиасы repo, какой инструмент для какой задачи
+  04-platform-mcp.md          # сверять сигнатуры через 1c-platform
+  05-bsl-style.md             # отступы, регистр ключевых слов, комментарии, запрет HTML-сущностей</code></pre>
+    </div>
+
+    <div class="step">
+      <h4>Приемочный сценарий</h4>
+      <div class="where">Где: рабочее место разработчика. Цель: убедиться, что все четыре слоя работают вместе.</div>
+      <table>
+        <thead><tr><th>#</th><th>Запрос к Cline</th><th>Что должно произойти</th><th>Проверяет</th></tr></thead>
+        <tbody>
+          <tr><td>1</td><td>«Какие параметры у метода СтрШаблон?»</td><td>Вызов <code>1c-platform.getMember</code>, ответ с сигнатурой</td><td>модель + MCP платформы</td></tr>
+          <tr><td>2</td><td>«Где в wim_du определена процедура ЗаполнитьПоШаблону?»</td><td>Вызов <code>code-index.find_symbol</code>, путь к модулю</td><td>MCP индекса кода</td></tr>
+          <tr><td>3</td><td>«Собери обработку ПримерОбработки из src в build»</td><td>Активация навыка <code>epf-build</code>, запуск скрипта, файл EPF в <code>build/</code></td><td>навыки + терминал</td></tr>
+          <tr><td>4</td><td>«Добавь в форму элемента реквизит Комментарий, строка 200»</td><td>Навык <code>form-edit</code>, правка XML формы, затем <code>form-validate</code></td><td>многошаговая задача</td></tr>
+          <tr><td>5</td><td>«Проверь этот запрос на оптимальность» + текст запроса</td><td>Навык <code>1c-query-optimization</code>, замечания по соединениям и индексам</td><td>навыки из набора Claude</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="devops">
+    <h4>Сводка файлов, переменных и путей</h4>
+    <table>
+      <thead><tr><th>Где</th><th>Объект</th><th>Назначение</th></tr></thead>
+      <tbody>
+        <tr><td>Сервер</td><td><code>/etc/systemd/system/ollama.service.d/override.conf</code></td><td>переменные <code>OLLAMA_HOST</code>, <code>OLLAMA_KEEP_ALIVE</code>, <code>OLLAMA_CONTEXT_LENGTH</code>, <code>OLLAMA_NUM_PARALLEL</code>, <code>OLLAMA_MODELS</code> (путь к весам)</td></tr>
+        <tr><td>Сервер</td><td><code>/opt/models</code> или <code>OLLAMA_MODELS</code></td><td>каталог весов на NVMe; резервная копия не нужна — веса скачиваются повторно</td></tr>
+        <tr><td>Сервер</td><td><code>docker-compose.yml</code> для vLLM</td><td>образ <code>vllm/vllm-openai</code>, <code>--gpus all</code>, <code>--ipc=host</code>, <code>restart: unless-stopped</code>, порт 8000</td></tr>
+        <tr><td>Сервер</td><td>Modelfile (Ollama)</td><td>фиксирует контекст и параметры генерации для модели: <code>FROM qwen3-coder:30b</code>, <code>PARAMETER num_ctx 65536</code>, <code>PARAMETER temperature 0.3</code></td></tr>
+        <tr><td>Рабочее место</td><td><code>%APPDATA%\Code\User\globalStorage\saoudrizwan.claude-dev\settings\cline_mcp_settings.json</code></td><td>MCP-серверы (глобально для пользователя)</td></tr>
+        <tr><td>Рабочее место</td><td><code>&lt;проект&gt;\.cline\skills\&lt;имя&gt;\SKILL.md</code></td><td>навыки проекта; альтернатива <code>.claude/skills/</code> читается Cline напрямую</td></tr>
+        <tr><td>Рабочее место</td><td><code>%USERPROFILE%\.cline\skills\</code></td><td>глобальные навыки; при совпадении имени перекрывают проектные</td></tr>
+        <tr><td>Рабочее место</td><td><code>&lt;проект&gt;\.clinerules\*.md</code></td><td>правила проекта, всегда в контексте</td></tr>
+        <tr><td>Рабочее место</td><td><code>&lt;проект&gt;\.clineignore</code></td><td>исключить из чтения агентом: <code>build/</code>, <code>*.dt</code>, <code>*.cf</code>, каталоги выгрузок больших баз</td></tr>
+        <tr><td>Рабочее место</td><td>Настройки Cline: <code>Use Compact Prompt</code>, <code>Enable Skills</code>, <code>Auto-approve</code></td><td>Auto-approve только на чтение файлов и безопасные MCP; запись и терминал — вручную</td></tr>
+      </tbody>
+    </table>
+    <p style="margin-top:12px"><b>Централизованное развертывание рабочих мест:</b> VS Code и расширения ставятся через <code>code --install-extension saoudrizwan.claude-dev</code> и <code>code --install-extension 1c-syntax.language-1c-bsl</code>; файл <code>cline_mcp_settings.json</code> и папки <code>.cline/</code>, <code>.clinerules/</code> раскатываются скриптом или хранятся в git репозитория проекта.</p>
+  </div>
+</section>
+
+<!-- ======================= 6. СРАВНЕНИЕ ======================= -->
+<section>
+  <h2><span class="num">5</span>Cursor, Claude Code и Cline: что общее, что отличается</h2>
+  <p class="sub">Инструменты взаимозаменяемы на уровне навыков и MCP. Отличается только то, где лежат конфиги и какая модель думает.</p>
+  <table>
+    <thead><tr><th>Аспект</th><th>Cursor</th><th>Claude Code</th><th>Cline + локальная LLM</th></tr></thead>
+    <tbody>
+      <tr><td>Модель</td><td>облако (Claude, GPT и др.)</td><td>облако (Claude)</td><td><b>свой сервер</b> (Qwen, GLM, DeepSeek, gpt-oss, Devstral)</td></tr>
+      <tr><td>Данные покидают контур</td><td>да</td><td>да</td><td><b>нет</b></td></tr>
+      <tr><td>Оплата</td><td>подписка $8-200 + токены</td><td>подписка $20-200</td><td><b>нет</b> (железо)</td></tr>
+      <tr><td>Навыки (SKILL.md)</td><td><code>.cursor/skills/</code>, <code>.agents/skills/</code></td><td><code>.claude/skills/</code></td><td><code>.cline/skills/</code>, <code>.claude/skills/</code></td></tr>
+      <tr><td>Формат навыка</td><td colspan="3" style="text-align:center"><span class="tag g">одинаковый</span> стандарт Agent Skills</td></tr>
+      <tr><td>MCP-серверы</td><td><code>mcp.json</code></td><td><code>.mcp.json</code></td><td><code>cline_mcp_settings.json</code></td></tr>
+      <tr><td>Формат MCP-конфига</td><td colspan="3" style="text-align:center"><span class="tag g">одинаковый</span> command / args / env</td></tr>
+      <tr><td>Правила проекта</td><td><code>.cursor/rules/*.mdc</code></td><td><code>CLAUDE.md</code></td><td><code>.clinerules/*.md</code></td></tr>
+      <tr><td>Вызов навыка</td><td>по описанию</td><td><code>/имя</code> или по описанию</td><td>по описанию или «используй навык ...»</td></tr>
+      <tr><td>Качество рассуждений</td><td>высокое</td><td>высокое</td><td>зависит от уровня сервера: A — среднее, B — хорошее, C — сопоставимое</td></tr>
+      <tr><td>Работа без интернета</td><td>нет</td><td>нет</td><td><b>да</b></td></tr>
+    </tbody>
+  </table>
+
+  <div class="devops">
+    <h4>Синхронизация конфигураций между инструментами</h4>
+    <table>
+      <thead><tr><th>Артефакт</th><th>Источник истины</th><th>Как попадает в Cline</th></tr></thead>
+      <tbody>
+        <tr><td>Навыки cc-1c-skills</td><td>git-репозиторий набора, обновляется в <code>.cursor/skills/</code></td><td>скрипт копирования в <code>.cline/skills/</code> (шаг 6); запуск по расписанию или git hook <code>post-merge</code></td></tr>
+        <tr><td>Навыки 1c-* (Claude)</td><td><code>~/.claude/skills/</code></td><td>Cline читает <code>.claude/skills/</code> в проекте напрямую — достаточно symlink или копии в корень проекта</td></tr>
+        <tr><td>MCP-конфиг</td><td><code>mcp.json</code> Cursor</td><td>преобразование JSON: добавить <code>disabled</code>, <code>autoApprove</code>; одноразовый PowerShell-скрипт</td></tr>
+        <tr><td>Правила</td><td><code>.cursor/rules/*.mdc</code></td><td>снять YAML-шапку <code>.mdc</code>, сохранить тело как <code>.clinerules/NN-name.md</code></td></tr>
+        <tr><td>Профили баз testpilot</td><td><code>profiles.yaml</code></td><td>общий файл, путь в <code>TC1C_PROFILES_FILE</code></td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ======================= 7. ОЖИДАНИЯ И РИСКИ ======================= -->
+<section>
+  <h2><span class="num">6</span>Чего ожидать: возможности и ограничения</h2>
+  <div class="grid grid-2">
+    <div class="card accent-green">
+      <h4>Хорошо работает уже на уровне A (1 GPU 24 ГБ)</h4>
+      <ul>
+        <li>Вопросы по синтаксису платформы с проверкой через MCP</li>
+        <li>Поиск по индексу кода: где процедура, кто вызывает, состав объекта</li>
+        <li>Правки отдельных процедур и запросов по четкому ТЗ</li>
+        <li>Сборка/разбор EPF, валидация форм и макетов через навыки</li>
+        <li>Ревью кода по чек-листу, пояснение чужого кода</li>
+        <li>Генерация документации к модулю</li>
+      </ul>
+    </div>
+    <div class="card accent-orange">
+      <h4>Требует уровня B или C</h4>
+      <ul>
+        <li>Многошаговые задачи: новая форма с обработчиками + серверный модуль + роль</li>
+        <li>Задачи с контекстом свыше 64К токенов (крупные модули, несколько файлов)</li>
+        <li>Самостоятельное восстановление после ошибки сборки</li>
+        <li>Сценарии через тест-клиент 1С с анализом скриншотов</li>
+        <li>Одновременная работа 5+ разработчиков без очереди</li>
+      </ul>
+    </div>
+  </div>
+
+  <h3>Оценка по ключевым критериям</h3>
+  <div class="card">
+    <div class="bar-chart">
+      <div class="bar-row"><span>Конфиденциальность</span><div class="bar-track"><div class="bar b2" style="width:100%"></div></div><span class="bar-val">10/10</span></div>
+      <div class="bar-row"><span>Стоимость владения (3 года)</span><div class="bar-track"><div class="bar b2" style="width:85%"></div></div><span class="bar-val">8/10</span></div>
+      <div class="bar-row"><span>Переносимость навыков и MCP</span><div class="bar-track"><div class="bar b2" style="width:95%"></div></div><span class="bar-val">9/10</span></div>
+      <div class="bar-row"><span>Качество кода, уровень A</span><div class="bar-track"><div class="bar b1" style="width:55%"></div></div><span class="bar-val">5/10</span></div>
+      <div class="bar-row"><span>Качество кода, уровень B</span><div class="bar-track"><div class="bar b1" style="width:75%"></div></div><span class="bar-val">7/10</span></div>
+      <div class="bar-row"><span>Качество кода, уровень C</span><div class="bar-track"><div class="bar b1" style="width:90%"></div></div><span class="bar-val">9/10</span></div>
+      <div class="bar-row"><span>Сложность администрирования</span><div class="bar-track"><div class="bar b4" style="width:40%"></div></div><span class="bar-val">4/10</span></div>
+    </div>
+    <div class="caption">Экспертная оценка относительно облачного решения (Cursor + Claude), 10 — лучше или равно. Публичный ориентир: лучшая открытая модель GLM-5.3 набирает 41,8% на Terminal-Bench против 51,8% у Claude Opus 5 и 64,8% у Opus 5.5.</div>
+  </div>
+
+  <h3>Риски и как их закрываем</h3>
+  <table>
+    <thead><tr><th>Риск</th><th>Проявление</th><th>Мера</th></tr></thead>
+    <tbody>
+      <tr><td>Нестабильный вызов инструментов</td><td>Модель пишет вызов MCP текстом вместо структуры, путает аргументы</td><td>Модели с явной поддержкой tool calling; в vLLM правильный парсер; Compact Prompt</td></tr>
+      <tr><td>Переполнение контекста</td><td>Модель «забывает» правила к середине задачи</td><td>Контекст от 64К; правила короткие; навыки вместо правил (подгружаются по требованию)</td></tr>
+      <tr><td>Опасные действия</td><td>Удаление файлов, загрузка конфигурации в рабочую базу</td><td>Cline подтверждает каждую команду; <code>autoApprove</code> только для чтения; в профилях testpilot только тестовые базы</td></tr>
+      <tr><td>Очередь на GPU</td><td>Ответы замедляются при 3+ пользователях</td><td>vLLM вместо Ollama, <code>OLLAMA_NUM_PARALLEL</code>, мониторинг; при росте команды — уровень B</td></tr>
+      <tr><td>Рассинхронизация навыков</td><td>В Cursor навык обновился, в Cline — старый</td><td>Скрипт синхронизации в планировщике или git hook; единый источник — git</td></tr>
+      <tr><td>Лицензионные ограничения</td><td>Выбранная модель запрещает использование компаниям с большой выручкой</td><td>Брать Apache 2.0 / MIT (Qwen, GLM-Flash, DeepSeek, gpt-oss, Gemma, Devstral Small); Mistral Medium, Llama, Kimi — после проверки юристами</td></tr>
+    </tbody>
+  </table>
+
+  <div class="devops">
+    <h4>Мониторинг, логирование, эксплуатация</h4>
+    <table>
+      <thead><tr><th>Что</th><th>Инструмент</th><th>Порог / действие</th></tr></thead>
+      <tbody>
+        <tr><td>Загрузка GPU, память, температура</td><td><code>nvidia-smi dmon</code>, DCGM Exporter + Prometheus + Grafana</td><td>VRAM &gt; 95% — уменьшить <code>num_ctx</code> или <code>NUM_PARALLEL</code>; температура &gt; 85 C — проверить охлаждение</td></tr>
+        <tr><td>Доступность API</td><td>HTTP-проверка <code>GET /v1/models</code> раз в минуту (Zabbix / Uptime Kuma)</td><td>2 неудачи подряд — перезапуск службы, уведомление</td></tr>
+        <tr><td>Задержка первого токена (TTFT)</td><td>метрики vLLM <code>/metrics</code>: <code>vllm:time_to_first_token_seconds</code></td><td>p95 &gt; 5 с при одном пользователе — проблема с загрузкой модели или KV-кэшем</td></tr>
+        <tr><td>Очередь запросов</td><td><code>vllm:num_requests_waiting</code></td><td>устойчиво &gt; 2 — пора на уровень B или вторую GPU</td></tr>
+        <tr><td>Логи сервера</td><td><code>journalctl -u ollama -f</code>; <code>docker logs vllm</code></td><td>ротация logrotate, хранить 14 дней; тела запросов не логируются</td></tr>
+        <tr><td>Обновление модели</td><td><code>ollama pull &lt;model&gt;</code> вне рабочего времени</td><td>перед заменой основной модели — прогон приемочного сценария (шаг 7)</td></tr>
+        <tr><td>Обновление Cline</td><td>автообновление VS Code Marketplace</td><td>фиксировать версию в пилоте; обновлять после проверки на одном рабочем месте</td></tr>
+        <tr><td>Резервное копирование</td><td>веса моделей хранить локально (повторная загрузка требует интернета); нужны: Modelfile, конфиги vLLM, <code>profiles.yaml</code>, <code>.cline/</code> в git</td><td>&nbsp;</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ======================= 8. ПЛАН ПИЛОТА ======================= -->
+<section>
+  <h2><span class="num">7</span>План пилота: 2 недели</h2>
+  <div class="diagram">
+    <svg width="1040" height="210" viewBox="0 0 1040 210" xmlns="http://www.w3.org/2000/svg" font-family="Segoe UI, Arial, sans-serif">
+      <line x1="40" y1="60" x2="1000" y2="60" stroke="#cbd5e1" stroke-width="4"/>
+      <g>
+        <circle cx="80" cy="60" r="14" fill="#16a34a"/>
+        <text x="80" y="36" font-size="13" text-anchor="middle" font-weight="700" fill="#14532d">День 1-2</text>
+        <rect x="20" y="86" width="150" height="100" rx="10" fill="#dcfce7" stroke="#16a34a"/>
+        <text x="30" y="108" font-size="12.5" fill="#1f2937">Сервер: Ollama,</text>
+        <text x="30" y="126" font-size="12.5" fill="#1f2937">glm-4.7-flash,</text>
+        <text x="30" y="144" font-size="12.5" fill="#1f2937">qwen3-coder:30b,</text>
+        <text x="30" y="162" font-size="12.5" fill="#1f2937">gpt-oss:20b</text>
+      </g>
+      <g>
+        <circle cx="300" cy="60" r="14" fill="#2563eb"/>
+        <text x="300" y="36" font-size="13" text-anchor="middle" font-weight="700" fill="#1e3a8a">День 3</text>
+        <rect x="225" y="86" width="150" height="100" rx="10" fill="#dbeafe" stroke="#2563eb"/>
+        <text x="235" y="108" font-size="12.5" fill="#1f2937">2 рабочих места:</text>
+        <text x="235" y="126" font-size="12.5" fill="#1f2937">Cline, MCP, навыки,</text>
+        <text x="235" y="144" font-size="12.5" fill="#1f2937">правила. Приемочный</text>
+        <text x="235" y="162" font-size="12.5" fill="#1f2937">сценарий (шаг 7)</text>
+      </g>
+      <g>
+        <circle cx="520" cy="60" r="14" fill="#7c3aed"/>
+        <text x="520" y="36" font-size="13" text-anchor="middle" font-weight="700" fill="#5b21b6">День 4-9</text>
+        <rect x="445" y="86" width="150" height="100" rx="10" fill="#ede9fe" stroke="#7c3aed"/>
+        <text x="455" y="108" font-size="12.5" fill="#1f2937">Реальные задачи</text>
+        <text x="455" y="126" font-size="12.5" fill="#1f2937">из спринта. Журнал:</text>
+        <text x="455" y="144" font-size="12.5" fill="#1f2937">задача, модель, время,</text>
+        <text x="455" y="162" font-size="12.5" fill="#1f2937">результат, доработка</text>
+      </g>
+      <g>
+        <circle cx="740" cy="60" r="14" fill="#ea580c"/>
+        <text x="740" y="36" font-size="13" text-anchor="middle" font-weight="700" fill="#9a3412">День 10</text>
+        <rect x="665" y="86" width="150" height="100" rx="10" fill="#ffedd5" stroke="#ea580c"/>
+        <text x="675" y="108" font-size="12.5" fill="#1f2937">Сравнение трех</text>
+        <text x="675" y="126" font-size="12.5" fill="#1f2937">моделей на одном</text>
+        <text x="675" y="144" font-size="12.5" fill="#1f2937">наборе из 10 задач,</text>
+        <text x="675" y="162" font-size="12.5" fill="#1f2937">выбор основной</text>
+      </g>
+      <g>
+        <circle cx="960" cy="60" r="14" fill="#0f172a"/>
+        <text x="960" y="36" font-size="13" text-anchor="middle" font-weight="700" fill="#0f172a">Итог</text>
+        <rect x="885" y="86" width="150" height="100" rx="10" fill="#e2e8f0" stroke="#64748b"/>
+        <text x="895" y="108" font-size="12.5" fill="#1f2937">Отчет архитектору:</text>
+        <text x="895" y="126" font-size="12.5" fill="#1f2937">метрики, стоимость</text>
+        <text x="895" y="144" font-size="12.5" fill="#1f2937">уровня B/C, решение</text>
+        <text x="895" y="162" font-size="12.5" fill="#1f2937">о тиражировании</text>
+      </g>
+    </svg>
+    <div class="caption">Схема 3. Календарь пилота</div>
+  </div>
+
+  <h3>Метрики пилота</h3>
+  <div class="grid grid-4">
+    <div class="card kpi"><div class="v">%</div><div class="l">задач, решенных без доработки вручную</div></div>
+    <div class="card kpi"><div class="v">мин</div><div class="l">среднее время шага агента</div></div>
+    <div class="card kpi"><div class="v">%</div><div class="l">корректных вызовов MCP и навыков</div></div>
+    <div class="card kpi"><div class="v">ток/с</div><div class="l">скорость генерации при 1 и 3 пользователях</div></div>
+  </div>
+
+  <div class="devops">
+    <h4>Сбор метрик пилота</h4>
+    <table>
+      <thead><tr><th>Метрика</th><th>Откуда</th><th>Как снимать</th></tr></thead>
+      <tbody>
+        <tr><td>Скорость генерации, ток/с</td><td>Ollama: поле <code>eval_count / eval_duration</code> в ответе <code>/api/chat</code>; vLLM: <code>/metrics</code></td><td>скрипт-нагрузка: 1, 3, 5 параллельных запросов по 2К токенов; фиксировать p50 и p95</td></tr>
+        <tr><td>Время шага агента</td><td>Cline показывает время и токены каждого запроса в истории задачи</td><td>экспорт задачи из Cline (кнопка Export) — файл markdown с хронометражем</td></tr>
+        <tr><td>Корректность вызовов инструментов</td><td>история Cline: ошибки «Invalid tool call», повторные вызовы</td><td>считать долю шагов с ошибкой формата на 100 шагов</td></tr>
+        <tr><td>Качество результата</td><td>журнал задач пилота (таблица)</td><td>оценка разработчика 0-2: не помогло / помогло с правками / принято как есть</td></tr>
+        <tr><td>Сравнение моделей</td><td>один набор из 10 задач, одинаковые промпты</td><td>переключать Model ID в Cline, остальное не менять; результаты в одну таблицу</td></tr>
+      </tbody>
+    </table>
+<pre><code># Быстрый замер скорости Ollama (PowerShell)
+$body = '{"model":"glm-4.7-flash","messages":[{"role":"user","content":"Напиши функцию на 1С для расчета НДС"}],"stream":false}'
+$r = Invoke-RestMethod -Uri http://srv-llm:11434/api/chat -Method Post -Body $body -ContentType "application/json"
+"{0:N1} ток/с" -f ($r.eval_count / ($r.eval_duration / 1e9))</code></pre>
+  </div>
+</section>
+
+<!-- ======================= 9. ЧЕК-ЛИСТ ======================= -->
+<section>
+  <h2><span class="num">8</span>Чек-лист внедрения</h2>
+  <div class="grid grid-2">
+    <div class="card">
+      <h4>Сервер</h4>
+      <ul class="check">
+        <li>GPU NVIDIA 24 ГБ+, драйвер и CUDA установлены</li>
+        <li>Ollama или vLLM запущен как служба, автозапуск</li>
+        <li>Модель скачана, <code>KEEP_ALIVE=-1</code>, контекст 64К</li>
+        <li>Порт открыт только для подсети разработки</li>
+        <li>Тест tool calling через curl пройден</li>
+        <li>Мониторинг загрузки GPU и доступности API</li>
+        <li>Лицензия модели проверена</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h4>Рабочее место</h4>
+      <ul class="check">
+        <li>VS Code, Cline, Language 1C (BSL)</li>
+        <li>Провайдер и модель настроены, Compact Prompt включен</li>
+        <li>Enable Skills включен, телеметрия выключена</li>
+        <li><code>cline_mcp_settings.json</code>: три сервера зеленые</li>
+        <li><code>.cline/skills/</code>: имена папок = name в шапке</li>
+        <li><code>.clinerules/</code>: пять коротких правил</li>
+        <li>Приемочный сценарий из 5 запросов пройден</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- ======================= 10. ИТОГ ======================= -->
+<section>
+  <div class="card accent-blue" style="background:linear-gradient(135deg,#eff6ff,#f5f3ff)">
+    <h3 style="margin-top:0">Итог</h3>
+    <p>Локальная модель на тестовом сервере с GPU дает команде 1С-разработки ИИ-помощника, который работает внутри контура, не требует оплаты за токены и использует уже созданные навыки и MCP-серверы без переделки. Выбор моделей широкий: китайские Qwen, GLM, DeepSeek лидируют по качеству на всех уровнях; американские gpt-oss, Gemma 4 и европейская Devstral закрывают уровни A и B, если нужна модель не из Китая. Cline, Cursor и Claude Code читают один и тот же формат навыков и MCP-конфигов, поэтому переход не ломает текущий процесс.</p>
+    <p><b>Минимальный старт:</b> одна видеокарта 24 ГБ, Ollama, две-три модели на выбор, один день на развертывание, две недели пилота с измеримыми метриками. <b>Целевой уровень</b> для команды — сервер с 1-2 GPU по 48-96 ГБ и vLLM. После загрузки весов сервер и рабочие места могут работать без доступа в интернет.</p>
+  </div>
+</section>
+
+</div>
+
+<footer>Предложение по развертыванию локальной LLM для разработки 1С. Все упомянутые модели — с открытыми весами, работают автономно на сервере компании, лицензии Apache 2.0 или MIT, кроме отмеченных отдельно. Cline — открытое расширение VS Code (Apache 2.0).</footer>
+
+</body>
+</html>
