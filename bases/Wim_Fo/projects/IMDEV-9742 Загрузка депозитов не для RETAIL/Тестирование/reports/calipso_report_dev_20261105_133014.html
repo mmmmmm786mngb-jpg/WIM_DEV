@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="ru"><head><meta charset="utf-8">
+<title>Депозиты Calipso: поиск в портфелях Фронт-офиса</title>
+<style>
+body{font-family:Arial,Helvetica,sans-serif;font-size:14px;color:#1f1f1f;margin:24px;line-height:1.45}
+h1{font-size:22px;margin:0 0 6px 0}h2{font-size:17px;margin:26px 0 8px 0}
+.meta{color:#555;margin:0 0 16px 0}
+.cards{display:flex;flex-wrap:wrap;gap:12px;margin:12px 0 4px 0}
+.card{border:1px solid #d0d7de;border-radius:6px;padding:10px 16px;min-width:150px}
+.card b{display:block;font-size:22px}
+.ok{color:#1a7f37}.bad{color:#b42318}
+ol li,ul li{margin:0 0 6px 0}
+code{background:#f2f4f7;padding:1px 4px;border-radius:3px;font-family:Consolas,monospace}
+.wrap{overflow-x:auto}
+table{border-collapse:collapse;font-size:12.5px;min-width:100%}
+th,td{border:1px solid #c9c9c9;padding:5px 7px;vertical-align:top;text-align:left}
+th{background:#eef1f4}
+td.num{text-align:right;white-space:nowrap}
+tr.notfound td.res{color:#b42318}tr.found td.res{color:#1a7f37}
+td.fill{min-width:140px;background:#fffbe6}
+</style></head><body>
+<h1>Депозиты Calipso: поиск в портфелях Фронт-офиса</h1>
+<p class="meta">Сформировано 05.11.2026 13:30. База Фронт-офиса: WIN_FO_server. Позиция Calipso на дату: 04.11.2026.</p>
+<div class="cards"><div class="card">Депозитов из Calipso<b>4</b></div><div class="card">Найдено в ФО<b class="ok">1</b></div><div class="card">Не найдено в ФО<b class="bad">3</b></div></div>
+<p>Отчет повторяет ежедневную загрузку депозитов Calipso во Фронт-офис: те же депозиты и те же правила поиска. Найденный депозит загрузка записывает в фактическую позицию портфеля. Ненайденный депозит в портфели не попадает, а только перечисляется в письме о загрузке в списке ненайденных.</p>
+<h2>Какие депозиты берутся из Calipso</h2><ul>
+<li>Позиции таблицы депозитов и кредитов Calipso на последнюю дату позиции.</li>
+<li>Только сделки, где контрагент и организация различаются.</li>
+<li>Не берутся депозиты, у которых зеркальная сделка на ту же дату - кредит (Loan).</li>
+<li>Для сделки типа Deposit клиентом считается контрагент сделки, а контрагентом - организация; для остальных
+сделок - наоборот.</li></ul>
+<h2>Как Фронт-офис ищет депозит</h2><ol>
+<li>Номер сделки Calipso (поле TradeId) переводится в 36-ричную запись: цифры 0-9 и латинские буквы A-Z.</li>
+<li>Из нее составляется строка поиска: <code>-D</code> + запись номера + <code>-</code>.</li>
+<li>В справочнике <b>Субпортфели</b> ищется субпортфель, у которого поле <b>Код счета</b> содержит эту строку. Субпортфели, помеченные на удаление, не учитываются. Если подходят несколько, берется первый. Депозит записывается в портфель найденного субпортфеля.</li>
+<li>Валюта депозита (поле Currency) ищется в справочнике <b>Валюты</b> по наименованию, для нее - актив в справочнике <b>Активы</b>.</li>
+</ol>
+<p>Пример: сделка <code>123456</code> в 36-ричной записи - <code>2N9C</code>, во Фронт-офисе ищется субпортфель с кодом счета, содержащим <code>-D2N9C-</code>.</p>
+<p><b>Клиент, контрагент, сумма и даты сделки в поиске не участвуют.</b> Депозит находится только по номеру сделки, записанному в код счета субпортфеля. Клиент и контрагент приведены в таблице, чтобы можно было узнать сделку.</p>
+<h2>Депозиты и результат поиска</h2><div class="wrap"><table><thead><tr><th>№</th><th>Номер сделки Calipso</th><th>Продукт</th><th>Клиент: код</th><th>Клиент: наименование</th><th>Контрагент</th><th>Валюта</th><th>Номинал</th><th>Ставка</th><th>Дата сделки</th><th>Дата погашения</th><th>Номер в 36-ричной записи</th><th>Что ищется в коде счета субпортфеля</th><th>Результат поиска в ФО</th><th>Портфель ФО, в котором должен быть депозит (заполняет бизнес)</th></tr></thead><tbody>
+<tr class="notfound"><td>1</td><td>-</td><td>Deposit.Fixed</td><td>CLIENT_ZERO</td><td>Тестовый клиент &lt;CLIENT_ZERO&gt; &amp; Ко</td><td>TEST BANK</td><td>RUB</td><td class="num">1 000 000,00</td><td class="num">12,75</td><td>01.10.2026</td><td>31.12.2026</td><td>-</td><td>-D-</td><td class="res">Номер сделки не удалось перевести в 36-ричную запись, поиск не выполняется</td><td class="fill"></td></tr>
+<tr class="notfound"><td>2</td><td>123456</td><td>Deposit.Fixed</td><td>CLIENT_CUR</td><td>Тестовый клиент &lt;CLIENT_CUR&gt; &amp; Ко</td><td>TEST BANK</td><td>ZZZ_НЕТ_ВАЛЮТЫ</td><td class="num">1 000 000,00</td><td class="num">12,75</td><td>01.10.2026</td><td>31.12.2026</td><td>2N9C</td><td>-D2N9C-</td><td class="res">В ФО не найдена валюта с наименованием &quot;ZZZ_НЕТ_ВАЛЮТЫ&quot;: депозит пропускается</td><td class="fill"></td></tr>
+<tr class="found"><td>3</td><td>987654321</td><td>Deposit.Fixed</td><td>CLIENT_OK</td><td>Тестовый клиент &lt;CLIENT_OK&gt; &amp; Ко</td><td>TEST BANK</td><td>RUB</td><td class="num">1 000 000,00</td><td class="num">12,75</td><td>01.10.2026</td><td>31.12.2026</td><td>GC0UY9</td><td>-DGC0UY9-</td><td class="res">Найден: портфель Технический портфель, субпортфель T9742 тест депозита Calipso, код счета T9742-DGC0UY9-</td><td class="fill"></td></tr>
+<tr class="notfound"><td>4</td><td>999999999999</td><td>Deposit.Fixed</td><td>CLIENT_NF</td><td>Тестовый клиент &lt;CLIENT_NF&gt; &amp; Ко</td><td>TEST BANK</td><td>RUB</td><td class="num">1 000 000,00</td><td class="num">12,75</td><td>01.10.2026</td><td>31.12.2026</td><td>CRE66I9R</td><td>-DCRE66I9R-</td><td class="res">Не найден: в ФО нет субпортфеля, код счета которого содержит -DCRE66I9R-</td><td class="fill"></td></tr>
+</tbody></table></div>
+<h2>Вопросы к бизнесу</h2><ol>
+<li>Должны ли эти депозиты отражаться в портфелях Фронт-офиса?</li>
+<li>Если да - укажите в последнем столбце таблицы портфель Фронт-офиса для каждого депозита. Если у портфеля уже
+есть субпортфель для депозита, укажите его: сейчас в его коде счета нет строки из столбца "Что ищется в коде
+счета субпортфеля".</li>
+<li>Если депозиты сопоставлять по другому признаку (номер договора, счет, клиент) - укажите какой.</li>
+<li>Если отражать депозиты Calipso не нужно - подтвердите, что их загрузку можно отключить.</li>
+</ol>
+</body></html>
