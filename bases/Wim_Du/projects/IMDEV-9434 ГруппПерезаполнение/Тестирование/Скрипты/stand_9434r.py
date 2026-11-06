@@ -41,7 +41,24 @@ def ref_by_uuid(c, manager, uid):
     return manager.ПолучитьСсылку(c.NewObject("УникальныйИдентификатор", uid))
 
 
+def restore_rows(c):
+    """Возвращает строки T9434R в таблицы СЧА стенда (их стирает перезаполнение), документы риска не создает."""
+    state = json.load(open(STATE, encoding="utf-8"))
+    for uid in state["scha"]:
+        obj = ref_by_uuid(c, c.Документы.РасчетСЧА_РСА, uid).ПолучитьОбъект()
+        if not any(MARK in c.String(row.Показатель) for row in obj.РасчетСЧА):
+            row = obj.РасчетСЧА.Добавить()
+            row.Показатель = BOND.get(c.String(obj.ДоговорДУ), MARK + " бумага")
+            row.Сумма = 1
+            obj.ОбменДанными.Загрузка = True
+            obj.Записать()
+
+
 def prepare(c):
+    if os.path.exists(STATE):
+        restore_rows(c)
+        info(c)
+        return
     state = {"risk": [], "scha": []}
     for ref, contract in scha_docs(c):
         obj = ref.ПолучитьОбъект()
