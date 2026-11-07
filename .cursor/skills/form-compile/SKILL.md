@@ -13,9 +13,17 @@ allowed-tools:
 
 Два режима:
 1. **JSON DSL** — из JSON-определения формы
-2. **From object** (`-FromObject`) — автоматически из метаданных объекта 1С по пресету ERP
+2. **From object** (`-FromObject`) — заготовка формы объекта конфигурации по его метаданным: поля объекта в стиле ЕРП/УТ, служебные убраны; событий, команд, связей полей и итогов в ней нет
 
-> **При проектировании формы с нуля (5+ элементов или нечёткие требования)** — вызовите `/form-patterns` для загрузки справочника. Для простых форм (1–3 поля) — не нужно.
+## С чего начать
+
+- содержимое формы уже есть — `/form-edit`;
+- форма описана в задаче целиком (текстом или эскизом) — JSON по описанию;
+- описана часть формы (поля, блок, поведение) — для формы объекта, списка, выбора, группы или записи заготовка `-EmitDsl`, впишите в неё описанное, сборка `-JsonPath`; для остальных форм — JSON;
+- форма по образцу другой формы конфигурации («как у ЗаказКлиента») — изучите образец через `/form-info`; для этих же форм разложите по нему заготовку `-EmitDsl`, для остальных — JSON; обработчики образца переносите только вместе с кодом;
+- о форме ничего не сказано — для этих же форм `-FromObject`, для остальных — JSON.
+
+> Если раскладка формы не задана в задаче и заготовки нет — архетип формы, имена групп и ширины полей в `references/layout-patterns.md`. В заготовке `-FromObject` / `-EmitDsl` раскладка уже как в типовых.
 
 ## Параметры
 
@@ -24,6 +32,8 @@ allowed-tools:
 | JsonPath   | режим 1      | Путь к JSON-определению формы   |
 | OutputPath | да           | Путь к выходному Form.xml       |
 | FromObject | режим 2      | Флаг (без значения) — генерация по метаданным объекта |
+| Purpose    | нет          | Назначение, если основная форма объекта названа нестандартно |
+| EmitDsl    | нет          | Сохранить сгенерированное JSON-определение в файл |
 
 ## Команда
 
@@ -31,8 +41,11 @@ allowed-tools:
 # Режим JSON DSL
 powershell.exe -NoProfile -File ".cursor/skills/form-compile/scripts/form-compile.ps1" -JsonPath "<json>" -OutputPath "<Form.xml>"
 
-# Режим from-object (объект и purpose выводятся из OutputPath; Document и Catalog)
-powershell.exe -NoProfile -File ".cursor/skills/form-compile/scripts/form-compile.ps1" -FromObject -OutputPath "<.../TypePlural/ObjectName/Forms/FormName/Ext/Form.xml>"
+# Режим from-object: объект и назначение берутся из пути формы
+powershell.exe -NoProfile -File ".cursor/skills/form-compile/scripts/form-compile.ps1" -FromObject -OutputPath "<.../Documents/ИмяОбъекта/Forms/ФормаДокумента/Ext/Form.xml>"
+
+# Заготовка для доработки: сохранить JSON, доработать, собрать режимом JSON DSL
+powershell.exe -NoProfile -File ".cursor/skills/form-compile/scripts/form-compile.ps1" -FromObject -OutputPath "<Form.xml>" -EmitDsl "<form.json>"
 ```
 
 ## JSON DSL
@@ -43,7 +56,7 @@ powershell.exe -NoProfile -File ".cursor/skills/form-compile/scripts/form-compil
 {
   "title": "Заголовок формы",
   "properties": { "windowOpeningMode": "LockOwnerWindow" },
-  "events": { "OnCreateAtServer": "ПриСозданииНаСервере" },
+  "events": { ... },
   "elements": [ ... ],
   "attributes": [ ... ],
   "commands": [ ... ],
@@ -171,6 +184,7 @@ powershell.exe -NoProfile -File ".cursor/skills/form-compile/scripts/form-compil
 | `changeRowSet: true` / `changeRowOrder: true` | Разрешить добавлять/удалять / перемещать строки |
 | `header: false` | Без шапки |
 | `heightInTableRows` | Высота в строках |
+| `commandBar` | Кнопки командной панели таблицы — сюда команды строк («Отметить все», «Снять отметки», «Заполнить», «Подбор»), а не в панель формы или группу на форме: `[ { "button": "ЦеныОтметитьВсе", "command": "ОтметитьВсе" } ]` (`references/buttons-commands.md`) |
 | `commandBarLocation` | `None` / `Top` / `Bottom` / `Auto` |
 | `searchStringLocation` | `None` / `Top` / `Bottom` / `CommandBar` / `Auto` |
 | `choiceMode: true` | Таблица выбора (форма выбора) |
@@ -211,9 +225,9 @@ powershell.exe -NoProfile -File ".cursor/skills/form-compile/scripts/form-compil
     { "button": "Загрузить", "command": "Загрузить", "defaultButton": true },
     { "popup": "Печать", "title": "Печать", "children": [
         { "button": "ПечатьСчета", "command": "ПечатьСчета" } ] },
-    { "buttonGroup": "ГруппаПеремещение", "children": [
-        { "button": "Вверх", "command": "Вверх" },
-        { "button": "Вниз", "command": "Вниз" } ] }
+    { "buttonGroup": "ГруппаНавигация", "children": [
+        { "button": "Назад", "command": "Назад" },
+        { "button": "Далее", "command": "Далее" } ] }
 ] }
 ```
 
@@ -311,18 +325,17 @@ powershell.exe -NoProfile -File ".cursor/skills/form-compile/scripts/form-compil
 ```json
 {
   "title": "Загрузка из файла",
-  "events": { "OnCreateAtServer": "ПриСозданииНаСервере" },
   "elements": [
+    { "autoCmdBar": "ФормаКоманднаяПанель", "children": [
+      { "button": "Загрузить", "command": "Загрузить", "defaultButton": true },
+      { "button": "Закрыть", "stdCommand": "Close" }
+    ]},
     { "group": "horizontal", "name": "ГруппаФайл", "children": [
       { "input": "ИмяФайла", "path": "ИмяФайла", "title": "Файл", "inputHint": "Выберите файл...",
         "choiceButton": true, "events": { "StartChoice": "ИмяФайлаНачалоВыбора" } },
       { "check": "ПерваяСтрокаЗаголовок", "path": "ПерваяСтрокаЗаголовок" }
     ]},
-    { "input": "Результат", "path": "Результат", "multiLine": true, "height": 8, "readOnly": true, "title": "Лог" },
-    { "autoCmdBar": "ФормаКоманднаяПанель", "children": [
-      { "button": "Загрузить", "command": "Загрузить", "defaultButton": true },
-      { "button": "Закрыть", "stdCommand": "Close" }
-    ]}
+    { "input": "Результат", "path": "Результат", "multiLine": true, "height": 8, "readOnly": true, "title": "Лог" }
   ],
   "attributes": [
     { "name": "Объект", "type": "ExternalDataProcessorObject.ЗагрузкаИзФайла", "main": true },
@@ -344,6 +357,7 @@ powershell.exe -NoProfile -File ".cursor/skills/form-compile/scripts/form-compil
 
 | Задача | Справочник |
 |--------|-----------|
+| Раскладка формы, не заданной в задаче: архетипы документа, списка, обработки, диалога, мастера; имена групп и элементов; ширины полей | `layout-patterns.md` |
 | Список выбора, быстрый выбор, своя форма выбора, маска, формат числа, пароль, выключатель/тумблер, кнопки открытия и создания, поле составного типа | `input-fields.md` |
 | Ограничить выбор отбором, связать поле с другим полем, связь по типу | `choice-params.md` |
 | Свёрнутая группа, интервалы и ширины колонок в группе, заголовок группы или страницы из данных, значок закладки, мастер по шагам (страницы без закладок) | `groups-pages.md` |
@@ -363,6 +377,7 @@ powershell.exe -NoProfile -File ".cursor/skills/form-compile/scripts/form-compil
 | Командный интерфейс формы (переходы, важные команды) | `command-interface.md` |
 | Выравнивание, предел размера, фокус по умолчанию, узкие экраны | `layout-advanced.md` |
 | Наборы и составные типы | `type-system-advanced.md` |
+| Изменить, как `-FromObject` раскладывает формы во всём проекте (стиль проекта) | `../presets/README.md` |
 
 ## Workflow
 

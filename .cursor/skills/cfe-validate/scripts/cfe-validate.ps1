@@ -1,4 +1,4 @@
-﻿# cfe-validate v1.31 — Validate 1C configuration extension structure (CFE)
+﻿# cfe-validate v1.37 — Validate 1C configuration extension structure (CFE)
 # Source: https://github.com/Nikolay-Shirokov/cc-1c-skills
 [CmdletBinding(PositionalBinding=$false)]
 param(
@@ -82,6 +82,7 @@ $finalize = {
 		$result = "=== Validation OK: Extension.$objName ($checks checks) ==="
 	} else {
 		Out-Line ""
+		if ($script:stopped -and $script:errors -ge $MaxErrors) { Out-Line "Stopped after $MaxErrors errors. Fix and re-run." }
 		Out-Line "=== Result: $($script:errors) errors, $($script:warnings) warnings ($checks checks) ==="
 		$result = $script:output.ToString()
 	}
@@ -887,15 +888,20 @@ function Validate-BorrowedSubItem {
 		$ok = $false
 	}
 	$subExt = $subProps.SelectSingleNode("md:ExtendedConfigurationObject", $nsm)
-	if (-not $subExt -or -not $subExt.InnerText) {
-		Report-Error "${checkNum}. ${context}: ${subType}.$($subName.InnerText) missing ExtendedConfigurationObject"
-		$ok = $false
+	if (-not $subExt) {
+		$subNameVal = if ($subName) { $subName.InnerText } else { "?" }
+		$script:noLinkItems.Add("${context}.${subType}.${subNameVal}")
 	} elseif ($subExt.InnerText -notmatch $guidPattern) {
 		Report-Error "${checkNum}. ${context}: ${subType}.$($subName.InnerText) invalid ExtendedConfigurationObject"
 		$ok = $false
 	}
 	return $ok
 }
+
+# Заимствованные элементы без ExtendedConfigurationObject (проверки 9–11). Платформа такие принимает и
+# связывает по имени, но штатно элемент пишется всегда: без него не видно, что объект источника
+# пересоздан, — расширение молча прицепится к новому (замер 8.3.23–8.5.1). Итог — одно предупреждение.
+$script:noLinkItems = New-Object System.Collections.Generic.List[string]
 
 if ($childObjNode) {
 	$borrowedCount = 0
@@ -953,9 +959,9 @@ if ($childObjNode) {
 			$borrowedCount++
 
 			$extObj = $objProps.SelectSingleNode("md:ExtendedConfigurationObject", $objNs)
-			if (-not $extObj -or -not $extObj.InnerText) {
-				Report-Error "9. Borrowed ${typeName}.${childName}: missing ExtendedConfigurationObject"
-				$check9Ok = $false
+			if (-not $extObj) {
+				$script:noLinkItems.Add("${typeName}.${childName}")
+				$borrowedOk++
 			} elseif ($extObj.InnerText -notmatch $guidPattern) {
 				Report-Error "9. Borrowed ${typeName}.${childName}: invalid ExtendedConfigurationObject UUID '$($extObj.InnerText)'"
 				$check9Ok = $false
@@ -1200,8 +1206,10 @@ foreach ($fi in $script:formList) {
 					# У общей формы это описание самого объекта — его уже проверила проверка 9
 					if ($isBorrowed -and -not $fi.IsCommon) {
 						$fmExt = $fmProps.SelectSingleNode("md:ExtendedConfigurationObject", $fmNs)
-						if (-not $fmExt -or $fmExt.InnerText -notmatch $guidPattern) {
-							Report-Error "11. ${ctx}: invalid/missing ExtendedConfigurationObject"
+						if (-not $fmExt) {
+							$script:noLinkItems.Add($ctx)
+						} elseif ($fmExt.InnerText -notmatch $guidPattern) {
+							Report-Error "11. ${ctx}: invalid ExtendedConfigurationObject"
 							$check11Ok = $false
 						}
 					}
@@ -1252,6 +1260,12 @@ if ($formCount -eq 0) {
 } elseif ($check11Ok) {
 	$bfCount = $script:borrowedFormsWithTree.Count
 	Report-OK "11. Borrowed forms: $formCount validated ($bfCount with BaseForm)"
+}
+
+if ($script:noLinkItems.Count -gt 0) {
+	$shown = ($script:noLinkItems | Select-Object -First 5) -join ", "
+	if ($script:noLinkItems.Count -gt 5) { $shown += ", …" }
+	Report-Warn "9. $($script:noLinkItems.Count) borrowed element(s) without ExtendedConfigurationObject ($shown), the link to the source object: the platform binds them by name only — if the source object is deleted and recreated under the same name, the extension silently binds to the new one. Restore the link: /cfe-borrow -Actualize"
 }
 
 if ($script:stopped) { & $finalize; exit 1 }
@@ -1776,6 +1790,15 @@ function Get-MdIdValue {
 	return $el.GetAttribute("uuid")
 }
 
+# Заимствованный элемент расширения попадает в индекс и без ExtendedConfigurationObject — со значением
+# $null: платформа связывает его по имени, и наличие в источнике с точным именем сверяется всё равно.
+function Test-AdoptedMdEl {
+	param($el, [bool]$fromExtension)
+	if (-not $fromExtension) { return $false }
+	$ob = $el.SelectSingleNode("*[local-name()='Properties']/*[local-name()='ObjectBelonging']")
+	return [bool]($ob -and $ob.InnerText.Trim() -eq 'Adopted')
+}
+
 # Подобъекты, у которых в ChildObjects владельца только имя, а описание — в отдельном файле
 # <каталог владельца>/<Имя владельца>/<Каталог>/<Имя>.xml.
 $nestedFileDirs = @{ "Form"="Forms"; "Template"="Templates"; "Subsystem"="Subsystems"; "Recalculation"="Recalculations" }
@@ -1795,7 +1818,7 @@ function Add-MdIdFile {
 	}
 	if (-not $objEl) { return $false }
 	$v = Get-MdIdValue $objEl $fromExtension
-	if ($v) { $idx[$key] = $v }
+	if ($v -or (Test-AdoptedMdEl $objEl $fromExtension)) { $idx[$key] = $v }
 	$ownDir = Join-Path (Split-Path $objFile -Parent) ([System.IO.Path]::GetFileNameWithoutExtension($objFile))
 	Add-MdIdEntries $idx $objEl $key $fromExtension $ownDir
 	return $true
@@ -1814,7 +1837,7 @@ function Add-MdIdEntries {
 		if ($nameNode) {
 			$key = "$prefix.$($sub.LocalName).$($nameNode.InnerText.Trim())"
 			$v = Get-MdIdValue $sub $fromExtension
-			if ($v) { $idx[$key] = $v }
+			if ($v -or (Test-AdoptedMdEl $sub $fromExtension)) { $idx[$key] = $v }
 			Add-MdIdEntries $idx $sub $key $fromExtension ""
 		} elseif ($ownDir -and $nestedFileDirs.ContainsKey($sub.LocalName) -and $sub.InnerText.Trim()) {
 			$subName = $sub.InnerText.Trim()
@@ -1832,6 +1855,106 @@ function Get-MdIdIndex {
 	$idx = New-Object System.Collections.Specialized.OrderedDictionary ([StringComparer]::Ordinal)
 	if (-not (Add-MdIdFile $idx (Join-Path $typeDir "$objName.xml") "$typeName.$objName" $fromExtension)) { return $null }
 	return $idx
+}
+
+# Имя объекта по его описанию в источнике; файл ищется без учёта регистра. Ключи индекса строятся из
+# имени в расширении, а на Windows файл источника находится и при другом регистре — без этой сверки
+# расхождение имени самого объекта не видно. $null — файла нет или он не читается.
+function Get-SourceObjectName {
+	param([string]$typeDir, [string]$objName)
+	$f = Join-Path $typeDir "$objName.xml"
+	if (-not (Test-Path -LiteralPath $f)) {
+		if (-not (Test-Path -LiteralPath $typeDir)) { return $null }
+		# -Filter на Windows ловит и «.xmlbak» через короткие имена 8.3 — расширение сверяем явно
+		$twin = Get-ChildItem -LiteralPath $typeDir -Filter "*.xml" -File |
+			Where-Object { $_.Extension -ieq ".xml" -and [string]::Equals($_.BaseName, $objName, [StringComparison]::OrdinalIgnoreCase) } |
+			Sort-Object Name |
+			Select-Object -First 1
+		if (-not $twin) { return $null }
+		$f = $twin.FullName
+	}
+	try {
+		$doc = New-Object System.Xml.XmlDocument
+		$doc.Load($f)
+	} catch { return $null }
+	foreach ($c in $doc.DocumentElement.ChildNodes) {
+		if ($c.NodeType -ne 'Element') { continue }
+		$n = $c.SelectSingleNode("*[local-name()='Properties']/*[local-name()='Name']")
+		if ($n) { return $n.InnerText.Trim() }
+		return $null
+	}
+	return $null
+}
+
+# Объект источника по UUID: имя или $null. Связь расширения указывает на объект, которого под этим именем
+# нет, — возможно, его переименовали. Индекс UUID → имя по каталогу вида строится один раз, из начала файлов.
+$script:srcUuidNames = @{}
+function Find-SourceObjectByUuid {
+	param([string]$typeDir, [string]$uuid)
+	if (-not $script:srcUuidNames.ContainsKey($typeDir)) {
+		$m = @{}
+		if (Test-Path -LiteralPath $typeDir) {
+			foreach ($f in (Get-ChildItem -LiteralPath $typeDir -Filter "*.xml" -File)) {
+				if ($f.Extension -ine ".xml") { continue }
+				$head = ''
+				try {
+					$sr = New-Object System.IO.StreamReader($f.FullName)
+					try { $buf = New-Object char[] 16384; $head = New-Object string($buf, 0, $sr.Read($buf, 0, $buf.Length)) } finally { $sr.Dispose() }
+				} catch { continue }
+				$um = [regex]::Match($head, '<MetaDataObject\b[^>]*>\s*<\w+\s[^>]*?uuid="([^"]+)"')
+				$nm = [regex]::Match($head, '<Name>([^<]*)</Name>')
+				if ($um.Success -and $nm.Success) { $m[$um.Groups[1].Value.ToLowerInvariant()] = $nm.Groups[1].Value.Trim() }
+			}
+		}
+		$script:srcUuidNames[$typeDir] = $m
+	}
+	return $script:srcUuidNames[$typeDir][$uuid.ToLowerInvariant()]
+}
+
+# Ключ подобъекта источника с этим UUID (подобъект переименован) или $null
+function Find-IdxKeyByUuid {
+	param($idx, [string]$uuid)
+	$u = $uuid.ToLowerInvariant()
+	foreach ($k in $idx.Keys) {
+		$v = $idx[$k]
+		if ($v -and $v.ToLowerInvariant() -ceq $u) { return $k }
+	}
+	return $null
+}
+
+# Тексты проверки 18 о связи с источником. Читатель — модель без контекста: смысл словами, имя тега —
+# указатель в файл, и что делать дальше; там, где решение за человеком, — прямо сказать, чего не делать.
+function Get-LinkRenamedText {
+	param([string]$key, [string]$newKey, [bool]$namesake)
+	$tail = if ($namesake) { "; the name $(($key -split '\.')[-1]) now belongs to a different object" } else { "" }
+	if ($key -like 'Language.*') {
+		return "18. ${key}: renamed in the source configuration to ${newKey} (the same language: its UUID matches ExtendedConfigurationObject in the extension)$tail — the platform does not apply the extension. Rename the language in the extension the same way: a language holds no data, so this is safe"
+	}
+	return "18. ${key}: renamed in the source configuration to ${newKey} (the same object: its UUID matches ExtendedConfigurationObject in the extension), the extension still uses the old name$tail — the platform does not apply the extension. /cfe-borrow -Actualize renames it in the extension following the UUID and keeps what the extension added (attributes, forms, code); then fix the code mentions it lists"
+}
+function Get-LinkMissingText {
+	param([string]$key, [bool]$hasLink)
+	$how = if ($hasLink) { "neither by name nor by its UUID (ExtendedConfigurationObject) — deleted there or recreated under another name" } else { "no object with this name" }
+	return "18. ${key}: missing from the source configuration, $how. The extension cannot be applied. Ask the user whether to remove it from the extension or restore it in the source; do not delete it by hand: the extension's own data may be bound to it"
+}
+function Get-LinkRecreatedText {
+	param([string]$key, [string]$srcUuid, [string]$extUuid)
+	if ($key -like 'Language.*') {
+		return "18. ${key}: ExtendedConfigurationObject (the link to the source object) is $extUuid, but the language in the source configuration has UUID $srcUuid — the platform does not apply the extension. $(Get-LanguageLinkFix $key)"
+	}
+	return "18. ${key}: the source object with this name is a different object (UUID $srcUuid): the one the extension borrowed (ExtendedConfigurationObject $extUuid) is no longer in the source — recreated or deleted. The platform does not apply the extension. Do not edit the UUID by hand or re-borrow: the extension's own data is bound to the old object — ask the user"
+}
+function Get-LinkZeroText {
+	param([string]$key, [bool]$withSource)
+	$how = if ($withSource) { "" } else { " with -ConfigPath" }
+	$fix = if ($key -like 'Language.*') { Get-LanguageLinkFix $key } else { "Restore the link: /cfe-borrow -Actualize$how" }
+	return "18. ${key}: ExtendedConfigurationObject (the link to the source object) is zero — it matches nothing, so the platform loads the extension but does not apply it. $fix"
+}
+# Язык cfe-borrow не актуализирует; данных у языка нет — UUID правится прямо
+function Get-LanguageLinkFix {
+	param([string]$key)
+	$n = $key.Substring('Language.'.Length)
+	return "Set it to the uuid attribute of the language in the source configuration (Languages/$n.xml): a language holds no data, so this is safe"
 }
 
 # Собственные подобъекты заимствованного объекта, одноимённые (без учёта регистра) с незаимствованным
@@ -1855,7 +1978,8 @@ function Get-OwnNameCollisions {
 	foreach ($sub in $co.ChildNodes) {
 		if ($sub.NodeType -ne 'Element') { continue }
 		if ($sub.LocalName -in @('Form','Template')) {
-			# Собственная форма или макет — файл есть и в нём нет ExtendedConfigurationObject. Нет файла или
+			# Собственная форма или макет — файл есть и в нём нет ни ObjectBelonging=Adopted, ни
+			# ExtendedConfigurationObject (у заимствованной формы последнего может не быть). Нет файла или
 			# не читается — не судим (об отсутствии файла формы говорит проверка 10)
 			$fName = $sub.InnerText.Trim()
 			if (-not $fName) { continue }
@@ -1864,6 +1988,7 @@ function Get-OwnNameCollisions {
 			$fDoc = New-Object System.Xml.XmlDocument
 			try { $fDoc.Load($fFile) } catch { continue }
 			if ($fDoc.SelectSingleNode("//*[local-name()='Properties']/*[local-name()='ExtendedConfigurationObject']")) { continue }
+			if ($fDoc.SelectSingleNode("//*[local-name()='Properties']/*[local-name()='ObjectBelonging' and normalize-space()='Adopted']")) { continue }
 			$keys += "$prefix.$($sub.LocalName).$fName"
 			continue
 		}
@@ -1887,6 +2012,189 @@ function Get-OwnNameCollisions {
 		if ($srcCi.ContainsKey($k)) { $result += @{ Own = $k; Src = $srcCi[$k] } }
 	}
 	return $result
+}
+
+# Объявленные свойства заимствованного против источника. Контролируется то, что объявлено в Properties;
+# режим — <xr:PropertyState> в InternalInfo: нет — проверять и запрещать, Notify — проверять, не
+# запрещать, Extended — переопределять, MultiState — у составного типа свой режим на часть типов
+# (xr:CheckValue / xr:ExtendValue / xr:NotifyValue). Замер 8.3.27: расхождение без режима — расширение
+# не применяется; Notify — применяется, проверка сообщает; Тип — не применяется в любом режиме контроля.
+function Get-MdPropStates($el) {
+	$states = [ordered]@{}
+	foreach ($ps in @($el.SelectNodes("*[local-name()='InternalInfo']/*[local-name()='PropertyState']"))) {
+		$p = $ps.SelectSingleNode("*[local-name()='Property']"); $s = $ps.SelectSingleNode("*[local-name()='State']")
+		if ($p -and $s) { $states[$p.InnerText.Trim()] = $s.InnerText.Trim() }
+	}
+	return $states
+}
+
+function Get-NormOuterXml($node) {
+	return (([regex]::Replace($node.OuterXml, '\s+xmlns(?::\w+)?="[^"]*"', '')) -replace '>\s+<', '><').Trim()
+}
+
+# Описание типов: состав (Type / TypeSet / TypeId) и квалификаторы по виду
+function Get-TypeDesc($typeNode) {
+	$types = @(); $quals = @{}
+	foreach ($c in $typeNode.ChildNodes) {
+		if ($c.NodeType -ne 'Element') { continue }
+		if ($c.LocalName -in @('Type', 'TypeSet', 'TypeId')) { $types += "$($c.LocalName)|$($c.InnerText.Trim())" }
+		elseif ($c.LocalName.EndsWith('Qualifiers')) { $quals[$c.LocalName] = Get-NormOuterXml $c }
+	}
+	return @{ Types = $types; Quals = $quals }
+}
+
+$script:qualKindByType = @{ 'Type|xs:string' = 'StringQualifiers'; 'Type|xs:decimal' = 'NumberQualifiers'; 'Type|xs:dateTime' = 'DateQualifiers'; 'Type|xs:base64Binary' = 'BinaryDataQualifiers' }
+
+function Format-TypeDesc($typeNode) {
+	$parts = @()
+	foreach ($c in $typeNode.ChildNodes) {
+		if ($c.NodeType -ne 'Element' -or $c.LocalName -notin @('Type', 'TypeSet', 'TypeId')) { continue }
+		$v = $c.InnerText.Trim()
+		switch ($v) {
+			'xs:string' { $l = $typeNode.SelectSingleNode("*[local-name()='StringQualifiers']/*[local-name()='Length']"); $v = if ($l) { "String($($l.InnerText))" } else { 'String' } }
+			'xs:decimal' { $dg = $typeNode.SelectSingleNode("*[local-name()='NumberQualifiers']/*[local-name()='Digits']"); $fd = $typeNode.SelectSingleNode("*[local-name()='NumberQualifiers']/*[local-name()='FractionDigits']"); $v = if ($dg) { "Number($($dg.InnerText),$(if ($fd) { $fd.InnerText } else { 0 }))" } else { 'Number' } }
+			'xs:boolean' { $v = 'Boolean' }
+			'xs:dateTime' { $v = 'Date' }
+			default { $v = $v -replace '^\w+:', '' }
+		}
+		$parts += $v
+	}
+	return ($parts -join ', ')
+}
+
+# Заявленная часть типа согласуется с источником: каждый тип есть в источнике, квалификаторы нужных ему
+# видов — те же. $exact — весь тип без режимов: состав должен совпасть целиком.
+function Test-TypePartFits($part, $src, [bool]$exact) {
+	if ($exact -and $part.Types.Count -ne $src.Types.Count) { return $false }
+	foreach ($t in $part.Types) {
+		if ($src.Types -cnotcontains $t) { return $false }
+		$k = $script:qualKindByType[$t]
+		if ($k -and $part.Quals.ContainsKey($k) -and $part.Quals[$k] -cne $src.Quals[$k]) { return $false }
+		if ($k -and $exact -and $part.Quals.ContainsKey($k) -ne $src.Quals.ContainsKey($k)) { return $false }
+	}
+	return $true
+}
+
+# Элементы файла объекта по ключам «Вид.Имя[.Вид.Имя…]» — та же схема, что у индекса UUID
+function Get-MdElementMap {
+	param([string]$objFile, [string]$key)
+	$map = New-Object System.Collections.Specialized.OrderedDictionary ([StringComparer]::Ordinal)
+	if (-not (Test-Path -LiteralPath $objFile)) { return $map }
+	$doc = New-Object System.Xml.XmlDocument
+	try { $doc.Load($objFile) } catch { return $map }
+	$objEl = $null
+	foreach ($c in $doc.DocumentElement.ChildNodes) { if ($c.NodeType -eq 'Element') { $objEl = $c; break } }
+	if (-not $objEl) { return $map }
+	$map[$key] = $objEl
+	$stack = New-Object System.Collections.Stack
+	$stack.Push(@($objEl, $key))
+	while ($stack.Count -gt 0) {
+		$cur = $stack.Pop()
+		$co = $cur[0].SelectSingleNode("*[local-name()='ChildObjects']")
+		if (-not $co) { continue }
+		foreach ($sub in $co.ChildNodes) {
+			if ($sub.NodeType -ne 'Element') { continue }
+			$n = $sub.SelectSingleNode("*[local-name()='Properties']/*[local-name()='Name']")
+			if (-not $n) { continue }
+			$k = "$($cur[1]).$($sub.LocalName).$($n.InnerText.Trim())"
+			$map[$k] = $sub
+			$stack.Push(@($sub, $k))
+		}
+	}
+	return $map
+}
+
+# Группы объявленных свойств — те же, что у cfe-borrow: контролируемые сверяются по режимам, дополнения
+# (список расширения сливается со списком источника — замер М10) не сверяются, прочие — предупреждение.
+$script:controlledProps = @('Type', 'Owners', 'Global', 'ClientManagedApplication', 'Server', 'ExternalConnection',
+	'ClientOrdinaryApplication', 'ServerCall', 'Hierarchical', 'CodeLength', 'DescriptionLength', 'CodeType',
+	'CodeAllowedLength', 'NumberType', 'NumberLength', 'NumberAllowedLength', 'InformationRegisterPeriodicity',
+	'WriteMode', 'LanguageCode', 'RegisteredDocuments', 'ExtDimensionTypes', 'MaxExtDimensionCount')
+$script:additiveProps = @('RegisterRecords', 'Content')
+# Свойства без переопределения (Конфигуратор режим не предлагает, замер М4): Extended у них платформа
+# принимает, но теряет при выгрузке, и своя же выгрузка не грузится (замеры М15, М16) — сверяем как контролируемые
+$script:noOverrideProps = @('Hierarchical', 'InformationRegisterPeriodicity', 'WriteMode', 'Global',
+	'ClientManagedApplication', 'Server', 'ExternalConnection', 'ClientOrdinaryApplication', 'ServerCall', 'CodeAllowedLength', 'LanguageCode')
+
+$script:check18Props = 0
+function Compare-AdoptedProperties([string]$key, $extEl, $srcEl) {
+	$ok = $true
+	$ep = $extEl.SelectSingleNode("*[local-name()='Properties']")
+	$sp = $srcEl.SelectSingleNode("*[local-name()='Properties']")
+	if (-not $ep -or -not $sp) { return $true }
+	$states = Get-MdPropStates $extEl
+	$hint = "refresh with /cfe-borrow (report: -Check)"
+	foreach ($c in $ep.ChildNodes) {
+		if ($c.NodeType -ne 'Element') { continue }
+		$prop = $c.LocalName
+		if ($prop -in @('ObjectBelonging', 'Name', 'Comment', 'ExtendedConfigurationObject')) { continue }
+		$state = $states[$prop]
+		$noOverride = ''
+		if ($state -ceq 'Extended' -and $script:noOverrideProps -ccontains $prop) {
+			$noOverride = ' — override mode is not supported for this property: the platform accepts it once, drops it on dump, and the next load fails'
+			$state = $null
+		}
+		# Переопределение типа платформа принимает только частями (MultiState, xr:ExtendValue); одиночный
+		# Extended у Type она не применяет и сверяет тип как контролируемый (замер М13, 8.3.27)
+		if ($state -ceq 'Extended' -and $prop -cne 'Type') { continue }
+		# Дополнения: список расширения сливается со списком источника — расхождение тут норма
+		if ($script:additiveProps -ccontains $prop) { continue }
+		$s = $sp.SelectSingleNode("*[local-name()='$prop']")
+		if (-not $s) { continue }
+		if ($script:controlledProps -cnotcontains $prop) {
+			if ((Get-NormOuterXml $c) -cne (Get-NormOuterXml $s)) {
+				Report-Warn "18. ${key}: $prop ($($c.InnerText.Trim())) differs from the source configuration ($($s.InnerText.Trim())) — not a known controlled property: if the platform controls it, the extension is not applied"
+			}
+			continue
+		}
+		if ($prop -ceq 'Owners') {
+			# Заявленные владельцы — подмножество владельцев источника (добавить владельца в источнике можно)
+			$srcItems = @($s.ChildNodes | Where-Object { $_.NodeType -eq 'Element' } | ForEach-Object { $_.InnerText.Trim() })
+			$propOk = $true
+			foreach ($it in @($c.ChildNodes | Where-Object { $_.NodeType -eq 'Element' })) {
+				if ($srcItems -cnotcontains $it.InnerText.Trim()) {
+					Report-Error "18. ${key}: owner $($it.InnerText.Trim()) is declared in the extension but not in the source configuration — the platform rejects the extension («Значение контролируемого свойства Владельцы не совпадает»); $hint"
+					$ok = $false; $propOk = $false
+				}
+			}
+			if ($propOk) { $script:check18Props++ }
+			continue
+		}
+		if ($prop -ceq 'Type') {
+			$sd = Get-TypeDesc $s
+			$xsiType = $c.GetAttribute('type', 'http://www.w3.org/2001/XMLSchema-instance')
+			if ($state -ceq 'MultiState' -or $xsiType -match 'ExtendedProperty') {
+				$propOk = $true
+				foreach ($part in $c.ChildNodes) {
+					if ($part.NodeType -ne 'Element' -or $part.LocalName -notin @('CheckValue', 'NotifyValue')) { continue }
+					if (-not (Test-TypePartFits (Get-TypeDesc $part) $sd $false)) {
+						$label = if ($part.LocalName -ceq 'CheckValue') { 'check' } else { 'notify' }
+						Report-Error "18. ${key}: Type ($label part) $(Format-TypeDesc $part) does not match the source configuration ($(Format-TypeDesc $s)) — the platform loads the extension but does not apply it («Значение контролируемого свойства Тип не совпадает»); $hint"
+						$ok = $false; $propOk = $false
+					}
+				}
+				if ($propOk) { $script:check18Props++ }
+				continue
+			}
+			if (-not (Test-TypePartFits (Get-TypeDesc $c) $sd $true)) {
+				Report-Error "18. ${key}: Type $(Format-TypeDesc $c) differs from the source configuration ($(Format-TypeDesc $s)) — the platform loads the extension but does not apply it («Значение контролируемого свойства Тип не совпадает»); $hint"
+				$ok = $false
+			} else { $script:check18Props++ }
+			continue
+		}
+		if ((Get-NormOuterXml $c) -ceq (Get-NormOuterXml $s)) { $script:check18Props++; continue }
+		$was = $c.InnerText.Trim(); $now = $s.InnerText.Trim()
+		if ($state -ceq 'Notify') {
+			Report-Warn "18. ${key}: $prop ($was) differs from the source configuration ($now), mode Notify — the extension is applied, the applicability check reports the mismatch; $hint"
+		} elseif ($noOverride) {
+			Report-Error "18. ${key}: $prop ($was) differs from the source configuration ($now)$noOverride («Значение контролируемого свойства … не совпадает»); $hint"
+			$ok = $false
+		} else {
+			Report-Error "18. ${key}: $prop ($was) differs from the source configuration ($now) — the platform loads the extension but does not apply it («Значение контролируемого свойства … не совпадает»); $hint"
+			$ok = $false
+		}
+	}
+	return $ok
 }
 
 if (-not $script:stopped -and $childObjNode) {
@@ -1926,6 +2234,50 @@ if (-not $script:stopped -and $childObjNode) {
 		}
 	}
 
+	# Дубль связи: два заимствованных элемента связаны с одним объектом источника — платформа расширение
+	# не грузит («Не найден объект …», замер М15). Видно в самом расширении, источник не нужен
+	$dupKeys = @{}
+	$linkOwners = New-Object System.Collections.Specialized.OrderedDictionary
+	# Индексы связей объектов — один разбор файла на запуск, основной цикл берёт их отсюда
+	$extIdxCache = @{}
+	foreach ($child in $childObjNode.ChildNodes) {
+		if ($child.NodeType -ne 'Element' -or -not $childTypeDirMap.ContainsKey($child.LocalName)) { continue }
+		$dn = $child.InnerText.Trim()
+		if (-not $dn) { continue }
+		# Повтор записи в ChildObjects — о нём говорит проверка 5; дублем связи он не является
+		if ($extIdxCache.ContainsKey("$($child.LocalName).$dn")) { continue }
+		$dix = Get-MdIdIndex (Join-Path $configDir $childTypeDirMap[$child.LocalName]) $child.LocalName $dn $true
+		$extIdxCache["$($child.LocalName).$dn"] = $dix
+		if (-not $dix) { continue }
+		foreach ($k in $dix.Keys) {
+			$l = $dix[$k]
+			if (-not $l -or $l -ceq $zeroGuid) { continue }
+			$l = $l.ToLowerInvariant()
+			if (-not $linkOwners.Contains($l)) { $linkOwners[$l] = New-Object System.Collections.Generic.List[string] }
+			$linkOwners[$l].Add($k)
+		}
+	}
+	foreach ($l in $linkOwners.Keys) {
+		$ks = $linkOwners[$l]
+		if ($ks.Count -lt 2) { continue }
+		foreach ($k in $ks) { $dupKeys[$k] = $true }
+	}
+	foreach ($l in $linkOwners.Keys) {
+		$ks = $linkOwners[$l]
+		if ($ks.Count -lt 2) { continue }
+		# Подобъекты двух дублей (объектов, табличных частей) повторяют ту же ошибку — о них не говорим
+		$ownerDup = @($ks | Where-Object {
+			$p = $_ -split '\.'
+			$hit = $false
+			for ($n = 2; $n -lt $p.Count; $n += 2) { if ($dupKeys.ContainsKey(($p[0..($n - 1)] -join '.'))) { $hit = $true; break } }
+			$hit
+		})
+		if ($ownerDup.Count -eq $ks.Count) { continue }
+		Report-Error "18. $($ks -join ', '): bound to the same source object (ExtendedConfigurationObject $l) — the platform does not load the extension («Не найден объект …»). Ask the user which one is extra and remove it by hand: both may hold data; do not rename one into the other"
+		$check18Ok = $false
+		if ($script:stopped) { break }
+	}
+
 	foreach ($child in $childObjNode.ChildNodes) {
 		if ($script:stopped) { break }
 		if ($child.NodeType -ne 'Element') { continue }
@@ -1934,28 +2286,54 @@ if (-not $script:stopped -and $childObjNode) {
 		$objName18 = $child.InnerText.Trim()
 		if (-not $objName18) { continue }
 		$dirName = $childTypeDirMap[$typeName]
-		$extIdx = Get-MdIdIndex (Join-Path $configDir $dirName) $typeName $objName18 $true
+		$extIdx = if ($extIdxCache.ContainsKey("$typeName.$objName18")) { $extIdxCache["$typeName.$objName18"] } else { Get-MdIdIndex (Join-Path $configDir $dirName) $typeName $objName18 $true }
 		if (-not $extIdx -or $extIdx.Count -eq 0) { continue }
+		# О дубле сказано выше; советы про переименование к нему неприменимы
+		if ($dupKeys.ContainsKey("$typeName.$objName18")) { continue }
 
 		if (-not $srcRoot) {
 			foreach ($key in $extIdx.Keys) {
 				$check18Count++
 				if ($extIdx[$key] -ceq $zeroGuid) {
-					Report-Warn "18. ${key}: ExtendedConfigurationObject is zero — the platform loads the extension but does not apply it. Create the extension and borrow objects with -ConfigPath"
+					Report-Warn (Get-LinkZeroText $key $false)
 				}
 			}
 			continue
 		}
 
-		$srcIdx = Get-MdIdIndex (Join-Path $srcRoot $dirName) $typeName $objName18 $false
-		if ($null -eq $srcIdx) {
-			Report-Error "18. ${typeName}.${objName18}: borrowed object is missing from the source configuration ($dirName/$objName18.xml)"
+		$srcName = Get-SourceObjectName (Join-Path $srcRoot $dirName) $objName18
+		# Только расхождение регистра: имя, отличающееся иначе (файл назван не по объекту), — не наш случай
+		if ($srcName -and $srcName -cne $objName18 -and [string]::Equals($srcName, $objName18, [StringComparison]::OrdinalIgnoreCase)) {
+			Report-Error "18. ${typeName}.${objName18}: the source configuration has this name in a different case (${typeName}.${srcName}) — the platform rejects the extension («контролируемое свойство Имя не совпадает»)"
 			$check18Ok = $false
 			continue
 		}
+		$srcIdx = Get-MdIdIndex (Join-Path $srcRoot $dirName) $typeName $objName18 $false
+		# Сам объект: нет под этим именем или под ним другой объект — переименован (ищем по UUID связи),
+		# пересоздан или удалён. Расхождения подобъектов в этом случае — следствие, о них не говорим
+		$topKey = "$typeName.$objName18"
+		$topLink = $extIdx[$topKey]
+		$topReal = [bool]($topLink -and $topLink -cne $zeroGuid)
+		$topOther = $topReal -and $null -ne $srcIdx -and $srcIdx[$topKey] -and $srcIdx[$topKey].ToLowerInvariant() -cne $topLink.ToLowerInvariant()
+		if ($null -eq $srcIdx -or $topOther) {
+			$renamedTo = if ($topReal) { Find-SourceObjectByUuid (Join-Path $srcRoot $dirName) $topLink } else { $null }
+			if ($renamedTo) {
+				Report-Error (Get-LinkRenamedText $topKey "$typeName.$renamedTo" ($null -ne $srcIdx))
+			} elseif ($null -eq $srcIdx) {
+				Report-Error (Get-LinkMissingText $topKey $topReal)
+			} else {
+				Report-Error (Get-LinkRecreatedText $topKey $srcIdx[$topKey] $topLink)
+			}
+			$check18Ok = $false
+			continue
+		}
+		# Подобъекты с расхождением связи: свойства у них сверять не с чем (под этим именем другой подобъект)
+		$linkBad = @{}
 		foreach ($key in $extIdx.Keys) {
-			$check18Count++
 			$extId = $extIdx[$key]
+			if ($dupKeys.ContainsKey($key)) { $linkBad[$key] = $true; continue }
+			# В итог «связи совпадают» — только сверенные UUID; о незаданных сказала проверка 9
+			if ($extId) { $check18Count++ }
 			if (-not $srcIdx.Contains($key)) {
 				$caseTwin = $null
 				foreach ($sk in $srcIdx.Keys) {
@@ -1964,12 +2342,22 @@ if (-not $script:stopped -and $childObjNode) {
 				if ($caseTwin) {
 					Report-Error "18. ${key}: the source configuration has this name in a different case ($caseTwin) — the platform loads the extension but does not apply it («контролируемое свойство Имя не совпадает»)"
 				} else {
-					Report-Error "18. ${key}: borrowed sub-object is missing from the source configuration"
+					$real = [bool]($extId -and $extId -cne $zeroGuid)
+					$nk = if ($real) { Find-IdxKeyByUuid $srcIdx $extId } else { $null }
+					if ($nk) { Report-Error (Get-LinkRenamedText $key $nk $false) }
+					else { Report-Error (Get-LinkMissingText $key $real) }
 				}
+				$linkBad[$key] = $true
 				$check18Ok = $false
-			} elseif ($extId.ToLowerInvariant() -cne $srcIdx[$key].ToLowerInvariant()) {
-				$what = if ($extId -ceq $zeroGuid) { "zero" } else { "$extId" }
-				Report-Error "18. ${key}: ExtendedConfigurationObject is $what, but the UUID in the source configuration is $($srcIdx[$key]) — the platform loads the extension but does not apply it («ОбъектРасширяемойКонфигурации не совпадает»)"
+			} elseif ($extId -and $extId.ToLowerInvariant() -cne $srcIdx[$key].ToLowerInvariant()) {
+				if ($extId -ceq $zeroGuid) {
+					Report-Error (Get-LinkZeroText $key $true)
+				} else {
+					$nk = Find-IdxKeyByUuid $srcIdx $extId
+					if ($nk) { Report-Error (Get-LinkRenamedText $key $nk $true) }
+					else { Report-Error (Get-LinkRecreatedText $key $srcIdx[$key] $extId) }
+				}
+				$linkBad[$key] = $true
 				$check18Ok = $false
 			}
 			if ($script:stopped) { break }
@@ -1984,12 +2372,22 @@ if (-not $script:stopped -and $childObjNode) {
 			$check18Ok = $false
 			if ($script:stopped) { break }
 		}
+		if ($script:stopped) { break }
+		# Объявленные свойства — у элементов, которые нашлись в источнике под тем же ключом
+		$extEls = Get-MdElementMap (Join-Path (Join-Path $configDir $dirName) "$objName18.xml") "$typeName.$objName18"
+		$srcEls = Get-MdElementMap (Join-Path (Join-Path $srcRoot $dirName) "$objName18.xml") "$typeName.$objName18"
+		foreach ($k in $extEls.Keys) {
+			if (-not $srcEls.Contains($k) -or -not $extIdx.Contains($k) -or $linkBad.ContainsKey($k)) { continue }
+			if (-not (Compare-AdoptedProperties $k $extEls[$k] $srcEls[$k])) { $check18Ok = $false }
+			if ($script:stopped) { break }
+		}
 	}
 
 	if (-not $ConfigPath) {
 		Out-Line "[INFO]  18. Borrowed objects and the default language were not compared with the source configuration: -ConfigPath not set"
 	} elseif ($srcRoot -and $check18Ok -and $check18Count -gt 0) {
-		Report-OK "18. Source config: $check18Count link(s) agree (DefaultLanguage, ExtendedConfigurationObject)"
+		$propsAgree = if ($script:check18Props -gt 0) { "; $($script:check18Props) controlled property value(s) agree" } else { "" }
+		Report-OK "18. Source config: $check18Count link(s) agree (DefaultLanguage, ExtendedConfigurationObject)$propsAgree"
 	}
 }
 
@@ -2235,6 +2633,72 @@ foreach ($bslFile in (Get-ChildItem -Path $extRootDir -Recurse -Filter *.bsl -Fi
 }
 if ($ctrlCount -gt 0) {
 	Out-Line "[INFO]  Controlled methods (&ИзменениеИКонтроль): $ctrlCount — not checked for staleness here. Check with: /cfe-patch-method -Check -ExtensionPath <ext> -ConfigPath <cf>"
+}
+
+# --- Check 20: режимы контроля заимствованного против режима совместимости расширения ---
+# Замер 8.3.27 (база и расширение в одном режиме): переопределение свойства — с 8.3.14, «Предупреждать»
+# (Notify) — с 8.3.15, переопределение типа (Extended у Type, MultiState) — с 8.3.18. Ниже — отказ
+# загрузки. Пометка Extended у модуля или формы — не переопределение свойства: её нет в Properties.
+if (-not $script:stopped -and $childObjNode -and $propsNode) {
+	$cmNode = $propsNode.SelectSingleNode("md:ConfigurationExtensionCompatibilityMode", $ns)
+	$cmText = if ($cmNode) { $cmNode.InnerText.Trim() } else { "" }
+	$cmMinor = $null
+	if ($cmText -match '^Version8_3_(\d+)$') { $cmMinor = [int]$Matches[1] }
+	elseif ($cmText -match '^Version8_[12]') { $cmMinor = 0 }
+	if ($null -ne $cmMinor -and $cmMinor -lt 18) {
+		$modeChecked = 0
+		$check20Ok = $true
+		foreach ($child in $childObjNode.ChildNodes) {
+			if ($script:stopped) { break }
+			if ($child.NodeType -ne 'Element' -or -not $childTypeDirMap.ContainsKey($child.LocalName)) { continue }
+			$n20 = $child.InnerText.Trim()
+			if (-not $n20) { continue }
+			$f20 = Join-Path (Join-Path $configDir $childTypeDirMap[$child.LocalName]) "$n20.xml"
+			if (-not (Test-Path -LiteralPath $f20)) { continue }
+			$els20 = Get-MdElementMap $f20 "$($child.LocalName).$n20"
+			foreach ($k in $els20.Keys) {
+				$el = $els20[$k]
+				$states = Get-MdPropStates $el
+				$p20 = $el.SelectSingleNode("*[local-name()='Properties']")
+				foreach ($prop in $states.Keys) {
+					$st = $states[$prop]
+					if (-not $p20 -or -not $p20.SelectSingleNode("*[local-name()='$prop']")) { continue }
+					$need = $null
+					if ($prop -ceq 'Type' -and ($st -ceq 'MultiState' -or $st -ceq 'Extended')) { $need = 18; $what = "type override" }
+					elseif ($st -ceq 'Notify') { $need = 15; $what = "mode Notify" }
+					elseif ($st -ceq 'Extended') { $need = 14; $what = "property override" }
+					if (-not $need) { continue }
+					$modeChecked++
+					if ($cmMinor -lt $need) {
+						Report-Error "20. ${k}: $prop — $what requires extension compatibility mode 8.3.$need or later (current: $cmText) — the platform rejects the extension («… недопустимо в режиме совместимости»)"
+						$check20Ok = $false
+					}
+				}
+			}
+		}
+		if ($modeChecked -gt 0 -and $check20Ok) {
+			Report-OK "20. Control modes fit the extension compatibility mode $cmText ($modeChecked)"
+		}
+	}
+	# Переопределённая нумерация документа требует объявленного (контролируемого) нумератора — иначе отказ
+	# загрузки (замер М16, 8.3.27)
+	foreach ($child in $childObjNode.ChildNodes) {
+		if ($script:stopped) { break }
+		if ($child.NodeType -ne 'Element' -or $child.LocalName -cne 'Document') { continue }
+		$n20 = $child.InnerText.Trim()
+		if (-not $n20) { continue }
+		$f20 = Join-Path (Join-Path $configDir $childTypeDirMap['Document']) "$n20.xml"
+		if (-not (Test-Path -LiteralPath $f20)) { continue }
+		$root20 = (Get-MdElementMap $f20 "Document.$n20")["Document.$n20"]
+		if (-not $root20) { continue }
+		$p20 = $root20.SelectSingleNode("*[local-name()='Properties']")
+		if (-not $p20 -or $p20.SelectSingleNode("*[local-name()='Numerator']")) { continue }
+		$states = Get-MdPropStates $root20
+		$numOv = @(@('NumberType', 'NumberLength', 'NumberAllowedLength') | Where-Object { $states[$_] -ceq 'Extended' -and $p20.SelectSingleNode("*[local-name()='$_']") })
+		if ($numOv.Count -gt 0) {
+			Report-Error "20. Document.${n20}: numbering is overridden ($($numOv -join ', ')), but Numerator is not declared — the platform rejects the extension («… отключать контролируемость свойства «Нумератор» недопустимо»). Declare Numerator with the source value"
+		}
+	}
 }
 
 # --- Final output ---

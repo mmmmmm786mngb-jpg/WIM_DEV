@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# cfe-validate v1.31 — Validate 1C configuration extension structure (CFE)
+# cfe-validate v1.37 — Validate 1C configuration extension structure (CFE)
 # Source: https://github.com/Nikolay-Shirokov/cc-1c-skills
 """Validates extension Configuration.xml: root, InternalInfo, extension properties, ChildObjects, borrowed objects."""
 import sys, os, argparse, re
@@ -373,6 +373,8 @@ class Reporter:
             result = f'=== Validation OK: Extension.{self.obj_name} ({checks} checks) ==='
         else:
             self.out('')
+            if self.stopped and self.errors >= self.max_errors:
+                self.out(f'Stopped after {self.max_errors} errors. Fix and re-run.')
             self.out(f'=== Result: {self.errors} errors, {self.warnings} warnings ({checks} checks) ===')
             result = self.text()
 
@@ -950,13 +952,17 @@ def main():
             ok = False
         sub_ext = sub_props.find(f'{{{MD}}}ExtendedConfigurationObject')
         sub_name_val = (sub_name.text or '') if sub_name is not None else '?'
-        if sub_ext is None or not (sub_ext.text or ''):
-            r.error(f'{check_num}. {context}: {sub_type}.{sub_name_val} missing ExtendedConfigurationObject')
-            ok = False
-        elif not GUID_PATTERN.match(sub_ext.text):
+        if sub_ext is None:
+            no_link_items.append(f'{context}.{sub_type}.{sub_name_val}')
+        elif not GUID_PATTERN.match(sub_ext.text or ''):
             r.error(f'{check_num}. {context}: {sub_type}.{sub_name_val} invalid ExtendedConfigurationObject')
             ok = False
         return ok
+
+    # Заимствованные элементы без ExtendedConfigurationObject (проверки 9–11). Платформа такие принимает и
+    # связывает по имени, но штатно элемент пишется всегда: без него не видно, что объект источника
+    # пересоздан, — расширение молча прицепится к новому (замер 8.3.23–8.5.1). Итог — одно предупреждение.
+    no_link_items = []
 
     if child_obj_node is not None:
         borrowed_count = 0
@@ -1015,11 +1021,11 @@ def main():
                 borrowed_count += 1
 
                 ext_obj = obj_props.find(f'{{{MD}}}ExtendedConfigurationObject')
-                if ext_obj is None or not (ext_obj.text or ''):
-                    r.error(f'9. Borrowed {type_name}.{child_name}: missing ExtendedConfigurationObject')
-                    check9_ok = False
-                elif not GUID_PATTERN.match(ext_obj.text):
-                    r.error(f"9. Borrowed {type_name}.{child_name}: invalid ExtendedConfigurationObject UUID '{ext_obj.text}'")
+                if ext_obj is None:
+                    no_link_items.append(f'{type_name}.{child_name}')
+                    borrowed_ok_count += 1
+                elif not GUID_PATTERN.match(ext_obj.text or ''):
+                    r.error(f"9. Borrowed {type_name}.{child_name}: invalid ExtendedConfigurationObject UUID '{ext_obj.text or ''}'")
                     check9_ok = False
                 else:
                     borrowed_ok_count += 1
@@ -1254,8 +1260,10 @@ def main():
                         # У общей формы это описание самого объекта — его уже проверила проверка 9
                         if is_borrowed and not is_common:
                             fm_ext = fm_props.find(f'{{{MD}}}ExtendedConfigurationObject')
-                            if fm_ext is None or not (fm_ext.text or '') or not GUID_PATTERN.match(fm_ext.text or ''):
-                                r.error(f'11. {ctx}: invalid/missing ExtendedConfigurationObject')
+                            if fm_ext is None:
+                                no_link_items.append(ctx)
+                            elif not GUID_PATTERN.match(fm_ext.text or ''):
+                                r.error(f'11. {ctx}: invalid ExtendedConfigurationObject')
                                 check11_ok = False
                         fm_type = fm_props.find(f'{{{MD}}}FormType')
                         if fm_type is not None and (fm_type.text or '') != 'Managed':
@@ -1293,6 +1301,12 @@ def main():
     elif check11_ok:
         bf_count = len(borrowed_forms_with_tree)
         r.ok(f'11. Borrowed forms: {form_count} validated ({bf_count} with BaseForm)')
+
+    if no_link_items:
+        shown = ', '.join(no_link_items[:5])
+        if len(no_link_items) > 5:
+            shown += ', …'
+        r.warn(f'9. {len(no_link_items)} borrowed element(s) without ExtendedConfigurationObject ({shown}), the link to the source object: the platform binds them by name only — if the source object is deleted and recreated under the same name, the extension silently binds to the new one. Restore the link: /cfe-borrow -Actualize')
 
     if r.stopped:
         r.finalize(out_file)
@@ -1807,6 +1821,14 @@ def main():
             return (n[0].text or '').strip() if n else None
         return el.get('uuid') or None
 
+    # Заимствованный элемент расширения попадает в индекс и без ExtendedConfigurationObject — со значением
+    # None: платформа связывает его по имени, и наличие в источнике с точным именем сверяется всё равно.
+    def is_adopted_md_el(el, from_extension):
+        if not from_extension:
+            return False
+        ob = el.xpath("*[local-name()='Properties']/*[local-name()='ObjectBelonging']")
+        return bool(ob) and (ob[0].text or '').strip() == 'Adopted'
+
     # Подобъекты, у которых в ChildObjects владельца только имя, а описание — в отдельном файле
     # <каталог владельца>/<Имя владельца>/<Каталог>/<Имя>.xml.
     nested_file_dirs = {'Form': 'Forms', 'Template': 'Templates', 'Subsystem': 'Subsystems', 'Recalculation': 'Recalculations'}
@@ -1828,7 +1850,7 @@ def main():
         if obj_el is None:
             return False
         v = md_id_value(obj_el, from_extension)
-        if v:
+        if v or is_adopted_md_el(obj_el, from_extension):
             idx[key] = v
         own_dir = os.path.join(os.path.dirname(obj_file), os.path.splitext(os.path.basename(obj_file))[0])
         add_md_id_entries(idx, obj_el, key, from_extension, own_dir)
@@ -1849,7 +1871,7 @@ def main():
             if name_node:
                 key = f'{prefix}.{sub_type}.{(name_node[0].text or "").strip()}'
                 v = md_id_value(sub, from_extension)
-                if v:
+                if v or is_adopted_md_el(sub, from_extension):
                     idx[key] = v
                 add_md_id_entries(idx, sub, key, from_extension, '')
             elif own_dir and sub_type in nested_file_dirs and (sub.text or '').strip():
@@ -1865,6 +1887,91 @@ def main():
         if not add_md_id_file(idx, os.path.join(type_dir, f'{obj_name}.xml'), f'{type_name}.{obj_name}', from_extension):
             return None
         return idx
+
+    # Имя объекта по его описанию в источнике; файл ищется без учёта регистра. Ключи индекса строятся из
+    # имени в расширении, а на Windows файл источника находится и при другом регистре — без этой сверки
+    # расхождение имени самого объекта не видно. None — файла нет или он не читается.
+    def source_object_name(type_dir, obj_name):
+        f = os.path.join(type_dir, f'{obj_name}.xml')
+        if not os.path.isfile(f):
+            if not os.path.isdir(type_dir):
+                return None
+            twin = next((n for n in sorted(os.listdir(type_dir))
+                         if n.lower().endswith('.xml') and n[:-4].upper() == obj_name.upper()
+                         and os.path.isfile(os.path.join(type_dir, n))), None)
+            if twin is None:
+                return None
+            f = os.path.join(type_dir, twin)
+        try:
+            doc_root = etree.parse(f).getroot()
+        except Exception:
+            return None
+        for c in doc_root:
+            if not isinstance(c.tag, str):
+                continue
+            n = c.xpath("*[local-name()='Properties']/*[local-name()='Name']")
+            return (n[0].text or '').strip() if n else None
+        return None
+
+    # Объект источника по UUID: имя или None. Связь расширения указывает на объект, которого под этим именем
+    # нет, — возможно, его переименовали. Индекс UUID → имя по каталогу вида строится один раз, из начала файлов.
+    src_uuid_names = {}
+
+    def find_source_object_by_uuid(type_dir, uuid_):
+        if type_dir not in src_uuid_names:
+            m = {}
+            if os.path.isdir(type_dir):
+                for n in sorted(os.listdir(type_dir)):
+                    f = os.path.join(type_dir, n)
+                    if not n.lower().endswith('.xml') or not os.path.isfile(f):
+                        continue
+                    try:
+                        with open(f, encoding='utf-8-sig', errors='replace') as fh:
+                            head = fh.read(16384)
+                    except OSError:
+                        continue
+                    um = re.search(r'<MetaDataObject\b[^>]*>\s*<\w+\s[^>]*?uuid="([^"]+)"', head)
+                    nm = re.search(r'<Name>([^<]*)</Name>', head)
+                    if um and nm:
+                        m[um.group(1).lower()] = nm.group(1).strip()
+            src_uuid_names[type_dir] = m
+        return src_uuid_names[type_dir].get(uuid_.lower())
+
+    # Ключ подобъекта источника с этим UUID (подобъект переименован) или None
+    def find_idx_key_by_uuid(idx, uuid_):
+        u = uuid_.lower()
+        for k, v in idx.items():
+            if v and v.lower() == u:
+                return k
+        return None
+
+    # Тексты проверки 18 о связи с источником. Читатель — модель без контекста: смысл словами, имя тега —
+    # указатель в файл, и что делать дальше; там, где решение за человеком, — прямо сказать, чего не делать.
+    def link_renamed_text(key, new_key, namesake):
+        tail = f"; the name {key.split('.')[-1]} now belongs to a different object" if namesake else ''
+        if key.startswith('Language.'):
+            return f"18. {key}: renamed in the source configuration to {new_key} (the same language: its UUID matches ExtendedConfigurationObject in the extension){tail} — the platform does not apply the extension. Rename the language in the extension the same way: a language holds no data, so this is safe"
+        return f"18. {key}: renamed in the source configuration to {new_key} (the same object: its UUID matches ExtendedConfigurationObject in the extension), the extension still uses the old name{tail} — the platform does not apply the extension. /cfe-borrow -Actualize renames it in the extension following the UUID and keeps what the extension added (attributes, forms, code); then fix the code mentions it lists"
+
+    def link_missing_text(key, has_link):
+        how = ('neither by name nor by its UUID (ExtendedConfigurationObject) — deleted there or recreated under another name'
+               if has_link else 'no object with this name')
+        return f"18. {key}: missing from the source configuration, {how}. The extension cannot be applied. Ask the user whether to remove it from the extension or restore it in the source; do not delete it by hand: the extension's own data may be bound to it"
+
+    # Язык cfe-borrow не актуализирует; данных у языка нет — UUID правится прямо
+    def language_link_fix(key):
+        n = key[len('Language.'):]
+        return f"Set it to the uuid attribute of the language in the source configuration (Languages/{n}.xml): a language holds no data, so this is safe"
+
+    def link_recreated_text(key, src_uuid, ext_uuid):
+        if key.startswith('Language.'):
+            return f"18. {key}: ExtendedConfigurationObject (the link to the source object) is {ext_uuid}, but the language in the source configuration has UUID {src_uuid} — the platform does not apply the extension. {language_link_fix(key)}"
+        return f"18. {key}: the source object with this name is a different object (UUID {src_uuid}): the one the extension borrowed (ExtendedConfigurationObject {ext_uuid}) is no longer in the source — recreated or deleted. The platform does not apply the extension. Do not edit the UUID by hand or re-borrow: the extension's own data is bound to the old object — ask the user"
+
+    def link_zero_text(key, with_source):
+        how = '' if with_source else ' with -ConfigPath'
+        fix = language_link_fix(key) if key.startswith('Language.') else f'Restore the link: /cfe-borrow -Actualize{how}'
+        return f"18. {key}: ExtendedConfigurationObject (the link to the source object) is zero — it matches nothing, so the platform loads the extension but does not apply it. {fix}"
 
     # Собственные подобъекты заимствованного объекта, одноимённые (без учёта регистра) с незаимствованным
     # подобъектом источника того же вида на том же уровне: реквизит, ТЧ, колонка заимствованной ТЧ, значение
@@ -1888,7 +1995,8 @@ def main():
                 continue
             ln = etree.QName(sub.tag).localname
             if ln in ('Form', 'Template'):
-                # Собственная форма или макет — файл есть и в нём нет ExtendedConfigurationObject. Нет файла или
+                # Собственная форма или макет — файл есть и в нём нет ни ObjectBelonging=Adopted, ни
+                # ExtendedConfigurationObject (у заимствованной формы последнего может не быть). Нет файла или
                 # не читается — не судим (об отсутствии файла формы говорит проверка 10)
                 f_name = (sub.text or '').strip()
                 if not f_name:
@@ -1901,6 +2009,8 @@ def main():
                 except Exception:
                     continue
                 if f_root.xpath("//*[local-name()='Properties']/*[local-name()='ExtendedConfigurationObject']"):
+                    continue
+                if f_root.xpath("//*[local-name()='Properties']/*[local-name()='ObjectBelonging' and normalize-space()='Adopted']"):
                     continue
                 keys.append(f'{prefix}.{ln}.{f_name}')
                 continue
@@ -1925,6 +2035,225 @@ def main():
             if k.upper() in src_ci:
                 result.append({'Own': k, 'Src': src_ci[k.upper()]})
         return result
+
+    # InnerText узла как в .NET XmlDocument (без PreserveWhitespace): текст потомков без комментариев
+    # и без пробельных узлов между тегами
+    def xml_inner_text(el):
+        return ''.join(t for t in el.itertext() if t.strip())
+
+    # Объявленные свойства заимствованного против источника. Контролируется то, что объявлено в Properties;
+    # режим — <xr:PropertyState> в InternalInfo: нет — проверять и запрещать, Notify — проверять, не
+    # запрещать, Extended — переопределять, MultiState — у составного типа свой режим на часть типов
+    # (xr:CheckValue / xr:ExtendValue / xr:NotifyValue). Замер 8.3.27: расхождение без режима — расширение
+    # не применяется; Notify — применяется, проверка сообщает; Тип — не применяется в любом режиме контроля.
+    # Ключ — имя свойства в верхнем регистре (поиск без учёта регистра), значение — (имя, режим).
+    def md_prop_states(el):
+        states = {}
+        for ps in el.xpath("*[local-name()='InternalInfo']/*[local-name()='PropertyState']"):
+            p = ps.xpath("*[local-name()='Property']")
+            s = ps.xpath("*[local-name()='State']")
+            if p and s:
+                name = xml_inner_text(p[0]).strip()
+                prev = states.get(name.upper())
+                states[name.upper()] = (prev[0] if prev else name, xml_inner_text(s[0]).strip())
+        return states
+
+    def norm_outer_xml(node):
+        x = etree.tostring(node, encoding='unicode', with_tail=False)
+        x = re.sub(r'\s+xmlns(?::\w+)?="[^"]*"', '', x)
+        return re.sub(r'>\s+<', '><', x).strip()
+
+    # Описание типов: состав (Type / TypeSet / TypeId) и квалификаторы по виду
+    def type_desc(type_node):
+        types = []
+        quals = {}
+        for c in type_node:
+            if not isinstance(c.tag, str):
+                continue
+            ln = etree.QName(c.tag).localname
+            if ln.upper() in ('TYPE', 'TYPESET', 'TYPEID'):
+                types.append(f'{ln}|{xml_inner_text(c).strip()}')
+            elif ln.endswith('Qualifiers'):
+                quals[ln.upper()] = norm_outer_xml(c)
+        return {'Types': types, 'Quals': quals}
+
+    qual_kind_by_type = {'TYPE|XS:STRING': 'StringQualifiers', 'TYPE|XS:DECIMAL': 'NumberQualifiers', 'TYPE|XS:DATETIME': 'DateQualifiers', 'TYPE|XS:BASE64BINARY': 'BinaryDataQualifiers'}
+
+    def format_type_desc(type_node):
+        parts = []
+        for c in type_node:
+            if not isinstance(c.tag, str) or etree.QName(c.tag).localname.upper() not in ('TYPE', 'TYPESET', 'TYPEID'):
+                continue
+            v = xml_inner_text(c).strip()
+            vl = v.lower()
+            if vl == 'xs:string':
+                ln_ = type_node.xpath("*[local-name()='StringQualifiers']/*[local-name()='Length']")
+                v = f'String({xml_inner_text(ln_[0])})' if ln_ else 'String'
+            elif vl == 'xs:decimal':
+                dg = type_node.xpath("*[local-name()='NumberQualifiers']/*[local-name()='Digits']")
+                fd = type_node.xpath("*[local-name()='NumberQualifiers']/*[local-name()='FractionDigits']")
+                v = f'Number({xml_inner_text(dg[0])},{xml_inner_text(fd[0]) if fd else 0})' if dg else 'Number'
+            elif vl == 'xs:boolean':
+                v = 'Boolean'
+            elif vl == 'xs:datetime':
+                v = 'Date'
+            else:
+                v = re.sub(r'^\w+:', '', v, count=1)
+            parts.append(v)
+        return ', '.join(parts)
+
+    # Заявленная часть типа согласуется с источником: каждый тип есть в источнике, квалификаторы нужных ему
+    # видов — те же. exact — весь тип без режимов: состав должен совпасть целиком.
+    def type_part_fits(part, src, exact):
+        if exact and len(part['Types']) != len(src['Types']):
+            return False
+        for t in part['Types']:
+            if t not in src['Types']:
+                return False
+            k = qual_kind_by_type.get(t.upper())
+            if not k:
+                continue
+            ku = k.upper()
+            if ku in part['Quals'] and part['Quals'][ku] != src['Quals'].get(ku):
+                return False
+            if exact and (ku in part['Quals']) != (ku in src['Quals']):
+                return False
+        return True
+
+    # Элементы файла объекта по ключам «Вид.Имя[.Вид.Имя…]» — та же схема, что у индекса UUID
+    def md_element_map(obj_file, key):
+        m = {}
+        if not os.path.exists(obj_file):
+            return m
+        try:
+            doc_root = etree.parse(obj_file).getroot()
+        except Exception:
+            return m
+        obj_el = next((c for c in doc_root if isinstance(c.tag, str)), None)
+        if obj_el is None:
+            return m
+        m[key] = obj_el
+        stack = [(obj_el, key)]
+        while stack:
+            cur_el, cur_key = stack.pop()
+            co = cur_el.xpath("*[local-name()='ChildObjects']")
+            if not co:
+                continue
+            for sub in co[0]:
+                if not isinstance(sub.tag, str):
+                    continue
+                n = sub.xpath("*[local-name()='Properties']/*[local-name()='Name']")
+                if not n:
+                    continue
+                k = f'{cur_key}.{etree.QName(sub.tag).localname}.{xml_inner_text(n[0]).strip()}'
+                m[k] = sub
+                stack.append((sub, k))
+        return m
+
+    # Группы объявленных свойств — те же, что у cfe-borrow: контролируемые сверяются по режимам, дополнения
+    # (список расширения сливается со списком источника — замер М10) не сверяются, прочие — предупреждение.
+    controlled_props = ['Type', 'Owners', 'Global', 'ClientManagedApplication', 'Server', 'ExternalConnection',
+                        'ClientOrdinaryApplication', 'ServerCall', 'Hierarchical', 'CodeLength', 'DescriptionLength', 'CodeType',
+                        'CodeAllowedLength', 'NumberType', 'NumberLength', 'NumberAllowedLength', 'InformationRegisterPeriodicity',
+                        'WriteMode', 'LanguageCode', 'RegisteredDocuments', 'ExtDimensionTypes', 'MaxExtDimensionCount']
+    additive_props = ['RegisterRecords', 'Content']
+    # Свойства без переопределения (Конфигуратор режим не предлагает, замер М4): Extended у них платформа
+    # принимает, но теряет при выгрузке, и своя же выгрузка не грузится (замеры М15, М16) — сверяем как контролируемые
+    no_override_props = ['Hierarchical', 'InformationRegisterPeriodicity', 'WriteMode', 'Global',
+                         'ClientManagedApplication', 'Server', 'ExternalConnection', 'ClientOrdinaryApplication', 'ServerCall', 'CodeAllowedLength', 'LanguageCode']
+
+    check18_props = [0]
+
+    def compare_adopted_properties(key, ext_el, src_el):
+        ok = True
+        ep = ext_el.xpath("*[local-name()='Properties']")
+        sp = src_el.xpath("*[local-name()='Properties']")
+        if not ep or not sp:
+            return True
+        ep, sp = ep[0], sp[0]
+        states = md_prop_states(ext_el)
+        hint = 'refresh with /cfe-borrow (report: -Check)'
+        for c in ep:
+            if not isinstance(c.tag, str):
+                continue
+            prop = etree.QName(c.tag).localname
+            if prop.upper() in ('OBJECTBELONGING', 'NAME', 'COMMENT', 'EXTENDEDCONFIGURATIONOBJECT'):
+                continue
+            st = states.get(prop.upper())
+            state = st[1] if st else None
+            no_override = ''
+            if state == 'Extended' and prop in no_override_props:
+                no_override = ' — override mode is not supported for this property: the platform accepts it once, drops it on dump, and the next load fails'
+                state = None
+            # Переопределение типа платформа принимает только частями (MultiState, xr:ExtendValue); одиночный
+            # Extended у Type она не применяет и сверяет тип как контролируемый (замер М13, 8.3.27)
+            if state == 'Extended' and prop != 'Type':
+                continue
+            # Дополнения: список расширения сливается со списком источника — расхождение тут норма
+            if prop in additive_props:
+                continue
+            s = sp.xpath(f"*[local-name()='{prop}']")
+            if not s:
+                continue
+            s = s[0]
+            if prop not in controlled_props:
+                if norm_outer_xml(c) != norm_outer_xml(s):
+                    r.warn(f'18. {key}: {prop} ({xml_inner_text(c).strip()}) differs from the source configuration ({xml_inner_text(s).strip()}) — not a known controlled property: if the platform controls it, the extension is not applied')
+                continue
+            if prop == 'Owners':
+                # Заявленные владельцы — подмножество владельцев источника (добавить владельца в источнике можно)
+                src_items = [xml_inner_text(x).strip() for x in s if isinstance(x.tag, str)]
+                prop_ok = True
+                for it in c:
+                    if not isinstance(it.tag, str):
+                        continue
+                    it_text = xml_inner_text(it).strip()
+                    if it_text not in src_items:
+                        r.error(f'18. {key}: owner {it_text} is declared in the extension but not in the source configuration — the platform rejects the extension («Значение контролируемого свойства Владельцы не совпадает»); {hint}')
+                        ok = False
+                        prop_ok = False
+                if prop_ok:
+                    check18_props[0] += 1
+                continue
+            if prop == 'Type':
+                sd = type_desc(s)
+                xsi_type = c.get('{http://www.w3.org/2001/XMLSchema-instance}type') or ''
+                if state == 'MultiState' or re.search('ExtendedProperty', xsi_type, re.IGNORECASE):
+                    prop_ok = True
+                    for part in c:
+                        if not isinstance(part.tag, str):
+                            continue
+                        part_ln = etree.QName(part.tag).localname
+                        if part_ln.upper() not in ('CHECKVALUE', 'NOTIFYVALUE'):
+                            continue
+                        if not type_part_fits(type_desc(part), sd, False):
+                            label = 'check' if part_ln == 'CheckValue' else 'notify'
+                            r.error(f'18. {key}: Type ({label} part) {format_type_desc(part)} does not match the source configuration ({format_type_desc(s)}) — the platform loads the extension but does not apply it («Значение контролируемого свойства Тип не совпадает»); {hint}')
+                            ok = False
+                            prop_ok = False
+                    if prop_ok:
+                        check18_props[0] += 1
+                    continue
+                if not type_part_fits(type_desc(c), sd, True):
+                    r.error(f'18. {key}: Type {format_type_desc(c)} differs from the source configuration ({format_type_desc(s)}) — the platform loads the extension but does not apply it («Значение контролируемого свойства Тип не совпадает»); {hint}')
+                    ok = False
+                else:
+                    check18_props[0] += 1
+                continue
+            if norm_outer_xml(c) == norm_outer_xml(s):
+                check18_props[0] += 1
+                continue
+            was = xml_inner_text(c).strip()
+            now = xml_inner_text(s).strip()
+            if state == 'Notify':
+                r.warn(f'18. {key}: {prop} ({was}) differs from the source configuration ({now}), mode Notify — the extension is applied, the applicability check reports the mismatch; {hint}')
+            elif no_override:
+                r.error(f'18. {key}: {prop} ({was}) differs from the source configuration ({now}){no_override} («Значение контролируемого свойства … не совпадает»); {hint}')
+                ok = False
+            else:
+                r.error(f'18. {key}: {prop} ({was}) differs from the source configuration ({now}) — the platform loads the extension but does not apply it («Значение контролируемого свойства … не совпадает»); {hint}')
+                ok = False
+        return ok
 
     if not r.stopped and child_obj_node is not None:
         zero_guid = '00000000-0000-0000-0000-000000000000'
@@ -1956,6 +2285,47 @@ def main():
                     r.error(f'18. Extension DefaultLanguage "{def_lang}" differs from the source configuration "{src_def_lang}" — the platform loads the extension but does not apply it («ОсновнойЯзык не совпадает»)')
                     check18_ok = False
 
+        # Дубль связи: два заимствованных элемента связаны с одним объектом источника — платформа расширение
+        # не грузит («Не найден объект …», замер М15). Видно в самом расширении, источник не нужен
+        dup_keys = set()
+        link_owners = {}
+        # Индексы связей объектов — один разбор файла на запуск, основной цикл берёт их отсюда
+        ext_idx_cache = {}
+        for child in child_obj_node:
+            if not isinstance(child.tag, str):
+                continue
+            d_type = etree.QName(child.tag).localname
+            if d_type not in CHILD_TYPE_DIR_MAP:
+                continue
+            dn = (child.text or '').strip()
+            if not dn:
+                continue
+            # Повтор записи в ChildObjects — о нём говорит проверка 5; дублем связи он не является
+            if f'{d_type}.{dn}' in ext_idx_cache:
+                continue
+            dix = md_id_index(os.path.join(config_dir, CHILD_TYPE_DIR_MAP[d_type]), d_type, dn, True)
+            ext_idx_cache[f'{d_type}.{dn}'] = dix
+            if not dix:
+                continue
+            for k, lnk in dix.items():
+                if not lnk or lnk == zero_guid:
+                    continue
+                link_owners.setdefault(lnk.lower(), []).append(k)
+        for lnk, ks in link_owners.items():
+            if len(ks) >= 2:
+                dup_keys.update(ks)
+        for lnk, ks in link_owners.items():
+            if len(ks) < 2:
+                continue
+            # Подобъекты двух дублей (объектов, табличных частей) повторяют ту же ошибку — о них не говорим
+            owner_dup = [k for k in ks if any('.'.join(k.split('.')[:n]) in dup_keys for n in range(2, len(k.split('.')), 2))]
+            if len(owner_dup) == len(ks):
+                continue
+            r.error(f"18. {', '.join(ks)}: bound to the same source object (ExtendedConfigurationObject {lnk}) — the platform does not load the extension («Не найден объект …»). Ask the user which one is extra and remove it by hand: both may hold data; do not rename one into the other")
+            check18_ok = False
+            if r.stopped:
+                break
+
         for child in child_obj_node:
             if r.stopped:
                 break
@@ -1968,35 +2338,78 @@ def main():
             if not obj_name18:
                 continue
             dir_name = CHILD_TYPE_DIR_MAP[type_name]
-            ext_idx = md_id_index(os.path.join(config_dir, dir_name), type_name, obj_name18, True)
+            ext_idx = (ext_idx_cache[f'{type_name}.{obj_name18}'] if f'{type_name}.{obj_name18}' in ext_idx_cache
+                       else md_id_index(os.path.join(config_dir, dir_name), type_name, obj_name18, True))
             if not ext_idx:
+                continue
+            # О дубле сказано выше; советы про переименование к нему неприменимы
+            if f'{type_name}.{obj_name18}' in dup_keys:
                 continue
 
             if not src_root:
                 for key, ext_id in ext_idx.items():
                     check18_count += 1
                     if ext_id == zero_guid:
-                        r.warn(f'18. {key}: ExtendedConfigurationObject is zero — the platform loads the extension but does not apply it. Create the extension and borrow objects with -ConfigPath')
+                        r.warn(link_zero_text(key, False))
                 continue
 
-            src_idx = md_id_index(os.path.join(src_root, dir_name), type_name, obj_name18, False)
-            if src_idx is None:
-                r.error(f'18. {type_name}.{obj_name18}: borrowed object is missing from the source configuration ({dir_name}/{obj_name18}.xml)')
+            src_name = source_object_name(os.path.join(src_root, dir_name), obj_name18)
+            # Только расхождение регистра: имя, отличающееся иначе (файл назван не по объекту), — не наш случай
+            if src_name and src_name != obj_name18 and src_name.upper() == obj_name18.upper():
+                r.error(f'18. {type_name}.{obj_name18}: the source configuration has this name in a different case ({type_name}.{src_name}) — the platform rejects the extension («контролируемое свойство Имя не совпадает»)')
                 check18_ok = False
                 continue
+            src_idx = md_id_index(os.path.join(src_root, dir_name), type_name, obj_name18, False)
+            # Сам объект: нет под этим именем или под ним другой объект — переименован (ищем по UUID связи),
+            # пересоздан или удалён. Расхождения подобъектов в этом случае — следствие, о них не говорим
+            top_key = f'{type_name}.{obj_name18}'
+            top_link = ext_idx.get(top_key)
+            top_real = bool(top_link and top_link != zero_guid)
+            top_other = (top_real and src_idx is not None and bool(src_idx.get(top_key))
+                         and src_idx[top_key].lower() != top_link.lower())
+            if src_idx is None or top_other:
+                renamed_to = find_source_object_by_uuid(os.path.join(src_root, dir_name), top_link) if top_real else None
+                if renamed_to:
+                    r.error(link_renamed_text(top_key, f'{type_name}.{renamed_to}', src_idx is not None))
+                elif src_idx is None:
+                    r.error(link_missing_text(top_key, top_real))
+                else:
+                    r.error(link_recreated_text(top_key, src_idx[top_key], top_link))
+                check18_ok = False
+                continue
+            # Подобъекты с расхождением связи: свойства у них сверять не с чем (под этим именем другой подобъект)
+            link_bad = set()
             for key, ext_id in ext_idx.items():
-                check18_count += 1
+                if key in dup_keys:
+                    link_bad.add(key)
+                    continue
+                # В итог «связи совпадают» — только сверенные UUID; о незаданных сказала проверка 9
+                if ext_id:
+                    check18_count += 1
                 src_id = src_idx.get(key)
                 if src_id is None:
                     case_twin = next((sk for sk in src_idx if sk.upper() == key.upper()), None)
                     if case_twin:
                         r.error(f'18. {key}: the source configuration has this name in a different case ({case_twin}) — the platform loads the extension but does not apply it («контролируемое свойство Имя не совпадает»)')
                     else:
-                        r.error(f'18. {key}: borrowed sub-object is missing from the source configuration')
+                        real = bool(ext_id and ext_id != zero_guid)
+                        nk = find_idx_key_by_uuid(src_idx, ext_id) if real else None
+                        if nk:
+                            r.error(link_renamed_text(key, nk, False))
+                        else:
+                            r.error(link_missing_text(key, real))
+                    link_bad.add(key)
                     check18_ok = False
-                elif ext_id.lower() != src_id.lower():
-                    what = 'zero' if ext_id == zero_guid else ext_id
-                    r.error(f'18. {key}: ExtendedConfigurationObject is {what}, but the UUID in the source configuration is {src_id} — the platform loads the extension but does not apply it («ОбъектРасширяемойКонфигурации не совпадает»)')
+                elif ext_id and ext_id.lower() != src_id.lower():
+                    if ext_id == zero_guid:
+                        r.error(link_zero_text(key, True))
+                    else:
+                        nk = find_idx_key_by_uuid(src_idx, ext_id)
+                        if nk:
+                            r.error(link_renamed_text(key, nk, True))
+                        else:
+                            r.error(link_recreated_text(key, src_id, ext_id))
+                    link_bad.add(key)
                     check18_ok = False
                 if r.stopped:
                     break
@@ -2012,11 +2425,24 @@ def main():
                 check18_ok = False
                 if r.stopped:
                     break
+            if r.stopped:
+                break
+            # Объявленные свойства — у элементов, которые нашлись в источнике под тем же ключом
+            ext_els = md_element_map(os.path.join(config_dir, dir_name, f'{obj_name18}.xml'), f'{type_name}.{obj_name18}')
+            src_els = md_element_map(os.path.join(src_root, dir_name, f'{obj_name18}.xml'), f'{type_name}.{obj_name18}')
+            for k in ext_els:
+                if k not in src_els or k not in ext_idx or k in link_bad:
+                    continue
+                if not compare_adopted_properties(k, ext_els[k], src_els[k]):
+                    check18_ok = False
+                if r.stopped:
+                    break
 
         if not config_path_arg:
             r.out('[INFO]  18. Borrowed objects and the default language were not compared with the source configuration: -ConfigPath not set')
         elif src_root and check18_ok and check18_count > 0:
-            r.ok(f'18. Source config: {check18_count} link(s) agree (DefaultLanguage, ExtendedConfigurationObject)')
+            props_agree = f'; {check18_props[0]} controlled property value(s) agree' if check18_props[0] > 0 else ''
+            r.ok(f'18. Source config: {check18_count} link(s) agree (DefaultLanguage, ExtendedConfigurationObject){props_agree}')
 
     # --- Check 19: ссылки на объекты, которых нет в расширении ---
     # Объект основной конфигурации виден расширению, только если он заимствован (замер 8.3.24/8.3.27):
@@ -2225,6 +2651,83 @@ def main():
                     pass
     if ctrl_count > 0:
         r.out('[INFO]  Controlled methods (&ИзменениеИКонтроль): %d — not checked for staleness here. Check with: /cfe-patch-method -Check -ExtensionPath <ext> -ConfigPath <cf>' % ctrl_count)
+
+    # --- Check 20: режимы контроля заимствованного против режима совместимости расширения ---
+    # Замер 8.3.27 (база и расширение в одном режиме): переопределение свойства — с 8.3.14, «Предупреждать»
+    # (Notify) — с 8.3.15, переопределение типа (Extended у Type, MultiState) — с 8.3.18. Ниже — отказ
+    # загрузки. Пометка Extended у модуля или формы — не переопределение свойства: её нет в Properties.
+    if not r.stopped and child_obj_node is not None and props_node is not None:
+        cm_node = props_node.find('md:ConfigurationExtensionCompatibilityMode', NS)
+        cm_text = xml_inner_text(cm_node).strip() if cm_node is not None else ''
+        cm_minor = None
+        m20 = re.match(r'^Version8_3_(\d+)$', cm_text, re.IGNORECASE)
+        if m20:
+            cm_minor = int(m20.group(1))
+        elif re.match(r'^Version8_[12]', cm_text, re.IGNORECASE):
+            cm_minor = 0
+        if cm_minor is not None and cm_minor < 18:
+            mode_checked = 0
+            check20_ok = True
+            for child in child_obj_node:
+                if r.stopped:
+                    break
+                if not isinstance(child.tag, str):
+                    continue
+                ln20 = etree.QName(child.tag).localname
+                if ln20 not in CHILD_TYPE_DIR_MAP:
+                    continue
+                n20 = (child.text or '').strip()
+                if not n20:
+                    continue
+                f20 = os.path.join(config_dir, CHILD_TYPE_DIR_MAP[ln20], f'{n20}.xml')
+                if not os.path.exists(f20):
+                    continue
+                els20 = md_element_map(f20, f'{ln20}.{n20}')
+                for k, el in els20.items():
+                    states = md_prop_states(el)
+                    p20 = el.xpath("*[local-name()='Properties']")
+                    for prop, st in states.values():
+                        if not p20 or not p20[0].xpath(f"*[local-name()='{prop}']"):
+                            continue
+                        need = None
+                        if prop == 'Type' and (st == 'MultiState' or st == 'Extended'):
+                            need, what = 18, 'type override'
+                        elif st == 'Notify':
+                            need, what = 15, 'mode Notify'
+                        elif st == 'Extended':
+                            need, what = 14, 'property override'
+                        if not need:
+                            continue
+                        mode_checked += 1
+                        if cm_minor < need:
+                            r.error(f'20. {k}: {prop} — {what} requires extension compatibility mode 8.3.{need} or later (current: {cm_text}) — the platform rejects the extension («… недопустимо в режиме совместимости»)')
+                            check20_ok = False
+            if mode_checked > 0 and check20_ok:
+                r.ok(f'20. Control modes fit the extension compatibility mode {cm_text} ({mode_checked})')
+        # Переопределённая нумерация документа требует объявленного (контролируемого) нумератора — иначе отказ
+        # загрузки (замер М16, 8.3.27)
+        for child in child_obj_node:
+            if r.stopped:
+                break
+            if not isinstance(child.tag, str) or etree.QName(child.tag).localname != 'Document':
+                continue
+            n20 = (child.text or '').strip()
+            if not n20:
+                continue
+            f20 = os.path.join(config_dir, CHILD_TYPE_DIR_MAP['Document'], f'{n20}.xml')
+            if not os.path.exists(f20):
+                continue
+            root20 = md_element_map(f20, f'Document.{n20}').get(f'Document.{n20}')
+            if root20 is None:
+                continue
+            p20 = root20.xpath("*[local-name()='Properties']")
+            if not p20 or p20[0].xpath("*[local-name()='Numerator']"):
+                continue
+            states = md_prop_states(root20)
+            num_ov = [x for x in ('NumberType', 'NumberLength', 'NumberAllowedLength')
+                      if states.get(x.upper()) and states[x.upper()][1] == 'Extended' and p20[0].xpath(f"*[local-name()='{x}']")]
+            if num_ov:
+                r.error(f"20. Document.{n20}: numbering is overridden ({', '.join(num_ov)}), but Numerator is not declared — the platform rejects the extension («… отключать контролируемость свойства «Нумератор» недопустимо»). Declare Numerator with the source value")
 
     # --- Final output ---
     r.finalize(out_file)

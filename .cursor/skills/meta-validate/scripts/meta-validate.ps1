@@ -1,4 +1,4 @@
-﻿# meta-validate v1.43 — Validate 1C metadata object structure
+﻿# meta-validate v1.47 — Validate 1C metadata object structure
 # Source: https://github.com/Nikolay-Shirokov/cc-1c-skills
 [CmdletBinding(PositionalBinding=$false)]
 param(
@@ -23,7 +23,7 @@ if ($pathList.Count -gt 1) {
 	$batchOk = 0
 	$batchFail = 0
 	foreach ($singlePath in $pathList) {
-		$callArgs = @{ ObjectPath = $singlePath; MaxErrors = $MaxErrors; Verbose = $Detailed }
+		$callArgs = @{ ObjectPath = $singlePath; MaxErrors = $MaxErrors; Detailed = $Detailed }
 		if ($OutFile) {
 			$baseName = [System.IO.Path]::GetFileNameWithoutExtension($OutFile)
 			$ext = [System.IO.Path]::GetExtension($OutFile)
@@ -142,6 +142,7 @@ $finalize = {
 		$result = "=== Validation OK: $mdType.$objName ($checks checks) ==="
 	} else {
 		Out-Line ""
+		if ($script:stopped -and $script:errors -ge $MaxErrors) { Out-Line "Stopped after $MaxErrors errors. Fix and re-run." }
 		Out-Line "=== Result: $($script:errors) errors, $($script:warnings) warnings ($checks checks) ==="
 		$result = $script:output.ToString()
 	}
@@ -767,6 +768,43 @@ $check4 = {
 	}
 }
 
+# --- Check 26: неограниченная строка там, где платформе нужен индекс ---
+# Замер 8.3.24: измерение регистра со строкой длины 0 (в том числе в составном типе) загружается
+# молча, а /UpdateDBCfg падает ошибкой СУБД; индексируемый реквизит с таким типом платформа отвергает
+# при загрузке («При установленном типе недопустимо индексирование»). Общий реквизит-разделитель
+# (DataSeparation=Separate) участвует в хеше при любом Indexing: загрузка молчит, /UpdateDBCfg падает
+# ошибкой SDBL. Строка без StringQualifiers — та же длина 0.
+function Test-UnlimitedString($typeNode) {
+	if (-not $typeNode) { return $false }
+	$str = @($typeNode.SelectNodes("v8:Type", $ns) | Where-Object { $_.InnerText.Trim() -match '(^|:)string$' })
+	if ($str.Count -eq 0) { return $false }
+	$len = $typeNode.SelectSingleNode("v8:StringQualifiers/v8:Length", $ns)
+	return (-not $len -or $len.InnerText.Trim() -eq '0')
+}
+$check26 = {
+	# Измерения — всегда; прочие (реквизиты, реквизиты ТЧ, ресурсы, реквизиты адресации, общий реквизит) —
+	# если у них есть Indexing, отличный от DontIndex.
+	$idxTargets = @($xmlDoc.SelectNodes("//md:Dimension/md:Properties|//md:Properties[md:Indexing]", $ns))
+	foreach ($p26 in $idxTargets) {
+		$isDim = $p26.ParentNode.LocalName -eq 'Dimension'
+		$sep = $p26.SelectSingleNode("md:DataSeparation", $ns)
+		$isSep = $p26.ParentNode.LocalName -eq 'CommonAttribute' -and $sep -and $sep.InnerText.Trim() -eq 'Separate'
+		$ix = $p26.SelectSingleNode("md:Indexing", $ns)
+		if (-not $isDim -and -not $isSep -and (-not $ix -or $ix.InnerText.Trim() -eq 'DontIndex')) { continue }
+		if (-not (Test-UnlimitedString ($p26.SelectSingleNode("md:Type", $ns)))) { continue }
+		$n26 = $p26.SelectSingleNode("md:Name", $ns)
+		$nm26 = if ($n26) { $n26.InnerText.Trim() } else { '?' }
+		if ($isSep) {
+			Report-Error "26. CommonAttribute '$nm26': unlimited String in a data separator — the load passes but /UpdateDBCfg fails; set a length (e.g. String(150))"
+		} elseif ($isDim) {
+			Report-Error "26. Dimension '$nm26': unlimited String — a dimension is indexed, the load passes but /UpdateDBCfg fails; set a length (e.g. String(150))"
+		} else {
+			Report-Error "26. $($p26.ParentNode.LocalName) '$nm26': unlimited String with Indexing=$($ix.InnerText.Trim()) — the platform rejects the load; set a length or DontIndex"
+		}
+	}
+}
+
+
 # --- Structural-only types: базовая проверка (Name) и значения перечислений, без type-specific правил ---
 if ($structuralOnlyTypes -contains $mdType) {
 	if ($objName -eq "(unknown)") {
@@ -777,6 +815,7 @@ if ($structuralOnlyTypes -contains $mdType) {
 		Report-OK "3. Properties: Name=`"$objName`" (basic structure check for $mdType)"
 	}
 	& $check4
+	& $check26
 	& $finalize
 	if ($script:errors -gt 0) { exit 1 }
 	exit 0
@@ -2200,6 +2239,8 @@ foreach ($ls in @($xmlDoc.SelectNodes($lsXPath, $ns))) {
 	$where = if ($owner -and $owner.InnerText.Trim() -ne $objName) { " of '$($owner.InnerText.Trim())'" } else { "" }
 	Report-Error "25. <$($ls.LocalName)>$where holds plain text '$plain' — a multilingual string needs <v8:item> elements; the platform rejects the load"
 }
+
+& $check26
 
 # --- Check 17: MDObjectRef form — ссылка должна указывать на ОБЪЕКТ метаданных, а не на тип ссылки ---
 # Owners/BasedOn/RegisterRecords/RegisteredDocuments/References содержат путь вида "Catalog.Валюты".
