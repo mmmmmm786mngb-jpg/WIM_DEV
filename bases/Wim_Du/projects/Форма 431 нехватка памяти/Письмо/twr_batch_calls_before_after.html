@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>0420431 - разбить вызовы TWR по пачкам мандатов</title>
+<style>
+  * { box-sizing: border-box; }
+  body { font-family: "Segoe UI", Arial, sans-serif; line-height: 1.55; color: #2c3e50;
+         max-width: 1440px; margin: 0 auto; padding: 24px; background: #f5f7fa; }
+  h1 { color: #1a2b48; font-size: 24px; border-bottom: 3px solid #17a2b8; padding-bottom: 12px; }
+  h2 { color: #1a2b48; font-size: 18px; margin: 0 0 10px; }
+  .card { background: #fff; border-radius: 8px; padding: 16px 20px; margin: 16px 0;
+          box-shadow: 0 1px 4px rgba(0,0,0,0.08); }
+  .intro { background: #eaf6f8; border-left: 4px solid #17a2b8; }
+  .warn { background: #fff8e1; border-left: 4px solid #f0ad4e; }
+  code { background: #eef1f4; padding: 1px 5px; border-radius: 4px;
+         font-family: Consolas, "Courier New", monospace; font-size: 13px; color: #b8005a; }
+  .compare { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; align-items: start; }
+  .pane h2 { display: flex; align-items: center; gap: 8px; }
+  .badge { font-size: 12px; font-weight: 700; color: #fff; border-radius: 10px; padding: 2px 8px; }
+  .badge-was { background: #dc3545; }
+  .badge-now { background: #28a745; }
+  .code { background: #1e1e1e; color: #d4d4d4; border-radius: 6px; overflow-x: auto;
+          font-family: Consolas, "Courier New", monospace; font-size: 12.5px; line-height: 1.45;
+          padding: 8px 0; }
+  .line { white-space: pre; padding: 0 14px; }
+  .line.was { background: rgba(220, 53, 69, 0.35); }
+  .line.now { background: rgba(40, 167, 69, 0.32); }
+  .line.ctx { color: #9aa0a6; }
+  .muted { color: #6b7785; font-size: 13px; margin: 8px 0 0; }
+  ul { margin: 8px 0; } li { margin: 4px 0; }
+  @media (max-width: 1100px) { .compare { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+
+<h1>0420431. Разбить вызовы TWR по пачкам мандатов</h1>
+
+<div class="card intro">
+  <p>Процедура <code>СформироватьВТ_ДанныеПоСтратегиям</code>. Меняется только ветка, где на стратегию уходит один вызов <code>TWR</code> со всем массивом мандатов. Сбор массива, период <code>НачалоПериодаTWR</code>, группировка <code>MANDATE</code> и индекс <code>ДоходностьПоМандатам</code> ниже остаются прежними.</p>
+  <p class="muted">Красные строки - один вызов на всю стратегию. Зеленые строки - цикл порций. Серые строки - контекст, его не трогаем. В копии обработки из IMDEV-9005 вызов стоит на строках 768-772. В модуле со снимка (<code>внКонтроль</code>) тот же вызов на строке 1060.</p>
+</div>
+
+<div class="compare">
+
+  <div class="pane card">
+    <h2><span class="badge badge-was">Было</span> один вызов на стратегию</h2>
+    <div class="code">
+      <div class="line ctx">Если НЕ МассивМандатов.Количество() = 0 Тогда</div>
+      <div class="line ctx">    Группировка      = "MANDATE";</div>
+      <div class="line was">    ДанныеДоходности = Соединение.ВТБ_РасчетДоходностиСервер.TWR(НачалоПериодаTWR, ОтчетОбъект.КонецПериода,</div>
+      <div class="line was">        Соединение.Справочники.Валюты.RUB, ВознаграждениеКакПассив, ?(ТипУчета = "Плановый", Истина, Ложь),</div>
+      <div class="line was">        МассивМандатов, ТекущаяСтрока.Стратегия, Группировка, КоммисияКакПассив, НДФЛКакПассив,);</div>
+      <div class="line ctx">Иначе</div>
+      <div class="line ctx">    ДанныеДоходности = Неопределено;</div>
+      <div class="line ctx">КонецЕсли;</div>
+      <div class="line"> </div>
+      <div class="line ctx">ДоходностьПоМандатам = Соединение.NewObject("Соответствие");</div>
+    </div>
+    <p class="muted">В <code>TWR</code> уходит весь <code>МассивМандатов</code> стратегии. Рыночная стоимость и вводы-выводы за период с 31.12 прошлого года собираются внутри этого одного вызова МО.</p>
+  </div>
+
+  <div class="pane card">
+    <h2><span class="badge badge-now">Стало</span> пачки по 500 мандатов</h2>
+    <div class="code">
+      <div class="line ctx">Если НЕ МассивМандатов.Количество() = 0 Тогда</div>
+      <div class="line ctx">    Группировка = "MANDATE";</div>
+      <div class="line now">    ДанныеДоходности = Неопределено;</div>
+      <div class="line now">    РазмерПорции = 500;</div>
+      <div class="line now">    КоличествоМандатов = МассивМандатов.Количество();</div>
+      <div class="line now">    ИндексМандата = 0;</div>
+      <div class="line"> </div>
+      <div class="line now">    Пока ИндексМандата &lt; КоличествоМандатов Цикл</div>
+      <div class="line"> </div>
+      <div class="line now">        ПорцияМандатов = Соединение.NewObject("Массив");</div>
+      <div class="line now">        КонецПорции = Мин(ИндексМандата + РазмерПорции, КоличествоМандатов);</div>
+      <div class="line"> </div>
+      <div class="line now">        Пока ИндексМандата &lt; КонецПорции Цикл</div>
+      <div class="line now">            ПорцияМандатов.Добавить(МассивМандатов.Получить(ИндексМандата));</div>
+      <div class="line now">            ИндексМандата = ИндексМандата + 1;</div>
+      <div class="line now">        КонецЦикла;</div>
+      <div class="line"> </div>
+      <div class="line now">        ПорцияДоходности = Соединение.ВТБ_РасчетДоходностиСервер.TWR(НачалоПериодаTWR, ОтчетОбъект.КонецПериода,</div>
+      <div class="line now">            Соединение.Справочники.Валюты.RUB, ВознаграждениеКакПассив, ?(ТипУчета = "Плановый", Истина, Ложь),</div>
+      <div class="line now">            ПорцияМандатов, ТекущаяСтрока.Стратегия, Группировка, КоммисияКакПассив, НДФЛКакПассив,);</div>
+      <div class="line"> </div>
+      <div class="line now">        Если ПорцияДоходности = Неопределено Тогда</div>
+      <div class="line now">            Продолжить;</div>
+      <div class="line now">        КонецЕсли;</div>
+      <div class="line"> </div>
+      <div class="line now">        Если ДанныеДоходности = Неопределено Тогда</div>
+      <div class="line now">            ДанныеДоходности = ПорцияДоходности;</div>
+      <div class="line now">        Иначе</div>
+      <div class="line now">            Для Каждого СтрокаПорции Из ПорцияДоходности Цикл</div>
+      <div class="line now">                ЗаполнитьЗначенияСвойств(ДанныеДоходности.Добавить(), СтрокаПорции);</div>
+      <div class="line now">            КонецЦикла;</div>
+      <div class="line now">        КонецЕсли;</div>
+      <div class="line"> </div>
+      <div class="line now">    КонецЦикла;</div>
+      <div class="line ctx">Иначе</div>
+      <div class="line ctx">    ДанныеДоходности = Неопределено;</div>
+      <div class="line ctx">КонецЕсли;</div>
+      <div class="line"> </div>
+      <div class="line ctx">ДоходностьПоМандатам = Соединение.NewObject("Соответствие");</div>
+    </div>
+    <p class="muted">Каждая пачка - отдельный вызов МО. Счетчик памяти вызова после возврата обнуляется. В <code>ДанныеДоходности</code> склеиваются только короткие строки результата, индекс ниже читает их как раньше.</p>
+  </div>
+
+</div>
+
+<div class="card warn">
+  <ul>
+    <li><code>РазмерПорции = 500</code> - стартовое значение. На т-1 его стоит уменьшить, если самая большая стратегия снова упрется в лимит, и увеличить, если пачки проходят с запасом.</li>
+    <li>Группировка остается <code>MANDATE</code>: доходность мандата не зависит от соседей в том же вызове.</li>
+    <li>Период <code>НачалоПериодаTWR</code> не меняется. Это по-прежнему 31.12 предыдущего года .. конец отчета.</li>
+    <li>Вызовы пачек идут последовательно. Параллельный запуск снова сложит память в одном рабочем процессе МО.</li>
+  </ul>
+</div>
+
+</body>
+</html>
