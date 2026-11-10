@@ -86,6 +86,34 @@ def series(i, rnd):
     return out
 
 
+def flows_recorder(c):
+    uid = c.NewObject("УникальныйИдентификатор", "43100000-0431-0431-0431-000000000432")
+    return c.Документы.Операция.ПолучитьСсылку(uid)
+
+
+def add_flows(c, n):
+    """Вводы-выводы стенда: каждому мандату с оценками - по одному обороту 15-го числа каждого месяца
+    (январь-октябрь 2026), сумма от -50 до +100 тысяч рублей. В TWR у такого мандата появляется таблица
+    вводов-выводов, дополненная до каждого дня окна, как на PROD."""
+    rub = c.Справочники.Валюты.RUB
+    rnd = random.Random(432)
+    fs = c.РегистрыНакопления.ВводыВыводыВДУ.СоздатьНаборЗаписей()
+    fs.Отбор.Регистратор.Установить(flows_recorder(c))
+    fs.ДополнительныеСвойства.Вставить("ОтключитьМеханизмРегистрацииОбъектов", True)
+    rows = 0
+    for m, acc in mandates(c, n + N_EMPTY)[:n]:
+        for month in range(1, 11):
+            r = fs.Добавить()
+            r.Период = datetime(2026, month, 15)
+            r.Мандат = m
+            r.СчетМандата = acc
+            r.Валюта = rub
+            r.Сумма = round(rnd.uniform(-5e4, 1e5), 2)
+            rows += 1
+    fs.Записать(True)
+    print("flows", rows)
+
+
 def main():
     cmd = sys.argv[1]
     c = connect()
@@ -93,6 +121,16 @@ def main():
     rs.Отбор.Регистратор.Установить(recorder(c))
     if cmd == "mandates":
         add_mandates(c, int(sys.argv[2]))
+        return
+    if cmd == "flows":
+        add_flows(c, N_DATA)
+        return
+    if cmd == "clearflows":
+        fs = c.РегистрыНакопления.ВводыВыводыВДУ.СоздатьНаборЗаписей()
+        fs.Отбор.Регистратор.Установить(flows_recorder(c))
+        fs.ДополнительныеСвойства.Вставить("ОтключитьМеханизмРегистрацииОбъектов", True)
+        fs.Записать(True)
+        print("flows cleared")
         return
     if cmd == "clear":
         rs.Записать(True)

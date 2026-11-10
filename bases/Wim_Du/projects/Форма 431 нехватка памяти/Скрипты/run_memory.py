@@ -19,6 +19,7 @@ DU = 'Srvr="localhost";Ref="WIM_DU";'
 MO = 'Srvr="localhost";Ref="WIM_MO";'
 CARD = "T431 Сверка TWR (стенд)"
 VARIANTS = [("1.07", None), ("1.08", None)]  # None: размер пачки из РазмерПорцииМандатовTWR (500)
+SPECIAL = "special" in sys.argv  # особая стратегия (SS-010, SS-020, SS-030): построчная свертка
 
 
 def run_job(c, card, keys, variant, size):
@@ -28,7 +29,7 @@ def run_job(c, card, keys, variant, size):
     p.Вставить("МандатыXML", ",".join(keys))
     p.Вставить("НачалоПериодаTWR", datetime(2026, 1, 1))
     p.Вставить("КонецПериода", datetime(2026, 10, 31, 23, 59, 59))
-    p.Вставить("ФлагОсобыеСтратегии", False)
+    p.Вставить("ФлагОсобыеСтратегии", SPECIAL)
     p.Вставить("РазмерПорции", size)
     jp = c.NewObject("Структура")
     jp.Вставить("ИмяМетода", "Т431_Замер")
@@ -72,7 +73,8 @@ def main():
     log = os.path.join(RES, f"memwatch_{stamp}.csv")
     watcher = subprocess.Popen([sys.executable, os.path.join(HERE, "memwatch.py"), log])
     time.sleep(3)
-    lines = [f"Замер {stamp}: мандатов в списке {len(keys)}, период 01.01.2026-31.10.2026"]
+    lines = [f"Замер {stamp}: мандатов в списке {len(keys)}, период 01.01.2026-31.10.2026, "
+             f"стратегия {'особая' if SPECIAL else 'обычная'}"]
     try:
         for n in range(repeats):
             for variant, size in VARIANTS:
