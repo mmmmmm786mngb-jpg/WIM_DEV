@@ -19,8 +19,9 @@ def region_108():
     i = s.index("#Область РасчетTWRПачками")
     j = s.index("#КонецОбласти", i) + len("#КонецОбласти")
     r = s[i:j]
-    assert r.count("\tВозврат 500;") == 1
-    return r.replace("\tВозврат 500;", "\tВозврат РазмерПачкиПроверки;")
+    body = "\tЕсли РазмерПачкиTWR > 0 Тогда\n\t\tВозврат РазмерПачкиTWR;\n\tКонецЕсли;\n\tВозврат 1000;"
+    assert r.count(body) == 1
+    return r.replace(body, "\tВозврат РазмерПачкиПроверки;")
 
 
 def main():

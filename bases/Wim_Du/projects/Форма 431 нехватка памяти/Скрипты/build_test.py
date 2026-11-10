@@ -17,6 +17,7 @@ SRC = os.path.join(TASK, "ОПТИМИЗИРОВАНО", NAME + "_epf")
 DST = os.path.join(TASK, "Тестирование", "T431_src")
 EPF = os.path.join(TASK, "Тестирование", "T431_Сверка.epf")
 CARD = "T431 Сверка TWR (стенд)"
+PACK = "\tЕсли РазмерПачкиTWR > 0 Тогда\n\t\tВозврат РазмерПачкиTWR;\n\tКонецЕсли;\n\tВозврат 1000;"
 
 
 def build():
@@ -26,7 +27,7 @@ def build():
     s = open(p, encoding="utf-8-sig").read().replace("\r\n", "\n")
     h = open(os.path.join(TASK, "Тестирование", "test_harness.bsl"), encoding="utf-8").read()
     k = "Перем МассивСоединений;"
-    assert s.count(k) == 1 and s.count("\tВозврат 500;") == 1
+    assert s.count(k) == 1 and s.count(PACK) == 1
     s = s.replace(k, k + "\nПерем Т431_РазмерПорции;\nПерем Т431_ОтключитьПозиции;\nПерем Т431_Пачек;"
                   "\nПерем Т431_ПачекПоСтрокам;", 1)
     # Счетчики пачек и переключатель свертки по позициям (только в тестовой копии).
@@ -36,8 +37,8 @@ def build():
     s = s.replace(cond, "\t\t\tИли Т431_ОтключитьПозиции = Истина\n" + cond
                   + "\t\t\tТ431_ПачекПоСтрокам = Т431_ПачекПоСтрокам + 1;\n")
     s = s.replace(rel, "\t\tТ431_Пачек = Т431_Пачек + 1;\n" + rel)
-    s = s.replace("\tВозврат 500;", "\tЕсли Т431_РазмерПорции <> Неопределено Тогда\n\t\tВозврат Т431_РазмерПорции;"
-                  "\n\tКонецЕсли;\n\tВозврат 500;")
+    s = s.replace(PACK, "\tЕсли Т431_РазмерПорции <> Неопределено Тогда\n\t\tВозврат Т431_РазмерПорции;"
+                  "\n\tКонецЕсли;\n" + PACK)
     s = s.rstrip("\n") + "\n" + h
     open(p, "w", encoding="utf-8-sig", newline="\r\n").write(s)
     r = subprocess.run(["powershell.exe", "-NoProfile", "-File",
