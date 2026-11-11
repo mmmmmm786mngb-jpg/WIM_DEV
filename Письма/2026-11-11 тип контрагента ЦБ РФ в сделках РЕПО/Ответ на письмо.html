@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>Тип контрагента ЦБ РФ в сделках РЕПО</title>
+</head>
+<body style="margin:0;padding:16px;background:#ffffff;">
+
+<div style="font-family:'Segoe UI',Arial,sans-serif;font-size:14px;line-height:1.5;color:#1f2933;max-width:760px;">
+
+<p style="margin:0 0 12px;">Роман, добрый день!</p>
+
+<p style="margin:0 0 12px;">Посмотрели, как заполняется поле &quot;Тип контрагента ЦБРФ&quot; в сделке РЕПО. Вы правы: при создании сделки через отчет брокера логика из учетной политики не работает. Ниже коротко, а в приложении подробности со схемами.</p>
+
+<!-- ===== Короткий ответ ===== -->
+<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="border-collapse:collapse;margin:0 0 16px;">
+<tr>
+<td bgcolor="#eaf4fb" style="background:#eaf4fb;border-left:5px solid #1f78b4;padding:14px 16px;">
+<div style="font-size:16px;font-weight:bold;color:#1f78b4;margin:0 0 6px;">Коротко</div>
+<div>Документ один и тот же - &quot;Сделка РЕПО&quot;. Но правило &quot;Определять тип контрагента по РЕПО от клиента ДУ&quot; сейчас срабатывает <b>только при работе в карточке сделки</b>, когда пользователь выбирает или меняет портфель, дату или контрагента.</div>
+<div style="margin-top:8px;">Отчет брокера создает сделки сам, без карточки, и это правило <b>не применяет</b>. Он берет тип из карточки контрагента сделки (для Банка ВТБ это &quot;Кредитные организации&quot;), а если там пусто, ставит &quot;Негосударственные финансовые организации&quot;.</div>
+</td>
+</tr>
+</table>
+
+<p style="margin:0 0 6px;font-weight:bold;">Что это значит на практике</p>
+<ul style="margin:0 0 12px;padding-left:22px;">
+<li style="margin-bottom:4px;">Сделка, созданная вручную в портфеле с включенным флагом, получает тип клиента ДУ (для НПФ Альфа - &quot;Негосударственные финансовые организации&quot;).</li>
+<li style="margin-bottom:4px;">Такая же сделка, созданная отчетом брокера, получает тип банка-контрагента (&quot;Кредитные организации&quot;).</li>
+<li style="margin-bottom:4px;">От этого поля зависят счета ЕПС в проводках по сделке. Поэтому одна и та же операция может попасть на разные счета в зависимости от того, как ее завели.</li>
+<li style="margin-bottom:4px;">Описание Алексея из августовского письма верное, но относится только к ручной работе в карточке сделки.</li>
+</ul>
+
+<p style="margin:0 0 6px;font-weight:bold;">Что можно сделать сейчас</p>
+<ul style="margin:0 0 12px;padding-left:22px;">
+<li style="margin-bottom:4px;">После создания сделок отчетом брокера открыть сделку и заново выбрать в ней контрагента (или портфель). Поле пересчитается по правилу учетной политики. Либо выбрать нужный тип вручную. Для сделок, по которым уже сформированы проводки, корректировку лучше согласовать с бухгалтерией.</li>
+<li style="margin-bottom:4px;">Доработать отчет брокера, чтобы он применял то же правило, что и карточка сделки. Это небольшая доработка, оценим отдельно.</li>
+</ul>
+
+<p style="margin:0 0 6px;font-weight:bold;">Что нужно от вас</p>
+<ul style="margin:0 0 16px;padding-left:22px;">
+<li style="margin-bottom:4px;">Подтвердить, что правило учетной политики должно действовать при любом способе создания сделки: вручную, отчетом брокера, общим отчетом брокера и загрузкой через обмен.</li>
+<li style="margin-bottom:4px;">Если да, заведем задачу на доработку.</li>
+</ul>
+
+<p style="margin:0 0 24px;">С уважением,</p>
+
+<!-- ===== Приложение ===== -->
+<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="border-collapse:collapse;margin:8px 0 14px;">
+<tr><td style="border-top:2px solid #9aa5b1;padding-top:10px;font-size:18px;font-weight:bold;color:#3e4c59;">Приложение. Технические подробности</td></tr>
+</table>
+
+<!-- 1. Сравнение способов -->
+<div style="font-size:15px;font-weight:bold;color:#1f78b4;margin:0 0 8px;">1. Как каждый способ создания заполняет поле</div>
+
+<table cellpadding="0" cellspacing="0" border="0" width="100%" style="border-collapse:collapse;font-size:13px;margin:0 0 6px;">
+<tr>
+<th bgcolor="#3e4c59" style="background:#3e4c59;color:#ffffff;padding:8px;border:1px solid #3e4c59;text-align:left;width:22%;">&nbsp;</th>
+<th bgcolor="#2e7d32" style="background:#2e7d32;color:#ffffff;padding:8px;border:1px solid #2e7d32;text-align:left;width:19.5%;">Карточка сделки (вручную)</th>
+<th bgcolor="#c62828" style="background:#c62828;color:#ffffff;padding:8px;border:1px solid #c62828;text-align:left;width:19.5%;">Документ &quot;Отчет брокера&quot;</th>
+<th bgcolor="#c62828" style="background:#c62828;color:#ffffff;padding:8px;border:1px solid #c62828;text-align:left;width:19.5%;">Обработка &quot;Общий отчет брокера&quot;</th>
+<th bgcolor="#c62828" style="background:#c62828;color:#ffffff;padding:8px;border:1px solid #c62828;text-align:left;width:19.5%;">Загрузка документов через обмен НСИ</th>
+</tr>
+<tr>
+<td bgcolor="#f5f7fa" style="background:#f5f7fa;padding:8px;border:1px solid #d5dde5;font-weight:bold;">Читает флаг учетной политики</td>
+<td bgcolor="#e8f5e9" style="background:#e8f5e9;padding:8px;border:1px solid #d5dde5;"><b style="color:#2e7d32;">Да</b></td>
+<td bgcolor="#fdecea" style="background:#fdecea;padding:8px;border:1px solid #d5dde5;"><b style="color:#c62828;">Нет</b></td>
+<td bgcolor="#fdecea" style="background:#fdecea;padding:8px;border:1px solid #d5dde5;"><b style="color:#c62828;">Нет</b></td>
+<td bgcolor="#fdecea" style="background:#fdecea;padding:8px;border:1px solid #d5dde5;"><b style="color:#c62828;">Нет</b></td>
+</tr>
+<tr>
+<td bgcolor="#f5f7fa" style="background:#f5f7fa;padding:8px;border:1px solid #d5dde5;font-weight:bold;">Откуда берется тип</td>
+<td style="padding:8px;border:1px solid #d5dde5;">Флаг включен: клиент портфеля.<br>Флаг выключен: контрагент сделки.</td>
+<td style="padding:8px;border:1px solid #d5dde5;">Контрагент сделки</td>
+<td style="padding:8px;border:1px solid #d5dde5;">Контрагент сделки (если пуст - брокер)</td>
+<td style="padding:8px;border:1px solid #d5dde5;">Контрагент сделки (если пуст - брокер)</td>
+</tr>
+<tr>
+<td bgcolor="#f5f7fa" style="background:#f5f7fa;padding:8px;border:1px solid #d5dde5;font-weight:bold;">Если в карточке тип не указан</td>
+<td style="padding:8px;border:1px solid #d5dde5;">Поле остается пустым</td>
+<td style="padding:8px;border:1px solid #d5dde5;">Негосударственные финансовые организации</td>
+<td style="padding:8px;border:1px solid #d5dde5;">Негосударственные финансовые организации</td>
+<td bgcolor="#fff8e1" style="background:#fff8e1;padding:8px;border:1px solid #d5dde5;">Негосударственные <b>коммерческие</b> организации</td>
+</tr>
+<tr>
+<td bgcolor="#f5f7fa" style="background:#f5f7fa;padding:8px;border:1px solid #d5dde5;font-weight:bold;">Когда заполняет</td>
+<td style="padding:8px;border:1px solid #d5dde5;">При изменении портфеля, даты или контрагента в карточке</td>
+<td style="padding:8px;border:1px solid #d5dde5;">При создании сделки, только если у сделки включен учет ЕПС или НУ ЕПС</td>
+<td style="padding:8px;border:1px solid #d5dde5;">При создании сделки, только если у сделки включен учет ЕПС или НУ ЕПС</td>
+<td style="padding:8px;border:1px solid #d5dde5;">При создании сделки, всегда</td>
+</tr>
+</table>
+<div style="font-size:12px;color:#616e7c;margin:0 0 16px;">Значения &quot;по умолчанию&quot; в трех программных способах тоже не совпадают: при загрузке через обмен подставляется другой тип, чем в отчетах брокера.</div>
+
+<!-- 2. Доля способов -->
+<div style="font-size:15px;font-weight:bold;color:#1f78b4;margin:0 0 8px;">2. Сколько способов создания учитывают настройку</div>
+<table cellpadding="0" cellspacing="0" border="0" width="100%" style="border-collapse:collapse;font-size:13px;margin:0 0 4px;">
+<tr>
+<td width="25%" bgcolor="#2e7d32" style="background:#2e7d32;color:#ffffff;padding:10px 8px;text-align:center;border:2px solid #ffffff;">Карточка сделки</td>
+<td width="25%" bgcolor="#e57373" style="background:#e57373;color:#ffffff;padding:10px 8px;text-align:center;border:2px solid #ffffff;">Отчет брокера</td>
+<td width="25%" bgcolor="#e57373" style="background:#e57373;color:#ffffff;padding:10px 8px;text-align:center;border:2px solid #ffffff;">Общий отчет брокера</td>
+<td width="25%" bgcolor="#e57373" style="background:#e57373;color:#ffffff;padding:10px 8px;text-align:center;border:2px solid #ffffff;">Загрузка через обмен</td>
+</tr>
+</table>
+<div style="font-size:13px;margin:0 0 16px;"><span style="color:#2e7d32;font-weight:bold;">1 из 4</span> способов применяет правило учетной политики. Остальные 3 записывают тип контрагента сделки.</div>
+
+<!-- 3. Схема ручного пути -->
+<div style="font-size:15px;font-weight:bold;color:#1f78b4;margin:0 0 8px;">3. Схема: как правило работает в карточке сделки</div>
+<table cellpadding="0" cellspacing="0" border="0" width="100%" style="border-collapse:collapse;font-size:13px;margin:0 0 16px;">
+<tr>
+<td colspan="3" align="center" style="padding:0;">
+<table cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;"><tr>
+<td bgcolor="#eef2f7" style="background:#eef2f7;border:1px solid #9aa5b1;padding:8px 14px;text-align:center;">Пользователь меняет в карточке сделки<br><b>портфель</b>, <b>дату</b> или <b>контрагента</b></td>
+</tr></table>
+</td>
+</tr>
+<tr><td colspan="3" align="center" style="color:#7b8794;font-size:16px;padding:2px;">&#9660;</td></tr>
+<tr>
+<td colspan="3" align="center" style="padding:0;">
+<table cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;"><tr>
+<td bgcolor="#e3f0fb" style="background:#e3f0fb;border:1px solid #1f78b4;padding:8px 14px;text-align:center;">В учетной политике портфеля на дату сделки<br>включен флаг <b>&quot;Определять тип контрагента по РЕПО от клиента ДУ&quot;</b>?</td>
+</tr></table>
+</td>
+</tr>
+<tr>
+<td width="50%" align="center" style="color:#2e7d32;font-size:13px;padding:4px;"><b>Да</b> &#9660;</td>
+<td width="0" style="padding:0;"></td>
+<td width="50%" align="center" style="color:#c62828;font-size:13px;padding:4px;"><b>Нет</b> &#9660;</td>
+</tr>
+<tr>
+<td align="center" style="padding:0 6px;">
+<table cellpadding="0" cellspacing="0" border="0" width="100%" style="border-collapse:collapse;"><tr>
+<td bgcolor="#e8f5e9" style="background:#e8f5e9;border:1px solid #2e7d32;padding:8px;text-align:center;">Берем <b>клиента портфеля</b><br>(АО &quot;НПФ Альфа&quot;)</td>
+</tr></table>
+</td>
+<td style="padding:0;"></td>
+<td align="center" style="padding:0 6px;">
+<table cellpadding="0" cellspacing="0" border="0" width="100%" style="border-collapse:collapse;"><tr>
+<td bgcolor="#fdecea" style="background:#fdecea;border:1px solid #c62828;padding:8px;text-align:center;">Берем <b>контрагента сделки</b><br>(Банк ВТБ (ПАО))</td>
+</tr></table>
+</td>
+</tr>
+<tr><td colspan="3" align="center" style="color:#7b8794;font-size:16px;padding:2px;">&#9660;</td></tr>
+<tr>
+<td colspan="3" align="center" style="padding:0;">
+<table cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;"><tr>
+<td bgcolor="#fff8e1" style="background:#fff8e1;border:1px solid #e0b100;padding:8px 14px;text-align:center;">В сделку записывается &quot;Тип контрагента ЦБ РФ&quot; из карточки выбранного контрагента</td>
+</tr></table>
+</td>
+</tr>
+</table>
+<div style="font-size:12px;color:#616e7c;margin:-8px 0 16px;">Открытие, запись и проведение сделки поле не пересчитывают. Уже записанная сделка пересчитается, только если в карточке заново выбрать портфель, дату или контрагента.</div>
+
+<!-- 4. Пример из письма -->
+<div style="font-size:15px;font-weight:bold;color:#1f78b4;margin:0 0 8px;">4. Пример из письма: сделка 8298-000000116 от 06.08.2026</div>
+<table cellpadding="0" cellspacing="0" border="0" width="100%" style="border-collapse:collapse;font-size:13px;margin:0 0 6px;">
+<tr>
+<th bgcolor="#3e4c59" style="background:#3e4c59;color:#ffffff;padding:8px;border:1px solid #3e4c59;text-align:left;">Объект</th>
+<th bgcolor="#3e4c59" style="background:#3e4c59;color:#ffffff;padding:8px;border:1px solid #3e4c59;text-align:left;">Значение</th>
+</tr>
+<tr><td style="padding:8px;border:1px solid #d5dde5;">Учетная политика 829800-00000003 от 20.07.2026, портфель ДУ 8298</td><td style="padding:8px;border:1px solid #d5dde5;">Флаг &quot;от клиента ДУ&quot; <b>включен</b></td></tr>
+<tr><td style="padding:8px;border:1px solid #d5dde5;">Клиент портфеля АО &quot;НПФ Альфа&quot;</td><td style="padding:8px;border:1px solid #d5dde5;">Негосударственные финансовые организации</td></tr>
+<tr><td style="padding:8px;border:1px solid #d5dde5;">Контрагент сделки Банк ВТБ (ПАО)</td><td style="padding:8px;border:1px solid #d5dde5;">Кредитные организации</td></tr>
+<tr><td bgcolor="#fff8e1" style="background:#fff8e1;padding:8px;border:1px solid #d5dde5;"><b>В сделке</b></td><td bgcolor="#fff8e1" style="background:#fff8e1;padding:8px;border:1px solid #d5dde5;"><b>Негосударственные финансовые организации</b></td></tr>
+</table>
+
+<table cellpadding="0" cellspacing="0" border="0" width="100%" style="border-collapse:collapse;font-size:13px;margin:8px 0 6px;">
+<tr>
+<th bgcolor="#3e4c59" style="background:#3e4c59;color:#ffffff;padding:8px;border:1px solid #3e4c59;text-align:left;">Если сделку создали...</th>
+<th bgcolor="#3e4c59" style="background:#3e4c59;color:#ffffff;padding:8px;border:1px solid #3e4c59;text-align:left;">В сделке было бы</th>
+</tr>
+<tr><td style="padding:8px;border:1px solid #d5dde5;">вручную в карточке</td><td bgcolor="#e8f5e9" style="background:#e8f5e9;padding:8px;border:1px solid #d5dde5;">Негосударственные финансовые организации (тип клиента ДУ, по правилу)</td></tr>
+<tr><td style="padding:8px;border:1px solid #d5dde5;">отчетом брокера, у Банка ВТБ тип заполнен</td><td bgcolor="#fdecea" style="background:#fdecea;padding:8px;border:1px solid #d5dde5;">Кредитные организации (тип банка)</td></tr>
+<tr><td style="padding:8px;border:1px solid #d5dde5;">отчетом брокера, у Банка ВТБ тип был пустой</td><td bgcolor="#fff8e1" style="background:#fff8e1;padding:8px;border:1px solid #d5dde5;">Негосударственные финансовые организации (значение по умолчанию, флаг не участвует)</td></tr>
+</table>
+<div style="font-size:12px;color:#616e7c;margin:0 0 16px;">Значение в этой сделке могло появиться двумя путями: по правилу учетной политики или как значение по умолчанию. На экране они неотличимы. Карточка Банка ВТБ обновлялась обменом (&quot;Информация на 11.08.26&quot;), поэтому на 06.08.2026 тип в ней мог быть не заполнен. Точно покажет история изменений сделки и карточки Банка ВТБ.</div>
+
+<!-- 5. Влияние на учет -->
+<div style="font-size:15px;font-weight:bold;color:#1f78b4;margin:0 0 8px;">5. Как поле влияет на учет после записи</div>
+<table cellpadding="0" cellspacing="0" border="0" width="100%" style="border-collapse:collapse;font-size:13px;margin:0 0 6px;">
+<tr>
+<td width="31%" valign="top" bgcolor="#fff8e1" style="background:#fff8e1;border:1px solid #e0b100;padding:8px;">Записанное в сделке <b>&quot;Тип контрагента ЦБРФ&quot;</b></td>
+<td width="4%" align="center" style="color:#7b8794;font-size:16px;">&#9654;</td>
+<td width="31%" valign="top" bgcolor="#eef2f7" style="background:#eef2f7;border:1px solid #9aa5b1;padding:8px;">Счета ЕПС подбираются по виду операции РЕПО и этому типу</td>
+<td width="4%" align="center" style="color:#7b8794;font-size:16px;">&#9654;</td>
+<td width="30%" valign="top" bgcolor="#eef2f7" style="background:#eef2f7;border:1px solid #9aa5b1;padding:8px;">Проводки первой и второй части, оплаты комиссий</td>
+</tr>
+</table>
+<ul style="margin:6px 0 16px;padding-left:22px;font-size:13px;">
+<li style="margin-bottom:4px;">При формировании проводок флаг учетной политики повторно не читается: используется значение, уже записанное в сделке.</li>
+<li style="margin-bottom:4px;">Символы ОФР по расходам на комиссии тоже берут тип из сделки. Флаг здесь учитывается, только если поле в сделке пустое.</li>
+<li style="margin-bottom:4px;">При включенном учете ЕПС поле обязательно к заполнению, но сама сделка его не вычисляет: проверка требует значение, правило не применяет.</li>
+</ul>
+
+<!-- 6. Для разработки -->
+<div style="font-size:15px;font-weight:bold;color:#1f78b4;margin:0 0 8px;">6. Справочно для разработки</div>
+<table cellpadding="0" cellspacing="0" border="0" width="100%" style="border-collapse:collapse;font-size:13px;margin:0 0 8px;">
+<tr>
+<th bgcolor="#3e4c59" style="background:#3e4c59;color:#ffffff;padding:8px;border:1px solid #3e4c59;text-align:left;width:38%;">Где</th>
+<th bgcolor="#3e4c59" style="background:#3e4c59;color:#ffffff;padding:8px;border:1px solid #3e4c59;text-align:left;">Что происходит</th>
+</tr>
+<tr><td style="padding:8px;border:1px solid #d5dde5;font-family:Consolas,'Courier New',monospace;font-size:12px;">Документ УчетнаяПолитика, реквизит ОпределятьТипКонтрагентаПоРепоОтКлиентаДУ</td><td style="padding:8px;border:1px solid #d5dde5;">При проведении пишется в параметры портфеля, читается на дату сделки</td></tr>
+<tr><td style="padding:8px;border:1px solid #d5dde5;font-family:Consolas,'Courier New',monospace;font-size:12px;">БизнесПроцесс.СделкиРЕПО, форма ФормаБизнесПроцесса, процедура ОбновитьТипКонтрагента</td><td style="padding:8px;border:1px solid #d5dde5;">Единственное место, где правило применяется. Вызывается из ПортфельПриИзменении, ДатаПриИзменении (через ИзмененПортфель) и КонтрпартнерПриИзменении</td></tr>
+<tr><td style="padding:8px;border:1px solid #d5dde5;font-family:Consolas,'Courier New',monospace;font-size:12px;">Документ ОтчетБрокера, модуль объекта, СделкиРЕПОСоздатьСделку</td><td style="padding:8px;border:1px solid #d5dde5;">Тип из карточки контрагента, иначе НФО; только при ЕПС или НУ ЕПС. Запускается командой &quot;Создать сделки РЕПО&quot; в фоне</td></tr>
+<tr><td style="padding:8px;border:1px solid #d5dde5;font-family:Consolas,'Courier New',monospace;font-size:12px;">Обработка ОбщийОтчетБрокера, СоздатьБПРЕПО</td><td style="padding:8px;border:1px solid #d5dde5;">То же правило, что в документе Отчет брокера</td></tr>
+<tr><td style="padding:8px;border:1px solid #d5dde5;font-family:Consolas,'Courier New',monospace;font-size:12px;">Обработки ВыгрузкаЗагрузкаДокументовНСИ и ВыгрузкаЗагрузкаДокументовНСИ_2_0</td><td style="padding:8px;border:1px solid #d5dde5;">Тип из карточки контрагента, иначе &quot;Негосударственные коммерческие организации&quot;</td></tr>
+<tr><td style="padding:8px;border:1px solid #d5dde5;font-family:Consolas,'Courier New',monospace;font-size:12px;">Модуль объекта СделкиРЕПО, подписки на события</td><td style="padding:8px;border:1px solid #d5dde5;">Поле не заполняют; ОбработкаПроверкиЗаполнения при ЕПС только требует заполненности</td></tr>
+</table>
+
+<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="border-collapse:collapse;margin:0 0 16px;">
+<tr>
+<td bgcolor="#e8f5e9" style="background:#e8f5e9;border-left:5px solid #2e7d32;padding:10px 14px;font-size:13px;">
+<b>Предлагаемая доработка.</b> Вынести правило из формы в общую серверную функцию бизнес-процесса СделкиРЕПО (портфель, контрагент, дата - тип контрагента ЦБ РФ) и вызывать ее из формы и из всех трех программных способов создания до записи сделки. Заодно согласовать единое значение по умолчанию для пустого типа. Доработка делается в расширении, типовой код не меняется.
+</td>
+</tr>
+</table>
+
+</div>
+</body>
+</html>
