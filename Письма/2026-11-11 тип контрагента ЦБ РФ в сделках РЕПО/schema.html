@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>Тип контрагента ЦБ РФ в сделке РЕПО: откуда заполняется</title>
+<style>
+  body { margin: 0; font-family: "Segoe UI", Arial, sans-serif; background: #f4f6f8; color: #1f2933; }
+  .page { max-width: 1180px; margin: 0 auto; padding: 28px 20px 48px; }
+  h1 { font-size: 22px; margin: 0 0 8px; }
+  h2 { font-size: 16px; margin: 28px 0 12px; }
+  p { line-height: 1.45; }
+  .lead { background: #fff; border-left: 4px solid #17a2b8; padding: 14px 16px; border-radius: 6px; }
+  .answer { background: #fff8e1; border: 1px solid #f0d78c; padding: 14px 16px; border-radius: 6px; }
+  code { font-family: Consolas, "Courier New", monospace; font-size: 13px; }
+  .cols { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; align-items: start; }
+  .col { background: #fff; border-radius: 8px; padding: 12px; border-top: 6px solid #6c757d; box-shadow: 0 1px 2px rgba(0,0,0,.06); }
+  .col.form { border-top-color: #28a745; }
+  .col.broker { border-top-color: #dc3545; }
+  .col h3 { margin: 0 0 10px; font-size: 15px; }
+  .box { border: 1px solid #d5dde5; border-radius: 6px; padding: 8px 10px; margin: 0 0 8px; background: #fbfcfd; font-size: 13px; line-height: 1.35; }
+  .box strong { display: block; margin-bottom: 2px; }
+  .box.decision { background: #eef6ff; border-color: #b9d4f0; }
+  .box.result { background: #eef8f0; border-color: #b7e0c2; }
+  .box.warn { background: #fdecea; border-color: #f5c2c0; }
+  .arrow { text-align: center; color: #6b7785; font-size: 12px; margin: -2px 0 6px; }
+  .common { background: #fff; border-radius: 8px; padding: 14px 16px; border-top: 6px solid #17a2b8; }
+  .row { display: flex; gap: 10px; flex-wrap: wrap; }
+  .row .box { flex: 1 1 240px; }
+  .note { font-size: 13px; color: #52606d; }
+  @media (max-width: 900px) { .cols { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<div class="page">
+  <h1>Откуда в сделке РЕПО берется «Тип контрагента ЦБ РФ»</h1>
+  <p class="lead">Бизнес-процесс один: <code>СделкиРЕПО</code>. Правило флага учетной политики живет только в модуле формы. Другой способ создать ту же сделку это правило не вызывает.</p>
+
+  <h2>Почему подмена зависит от пути</h2>
+  <div class="answer">
+    <p>Подмена «контрагент сделки -&gt; клиент портфеля» сделана процедурой формы <code>ОбновитьТипКонтрагента</code>. Ее вызывают только три события формы: изменение портфеля, изменение даты, изменение контрагента.</p>
+    <p><code>ОбработкаЗаполнения</code>, <code>ПередЗаписью</code> и подписки на события объекта поле не заполняют. <code>ОбработкаПроверкиЗаполнения</code> при ЕПС лишь требует, чтобы поле было заполнено.</p>
+    <p>Отчет брокера и общий отчет брокера пишут реквизит сами и сразу записывают бизнес-процесс. Флаг они не читают. Поэтому та же сделка, созданная не с формы, получает другой тип.</p>
+  </div>
+
+  <h2>Общий источник флага</h2>
+  <div class="common">
+    <div class="box"><strong>Документ «Учетная политика»</strong>Реквизит <code>ОпределятьТипКонтрагентаПоРепоОтКлиентаДУ</code></div>
+    <div class="arrow">проведение, ДвиженияПараметровПортфеля</div>
+    <div class="box"><strong>Регистр сведений «Значения параметров портфеля»</strong>Параметр с тем же именем, на дату документа, по портфелю</div>
+    <p class="note">Форма читает регистр на дату сделки. Сравнение строгое: значение должно быть равно Истина. Пустой параметр для этой ветки равен выключенному флагу.</p>
+  </div>
+
+  <h2>Три способа получить значение в сделке</h2>
+  <div class="cols">
+    <div class="col form">
+      <h3>Форма сделки</h3>
+      <div class="box"><strong>Действие пользователя</strong>Сменили портфель, дату или контрагента (элемент Контрпартнер)</div>
+      <div class="arrow">v</div>
+      <div class="box"><strong>Форма</strong><code>ИзмененПортфель</code> или <code>КонтрпартнерПриИзмененииНаСервере</code></div>
+      <div class="arrow">v</div>
+      <div class="box"><strong>ОбновитьТипКонтрагента</strong>Источник по умолчанию: контрагент сделки</div>
+      <div class="arrow">v</div>
+      <div class="box decision"><strong>Флаг на дату сделки = Истина?</strong>Да: источник = клиент портфеля<br>Нет: источник остается контрагентом сделки</div>
+      <div class="arrow">v</div>
+      <div class="box result"><strong>Реквизит сделки</strong><code>ТипКонтрагентаЦБРФ</code> карточки выбранного источника. Открытие формы само по себе поле не пересчитывает.</div>
+    </div>
+
+    <div class="col broker">
+      <h3>Документ «Отчет брокера»</h3>
+      <div class="box"><strong>Команда формы</strong><code>СоздатьСделкиРЕПО</code></div>
+      <div class="arrow">v</div>
+      <div class="box"><strong>Фоновое задание</strong><code>Документы.ОтчетБрокера.СоздатьСделкиРЕПО</code></div>
+      <div class="arrow">v</div>
+      <div class="box"><strong>Объект документа</strong><code>СоздатьСделкиРЕПО</code> -&gt; <code>СоздатьДанныеСделкиРЕПО</code> -&gt; <code>СделкиРЕПОСоздатьСделку</code></div>
+      <div class="arrow">v</div>
+      <div class="box decision"><strong>ЕПС или НУ_ЕПС?</strong>Нет: этот блок тип не заполняет<br>Да: см. ниже</div>
+      <div class="arrow">v</div>
+      <div class="box warn"><strong>Флаг не читается</strong>Тип из карточки контрагента сделки. Если пусто: «Негосударственные финансовые организации». Затем Записать().</div>
+    </div>
+
+    <div class="col broker">
+      <h3>Обработка «Общий отчет брокера»</h3>
+      <div class="box"><strong>Команда формы</strong><code>СоздатьЗавершитьСделкиРЕПО</code></div>
+      <div class="arrow">v</div>
+      <div class="box"><strong>Форма, сервер</strong><code>СоздатьБПРЕПОНаСервере</code>. Тот же метод еще зовет <code>СоздатьВсеОбъектыНаСервере</code></div>
+      <div class="arrow">v</div>
+      <div class="box"><strong>Объект обработки</strong><code>СоздатьБПРЕПО</code></div>
+      <div class="arrow">v</div>
+      <div class="box"><strong>Контрагент сделки</strong>Контрпартнер строки. Если пусто, подставляется брокер обработки</div>
+      <div class="arrow">v</div>
+      <div class="box warn"><strong>Флаг не читается</strong>При ЕПС или НУ_ЕПС тип из карточки этого контрагента, иначе то же предопределенное значение. Затем запись.</div>
+    </div>
+  </div>
+
+  <h2>Что происходит с уже записанным полем</h2>
+  <div class="common">
+    <div class="row">
+      <div class="box"><strong>Счета ЕПС</strong><code>УчетЕПСПовтИсп.СчетаРЕПО(ВидОперации, ТипКонтрагентаЦБРФ)</code>. Берут реквизит сделки как есть. Флаг повторно не смотрят.</div>
+      <div class="box"><strong>Символ ОФР по комиссиям</strong><code>СимволыОФР_РасходПоКомиссиям</code> флаг читает, но если реквизит сделки уже заполнен, использует его. В карточку клиента идет только при пустом поле. Реквизит сделки эта функция не перезаписывает.</div>
+    </div>
+    <p class="note">Пример со скриншотов (сделка 8298-000000116, портфель НПФ Альфа, контрагент ВТБ) совпадает с путем формы: в сделке тип клиента «Негосударственные финансовые организации», а не «Кредитные организации» из карточки ВТБ. Отчет брокера при заполненном типе ВТБ записал бы кредитную организацию.</p>
+  </div>
+</div>
+</body>
+</html>
