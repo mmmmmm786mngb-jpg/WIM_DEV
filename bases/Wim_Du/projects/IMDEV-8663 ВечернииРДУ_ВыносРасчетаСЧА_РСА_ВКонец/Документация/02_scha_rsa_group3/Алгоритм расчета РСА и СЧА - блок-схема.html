@@ -1,0 +1,557 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Алгоритм расчета РСА и СЧА</title>
+<style>
+    * { box-sizing: border-box; }
+    :root {
+        --ink: #222;
+        --muted: #5a6577;
+        --line: #8a96a8;
+        --bg: #f4f6f8;
+        --page: #fff;
+        --reg: #1f3c88;  --reg-bg: #eaf0fb;
+        --doc: #1e7e34;  --doc-bg: #eaf7ed;
+        --qry: #6f42c1;  --qry-bg: #f3effa;
+        --wr:  #b35c00;  --wr-bg:  #fdf1e3;
+        --ext: #c0392b;  --ext-bg: #fdecee;
+        --dec: #8a6d00;  --dec-bg: #fff8db;
+    }
+    body {
+        font-family: Calibri, "Segoe UI", Arial, sans-serif;
+        font-size: 15px; line-height: 1.5; color: var(--ink);
+        background: var(--bg); margin: 0;
+    }
+    .page { max-width: 1180px; margin: 0 auto; background: var(--page); padding-bottom: 48px; box-shadow: 0 0 18px rgba(0,0,0,.08); }
+    header.doc-head { background: linear-gradient(135deg, #1f3c88 0%, #2c5aa0 100%); color: #fff; padding: 30px 44px 24px; }
+    header.doc-head .kicker { font-size: 13px; letter-spacing: 1.2px; text-transform: uppercase; opacity: .85; margin-bottom: 8px; }
+    header.doc-head h1 { margin: 0 0 10px; font-size: 27px; line-height: 1.25; font-weight: 600; }
+    header.doc-head .sub { font-size: 16px; opacity: .92; }
+    .content { padding: 0 44px; }
+    h2 { font-size: 21px; color: #1f3c88; margin: 36px 0 14px; padding-bottom: 8px; border-bottom: 2px solid #e3e8ef; }
+    h3 { font-size: 17px; color: #24365c; margin: 24px 0 10px; }
+    p { margin: 0 0 12px; }
+    code, .mono { font-family: Consolas, "Courier New", monospace; font-size: 13px; }
+    code { background: #f0f3f7; padding: 1px 5px; border-radius: 3px; }
+
+    .legend { display: flex; flex-wrap: wrap; gap: 10px 18px; margin: 18px 0 6px; font-size: 13.5px; }
+    .legend span { display: inline-flex; align-items: center; gap: 7px; }
+    .legend i { width: 18px; height: 14px; border-radius: 3px; border: 2px solid; display: inline-block; }
+
+    .formula { border-left: 5px solid #1f3c88; background: #eef2f9; padding: 14px 18px; border-radius: 0 4px 4px 0; margin: 16px 0; }
+    .formula .row { font-family: Consolas, "Courier New", monospace; font-size: 14.5px; margin: 4px 0; }
+    .formula b { color: #1f3c88; }
+
+    /* ---------- блок-схема ---------- */
+    .flow { display: flex; flex-direction: column; align-items: center; margin: 20px 0 10px; }
+    .n {
+        width: 100%; max-width: 640px; border: 2px solid; border-radius: 7px;
+        padding: 10px 14px; font-size: 14px; position: relative;
+    }
+    .n .t { font-weight: 700; margin-bottom: 3px; }
+    .n .src { font-size: 12px; color: var(--muted); margin-top: 5px; font-family: Consolas, "Courier New", monospace; }
+    .n ul { margin: 4px 0 0; padding-left: 18px; }
+    .n li { margin: 1px 0; }
+    .n.reg { border-color: var(--reg); background: var(--reg-bg); }
+    .n.doc { border-color: var(--doc); background: var(--doc-bg); }
+    .n.qry { border-color: var(--qry); background: var(--qry-bg); }
+    .n.wr  { border-color: var(--wr);  background: var(--wr-bg); }
+    .n.ext { border-color: var(--ext); background: var(--ext-bg); }
+    .n.term { border-radius: 30px; text-align: center; background: #263552; color: #fff; border-color: #263552; max-width: 420px; font-weight: 600; }
+    .n.dec {
+        border-color: var(--dec); background: var(--dec-bg); text-align: center;
+        clip-path: polygon(4% 0, 96% 0, 100% 50%, 96% 100%, 4% 100%, 0 50%);
+        border-width: 0; outline: none; padding: 12px 40px;
+        box-shadow: inset 0 0 0 2px var(--dec);
+    }
+    .n.dec .t { color: #5c4a00; }
+    .num {
+        position: absolute; left: -13px; top: -13px; width: 26px; height: 26px; border-radius: 50%;
+        background: #263552; color: #fff; font-size: 12.5px; font-weight: 700;
+        display: flex; align-items: center; justify-content: center;
+    }
+    .n.dec .num { left: 14px; top: 4px; }
+
+    .arr { width: 2px; height: 26px; background: var(--line); position: relative; margin-bottom: 7px; }
+    .arr::after {
+        content: ""; position: absolute; left: -5px; bottom: -8px;
+        border-left: 6px solid transparent; border-right: 6px solid transparent; border-top: 9px solid var(--line);
+    }
+    .arr.short { height: 14px; }
+
+    .branch { display: grid; grid-template-columns: 1fr 1fr; gap: 0 26px; width: 100%; max-width: 1060px; position: relative; padding-top: 0; }
+    .branch.three { grid-template-columns: 1fr 1fr 1fr; gap: 0 18px; }
+    .branch .col { display: flex; flex-direction: column; align-items: center; position: relative; }
+    .branch .col::before { content: ""; position: absolute; top: 0; height: 2px; background: var(--line); left: -13px; right: -13px; }
+    .branch .col:first-child::before { left: 50%; }
+    .branch .col:last-child::before { right: 50%; }
+    .branch.three .col::before { left: -9px; right: -9px; }
+    .branch.three .col:first-child::before { left: 50%; }
+    .branch.three .col:last-child::before { right: 50%; }
+    .branch .col .n { max-width: 100%; }
+    .lbl {
+        display: inline-block; font-size: 12.5px; font-weight: 700; padding: 1px 10px; border-radius: 10px;
+        margin: 6px 0 2px; background: #fff; border: 1.5px solid var(--line); color: #34405a;
+    }
+    .lbl.yes { border-color: #1e7e34; color: #1e7e34; }
+    .lbl.no  { border-color: #c0392b; color: #c0392b; }
+    .stub { width: 2px; height: 14px; background: var(--line); }
+    .merge { width: 100%; max-width: 1060px; display: grid; grid-template-columns: 1fr 1fr; gap: 0 26px; }
+    .merge.three { grid-template-columns: 1fr 1fr 1fr; gap: 0 18px; }
+    .merge div { height: 14px; position: relative; }
+    .merge div::before { content: ""; position: absolute; left: 50%; top: 0; width: 2px; height: 14px; background: var(--line); }
+    .merge div::after { content: ""; position: absolute; bottom: 0; height: 2px; background: var(--line); left: -13px; right: -13px; }
+    .merge div:first-child::after { left: 50%; }
+    .merge div:last-child::after { right: 50%; }
+    .merge.three div::after { left: -9px; right: -9px; }
+    .merge.three div:first-child::after { left: 50%; }
+    .merge.three div:last-child::after { right: 50%; }
+    .merge div.none::before, .merge div.none::after { display: none; }
+    .grow { flex: 1; width: 2px; background: var(--line); min-height: 10px; }
+    .endnote { font-size: 12.5px; color: var(--muted); text-align: center; margin-top: 6px; }
+
+    .stage { width: 100%; max-width: 1060px; margin: 8px 0; padding: 4px 0 2px; font-size: 12px; letter-spacing: 1px;
+        text-transform: uppercase; color: var(--muted); border-bottom: 1px dashed #c6cfdb; text-align: left; }
+
+    .p {
+        display: inline-block; min-width: 26px; padding: 0 5px; margin-right: 3px; border-radius: 9px;
+        background: #0d6e7a; color: #fff; font-size: 11.5px; font-weight: 700; text-align: center; line-height: 17px;
+        font-family: Calibri, "Segoe UI", Arial, sans-serif; vertical-align: 1px;
+    }
+    .p.tk { background: #7a4d0d; }
+    .n.par { border-color: #0d6e7a; background: #e6f5f6; max-width: 1060px; }
+    .n.par .cols { display: grid; grid-template-columns: 1fr 1fr; gap: 2px 24px; margin-top: 6px; }
+    .n.par .cols div { font-size: 13.5px; }
+    .n.par .dim { color: var(--muted); }
+    .n li.cond { list-style: none; margin-left: -18px; }
+    .n .sub { font-weight: 700; margin-top: 6px; font-size: 13px; color: #3b2a66; }
+    @media (max-width: 820px) { .n.par .cols { grid-template-columns: 1fr; } }
+
+    table.grid { width: 100%; border-collapse: collapse; margin: 12px 0 20px; font-size: 13.5px; }
+    table.grid th { background: #eef2f7; border: 1px solid #d5dbe3; padding: 8px 10px; text-align: left; color: #26385c; font-weight: 600; }
+    table.grid td { border: 1px solid #d5dbe3; padding: 7px 10px; vertical-align: top; }
+    table.grid tr:nth-child(even) td { background: #fafbfc; }
+    td.c { text-align: center; white-space: nowrap; }
+    .plus { color: #1e7e34; font-weight: 700; }
+    .minus { color: #c0392b; font-weight: 700; }
+    .zero { color: #9aa3b1; }
+    .box { border-left: 5px solid #e0a800; background: #fdf6e3; padding: 12px 16px; margin: 14px 0; border-radius: 0 4px 4px 0; }
+    .box .t { font-weight: 600; margin-bottom: 4px; }
+
+    @media (max-width: 820px) {
+        .content { padding: 0 16px; }
+        header.doc-head { padding: 22px 16px; }
+        .branch, .branch.three, .merge, .merge.three { grid-template-columns: 1fr; gap: 10px; }
+        .merge { display: none; }
+        .branch .col { border-top: 0; }
+        table.grid { display: block; overflow-x: auto; }
+    }
+</style>
+</head>
+<body>
+<div class="page">
+<header class="doc-head">
+    <div class="kicker">ДУ 1.5 &middot; регламентная операция 1000</div>
+    <h1>Алгоритм расчета РСА и СЧА</h1>
+    <div class="sub">Блок-схема по коду конфигурации: от плана регламентных операций до записи в регистр РСА/СЧА</div>
+</header>
+
+<div class="content">
+
+<h2>Итоговая формула</h2>
+<div class="formula">
+    <div class="row"><b>РСА</b> = &Sigma; БУ.СуммаДляРСА + &Sigma; УУ.СуммаДляРСА + &Sigma; СС.Дебиторка</div>
+    <div class="row"><b>СЧА</b> = &Sigma; БУ.СуммаДляСЧА + &Sigma; УУ.СуммаДляСЧА + &Sigma; СС.Дебиторка - &Sigma; СС.Кредиторка</div>
+</div>
+<p>Слагаемые формируются тремя запросами (БУ, УУ, справедливая стоимость незавершенных сделок Т+) и сохраняются строками в табличных частях <code>РасчетРСА</code> и <code>РасчетСЧА</code> документа <code>РасчетСЧА_РСА</code>. Итоговые суммы документа - это итоги колонки <code>Сумма</code> табличных частей (пересчет в <code>ПередЗаписью</code>). Состав слагаемых задан в коде; меняется он только параметрами договора ДУ и типом клиента (раздел "Детализация" ниже).</p>
+
+<div class="legend">
+    <span><i style="border-color:var(--reg);background:var(--reg-bg)"></i>Регламентные операции</span>
+    <span><i style="border-color:var(--doc);background:var(--doc-bg)"></i>Документ РасчетСЧА_РСА</span>
+    <span><i style="border-color:var(--qry);background:var(--qry-bg)"></i>Запросы к данным</span>
+    <span><i style="border-color:var(--wr);background:var(--wr-bg)"></i>Запись и проведение</span>
+    <span><i style="border-color:var(--ext);background:var(--ext-bg)"></i>Внешняя обработка</span>
+    <span><i style="border-color:var(--dec);background:var(--dec-bg)"></i>Условие</span>
+</div>
+
+<h2>Блок-схема</h2>
+
+<div class="flow">
+
+    <div class="n term">Закрытие периода по пачке договоров ДУ</div>
+    <div class="arr"></div>
+
+    <div class="stage">Подготовка данных (только пакетный режим)</div>
+
+    <div class="n dec"><span class="num">1</span>
+        <div class="t">Константа ИспользоватьПредварительныеЗапросыДляРегламентовСЧА_РСА = Истина<br>и группа операций = "3. Расчет СЧА/РСА"?</div>
+        <div class="src">Справочник.РегламентныеПериоды, модуль менеджера</div>
+    </div>
+    <div class="branch">
+        <div class="col">
+            <span class="lbl yes">Да</span><div class="stub"></div>
+            <div class="n reg"><span class="num">2</span>
+                <div class="t">Пакетный расчет по всей пачке</div>
+                <ul>
+                    <li><code>ЗаполнитьПараметрыСохраненияПакетнымиДаннымиГруппыСЧА</code></li>
+                    <li>вызывает <code>РасчетСЧА_РСА.ПолучитьСуммыРСА_СЧА_Пакетно</code></li>
+                    <li>параметры всех договоров пачки читаются одним запросом (<code>ЗначенияПараметровДоговоровДУПакетно</code>)</li>
+                    <li>договоры группируются по сигнатуре <span class="p">П1</span>...<span class="p">П9</span> + <span class="p tk">ТК</span> (блок 8а): в одной группе одинаковые наборы счетов и ветки запросов</li>
+                    <li>на каждую группу: запросы БУ, УУ и СС (блоки 9-11) с отбором <code>ДоговорДУ В (&amp;ДоговорыГруппы)</code></li>
+                    <li>результат раскладывается: договор -&gt; ТаблицаБУ, ТаблицаУУ</li>
+                </ul>
+            </div>
+            <div class="arr short"></div>
+            <div class="n dec"><div class="t">Исключение при пакетном расчете?</div></div>
+            <div class="branch" style="max-width:100%">
+                <div class="col"><span class="lbl yes">Да</span><div class="stub"></div>
+                    <div class="n reg" style="font-size:13px">Запись в журнал регистрации "IMDEV-8663.2", готовых данных нет</div><div class="grow"></div></div>
+                <div class="col"><span class="lbl no">Нет</span><div class="stub"></div>
+                    <div class="n reg" style="font-size:13px">ДополнительныеДанные операции 1000 = Структура(ТаблицаБУ, ТаблицаУУ)</div><div class="grow"></div></div>
+            </div>
+            <div class="merge" style="max-width:100%"><div></div><div></div></div>
+            <div class="grow"></div>
+        </div>
+        <div class="col">
+            <span class="lbl no">Нет</span><div class="stub"></div>
+            <div class="n reg"><div class="t">Готовых данных нет</div>Каждый договор будет посчитан однодоговорным запросом</div>
+            <div class="grow"></div>
+        </div>
+    </div>
+    <div class="merge"><div></div><div></div></div>
+    <div class="arr"></div>
+
+    <div class="stage">Запуск операции по договору</div>
+
+    <div class="n reg"><span class="num">3</span>
+        <div class="t">План регламентных операций ДУ по договору</div>
+        Операции <code>РасчетРСА_БУ</code> и (или) <code>РасчетСЧА_БУ</code> отмечены к выполнению. Обе операции выполняются одним вызовом общей процедуры.
+        <div class="src">Документ.ПланРегламентныхОперацийДУ -&gt; Справочник.ВидыОперацийЗакрытияПериода.ВыполнитьИсполняемуюПроцедуруЗакрытияПериода</div>
+    </div>
+    <div class="arr"></div>
+
+    <div class="n dec"><span class="num">4</span>
+        <div class="t">Вид операции: ИспользоватьВнешнююОбработку = Истина?</div>
+        <div class="src">реквизиты ИспользоватьВнешнююОбработку, ВнешняяОбработка, ИсполняемаяПроцедура</div>
+    </div>
+    <div class="branch">
+        <div class="col">
+            <span class="lbl yes">Да</span><div class="stub"></div>
+            <div class="n ext"><span class="num">5</span>
+                <div class="t">Внешний алгоритм</div>
+                <code>ДополнительныеОтчетыИОбработки.ВыполнитьКомандуОбработкиПоПараметрам(ВнешняяОбработка, ИдентификаторКоманды, ...)</code>
+                <div style="margin-top:6px">Расчет полностью определяется подключенной обработкой; дальнейшие блоки схемы не выполняются. В начальном заполнении справочника флаг не установлен.</div>
+            </div>
+            <div class="arr short"></div>
+            <div class="n term" style="background:#7a2a20;border-color:#7a2a20">Конец (внешняя обработка)</div>
+            <div class="grow" style="background:transparent"></div>
+        </div>
+        <div class="col">
+            <span class="lbl no">Нет (поставка)</span><div class="stub"></div>
+            <div class="n reg"><span class="num">6</span>
+                <div class="t">Выполнить(ИсполняемаяПроцедура + "(...)")</div>
+                Строка процедуры: <code>ИсполняемыеПроцедурыЗакрытияПериода.Операция_1000_РасчетРСА_СЧА</code>. Если для нее есть ДополнительныеДанные из блока 2 - передаются последним параметром.
+            </div>
+            <div class="grow"></div>
+        </div>
+    </div>
+    <div class="merge"><div class="none"></div><div></div></div>
+    <div class="arr"></div>
+
+    <div class="stage">Операция 1000</div>
+
+    <div class="n doc"><span class="num">7</span>
+        <div class="t">Операция_1000_РасчетРСА_СЧА</div>
+        <ul>
+            <li>подчиненный документ <code>РасчетСЧА_РСА</code> регламентной операции (найти или создать)</li>
+            <li>Дата = дата периода + время окончания рабочего дня; ДоговорДУ; ДокументОснование</li>
+            <li>флаг <code>РСА</code> = в списке операций есть РасчетРСА_БУ; флаг <code>СЧА</code> = есть РасчетСЧА_БУ</li>
+            <li>вызов <code>ДокументОбъект.ПолучитьСуммыРСАСЧА(Отказ, ТекстОтказа, ДополнительныеДанные)</code></li>
+        </ul>
+        <div class="src">ОбщийМодуль.ИсполняемыеПроцедурыЗакрытияПериода</div>
+    </div>
+    <div class="arr"></div>
+
+    <div class="n dec"><span class="num">8</span>
+        <div class="t">ГотовыеДанные - Структура с ТаблицаБУ и ТаблицаУУ типа ТаблицаЗначений?</div>
+        <div class="src">Документ.РасчетСЧА_РСА, модуль объекта, ПолучитьСуммыРСАСЧА</div>
+    </div>
+    <div class="branch">
+        <div class="col">
+            <span class="lbl yes">Да</span><div class="stub"></div>
+            <div class="n doc"><div class="t">Взять таблицы договора из пакета</div>Пустая таблица допустима (нулевые остатки), повторный запрос не выполняется</div>
+            <div class="grow"></div>
+        </div>
+        <div class="col">
+            <span class="lbl no">Нет</span><div class="stub"></div>
+            <div class="n doc">
+                <div class="t">Документы.РасчетСЧА_РСА.ПолучитьСуммыРСА_СЧА</div>
+                <ul>
+                    <li>чтение параметров <span class="p">П1</span>...<span class="p">П9</span> договора на дату (блок 8а)</li>
+                    <li>наборы счетов по <span class="p">П1</span> <span class="p">П2</span> <span class="p tk">ТК</span>: для РСА, для СЧА, исключения, ДФО, вычитание</li>
+                    <li>граница остатков: КонецДня(Дата), включая</li>
+                </ul>
+                <div class="src">модуль менеджера документа</div>
+            </div>
+            <div class="grow"></div>
+        </div>
+    </div>
+    <div class="merge"><div></div><div></div></div>
+    <div class="arr"></div>
+
+    <div class="n par"><span class="num">8а</span>
+        <div class="t">Параметры договора ДУ, управляющие формулой</div>
+        <div class="dim" style="font-size:13px">ПВХ ПараметрыДоговораДУ, значения из РегистрСведений.ЗначенияПараметровДоговораДУ на дату расчета (булево, пустое значение = Ложь). Пакетный режим: те же значения, прочитанные на пачку в блоке 2.</div>
+        <div class="cols">
+            <div><span class="p">П1</span>ОбособленныйУчетЗадолженностиЭмитента_УУ</div>
+            <div><span class="p">П6</span>ОценкаНезавершенныхСделокПоСС</div>
+            <div><span class="p">П2</span>ОбособленныйУчетЗадолженностиПоДивидендам_УУ</div>
+            <div><span class="p">П7</span>НеПереоцениватьНезавершенныеСделкиПокупкиПоСС</div>
+            <div><span class="p">П3</span>УчитыватьСделкиРЕПОСогласноПисьмаЦБ_УУ <span class="dim">(в запросе &amp;УчетЗадолженности)</span></div>
+            <div><span class="p">П8</span>НеПереоцениватьНезавершенныеСделкиПродажиПоСС</div>
+            <div><span class="p">П4</span>ОтражатьДебиторскуюЗадолженностьПоОбратномуРЕПО</div>
+            <div><span class="p">П9</span>НеПереоцениватьНКДВОбратномРЕПО <span class="dim">(читается, в запросах не используется)</span></div>
+            <div><span class="p">П5</span>ОтражатьКредиторскуюЗадолженностьПоПрямомуРЕПО</div>
+            <div><span class="p tk">ТК</span>реквизит договора ТипКлиентаДУ</div>
+        </div>
+    </div>
+    <div class="arr short"></div>
+
+    <div class="stage">Запросы (одинаковые тексты для пакетного и однодоговорного режима)</div>
+
+    <div class="branch three">
+        <div class="col">
+            <div class="stub"></div>
+            <div class="n qry"><span class="num">9</span>
+                <div class="t">Запрос БУ</div>
+                <code>РегистрБухгалтерии.Хозрасчетный.Остатки</code>
+                <ul>
+                    <li>РСА: Дт 76 (развернутый Дт), кроме 76.01, 76.05, 76.04.4</li>
+                    <li>СЧА: сальдо 68 и 76, кроме 76.01, 76.05; 76.04.4 только при остатке Кт &gt; 0</li>
+                    <li class="cond"><span class="p">П1</span>= Истина: из РСА и СЧА исключаются 76.04.2.1, 76.04.2.2</li>
+                    <li class="cond"><span class="p">П2</span>= Истина: из РСА и СЧА исключаются 76.04.1, 76.04.9</li>
+                    <li>ДФО: минус остаток Дт (РСА и СЧА)</li>
+                    <li class="cond"><span class="p tk">ТК</span>НПФ, резервы НПФ: СЧА минус Кт 79.04; ПФР: минус Кт 79.05; прочие: без вычитания</li>
+                    <li>группировка: Счет, Субконто1</li>
+                </ul>
+                <div class="src">ТекстЗапросаБУ</div>
+            </div>
+            <div class="grow"></div>
+        </div>
+        <div class="col">
+            <div class="stub"></div>
+            <div class="n qry"><span class="num">10</span>
+                <div class="t">Запрос УУ</div>
+                Объединение остатков 19 регистров накопления
+                <div class="sub">Всегда (РСА и СЧА, +)</div>
+                <ul>
+                    <li>стоимость активов, НКД, HTM и НКД HTM, ЭСП, проценты по банковским счетам, денежные средства, опционные премии</li>
+                    <li>резервы: со знаком минус</li>
+                </ul>
+                <div class="sub">По параметрам</div>
+                <ul>
+                    <li class="cond"><span class="p">П1</span>= Истина: задолженность эмитента по облигациям и купону</li>
+                    <li class="cond"><span class="p">П2</span>= Истина: задолженность эмитента по дивидендам</li>
+                    <li class="cond"><span class="p">П3</span>= Ложь: стоимость бумаг по РЕПО, НКД по РЕПО, проценты по РЕПО</li>
+                    <li class="cond"><span class="p">П4</span>= Истина: обратное РЕПО не в стоимости бумаг и НКД по РЕПО</li>
+                    <li class="cond"><span class="p">П3</span>или <span class="p">П4</span>: дебиторка РЕПО по телу</li>
+                    <li class="cond"><span class="p">П3</span>= Истина: дебиторка РЕПО по купону; кредиторка по купону (только СЧА, -)</li>
+                    <li class="cond"><span class="p">П3</span>или <span class="p">П5</span>: кредиторка РЕПО по телу (только СЧА, -)</li>
+                </ul>
+                <div class="src">ТекстЗапросаУУ</div>
+            </div>
+            <div class="grow"></div>
+        </div>
+        <div class="col">
+            <div class="stub"></div>
+            <div class="n dec" style="padding:10px 26px"><span class="num">11</span><div class="t" style="font-size:13px"><span class="p">П6</span>ОценкаНезавершенныхСделокПоСС = Истина?</div></div>
+            <div class="arr short"></div>
+            <div class="n qry">
+                <div class="t">Запрос СС (если Да)</div>
+                <code>РегистрНакопления.СправедливаяСтоимостьСделокTn.Остатки</code>
+                <ul>
+                    <li>Дебиторка: в РСА и СЧА со знаком +</li>
+                    <li>Кредиторка: только в СЧА со знаком -</li>
+                    <li class="cond"><span class="p">П7</span>= Истина: позиции покупки (Поступление) пропускаются</li>
+                    <li class="cond"><span class="p">П8</span>= Истина: позиции продажи пропускаются</li>
+                </ul>
+                <div style="font-size:13px">Если <span class="p">П6</span>= Ложь: запрос не выполняется, слагаемых СС нет</div>
+                <div class="src">ТекстЗапросаСС</div>
+            </div>
+            <div class="grow"></div>
+        </div>
+    </div>
+    <div class="merge three"><div></div><div></div><div></div></div>
+    <div class="arr"></div>
+
+    <div class="n doc"><span class="num">12</span>
+        <div class="t">Заполнение табличных частей документа</div>
+        <ul>
+            <li>если флаг <code>СЧА</code>: строки БУ и УУ с <code>СуммаДляСЧА &lt;&gt; 0</code> -&gt; <code>РасчетСЧА</code> (ИсточникПоказателя, Показатель, Сумма)</li>
+            <li>если флаг <code>РСА</code>: строки с <code>СуммаДляРСА &lt;&gt; 0</code> -&gt; <code>РасчетРСА</code></li>
+            <li>строки СС входят в таблицу УУ</li>
+        </ul>
+    </div>
+    <div class="arr"></div>
+
+    <div class="n dec"><span class="num">13</span>
+        <div class="t">Отказ и константа ИспользоватьТолькоАктуальныеКурсыВалют = Истина?</div>
+    </div>
+    <div class="branch">
+        <div class="col">
+            <span class="lbl yes">Да</span><div class="stub"></div>
+            <div class="n wr"><div class="t">Записать документ без проведения</div>Регистры не обновляются, операция завершается с отказом</div>
+            <div class="arr short"></div>
+            <div class="n term" style="background:#7a4a00;border-color:#7a4a00">Конец (без проведения)</div>
+            <div class="grow" style="background:transparent"></div>
+        </div>
+        <div class="col">
+            <span class="lbl no">Нет</span><div class="stub"></div>
+            <div class="n wr"><span class="num">14</span>
+                <div class="t">Запись в режиме проведения</div>
+                <code>ЗаписатьСОбработкойКоллизииНомера</code>: при неуникальном номере - новый номер и повтор, до 30 попыток
+            </div>
+            <div class="grow"></div>
+        </div>
+    </div>
+    <div class="merge"><div class="none"></div><div></div></div>
+    <div class="arr"></div>
+
+    <div class="n wr"><span class="num">15</span>
+        <div class="t">ПередЗаписью</div>
+        <ul>
+            <li>документ в плане регламентных операций -&gt; проверка закрытого периода</li>
+            <li><b>СуммаСЧА = РасчетСЧА.Итог("Сумма")</b>, <b>СуммаРСА = РасчетРСА.Итог("Сумма")</b></li>
+        </ul>
+    </div>
+    <div class="arr"></div>
+
+    <div class="n wr"><span class="num">16</span>
+        <div class="t">ОбработкаПроведения</div>
+        <ul>
+            <li>УстановитьРеглПериод, проверка регламентного периода</li>
+            <li>ОтменитьРасчетРСА_СЧА: удаление прежних записей по договору и дате</li>
+            <li>если константа ВестиУчетПоПаям: КоличествоПаев из остатков <code>ПартииПортфеля</code>, СтоимостьПая = СуммаСЧА / КоличествоПаев</li>
+            <li><code>РегистрСведений.РегистрРСА_СЧА</code>: Период = НачалоДня(Дата), РСА, СЧА, ДокументОснование, пай</li>
+            <li><code>РегистрСведений.СправкаРасчетРСА_СЧА</code>: строки табличных частей с ВидРасчета = СЧА / РСА</li>
+        </ul>
+    </div>
+    <div class="arr"></div>
+
+    <div class="n dec"><span class="num">17</span><div class="t">Исключение при проведении?</div></div>
+    <div class="branch">
+        <div class="col">
+            <span class="lbl yes">Да</span><div class="stub"></div>
+            <div class="n wr">Записать без проведения, Отказ = Истина, текст "Не удалось провести документ ..."</div>
+            <div class="grow"></div>
+        </div>
+        <div class="col">
+            <span class="lbl no">Нет</span><div class="stub"></div>
+            <div class="n wr">Документ проведен, РСА и СЧА на дату записаны</div>
+            <div class="grow"></div>
+        </div>
+    </div>
+    <div class="merge"><div></div><div></div></div>
+    <div class="arr"></div>
+    <div class="n term">Конец операции 1000 по договору</div>
+</div>
+
+<h2>Детализация слагаемых</h2>
+
+<h3>Запрос БУ (блок 9): РегистрБухгалтерии.Хозрасчетный.Остатки</h3>
+<table class="grid">
+    <tr><th>Счета</th><th>Условие включения</th><th class="c">В РСА</th><th class="c">В СЧА</th></tr>
+    <tr><td>ДефолтПоТелу, ДефолтПоКупону (ДФО)</td><td>всегда; проверяется первым</td><td class="c minus">- ОстатокДт</td><td class="c minus">- ОстатокДт</td></tr>
+    <tr><td>76 и субсчета</td><td>кроме исключений РСА</td><td class="c plus">РазвернутыйОстатокДт</td><td class="c zero">-</td></tr>
+    <tr><td>68, 76 и субсчета</td><td>кроме исключений СЧА</td><td class="c zero">-</td><td class="c plus">Остаток (Дт - Кт)</td></tr>
+    <tr><td>76.04.4 РасчетыПоБанковскимСчетам</td><td>частный случай строки выше: берется, только если ОстатокКт &gt; 0</td><td class="c zero">исключен</td><td class="c">Остаток или 0</td></tr>
+    <tr><td>79.04 СредстваНаправляемыеВНПФДляОУД</td><td>ТипКлиентаДУ = пенсионные накопления через НПФ или пенсионные резервы НПФ</td><td class="c zero">-</td><td class="c minus">- ОстатокКт</td></tr>
+    <tr><td>79.05 РасчетыСФондом</td><td>ТипКлиентаДУ = пенсионные накопления, переданные ПФР</td><td class="c zero">-</td><td class="c minus">- ОстатокКт</td></tr>
+</table>
+<table class="grid">
+    <tr><th>Исключаемые субсчета</th><th>РСА</th><th>СЧА</th></tr>
+    <tr><td>76.01 РасчетыБрокера, 76.05 НКД</td><td>всегда</td><td>всегда</td></tr>
+    <tr><td>76.04.4 РасчетыПоБанковскимСчетам</td><td>всегда</td><td>нет (особое правило выше)</td></tr>
+    <tr><td>76.04.2.1 РасчетыПоОблигациям, 76.04.2.2 погашение тела</td><td colspan="2">если параметр договора ОбособленныйУчетЗадолженностиЭмитента_УУ</td></tr>
+    <tr><td>76.04.1 РасчетыПоДивидендам, 76.04.9 РасчетыПоПаямПИФ</td><td colspan="2">если параметр договора ОбособленныйУчетЗадолженностиПоДивидендам_УУ</td></tr>
+</table>
+
+<h3>Запрос УУ (блок 10): остатки регистров накопления</h3>
+<table class="grid">
+    <tr><th>Регистр накопления</th><th>Показатель</th><th>Условие</th><th class="c">РСА</th><th class="c">СЧА</th></tr>
+    <tr><td>СтоимостьАктивовУправленческий</td><td>Актив</td><td>КоличествоОстаток &lt;&gt; 0</td><td class="c plus">+</td><td class="c plus">+</td></tr>
+    <tr><td>НачисленныйКупонныйДоходУправленческий</td><td>Облигация</td><td>всегда</td><td class="c plus">+</td><td class="c plus">+</td></tr>
+    <tr><td>УУ_ЦенныеБумагиHTM</td><td>Партия</td><td>всегда</td><td class="c plus">+</td><td class="c plus">+</td></tr>
+    <tr><td>УУ_НКДПоЦеннымБумагамHTM</td><td>Партия</td><td>всегда</td><td class="c plus">+</td><td class="c plus">+</td></tr>
+    <tr><td>КорректировкиПоЭСПОблигации</td><td>Партия</td><td>всегда</td><td class="c plus">+</td><td class="c plus">+</td></tr>
+    <tr><td>НачисленныеПроцентыПоБанковскимСчетамУправленческий</td><td>АналитическийСчет</td><td>всегда</td><td class="c plus">+</td><td class="c plus">+</td></tr>
+    <tr><td>ЗадолженностьЭмитентаПоОблигациямУУ</td><td>Актив</td><td rowspan="2">ОбособленныйУчетЗадолженностиЭмитента_УУ</td><td class="c plus">+</td><td class="c plus">+</td></tr>
+    <tr><td>ЗадолженностьЭмитентаПоКупонномуДоходуУУ</td><td>Облигация</td><td class="c plus">+</td><td class="c plus">+</td></tr>
+    <tr><td>ЗадолженностьЭмитентаПоДивидендамУУ</td><td>Актив</td><td>ОбособленныйУчетЗадолженностиПоДивидендам_УУ</td><td class="c plus">+</td><td class="c plus">+</td></tr>
+    <tr><td>ДенежныеСредстваУправленческий</td><td>АналитическийСчет</td><td>всегда</td><td class="c plus">+</td><td class="c plus">+</td></tr>
+    <tr><td>ОпционныеПремии</td><td>Опцион</td><td>всегда</td><td class="c plus">+</td><td class="c plus">+</td></tr>
+    <tr><td>СтоимостьАктивовПоСделкамРЕПОУправленческий</td><td>Актив</td><td rowspan="2">НЕ УчитыватьСделкиРЕПОСогласноПисьмаЦБ_УУ; обратное РЕПО исключается при ОтражатьДебиторскуюЗадолженностьПоОбратномуРЕПО. Для стоимости: КоличествоОстаток &lt;&gt; 0</td><td class="c plus">+</td><td class="c plus">+</td></tr>
+    <tr><td>НачисленныйКупонныйДоходПоСделкамРЕПОУправленческий</td><td>Облигация</td><td class="c plus">+</td><td class="c plus">+</td></tr>
+    <tr><td>НачисленныеПроцентыПоРЕПОУправленческий</td><td>СделкаРЕПО</td><td>НЕ УчитыватьСделкиРЕПОСогласноПисьмаЦБ_УУ</td><td class="c plus">+</td><td class="c plus">+</td></tr>
+    <tr><td>РасчетыРЕПОДебиторскаяЗадолженностьПоТелу</td><td>БизнесПроцесс</td><td>УчитыватьСделкиРЕПОСогласноПисьмаЦБ_УУ ИЛИ ОтражатьДебиторскуюЗадолженностьПоОбратномуРЕПО</td><td class="c plus">+</td><td class="c plus">+</td></tr>
+    <tr><td>РасчетыРЕПОДебиторскаяЗадолженностьПоКупону</td><td>Контрагент</td><td>УчитыватьСделкиРЕПОСогласноПисьмаЦБ_УУ</td><td class="c plus">+</td><td class="c plus">+</td></tr>
+    <tr><td>РасчетыРЕПОКредиторскаяЗадолженностьПоТелу</td><td>БизнесПроцесс</td><td>УчитыватьСделкиРЕПОСогласноПисьмаЦБ_УУ ИЛИ ОтражатьКредиторскуюЗадолженностьПоПрямомуРЕПО</td><td class="c zero">0</td><td class="c minus">-</td></tr>
+    <tr><td>РасчетыРЕПОКредиторскаяЗадолженностьПоКупону</td><td>Контрагент</td><td>УчитыватьСделкиРЕПОСогласноПисьмаЦБ_УУ</td><td class="c zero">0</td><td class="c minus">-</td></tr>
+    <tr><td>СформированныеРезервы</td><td>Аналитика</td><td>всегда</td><td class="c minus">-</td><td class="c minus">-</td></tr>
+</table>
+<p>Показатель и ИсточникПоказателя (текстовое имя источника, например "Стоимость активов (УУ)") попадают в строки табличных частей и в регистр СправкаРасчетРСА_СЧА.</p>
+
+<h3>Запрос СС (блок 11): СправедливаяСтоимостьСделокTn.Остатки</h3>
+<table class="grid">
+    <tr><th>Вид операции плановой позиции</th><th>Остаток СС</th><th>Результат</th><th class="c">РСА</th><th class="c">СЧА</th></tr>
+    <tr><td>Поступление</td><td>&gt; 0</td><td>Дебиторка = СС</td><td class="c plus">+</td><td class="c plus">+</td></tr>
+    <tr><td>Продажа</td><td>&lt; 0</td><td>Дебиторка = -СС</td><td class="c plus">+</td><td class="c plus">+</td></tr>
+    <tr><td>Поступление</td><td>&lt; 0</td><td>Кредиторка = -СС</td><td class="c zero">0 (ASP-34313)</td><td class="c minus">-</td></tr>
+    <tr><td>Продажа</td><td>&gt; 0</td><td>Кредиторка = СС</td><td class="c zero">0 (ASP-34313)</td><td class="c minus">-</td></tr>
+</table>
+<p>Позиции не учитываются, если для их вида операции установлен параметр НеПереоцениватьНезавершенныеСделкиПокупкиПоСС или НеПереоцениватьНезавершенныеСделкиПродажиПоСС. Группировка по активу.</p>
+
+<h2>Параметры договора, влияющие на формулу</h2>
+<table class="grid">
+    <tr><th>Метка</th><th>Параметр (ПВХ ПараметрыДоговораДУ)</th><th>Блоки</th><th>На что влияет</th></tr>
+    <tr><td class="c"><span class="p">П1</span></td><td>ОбособленныйУчетЗадолженностиЭмитента_УУ</td><td>9, 10</td><td>исключение 76.04.2.1 и 76.04.2.2 из БУ и включение регистров задолженности эмитента по облигациям и купону в УУ</td></tr>
+    <tr><td class="c"><span class="p">П2</span></td><td>ОбособленныйУчетЗадолженностиПоДивидендам_УУ</td><td>9, 10</td><td>исключение 76.04.1 и 76.04.9 из БУ и включение регистра задолженности по дивидендам в УУ</td></tr>
+    <tr><td class="c"><span class="p">П3</span></td><td>УчитыватьСделкиРЕПОСогласноПисьмаЦБ_УУ</td><td>10</td><td>выбор между стоимостью бумаг, НКД и процентами по РЕПО (Ложь) и расчетами по РЕПО: дебиторка, кредиторка (Истина)</td></tr>
+    <tr><td class="c"><span class="p">П4</span></td><td>ОтражатьДебиторскуюЗадолженностьПоОбратномуРЕПО</td><td>10</td><td>обратное РЕПО отражается дебиторкой по телу вместо стоимости бумаг и НКД по РЕПО</td></tr>
+    <tr><td class="c"><span class="p">П5</span></td><td>ОтражатьКредиторскуюЗадолженностьПоПрямомуРЕПО</td><td>10</td><td>кредиторка по телу РЕПО в СЧА со знаком минус</td></tr>
+    <tr><td class="c"><span class="p">П6</span></td><td>ОценкаНезавершенныхСделокПоСС</td><td>11</td><td>выполнение запроса СС</td></tr>
+    <tr><td class="c"><span class="p">П7</span></td><td>НеПереоцениватьНезавершенныеСделкиПокупкиПоСС</td><td>11</td><td>исключение позиций покупки из запроса СС</td></tr>
+    <tr><td class="c"><span class="p">П8</span></td><td>НеПереоцениватьНезавершенныеСделкиПродажиПоСС</td><td>11</td><td>исключение позиций продажи из запроса СС</td></tr>
+    <tr><td class="c"><span class="p">П9</span></td><td>НеПереоцениватьНКДВОбратномРЕПО</td><td>2</td><td>читается, в запросах не используется; в пакетном режиме входит в сигнатуру группы</td></tr>
+    <tr><td class="c"><span class="p tk">ТК</span></td><td>Реквизит договора ТипКлиентаДУ</td><td>9</td><td>вычитание 79.04 (НПФ, резервы НПФ) или 79.05 (ПФР) из СЧА</td></tr>
+</table>
+
+<div class="box">
+    <div class="t">Замечания по коду</div>
+    <ul style="margin:4px 0 0">
+        <li>В однодоговорной процедуре вычисляются ВалютаРеглУчета, ИнформационнаяПлощадка и курсы валют по портфелю, но в расчете они не используются. Отказ в процедуре не устанавливается, поэтому ветка "Да" блока 13 на практике возникает только при отказе, выставленном раньше.</li>
+        <li>Документные СуммаРСА и СуммаСЧА, накопленные в процедуре менеджера, перезаписываются в ПередЗаписью итогами табличных частей. Строки с нулевой суммой в табличные части не попадают, на итог это не влияет.</li>
+        <li>Тексты запросов пакетного и однодоговорного режимов строятся из одного источника (ТекстЗапросаБУ / УУ / СС с параметром Пакетно); пакетный отличается только отбором по списку договоров и колонкой ДоговорДУ.</li>
+    </ul>
+</div>
+
+<p class="muted" style="font-size:13px">Подробный разбор ядра расчета и запросов БУ, УУ, СС с картинками - в документе "Алгоритм расчета РСА и СЧА - разбор расчета и запросов".</p>
+
+<h2>Объекты и процедуры</h2>
+<table class="grid">
+    <tr><th>Блок</th><th>Объект</th><th>Процедура</th></tr>
+    <tr><td>1-2</td><td>Справочник.РегламентныеПериоды (модуль менеджера)</td><td>ЗаполнитьПараметрыСохраненияПакетнымиДаннымиГруппыСЧА</td></tr>
+    <tr><td>2, 9-11</td><td>Документ.РасчетСЧА_РСА (модуль менеджера)</td><td>ПолучитьСуммыРСА_СЧА_Пакетно, ПодготовитьГруппыДоговоровПоСигнатуре, ДобавитьДанныеБУПоГруппе / УУ / СС</td></tr>
+    <tr><td>3-6</td><td>Справочник.ВидыОперацийЗакрытияПериода (модуль менеджера)</td><td>ВыполнитьИсполняемуюПроцедуруЗакрытияПериода; начальное заполнение элементов РасчетРСА_БУ и РасчетСЧА_БУ</td></tr>
+    <tr><td>7, 13-14, 17</td><td>ОбщийМодуль.ИсполняемыеПроцедурыЗакрытияПериода</td><td>Операция_1000_РасчетРСА_СЧА; отмена - ОтменитьРасчетРСА_СЧА</td></tr>
+    <tr><td>8, 12, 15-16</td><td>Документ.РасчетСЧА_РСА (модуль объекта)</td><td>ПолучитьСуммыРСАСЧА, ПередЗаписью, ОбработкаПроведения, ОтменитьРасчетРСА_СЧА</td></tr>
+    <tr><td>8а</td><td>РегистрСведений.ЗначенияПараметровДоговораДУ</td><td>ЗначенияПараметровДоговораДУ (однодоговорный), ЗначенияПараметровДоговоровДУПакетно (пакетный)</td></tr>
+    <tr><td>8-11</td><td>Документ.РасчетСЧА_РСА (модуль менеджера)</td><td>ПолучитьСуммыРСА_СЧА, НаборыСчетовПоПризнакам, ТекстЗапросаБУ, ТекстЗапросаУУ, ТекстЗапросаСС</td></tr>
+</table>
+
+</div>
+</div>
+</body>
+</html>
