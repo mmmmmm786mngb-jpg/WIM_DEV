@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>B1. Отчет брокера: тип контрагента ЦБ РФ</title>
+</head>
+<body style="margin:0;padding:16px;background:#ffffff;">
+
+<div style="font-family:'Segoe UI',Arial,sans-serif;font-size:14px;line-height:1.5;color:#1f2933;max-width:760px;">
+
+<p style="margin:0 0 12px;">Как в сделку РЕПО попадает поле &quot;Тип контрагента ЦБРФ&quot;, если сделку создают из документа &quot;Отчет брокера&quot;. В схеме письма это ветка <b>B1</b>.</p>
+
+<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="border-collapse:collapse;margin:0 0 16px;">
+<tr>
+<td bgcolor="#fdecea" style="background:#fdecea;border-left:5px solid #c62828;padding:12px 14px;">
+<div style="font-size:15px;font-weight:bold;color:#c62828;margin:0 0 4px;">B1 не читает флаг учетной политики</div>
+<div>Флаг &quot;Определять тип контрагента по РЕПО от клиента ДУ&quot; здесь не используется. Тип берется из карточки контрагента самой сделки. Если его нет, подставляются &quot;Негосударственные финансовые организации&quot;.</div>
+</td>
+</tr>
+</table>
+
+<div style="font-size:15px;font-weight:bold;color:#1f78b4;margin:0 0 8px;">Что делает пользователь</div>
+<p style="margin:0 0 14px;">В документе &quot;Отчет брокера&quot; нажимает команду <b>&quot;Создать сделки РЕПО&quot;</b>. Отчет сначала записывается, затем в фоне по каждой строке табличной части создается бизнес-процесс &quot;Сделка РЕПО&quot;.</p>
+
+<div style="font-size:15px;font-weight:bold;color:#1f78b4;margin:0 0 8px;">Дерево вызова</div>
+<table cellpadding="0" cellspacing="0" border="0" width="100%" style="border-collapse:collapse;margin:0 0 6px;">
+<tr><td bgcolor="#f5f7fa" style="background:#f5f7fa;border:1px solid #d5dde5;padding:12px 14px;">
+<pre style="margin:0;font-family:Consolas,'Courier New',monospace;font-size:12px;line-height:1.5;color:#1f2933;white-space:pre-wrap;">Команда &quot;Создать сделки РЕПО&quot;
+|
++-- Документ ОтчетБрокера, форма ФормаДокумента
+|     СоздатьСделкиРЕПО
+|     отчет записывается, стартует фоновое задание
+|
++-- Модуль менеджера документа
+|     СоздатьСделкиРЕПО
+|     открывает объект отчета
+|
++-- Модуль объекта документа
+|     СоздатьСделкиРЕПО
+|       СоздатьДанныеСделкиРЕПО
+|         по каждой строке:
+|           СделкиРЕПОСоздатьСделку
+|
++-- <b>Здесь пишется тип</b>
+      область ЗАПОЛНЕНИЕ_ОБЪЕКТА_ЕПС
+      только если у сделки ЕПС или НУ ЕПС
+      затем бизнес-процесс записывается</pre>
+</td></tr>
+</table>
+<div style="font-size:12px;color:#616e7c;margin:0 0 16px;">Если ни ЕПС, ни НУ ЕПС не включены, этот блок тип не заполняет.</div>
+
+<div style="font-size:15px;font-weight:bold;color:#1f78b4;margin:0 0 8px;">Как выбирается значение</div>
+<table cellpadding="0" cellspacing="0" border="0" width="100%" style="border-collapse:collapse;font-size:13px;margin:0 0 16px;">
+<tr>
+<td align="center" style="padding:0 0 4px;">
+<table cellpadding="0" cellspacing="0" border="0"><tr>
+<td bgcolor="#eef2f7" style="background:#eef2f7;border:1px solid #9aa5b1;padding:8px 12px;text-align:center;">Контрагент сделки заполнен<br>и в его карточке есть тип ЦБ РФ?</td>
+</tr></table>
+</td>
+</tr>
+<tr>
+<td align="center" style="padding:2px 0 6px;color:#7b8794;font-size:12px;">да &#8595; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; нет &#8595;</td>
+</tr>
+<tr>
+<td>
+<table cellpadding="0" cellspacing="0" border="0" width="100%" style="border-collapse:collapse;">
+<tr>
+<td width="50%" valign="top" style="padding:0 4px 0 0;">
+<table cellpadding="0" cellspacing="0" border="0" width="100%"><tr>
+<td bgcolor="#e8f5e9" style="background:#e8f5e9;border:1px solid #2e7d32;padding:8px;text-align:center;">В сделку пишется тип<br>из карточки контрагента</td>
+</tr></table>
+</td>
+<td width="50%" valign="top" style="padding:0 0 0 4px;">
+<table cellpadding="0" cellspacing="0" border="0" width="100%"><tr>
+<td bgcolor="#fff8e1" style="background:#fff8e1;border:1px solid #e0b100;padding:8px;text-align:center;">В сделку пишутся<br>&quot;Негосударственные финансовые организации&quot;</td>
+</tr></table>
+</td>
+</tr>
+</table>
+</td>
+</tr>
+</table>
+
+<div style="font-size:15px;font-weight:bold;color:#1f78b4;margin:0 0 8px;">Кусок кода</div>
+<p style="margin:0 0 8px;">Документ <b>ОтчетБрокера</b>, модуль объекта, процедура <b>СделкиРЕПОСоздатьСделку</b>.</p>
+<table cellpadding="0" cellspacing="0" border="0" width="100%" style="border-collapse:collapse;margin:0 0 16px;">
+<tr><td bgcolor="#1f2933" style="background:#1f2933;padding:10px 12px;">
+<pre style="margin:0;font-family:Consolas,'Courier New',monospace;font-size:12px;line-height:1.45;color:#f5f7fa;white-space:pre-wrap;">Если БПСделкаРЕПО.ЕПС Или БПСделкаРЕПО.НУ_ЕПС Тогда
+
+    ТипКонтрагентаЦБРФ = Неопределено;
+    Если ЗначениеЗаполнено(БПСделкаРЕПО.Контрагент) Тогда
+        ТипКонтрагентаЦБРФ = ...Контрагент, &quot;ТипКонтрагентаЦБРФ&quot;;
+    КонецЕсли;
+
+    Если Не ЗначениеЗаполнено(ТипКонтрагентаЦБРФ) Тогда
+        ТипКонтрагентаЦБРФ = НегосударственныеФинансовыеОрганизации;
+    КонецЕсли;
+
+    БПСделкаРЕПО.ТипКонтрагентаЦБРФ = ТипКонтрагентаЦБРФ;
+
+КонецЕсли;</pre>
+</td></tr>
+</table>
+
+<div style="font-size:15px;font-weight:bold;color:#1f78b4;margin:0 0 8px;">Как это выглядит в конфигураторе</div>
+<p style="margin:0 0 8px;">Документ &quot;Отчет брокера&quot;, модуль объекта, процедура <b>СделкиРЕПОСоздатьСделку</b>, область <b>ЗАПОЛНЕНИЕ_ОБЪЕКТА_ЕПС</b>. Красная рамка - весь блок. Стрелки показывают, откуда берется тип и куда он пишется.</p>
+<img src="b1_modul_otchet_brokera.png" alt="Модуль объекта документа Отчет брокера, блок заполнения типа контрагента ЦБ РФ" width="760" style="display:block;width:100%;max-width:760px;height:auto;border:1px solid #d5dde5;margin:0 0 16px;">
+
+<div style="font-size:15px;font-weight:bold;color:#1f78b4;margin:0 0 8px;">Примеры</div>
+<table cellpadding="0" cellspacing="0" border="0" width="100%" style="border-collapse:collapse;font-size:13px;margin:0 0 8px;">
+<tr>
+<th bgcolor="#3e4c59" style="background:#3e4c59;color:#ffffff;padding:8px;border:1px solid #3e4c59;text-align:left;">Ситуация</th>
+<th bgcolor="#3e4c59" style="background:#3e4c59;color:#ffffff;padding:8px;border:1px solid #3e4c59;text-align:left;">Что попадет в сделку</th>
+</tr>
+<tr>
+<td style="padding:8px;border:1px solid #d5dde5;">Контрагент Банк ВТБ (ПАО), в карточке &quot;Кредитные организации&quot;. Флаг портфеля включен, у клиента НПФ стоит &quot;Негосударственные финансовые организации&quot;.</td>
+<td bgcolor="#fdecea" style="background:#fdecea;padding:8px;border:1px solid #d5dde5;"><b>Кредитные организации.</b> Флаг и клиент портфеля не смотрятся.</td>
+</tr>
+<tr>
+<td style="padding:8px;border:1px solid #d5dde5;">Контрагент Банк ВТБ, но тип в его карточке пустой.</td>
+<td bgcolor="#fff8e1" style="background:#fff8e1;padding:8px;border:1px solid #d5dde5;"><b>Негосударственные финансовые организации.</b> Это запасное значение отчета брокера, не тип клиента.</td>
+</tr>
+<tr>
+<td style="padding:8px;border:1px solid #d5dde5;">Та же сделка заведена не отчетом, а в карточке или пришла обменом из ДУ, флаг включен.</td>
+<td bgcolor="#e8f5e9" style="background:#e8f5e9;padding:8px;border:1px solid #d5dde5;"><b>Негосударственные финансовые организации</b> клиента портфеля. Это уже не ветка B1.</td>
+</tr>
+</table>
+<div style="font-size:12px;color:#616e7c;margin:0 0 4px;">Сделка 8298-000000116 от 06.08.2026 как раз показывает второй результат на экране: в сделке тип НПФ, а не тип ВТБ. Через отчет брокера при заполненной карточке ВТБ так не получится.</div>
+
+</div>
+</body>
+</html>
