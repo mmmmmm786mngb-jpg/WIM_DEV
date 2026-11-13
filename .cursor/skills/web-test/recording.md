@@ -4,31 +4,30 @@ Record browser automation sessions as MP4 video files. Uses CDP `Page.startScree
 
 ## Prerequisites
 
-**ffmpeg** must be installed. Choose один из вариантов:
+**ffmpeg** must be installed. Any one of:
 
-### Вариант 1: в проект (рекомендуется)
+### Option 1: in the project (recommended)
 
-Скачать essentials build с https://www.gyan.dev/ffmpeg/builds/, распаковать в `tools/ffmpeg/` проекта:
+Download an essentials build from https://www.gyan.dev/ffmpeg/builds/ and unpack it into the project's `tools/ffmpeg/`:
 
 ```
 tools/ffmpeg/
 ├── bin/
-│   ├── ffmpeg.exe      ← этот файл ищет startRecording()
+│   ├── ffmpeg.exe      ← the file startRecording() looks for
 │   ├── ffplay.exe
 │   └── ffprobe.exe
 └── ...
 ```
 
-Код автоматически найдёт `tools/ffmpeg/bin/ffmpeg.exe` — ничего больше настраивать не нужно.
+`tools/ffmpeg/bin/ffmpeg.exe` is found by itself — nothing else to set up.
 
-### Вариант 2: глобально (один раз на машину)
+### Option 2: globally (once per machine)
 
-Скачать, распаковать в любой каталог (напр. `C:\tools\ffmpeg`), добавить `bin/` в системный PATH.
-После этого ffmpeg доступен во всех проектах.
+Unpack it anywhere (e.g. `C:\tools\ffmpeg`) and add `bin/` to the system PATH. Every project then has ffmpeg.
 
-### Вариант 3: через .v8-project.json (общий путь)
+### Option 3: in .v8-project.json (a shared path)
 
-Чтобы не копировать ffmpeg в каждый проект, указать путь в конфиге:
+To avoid a copy in every project, give the path in the config:
 
 ```json
 {
@@ -36,15 +35,15 @@ tools/ffmpeg/
 }
 ```
 
-Движок подхватит это поле сам (запись, озвучка, слайды).
+The engine picks this field up itself (recording, narration, slides).
 
-### Порядок поиска ffmpeg
+### Where ffmpeg is looked for
 
-1. `opts.ffmpegPath` — явный путь в параметре
-2. `ffmpegPath` из `.v8-project.json` (от корня проекта)
-3. `FFMPEG_PATH` — переменная окружения
-4. `ffmpeg` — в системном PATH
-5. `tools/ffmpeg/bin/ffmpeg.exe` — относительно корня проекта
+1. `opts.ffmpegPath` — an explicit path in the call
+2. `ffmpegPath` in `.v8-project.json` (from the project root)
+3. `FFMPEG_PATH` — environment variable
+4. `ffmpeg` — on the system PATH
+5. `tools/ffmpeg/bin/ffmpeg.exe` — from the project root
 
 ## API
 
@@ -99,6 +98,8 @@ Display a text overlay on the page (visible in recording). Calling again updates
 When `text` is empty but `speech` is a string, the caption is still recorded for TTS (no visible overlay). Useful for narration-only captions (e.g. podcast mode).
 
 The overlay uses `pointer-events: none` — does not interfere with clicking.
+
+The caption is one for the session: with several contexts (pages) it stays on the page it was shown on, and a new caption or `hideCaption()` takes it off the others too.
 
 **Smart TTS wait** (during recording): `showCaption` automatically pauses for the speech duration — the phrase's real length when it is already in the TTS cache (synthesized ahead or recorded before; cache key: the `.v8-project.json` `tts` settings + `opts.voice`), otherwise an estimate (default ~70ms per character, min 2s; configurable via `startRecording({ speechRate })`). The next `wait()` call accounts for this — if the explicit pause is shorter than the TTS wait already done, no extra delay is added. If longer, only the remaining difference is waited. This means script authors don't need to calculate TTS timing manually.
 

@@ -1,4 +1,4 @@
-// web-test recording/slides/templates v1.3 — slide templates: spec → { html, css, steps, bg?, push?, maxZoom? }.
+// web-test recording/slides/templates v1.8 — slide templates: spec → { html, css, steps, bg?, push?, maxZoom? }.
 // Source: https://github.com/Nikolay-Shirokov/cc-1c-skills
 //
 // Every template is a generator for the step protocol (protocol.mjs): it builds a 1920×1080 page and
@@ -73,15 +73,75 @@ export function imageInfo(src, layout = 'image') {
 
 // ── shared pieces ─────────────────────────────────────────────────────────
 const TITLE_CSS = `
-.ws-title{position:absolute;left:96px;right:96px;top:52px;font-weight:800;font-size:48px;line-height:1.1;letter-spacing:-.01em;
+.ws-title{position:absolute;left:96px;right:96px;top:max(52px, var(--safe-top));font-weight:var(--heading-weight);font-size:48px;line-height:1.1;letter-spacing:-.01em;
   color:var(--ink);animation:tplIn .8s ${EASE} both}
 .ws-title::after{content:'';display:block;width:120px;height:6px;margin-top:16px;border-radius:3px;background:var(--accent)}
 @keyframes tplIn{from{opacity:0;transform:translateY(26px)}to{opacity:1;transform:none}}
 `;
 const titleHtml = (t) => (t ? `<div class="ws-title">${esc(t)}</div>` : '');
-const CARD_SHADOW = '0 6px 24px color-mix(in srgb, var(--ink) 8%, transparent)';
+const CARD_SHADOW = '0 0 0 1.5px var(--surface-edge),0 6px 24px color-mix(in srgb, var(--shadow) 8%, transparent)';
 const LIFT_SHADOW = '0 22px 60px color-mix(in srgb, var(--primary) 26%, transparent)';
 const DARK_TEXT = `.ws-slide{color:var(--on-dark)}`;
+
+// radial hub: the side of the square inscribed in its circle, and the title size that fits it — the longest
+// word on one line (≈0.78 em a letter: wide bold faces), the lines (greedy wrap) and the items under them within the square; 62px at most
+const HUB_IN = 270;
+function hubTitleSize(title, items) {
+  const words = String(title).split(/\s+/).filter(Boolean);
+  const longest = Math.max(...words.map((w) => w.length));
+  const room = HUB_IN - 22 - (items?.length ? items.length * 32 + 10 : 0);
+  for (let fs = 62; fs > 28; fs -= 2) {
+    const perLine = Math.floor(HUB_IN / (0.78 * fs));   // a wide heavy face (weight 800) with letter-spacing
+    if (longest > perLine) continue;
+    let lines = 1, cur = 0;
+    for (const w of words) { const add = (cur ? 1 : 0) + w.length; if (cur + add > perLine) { lines++; cur = w.length; } else cur += add; }
+    if (lines * fs * 1.12 <= room) return fs;
+  }
+  return 28;
+}
+
+// content tops: under a slide title they follow the title (which a top-corner frame moves down); without a title
+// they keep clear of the top field
+const contentTop = (hasTitle, base) => (hasTitle ? `calc(max(52px, var(--safe-top)) + ${base - 52}px)` : `max(${base}px, var(--safe-top))`);
+const topShift = (hasTitle, base) => (hasTitle ? '(max(52px, var(--safe-top)) - 52px)' : `(max(${base}px, var(--safe-top)) - ${base}px)`);
+// a card with a status stripe (cards, flow): the stripe in the status colour (focus too), room for the mark
+const STRIPE_STATUS_CSS = (card) => `
+${card}.ws-st-ok,${card}.ws-st-warn,${card}.ws-st-ok.ws-focus,${card}.ws-st-warn.ws-focus{border-left-color:var(--st);padding-right:78px}
+${card}.ws-st-optional{border-left-color:transparent}`;
+// text in a circle hub (radial centre, flow circle): the inscribed square, the title, its rule, the items
+const HUB_CSS = (circle, inner) => `
+${inner}{width:${HUB_IN}px;height:${HUB_IN}px;display:flex;flex-direction:column;align-items:center;justify-content:center;overflow:hidden}
+${circle} b{font-size:62px;font-weight:var(--heading-weight);letter-spacing:.02em;line-height:1.12}
+${circle} b::after{content:'';display:block;width:60px;height:5px;margin:10px auto 0;border-radius:3px;background:var(--accent)}
+${circle} ul{list-style:none;margin:10px 0 0;padding:0;font-size:22px;font-weight:600;line-height:1.45;opacity:.92}`;
+
+// ── statuses ──────────────────────────────────────────────────────────────
+// status: 'ok' | 'warn' | 'off' | 'optional' on a card, column, stage, comparison cell or flow item. No words on
+// screen (the voice says it): ok/warn — a stripe in the status colour and a round mark, off — faded and struck
+// through, optional — no plate, a dashed outline. Without a status the element is drawn as before.
+const STATUSES = ['ok', 'warn', 'off', 'optional'];
+function checkStatus(layout, what, x) {
+  need(layout, x?.status === undefined || STATUSES.includes(x.status), `${what}: status must be ok, warn, off or optional`);
+}
+const stClass = (x) => (x?.status ? ` ws-st-${x.status}` : '');
+const stIcon = (x) => (x?.status === 'ok' ? '<i class="ws-st-ic">✓</i>' : x?.status === 'warn' ? '<i class="ws-st-ic">?</i>' : '');
+const STATUS_CSS = `
+.ws-st-ok{--st:var(--status-ok)} .ws-st-warn{--st:var(--status-warn)}
+.ws-st-ok,.ws-st-warn{position:relative}
+.ws-st-ic{position:absolute;right:18px;top:18px;width:40px;height:40px;border-radius:50%;background:var(--st);color:#fff;
+  font-style:normal;font-size:24px;font-weight:800;line-height:1;display:flex;align-items:center;justify-content:center}
+.ws-st-off>*{opacity:.5;text-decoration:line-through;text-decoration-thickness:2px}
+.ws-st-optional{background:transparent;box-shadow:none;outline:3px dashed color-mix(in oklab, var(--line) 70%, transparent);outline-offset:-3px}
+.ws-st-optional>*{opacity:.75}
+.ws-st-optional>h3{background:transparent;color:var(--heading)}
+/* in focus: no growth and no lift (with no plate a link would show past its edge) — the outline takes the accent */
+.ws-st-optional.ws-st-optional.ws-focus{transform:none;box-shadow:none;outline-color:var(--accent)}
+`;
+// a card with a header band (columns, process, radial): the stripe on the band's left edge, the mark inside it
+const BAND_STATUS_CSS = (card) => `
+${card}.ws-st-ok>h3,${card}.ws-st-warn>h3{position:relative;box-shadow:inset 8px 0 0 var(--st);padding-right:72px}
+${card}.ws-st-ok>h3 .ws-st-ic,${card}.ws-st-warn>h3 .ws-st-ic{top:50%;margin-top:-20px}
+`;
 
 // ── templates ─────────────────────────────────────────────────────────────
 export const templates = {
@@ -101,7 +161,7 @@ export const templates = {
       css: DARK_TEXT + `
 .tt-box{position:absolute;left:140px;top:0;bottom:0;width:${spec.image ? 1000 : 1640}px;display:flex;flex-direction:column;justify-content:center}
 .tt-kicker{font-size:28px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:var(--accent-hi);margin-bottom:28px;--dy:12px}
-.tt-title{margin:0;font-size:${spec.image ? 80 : 96}px;line-height:1.08;font-weight:800;letter-spacing:-.02em}
+.tt-title{margin:0;font-size:${spec.image ? 80 : 96}px;line-height:1.08;font-weight:var(--heading-weight);letter-spacing:-.02em}
 .tt-title span{display:block;--dy:36px;--stagger:.18s}
 .tt-rule{width:220px;height:8px;margin:40px 0 0;border-radius:4px;background:var(--accent);transform-origin:left center}
 .tt-rule.ws-pending:not(.on){transform:scaleX(0)}
@@ -136,15 +196,15 @@ export const templates = {
       push: true,
       html: `<div class="ag-head">${esc(spec.title || 'Содержание')}</div><div class="ag-box ws-fit"><ol class="ag-list">${items}</ol></div>`,
       css: `
-.ag-head{position:absolute;left:120px;top:0;bottom:0;width:${two ? 420 : 520}px;display:flex;align-items:center;font-size:${two ? 64 : 76}px;
-  font-weight:800;line-height:1.05;letter-spacing:-.02em;color:var(--primary);--dx:-30px;--dy:0px}
-.ag-box{position:absolute;left:${two ? 600 : 720}px;right:100px;top:60px;bottom:60px;display:flex;align-items:center}
+.ag-head{position:absolute;left:max(120px, var(--safe-left));top:calc(max(60px, var(--safe-top)) - 60px);bottom:calc(max(60px, var(--safe-bottom)) - 60px);width:${two ? 420 : 520}px;display:flex;align-items:center;font-size:${two ? 64 : 76}px;
+  font-weight:var(--heading-weight);line-height:1.05;letter-spacing:-.02em;color:var(--heading);--dx:-30px;--dy:0px}
+.ag-box{position:absolute;left:max(${two ? 600 : 720}px, var(--safe-left));right:max(100px, var(--safe-right));top:max(60px, var(--safe-top));bottom:max(60px, var(--safe-bottom));display:flex;align-items:center}
 .ag-list{width:100%;margin:0;padding:0;list-style:none;display:grid;grid-template-rows:repeat(${rows},auto);grid-auto-flow:column;
   grid-auto-columns:1fr;gap:${two ? 18 : 22}px ${two ? 28 : 0}px}
-.ag-list li{display:flex;align-items:center;gap:26px;padding:${two ? 16 : 20}px 28px;border-radius:16px;background:#fff;
-  box-shadow:${CARD_SHADOW};font-size:${two ? 32 : 38}px;font-weight:600;color:var(--ink);--stagger:.1s;--dx:30px;--dy:0px}
+.ag-list li{display:flex;align-items:center;gap:26px;padding:${two ? 16 : 20}px 28px;border-radius:16px;background:var(--surface);
+  box-shadow:${CARD_SHADOW};font-size:${two ? 32 : 38}px;font-weight:600;color:var(--on-surface);--stagger:.1s;--dx:30px;--dy:0px}
 .ag-list b{flex:none;width:60px;height:60px;border-radius:50%;display:flex;align-items:center;justify-content:center;
-  background:var(--soft);color:var(--accent-text);font-size:30px;font-weight:800}
+  background:var(--surface-soft);color:var(--accent-text);font-size:30px;font-weight:800}
 .ag-list li.ws-focus{animation:none;transform:scale(1.04);background:var(--accent);color:var(--on-accent);
   box-shadow:0 20px 50px color-mix(in srgb, var(--accent) 35%, transparent)}
 .ag-list li.ws-focus b{background:#fff;color:var(--primary)}`,
@@ -164,10 +224,10 @@ export const templates = {
         + (spec.value ? `<div class="st-val">${esc(spec.value)}</div>` : '')
         + `<div class="st-text">${esc(spec.text)}</div>` + (spec.caption ? `<div class="st-cap">${esc(spec.caption)}</div>` : '') + '</div>',
       css: `
-.st-box{position:absolute;inset:0 160px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center}
+.st-box{position:absolute;top:var(--safe-top);bottom:var(--safe-bottom);left:max(160px, var(--safe-left));right:max(160px, var(--safe-right));display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center}
 .st-box>*{--stagger:.35s}
 .st-kick{font-size:28px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:var(--accent-text);margin-bottom:24px}
-.st-val{font-size:240px;font-weight:800;line-height:1;letter-spacing:-.04em;color:var(--accent);--from-scale:.85;--dy:0px;
+.st-val{font-size:240px;font-weight:var(--heading-weight);line-height:1;letter-spacing:-.04em;color:var(--accent);--from-scale:.85;--dy:0px;
   -webkit-text-stroke:2px color-mix(in srgb, var(--accent-text) 40%, transparent)}
 .st-text{font-size:${spec.value ? 56 : 76}px;font-weight:700;line-height:1.2;letter-spacing:-.01em;color:var(--ink);max-width:1400px;
   margin-top:${spec.value ? 30 : 0}px}
@@ -182,12 +242,13 @@ export const templates = {
     count(L, 'cards', spec.cards, 1, 12, 'split the slide');
     const n = spec.cards.length;
     spec.cards.forEach((c, i) => need(L, c && (isStr(c.title) || isStr(c.text) || isArr(c.items)), `card ${i + 1} needs title, text or items`));
+    spec.cards.forEach((c, i) => checkStatus(L, `card ${i + 1}`, c));
     const steps0 = stepsOf(L, spec);
     checkShow(L, steps0, n, ['all', 'lead'], ['all', 'lead']);
     if (steps0.some((s) => [].concat(s.show).includes('lead'))) need(L, spec.lead, 'show "lead" without a "lead" block');
     const cols = spec.columns || (spec.lead ? (n <= 4 ? 2 : 3) : n <= 3 ? n : n <= 4 ? 2 : n <= 6 ? 3 : 4);
     const lead = spec.lead ? `<div class="cd-lead"><b>${esc(spec.lead.title)}</b><p>${esc(spec.lead.text)}</p></div>` : '';
-    const cards = spec.cards.map((c, i) => `<div class="cd-card cd-${i}">`
+    const cards = spec.cards.map((c, i) => `<div class="cd-card cd-${i}${stClass(c)}">${stIcon(c)}`
       + (c.title ? `<h3>${esc(c.title)}</h3>` : '') + (c.text ? `<p>${esc(c.text)}</p>` : '') + list(c.items) + '</div>');
     const sel = (i) => (i === 'lead' ? '.cd-lead' : `.cd-${i}`);
     const steps = steps0.map(({ show, ...s }) => {
@@ -203,20 +264,21 @@ export const templates = {
       push: true,
       html: titleHtml(spec.title) + `<div class="cd-wrap">${lead}<div class="cd-box ws-fit"><div class="cd-grid">${cards.join('')}</div></div></div>`,
       css: TITLE_CSS + `
-.cd-wrap{position:absolute;left:96px;right:80px;top:${spec.title ? 180 : 60}px;bottom:40px;display:flex;align-items:center;gap:56px}
+.cd-wrap{position:absolute;left:max(96px, var(--safe-left));right:max(80px, var(--safe-right));top:${contentTop(spec.title, spec.title ? 180 : 60)};bottom:max(40px, var(--safe-bottom));display:flex;align-items:center;gap:56px}
 .cd-lead{flex:0 0 460px;--dx:-28px;--dy:0px}
-.cd-lead b{display:block;font-size:72px;font-weight:800;color:var(--primary);letter-spacing:.02em}
+.cd-lead b{display:block;font-size:72px;font-weight:var(--heading-weight);color:var(--heading);letter-spacing:.02em}
 .cd-lead b::after{content:'';display:block;width:90px;height:6px;margin-top:14px;border-radius:3px;background:var(--accent)}
 .cd-lead p{margin:18px 0 0;font-size:30px;line-height:1.4;color:var(--ink2)}
 .cd-box{flex:1;align-self:stretch;display:flex;flex-direction:column;min-width:0}
 .cd-box::before{content:'';flex:1}.cd-box::after{content:'';flex:2}
 .cd-grid{width:100%;display:grid;grid-template-columns:repeat(${cols},1fr);gap:28px}
-.cd-card{background:#fff;border-radius:16px;border-left:8px solid var(--line);padding:26px 30px;box-shadow:${CARD_SHADOW};--stagger:.12s}
+.cd-card{background:var(--surface);border-radius:16px;border-left:8px solid var(--line);padding:26px 30px;box-shadow:${CARD_SHADOW};--stagger:.12s}
 .cd-card.ws-focus{animation:none;transform:scale(1.03);box-shadow:${LIFT_SHADOW};border-left-color:var(--accent)}
-.cd-card h3{margin:0 0 10px;font-size:34px;font-weight:700;color:var(--primary);line-height:1.15}
-.cd-card p{margin:0;font-size:${spec.textSize || 29}px;line-height:1.35;color:var(--ink2)}
-.cd-card ul{margin:0;padding-left:28px;font-size:27px;line-height:1.35;color:var(--ink2)}
-.cd-card li::marker{color:var(--line)}`,
+.cd-card h3{margin:0 0 10px;font-size:34px;font-weight:700;color:var(--surface-heading);line-height:1.15}
+.cd-card p{margin:0;font-size:${spec.textSize || 29}px;line-height:1.35;color:var(--surface-ink2)}
+.cd-card ul{margin:0;padding-left:28px;font-size:27px;line-height:1.35;color:var(--surface-ink2)}
+.cd-card li::marker{color:var(--line)}
+` + STRIPE_STATUS_CSS('.cd-card') + STATUS_CSS,
       steps,
     };
   },
@@ -226,12 +288,12 @@ export const templates = {
     const L = 'columns';
     count(L, 'columns', spec.columns, 2, 5, 'use cards for more');
     const n = spec.columns.length;
-    spec.columns.forEach((c, i) => need(L, c && isStr(c.title), `column ${i + 1} needs a title`));
+    spec.columns.forEach((c, i) => { need(L, c && isStr(c.title), `column ${i + 1} needs a title`); checkStatus(L, `column ${i + 1}`, c); });
     const steps0 = stepsOf(L, spec);
     checkShow(L, steps0, n, ['all']);
     const colors = ['var(--c1)', 'var(--c2)', 'var(--c4)', 'var(--c5)', 'var(--c3)'];
-    const cols = spec.columns.map((c, i) => `<div class="co-col co-${i}" style="--c:${c.color || colors[i % colors.length]}">`
-      + `<h3>${esc(c.title)}</h3>${(c.items || []).map((x) => `<div class="co-it">${esc(x)}</div>`).join('')}</div>`).join('');
+    const cols = spec.columns.map((c, i) => `<div class="co-col co-${i}${stClass(c)}" style="--c:${c.color || colors[i % colors.length]}">`
+      + `<h3>${esc(c.title)}${stIcon(c)}</h3>${(c.items || []).map((x) => `<div class="co-it">${esc(x)}</div>`).join('')}</div>`).join('');
     const sel = (i) => `.co-${i}`;
     const steps = steps0.map(({ show, ...s }) => (show === undefined ? s
       : show === 'all' ? { ...s, show: range(n).map(sel).join(', ') } : { ...s, show: [].concat(show).map(sel).join(', '), focus: [].concat(show).map(sel).join(', ') }));
@@ -240,13 +302,13 @@ export const templates = {
       push: true,
       html: titleHtml(spec.title) + `<div class="co-box ws-fit"><div class="co-row">${cols}</div></div>`,
       css: TITLE_CSS + `
-.co-box{position:absolute;left:96px;right:96px;top:${spec.title ? 180 : 60}px;bottom:44px;display:flex;flex-direction:column}
+.co-box{position:absolute;left:max(96px, var(--safe-left));right:max(96px, var(--safe-right));top:${contentTop(spec.title, spec.title ? 180 : 60)};bottom:max(44px, var(--safe-bottom));display:flex;flex-direction:column}
 .co-box::before{content:'';flex:1}.co-box::after{content:'';flex:2}
 .co-row{width:100%;display:grid;grid-template-columns:repeat(${n},1fr);gap:32px;align-items:center}
-.co-col{background:#fff;border-radius:18px;overflow:hidden;box-shadow:${CARD_SHADOW};--stagger:.15s}
+.co-col{background:var(--surface);border-radius:18px;overflow:hidden;box-shadow:${CARD_SHADOW};--stagger:.15s}
 .co-col.ws-focus{animation:none;transform:scale(1.025);box-shadow:${LIFT_SHADOW}}
 .co-col h3{margin:0;padding:20px 26px;background:var(--c);color:#fff;font-size:34px;font-weight:700;line-height:1.15}
-.co-it{margin:14px 18px;padding:14px 20px;border-radius:10px;background:var(--soft);font-size:27px;line-height:1.3;color:var(--ink2)}`,
+.co-it{margin:14px 18px;padding:14px 20px;border-radius:10px;background:var(--surface-soft);font-size:27px;line-height:1.3;color:var(--surface-ink2)}` + STATUS_CSS + BAND_STATUS_CSS('.co-col'),
       steps,
     };
   },
@@ -265,7 +327,13 @@ export const templates = {
       need(L, s.row === undefined || (Number.isInteger(s.row) && s.row >= 0 && s.row < n), `step ${i + 1}: row must be 0..${n - 1}`);
     });
     const { left: Lf, right: R } = spec;
-    const cell = (side, i, x) => `<div class="cp-cell cp-${side} cp-${side}${i}" style="grid-row:${i + 2}">${x === undefined ? '' : esc(x)}</div>`;
+    for (const side of ['left', 'right']) spec[side].items.forEach((x, i) => {
+      need(L, x === undefined || typeof x === 'string' || (x && typeof x.text === 'string'), `${side} item ${i + 1}: a string or { text, status }`);
+      checkStatus(L, `${side} item ${i + 1}`, x);
+    });
+    // a cell: a string, or { text, status } (its text in a span: a struck-through status styles the children)
+    const cell = (side, i, x) => `<div class="cp-cell cp-${side} cp-${side}${i}${stClass(x)}" style="grid-row:${i + 2}">`
+      + (x === undefined ? '' : x?.status ? `${stIcon(x)}<span>${esc(x.text)}</span>` : esc(typeof x === 'string' ? x : x.text)) + '</div>';
     // an arrow only between two filled cells (a row with one side empty has none)
     const arrow = (i) => (Lf.items[i] !== undefined && R.items[i] !== undefined
       ? `<div class="cp-vs cp-a${i}" style="grid-row:${i + 2}">→</div>` : '');
@@ -288,20 +356,22 @@ export const templates = {
       html: titleHtml(spec.title) + `<div class="cp-box ws-fit"><div class="cp-grid"><div class="cp-head cp-hl">${esc(Lf.title)}</div>`
         + `<div class="cp-head cp-hr">${esc(R.title)}</div>${cells}</div></div>`,
       css: TITLE_CSS + `
-.cp-box{position:absolute;left:96px;right:96px;top:${spec.title ? 180 : 60}px;bottom:44px;display:flex;flex-direction:column}
+.cp-box{position:absolute;left:max(96px, var(--safe-left));right:max(96px, var(--safe-right));top:${contentTop(spec.title, spec.title ? 180 : 60)};bottom:max(44px, var(--safe-bottom));display:flex;flex-direction:column}
 .cp-box::before{content:'';flex:1}.cp-box::after{content:'';flex:2}
 .cp-grid{width:100%;display:grid;grid-template-columns:1fr 90px 1fr;grid-auto-rows:auto;row-gap:18px}
-.cp-head{grid-row:1;padding:18px 30px;border-radius:14px;font-size:38px;font-weight:800;margin-bottom:8px}
+.cp-head{grid-row:1;padding:18px 30px;border-radius:14px;font-size:38px;font-weight:var(--heading-weight);margin-bottom:8px}
 .cp-hl{grid-column:1;background:var(--c3);color:#fff}
-.cp-hr{grid-column:3;background:var(--primary);color:#fff;box-shadow:inset 0 -6px 0 var(--accent)}
+.cp-hr{grid-column:3;background:var(--c1);color:#fff;box-shadow:inset 0 -6px 0 var(--accent),0 0 0 1.5px var(--surface-edge)}
 .cp-vs{grid-column:2;align-self:center;justify-self:center;font-size:44px;font-weight:800;color:var(--line);--dx:-14px;--dy:0px}
 .cp-vs.ws-focus{animation:none;color:var(--accent)}
-.cp-cell{padding:18px 26px;border-radius:12px;background:#fff;font-size:30px;line-height:1.3;color:var(--ink2);box-shadow:${CARD_SHADOW};--stagger:.1s}
+.cp-cell{padding:18px 26px;border-radius:12px;background:var(--surface);font-size:30px;line-height:1.3;color:var(--surface-ink2);box-shadow:${CARD_SHADOW};--stagger:.1s}
 .cp-cell:empty{visibility:hidden}
-.cp-l{grid-column:1;color:var(--muted)}
+.cp-l{grid-column:1;color:var(--surface-muted)}
 .cp-r{grid-column:3;border-left:6px solid var(--line)}
 .cp-cell.ws-focus{animation:none;transform:scale(1.03);box-shadow:${LIFT_SHADOW}}
-.cp-r.ws-focus{border-left-color:var(--accent)}`,
+.cp-r.ws-focus{border-left-color:var(--accent)}
+.cp-cell.ws-st-ok,.cp-cell.ws-st-warn{border-left:6px solid var(--st);padding-right:72px}
+.cp-cell .ws-st-ic{top:50%;margin-top:-20px}` + STATUS_CSS,
       steps,
     };
   },
@@ -313,7 +383,7 @@ export const templates = {
     const L = 'process';
     count(L, 'stages', spec.stages, 2, 10, 'split the process');
     const n = spec.stages.length;
-    spec.stages.forEach((s, i) => need(L, s && isStr(s.title), `stage ${i + 1} needs a title`));
+    spec.stages.forEach((s, i) => { need(L, s && isStr(s.title), `stage ${i + 1} needs a title`); checkStatus(L, `stage ${i + 1}`, s); });
     const wrap = spec.wrap ?? 'snake';
     need(L, ['snake', 'bend', 'none'].includes(wrap), `wrap must be 'snake', 'bend' or 'none'`);
     const steps0 = stepsOf(L, spec);
@@ -327,7 +397,7 @@ export const templates = {
     const arrow = (i, rev) => `<svg class="pr-arr pr-${i}a${rev ? ' rev' : ''}" viewBox="0 0 64 40"><path d="M4 20H54M42 8l14 12-14 12"/></svg>`;
     const colors = ['var(--c1)', 'var(--c2)', 'var(--c4)', 'var(--c5)'];
     const stage = (st, i) => `<div class="pr-st pr-${i}" style="--c:${st.color || colors[i % colors.length]}">`
-      + `<div class="pr-card pr-c${i}"><h3>${esc(st.title)}</h3>${list(st.items)}</div>`
+      + `<div class="pr-card pr-c${i}${stClass(st)}"><h3>${esc(st.title)}${stIcon(st)}</h3>${list(st.items)}</div>`
       + (st.role ? `<div class="pr-role">${person}<b>${esc(st.role)}</b>${st.caption ? `<span>${esc(st.caption)}</span>` : ''}</div>`
         : hasRole ? '<div class="pr-role"></div>' : '') + '</div>';
     const row = (from, to, rev) => `<div class="pr-row${rev ? ' rev' : ''}">`
@@ -352,22 +422,22 @@ export const templates = {
       push: true,
       html: titleHtml(spec.title) + `<div class="pr-box ws-fit"><div class="pr-flow">${body}</div></div>`,
       css: TITLE_CSS + `
-.pr-box{position:absolute;left:60px;right:60px;top:${spec.title ? 170 : 50}px;bottom:36px;display:flex;flex-direction:column}
+.pr-box{position:absolute;left:max(60px, var(--safe-left));right:max(60px, var(--safe-right));top:${contentTop(spec.title, spec.title ? 170 : 50)};bottom:max(36px, var(--safe-bottom));display:flex;flex-direction:column}
 .pr-box::before{content:'';flex:1}.pr-box::after{content:'';flex:2}
 .pr-flow{width:100%;display:flex;flex-direction:column;gap:${twoRows ? 10 : 0}px}
 .pr-row{display:flex;align-items:${hasItems ? 'stretch' : 'center'};gap:${GAPX}px}
 .pr-row.rev{flex-direction:row-reverse}
 .pr-st{flex:0 0 ${w}px;display:flex;flex-direction:column;gap:${twoRows ? 16 : 30}px;--dy:30px}
-.pr-card{flex:${hasItems ? 1 : 'none'};background:#fff;border-radius:16px;overflow:hidden;box-shadow:${CARD_SHADOW};
+.pr-card{flex:${hasItems ? 1 : 'none'};background:var(--surface);border-radius:16px;overflow:hidden;box-shadow:${CARD_SHADOW};
   min-height:${hasItems ? (twoRows ? 0 : 300) : 0}px}
 .pr-card.ws-focus{animation:none;transform:translateY(-8px);box-shadow:${LIFT_SHADOW}}
 .pr-card h3{margin:0;padding:20px 24px;background:var(--c);color:#fff;font-size:${w < 300 ? 28 : 32}px;font-weight:700;line-height:1.15
   ${hasItems ? '' : ';min-height:130px;display:flex;align-items:center;justify-content:center;text-align:center'}}
-.pr-card ul{margin:0;padding:16px 22px 20px 44px;font-size:${w < 300 ? 24 : 27}px;line-height:1.35;color:var(--ink2)}
+.pr-card ul{margin:0;padding:16px 22px 20px 44px;font-size:${w < 300 ? 24 : 27}px;line-height:1.35;color:var(--surface-ink2)}
 .pr-card li{margin:4px 0}
 .pr-card li::marker{color:var(--line)}
 .pr-role{display:flex;flex-direction:column;align-items:center;text-align:center;min-height:${twoRows ? 0 : 150}px}
-.pr-ico{width:${twoRows ? 56 : 84}px;height:${twoRows ? 56 : 84}px;fill:none;stroke:var(--primary);stroke-width:3.5}
+.pr-ico{width:${twoRows ? 56 : 84}px;height:${twoRows ? 56 : 84}px;fill:none;stroke:var(--heading);stroke-width:3.5}
 .pr-role b{margin-top:10px;font-size:${twoRows ? 26 : 32}px;font-weight:700;color:var(--ink)}
 .pr-role span{margin-top:6px;font-size:22px;font-weight:600;color:var(--accent-text);text-transform:uppercase;letter-spacing:.06em}
 .pr-arr{flex:0 0 ${ARW}px;width:${ARW}px;height:40px;align-self:${hasItems || hasRole ? 'flex-start' : 'center'};margin-top:${hasItems || hasRole ? 34 : 0}px;
@@ -380,7 +450,7 @@ export const templates = {
 .pr-turn path, .pr-bend path{fill:none;stroke:var(--line);stroke-width:4;stroke-linecap:round;stroke-linejoin:round}
 .pr-bend{width:100%;height:70px}
 .pr-arr.ws-focus, .pr-turn.ws-focus{animation:none}
-.pr-arr.ws-focus, .pr-turn.ws-focus path, .pr-bend.ws-focus path{stroke:var(--accent)}`,
+.pr-arr.ws-focus, .pr-turn.ws-focus path, .pr-bend.ws-focus path{stroke:var(--accent)}` + STATUS_CSS + BAND_STATUS_CSS('.pr-card'),
       steps,
     };
   },
@@ -392,16 +462,18 @@ export const templates = {
     need(L, spec.center && isStr(spec.center.title), '"center" needs a title');
     count(L, 'cards', spec.cards, 3, 6, 'split the slide or use cards');
     const n = spec.cards.length;
-    spec.cards.forEach((c, i) => need(L, c && isStr(c.title), `card ${i + 1} needs a title`));
+    spec.cards.forEach((c, i) => { need(L, c && isStr(c.title), `card ${i + 1} needs a title`); checkStatus(L, `card ${i + 1}`, c); });
     const steps0 = stepsOf(L, spec);
     checkShow(L, steps0, n, ['center', 'all']);
     const colors = ['var(--c1)', 'var(--c2)', 'var(--c4)', 'var(--c3)', 'var(--c5)', 'var(--c2)'];
-    const card = (c, i) => `<div class="hb-card hb-c${i} ${i % 2 ? 'right' : 'left'}" style="--c:${c.color || colors[i]}">`
-      + `<h3>${esc(c.title)}</h3>${list(c.items)}</div>`;
+    const card = (c, i) => `<div class="hb-card hb-c${i} ${i % 2 ? 'right' : 'left'}${stClass(c)}" style="--c:${c.color || colors[i]}">`
+      + `<h3>${esc(c.title)}${stIcon(c)}</h3>${list(c.items)}</div>`;
     const leftCol = range(n).filter((i) => i % 2 === 0).map((i) => card(spec.cards[i], i)).join('');
     const rightCol = range(n).filter((i) => i % 2 === 1).map((i) => card(spec.cards[i], i)).join('');
     const links = range(n).map((i) => `<path class="hb-l${i}" data-to=".hb-c${i}"/>`).join('');
-    const hub = `<div class="hb-hub"><b>${esc(spec.center.title)}</b>${list(spec.center.items)}</div>`;
+    // the hub's text lives in the square inscribed in the circle; the title's size follows its length
+    const hub = `<div class="hb-hub"><div class="hb-in"><b style="font-size:${hubTitleSize(spec.center.title, spec.center.items)}px">`
+      + `${esc(spec.center.title)}</b>${list(spec.center.items)}</div></div>`;
     // step { show: 'center' | i } → show the card and its line, focus it, dim the ones before
     const shown = [];
     const steps = steps0.map(({ show, ...rest }) => {
@@ -422,23 +494,102 @@ export const templates = {
         + `<svg class="ws-links" data-from=".hb-hub" data-round viewBox="0 0 ${W} ${H}">${links}</svg>${hub}`
         + `<div class="hb-col hb-left ws-fit">${leftCol}</div><div class="hb-col hb-right ws-fit">${rightCol}</div>`,
       css: TITLE_CSS + `
-.hb-col{position:absolute;top:${top}px;bottom:36px;width:640px;display:flex;flex-direction:column;justify-content:space-around;gap:18px}
-.hb-left{left:80px}
-.hb-right{right:80px}
-.hb-card{background:#fff;border-radius:18px;overflow:hidden;box-shadow:${CARD_SHADOW};--stagger:.4s}
+.hb-col{position:absolute;top:${contentTop(spec.title, top)};bottom:max(36px, var(--safe-bottom));width:640px;display:flex;flex-direction:column;justify-content:space-around;gap:18px}
+.hb-left{left:max(80px, var(--safe-left))}
+.hb-right{right:max(80px, var(--safe-right))}
+.hb-card{background:var(--surface);border-radius:18px;overflow:hidden;box-shadow:${CARD_SHADOW};--stagger:.4s}
 .hb-card.left{--dx:-32px;--dy:0px}
 .hb-card.right{--dx:32px;--dy:0px}
 .hb-card.ws-focus{animation:none;transform:scale(1.025);box-shadow:${LIFT_SHADOW}}
 .hb-card h3{margin:0;padding:18px 28px;color:#fff;background:var(--c);font-weight:700;font-size:32px;line-height:1.15}
-.hb-card ul{margin:0;padding:14px 28px 18px 50px;color:var(--ink2);font-size:23px;line-height:1.32}
+.hb-card ul{margin:0;padding:14px 28px 18px 50px;color:var(--surface-ink2);font-size:23px;line-height:1.32}
 .hb-card li{margin:3px 0}
 .hb-card li::marker{color:var(--line)}
-.hb-hub{position:absolute;left:770px;top:${r1(cy - 190)}px;width:380px;height:380px;border-radius:50%;color:#fff;--dy:0px;--from-scale:.8;
-  background:radial-gradient(circle at 35% 30%,var(--primary-hi),var(--primary));box-shadow:0 20px 60px color-mix(in srgb, var(--primary) 35%, transparent);
+.hb-hub{position:absolute;left:calc(770px + (max(80px, var(--safe-left)) - max(80px, var(--safe-right))) / 2);top:calc(${r1(cy - 190)}px + (${topShift(spec.title, top)} - (max(36px, var(--safe-bottom)) - 36px)) / 2);width:380px;height:380px;border-radius:50%;color:#fff;--dy:0px;--from-scale:.8;
+  background:radial-gradient(circle at 35% 30%,var(--primary-hi),var(--primary));box-shadow:0 0 0 2px var(--surface-edge),0 20px 60px color-mix(in srgb, var(--primary) 35%, transparent);
   display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:30px}
-.hb-hub b{font-size:62px;font-weight:800;letter-spacing:.02em}
-.hb-hub b::after{content:'';display:block;width:60px;height:5px;margin:10px auto 0;border-radius:3px;background:var(--accent)}
-.hb-hub ul{list-style:none;margin:10px 0 0;padding:0;font-size:22px;font-weight:600;line-height:1.45;opacity:.92}`,
+` + HUB_CSS('.hb-hub', '.hb-in') + STATUS_CSS + BAND_STATUS_CSS('.hb-card'),
+      steps,
+    };
+  },
+
+  // Inputs → a node → outputs, left to right (sources, processing, a result). step: show 'center' | 'all',
+  // in: i | [i] | 'all', out: i | [i] | 'all' (indexes within their column). The node: a plate, or shape 'circle'.
+  flow(spec) {
+    const L = 'flow';
+    count(L, 'inputs', spec.inputs, 1, 5, 'split the slide or use cards');
+    count(L, 'outputs', spec.outputs, 1, 4, 'split the slide or use cards');
+    need(L, spec.center && isStr(spec.center.title), '"center" needs a title');
+    need(L, spec.center.items === undefined || (isArr(spec.center.items) && spec.center.items.length <= 3), 'center: up to 3 items');
+    const shape = spec.center.shape ?? 'plate';
+    need(L, ['plate', 'circle'].includes(shape), `center.shape must be 'plate' or 'circle'`);
+    const ni = spec.inputs.length, no = spec.outputs.length;
+    for (const [side, arr] of [['input', spec.inputs], ['output', spec.outputs]]) {
+      arr.forEach((x, i) => {
+        need(L, x && (isStr(x.title) || isStr(x.text) || isArr(x.items)), `${side} ${i + 1} needs title, text or items`);
+        checkStatus(L, `${side} ${i + 1}`, x);
+      });
+    }
+    const steps0 = stepsOf(L, spec);
+    const idxOk = (v, n) => v === 'all' || [].concat(v).every((x) => Number.isInteger(x) && x >= 0 && x < n);
+    steps0.forEach((s, i) => {
+      need(L, s.show === undefined || ['center', 'all'].includes(s.show), `step ${i + 1}: show must be 'center' or 'all'`);
+      need(L, s.in === undefined || idxOk(s.in, ni), `step ${i + 1}: in must be 0..${ni - 1} or 'all'`);
+      need(L, s.out === undefined || idxOk(s.out, no), `step ${i + 1}: out must be 0..${no - 1} or 'all'`);
+    });
+    const card = (x, k) => `<div class="fl-card fl-${k}${stClass(x)}">${stIcon(x)}`
+      + (x.title ? `<h3>${esc(x.title)}</h3>` : '') + (x.text ? `<p>${esc(x.text)}</p>` : '') + list(x.items) + '</div>';
+    const circle = shape === 'circle';
+    const center = circle
+      ? `<div class="fl-center fl-circle"><div class="fl-in"><b style="font-size:${hubTitleSize(spec.center.title, spec.center.items)}px">`
+        + `${esc(spec.center.title)}</b>${list(spec.center.items)}</div></div>`
+      : `<div class="fl-center fl-plate"><b>${esc(spec.center.title)}</b>${list(spec.center.items)}</div>`;
+    const links = range(ni).map((i) => `<path class="fl-li${i}" data-to=".fl-i${i}"/>`).join('')
+      + range(no).map((i) => `<path class="fl-lo${i}" data-to=".fl-o${i}"/>`).join('');
+    const inSel = (i) => `.fl-i${i}, .fl-li${i}`, outSel = (i) => `.fl-o${i}, .fl-lo${i}`;
+    const pick = (v, n, sel) => (v === 'all' ? range(n) : [].concat(v)).map(sel);
+    const steps = steps0.map(({ show, in: inp, out, ...rest }) => {
+      const parts = [], focus = [];
+      if (show === 'center') { parts.push('.fl-center'); focus.push('.fl-center'); }
+      if (show === 'all') parts.push('.fl-center', ...range(ni).map(inSel), ...range(no).map(outSel));
+      if (inp !== undefined) { const p = pick(inp, ni, inSel); parts.push(...p); focus.push(...p); }
+      if (out !== undefined) { const p = pick(out, no, outSel); parts.push(...p); focus.push(...p); }
+      if (!parts.length) return rest;
+      const st = { ...rest, show: parts.join(', ') };
+      if (show !== 'all' && focus.length) st.focus = focus.join(', ');
+      return st;
+    });
+    steps.push({ clear: true, focus: null, hold: spec.outro ?? 1.2 });
+    const top = spec.title ? 180 : 60;
+    return {
+      push: true,
+      html: titleHtml(spec.title)
+        + `<svg class="ws-links" data-from=".fl-center"${circle ? ' data-round' : ''} viewBox="0 0 ${W} ${H}">${links}</svg>`
+        + `<div class="fl-col fl-ins ws-fit">${spec.inputs.map((x, i) => card(x, `i${i}`)).join('')}</div>`
+        + `<div class="fl-mid">${center}</div>`
+        + `<div class="fl-col fl-outs ws-fit">${spec.outputs.map((x, i) => card(x, `o${i}`)).join('')}</div>`,
+      css: TITLE_CSS + `
+.fl-col{position:absolute;top:${contentTop(spec.title, top)};bottom:max(40px, var(--safe-bottom));width:520px;display:flex;flex-direction:column;justify-content:center;gap:22px}
+.fl-ins{left:max(96px, var(--safe-left))}
+.fl-outs{right:max(96px, var(--safe-right))}
+.fl-card{background:var(--surface);border-radius:16px;border-left:8px solid var(--line);padding:22px 28px;box-shadow:${CARD_SHADOW};--stagger:.12s}
+.fl-ins .fl-card{--dx:-28px;--dy:0px}
+.fl-outs .fl-card{--dx:28px;--dy:0px}
+.fl-card.ws-focus{animation:none;transform:scale(1.03);box-shadow:${LIFT_SHADOW};border-left-color:var(--accent)}
+.fl-card h3{margin:0 0 8px;font-size:30px;font-weight:700;color:var(--surface-heading);line-height:1.15}
+.fl-card p{margin:0;font-size:25px;line-height:1.35;color:var(--surface-ink2)}
+.fl-card ul{margin:0;padding-left:26px;font-size:25px;line-height:1.35;color:var(--surface-ink2)}
+.fl-card li::marker{color:var(--line)}
+.fl-mid{position:absolute;left:calc(736px + (max(96px, var(--safe-left)) - max(96px, var(--safe-right))) / 2);width:448px;top:${contentTop(spec.title, top)};bottom:max(40px, var(--safe-bottom));display:flex;align-items:center;justify-content:center}
+.fl-center{color:#fff;--dy:0px;--from-scale:.85;text-align:center}
+.fl-center.ws-focus{animation:none}
+.fl-plate{width:448px;padding:40px 36px;border-radius:24px;background:var(--c1);
+  box-shadow:0 0 0 2px var(--surface-edge),0 20px 60px color-mix(in srgb, var(--primary) 30%, transparent)}
+.fl-plate b{display:block;font-size:40px;font-weight:var(--heading-weight);line-height:1.15}
+.fl-circle{width:380px;height:380px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+  background:radial-gradient(circle at 35% 30%,var(--primary-hi),var(--primary));box-shadow:0 0 0 2px var(--surface-edge),0 20px 60px color-mix(in srgb, var(--primary) 35%, transparent)}
+.fl-plate b::after{content:'';display:block;width:60px;height:5px;margin:12px auto 0;border-radius:3px;background:var(--accent)}
+.fl-plate ul{list-style:none;margin:14px 0 0;padding:0;font-size:24px;font-weight:600;line-height:1.45;opacity:.92}` + HUB_CSS('.fl-circle', '.fl-in') + STRIPE_STATUS_CSS('.fl-card') + STATUS_CSS,
       steps,
     };
   },
@@ -493,7 +644,7 @@ export const templates = {
       css: `
 ${(spec.shadow ?? framed) ? '.im-main{box-shadow:0 4px 40px rgba(0,0,0,.5)}' : ''}
 .im-co{position:absolute;width:0;height:0;--dy:0px;--from-scale:.5}
-.im-co b{position:absolute;left:-26px;top:-26px;width:52px;height:52px;border-radius:50%;background:var(--mark);color:var(--ink);
+.im-co b{position:absolute;left:-26px;top:-26px;width:52px;height:52px;border-radius:50%;background:var(--mark);color:var(--on-accent);
   font-size:28px;font-weight:800;display:flex;align-items:center;justify-content:center;
   box-shadow:0 0 0 5px color-mix(in srgb, var(--mark) 35%, transparent),0 8px 20px rgba(0,0,0,.3)}
 .im-co span{position:absolute;left:40px;top:-26px;white-space:nowrap;padding:8px 18px;border-radius:10px;background:var(--primary);color:#fff;
@@ -527,7 +678,7 @@ ${(spec.shadow ?? framed) ? '.im-main{box-shadow:0 4px 40px rgba(0,0,0,.5)}' : '
       html: titleHtml(spec.title || 'Итоги') + `<div class="sm-box ws-fit"><ul class="sm-list">${items}</ul></div>`
         + (spec.next ? `<div class="sm-next"><small>${esc(spec.nextLabel || 'Дальше')}</small>${esc(spec.next)}</div>` : ''),
       css: TITLE_CSS + `
-.sm-box{position:absolute;left:96px;right:96px;top:180px;bottom:${spec.next ? 230 : 50}px;display:flex;flex-direction:column}
+.sm-box{position:absolute;left:max(96px, var(--safe-left));right:max(96px, var(--safe-right));top:calc(max(52px, var(--safe-top)) + 128px);bottom:${spec.next ? 'calc(max(60px, var(--safe-bottom)) + 170px)' : 'max(50px, var(--safe-bottom))'};display:flex;flex-direction:column}
 .sm-box::before{content:'';flex:1}.sm-box::after{content:'';flex:2}
 .sm-list{width:100%;margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:24px}
 .sm-list li{display:flex;align-items:center;gap:28px;font-size:40px;font-weight:600;color:var(--ink);--stagger:.15s}
@@ -535,7 +686,7 @@ ${(spec.shadow ?? framed) ? '.im-main{box-shadow:0 4px 40px rgba(0,0,0,.5)}' : '
   display:flex;align-items:center;justify-content:center;transition:background .5s ease,color .5s ease}
 .sm-list li.ws-focus{animation:none}
 .sm-list li.ws-focus i{background:var(--accent);color:var(--on-accent)}
-.sm-next{position:absolute;left:96px;right:96px;bottom:60px;padding:28px 36px;border-radius:18px;background:var(--primary);color:#fff;
+.sm-next{position:absolute;left:max(96px, var(--safe-left));right:max(96px, var(--safe-right));bottom:max(60px, var(--safe-bottom));padding:28px 36px;border-radius:18px;background:var(--c1);color:#fff;box-shadow:0 0 0 1.5px var(--surface-edge);
   font-size:36px;font-weight:600;line-height:1.3}
 .sm-next small{display:block;font-size:22px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:var(--accent-hi);margin-bottom:8px}`,
       steps,
@@ -558,7 +709,7 @@ ${(spec.shadow ?? framed) ? '.im-main{box-shadow:0 4px 40px rgba(0,0,0,.5)}' : '
       css: DARK_TEXT + `
 .cl-box{position:absolute;left:140px;top:0;bottom:0;width:${spec.image ? 1000 : 1640}px;display:flex;flex-direction:column;justify-content:center}
 .cl-box>*{--stagger:.3s}
-.cl-title{margin:0;font-size:84px;font-weight:800;line-height:1.1;letter-spacing:-.02em}
+.cl-title{margin:0;font-size:84px;font-weight:var(--heading-weight);line-height:1.1;letter-spacing:-.02em}
 .cl-sub{margin-top:24px;font-size:40px;font-weight:600;color:var(--accent-hi)}
 .cl-contacts{margin-top:48px;font-size:32px;line-height:1.6;color:var(--on-dark-muted)}
 .cl-qr{margin-top:36px;width:200px;height:200px;border-radius:12px;background:#fff;padding:10px}
@@ -582,7 +733,17 @@ export function buildSlide(spec) {
   if (spec.layout !== undefined) {
     const t = templates[spec.layout];
     if (!t) throw new SpecError(`showSlide: unknown layout "${spec.layout}" — one of: ${LAYOUTS.join(', ')}`);
-    return t(spec);
+    const built = t(spec);
+    // a step whose show has 'all' lights everything: no focus, no dim left from the steps before (a comparison
+    // row given with it keeps its own focus). Template steps follow spec.steps one to one, extras go after.
+    (isArr(spec.steps) ? spec.steps : []).forEach((s, i) => {
+      if (!s || ![].concat(s.show).includes('all') || !built.steps[i]) return;
+      built.steps[i].clear = true;
+      if (s.row === undefined) built.steps[i].focus = null;
+    });
+    // every template takes `background` (a colour, a gradient, url(asset:…)); without it — the template's own
+    if (spec.background !== undefined) built.bg = rewriteAssets(spec.background);
+    return built;
   }
   let html = spec.html;
   if (html === undefined && spec.file) {

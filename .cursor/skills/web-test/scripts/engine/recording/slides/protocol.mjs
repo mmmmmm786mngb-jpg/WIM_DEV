@@ -1,4 +1,4 @@
-// web-test recording/slides/protocol v1.4 — step-slide protocol: base CSS + theme, page-side mount/step/lint.
+// web-test recording/slides/protocol v1.9 — step-slide protocol: base CSS + theme, page-side mount/step/lint.
 // Source: https://github.com/Nikolay-Shirokov/cc-1c-skills
 //
 // A slide is a 1920×1080 page inside a shadow root (its CSS cannot touch a neighbour slide or the
@@ -17,21 +17,35 @@ const CAM = 'cubic-bezier(.65,0,.35,1)';
 const SOFT = 'cubic-bezier(.33,0,.2,1)';   // gentle start, soft landing (EASE front-loads → reads as a jerk)
 export { EASE };
 
-// Theme: base colours (primary, accent, ground, ink; optional line, mark, onAccent, font); the rest derived.
-// Structure (headers, links, arrows, rules, tints) is shades of primary; the accent marks what is being
-// said now (focus) plus title rules, numbers and callouts.
+// Theme: base colours (primary, accent, ground, ink; optional line, mark, onAccent, surface, onSurface, font,
+// fonts); the rest derived. Structure (headers, links, arrows, rules, tints) is shades of primary; the accent
+// marks what is being said now (focus) plus title rules, numbers and callouts.
+// Two families of text colours: on the slide's ground (ink, ink2, muted, heading) and on cards and plates —
+// the surface (on-surface, surface-ink2, surface-muted, surface-heading). A light ground keeps white cards;
+// a dark one derives dark cards a shade lighter than the ground (themeVars).
 export const DEFAULT_THEME = { primary: '#16213e', accent: '#f0a202', ground: '#f4f6fa', ink: '#1a1a2e' };
 
 export const BASE_CSS = `
+.ws-slide{all:initial}   /* nothing inherited from the page: font features, spacing, colour */
 .ws-slide{
   --primary:${DEFAULT_THEME.primary}; --accent:${DEFAULT_THEME.accent}; --ground:${DEFAULT_THEME.ground}; --ink:${DEFAULT_THEME.ink};
-  --mark:var(--accent); --on-accent:var(--ink); --font:'Segoe UI',Arial,sans-serif;
+  --mark:var(--accent); --on-accent:var(--ink); --font:'Segoe UI',Arial,sans-serif; --heading-weight:800;
   --line:color-mix(in oklab, var(--primary), #fff 45%);   /* structure: links, arrows, card rules, list markers */
   --primary-hi:color-mix(in oklab, var(--primary), #fff 18%);
   --primary-dk:color-mix(in oklab, var(--primary), #000 35%);
   --ink2:color-mix(in oklab, var(--ink) 85%, var(--ground));
   --muted:color-mix(in oklab, var(--ink) 55%, var(--ground));
-  --soft:color-mix(in oklab, var(--primary) 7%, #fff);   /* quiet tint for item boxes and number badges */
+  --heading:var(--primary);   /* big headings on the ground */
+  --surface:#fff; --on-surface:var(--ink);   /* cards, plates, cells */
+  --surface-ink2:color-mix(in oklab, var(--on-surface) 85%, var(--ground));
+  --surface-muted:color-mix(in oklab, var(--on-surface) 55%, var(--ground));
+  --surface-heading:var(--primary);
+  --surface-soft:color-mix(in oklab, var(--primary) 7%, var(--surface));   /* quiet tint inside a card */
+  --surface-edge:transparent;   /* card outline (a dark ground draws it) */
+  --shadow:var(--ink);
+  --soft:var(--surface-soft);   /* quiet tint for item boxes and number badges */
+  --status-ok:#2fb36a; --status-warn:#e8a317;   /* element statuses (templates' status field) */
+  --safe-top:0px; --safe-right:0px; --safe-bottom:0px; --safe-left:0px;   /* fields kept for the frame (theme.frame) */
   --accent-hi:color-mix(in oklab, var(--accent), #fff 25%);
   --accent-text:color-mix(in oklab, var(--accent), #000 30%);
   --on-dark:#f4f4f6; --on-dark-muted:color-mix(in oklab, var(--on-dark) 70%, var(--primary));
@@ -64,14 +78,72 @@ export const BASE_CSS = `
 .ws-links path.ws-focus{animation:none;stroke:var(--accent)}
 .ws-links path.ws-t{transition:stroke-dashoffset .7s cubic-bezier(.4,0,.2,1),opacity .4s ease,stroke .5s ease}
 .ws-static, .ws-static *{transition:none !important;animation:none !important}
+/* the frame: logo, slide number, footer — outside the push and the camera, it stands still */
+.ws-frame{position:absolute;inset:0;pointer-events:none;font-size:22px;color:var(--muted)}
+.wf-c{position:absolute;display:flex;align-items:center;gap:28px}
+.wf-top-left{top:40px;left:54px} .wf-top-right{top:40px;right:54px;flex-direction:row-reverse}
+.wf-bottom-left{bottom:40px;left:54px} .wf-bottom-right{bottom:40px;right:54px;flex-direction:row-reverse}
+.wf-logo{display:block;height:30px;width:auto;max-width:320px;object-fit:contain}
+.wf-num{font-weight:700;letter-spacing:.04em}
+.wf-text{white-space:nowrap;letter-spacing:.04em}
+.wf-edge{position:absolute;top:50%;white-space:nowrap;letter-spacing:.06em;max-width:800px;overflow:hidden;text-overflow:ellipsis}
+.wf-edge.wf-left{left:64px;transform:translate(-50%,-50%) rotate(-90deg)}
+.wf-edge.wf-right{right:64px;transform:translate(50%,-50%) rotate(90deg)}
 `;
 
-/** Theme object → CSS custom properties (camelCase keys → --kebab-case). */
+/** Relative luminance of a #rgb / #rrggbb / rgb() colour, or null for anything else (a name, a gradient). */
+export function luminance(c) {
+  const s = String(c ?? '').trim();
+  let m = s.match(/^#([0-9a-f]{3}|[0-9a-f]{6})$/i), rgb;
+  if (m) {
+    const h = m[1].length === 3 ? [...m[1]].map((x) => x + x).join('') : m[1];
+    rgb = [0, 2, 4].map((i) => parseInt(h.slice(i, i + 2), 16));
+  } else if ((m = s.match(/^rgba?\(\s*(\d+)[\s,]+(\d+)[\s,]+(\d+)/i))) rgb = m.slice(1, 4).map(Number);
+  else return null;
+  const [r, g, b] = rgb.map((v) => { v /= 255; return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4; });
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+}
+const isDark = (c) => { const l = luminance(c); return l != null && l < 0.18; };   // white text reads better below ~0.18
+
+/**
+ * Theme object → CSS custom properties (camelCase keys → --kebab-case). Only scalar keys become properties
+ * (`fonts` is loaded and `background` laid by index.mjs). A dark ground (or a dark `surface`) derives what the light defaults
+ * cannot: dark cards a shade lighter than the ground, light text on them, headings in ink, an outline
+ * instead of a shadow. Explicit keys always win; a light ground keeps the defaults as they are.
+ */
 export function themeVars(theme) {
+  const t = theme || {};
   const out = {};
-  for (const [k, v] of Object.entries(theme || {})) {
-    if (v == null || v === '') continue;
+  const set = (k, v) => { if (!(k in out)) out[k] = v; };
+  for (const [k, v] of Object.entries(t)) {
+    if (v == null || v === '' || typeof v === 'object' || k === 'background') continue;   // background: the slide's ground, not a colour
     out[`--${k.replace(/[A-Z]/g, (c) => '-' + c.toLowerCase())}`] = String(v);
+  }
+  const family = Array.isArray(t.fonts) && typeof t.fonts[0]?.family === 'string' ? t.fonts[0].family.trim() : '';
+  if (family && !t.font) out['--font'] = `'${family.replace(/['\\]/g, '\\$&')}','Segoe UI',Arial,sans-serif`;
+  const groundDark = isDark(t.ground ?? DEFAULT_THEME.ground);
+  const surfaceDark = t.surface !== undefined ? isDark(t.surface) : groundDark;
+  const inkDark = isDark(t.ink ?? DEFAULT_THEME.ink);
+  if (groundDark) {
+    set('--heading', 'var(--ink)');
+    set('--accent-text', 'var(--accent-hi)');
+    set('--shadow', '#000');
+    set('--surface-edge', 'color-mix(in oklab, var(--line) 45%, transparent)');
+    set('--surface', 'color-mix(in oklab, var(--ground), #fff 8%)');   // a shade lighter than the ground, whatever primary is
+    // header bands: shades of primary vanish on a ground of the same depth — the accent tinted into the card
+    // instead, at different strengths (distinct from the ground and the card body, white text stays readable)
+    [['--c1', 26], ['--c2', 38], ['--c3', 18], ['--c4', 32], ['--c5', 44]]
+      .forEach(([k, p]) => set(k, `color-mix(in oklab, var(--accent) ${p}%, var(--surface))`));
+  }
+  if (surfaceDark && inkDark) set('--on-surface', '#f4f4f6');
+  if (!surfaceDark && !inkDark) set('--on-surface', DEFAULT_THEME.ink);
+  if (surfaceDark) {
+    set('--surface-heading', 'var(--on-surface)');
+    set('--surface-soft', 'color-mix(in oklab, var(--on-surface) 9%, var(--surface))');
+  }
+  if (groundDark || surfaceDark) {
+    set('--surface-ink2', 'color-mix(in oklab, var(--on-surface) 85%, var(--surface))');
+    set('--surface-muted', 'color-mix(in oklab, var(--on-surface) 62%, var(--surface))');
   }
   return out;
 }
@@ -82,17 +154,21 @@ export function themeVars(theme) {
  * Mount a slide (page side). Order matters: layout first (fit, links) on untransformed elements,
  * then pending states without transitions, then .ws-t — so nothing animates from the measuring state.
  */
-export function pageMount({ html, css, bg, vars, pushSec, animated, instant, staticMode, hostId }) {
+export function pageMount({ html, css, bg, vars, pushSec, animated, instant, staticMode, hostId, frame }) {
   const old = document.getElementById('__ws_slide');
   if (old) old.id = '__ws_slide_old';
   const host = document.createElement('div');
   host.id = '__ws_slide';
   if (hostId) host.dataset.kind = hostId;
+  // not in the page's language: it picks a font's local letter forms (lang="bg" — the Bulgarian Cyrillic of
+  // Montserrat); the page's text styles stop at .ws-slide (BASE_CSS)
+  host.lang = '';
   host.style.cssText = 'position:fixed;inset:0;z-index:999999;pointer-events:none;'
     + (instant ? 'opacity:1' : 'opacity:0;transition:opacity .5s ease');
   const root = host.attachShadow({ mode: 'open' });
   root.innerHTML = `<style>${css}</style><div class="ws-slide${staticMode ? ' ws-static' : ''}"><div class="ws-stage">`
-    + `<div class="ws-push"><div class="ws-cam">${html}<div class="ws-spot"></div></div></div></div></div>`;
+    + `<div class="ws-push"><div class="ws-cam">${html}<div class="ws-spot"></div></div></div>`
+    + (frame ? `<div class="ws-frame">${frame}</div>` : '') + '</div></div>';
   const slide = root.querySelector('.ws-slide');
   for (const [k, v] of Object.entries(vars || {})) slide.style.setProperty(k, v);
   if (bg) slide.style.background = bg;
@@ -168,11 +244,15 @@ export function pageStep({ step, index, maxZoom }) {
   const root = document.getElementById('__ws_slide')?.shadowRoot;
   if (!root) return;
   const q = (sel) => (sel ? [...root.querySelectorAll(sel)] : []);
-  if (step.clear) root.querySelectorAll('.ws-focus, .ws-dim').forEach((e) => e.classList.remove('ws-focus', 'ws-dim'));
-  q(step.undim).forEach((e) => e.classList.remove('ws-dim'));
+  // the cascade (--stagger) is for appearing: lighting up again is at once, or a long card list takes seconds
+  if (step.clear) root.querySelectorAll('.ws-focus, .ws-dim').forEach((e) => { e.style.setProperty('--si', 0); e.classList.remove('ws-focus', 'ws-dim'); });
+  q(step.undim).forEach((e) => { e.style.setProperty('--si', 0); e.classList.remove('ws-dim'); });
   // a hidden element drops its dim too: .ws-dim would otherwise keep it on screen at a third of its opacity
   q(step.hide).forEach((e) => { e.style.setProperty('--si', 0); e.classList.remove('on', 'ws-focus', 'ws-dim'); });
-  q(step.show).forEach((e, i) => { e.style.setProperty('--si', i); e.classList.add('on'); });
+  // the cascade counts what appears now; an element already on screen (a step that shows 'all' again) is not
+  // re-queued — or lighting it up waits for its place in the list
+  let si = 0;
+  q(step.show).forEach((e) => { e.style.setProperty('--si', e.classList.contains('on') ? 0 : si++); e.classList.add('on'); });
   q(step.dim).forEach((e) => e.classList.add('ws-dim'));
   if (step.focus !== undefined) {
     root.querySelectorAll('.ws-focus').forEach((e) => e.classList.remove('ws-focus'));
@@ -287,12 +367,26 @@ export function pageLint({ showSel }) {
   const tx = sr.width * 0.015 + 2, ty = sr.height * 0.015 + 2;
   const camIdle = getComputedStyle(root.querySelector('.ws-cam')).transform === 'none';
   const visible = (el) => !el.closest('.ws-pending:not(.on)') && getComputedStyle(el).visibility !== 'hidden';
+  // the nearest element that draws a box: a background, a border or a shadow (up to the camera layer)
+  const paintedBox = (el) => {
+    for (let a = el; a && !a.classList.contains('ws-cam'); a = a.parentElement) {
+      const cs = getComputedStyle(a);
+      const bg = cs.backgroundImage !== 'none' || !/rgba\(0, 0, 0, 0\)|transparent/.test(cs.backgroundColor);
+      const border = ['Top', 'Right', 'Bottom', 'Left'].some((s) => parseFloat(cs[`border${s}Width`]) > 0 && cs[`border${s}Style`] !== 'none');
+      if (bg || border || cs.boxShadow !== 'none') return a;
+    }
+    return null;
+  };
   const name = (el) => {
     const cls = typeof el.className === 'string' ? el.className.split(' ').find((c) => c && !c.startsWith('ws-')) : null;
     return cls ? '.' + cls : el.tagName.toLowerCase();
   };
   // .ws-nolint — a deliberate element (a speech bubble that repeats the phrase, a figure past the edge): not checked
   const els = [...root.querySelectorAll('.ws-cam *')].filter((e) => !e.matches('.ws-spot, style') && !e.closest('.ws-nolint') && visible(e));
+  // the frame's elements (logo, number, footer): content drawn under them is flagged
+  const frameRects = [...root.querySelectorAll('.ws-frame .wf-logo, .ws-frame .wf-num, .ws-frame .wf-text, .ws-frame .wf-edge')]
+    .map((e) => e.getBoundingClientRect()).filter((r) => r.width && r.height);
+  const hits = (r) => frameRects.some((f) => r.left < f.right - 2 && r.right > f.left + 2 && r.top < f.bottom - 2 && r.bottom > f.top + 2);
   for (const el of els) {
     const r = el.getBoundingClientRect();
     const hasText = !!el.textContent.trim();
@@ -305,6 +399,21 @@ export function pageLint({ showSel }) {
     if (hasText && ov && el.scrollWidth > el.clientWidth + 2) out.overflow.push(`${name(el)} text does not fit (width)`);
     if (hasText && ov && el.scrollHeight > el.clientHeight + 2) out.overflow.push(`${name(el)} text does not fit (height)`);
     const own = [...el.childNodes].filter((n) => n.nodeType === 3 && n.textContent.trim());
+    // text that runs out of its visible box (a card, a plate) without clipping: overflow stays visible, so the
+    // scroll check above is blind to it — measure the text itself against the nearest painted ancestor
+    if (own.length && camIdle && !ov) {
+      const box = paintedBox(el);
+      if (box) {
+        const b = box.getBoundingClientRect(), tol = 3 * k;
+        const spills = own.some((n) => {
+          const rg = document.createRange();
+          rg.selectNodeContents(n);
+          const t = rg.getBoundingClientRect();
+          return t.width && (t.left < b.left - tol || t.right > b.right + tol || t.top < b.top - tol || t.bottom > b.bottom + tol);
+        });
+        if (spills) out.overflow.push(`${name(el)} text spills out of its box`);
+      }
+    }
     if (own.length) {
       out.words += own.map((n) => n.textContent.trim().split(/\s+/).length).reduce((a, b) => a + b, 0);
       // effective size on the 1920-wide stage, zoom of fitted boxes included
@@ -312,6 +421,13 @@ export function pageLint({ showSel }) {
       if (fs < 21.5) out.small.push(`${name(el)} ${Math.round(fs)}px`);
     }
     if (/^(UL|OL)$/.test(el.tagName) && el.children.length > 6) out.longLists.push(`${name(el)}: ${el.children.length} items`);
+    // text or a picture under the frame (camera at rest: a zoom brings anything under it). A backdrop, a plate or
+    // a picture filling most of the slide is meant to lie under it
+    if (frameRects.length && camIdle && r.width) {
+      const textUnder = own.some((n) => { const rg = document.createRange(); rg.selectNodeContents(n); return hits(rg.getBoundingClientRect()); });
+      const smallPic = el.tagName === 'IMG' && r.width * r.height < sr.width * sr.height * 0.5;
+      if (textUnder || (smallPic && hits(r))) out.overflow.push(`${name(el)} overlaps the frame`);
+    }
   }
   if (showSel) out.shown = [...root.querySelectorAll(showSel)].filter((e) => !e.closest('.ws-nolint')).map((e) => (e.innerText ?? e.textContent ?? '').trim()).filter(Boolean);
   out.overflow = [...new Set(out.overflow)];
