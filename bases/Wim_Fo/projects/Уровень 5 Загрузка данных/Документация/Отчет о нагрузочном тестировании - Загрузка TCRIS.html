@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>Нагрузочное тестирование - Загрузка TCRIS</title>
+<style>
+body { font-family: 'Segoe UI', Arial, sans-serif; margin: 28px auto; max-width: 900px;
+       color: #1a1a1a; line-height: 1.45; padding: 0 16px; }
+h1 { font-size: 24px; color: #1f3864; border-bottom: 2px solid #2f5d8a; padding-bottom: 8px; }
+h2 { font-size: 18px; color: #2f5d8a; margin-top: 26px; }
+table { border-collapse: collapse; width: 100%; margin: 12px 0; }
+th, td { border: 1px solid #bfbfbf; padding: 6px 10px; font-size: 14px; text-align: left; }
+th { background: #e6edf5; }
+td.num, th.num { text-align: right; white-space: nowrap; }
+.note { background: #f6f8fa; border-left: 4px solid #2f5d8a; padding: 10px 14px; margin: 14px 0; font-size: 14px; }
+.warn { border-left-color: #b45309; }
+.rec { border: 1px solid #bfbfbf; border-left: 5px solid #2f5d8a; margin: 14px 0; padding: 10px 16px; }
+.rec h3 { margin: 4px 0 8px 0; font-size: 16px; color: #1f3864; }
+.rec .meta { color: #555; font-size: 13px; margin-top: 8px; }
+.muted { color: #666; font-size: 13px; }
+</style>
+</head>
+<body>
+<h1>Отчет о нагрузочном тестировании: Загрузка TCRIS</h1>
+<p class="muted">Нагрузочный стенд, разработческие базы, 14.11.2026</p>
+<h2>Что проверялось</h2>
+<p>Внешняя обработка загрузки дополнительного реквизита TCRIS контрагентов, ежедневно в обеих базах Фронт-офиса. Чтение из внешней базы рейтингов заменено локальной таблицей того же объема, сопоставление и запись настоящие. Прогон выполнялся дважды: первая запись значений и повтор с теми же значениями.</p>
+<p><b>Объем прогона:</b> 1170 строк рейтингов, 520 сопоставленных контрагентов (объем ПРОД: 1169-1171 строк, 480-536 контрагентов).</p>
+<h2>Результаты стенда</h2>
+<table>
+<tr><th>Шаг</th><th class="num">Время, с</th><th class="num">Доля / на единицу</th></tr>
+<tr><td>Чтение рейтингов (локальная таблица)</td><td class="num">0,06</td><td class="num">1%</td></tr>
+<tr><td>Сопоставление контрагентов по ИНН</td><td class="num">0,26</td><td class="num">3%</td></tr>
+<tr><td>Запись значений (по одному контрагенту)</td><td class="num">7,1</td><td class="num">95%</td></tr>
+<tr><td>Вся загрузка</td><td class="num">7,5</td><td class="num">100%</td></tr>
+</table>
+<h2>Профиль рабочей базы за 16.10-02.11.2026 (среднее на запуск)</h2>
+<table>
+<tr><th>Шаг</th><th class="num">Розница, с</th><th class="num">Обычный ФО, с</th></tr>
+<tr><td>Чтение рейтингов</td><td class="num">0,3</td><td class="num">0,3</td></tr>
+<tr><td>Сопоставление</td><td class="num">0,6-1,0</td><td class="num">0,6-1,0</td></tr>
+<tr><td>Запись</td><td class="num">31,0-33,2</td><td class="num">31,0-33,2</td></tr>
+<tr><td>Вся загрузка</td><td class="num">34,5</td><td class="num">32,0</td></tr>
+</table>
+<h2>Выводы</h2>
+<ul>
+<li>95% операции - запись: каждому сопоставленному контрагенту значение пишется отдельной записью со своей транзакцией (13 мс на контрагента на стенде, 64 мс на рабочей базе).</li>
+<li>Повторный прогон с неизменившимися значениями стоит столько же: обработка пишет всем контрагентам каждый день, хотя рейтинг меняется у единиц.</li>
+<li>На каждую запись дополнительно срабатывает подписка на запись дополнительных сведений - еще одна причина не писать лишнего.</li>
+</ul>
+<div class="note">Времена стенда получены на разработческой базе и не переносятся на рабочую как абсолюты: сопоставимы доли шагов и стоимость на единицу. Профиль рабочей базы - из выгрузок замеров за 16.10-02.11.2026, где он есть.</div>
+</body>
+</html>
